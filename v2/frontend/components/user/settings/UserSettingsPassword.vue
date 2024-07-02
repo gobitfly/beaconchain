@@ -6,23 +6,13 @@ const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { handleSubmit, errors } = useForm()
-const { value: oldPassword } = useField<string>('oldPassword', validatePassword)
-const { value: newPassword } = useField<string>('newPassword', validatePassword) // TODO: This should also validate that new != old, add to userValidation.ts
-const { value: confirmPassword } = useField<string>('confirmPassword', validatePassword)
+const { value: oldPassword } = useField<string>('oldPassword', value => validatePassword(value))
+const { value: newPassword } = useField<string>('newPassword', value => validatePassword(value))
+const { value: confirmPassword } = useField<string>('confirmPassword', value => validatePassword(value, newPassword.value))
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-// TODO: Use userValidation.ts
-function validatePassword (value: string) : true | string {
-  if (!value) {
-    // TODO: Create validation in language file and put stuff like "no_password" in there
-    return $t('login_and_register.no_password')
-  }
-  if (value.length < 5) {
-    return $t('login_and_register.invalid_password')
-  }
-  return true
-}
+setTranslator($t)
 
 const onSubmit = handleSubmit(async (values) => {
   if (!canSubmit.value) {

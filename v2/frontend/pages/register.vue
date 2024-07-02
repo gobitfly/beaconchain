@@ -3,7 +3,7 @@ import { useField, useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
-import { setTranslator, validateAddress, validatePassword, validateAgreement } from '~/utils/userValidation'
+import { setTranslator, validateEmailAddress, validatePassword, validateAgreement } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -12,22 +12,12 @@ const toast = useBcToast()
 useBcSeo('login_and_register.title_register')
 
 const { handleSubmit, errors } = useForm()
-const { value: email } = useField<string>('email', validateAddress)
-const { value: password } = useField<string>('password', validatePassword)
-const { value: passwordConfirm } = useField<string>('passwordConfirm', validatePasswordConfirmation)
+const { value: email } = useField<string>('email', value => validateEmailAddress(value))
+const { value: password } = useField<string>('password', value => validatePassword(value))
+const { value: passwordConfirm } = useField<string>('passwordConfirm', value => validatePassword(value, password.value))
 const { value: agreement } = useField<boolean>('agreement', validateAgreement)
 
 setTranslator($t)
-
-function validatePasswordConfirmation (value: string) : true|string {
-  if (!value) {
-    return $t('login_and_register.retype_password')
-  }
-  if (value !== password.value) {
-    return $t('login_and_register.passwords_dont_match')
-  }
-  return true
-}
 
 const onSubmit = handleSubmit(async (values) => {
   try {

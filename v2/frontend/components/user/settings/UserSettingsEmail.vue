@@ -1,26 +1,18 @@
 <script lang="ts" setup>
 import { useField, useForm } from 'vee-validate'
 import { API_PATH } from '~/types/customFetch'
+import { setTranslator, validateEmailAddress } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { handleSubmit, errors } = useForm()
-const { value: newEmail } = useField<string>('newEmail', validateEmail)
-const { value: confirmEmail } = useField<string>('confirmEmail', validateEmail)
+const { value: newEmail } = useField<string>('newEmail', value => validateEmailAddress(value))
+const { value: confirmEmail } = useField<string>('confirmEmail', value => validateEmailAddress(value, newEmail.value))
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-// TODO: Use userValidation.ts
-function validateEmail (value: string) : true | string {
-  if (!value) {
-    return $t('login_and_register.no_email')
-  }
-  if (!REGEXP_VALID_EMAIL.test(value)) {
-    return $t('login_and_register.invalid_email')
-  }
-  return true
-}
+setTranslator($t)
 
 const onSubmit = handleSubmit(async (values) => {
   if (!canSubmit.value) {

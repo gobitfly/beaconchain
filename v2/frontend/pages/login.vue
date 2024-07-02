@@ -2,7 +2,7 @@
 import { useField, useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 import { Target } from '~/types/links'
-import { setTranslator, validateAddress, validatePassword } from '~/utils/userValidation'
+import { setTranslator, validateEmailAddress, validatePassword } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { doLogin } = useUserStore()
@@ -11,8 +11,8 @@ const toast = useBcToast()
 useBcSeo('login_and_register.title_login')
 
 const { handleSubmit, errors } = useForm()
-const { value: email } = useField<string>('email', validateAddress)
-const { value: password } = useField<string>('password', validatePassword)
+const { value: email } = useField<string>('email', value => validateEmailAddress(value))
+const { value: password } = useField<string>('password', value => validatePassword(value))
 
 setTranslator($t)
 
