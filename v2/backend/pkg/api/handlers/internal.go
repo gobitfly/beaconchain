@@ -791,13 +791,13 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	}
 	q := r.URL.Query()
 	groupIds := v.checkGroupIdList(q.Get("group_ids"))
-	efficiency := checkEnum[enums.VDBSummaryChartEfficiency](&v, q.Get("filter"), "filter")
+	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId, groupIds, efficiency)
+	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId, groupIds, efficiencyType)
 	if err != nil {
 		handleErr(w, err)
 		return
