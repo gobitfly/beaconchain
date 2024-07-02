@@ -1021,6 +1021,28 @@ func (d *dashboardData) ProcessEpochData(data *Data, domain []byte) ([]*validato
 	return d.process(data, domain)
 }
 
+func isPartitionAttached(pTable string, partition string) (bool, error) {
+	var attached bool
+	err := db.AlloyWriter.QueryRow(fmt.Sprintf(`
+	SELECT EXISTS (
+		SELECT 1
+		FROM pg_partitioned_table pgt
+		JOIN pg_inherits pi ON pgt.partrelid = pi.inhparent
+		JOIN pg_class pc ON pc.oid = pi.inhrelid
+		WHERE pgt.partrelid = '%s'::regclass
+		AND pc.relname = '%s'
+	)
+	`,
+		pTable, partition,
+	)).Scan(&attached)
+
+	if err != nil {
+		return false, errors.Wrap(err, "failed to check if partition is already attached")
+	}
+
+	return attached, nil
+}
+
 // Returns the epoch where the sync committee election for the given epoch took place
 func getSyncCommitteeElectionEpochOf(period uint64) uint64 {
 	syncElectionPeriod := int64(period) - 1
