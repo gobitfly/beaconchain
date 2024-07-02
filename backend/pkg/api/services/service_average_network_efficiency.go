@@ -35,12 +35,8 @@ func (s *Services) startEfficiencyDataService() {
 }
 
 func (s *Services) updateEfficiencyData() error {
-	var efficiencyInfo *EfficiencyData
+	efficiencyInfo := s.initEfficiencyInfo()
 	efficiencyMutex := &sync.RWMutex{}
-
-	if currentEfficiencyInfo == nil {
-		efficiencyInfo = s.initEfficiencyInfo()
-	}
 
 	setEfficiencyData := func(tableName string, period enums.TimePeriod) error {
 		var queryResult struct {
