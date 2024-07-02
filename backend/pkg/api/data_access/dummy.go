@@ -274,7 +274,7 @@ func (d *DummyService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, gr
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId) (*t.ChartData[int, float64], error) {
+func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId, groupIds []uint64, efficiency enums.VDBSummaryChartEfficiency) (*t.ChartData[int, float64], error) {
 	r := t.ChartData[int, float64]{}
 	err := commonFakeData(&r)
 	return &r, err
