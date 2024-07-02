@@ -523,22 +523,22 @@ var ValidatorStatuses = struct {
 
 // Validator Reward Chart Efficiency Filter
 
-type VDBSummaryChartEfficiency int
+type VDBSummaryChartEfficiencyType int
 
-var _ EnumFactory[VDBSummaryChartEfficiency] = VDBSummaryChartEfficiency(0)
+var _ EnumFactory[VDBSummaryChartEfficiencyType] = VDBSummaryChartEfficiencyType(0)
 
 const (
-	VDBSummaryChartAll VDBSummaryChartEfficiency = iota
+	VDBSummaryChartAll VDBSummaryChartEfficiencyType = iota
 	VDBSummaryChartAttestation
 	VDBSummaryChartSync
 	VDBSummaryChartProposal
 )
 
-func (c VDBSummaryChartEfficiency) Int() int {
+func (c VDBSummaryChartEfficiencyType) Int() int {
 	return int(c)
 }
 
-func (VDBSummaryChartEfficiency) NewFromString(s string) VDBSummaryChartEfficiency {
+func (VDBSummaryChartEfficiencyType) NewFromString(s string) VDBSummaryChartEfficiencyType {
 	switch s {
 	case "", "all":
 		return VDBSummaryChartAll
@@ -549,15 +549,15 @@ func (VDBSummaryChartEfficiency) NewFromString(s string) VDBSummaryChartEfficien
 	case "proposal":
 		return VDBSummaryChartProposal
 	default:
-		return VDBSummaryChartEfficiency(-1)
+		return VDBSummaryChartEfficiencyType(-1)
 	}
 }
 
 var VDBSummaryChartEfficiencyFilters = struct {
-	All         VDBSummaryChartEfficiency
-	Attestation VDBSummaryChartEfficiency
-	Sync        VDBSummaryChartEfficiency
-	Proposal    VDBSummaryChartEfficiency
+	All         VDBSummaryChartEfficiencyType
+	Attestation VDBSummaryChartEfficiencyType
+	Sync        VDBSummaryChartEfficiencyType
+	Proposal    VDBSummaryChartEfficiencyType
 }{
 	VDBSummaryChartAll,
 	VDBSummaryChartAttestation,
