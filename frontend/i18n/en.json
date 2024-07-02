@@ -283,6 +283,18 @@
       "proposer_slashing": "Proposer Slashing Reward"
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "login_question": "Do you want to login to set notifications?",
+    "manage": "Manage Notifications",
+    "tabs":{
+      "dashboards": "Dashboards",
+      "machines": "Machines",
+      "clients": "Clients",
+      "rocketpool": "Rocket Pool",
+      "network": "Network"
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
