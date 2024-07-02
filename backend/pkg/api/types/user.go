@@ -3,7 +3,6 @@ package types
 type UserInfo struct {
 	Id            uint64             `json:"id"`
 	Email         string             `json:"email"`
-	Confirmed     bool               `json:"email_confirmed"`
 	ApiKeys       []string           `json:"api_keys"`
 	ApiPerks      ApiPerks           `json:"api_perks"`
 	PremiumPerks  PremiumPerks       `json:"premium_perks"`

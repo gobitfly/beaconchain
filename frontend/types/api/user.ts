@@ -8,7 +8,6 @@ import type { ApiDataResponse } from './common'
 export interface UserInfo {
   id: number /* uint64 */;
   email: string;
-  email_confirmed: boolean;
   api_keys: string[];
   api_perks: ApiPerks;
   premium_perks: PremiumPerks;
