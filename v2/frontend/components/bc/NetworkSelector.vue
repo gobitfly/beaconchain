@@ -5,12 +5,12 @@ import { IconNetwork } from '#components'
 import { ChainInfo, ChainID } from '~/types/network'
 
 const { availableNetworks, isNetworkDisabled } = useNetworkStore()
-const { bridgeArraysRefs, bridgePrimitiveRefs } = useRefBridge()
+const { bridgeArrayRefs, bridgePrimitiveRefs } = useRefBridge()
 
 /** This ref is a chain ID if only one network can be selected, or an array of chain IDs if several networks can be selected. */
 const liveState = defineModel<ChainID|ChainID[]>()
 
-let selectionMulti : ModelRef<string[]>
+const selectionMulti = ref<string[]>()
 const selectionSingle = ref<string>()
 
 const buttons = computed(() => {
@@ -27,7 +27,7 @@ const buttons = computed(() => {
 })
 
 if (Array.isArray(liveState.value)) {
-  bridgeArraysRefs(liveState as ModelRef<ChainID[]>, selectionMulti)
+  bridgeArrayRefs(liveState as ModelRef<ChainID[]>, selectionMulti)
 } else {
   bridgePrimitiveRefs(liveState as ModelRef<ChainID>, selectionSingle)
 }
