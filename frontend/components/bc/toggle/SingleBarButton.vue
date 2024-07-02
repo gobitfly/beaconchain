@@ -17,7 +17,7 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
 </script>
 
 <template>
-  <BcTooltip :dont-open-permanently="true" :hover-delay="350">
+  <BcTooltip :dont-open-permanently="true" :hover-delay="350" :hide="!tooltip">
     <template #tooltip>
       <div class="button-tooltip">
         <div v-if="tooltip" class="individual">
@@ -44,7 +44,7 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
 <style lang="scss" scoped>
 @use '~/assets/css/fonts.scss';
 
-.button-tooltip{
+.button-tooltip {
   width: max-content;
   text-align: left;
   .individual{

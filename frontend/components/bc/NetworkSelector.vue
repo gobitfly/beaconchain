@@ -10,7 +10,7 @@ const { bridgeArraysRefs, bridgePrimitiveRefs } = useRefBridge()
 /** This ref is a chain ID if only one network can be selected, or an array of chain IDs if several networks can be selected. */
 const liveState = defineModel<ChainID|ChainID[]>()
 
-const selectionMulti = ref<string[]>()
+let selectionMulti : ModelRef<string[]>
 const selectionSingle = ref<string>()
 
 const buttons = computed(() => {
