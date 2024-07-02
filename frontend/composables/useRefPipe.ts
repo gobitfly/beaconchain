@@ -5,7 +5,7 @@ export interface ConverterCallBack<Tx, Ty> { (x: Tx) : Ty}
 export function useRefPipe () {
   const stoppers: WatchStopHandle[] = []
 
-  function bindPrimitiveRefs<T> (refA: Ref<T>, refB: Ref<T>) {
+  function pipePrimitiveRefs<T> (refA: Ref<T>, refB: Ref<T>) {
     stoppers.push(watch(refA, (a: T) => {
       if (a !== refB.value) {
         refB.value = a
@@ -18,7 +18,7 @@ export function useRefPipe () {
     }, { immediate: true }))
   }
 
-  function bindPrimitiveRefsOfDifferentTypes<Ta, Tb> (refA: Ref<Ta>, refB: Ref<Tb>) {
+  function pipePrimitiveRefsOfDifferentTypes<Ta, Tb> (refA: Ref<Ta>, refB: Ref<Tb>) {
     stoppers.push(watch(refA, (a: Ta) => {
       if (JSON.stringify(a) !== JSON.stringify(refB.value)) {
         refB.value = <Tb>(a as unknown)
@@ -31,7 +31,7 @@ export function useRefPipe () {
     }, { immediate: true }))
   }
 
-  function bindObjectRefs<T> (refA: Ref<T>, refB: Ref<T>) {
+  function pipeObjectRefs<T> (refA: Ref<T>, refB: Ref<T>) {
     stoppers.push(watch(refA, (a: T) => {
       if (JSON.stringify(a) !== JSON.stringify(refB.value)) {
         refB.value = a
@@ -44,7 +44,7 @@ export function useRefPipe () {
     }, { immediate: true }))
   }
 
-  function bindArraysRefsOfDifferentTypes<Ta, Tb> (refA: Ref<Ta[]>, refB: Ref<Tb[]>, AtoB: ConverterCallBack<Ta, Tb>, BtoA: ConverterCallBack<Tb, Ta>) {
+  function pipeArraysRefsOfDifferentTypes<Ta, Tb> (refA: Ref<Ta[]>, refB: Ref<Tb[]>, AtoB: ConverterCallBack<Ta, Tb>, BtoA: ConverterCallBack<Tb, Ta>) {
     stoppers.push(watch(refA, (a: Ta[]) => {
       const AasB = a.map(el => AtoB(el))
       if (JSON.stringify(AasB) !== JSON.stringify(refB.value)) {
@@ -63,5 +63,5 @@ export function useRefPipe () {
     stoppers.forEach(stopper => stopper())
   })
 
-  return { bindPrimitiveRefs, bindObjectRefs, bindPrimitiveRefsOfDifferentTypes, bindArraysRefsOfDifferentTypes }
+  return { pipePrimitiveRefs, pipeObjectRefs, pipePrimitiveRefsOfDifferentTypes, pipeArraysRefsOfDifferentTypes }
 }
