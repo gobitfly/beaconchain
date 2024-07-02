@@ -41,7 +41,7 @@ const accountSub: AccountSubscriptionState = {
   erc20: -1,
   erc721: true,
   erc1155: false,
-  networks: [1, 100, 8453],
+  networks: [17000, 10200],
   ignoreSpam: true
 }
 

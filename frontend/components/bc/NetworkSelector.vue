@@ -27,9 +27,9 @@ const buttons = computed(() => {
 })
 
 if (Array.isArray(liveState.value)) {
-  pipeArraysRefsOfDifferentTypes(selectionMulti, liveState as ModelRef<ChainID[]>)
+  pipeArraysRefsOfDifferentTypes(liveState as ModelRef<ChainID[]>, selectionMulti)
 } else {
-  pipePrimitiveRefsOfDifferentTypes(selectionSingle, liveState as ModelRef<ChainID>)
+  pipePrimitiveRefsOfDifferentTypes(liveState as ModelRef<ChainID>, selectionSingle)
 }
 </script>
 
