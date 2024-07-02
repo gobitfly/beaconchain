@@ -10,7 +10,9 @@ interface Props {
     componentProps?: any,
     componentClass?: string,
     value: string,
-    disabled?: boolean
+    tooltip?: string,
+    disabled?: boolean,
+
   }[],
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
@@ -47,6 +49,7 @@ function onButtonClicked (value: string) {
       :text="button.text"
       :sub-text="button.subText"
       :selected="values[button.value]"
+      :tooltip="button.tooltip"
       :disabled="button.disabled"
       @click="!button.disabled && onButtonClicked(button.value)"
     >

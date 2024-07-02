@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import type { ChainIDs } from '~/types/network'
+import type { ChainID } from '~/types/network'
 
 const props = defineProps<{
   tPath: string,
@@ -13,7 +13,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const type = computed(() => props.inputType || 'binary')
-const state = defineModel<boolean|number|ChainIDs[]>({ required: true })
+const state = defineModel<boolean|number|ChainID[]>({ required: true })
 const checked = ref<boolean>(false)
 const inputted = ref('')
 
@@ -134,7 +134,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       />
     </div>
     <div v-else class="right">
-      <NotificationsNetworkSelector />
+      <BcNetworkSelector /><!--v-model:multiselect="state" -->
     </div>
   </div>
 </template>

@@ -1,4 +1,4 @@
-import { ChainIDs } from './network'
+import { ChainID } from './network'
 
 export type ValidatorSubscriptionState = {
   offlineValidator: boolean,
@@ -18,6 +18,6 @@ export type AccountSubscriptionState = {
   erc20: number,
   erc721: boolean,
   erc1155: boolean,
-  networks: ChainIDs[],
+  networks: ChainID[],
   ignoreSpam: boolean
 }

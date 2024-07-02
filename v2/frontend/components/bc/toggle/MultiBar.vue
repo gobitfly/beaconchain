@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type MultiBarItem } from '~/types/multiBar'
 
 interface Props {
-  icons: MultiBarItem[]
+  buttons: MultiBarItem[]
 }
 
 const props = defineProps<Props>()
@@ -11,7 +11,7 @@ const props = defineProps<Props>()
 const selected = defineModel<string[]>({ required: true })
 
 const inital: Record<string, boolean> = {}
-const modelValues = ref<Record<string, boolean>>(props.icons.reduce((map, { value }) => {
+const modelValues = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
   map[value] = selected.value.includes(value)
   return map
 }, inital))
@@ -31,16 +31,17 @@ watch(modelValues, () => {
 <template>
   <div class="bc-togglebar">
     <BcToggleMultiBarButton
-      v-for="icon in props.icons"
+      v-for="icon in props.buttons"
       :key="icon.value"
       v-model="modelValues[icon.value]"
       :class="icon.className"
       :icon="icon.icon"
       :tooltip="icon.tooltip"
+      :disabled="icon.disabled"
     >
       <template #icon>
         <slot :name="icon.value">
-          <component :is="icon.component" v-if="icon.component" v-bind="icon.componentProps" class="max" />
+          <component :is="icon.component" v-if="icon.component" v-bind="icon.componentProps" :class="icon.componentClass" />
           <FontAwesomeIcon v-else-if="icon.icon" :icon="icon.icon" />
         </slot>
       </template>
@@ -57,9 +58,5 @@ watch(modelValues, () => {
   background-color: var(--container-background);
   border: solid 1px var(--container-border-color);
   border-radius: var(--border-radius);
-}
-.max {
-  width: 100%;
-  height: 100%;
 }
 </style>

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { type DashboardType } from '~/types/dashboard'
 import { type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
-import { ChainIDs } from '~/types/network'
+import { ChainID } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
@@ -20,7 +20,7 @@ const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
 const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
-const network = ref<ChainIDs>()
+const network = ref<ChainID>()
 const { dashboardKey, publicEntities } = useDashboardKey()
 const { fetch } = useCustomFetch()
 const route = useRoute()

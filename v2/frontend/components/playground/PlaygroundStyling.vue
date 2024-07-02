@@ -126,7 +126,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           <BcToggleMultiBarButton v-model="selected" :icon="faTable" />
         </div>
         <div>
-          <BcToggleMultiBar v-model="selectedList" :icons="completeList" style="margin-right: 10px;">
+          <BcToggleMultiBar v-model="selectedList" :buttons="completeList" style="margin-right: 10px;">
             <template #attestation>
               <IconSlotAttestation />
             </template>

@@ -6,6 +6,7 @@ import BcTooltip from '../BcTooltip.vue'
 interface Props {
   icon?: IconDefinition,
   falseIcon?: IconDefinition,
+  disabled?:boolean,
   tooltip?: string,
 }
 
@@ -28,7 +29,7 @@ const icon = computed(() => {
         <div>{{ selected ? $t('filter.enabled'): $t('filter.disabled') }}</div>
       </div>
     </template>
-    <ToggleButton v-model="selected" class="bc-toggle" on-label="''" off-icon="''">
+    <ToggleButton v-model="selected" class="bc-toggle" on-label="''" off-icon="''" :disabled="disabled">
       <template #icon="slotProps">
         <slot name="icon" v-bind="slotProps">
           <FontAwesomeIcon v-if="icon" :icon="icon" />
@@ -63,6 +64,10 @@ const icon = computed(() => {
       // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
       :deep(.p-button-label) {
         display: none;
+      }
+      &.p-disabled{
+        opacity: 0.5;
+        cursor: default;
       }
     }
   }
