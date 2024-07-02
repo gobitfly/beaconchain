@@ -3,14 +3,14 @@ import { type ModelRef, type WatchStopHandle } from 'vue'
 type vRef<T> = ModelRef<T|undefined> | Ref<T|undefined>
 interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
 
-// This composable solves 3 difficulties that arise when performing a two way binding of reactive variables:
-// 1. Different types. This is the main reason you need to bridge reactive variables: values of different types
-//    that must stay synchronized.
-// 2. Infinite loops. When one variable changes, the goal is to update the other one and you do not want that
-//    the update triggers the first one again and so on.
-// 3. At the moment the binding is created, it is typical that one variable has initial data and the other is
-//    empty. You do not want the empty one to erase the data when the binding starts. You want the data to
-//    update the other variable at first.
+/** This composable solves 3 difficulties that arise when performing a two way binding of reactive variables:
+ *  1. Different types. This is the main reason you need to bridge reactive variables: values of different types
+ *     that must stay synchronized.
+ *  2. Infinite loops. When one variable changes, the goal is to update the other one and you do not want that
+ *     the update triggers the first one again and so on.
+ *  3. At the moment the binding is created, it is typical that one variable has initial data and the other is
+ *     empty. You do not want the empty one to erase the initial data when the binding starts. You want this data
+ *     to update the other variable at first. */
 
 export function useRefBridge () {
   const stoppers: WatchStopHandle[] = []
@@ -40,7 +40,7 @@ export function useRefBridge () {
    * Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the second ref.
    * @param AtoB (optional) Callback/Arrow function that converts the elements of the first array into elements compatibles with the second array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
    * @param BtoA (optional) Callback/Arrow function that converts the elements of the second array into elements compatibles with the first array. If not provided, a basic conversion is performed, which is safe only between strings and numbers. */
-  function bridgeArraysRefs<Ta, Tb> (refA: vRef<Ta[]>, refB: vRef<Tb[]>, AtoB?: ConverterCallback<Ta, Tb>, BtoA?: ConverterCallback<Tb, Ta>) : void {
+  function bridgeArrayRefs<Ta, Tb> (refA: vRef<Ta[]>, refB: vRef<Tb[]>, AtoB?: ConverterCallback<Ta, Tb>, BtoA?: ConverterCallback<Tb, Ta>) : void {
     stoppers.push(watch(refA, () => {
       const AasB = refA.value ? refA.value.map(el => AtoB ? AtoB(el) : <Tb>(el as unknown)) : undefined
       if (JSON.stringify(AasB) !== JSON.stringify(refB.value)) {
@@ -79,5 +79,5 @@ export function useRefBridge () {
     stoppers.forEach(stopper => stopper())
   })
 
-  return { bridgePrimitiveRefs, bridgeObjectRefs, bridgeArraysRefs }
+  return { bridgePrimitiveRefs, bridgeArrayRefs, bridgeObjectRefs }
 }
