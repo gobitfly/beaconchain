@@ -4,7 +4,7 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
 interface Props {
   header?: string,
-  icon?: IconDefinition,
+  icon?: IconDefinition
 }
 
 const props = defineProps<Props>()
@@ -13,7 +13,9 @@ const props = defineProps<Props>()
 
 <template>
   <div class="tab-header">
-    <FontAwesomeIcon v-if="props.icon" :icon="props.icon" />
+    <slot name="icon">
+      <FontAwesomeIcon v-if="props.icon" :icon="props.icon" />
+    </slot>
     <span v-if="props.header">{{ props.header }}</span>
   </div>
 </template>
