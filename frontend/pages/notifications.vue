@@ -50,7 +50,11 @@ const openManageNotifications = () => {
       props: {
         header: $t('notifications.title')
       },
-      onClose: async () => await navigateTo('/login'),
+      onClose: async (response) => {
+        if (response?.data) {
+          await navigateTo('/login')
+        }
+      },
       data: {
         question: $t('notifications.login_question')
       }
