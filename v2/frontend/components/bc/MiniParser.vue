@@ -35,135 +35,106 @@
  *    hard-code the input in JS.
  *
 */
+
+import { type VNode } from 'vue'
 import { BcLink } from '#components'
 import { Target } from '~/types/links'
 
 const props = defineProps<{ input: string|string[], links?: Record<string, string> }>()
 
-const parsingResult = computed(() => {
-  if (!Array.isArray(props.input)) {
-    if (typeof props.input !== 'string') {
-      return []
-    }
-    inputArray.lines = (props.input.includes('\r\n')) ? props.input.split('\r\n') : props.input.split('\n')
-  } else {
-    inputArray.lines = props.input
-  }
-  return parse()
-})
-
 const Escapement = '\\'
 enum Tag { H1 = '#', H2 = '##', H3 = '###', Item = '-', Italic = '_', Bold = '*', Code = '`', LinkStart = '[', LinkMid = '](', LinkEnd = ')' }
 const OpeningTags = [Tag.Italic, Tag.Bold, Tag.Code, Tag.LinkStart]
-const FormatToStyle: Record<string, string> = { italic: 'font-style: italic;', bold: 'font-weight: bold;', code: 'font-family: monospace;' }
+const ClosingTags: Record<string, Tag> = { [Tag.Italic]: Tag.Italic, [Tag.Bold]: Tag.Bold, [Tag.Code]: Tag.Code, [Tag.LinkStart]: Tag.LinkEnd }
 
-type Formatting = { italic: boolean, bold: boolean, code: boolean }
-type Text = { text: string, format: Formatting}
-type Link = { link: string, caption: Text[], target: Target}
-type Block = Array<Text|Link>
-type List = { list: Block[] }
-type Title = { title: Block, height: number}
-type Parsed = Array<Title|List|Block>
+type VDOMnodes = Array<VNode|string>
 
 const inputArray = { lines: [] as string[], pos: 0 as number }
 
 /** converts the input into a tree that will be very easy to browse afterwards to generate a v-DOM */
-function parse () : Parsed {
-  const output: Parsed = []
-  for (let i = 0; i < inputArray.lines.length; i++) {
-    inputArray.lines[i] = replaceEscapements(inputArray.lines[i])
+function parse (props: {input: string|string[]}) : VDOMnodes {
+  if (!Array.isArray(props.input)) {
+    if (typeof props.input !== 'string') { return [] }
+    inputArray.lines = (props.input.includes('\r\n')) ? props.input.split('\r\n') : props.input.split('\n')
+  } else {
+    inputArray.lines = props.input
   }
+  inputArray.lines = inputArray.lines.map(line => replaceEscapements(line))
   inputArray.pos = 0
+  const output: VDOMnodes = []
   while (inputArray.pos < inputArray.lines.length) {
-    const line = inputArray.lines[inputArray.pos]
-    if (isLineATitle(line)) {
-      output.push(parseTitle({ title: [], height: 0 }, line))
-      inputArray.pos++
+    if (isLineATitle(inputArray.lines[inputArray.pos])) {
+      output.push(parseTitle())
     } else
-      if (isLineAnItemInList(line)) {
-        output.push(parseList({ list: [] }))
-      } else {
-        output.push(parseText([], line))
-        inputArray.pos++
-      }
+      if (isLineAnItemInList(inputArray.lines[inputArray.pos])) {
+        output.push(parseList())
+      } else
+        if (lineType() !== 'none') {
+          output.push(parseLine(lineType()))
+        } else {
+          inputArray.pos++
+        }
   }
   return output
 }
 
-function parseTitle (output: Title, line: string) : Title {
-  const { h, tag } = isLineATitle(line)!
-  output.title = parseText(output.title, line.slice(tag.length))
-  output.height = h
-  return output
+function parseTitle () : VNode {
+  const { height, tag } = isLineATitle(inputArray.lines[inputArray.pos])!
+  return h('h' + height, {}, parseText(inputArray.lines[inputArray.pos++].slice(tag.length)))
 }
 
-function parseList (output: List) : List {
-  while (inputArray.pos < inputArray.lines.length) {
-    if (!isLineAnItemInList(inputArray.lines[inputArray.pos])) {
-      return output // end of list
-    }
-    output.list.push(parseText([], inputArray.lines[inputArray.pos].slice(Tag.Item.length))) // new item
+function parseList () : VNode {
+  const items : VDOMnodes = []
+  while (inputArray.pos < inputArray.lines.length && isLineAnItemInList(inputArray.lines[inputArray.pos])) {
+    items.push(h('li', {}, parseText(inputArray.lines[inputArray.pos].slice(Tag.Item.length)))) // new item
     inputArray.pos++
   }
-  return output
+  return h('ul', {}, items)
 }
 
-function parseText (output: Block, text: string, format: Formatting = { italic: false, bold: false, code: false }) : Block {
+function parseLine (lineType: 'full'|'blank'|'none') : VNode {
+  const pos = inputArray.pos++
+  switch (lineType) {
+    case 'full' : return h('div', {}, parseText(inputArray.lines[pos]))
+    default : return h('br', {})
+  }
+}
+
+function parseText (text: string) : VDOMnodes {
   const { pos: openingTagPos, tag: openingTag } = findTag(text, 0)
-  if (openingTagPos < 0) { // no tag found
-    addTextPart(output, text, format)
-    return output
+  const { pos: closingTagPos } = findTag(text, openingTagPos + openingTag.length, ClosingTags[openingTag])
+  if (openingTagPos < 0 || closingTagPos < 0) { // First case: no tag, we can copy the raw line. Second case: syntax error (either the closing tag has been forgotten or nested tags have their closure swapped)
+    return [cleanText(text)] // so we output the text without parsing it
   }
-  // opening tag found
-  let closingTag: Tag
-  const middle = { ...format }
-  let middleIsAlink = false
+  // opening tag found.
+  const threeParts : VDOMnodes = []
+  if (openingTagPos > 0) {
+    threeParts.push(cleanText(text.slice(0, openingTagPos)))
+  }
+  const middle = text.slice(openingTagPos + openingTag.length, closingTagPos)
   switch (openingTag) {
-    case Tag.Italic : middle.italic = true; closingTag = Tag.Italic; break
-    case Tag.Bold : middle.bold = true; closingTag = Tag.Bold; break
-    case Tag.Code : middle.code = true; closingTag = Tag.Code; break
-    case Tag.LinkStart : middleIsAlink = true; closingTag = Tag.LinkEnd; break
-    default: return output
+    case Tag.Italic : threeParts.push(h('i', {}, parseText(middle))); break
+    case Tag.Bold : threeParts.push(h('b', {}, parseText(middle))); break
+    case Tag.Code : threeParts.push(h('span', { style: 'font-family: monospace;' }, cleanText(middle, true))); break
+    case Tag.LinkStart : threeParts.push(parseLink(middle)); break
   }
-  const { pos: closingTagPos } = findTag(text, openingTagPos + openingTag.length, closingTag)
-  if (closingTagPos < 0) { // syntax error: either the closing tag has been forgotten or nested tags have their closure swapped
-    addTextPart(output, text, format) // so we output the text without parsing it
-    return output
+  if (closingTagPos + ClosingTags[openingTag].length < text.length) {
+    threeParts.push(...parseText(text.slice(closingTagPos + ClosingTags[openingTag].length)))
   }
-  parseLeftMiddleRightTexts(output, text, [openingTagPos, openingTagPos + openingTag.length, closingTagPos, closingTagPos + closingTag.length], format, middle, middleIsAlink)
-  return output
+  return threeParts
 }
 
-function parseLeftMiddleRightTexts (output: Block, text: string, innerEnds: number[], leftRight: Formatting, middle: Formatting, middleIsAlink: boolean) : void {
-  if (innerEnds[0] > 0) { addTextPart(output, text.slice(0, innerEnds[0]), leftRight) }
-  if (middleIsAlink) {
-    parseLink(output, text.slice(innerEnds[1], innerEnds[2]), middle)
-  } else
-    if (middle.code) {
-      addTextPart(output, text.slice(innerEnds[1], innerEnds[2]), middle) // we do not parse anything inside
-    } else {
-      parseText(output, text.slice(innerEnds[1], innerEnds[2]), middle)
-    }
-  if (innerEnds[3] < text.length) { parseText(output, text.slice(innerEnds[3]), leftRight) }
-}
-
-function parseLink (output: Block, text: string, format: Formatting) {
+function parseLink (text: string) : VNode|string {
   // note: param `text` is of the form  `caption of the link](urlRef`  (both ends have been removed by the calling function)
   const { pos: middleTagPos } = findTag(text, 0, Tag.LinkMid)
-  const caption = parseText([], text.slice(0, middleTagPos), format) as Text[]
-  const urlRef = text.slice(middleTagPos + Tag.LinkMid.length)
-  const link = props.links && urlRef in props.links ? props.links[urlRef] : urlRef
-  const target = (link.includes('://') || link.startsWith('www.')) ? Target.External : Target.Internal // correct 99% of the time I suppose
-  output.push({ caption, link, target })
-}
-
-function isLineATitle (line: string) : { h: number, tag: Tag } | undefined {
-  for (const title of [{ h: 3, tag: Tag.H3 }, { h: 2, tag: Tag.H2 }, { h: 1, tag: Tag.H1 }]) {
-    if (line.startsWith(title.tag)) { return title }
+  if (middleTagPos <= 0) {
+    return cleanText(text)
   }
+  const urlRef = text.slice(middleTagPos + Tag.LinkMid.length)
+  const to = props.links && urlRef in props.links ? props.links[urlRef] : urlRef
+  const target = (to.includes('://') || to.startsWith('www.')) ? Target.External : Target.Internal // correct 99% of the time I suppose
+  return h(BcLink, { to, target, class: 'link' }, () => parseText(text.slice(0, middleTagPos)))
 }
-
-const isLineAnItemInList = (line: string) => line.startsWith(Tag.Item)
 
 const ESC = '\u001B'
 
@@ -187,8 +158,6 @@ function findTag (text: string, start: number, wanted?: Tag) : { pos: number, ta
   return closest
 }
 
-const addTextPart = (output: Block, text: string, format: Formatting) => output.push({ text: removeEscapements(text), format: { ...format } })
-
 /** replaces all `\` with `\u001B` and all `\\` with `\`  */
 function replaceEscapements (input: string) : string {
   const DoubleEsc = Escapement + Escapement
@@ -211,56 +180,32 @@ function replaceEscapements (input: string) : string {
   return (output + input.slice(posIn))
 }
 
-const removeEscapements = (raw: string) => raw.replaceAll(ESC, '')
+function cleanText (raw: string, forceSpaces = false) {
+  if (forceSpaces) {
+    raw = raw.replaceAll(' ', '\xA0')
+  }
+  return raw.replaceAll(ESC, '')
+}
 
-function getLineStatus (parsed: Parsed, line: Block, pos: number) : 'skip'|'blank'|'ok' {
-  if (line.length > 1 || !('text' in line[0]) || (line[0] as Text).text) {
-    return 'ok'
+function isLineATitle (line: string) : { height: number, tag: Tag } | undefined {
+  for (const title of [{ height: 3, tag: Tag.H3 }, { height: 2, tag: Tag.H2 }, { height: 1, tag: Tag.H1 }]) {
+    if (line.startsWith(title.tag)) { return title }
   }
-  for (const skippingReasons of ['title']) { // in the future, if new structures allow surrounding blank lines to be skipped, add them to this list
-    if ((pos === 0 || pos === parsed.length - 1 || skippingReasons in parsed[pos - 1] || skippingReasons in parsed[pos + 1])) { return 'skip' }
-  }
+}
+
+const isLineAnItemInList = (line: string) => line.startsWith(Tag.Item)
+
+function lineType () : 'full'|'blank'|'none' {
+  const pos = inputArray.pos
+  if (inputArray.lines[pos].length > 0) { return 'full' }
+  if (pos === 0 || pos === inputArray.lines.length - 1 || isLineATitle(inputArray.lines[pos - 1]) || isLineATitle(inputArray.lines[pos + 1])) { return 'none' }
   return 'blank'
-}
-
-function RenderAll (props: {parsed: Parsed}) : any[] {
-  const output = []
-  for (let k = 0; k < props.parsed.length; k++) {
-    const section = props.parsed[k]
-    if ('title' in section) {
-      output.push(h('h' + section.height, {}, renderBlock(section.title)))
-    } else
-      if ('list' in section) {
-        const list = section.list.map(item => h('li', {}, renderBlock(item)))
-        output.push(h('ul', {}, list))
-      } else {
-        switch (getLineStatus(props.parsed, section, k)) {
-          case 'blank' : output.push(h('br', {})); break
-          case 'ok' : output.push(h('div', {}, renderBlock(section))); break
-        }
-      }
-  }
-  return output
-}
-
-function renderBlock (block: Block) : any[] {
-  const output = []
-  for (const part of block) {
-    if ('link' in part) {
-      output.push(h(BcLink, { to: part.link, target: part.target, class: 'link' }, () => renderBlock(part.caption)))
-    } else {
-      const style = Object.entries(part.format).filter(form => form[1]).map(form => FormatToStyle[form[0]]).join(' ')
-      const text = (part.format.code) ? part.text.replaceAll(' ', '\xA0') : part.text
-      output.push((!style.length) ? text : h('span', { style }, text))
-    }
-  }
-  return output
 }
 </script>
 
 <template>
   <div>
-    <RenderAll :parsed="parsingResult" />
+    <parse :input="props.input" />
   </div>
 </template>
 
