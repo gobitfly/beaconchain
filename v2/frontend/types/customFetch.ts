@@ -234,8 +234,8 @@ export const mapping: Record<string, MappingData> = {
     mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
-    path: '/validator-dashboards/{dashboard_id}/validator-indices',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validator-indices`,
+    path: '/validator-dashboards/{dashboard_id}/summary/validators',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false
   },
   [API_PATH.LATEST_STATE]: {

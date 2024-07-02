@@ -799,7 +799,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -810,21 +810,39 @@ func (h *HandlerService) InternalGetValidatorDashboardValidatorIndices(w http.Re
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_24h, last_7d, last_30d
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last24h, enums.TimePeriods.Last7d, enums.TimePeriods.Last30d}
+	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
+	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardValidatorIndices(*dashboardId, groupId, duty, period)
+	// get indices based on duty
+	var indices interface{}
+	duties := enums.ValidatorDuties
+	switch duty {
+	case duties.None:
+		indices, err = h.dai.GetValidatorDashboardSummaryValidators(*dashboardId, groupId)
+	case duties.Sync:
+		indices, err = h.dai.GetValidatorDashboardSyncSummaryValidators(*dashboardId, groupId, period)
+	case duties.Slashed:
+		indices, err = h.dai.GetValidatorDashboardSlashingsSummaryValidators(*dashboardId, groupId, period)
+	case duties.Proposal:
+		indices, err = h.dai.GetValidatorDashboardProposalSummaryValidators(*dashboardId, groupId, period)
+	}
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	// map indices to response format
+	data, err := mapVDBIndices(indices)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
-	response := types.InternalGetValidatorDashboardValidatorIndicesResponse{
+	response := types.InternalGetValidatorDashboardSummaryValidatorsResponse{
 		Data: data,
 	}
 
