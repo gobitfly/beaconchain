@@ -6,6 +6,7 @@ interface Props {
   cursor: Cursor
   pageSize: number
   paging?: Paging
+  stepperOnly?: boolean
 }
 const props = defineProps<Props>()
 
@@ -109,14 +110,14 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
         </div>
       </template>
       <Dropdown
-        v-if="props.pageSize"
+        v-if="props.pageSize && !stepperOnly"
         :model-value="props.pageSize"
         :options="pageSizes"
         class="table small"
         @change="(event) => setPageSize(event.value)"
       />
     </div>
-    <div class="left-info">
+    <div v-if="!stepperOnly" class="left-info">
       <slot name="bc-table-footer-left">
         <span v-if="props.paging?.total_count">
           {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}

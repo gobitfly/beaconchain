@@ -270,6 +270,36 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
+                    {{ $t('table.from') }}
+                  </div>
+                  <BcFormatHash
+                    v-if="slotProps.data.index !== undefined"
+                    :hash="slotProps.data.from.hash"
+                    :ens="slotProps.data.from.ens"
+                    :no-wrap="true"
+                    type="address"
+                  />
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('dashboard.validator.col.depositor') }}
+                  </div>
+                  <BcFormatHash
+                    v-if="slotProps.data.index !== undefined"
+                    :hash="slotProps.data.depositor.hash"
+                    :ens="slotProps.data.depositor.ens"
+                    :no-wrap="true"
+                    type="address"
+                  />
+                </div>
+                <div class="row">
+                  <div class="label">
+                    {{ $t('block.col.tx_hash') }}
+                  </div>
+                  <BcFormatHash v-if="slotProps.data.index !== undefined" :hash="slotProps.data.tx_hash" :no-wrap="true" type="tx" />
+                </div>
+                <div class="row">
+                  <div class="label">
                     {{ $t('dashboard.validator.col.withdrawal_credential') }}
                   </div>
                   <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" :no-wrap="true" />

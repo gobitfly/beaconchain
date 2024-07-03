@@ -46,7 +46,7 @@ const { fetch } = useCustomFetch()
 
 const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 
-const data = ref<ChartData<number, string> | undefined >()
+const data = ref<ChartData<number, string> | undefined>()
 const isLoading = ref(false)
 
 await useAsyncData('validator_dashboard_rewards_chart', async () => {
@@ -78,7 +78,7 @@ const colors = computed(() => {
 })
 
 const styles = window.getComputedStyle(document.documentElement)
-const fontFamily = styles.getPropertyValue('--roboto-family')
+const fontFamily = `${styles.getPropertyValue('--roboto-family')}, ${styles.getPropertyValue('--roboto-family')}, Roboto`
 const textSize = parseInt(styles.getPropertyValue('--standard_text_font_size'))
 const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
@@ -102,13 +102,13 @@ const mapSeriesData = (data: RewardChartSeries) => {
 }
 
 const series = computed<RewardChartSeries[]>(() => {
-  const list:RewardChartSeries[] = []
+  const list: RewardChartSeries[] = []
   if (!data.value?.series) {
     return list
   }
 
   const categoryCount = data.value?.categories.length ?? 0
-  const clSeries:RewardChartSeries = {
+  const clSeries: RewardChartSeries = {
     id: 1,
     name: $t('dashboard.validator.rewards.chart.cl'),
     color: colors.value.data.cl,
@@ -121,7 +121,7 @@ const series = computed<RewardChartSeries[]>(() => {
     formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
     data: Array.from(Array(categoryCount)).map(() => 0)
   }
-  const elSeries:RewardChartSeries = {
+  const elSeries: RewardChartSeries = {
     id: 2,
     name: $t('dashboard.validator.rewards.chart.el'),
     color: colors.value.data.el,
@@ -181,6 +181,7 @@ const option = computed<ECBasicOption | undefined>(() => {
     grid: {
       containLabel: true,
       top: 20,
+      bottom: 80,
       left: '5%',
       right: '5%'
     },
@@ -189,6 +190,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       data: data.value?.categories,
       axisLabel: {
         fontSize: textSize,
+        fontWeight: fontWeightMedium,
         lineHeight: 20,
         formatter: (value: number) => {
           const date = formatEpochToDate(value, $t('locales.date'))
@@ -205,6 +207,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       silent: true,
       axisLabel: {
         formatter: valueFormatter.value,
+        fontWeight: fontWeightMedium,
         fontSize: textSize,
         padding: [0, 10, 0, 0]
       },
@@ -224,7 +227,7 @@ const option = computed<ECBasicOption | undefined>(() => {
     legend: {
       type: 'scroll',
       orient: 'horizontal',
-      bottom: 40,
+      bottom: 50,
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
@@ -237,7 +240,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       triggerOn: 'click',
       padding: 0,
       borderColor: colors.value.background,
-      formatter (params : any) : HTMLElement {
+      formatter (params: any): HTMLElement {
         const startEpoch = parseInt(params[0].axisValue)
         const dataIndex = params[0].dataIndex
 
@@ -270,6 +273,3 @@ const option = computed<ECBasicOption | undefined>(() => {
     <VChart v-else class="chart" :option="option" autoresize />
   </ClientOnly>
 </template>
-
-<style lang="scss">
-</style>

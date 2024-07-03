@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"math/big"
@@ -23,7 +24,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardWithdrawals(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	result := make([]t.VDBWithdrawalsTableRow, 0)
 	var paging t.Paging
 
@@ -455,7 +456,7 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	return timeToWithdrawal
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
 	result := &t.VDBTotalWithdrawalsData{
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}

@@ -8,14 +8,6 @@ const APIcallTimeout = 30 * 1000 // 30 seconds
 const pathNames = Object.values(API_PATH)
 type PathName = typeof pathNames[number]
 
-function addQueryParams (path: string, query?: PathValues) {
-  if (!query) {
-    return path
-  }
-  const q = Object.entries(query).filter(([_, value]) => value !== undefined).map(([key, value]) => `${key}=${value}`).join('&')
-  return `${path}?${q}`
-}
-
 export function useCustomFetch () {
   const headers = useRequestHeaders(['cookie'])
   const xForwardedFor = useRequestHeader('x-forwarded-for')
@@ -44,7 +36,7 @@ export function useCustomFetch () {
     const runtimeConfig = useRuntimeConfig()
     const showInDevelopment = Boolean(runtimeConfig.showInDevelopment)
     const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = runtimeConfig
-    const path = addQueryParams(map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path, query)
+    const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
 
     if (process.server) {
@@ -55,6 +47,7 @@ export function useCustomFetch () {
     if (apiKey) {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
+    options.query = { ...options.query, ...query }
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
 
