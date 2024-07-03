@@ -34,6 +34,7 @@ func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader 
 func (s *Services) InitServices() {
 	go s.startSlotVizDataService()
 	go s.startIndexMappingService()
+	go s.startEfficiencyDataService()
 	go s.startEmailSenderService()
 
 	log.Infof("initializing prices...")

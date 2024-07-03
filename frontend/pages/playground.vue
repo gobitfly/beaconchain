@@ -55,6 +55,9 @@ onMounted(async () => {
       <TabPanel header="Slot Viz">
         <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
       </TabPanel>
+      <TabPanel header="Subset Validators">
+        <PlaygroundSubsetList />
+      </TabPanel>
       <TabPanel header="Manage Validators">
         <PlaygroundDashboardValidatorManageValidators />
       </TabPanel>

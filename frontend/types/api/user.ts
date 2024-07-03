@@ -88,6 +88,7 @@ export interface PremiumPerks {
   validator_groups_per_dashboard: number /* uint64 */;
   share_custom_dashboards: boolean;
   manage_dashboard_via_api: boolean;
+  bulk_adding: boolean;
   heatmap_history_seconds: number /* uint64 */;
   summary_chart_history_seconds: number /* uint64 */;
   email_notifications_per_day: number /* uint64 */;
