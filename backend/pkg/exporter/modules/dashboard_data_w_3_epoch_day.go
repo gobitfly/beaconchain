@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"regexp"
@@ -147,7 +148,10 @@ func (d *epochToDayAggregator) aggregateUtcDayWithBounds(firstEpochOfDay, lastEp
 
 	boundsStart, _ := getDayAggregateBounds(firstEpochOfDay)
 
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.AlloyWriter.BeginTxx(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
@@ -186,7 +190,10 @@ func (d *epochToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, ti
 }
 
 func (d *epochToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.AlloyWriter.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %[5]s_%[1]s_%[2]s
 		PARTITION OF %[5]s
 			FOR VALUES FROM ('%[3]s') TO ('%[4]s')
@@ -244,7 +251,10 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 	dayOldBoundsStart, latestHourlyEpoch := d.getBootstrapBounds(latestHourlyEpochBounds.EpochEnd, 1)
 
 	var found bool
-	err = db.AlloyWriter.Get(&found, fmt.Sprintf(`
+	err = db.AlloyWriter.GetContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(5*time.Minute))
+		return a
+	}(), &found, fmt.Sprintf(`
 		SELECT true FROM %s WHERE epoch_start = $1 LIMIT 1 
 	`, edb.HourWriterTableName), dayOldBoundsStart)
 	if err != nil || !found {
@@ -254,12 +264,18 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 	latestHourlyStartBound, _ := getHourAggregateBounds(latestHourlyEpoch - 1) // excl
 	d.log.Infof("latestHourlyEpoch (excl): %d, dayOldHourlyEpoch: %d, latestHourlyStartBound (incl): %d", latestHourlyEpoch, dayOldBoundsStart, latestHourlyStartBound)
 
-	_, err = tx.Exec(fmt.Sprintf(`TRUNCATE %s`, edb.RollingDailyWriterTable))
+	_, err = tx.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`TRUNCATE %s`, edb.RollingDailyWriterTable))
 	if err != nil {
 		return errors.Wrap(err, "failed to delete old rolling 24h aggregate")
 	}
 
-	_, err = tx.Exec(fmt.Sprintf(`
+	_, err = tx.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), fmt.Sprintf(`
 		WITH
 			epoch_ends as (
 				SELECT max(epoch_end) as epoch_end FROM %[2]s WHERE epoch_start = $2 LIMIT 1
@@ -475,6 +491,9 @@ func (d *epochToDayAggregator) deleteDayPartition(epochStartFrom, epochStartTo s
 		edb.DayWriterTableName, epochStartFrom, epochStartTo,
 	)
 
-	_, err := db.AlloyWriter.Exec(query)
+	_, err := db.AlloyWriter.ExecContext(func() context.Context {
+		a, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Minute))
+		return a
+	}(), query)
 	return err
 }
