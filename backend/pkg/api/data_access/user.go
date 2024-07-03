@@ -261,6 +261,44 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	return userInfo, nil
 }
 
+const hour uint64 = 3600
+const day = 24 * hour
+const week = 7 * day
+const month = 30 * day
+const fullHistory = math.MaxUint64
+
+var freeTierProduct t.PremiumProduct = t.PremiumProduct{
+	ProductName: "Free",
+	PremiumPerks: t.PremiumPerks{
+		AdFree:                      false,
+		ValidatorDasboards:          1,
+		ValidatorsPerDashboard:      20,
+		ValidatorGroupsPerDashboard: 1,
+		ShareCustomDashboards:       false,
+		ManageDashboardViaApi:       false,
+		BulkAdding:                  false,
+		ChartHistorySeconds: t.ChartHistorySeconds{
+			Epoch:  0,
+			Hourly: 12 * hour,
+			Daily:  0,
+			Weekly: 0,
+		},
+		EmailNotificationsPerDay:        5,
+		ConfigureNotificationsViaApi:    false,
+		ValidatorGroupNotifications:     1,
+		WebhookEndpoints:                1,
+		MobileAppCustomThemes:           false,
+		MobileAppWidget:                 false,
+		MonitorMachines:                 1,
+		MachineMonitoringHistorySeconds: 3600 * 3,
+		CustomMachineAlerts:             false,
+	},
+	PricePerMonthEur: 0,
+	PricePerYearEur:  0,
+	ProductIdMonthly: "premium_free",
+	ProductIdYearly:  "premium_free.yearly",
+}
+
 func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 	// TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
@@ -333,45 +371,23 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			},
 		},
 		PremiumProducts: []t.PremiumProduct{
-			{
-				ProductName: "Free",
-				PremiumPerks: t.PremiumPerks{
-					AdFree:                          false,
-					ValidatorDasboards:              1,
-					ValidatorsPerDashboard:          20,
-					ValidatorGroupsPerDashboard:     1,
-					ShareCustomDashboards:           false,
-					ManageDashboardViaApi:           false,
-					BulkAdding:                      false,
-					HeatmapHistorySeconds:           0,
-					SummaryChartHistorySeconds:      3600 * 12,
-					EmailNotificationsPerDay:        5,
-					ConfigureNotificationsViaApi:    false,
-					ValidatorGroupNotifications:     1,
-					WebhookEndpoints:                1,
-					MobileAppCustomThemes:           false,
-					MobileAppWidget:                 false,
-					MonitorMachines:                 1,
-					MachineMonitoringHistorySeconds: 3600 * 3,
-					CustomMachineAlerts:             false,
-				},
-				PricePerMonthEur: 0,
-				PricePerYearEur:  0,
-				ProductIdMonthly: "premium_free",
-				ProductIdYearly:  "premium_free.yearly",
-			},
+			freeTierProduct,
 			{
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                          true,
-					ValidatorDasboards:              1,
-					ValidatorsPerDashboard:          100,
-					ValidatorGroupsPerDashboard:     3,
-					ShareCustomDashboards:           true,
-					ManageDashboardViaApi:           false,
-					BulkAdding:                      true,
-					HeatmapHistorySeconds:           3600 * 24 * 7,
-					SummaryChartHistorySeconds:      3600 * 24 * 7,
+					AdFree:                      true,
+					ValidatorDasboards:          1,
+					ValidatorsPerDashboard:      100,
+					ValidatorGroupsPerDashboard: 3,
+					ShareCustomDashboards:       true,
+					ManageDashboardViaApi:       false,
+					BulkAdding:                  true,
+					ChartHistorySeconds: t.ChartHistorySeconds{
+						Epoch:  day,
+						Hourly: 7 * day,
+						Daily:  month,
+						Weekly: 0,
+					},
 					EmailNotificationsPerDay:        15,
 					ConfigureNotificationsViaApi:    false,
 					ValidatorGroupNotifications:     3,
@@ -392,15 +408,19 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			{
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                          true,
-					ValidatorDasboards:              2,
-					ValidatorsPerDashboard:          300,
-					ValidatorGroupsPerDashboard:     10,
-					ShareCustomDashboards:           true,
-					ManageDashboardViaApi:           false,
-					BulkAdding:                      true,
-					HeatmapHistorySeconds:           3600 * 24 * 30,
-					SummaryChartHistorySeconds:      3600 * 24 * 14,
+					AdFree:                      true,
+					ValidatorDasboards:          2,
+					ValidatorsPerDashboard:      300,
+					ValidatorGroupsPerDashboard: 10,
+					ShareCustomDashboards:       true,
+					ManageDashboardViaApi:       false,
+					BulkAdding:                  true,
+					ChartHistorySeconds: t.ChartHistorySeconds{
+						Epoch:  5 * day,
+						Hourly: month,
+						Daily:  2 * month,
+						Weekly: 8 * week,
+					},
 					EmailNotificationsPerDay:        20,
 					ConfigureNotificationsViaApi:    false,
 					ValidatorGroupNotifications:     10,
@@ -421,15 +441,19 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			{
 				ProductName: "Orca",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                          true,
-					ValidatorDasboards:              2,
-					ValidatorsPerDashboard:          1000,
-					ValidatorGroupsPerDashboard:     30,
-					ShareCustomDashboards:           true,
-					ManageDashboardViaApi:           true,
-					BulkAdding:                      true,
-					HeatmapHistorySeconds:           3600 * 24 * 365,
-					SummaryChartHistorySeconds:      3600 * 24 * 365,
+					AdFree:                      true,
+					ValidatorDasboards:          2,
+					ValidatorsPerDashboard:      1000,
+					ValidatorGroupsPerDashboard: 30,
+					ShareCustomDashboards:       true,
+					ManageDashboardViaApi:       true,
+					BulkAdding:                  true,
+					ChartHistorySeconds: t.ChartHistorySeconds{
+						Epoch:  3 * week,
+						Hourly: 6 * month,
+						Daily:  12 * month,
+						Weekly: fullHistory,
+					},
 					EmailNotificationsPerDay:        50,
 					ConfigureNotificationsViaApi:    true,
 					ValidatorGroupNotifications:     60,
@@ -472,6 +496,10 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			},
 		},
 	}, nil
+}
+
+func (d *DataAccessService) GetFreeTierPerks() (*t.PremiumPerks, error) {
+	return &freeTierProduct.PremiumPerks, nil
 }
 
 func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {

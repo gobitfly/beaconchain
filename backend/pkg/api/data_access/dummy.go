@@ -117,6 +117,12 @@ func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
 	return &r, err
 }
 
+func (d *DummyService) GetFreeTierPerks() (*t.PremiumPerks, error) {
+	r := t.PremiumPerks{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
 func (d *DummyService) GetValidatorDashboardInfo(dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	r := t.DashboardInfo{}
 	err := commonFakeData(&r)
@@ -274,7 +280,7 @@ func (d *DummyService) GetValidatorDashboardGroupSummary(dashboardId t.VDBId, gr
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId, groupIds []uint64, efficiency enums.VDBSummaryChartEfficiencyType) (*t.ChartData[int, float64], error) {
+func (d *DummyService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId, groupIds []uint64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
 	r := t.ChartData[int, float64]{}
 	err := commonFakeData(&r)
 	return &r, err

@@ -564,3 +564,47 @@ var VDBSummaryChartEfficiencyFilters = struct {
 	VDBSummaryChartSync,
 	VDBSummaryChartProposal,
 }
+
+// Chart Aggregation Interval
+
+type ChartAggregation int
+
+var _ EnumFactory[ChartAggregation] = ChartAggregation(0)
+
+const (
+	IntervalEpoch ChartAggregation = iota
+	IntervalHourly
+	IntervalDaily
+	IntervalWeekly
+)
+
+func (c ChartAggregation) Int() int {
+	return int(c)
+}
+
+func (ChartAggregation) NewFromString(s string) ChartAggregation {
+	switch s {
+	case "epoch":
+		return IntervalEpoch
+	case "hourly":
+		return IntervalHourly
+	case "daily":
+		return IntervalDaily
+	case "weekly":
+		return IntervalWeekly
+	default:
+		return ChartAggregation(-1)
+	}
+}
+
+var ChartAggregations = struct {
+	Epoch  ChartAggregation
+	Hourly ChartAggregation
+	Daily  ChartAggregation
+	Weekly ChartAggregation
+}{
+	IntervalEpoch,
+	IntervalHourly,
+	IntervalDaily,
+	IntervalWeekly,
+}

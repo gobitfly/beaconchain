@@ -81,6 +81,12 @@ export interface ExtraDashboardValidatorsPremiumAddon {
   stripe_price_id_monthly: string;
   stripe_price_id_yearly: string;
 }
+export interface ChartHistorySeconds {
+  epoch: number /* uint64 */;
+  hourly: number /* uint64 */;
+  daily: number /* uint64 */;
+  weekly: number /* uint64 */;
+}
 export interface PremiumPerks {
   ad_free: boolean; // note that this is somhow redunant, since there is already ApiPerks.NoAds
   validator_dashboards: number /* uint64 */;
@@ -89,8 +95,7 @@ export interface PremiumPerks {
   share_custom_dashboards: boolean;
   manage_dashboard_via_api: boolean;
   bulk_adding: boolean;
-  heatmap_history_seconds: number /* uint64 */;
-  summary_chart_history_seconds: number /* uint64 */;
+  chart_history_seconds: ChartHistorySeconds;
   email_notifications_per_day: number /* uint64 */;
   configure_notifications_via_api: boolean;
   validator_group_notifications: number /* uint64 */;

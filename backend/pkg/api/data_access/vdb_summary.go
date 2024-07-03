@@ -858,7 +858,7 @@ func (d *DataAccessService) internal_getElClAPR(validators []t.VDBValidator, day
 
 // for summary charts: series id is group id, no stack
 
-func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId, groupIds []uint64, efficiency enums.VDBSummaryChartEfficiencyType) (*t.ChartData[int, float64], error) {
+func (d *DataAccessService) GetValidatorDashboardSummaryChart(dashboardId t.VDBId, groupIds []uint64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
 	ret := &t.ChartData[int, float64]{}
 
 	type queryResult struct {

@@ -21,12 +21,13 @@ type VDBOverviewGroup struct {
 }
 
 type VDBOverviewData struct {
-	Name       string                                     `json:"name,omitempty"`
-	Groups     []VDBOverviewGroup                         `json:"groups"`
-	Validators VDBOverviewValidators                      `json:"validators"`
-	Efficiency PeriodicValues[float64]                    `json:"efficiency"`
-	Rewards    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
-	Apr        PeriodicValues[ClElValue[float64]]         `json:"apr"`
+	Name                string                                     `json:"name,omitempty"`
+	Groups              []VDBOverviewGroup                         `json:"groups"`
+	Validators          VDBOverviewValidators                      `json:"validators"`
+	Efficiency          PeriodicValues[float64]                    `json:"efficiency"`
+	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
+	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
+	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
 }
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
