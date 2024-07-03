@@ -89,13 +89,6 @@ type ExtraDashboardValidatorsPremiumAddon struct {
 	StripePriceIdYearly      string  `json:"stripe_price_id_yearly"`
 }
 
-type ChartHistorySeconds struct {
-	Epoch  uint64 `json:"epoch"`
-	Hourly uint64 `json:"hourly"`
-	Daily  uint64 `json:"daily"`
-	Weekly uint64 `json:"weekly"`
-}
-
 type PremiumPerks struct {
 	AdFree                          bool                `json:"ad_free"` // note that this is somhow redunant, since there is already ApiPerks.NoAds
 	ValidatorDasboards              uint64              `json:"validator_dashboards"`
