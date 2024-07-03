@@ -12,19 +12,15 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
-const { bridgeArrayRefs } = useRefBridge()
 
 const type = computed(() => props.inputType || 'binary')
 const state = defineModel<boolean|number|ChainID[]>({ required: true })
-const networkSelectorState = ref<ChainID[]>([])
 const checked = ref<boolean>(false)
 const inputted = ref('')
 
 refreshUIfromState() // initial loading
 
-if (props.inputType === 'networks') {
-  bridgeArrayRefs(state as ModelRef<ChainID[]>, networkSelectorState)
-}
+const networkSelectorState = (props.inputType !== 'networks') ? undefined : state as ModelRef<ChainID[]>
 
 const tooltipLines = computed(() => {
   let options
