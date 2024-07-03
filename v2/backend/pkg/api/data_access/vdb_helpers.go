@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 )
 
@@ -79,10 +81,25 @@ type ValidatorDashboardRepository interface {
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
 
-func (d DataAccessService) getDashboardValidators(ctx context.Context, dashboardId t.VDBId) ([]t.VDBValidator, error) {
+func (d DataAccessService) getDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupIds []uint64) ([]t.VDBValidator, error) {
 	if len(dashboardId.Validators) == 0 {
+		ds := goqu.Dialect("postgres").
+			Select("validator_index").
+			From("users_val_dashboards_validators").
+			Where(goqu.L("dashboard_id = ?", dashboardId.Id)).
+			Order(goqu.I("validator_index").Asc())
+
+		if len(groupIds) > 0 {
+			ds = ds.Where(goqu.L("group_id = ANY(?)", pq.Array(groupIds)))
+		}
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return nil, err
+		}
+
 		var validatorsArray []t.VDBValidator
-		err := d.alloyReader.Select(&validatorsArray, `SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1 ORDER BY validator_index`, dashboardId.Id)
+		err = d.alloyReader.Select(&validatorsArray, query, args...)
 		return validatorsArray, err
 	}
 	return dashboardId.Validators, nil

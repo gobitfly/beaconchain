@@ -50,7 +50,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		// (query validators twice: once without search applied (fast) to pre-filter scheduled proposals (which are sent to db, want to minimize),
 		// again for blocks query with search applied to not having to send potentially huge validator-list)
 		startTime := time.Now()
-		valis, err := d.getDashboardValidators(ctx, dashboardId)
+		valis, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		log.Debugf("=== getting validators took %s", time.Since(startTime))
 		if err != nil {
 			return nil, nil, err
