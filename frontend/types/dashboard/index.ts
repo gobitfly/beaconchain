@@ -1,7 +1,7 @@
 // can be either a dashboard id or a list of hashed validators
 export type DashboardKey = string
 
-export type DashboardType = 'validator' | 'account'
+export type DashboardType = 'validator' | 'account' | 'notifications'
 
 export enum COOKIE_DASHBOARD_ID{
   VALIDATOR = -2,
