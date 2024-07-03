@@ -266,7 +266,7 @@ const hour uint64 = 3600
 const day = 24 * hour
 const week = 7 * day
 const month = 30 * day
-const fullHistory = math.MaxUint64
+const fullHistory uint64 = 9007199254740991 // 2^53-1 (max int in JS)
 
 var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 	ProductName: "Free",
@@ -481,7 +481,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				PricePerMonthEur:         74.99,
 				PricePerYearEur:          719.88,
 				ProductIdMonthly:         "vdb_addon_1k",
-				ProductIdYearly:          "vdb_addon_1k.yearly",
+				ProductIdYearly:          "vdb_addon_1k.year	ly",
 				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon1k,
 				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon1kYearly,
 			},
