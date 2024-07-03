@@ -356,6 +356,7 @@
       "delete": {
         "title": "Delete Dashboard",
         "text": "This will delete dashboard {dashboard} from the archive and is irreversible.",
+        "no_label": "Cancel",
         "yes_label": "Delete Dashboard"
       },
       "clear": {
@@ -814,6 +815,7 @@
       "dialog": {
         "title": "Delete Account",
         "warning": "This will delete your account from the archive and is irreversible.",
+        "no_label": "Cancel",
         "yes_label": "Delete Account"
       }
     }

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { BcDialogDelete } from '#components'
+import { BcDialogConfirm } from '#components'
 import { API_PATH } from '~/types/customFetch'
 
 const dialog = useDialog()
@@ -9,11 +9,13 @@ const { fetch } = useCustomFetch()
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
 const onDelete = () => {
-  dialog.open(BcDialogDelete, {
+  dialog.open(BcDialogConfirm, {
     data: {
       title: $t('user_settings.delete_account.dialog.title'),
-      warning: $t('user_settings.delete_account.dialog.warning'),
-      yesLabel: $t('user_settings.delete_account.dialog.yes_label')
+      question: $t('user_settings.delete_account.dialog.warning'),
+      noLabel: $t('user_settings.delete_account.dialog.no_label'),
+      yesLabel: $t('user_settings.delete_account.dialog.yes_label'),
+      severity: 'danger'
     },
     onClose: response => response?.data && deleteAction()
   })
