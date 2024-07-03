@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -247,11 +248,18 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 		return
 	}
 
+	// add premium chart perk info for shared dashboards
+	premiumPerks, err := h.getDashboardPremiumPerks(*dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 	data, err := h.dai.GetValidatorDashboardOverview(*dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
+	data.ChartHistorySeconds = premiumPerks.ChartHistorySeconds
 	data.Name = name
 
 	response := types.InternalGetValidatorDashboardResponse{
@@ -789,15 +797,32 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 		handleErr(w, err)
 		return
 	}
+	premiumPerks, err := h.getDashboardPremiumPerks(*dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 	q := r.URL.Query()
 	groupIds := v.checkGroupIdList(q.Get("group_ids"))
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
+	aggregation := checkEnum[enums.ChartAggregation](&v, q.Get("aggregation"), "aggregation")
+	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds)
+	beforeTs, afterTs := v.checkTimestamps(q.Get("before_ts"), q.Get("after_ts"), maxAge)
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
+	if maxAge == 0 {
+		returnConflict(w, fmt.Errorf("requested aggregation is not available for dashboard owner's premium subscription"))
+		return
+	}
+	minAllowedTs := uint64(time.Now().Unix()) - maxAge
+	if beforeTs <= minAllowedTs || afterTs <= minAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription is %v seconds", maxAge))
+		return
+	}
 
-	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId, groupIds, efficiencyType)
+	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
 	if err != nil {
 		handleErr(w, err)
 		return

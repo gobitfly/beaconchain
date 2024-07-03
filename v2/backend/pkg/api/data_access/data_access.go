@@ -30,6 +30,7 @@ type DataAccessor interface {
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
 	GetProductSummary() (*t.ProductSummary, error)
+	GetFreeTierPerks() (*t.PremiumPerks, error)
 
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
 }

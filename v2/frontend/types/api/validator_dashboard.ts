@@ -28,6 +28,7 @@ export interface VDBOverviewData {
   efficiency: PeriodicValues<number /* float64 */>;
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
+  chart_history_seconds: ChartHistorySeconds;
 }
 export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBSummaryStatus {
