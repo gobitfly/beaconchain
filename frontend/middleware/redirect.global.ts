@@ -40,7 +40,7 @@ export default function ({ name, params, query }: RouteLocationNormalizedLoaded)
     case 'dashboard-id':
       if (query.validators && typeof query.validators === 'string') {
         const list = query.validators.split(',').filter((v) => {
-          return !isNaN(parseInt(v)) || isPublicKey(v)
+          return isInt(v) || isPublicKey(v)
         }).slice(0, 20).join(',')
         if (list.length) {
           const hash = toBase64Url(list)

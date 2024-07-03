@@ -4,4 +4,4 @@ export const REGEXP_VALID_EMAIL = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&
 
 export const REGEXP_VALID_NAME = /^(?=.*[a-zA-Z0-9])[a-zA-Z0-9 ]*$/
 
-export const REGEXP_PUBLIC_KEX = /^(1|3)[A-Za-z0-9]{39}$/
+export const REGEXP_PUBLIC_KEX = /^(0x)?[A-Fa-f0-9]{96}$/
