@@ -7,7 +7,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, BcDialogDelete, DashboardShareModal, DashboardShareCodeModal } from '#components'
+import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
@@ -119,26 +119,19 @@ const deleteButtonOptions = computed(() => {
 })
 
 const onDelete = () => {
-  if (deleteButtonOptions.value.deleteDashboard) {
-    dialog.open(BcDialogDelete, {
-      data: {
-        title: $t('dashboard.deletion.delete.title'),
-        warning: $t('dashboard.deletion.delete.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) }),
-        yesLabel: $t('dashboard.deletion.delete.yes_label')
-      },
-      onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward)
-    })
-  } else {
-    dialog.open(BcDialogConfirm, {
-      props: {
-        header: $t('dashboard.deletion.clear.title')
-      },
-      onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
-      data: {
-        question: $t('dashboard.deletion.clear.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
-      }
-    })
+  const isDelete = deleteButtonOptions.value.deleteDashboard
+  const dialogData = {
+    title: $t(isDelete ? 'dashboard.deletion.delete.title' : 'dashboard.deletion.clear.title'),
+    question: $t(isDelete ? 'dashboard.deletion.delete.text' : 'dashboard.deletion.clear.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) }),
+    noLabel: isDelete ? $t('dashboard.deletion.delete.no_label') : undefined,
+    yesLabel: isDelete ? $t('dashboard.deletion.delete.yes_label') : undefined,
+    severity: isDelete ? 'danger' : undefined
   }
+
+  dialog.open(BcDialogConfirm, {
+    data: dialogData,
+    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward)
+  })
 }
 
 const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean) => {
