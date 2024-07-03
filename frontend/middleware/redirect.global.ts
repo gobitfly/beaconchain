@@ -2,6 +2,7 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 export default function ({ name, params }: RouteLocationNormalizedLoaded) {
   const v1Domain = useRuntimeConfig().public.v1Domain || 'https://beaconcha.in'
+  const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
   if (name === 'slug') {
     name = params.slug?.[0]
   }
@@ -35,5 +36,10 @@ export default function ({ name, params }: RouteLocationNormalizedLoaded) {
       )
     case 'mobile':
       return navigateTo(`${v1Domain}/mobile`, { external: true })
+    case 'user-settings':
+      // TODO: Remove once backend for this page is ready
+      if (!showInDevelopment) {
+        return navigateTo(`${v1Domain}/user/settings`, { external: true })
+      }
   }
 }
