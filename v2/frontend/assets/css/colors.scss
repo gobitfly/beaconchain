@@ -1,6 +1,7 @@
 // When updating values here, please keep in mind that you might have to updated utils/colors.ts too
 
 :root {
+  --white: #ffffff;
   --grey: #a5a5a5;
   --medium-grey: #b3b3b3;
   --grey-1: #e9e9e9;
@@ -60,7 +61,7 @@
   --button-color-dangerous-hover: var(--dark-red);
   --button-text-color-dark-pattern: var(--light-black);
   --button-text-color-disabled: var(--grey-4);
-  --button-text-color-dangerous: var(--grey-4);
+  --button-text-color-dangerous: var(--white);
 
   --checkbox-background-color: var(--light-grey-4);
 
