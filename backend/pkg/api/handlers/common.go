@@ -530,7 +530,7 @@ func (v *validationError) checkTimestamps(beforeParam string, afterParam string,
 		v.add("before_ts", "must not be smaller than after_ts")
 	}
 	// set default values if values were omitted
-	// since maxAge can be max uint64, we need to avoid overflows here
+	// since maxAge can be very large, we need to avoid overflows here
 	if beforeTs == 0 && afterTs == 0 {
 		beforeTs = uint64(time.Now().Unix())
 		afterTs = beforeTs - minUint64(maxAge, beforeTs)
