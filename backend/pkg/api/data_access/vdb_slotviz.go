@@ -9,8 +9,8 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error) {
-	// TODO if `groupIds`` is empty, get all groups; otherwise only fetch data for the specific groups
-	validatorsArray, err := d.getDashboardValidators(ctx, dashboardId)
+	// If groupIds is empty, get all groups; otherwise only fetch data for the specific groups
+	validatorsArray, err := d.getDashboardValidators(ctx, dashboardId, groupIds)
 	if err != nil {
 		return nil, err
 	}
