@@ -933,10 +933,12 @@ const items = computed(() => {
     ]
   }
   if (isMobile.value) {
-    list.push({
-      label: $t('header.settings'),
-      command: async () => { await navigateTo('../user/settings') }
-    })
+    if (isLoggedIn.value) {
+      list.push({
+        label: $t('header.settings'),
+        command: async () => { await navigateTo('../user/settings') }
+      })
+    }
 
     list.push({
       label: currency.value,
