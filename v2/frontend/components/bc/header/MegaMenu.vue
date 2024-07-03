@@ -288,7 +288,7 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.notifications'),
                   icon: faBell,
-                  url: '/user/notifications'
+                  url: '/notifications'
                 },
                 {
                   label: $t('header.megamenu.graffiti_wall'),
@@ -521,7 +521,7 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.notifications'),
                   icon: faBell,
-                  url: '/user/notifications'
+                  url: '/notifications'
                 },
                 {
                   label: $t('header.megamenu.knowledge_base'),
@@ -917,7 +917,7 @@ const items = computed(() => {
       },
       {
         label: $t('header.megamenu.notifications'),
-        url: '/user/notifications'
+        url: '/notifications'
       }
     ]
   } else {

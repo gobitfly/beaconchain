@@ -26,7 +26,7 @@ export function useValidatorDashboardSummaryDetailsStore (dashboardKey: Dashboar
       data.value = {}
       storeTimeFrame.value = timeFrame
     }
-    const res = await fetch<InternalGetValidatorDashboardGroupSummaryResponse>(API_PATH.DASHBOARD_SUMMARY_DETAILS, { query: { time_frame: timeFrame } }, { dashboardKey, groupId })
+    const res = await fetch<InternalGetValidatorDashboardGroupSummaryResponse>(API_PATH.DASHBOARD_SUMMARY_DETAILS, { query: { period: timeFrame } }, { dashboardKey, groupId })
     data.value = { ...data.value, [getKey()]: res.data }
     return res.data
   }
