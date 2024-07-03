@@ -5,7 +5,7 @@ const { stripeCustomerPortal, isStripeDisabled } = useStripe()
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-async function buttonCallback () {
+async function goToStripeCustomerPortal () {
   if (planButton.value.disabled) {
     return
   }
@@ -36,7 +36,7 @@ const planButton = computed(() => {
       {{ $t('user_settings.subscriptions.explanation') }}
     </div>
     <div class="button-row">
-      <Button :label="planButton.text" :disabled="planButton.disabled" @click="buttonCallback()" />
+      <Button :label="planButton.text" :disabled="planButton.disabled" @click="goToStripeCustomerPortal()" />
     </div>
   </div>
 </template>
