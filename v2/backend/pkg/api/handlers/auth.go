@@ -52,9 +52,9 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 }
 
 // TODO move to service?
-func (h *HandlerService) sendConfirmationEmail(email string) error {
+func (h *HandlerService) sendConfirmationEmail(ctx context.Context, email string) error {
 	// 1. check last confirmation time to enforce ratelimit
-	lastTs, err := h.dai.GetEmailConfirmationTime(email)
+	lastTs, err := h.dai.GetEmailConfirmationTime(ctx, email)
 	if err != nil {
 		return errors.New("error getting confirmation-ts")
 	}
@@ -64,7 +64,7 @@ func (h *HandlerService) sendConfirmationEmail(email string) error {
 
 	// 2. update confirmation hash (before sending so there's no hash mismatch on failure)
 	confirmationHash := utils.RandomString(40)
-	err = h.dai.UpdateEmailConfirmationHash(email, confirmationHash)
+	err = h.dai.UpdateEmailConfirmationHash(ctx, email, confirmationHash)
 	if err != nil {
 		return errors.New("error updating confirmation hash")
 	}
@@ -85,7 +85,7 @@ Best regards,
 	}
 
 	// 4. update confirmation time (only after mail was sent)
-	err = h.dai.UpdateEmailConfirmationTime(email)
+	err = h.dai.UpdateEmailConfirmationTime(ctx, email)
 	if err != nil {
 		// shouldn't present this as error to user, confirmation works fine
 		log.Error(err, "error updating email confirmation time, rate limiting won't be enforced", 0, nil)
@@ -114,7 +114,7 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 	if apiKey == "" {
 		return 0, newUnauthorizedErr("missing api key")
 	}
-	userId, err := h.dai.GetUserIdByApiKey(apiKey)
+	userId, err := h.dai.GetUserIdByApiKey(r.Context(), apiKey)
 	if errors.Is(err, dataaccess.ErrNotFound) {
 		err = newUnauthorizedErr("api key not found")
 	}
@@ -154,7 +154,7 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userExists, err := h.dai.GetUserExists(email)
+	userExists, err := h.dai.GetUserExists(r.Context(), email)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -177,14 +177,14 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 	}
 
 	// add user
-	err = h.dai.CreateUser(email, string(passwordHash))
+	err = h.dai.CreateUser(r.Context(), email, string(passwordHash))
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
 	// email confirmation
-	err = h.sendConfirmationEmail(email)
+	err = h.sendConfirmationEmail(r.Context(), email)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -213,7 +213,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
-	user, err := h.dai.GetUserCredentialInfo(email)
+	user, err := h.dai.GetUserCredentialInfo(r.Context(), email)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
 			err = badCredentialsErr
@@ -279,7 +279,7 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 			r = r.WithContext(ctx)
 
-			dashboard, err := h.dai.GetValidatorDashboardInfo(types.VDBIdPrimary(dashboardId))
+			dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
 			if err != nil {
 				handleErr(w, err)
 				return
@@ -307,7 +307,7 @@ func (h *HandlerService) VDBPublicApiCheckMiddleware(next http.Handler) http.Han
 			handleErr(w, errors.New("error getting user id from context"))
 			return
 		}
-		userInfo, err := h.dai.GetUserInfo(userId)
+		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
 		if err != nil {
 			handleErr(w, err)
 			return
