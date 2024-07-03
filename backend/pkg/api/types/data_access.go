@@ -102,10 +102,12 @@ type WithdrawalsCursor struct {
 }
 
 type UserCredentialInfo struct {
-	Id        uint64 `db:"id"`
-	Password  string `db:"password"`
-	ProductId string `db:"product_id"`
-	UserGroup string `db:"user_group"`
+	Id             uint64 `db:"id"`
+	Email          string `db:"email"`
+	EmailConfirmed bool   `db:"email_confirmed"`
+	Password       string `db:"password"`
+	ProductId      string `db:"product_id"`
+	UserGroup      string `db:"user_group"`
 }
 
 type BlocksCursor struct {

@@ -64,6 +64,7 @@ var (
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
+	reEmailConfirmationHash        = regexp.MustCompile(`^[a-z0-9]{40}$`)
 )
 
 const (
@@ -85,6 +86,7 @@ var (
 	errBadRequest   = errors.New("bad request")
 	errUnauthorized = errors.New("unauthorized")
 	errForbidden    = errors.New("forbidden")
+	errConflict     = errors.New("conflict")
 )
 
 type Paging struct {
@@ -157,6 +159,10 @@ func (v *validationError) checkEmail(email string) string {
 
 func (v *validationError) checkPassword(password string) string {
 	return v.checkRegex(rePassword, password, "password")
+}
+
+func (v *validationError) checkConfirmationHash(hash string) string {
+	return v.checkRegex(reEmailConfirmationHash, hash, "token")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -589,6 +595,9 @@ func handleErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, errForbidden) {
 		returnForbidden(w, err)
 		return
+	} else if errors.Is(err, errConflict) {
+		returnConflict(w, err)
+		return
 	}
 	returnInternalServerError(w, err)
 }
@@ -611,6 +620,10 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
+}
+
+func newConflictErr(format string, args ...interface{}) error {
+	return errWithMsg(errConflict, format, args...)
 }
 
 func newNotFoundErr(format string, args ...interface{}) error {
