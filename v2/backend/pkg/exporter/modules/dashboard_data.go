@@ -403,7 +403,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 					d.log.Infof("epoch data fetcher, processing data for epoch %d", datas[i].epoch)
 					start := time.Now()
 
-					result, err := d.ProcessEpochData(datas[i], d.signingDomain)
+					result, err := d.ProcessEpochData(datas[i])
 					if err != nil {
 						d.log.Error(err, "failed to process epoch data", 0, map[string]interface{}{"epoch": datas[i].epoch})
 						time.Sleep(time.Second * 10)
@@ -1009,7 +1009,7 @@ func (d *dashboardData) GetEpochDataRaw(epoch uint64, skipSerialCalls bool) (*Da
 	return data, nil
 }
 
-func (d *dashboardData) ProcessEpochData(data *Data, domain []byte) ([]*validatorDashboardDataRow, error) {
+func (d *dashboardData) ProcessEpochData(data *Data) ([]*validatorDashboardDataRow, error) {
 	if d.signingDomain == nil {
 		domain, err := utils.GetSigningDomain()
 		if err != nil {
@@ -1019,7 +1019,7 @@ func (d *dashboardData) ProcessEpochData(data *Data, domain []byte) ([]*validato
 		d.signingDomain = domain
 	}
 
-	return d.process(data, domain)
+	return d.process(data, d.signingDomain)
 }
 
 func isPartitionAttached(pTable string, partition string) (bool, error) {
