@@ -16,6 +16,7 @@ watch(products, () => {
 
 if (!isLoggedIn.value) {
   // only users that are logged in can view this page
+  // TODO: This should maybe be part of the middleware
   await navigateTo('/login')
 }
 </script>
