@@ -208,7 +208,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		handleErr(w, err)
 		return
 	}
-	confirmationTime, err := h.dai.GetEmailConfirmationTime(userId)
+	confirmationTime, err := h.dai.GetEmailConfirmationTime(r.Context(), userId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -218,7 +218,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		return
 	}
 
-	err = h.dai.UpdateUserEmail(userId)
+	err = h.dai.UpdateUserEmail(r.Context(), userId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -249,7 +249,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
-	userId, err := h.dai.GetUserByEmail(email)
+	userId, err := h.dai.GetUserByEmail(r.Context(), email)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -306,7 +306,7 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 	}
 
 	// TODO allow if user has any subsciptions etc?
-	err = h.dai.RemoveUser(user.Id)
+	err = h.dai.RemoveUser(r.Context(), user.Id)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -322,7 +322,7 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 		handleErr(w, err)
 		return
 	}
-	userInfo, err := h.dai.GetUserCredentialInfo(user.Id)
+	userInfo, err := h.dai.GetUserCredentialInfo(r.Context(), user.Id)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -354,7 +354,7 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	_, err = h.dai.GetUserByEmail(newEmail)
+	_, err = h.dai.GetUserByEmail(r.Context(), newEmail)
 	if !errors.Is(err, dataaccess.ErrNotFound) {
 		if err == nil {
 			handleErr(w, newConflictErr("email already registered"))
@@ -377,7 +377,7 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 	}
 
 	// email confirmation
-	err = h.sendConfirmationEmail(userInfo.Id, newEmail)
+	err = h.sendConfirmationEmail(r.Context(), userInfo.Id, newEmail)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -427,7 +427,7 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 	}
 
 	// change password
-	err = h.dai.UpdateUserPassword(user.Id, newPassword)
+	err = h.dai.UpdateUserPassword(r.Context(), user.Id, newPassword)
 	if err != nil {
 		handleErr(w, err)
 		return
