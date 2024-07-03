@@ -1,83 +1,77 @@
-import { type ModelRef, type WatchStopHandle } from 'vue'
+import { type ModelRef } from 'vue'
 
-type vRef<T> = ModelRef<T|undefined> | Ref<T|undefined>
 interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
 
-/** This composable solves 3 difficulties that arise when performing a two way binding of reactive variables:
+/** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back
+ *  and forth transparently from A to B and B to A, the reactivity is preserved on both ends, the types are converted
+ *  when the values pass through.
+ *  It solves 3 difficulties:
  *  1. Different types. This is the main reason you need to bridge reactive variables: values of different types
  *     that must stay synchronized.
  *  2. Infinite loops. When one variable changes, the goal is to update the other one and you do not want that
  *     the update triggers the first one again and so on.
  *  3. At the moment the binding is created, it is typical that one variable has initial data and the other is
- *     empty. You do not want the empty one to erase the initial data when the binding starts. You want this data
- *     to update the other variable at first. */
-
-export function useRefBridge () {
-  const stoppers: WatchStopHandle[] = []
-
-  /** Bridges two reactive variables of primitive types (string, boolean, number, enum, etc).
-   *
-   * Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the second ref.
-   * @param AtoB (optional) Callback/Arrow function that converts the first value into the type of the second value. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
-   * @param BtoA (optional) Callback/Arrow function that converts the second value into the type of the first value. If not provided, a basic conversion is performed, which is safe only between strings and numbers. */
-  function bridgePrimitiveRefs<Ta, Tb> (refA: vRef<Ta>, refB: vRef<Tb>, AtoB?: ConverterCallback<Ta, Tb>, BtoA?: ConverterCallback<Tb, Ta>) : void {
-    stoppers.push(watch(refA, () => {
-      const AasB = (refA.value !== undefined) ? (AtoB ? AtoB(refA.value) : <Tb>(refA.value as unknown)) : undefined
-      if (AasB !== refB.value) {
-        refB.value = AasB
-      }
-    }, { immediate: true }))
-    stoppers.push(watch(refB, () => {
-      const BasA = (refB.value !== undefined) ? (BtoA ? BtoA(refB.value) : <Ta>(refB.value as unknown)) : undefined
-      if (BasA !== refA.value) {
-        refA.value = BasA
-      }
-    }))
-  }
-
-  /** Bridges two reactive arrays.
-   *
-   * Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the second ref.
-   * @param AtoB (optional) Callback/Arrow function that converts the elements of the first array into elements compatibles with the second array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
-   * @param BtoA (optional) Callback/Arrow function that converts the elements of the second array into elements compatibles with the first array. If not provided, a basic conversion is performed, which is safe only between strings and numbers. */
-  function bridgeArrayRefs<Ta, Tb> (refA: vRef<Ta[]>, refB: vRef<Tb[]>, AtoB?: ConverterCallback<Ta, Tb>, BtoA?: ConverterCallback<Tb, Ta>) : void {
-    stoppers.push(watch(refA, () => {
-      const AasB = refA.value ? refA.value.map(el => AtoB ? AtoB(el) : <Tb>(el as unknown)) : undefined
-      if (JSON.stringify(AasB) !== JSON.stringify(refB.value)) {
-        refB.value = AasB
-      }
-    }, { immediate: true }))
-    stoppers.push(watch(refB, () => {
-      const BasA = refB.value ? refB.value.map(el => BtoA ? BtoA(el) : <Ta>(el as unknown)) : undefined
-      if (JSON.stringify(BasA) !== JSON.stringify(refA.value)) {
-        refA.value = BasA
-      }
-    }))
-  }
-
-  /** Bridges two reactive objects.
-   *
-   * Caution: Altough the bridge between the refs is two-way (ensuring that the values will always update each other), the order of the parameters here is very important. At the moment the bridge is created, the values of the refs are not yet equal (for example one ref has data and the other ref is still undefined). To make sure that the empty value does not cross the bridge to erase your initial data, the first parameter must be the ref containing the initial data. Then, at the creation of the bridge, the initial data fills the second ref.
-   * @param AtoB Callback/Arrow function that converts the first object into the type of the second object.
-   * @param BtoA Callback/Arrow function that converts the second object into the type of the first object. */
-  function bridgeObjectRefs<Ta, Tb> (refA: vRef<Ta>, refB: vRef<Tb>, AtoB: ConverterCallback<Ta, Tb>, BtoA: ConverterCallback<Tb, Ta>) : void {
-    stoppers.push(watch(refA, () => {
-      const AasB = (refA.value !== undefined) ? AtoB(refA.value) : undefined
-      if (JSON.stringify(AasB) !== JSON.stringify(refB.value)) {
-        refB.value = AasB
-      }
-    }, { immediate: true }))
-    stoppers.push(watch(refB, () => {
-      const BasA = (refB.value !== undefined) ? BtoA(refB.value) : undefined
-      if (JSON.stringify(BasA) !== JSON.stringify(refA.value)) {
-        refA.value = BasA
-      }
-    }))
-  }
-
-  onUnmounted(() => {
-    stoppers.forEach(stopper => stopper())
+ *     empty. You do not want the empty one to erase the initial data when the binding starts.
+ * @param origRef Ref that you want to bridge with the new ref that this function will create for you.
+ * @param origToCreated (optional) Callback/Arrow function that converts an element in the original array into the type of the elements in the created array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
+ * @param createdToOrig (optional) Callback/Arrow function that converts an element in the created array into the type of the elements in the original array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
+ * */
+export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelRef<Torig[]>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated[]> {
+  const createdRef = ref<Tcreated[]>()
+  const stopperForth = watch(origRef, () => {
+    const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : <Tcreated>(el as unknown)) : undefined
+    if (JSON.stringify(OasC) !== JSON.stringify(createdRef.value)) {
+      createdRef.value = OasC
+    }
+  }, { immediate: true })
+  const stopperBack = watch(createdRef, () => {
+    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : <Torig>(el as unknown)) : undefined
+    if (JSON.stringify(CasO) !== JSON.stringify(origRef.value)) {
+      origRef.value = CasO as Torig[]
+    }
   })
 
-  return { bridgePrimitiveRefs, bridgeArrayRefs, bridgeObjectRefs }
+  onUnmounted(() => {
+    stopperBack()
+    stopperForth()
+  })
+
+  return createdRef as Ref<Tcreated[]>
+}
+
+/** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back
+ *  and forth transparently from A to B and B to A, the reactivity is preserved on both ends, the types are converted
+ *  when the values pass through.
+ *  It solves 3 difficulties:
+ *  1. Different types. This is the main reason you need to bridge reactive variables: values of different types
+ *     that must stay synchronized.
+ *  2. Infinite loops. When one variable changes, the goal is to update the other one and you do not want that
+ *     the update triggers the first one again and so on.
+ *  3. At the moment the binding is created, it is typical that one variable has initial data and the other is
+ *     empty. You do not want the empty one to erase the initial data when the binding starts.
+ * @param origRef Ref that you want to bridge with the new ref that this function will create for you.
+ * @param origToCreated (optional) Callback/Arrow function that converts the value in the original ref into the type of the value in the created ref. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
+ * @param createdToOrig (optional) Callback/Arrow function that converts the value in the created ref into the type of the value in the original ref. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
+ * */
+export function usePrimitiveRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated> {
+  const createdRef = ref<Tcreated>()
+  const stopperForth = watch(origRef, () => {
+    const OasC = (origRef.value !== undefined) ? (origToCreated ? origToCreated(origRef.value) : <Tcreated>(origRef.value as unknown)) : undefined
+    if (OasC !== createdRef.value) {
+      createdRef.value = OasC
+    }
+  }, { immediate: true })
+  const stopperBack = watch(createdRef, () => {
+    const CasO = (createdRef.value !== undefined) ? (createdToOrig ? createdToOrig(createdRef.value) : <Torig>(createdRef.value as unknown)) : undefined
+    if (CasO !== origRef.value) {
+      origRef.value = CasO as Torig
+    }
+  })
+
+  onUnmounted(() => {
+    stopperBack()
+    stopperForth()
+  })
+
+  return createdRef as Ref<Tcreated>
 }

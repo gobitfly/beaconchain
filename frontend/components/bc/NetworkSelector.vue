@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import type { ModelRef } from 'vue'
 import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
 import { ChainInfo, ChainID } from '~/types/network'
 
 const { availableNetworks, isNetworkDisabled } = useNetworkStore()
-const { bridgeArrayRefs, bridgePrimitiveRefs } = useRefBridge()
 
 /** This ref is a chain ID if only one network can be selected, or an array of chain IDs if several networks can be selected. */
 const liveState = defineModel<ChainID|ChainID[]>()
 
-const selectionMulti = ref<string[]>()
-const selectionSingle = ref<string>()
+const selection = Array.isArray(liveState.value)
+  ? useArrayRefBridge<ChainID, string>(liveState as Ref<ChainID[]>)
+  : usePrimitiveRefBridge<ChainID, string>(liveState as Ref<ChainID>)
 
 const buttons = computed(() => {
   const list: MultiBarItem[] = []
@@ -25,17 +24,11 @@ const buttons = computed(() => {
   }))
   return list
 })
-
-if (Array.isArray(liveState.value)) {
-  bridgeArrayRefs(liveState as ModelRef<ChainID[]>, selectionMulti)
-} else {
-  bridgePrimitiveRefs(liveState as ModelRef<ChainID>, selectionSingle)
-}
 </script>
 
 <template>
-  <BcToggleMultiBar v-if="selectionMulti" v-model="selectionMulti" :buttons="buttons" />
-  <BcToggleSingleBar v-if="selectionSingle" v-model="selectionSingle" :buttons="buttons" />
+  <BcToggleMultiBar v-if="Array.isArray(selection)" v-model="selection" :buttons="buttons" />
+  <BcToggleSingleBar v-else v-model="selection" :buttons="buttons" />
 </template>
 
 <style lang="scss">

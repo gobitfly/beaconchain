@@ -44,7 +44,7 @@ export function useNetworkStore () {
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
   function isNetworkDisabled (chainId: networkTs.ChainID) : boolean {
-    // TODO: return `true` for everything once we are ready
+    // TODO: return `false` for everything once we are ready
     return !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value
   }
 
