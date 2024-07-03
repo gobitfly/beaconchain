@@ -10,6 +10,9 @@ import {
 const { t: $t } = useI18n()
 
 const visible = defineModel<boolean>()
+
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
 </script>
 
 <template>
@@ -25,25 +28,25 @@ const visible = defineModel<boolean>()
         </template>
         General coming soon!
       </TabPanel>
-      <TabPanel>
+      <TabPanel :disabled="!showInDevelopment">
         <template #header>
           <BcTabHeader :header="$t('dashboard.notifications.management.tabs.dashboards')" :icon="faGaugeSimpleMax" />
         </template>
         Dashboards coming soon!
       </TabPanel>
-      <TabPanel>
+      <TabPanel :disabled="!showInDevelopment">
         <template #header>
           <BcTabHeader :header="$t('dashboard.notifications.management.tabs.machines')" :icon="faMonitorWaveform" />
         </template>
         Machines coming soon!
       </TabPanel>
-      <TabPanel>
+      <TabPanel :disabled="!showInDevelopment">
         <template #header>
           <BcTabHeader :header="$t('dashboard.notifications.management.tabs.clients')" :icon="faBolt" />
         </template>
         Clients coming soon!
       </TabPanel>
-      <TabPanel>
+      <TabPanel :disabled="!showInDevelopment">
         <template #header>
           <BcTabHeader :header="$t('dashboard.notifications.management.tabs.rocketpool')">
             <template #icon>
@@ -53,7 +56,7 @@ const visible = defineModel<boolean>()
         </template>
         Rocket Pool coming soon!
       </TabPanel>
-      <TabPanel>
+      <TabPanel :disabled="!showInDevelopment">
         <template #header>
           <BcTabHeader :header="$t('dashboard.notifications.management.tabs.network')" :icon="faNetworkWired" />
         </template>
