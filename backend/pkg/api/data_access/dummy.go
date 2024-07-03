@@ -69,21 +69,21 @@ func (d *DummyService) GetUserByEmail(ctx context.Context, email string) (uint64
 	return r, err
 }
 
-func (d *DummyService) CreateUser(email, password string) (uint64, error) {
+func (d *DummyService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d *DummyService) RemoveUser(userId uint64) error {
+func (d *DummyService) RemoveUser(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) UpdateUserEmail(userId uint64) error {
+func (d *DummyService) UpdateUserEmail(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) UpdateUserPassword(userId uint64, password string) error {
+func (d *DummyService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
 	return nil
 }
 

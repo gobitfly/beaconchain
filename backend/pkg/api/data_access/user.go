@@ -15,9 +15,9 @@ import (
 type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (uint64, error)
 	CreateUser(ctx context.Context, email, password string) (uint64, error)
-	RemoveUser(userId uint64) error
-	UpdateUserEmail(userId uint64) error
-	UpdateUserPassword(userId uint64, password string) error
+	RemoveUser(ctx context.Context, userId uint64) error
+	UpdateUserEmail(ctx context.Context, userId uint64) error
+	UpdateUserPassword(ctx context.Context, userId uint64, password string) error
 	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
 	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
 	GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error)
@@ -42,23 +42,23 @@ func (d *DataAccessService) CreateUser(ctx context.Context, email, password stri
 	return d.dummy.CreateUser(ctx, email, password)
 }
 
-func (d *DataAccessService) RemoveUser(userId uint64) error {
+func (d *DataAccessService) RemoveUser(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.RemoveUser(userId)
+	return d.dummy.RemoveUser(ctx, userId)
 }
 
-func (d *DataAccessService) UpdateUserEmail(userId uint64) error {
+func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
 	// Called after user clicked link for email confirmations + changes, so:
 	// set user_confirmed true, set email (from email_change_to_value), update stripe email
 	// unset email_confirmation_hash
-	return d.dummy.UpdateUserEmail(userId)
+	return d.dummy.UpdateUserEmail(ctx, userId)
 }
 
-func (d *DataAccessService) UpdateUserPassword(userId uint64, password string) error {
+func (d *DataAccessService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
 	// TODO @DATA-ACCESS
 	// (password is already hashed)
-	return d.dummy.UpdateUserPassword(userId, password)
+	return d.dummy.UpdateUserPassword(ctx, userId, password)
 }
 
 func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
@@ -112,7 +112,7 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId ui
 		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
 	}
 	return result, err*/
-	return d.dummy.GetUserCredentialInfo(userId)
+	return d.dummy.GetUserCredentialInfo(ctx, userId)
 }
 
 func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
