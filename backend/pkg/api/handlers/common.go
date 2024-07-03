@@ -311,7 +311,7 @@ func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrima
 }
 
 // getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
-func (h *HandlerService) getDashboardPremiumPerks(id types.VDBId) (*types.PremiumPerks, error) {
+func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
 	// for guest dashboards, return free tier perks
 	if id.Validators != nil {
 		perk, err := h.dai.GetFreeTierPerks()
@@ -321,11 +321,11 @@ func (h *HandlerService) getDashboardPremiumPerks(id types.VDBId) (*types.Premiu
 		return perk, nil
 	}
 	// could be made into a single query if needed
-	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(id.Id)
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(ctx, id.Id)
 	if err != nil {
 		return nil, err
 	}
-	userInfo, err := h.dai.GetUserInfo(dashboardInfo.UserId)
+	userInfo, err := h.dai.GetUserInfo(ctx, dashboardInfo.UserId)
 	if err != nil {
 		return nil, err
 	}

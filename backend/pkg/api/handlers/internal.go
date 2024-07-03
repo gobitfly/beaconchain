@@ -249,7 +249,7 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 	}
 
 	// add premium chart perk info for shared dashboards
-	premiumPerks, err := h.getDashboardPremiumPerks(*dashboardId)
+	premiumPerks, err := h.getDashboardPremiumPerks(r.Context(), *dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -794,12 +794,13 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	ctx := r.Context()
+	dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	premiumPerks, err := h.getDashboardPremiumPerks(*dashboardId)
+	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -824,7 +825,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardSummaryChart(*dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
+	data, err := h.dai.GetValidatorDashboardSummaryChart(ctx, *dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
 	if err != nil {
 		handleErr(w, err)
 		return
