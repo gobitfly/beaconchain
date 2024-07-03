@@ -1425,7 +1425,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 			if _, ok := missedValidatorMap[row.ValidatorIndex]; !ok {
 				missedValidatorMap[row.ValidatorIndex] = make([]uint64, 0)
 			}
-			missedValidatorMap[row.ValidatorIndex] = append(missedValidatorMap[row.ValidatorIndex], uint64(row.Slot))
+			missedValidatorMap[row.ValidatorIndex] = append(missedValidatorMap[row.ValidatorIndex], row.Slot)
 		}
 	}
 
