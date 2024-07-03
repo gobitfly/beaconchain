@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -34,18 +35,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	table := ""
-	switch period {
-	case enums.TimePeriods.Last24h:
-		table = "validator_dashboard_data_rolling_daily"
-	case enums.TimePeriods.Last7d:
-		table = "validator_dashboard_data_rolling_weekly"
-	case enums.TimePeriods.Last30d:
-		table = "validator_dashboard_data_rolling_monthly"
-	case enums.TimePeriods.AllTime:
-		table = "validator_dashboard_data_rolling_total"
-	default:
-		return nil, nil, fmt.Errorf("not-implemented time period: %v", period)
+	table, _, _, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Searching for a group name is not supported when aggregating groups or for guest dashboards
@@ -501,29 +493,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, err
 	}
 
-	table := ""
-	slashedByCountTable := ""
-	days := 0
-
-	switch period {
-	case enums.TimePeriods.Last24h:
-		table = "validator_dashboard_data_rolling_daily"
-		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
-		days = 1
-	case enums.TimePeriods.Last7d:
-		table = "validator_dashboard_data_rolling_weekly"
-		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
-		days = 7
-	case enums.TimePeriods.Last30d:
-		table = "validator_dashboard_data_rolling_monthly"
-		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
-		days = 30
-	case enums.TimePeriods.AllTime:
-		table = "validator_dashboard_data_rolling_total"
-		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
-		days = -1
-	default:
-		return nil, fmt.Errorf("not-implemented time period: %v", period)
+	// Get the table names based on the period
+	table, slashedByCountTable, days, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return nil, err
 	}
 
 	query := `select
@@ -1040,13 +1013,15 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 					Index: validatorIndex,
 				}
 
-				distance, err := d.getWithdrawableCountFromCursor(validatorIndex, *stats.LatestValidatorWithdrawalIndex)
-				if err != nil {
-					return nil, err
-				}
+				if utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
+					distance, err := d.getWithdrawableCountFromCursor(validatorIndex, *stats.LatestValidatorWithdrawalIndex)
+					if err != nil {
+						return nil, err
+					}
 
-				timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
-				validatorInfo.Timestamp = uint64(timeToWithdrawal.Unix())
+					timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
+					validatorInfo.Timestamp = uint64(timeToWithdrawal.Unix())
+				}
 
 				result.Withdrawing = append(result.Withdrawing, validatorInfo)
 			} else if constypes.ValidatorStatus(metadata.Status) == constypes.WithdrawalDone {
@@ -1061,20 +1036,19 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	result := &t.VDBSyncSummaryValidators{}
+	var resultMutex = &sync.RWMutex{}
+
+	type PastStruct struct {
+		Index uint64
+		Count uint64
+	}
+
+	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	table := ""
-	switch period {
-	case enums.TimePeriods.Last24h:
-		table = "validator_dashboard_data_rolling_daily"
-	case enums.TimePeriods.Last7d:
-		table = "validator_dashboard_data_rolling_weekly"
-	case enums.TimePeriods.Last30d:
-		table = "validator_dashboard_data_rolling_monthly"
-	case enums.TimePeriods.AllTime:
-		table = "validator_dashboard_data_rolling_total"
-	default:
-		return nil, fmt.Errorf("not-implemented time period: %v", period)
+	table, _, _, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return nil, err
 	}
 
 	// Get the validator indices
@@ -1090,56 +1064,87 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 
 	// Get the current and next sync committee validators
 	latestEpoch := cache.LatestEpoch.Get()
-	currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, validatorIndex := range validatorIndices {
-		if currentSyncCommitteeValidators[validatorIndex] {
-			result.Current = append(result.Current, validatorIndex)
+	wg.Go(func() error {
+		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
+		if err != nil {
+			return err
 		}
-		if upcomingSyncCommitteeValidators[validatorIndex] {
-			result.Upcoming = append(result.Upcoming, validatorIndex)
+
+		resultMutex.Lock()
+		for _, validatorIndex := range validatorIndices {
+			if currentSyncCommitteeValidators[validatorIndex] {
+				result.Current = append(result.Current, validatorIndex)
+			}
+			if upcomingSyncCommitteeValidators[validatorIndex] {
+				result.Upcoming = append(result.Upcoming, validatorIndex)
+			}
 		}
-	}
+		resultMutex.Unlock()
 
-	// Get the cutoff period for past sync committees
-	ds := goqu.Dialect("postgres").
-		Select(
-			goqu.L("epoch_start")).
-		From(table).
-		Limit(1)
-
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	var epochStart uint64
-	err = d.alloyReader.Get(&epochStart, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
-	}
-	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
+		return nil
+	})
 
 	// Get the past sync committee validators
-	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-	ds = goqu.Dialect("postgres").
-		Select(
-			goqu.L("sc.validatorindex")).
-		From(goqu.L("sync_committees sc")).
-		LeftJoin(goqu.I(table).As("r"), goqu.On(goqu.L("sc.validatorindex = r.validator_index"))).
-		Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(validatorIndices)))
+	wg.Go(func() error {
+		// Get the cutoff period for past sync committees
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("epoch_start")).
+			From(table).
+			Limit(1)
 
-	query, args, err = ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %w", err)
+		}
 
-	err = d.readerDb.Select(&result.Past, query, args...)
+		var epochStart uint64
+		err = d.alloyReader.Get(&epochStart, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
+		}
+		pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
+
+		// Get the past sync committee validators
+		currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+		ds = goqu.Dialect("postgres").
+			Select(
+				goqu.L("sc.validatorindex")).
+			From(goqu.L("sync_committees sc")).
+			LeftJoin(goqu.I(table).As("r"), goqu.On(goqu.L("sc.validatorindex = r.validator_index"))).
+			Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(validatorIndices)))
+
+		query, args, err = ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %w", err)
+		}
+
+		var validatorIndices []uint64
+		err = d.alloyReader.Select(&validatorIndices, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving data for past sync committees: %w", err)
+		}
+
+		validatorCountMap := make(map[uint64]uint64)
+		for _, validatorIndex := range validatorIndices {
+			validatorCountMap[validatorIndex]++
+		}
+
+		resultMutex.Lock()
+		for validatorIndex, count := range validatorCountMap {
+			result.Past = append(result.Past, PastStruct{
+				Index: validatorIndex,
+				Count: count,
+			})
+		}
+		resultMutex.Unlock()
+
+		return nil
+	})
+
+	err = wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving data for past sync committees: %w", err)
+		return nil, err
 	}
 
 	return result, nil
@@ -1159,23 +1164,9 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	}
 
 	// Get the table names based on the period
-	table := ""
-	slashedByCountTable := ""
-	switch period {
-	case enums.TimePeriods.Last24h:
-		table = "validator_dashboard_data_rolling_daily"
-		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
-	case enums.TimePeriods.Last7d:
-		table = "validator_dashboard_data_rolling_weekly"
-		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
-	case enums.TimePeriods.Last30d:
-		table = "validator_dashboard_data_rolling_monthly"
-		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
-	case enums.TimePeriods.AllTime:
-		table = "validator_dashboard_data_rolling_total"
-		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
-	default:
-		return nil, fmt.Errorf("not-implemented time period: %v", period)
+	table, slashedByCountTable, _, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return nil, err
 	}
 
 	if dashboardId.AggregateGroups {
@@ -1216,7 +1207,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		}
 	}
 
-	query, args, err := ds.Prepared(false).ToSQL()
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
 	}
@@ -1373,18 +1364,9 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	// Get the table name based on the period
-	table := ""
-	switch period {
-	case enums.TimePeriods.Last24h:
-		table = "validator_dashboard_data_rolling_daily"
-	case enums.TimePeriods.Last7d:
-		table = "validator_dashboard_data_rolling_weekly"
-	case enums.TimePeriods.Last30d:
-		table = "validator_dashboard_data_rolling_monthly"
-	case enums.TimePeriods.AllTime:
-		table = "validator_dashboard_data_rolling_total"
-	default:
-		return nil, fmt.Errorf("not-implemented time period: %v", period)
+	table, _, _, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return nil, err
 	}
 
 	// Build the query and get the data
@@ -1508,4 +1490,33 @@ func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(latestEpoch uint
 	}
 
 	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
+}
+
+func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, string, int, error) {
+	table := ""
+	slashedByCountTable := ""
+	days := 0
+
+	switch period {
+	case enums.TimePeriods.Last24h:
+		table = "validator_dashboard_data_rolling_daily"
+		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
+		days = 1
+	case enums.TimePeriods.Last7d:
+		table = "validator_dashboard_data_rolling_weekly"
+		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
+		days = 7
+	case enums.TimePeriods.Last30d:
+		table = "validator_dashboard_data_rolling_monthly"
+		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
+		days = 30
+	case enums.TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
+		days = -1
+	default:
+		return "", "", 0, fmt.Errorf("not-implemented time period: %v", period)
+	}
+
+	return table, slashedByCountTable, days, nil
 }

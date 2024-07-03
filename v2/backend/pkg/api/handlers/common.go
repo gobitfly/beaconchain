@@ -657,7 +657,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		appendData("sync_current", v.Current)
 		appendData("sync_upcoming", v.Upcoming)
-		appendData("sync_past", v.Past)
+		// appendData("sync_past", v.Past)
 		return data, nil
 
 	case *types.VDBSlashingsSummaryValidators:

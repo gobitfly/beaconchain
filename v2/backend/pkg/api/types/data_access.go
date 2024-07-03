@@ -150,7 +150,10 @@ type VDBSyncSummaryValidators struct {
 	// fill slices with indices of validators
 	Upcoming []uint64
 	Current  []uint64
-	Past     []uint64
+	Past     []struct {
+		Index uint64
+		Count uint64
+	}
 }
 
 type VDBSlashingsSummaryValidators struct {
