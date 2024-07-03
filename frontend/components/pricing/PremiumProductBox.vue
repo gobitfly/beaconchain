@@ -50,8 +50,8 @@ const percentages = computed(() => {
   return {
     validatorDashboards: props.product.premium_perks.validator_dashboards / (bestProduct.premium_perks.validator_dashboards) * 100,
     validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (bestProduct.premium_perks.validators_per_dashboard) * 100,
-    summaryChart: props.product.premium_perks.summary_chart_history_seconds / (bestProduct.premium_perks.summary_chart_history_seconds) * 100,
-    heatmapChart: props.product.premium_perks.heatmap_history_seconds / (bestProduct.premium_perks.heatmap_history_seconds) * 100
+    summaryChart: props.product.premium_perks.chart_history_seconds.hourly / (bestProduct.premium_perks.chart_history_seconds.hourly) * 100,
+    heatmapChart: props.product.premium_perks.chart_history_seconds.hourly / (bestProduct.premium_perks.chart_history_seconds.hourly) * 100
   }
 })
 
