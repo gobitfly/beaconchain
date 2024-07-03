@@ -13,56 +13,82 @@ import (
 )
 
 type UserRepository interface {
-	GetUserExists(ctx context.Context, email string) (bool, error)
-	CreateUser(ctx context.Context, email, password string) error
-	GetEmailConfirmationTime(ctx context.Context, email string) (time.Time, error)
-	UpdateEmailConfirmationTime(ctx context.Context, email string) error
-	GetEmailConfirmationHash(ctx context.Context, email string) (string, error)
-	UpdateEmailConfirmationHash(ctx context.Context, email, confirmationHash string) error
-	GetUserCredentialInfo(ctx context.Context, email string) (*t.UserCredentialInfo, error)
+	GetUserByEmail(ctx context.Context, email string) (uint64, error)
+	CreateUser(ctx context.Context, email, password string) (uint64, error)
+	RemoveUser(ctx context.Context, userId uint64) error
+	UpdateUserEmail(ctx context.Context, userId uint64) error
+	UpdateUserPassword(ctx context.Context, userId uint64, password string) error
+	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
+	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
+	GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error)
+	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
+	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
+	GetUserIdByConfirmationHash(hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
 }
 
-func (d *DataAccessService) GetUserExists(ctx context.Context, email string) (bool, error) {
+func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetUserExists(ctx, email)
+	// return dataaccess.ErrNotFound if not present
+	return d.dummy.GetUserByEmail(ctx, email)
 }
 
-func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) error {
+func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
 	// TODO @DATA-ACCESS
+	// (password is already hashed)
 	return d.dummy.CreateUser(ctx, email, password)
 }
 
-func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, email string) (time.Time, error) {
+func (d *DataAccessService) RemoveUser(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationTime(ctx, email)
+	return d.dummy.RemoveUser(ctx, userId)
 }
 
-func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, email string) error {
+func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationTime(ctx, email)
+	// Called after user clicked link for email confirmations + changes, so:
+	// set user_confirmed true, set email (from email_change_to_value), update stripe email
+	// unset email_confirmation_hash
+	return d.dummy.UpdateUserEmail(ctx, userId)
 }
 
-func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, email string) (string, error) {
+func (d *DataAccessService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationHash(ctx, email)
+	// (password is already hashed)
+	return d.dummy.UpdateUserPassword(ctx, userId, password)
 }
 
-func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, email, confirmationHash string) error {
+func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationHash(ctx, email, confirmationHash)
+	return d.dummy.GetEmailConfirmationTime(ctx, userId)
 }
 
-func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, email string) (*t.UserCredentialInfo, error) {
+func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationTime(ctx, userId)
+}
+
+func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetEmailConfirmationHash(ctx, userId)
+}
+
+func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationHash(ctx, userId, email, confirmationHash)
+}
+
+func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
 	// TODO @patrick post-beta improve product-mgmt
-	result := &t.UserCredentialInfo{}
+	// TODO @DATA-ACCESS adjust to return struct changes (email + email_confirmed)
+	/*result := &t.UserCredentialInfo{}
 	err := d.userReader.Get(result, `
 		WITH
 			latest_and_greatest_sub AS (
-				SELECT user_id, product_id FROM users_app_subscriptions 
+				SELECT user_id, product_id FROM users_app_subscriptions
 				LEFT JOIN users ON users.id = user_id AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
 				WHERE users.email = $1 AND active = true
 				ORDER BY CASE product_id
@@ -78,14 +104,15 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, email str
 					ELSE                       10  -- For any other product_id values
 				END, users_app_subscriptions.created_at DESC LIMIT 1
 			)
-		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group 
+		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group
 		FROM users
-		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id  
+		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id
 		WHERE email = $1`, email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
 	}
-	return result, err
+	return result, err*/
+	return d.dummy.GetUserCredentialInfo(ctx, userId)
 }
 
 func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
@@ -95,6 +122,11 @@ func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string
 		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
 	}
 	return userId, err
+}
+
+func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserIdByConfirmationHash(hash)
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {

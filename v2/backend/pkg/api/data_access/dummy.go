@@ -63,33 +63,47 @@ func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	return r, err
 }
 
-func (d *DummyService) GetUserExists(ctx context.Context, email string) (bool, error) {
-	r := false
+func (d *DummyService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
+	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d *DummyService) CreateUser(ctx context.Context, email, password string) error {
+func (d *DummyService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) RemoveUser(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, email string) (time.Time, error) {
+func (d *DummyService) UpdateUserEmail(ctx context.Context, userId uint64) error {
+	return nil
+}
+
+func (d *DummyService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
+	return nil
+}
+
+func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
 	r := time.Time{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, email string) error {
+func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) GetEmailConfirmationHash(ctx context.Context, email string) (string, error) {
+func (d *DummyService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
 	r := ""
 	err := commonFakeData(&r)
 	return r, err
 }
 
-func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, email, confirmationHash string) error {
+func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
 	return nil
 }
 
@@ -99,13 +113,19 @@ func (d *DummyService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserI
 	return &r, err
 }
 
-func (d *DummyService) GetUserCredentialInfo(ctx context.Context, email string) (*t.UserCredentialInfo, error) {
+func (d *DummyService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
 	r := t.UserCredentialInfo{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
 func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
