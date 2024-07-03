@@ -1127,7 +1127,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(dashboard
 	ds = goqu.Dialect("postgres").
 		Select(
 			goqu.L("sc.validatorindex")).
-		From("sync_committees sc").
+		From(goqu.L("sync_committees sc")).
 		LeftJoin(goqu.I(table).As("r"), goqu.On(goqu.L("sc.validatorindex = r.validator_index"))).
 		Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(validatorIndices)))
 
@@ -1199,7 +1199,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dash
 		goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount")).
 		From(goqu.T(table).As("r")).
 		LeftJoin(goqu.T(slashedByCountTable).As("s"), goqu.On(goqu.L("r.validator_index = s.slashed_by"))).
-		Where(goqu.L("r.slashed_by IS NOT NULL OR s.slashed_amount > 0"))
+		Where(goqu.L("(r.slashed_by IS NOT NULL OR s.slashed_amount > 0)"))
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
@@ -1209,9 +1209,13 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dash
 		ds = ds.
 			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+
+		if groupId != t.AllGroups {
+			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
+		}
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
+	query, args, err := ds.Prepared(false).ToSQL()
 	if err != nil {
 		return nil, err
 	}
@@ -1261,10 +1265,10 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dash
 		ds := goqu.Dialect("postgres").
 			Select(
 				goqu.L("b.proposer"),
-				goqu.L("ps.proposerindex")).
-			From(goqu.L("blocks_proposerslashings ps")).
-			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = ps.block_slot"))).
-			Where(goqu.L("ps.block_slot >= ? AND ps.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
+				goqu.L("bps.proposerindex")).
+			From(goqu.L("blocks_proposerslashings bps")).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = bps.block_slot"))).
+			Where(goqu.L("bps.block_slot >= ? AND bps.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
@@ -1296,11 +1300,11 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(dash
 		ds := goqu.Dialect("postgres").
 			Select(
 				goqu.L("b.proposer"),
-				goqu.L("as.attestation1_indices"),
-				goqu.L("as.attestation2_indices")).
-			From(goqu.L("blocks_attesterslashings as")).
-			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = as.block_slot"))).
-			Where(goqu.L("as.block_slot >= ? AND as.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
+				goqu.L("bas.attestation1_indices"),
+				goqu.L("bas.attestation2_indices")).
+			From(goqu.L("blocks_attesterslashings bas")).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = bas.block_slot"))).
+			Where(goqu.L("bas.block_slot >= ? AND bas.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
@@ -1392,6 +1396,8 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(dashb
 
 	ds := goqu.Dialect("postgres").
 		Select(
+			goqu.L("b.slot"),
+			goqu.L("b.exec_block_number"),
 			goqu.L("b.status"),
 			goqu.L("r.validator_index")).
 		From(goqu.T(table).As("r")).
