@@ -104,6 +104,7 @@ type PremiumPerks struct {
 	ValidatorGroupsPerDashboard     uint64 `json:"validator_groups_per_dashboard"`
 	ShareCustomDashboards           bool   `json:"share_custom_dashboards"`
 	ManageDashboardViaApi           bool   `json:"manage_dashboard_via_api"`
+	BulkAdding                      bool   `json:"bulk_adding"`
 	HeatmapHistorySeconds           uint64 `json:"heatmap_history_seconds"`
 	SummaryChartHistorySeconds      uint64 `json:"summary_chart_history_seconds"`
 	EmailNotificationsPerDay        uint64 `json:"email_notifications_per_day"`

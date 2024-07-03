@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -269,12 +270,12 @@ func parseDashboardId(id string) (interface{}, error) {
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
-func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
+func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam interface{}) (*types.VDBId, error) {
 	switch dashboardId := dashboardIdParam.(type) {
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
-		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(dashboardId)
+		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(ctx, dashboardId)
 		if err != nil {
 			return nil, err
 		}
@@ -297,14 +298,14 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard handlers.
-func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
+func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
 		return nil, err
 	}
 	// convert to VDBId
-	dashboardId, err := h.getDashboardId(dashboardIdParam)
+	dashboardId, err := h.getDashboardId(ctx, dashboardIdParam)
 	if err != nil {
 		return nil, err
 	}
@@ -719,11 +720,11 @@ func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSu
 
 	return []types.VDBSummaryValidatorsData{
 		{
-			Category:   "proposed",
+			Category:   "proposal_proposed",
 			Validators: proposedValidators,
 		},
 		{
-			Category:   "missed",
+			Category:   "proposal_missed",
 			Validators: missedValidators,
 		},
 	}

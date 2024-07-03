@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
@@ -12,33 +13,33 @@ import (
 )
 
 type UserRepository interface {
-	GetUserByEmail(email string) (uint64, error)
-	CreateUser(email, password string) (uint64, error)
+	GetUserByEmail(ctx context.Context, email string) (uint64, error)
+	CreateUser(ctx context.Context, email, password string) (uint64, error)
 	RemoveUser(userId uint64) error
 	UpdateUserEmail(userId uint64) error
 	UpdateUserPassword(userId uint64, password string) error
-	GetEmailConfirmationTime(userId uint64) (time.Time, error)
-	UpdateEmailConfirmationTime(userId uint64) error
-	GetEmailConfirmationHash(userId uint64) (string, error)
-	UpdateEmailConfirmationHash(userId uint64, email, confirmationHash string) error
-	GetUserCredentialInfo(userId uint64) (*t.UserCredentialInfo, error)
-	GetUserIdByApiKey(apiKey string) (uint64, error)
+	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
+	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
+	GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error)
+	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
+	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
+	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
 	GetUserIdByConfirmationHash(hash string) (uint64, error)
-	GetUserInfo(id uint64) (*t.UserInfo, error)
-	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
-	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
+	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
+	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
+	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
 }
 
-func (d *DataAccessService) GetUserByEmail(email string) (uint64, error) {
+func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
 	// TODO @DATA-ACCESS
 	// return dataaccess.ErrNotFound if not present
-	return d.dummy.GetUserByEmail(email)
+	return d.dummy.GetUserByEmail(ctx, email)
 }
 
-func (d *DataAccessService) CreateUser(email, password string) (uint64, error) {
+func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
 	// TODO @DATA-ACCESS
 	// (password is already hashed)
-	return d.dummy.CreateUser(email, password)
+	return d.dummy.CreateUser(ctx, email, password)
 }
 
 func (d *DataAccessService) RemoveUser(userId uint64) error {
@@ -60,27 +61,27 @@ func (d *DataAccessService) UpdateUserPassword(userId uint64, password string) e
 	return d.dummy.UpdateUserPassword(userId, password)
 }
 
-func (d *DataAccessService) GetEmailConfirmationTime(userId uint64) (time.Time, error) {
+func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationTime(userId)
+	return d.dummy.GetEmailConfirmationTime(ctx, userId)
 }
 
-func (d *DataAccessService) UpdateEmailConfirmationTime(userId uint64) error {
+func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationTime(userId)
+	return d.dummy.UpdateEmailConfirmationTime(ctx, userId)
 }
 
-func (d *DataAccessService) GetEmailConfirmationHash(userId uint64) (string, error) {
+func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationHash(userId)
+	return d.dummy.GetEmailConfirmationHash(ctx, userId)
 }
 
-func (d *DataAccessService) UpdateEmailConfirmationHash(userId uint64, email, confirmationHash string) error {
+func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
 	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationHash(userId, email, confirmationHash)
+	return d.dummy.UpdateEmailConfirmationHash(ctx, userId, email, confirmationHash)
 }
 
-func (d *DataAccessService) GetUserCredentialInfo(userId uint64) (*t.UserCredentialInfo, error) {
+func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
 	// TODO @patrick post-beta improve product-mgmt
 	// TODO @DATA-ACCESS adjust to return struct changes (email + email_confirmed)
 	/*result := &t.UserCredentialInfo{}
@@ -114,7 +115,7 @@ func (d *DataAccessService) GetUserCredentialInfo(userId uint64) (*t.UserCredent
 	return d.dummy.GetUserCredentialInfo(userId)
 }
 
-func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
+func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
 	var userId uint64
 	err := d.userReader.Get(&userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -128,7 +129,7 @@ func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, er
 	return d.dummy.GetUserIdByConfirmationHash(hash)
 }
 
-func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
+func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 	// TODO @patrick post-beta improve and unmock
 	userInfo := &t.UserInfo{
 		Id:      userId,
@@ -374,6 +375,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     1,
 					ShareCustomDashboards:           false,
 					ManageDashboardViaApi:           false,
+					BulkAdding:                      false,
 					HeatmapHistorySeconds:           0,
 					SummaryChartHistorySeconds:      3600 * 12,
 					EmailNotificationsPerDay:        5,
@@ -400,6 +402,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     3,
 					ShareCustomDashboards:           true,
 					ManageDashboardViaApi:           false,
+					BulkAdding:                      true,
 					HeatmapHistorySeconds:           3600 * 24 * 7,
 					SummaryChartHistorySeconds:      3600 * 24 * 7,
 					EmailNotificationsPerDay:        15,
@@ -428,6 +431,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     10,
 					ShareCustomDashboards:           true,
 					ManageDashboardViaApi:           false,
+					BulkAdding:                      true,
 					HeatmapHistorySeconds:           3600 * 24 * 30,
 					SummaryChartHistorySeconds:      3600 * 24 * 14,
 					EmailNotificationsPerDay:        20,
@@ -456,6 +460,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 					ValidatorGroupsPerDashboard:     30,
 					ShareCustomDashboards:           true,
 					ManageDashboardViaApi:           true,
+					BulkAdding:                      true,
 					HeatmapHistorySeconds:           3600 * 24 * 365,
 					SummaryChartHistorySeconds:      3600 * 24 * 365,
 					EmailNotificationsPerDay:        50,
@@ -502,7 +507,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 	}, nil
 }
 
-func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
+func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
 	result := &t.UserDashboardsData{}
 
 	dbReturn := []struct {
@@ -567,7 +572,7 @@ func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsD
 	return result, nil
 }
 
-func (d *DataAccessService) GetUserValidatorDashboardCount(userId uint64) (uint64, error) {
+func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
 	var count uint64
 	err := d.alloyReader.Get(&count, `
 		SELECT COUNT(*) FROM users_val_dashboards
