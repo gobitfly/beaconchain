@@ -586,7 +586,7 @@ func (ChartAggregation) NewFromString(s string) ChartAggregation {
 	switch s {
 	case "epoch":
 		return IntervalEpoch
-	case "hourly":
+	case "", "hourly":
 		return IntervalHourly
 	case "daily":
 		return IntervalDaily
