@@ -934,6 +934,11 @@ const items = computed(() => {
   }
   if (isMobile.value) {
     list.push({
+      label: $t('header.settings'),
+      command: async () => { await navigateTo('../user/settings') }
+    })
+
+    list.push({
       label: currency.value,
       currency: currency.value,
       items: [[{
@@ -943,11 +948,10 @@ const items = computed(() => {
     })
   }
   if (isSmallScreen.value && isLoggedIn.value) {
-    list.push(
-      {
-        label: $t('header.logout'),
-        command: () => doLogout()
-      })
+    list.push({
+      label: $t('header.logout'),
+      command: () => doLogout()
+    })
   }
   return list
 })
