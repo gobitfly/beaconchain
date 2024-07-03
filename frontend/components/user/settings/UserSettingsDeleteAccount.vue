@@ -41,7 +41,7 @@ const deleteAction = async () => {
         {{ $t('user_settings.delete_account.warning') }}
       </div>
       <div class="button-container">
-        <Button :label="$t('user_settings.delete_account.button')" :disabled="buttonsDisabled" class="delete-button" @click="onDelete" />
+        <Button :label="$t('user_settings.delete_account.button')" :disabled="buttonsDisabled" severity="danger" class="delete-button" @click="onDelete" />
       </div>
     </div>
   </div>
@@ -75,7 +75,6 @@ const deleteAction = async () => {
 
     .button-container {
       .delete-button {
-        @include main.button-dangerous;
         flex-shrink: 0;
       }
     }

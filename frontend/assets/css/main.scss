@@ -49,24 +49,6 @@ a {
   @include container;
 }
 
-@mixin button-dangerous {
-  color: var(--button-text-color-dangerous);
-  
-  &:not(:disabled) {
-    background-color: var(--button-color-dangerous);
-    border-color: var(--button-color-dangerous);
-
-    &:hover {
-      background-color: var(--button-color-dangerous-hover);
-      border-color: var(--button-color-dangerous-hover);
-    }
-  }
-}
-
-.button-dangerous {
-  @include button-dangerous;
-}
-
 /***
   * Scrollbar styling
 ***/

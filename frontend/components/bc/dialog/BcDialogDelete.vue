@@ -25,13 +25,12 @@ const closeDialog = (response: boolean) => {
       <div class="cancel" @click="closeDialog(false)">
         {{ props?.noLabel || $t('navigation.cancel') }}
       </div>
-      <Button type="button" class="delete" :label="props?.yesLabel || $t('navigation.delete')" @click="closeDialog(true)" />
+      <Button type="button" severity="danger" :label="props?.yesLabel || $t('navigation.delete')" @click="closeDialog(true)" />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
 @use '~/assets/css/fonts.scss';
 
 .content {
@@ -62,10 +61,6 @@ const closeDialog = (response: boolean) => {
       @include fonts.button_text;
       cursor: pointer;
       color: var(--text-color-discreet);
-    }
-
-    .delete {
-      @include main.button-dangerous;
     }
   }
 }
