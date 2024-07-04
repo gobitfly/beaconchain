@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import BcTooltip from '../BcTooltip.vue'
 
 interface Props {
+  layout: 'minimal' | 'gaudy'
   icon?: IconDefinition,
   text?: string,
   subText?: string,
@@ -23,14 +24,15 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
         <div v-if="tooltip" class="individual">
           {{ tooltip }}
         </div>
+        <div>{{ selected ? $t('common.selected'): $t('common.deselected') }}</div>
       </div>
     </template>
-    <ToggleButton class="bc-toggle" :disabled="disabled" :model-value="selected">
+    <ToggleButton class="bc-toggle" :class="layout" :disabled="disabled" :model-value="selected">
       <template #icon="slotProps">
         <slot name="icon" v-bind="slotProps">
           <FontAwesomeIcon v-if="icon" :icon="icon" />
         </slot>
-        <div class="label">
+        <div v-if="text" class="label">
           {{ text }}
           <div v-if="subText" class="sub">
             {{ subText }}
@@ -52,26 +54,38 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
   }
 }
 .bc-toggle {
+  min-width: 30px;
+  min-height: 30px;
   &.p-button {
     &.p-togglebutton {
-      display: flex;
-      flex-grow: 1;
-      flex-direction: column;
-      gap: 11px;
+      &.gaudy {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-grow: 1;
+        flex-direction: column;
+        gap: 11px;
+        padding: v-bind(topBottomPadding) 0;
+        border: 1px var(--container-border-color) solid;
+        border-radius: var(--border-radius);
+        background-color: var(--container-background);
+        color: var(--text-color);
 
-      width: 100%;
-      height: 100%;
-      padding: v-bind(topBottomPadding) 0;
-      border: 1px var(--container-border-color) solid;
-      border-radius: var(--border-radius);
-      background-color: var(--container-background);
-      color: var(--text-color);
-
-      &.p-highlight {
-        border-color: var(--button-color-active);
-        color: var(--button-color-active);
+        &.p-highlight {
+          border-color: var(--button-color-active);
+          color: var(--button-color-active);
+        }
       }
+      &.minimal {
+        padding: 2px;
+        border-style: none;
+        color: var(--container-color);
+        background-color: var(--container-border-color);
 
+        &:not(.p-highlight) {
+          background-color: var(--container-background);
+        }
+      }
       :deep(.p-button-label) {
         display: none;
       }

@@ -13,14 +13,31 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const type = computed(() => props.inputType || 'binary')
 const state = defineModel<boolean|number|ChainID[]>({ required: true })
+const networkSelectorState = state as ModelRef<ChainID[]>
+
+const type = computed(() => props.inputType || 'binary')
 const checked = ref<boolean>(false)
 const inputted = ref('')
 
 refreshUIfromState() // initial loading
 
-const networkSelectorState = (props.inputType !== 'networks') ? undefined : state as ModelRef<ChainID[]>
+function refreshUIfromState () : void {
+  switch (type.value) {
+    case 'amount' :
+    case 'percent' :
+      state.value = state.value as number
+      inputted.value = String(state.value)
+      checked.value = (state.value >= 0)
+      correctUserInput()
+      break
+    case 'binary' :
+      checked.value = state.value as boolean
+      break
+    case 'networks' :
+      break
+  }
+}
 
 const tooltipLines = computed(() => {
   let options
@@ -83,22 +100,7 @@ function isThisAvalidInput (input: string | Ref<string>) : boolean {
   return !!input && !isNaN(Number(input)) && Number(input) >= 0
 }
 
-function refreshUIfromState () : void {
-  switch (type.value) {
-    case 'amount' :
-    case 'percent' :
-      state.value = state.value as number
-      inputted.value = String(state.value)
-      checked.value = (state.value >= 0)
-      correctUserInput()
-      break
-    case 'binary' :
-      checked.value = state.value as boolean
-      break
-    case 'networks' :
-      break
-  }
-}
+const test = ref<number>(10200)
 
 const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
 </script>
@@ -137,7 +139,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       />
     </div>
     <div v-else class="right">
-      <BcNetworkSelector v-model="networkSelectorState" />
+      <BcNetworkSelector v-model="test" />
     </div>
   </div>
 </template>

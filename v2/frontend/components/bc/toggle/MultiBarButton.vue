@@ -48,10 +48,10 @@ const icon = computed(() => {
   }
 }
 .bc-toggle {
+  min-width: 30px;
+  min-height: 30px;
   &.p-button {
     &.p-togglebutton {
-      width: 30px;
-      height: 30px;
       padding: 2px;
       border-style: none;
       color: var(--container-color);

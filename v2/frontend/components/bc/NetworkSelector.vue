@@ -15,6 +15,7 @@ const selection = Array.isArray(liveState.value)
 const buttons = computed(() => {
   const list: MultiBarItem[] = []
   availableNetworks.value.forEach(chainId => list.push({
+    className: 'button-size',
     component: IconNetwork,
     componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
     componentClass: 'maximum',
@@ -28,7 +29,7 @@ const buttons = computed(() => {
 
 <template>
   <BcToggleMultiBar v-if="Array.isArray(selection)" v-model="selection" :buttons="buttons" />
-  <BcToggleSingleBar v-else v-model="selection" :buttons="buttons" />
+  <BcToggleSingleBar v-else v-model="selection" :buttons="buttons" layout="minimal" />
 </template>
 
 <style lang="scss">

@@ -30,9 +30,9 @@ watch(props, (props) => {
   if (props.validatorSub) {
     tPath = 'notifications.subscriptions.validators.'
     validatorSubModifiable.value = { offlineGroup: -1, realTime: false, ...structuredClone(toRaw(props.validatorSub)) }
-  } else {
+  } else if (props.accountSub) {
     tPath = 'notifications.subscriptions.accounts.'
-    accountSubModifiable.value = structuredClone(toRaw(props.accountSub!))
+    accountSubModifiable.value = structuredClone(toRaw(props.accountSub))
   }
 }, { immediate: true })
 
