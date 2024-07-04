@@ -43,7 +43,7 @@ const rows = computed(() => {
       if (value === Number.MAX_SAFE_INTEGER) {
         value = $t('pricing.full_history')
       } else {
-        value = formatTimeDuration(value as number, $t)
+        value = $t('common.last_x', { duration: formatTimeDuration(value as number, $t) })
       }
     }
 
