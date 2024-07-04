@@ -11,32 +11,71 @@ const props = defineProps<{
   default?: number
 }>()
 
+const type = computed(() => props.inputType || 'binary')
+
 const { t } = useI18n()
 
+interface CheckboxAndText {
+  check: boolean,
+  text: string
+}
+
 const state = defineModel<boolean|number|ChainID[]>({ required: true })
-const networkSelectorState = state as ModelRef<ChainID[]>
+let networkSelectorState: ModelRef<ChainID[]>
+let checkboxAndText = undefined as unknown as Ref<CheckboxAndText>
 
-const type = computed(() => props.inputType || 'binary')
-const checked = ref<boolean>(false)
-const inputted = ref('')
+if (type.value === 'networks') {
+  networkSelectorState = state as ModelRef<ChainID[]>
+} else {
+  checkboxAndText = useObjectRefBridge<boolean|number, CheckboxAndText>(state as Ref<boolean|number>, receiveFromVModel, sendToVModel)
+}
 
-refreshUIfromState() // initial loading
-
-function refreshUIfromState () : void {
+function receiveFromVModel (state: boolean|number) : CheckboxAndText {
+  const output = {} as CheckboxAndText
   switch (type.value) {
     case 'amount' :
     case 'percent' :
-      state.value = state.value as number
-      inputted.value = String(state.value)
-      checked.value = (state.value >= 0)
-      correctUserInput()
+      output.text = correctUserInput(String(state))
+      output.check = (state as number >= 0)
       break
     case 'binary' :
-      checked.value = state.value as boolean
-      break
-    case 'networks' :
+      output.check = state as boolean
       break
   }
+  return output
+}
+
+function sendToVModel (state: CheckboxAndText) : boolean|number {
+  switch (type.value) {
+    case 'amount' :
+      return state.check && isThisAvalidInput(state.text) ? calculateCorrectNumber(state.text) : -1
+    case 'percent' :
+      return state.check ? calculateCorrectNumber(state.text) : -1
+    case 'binary' :
+      return state.check
+  }
+  return 0
+}
+
+function correctUserInput (input: string) : string {
+  switch (type.value) {
+    case 'amount' : return isThisAvalidInput(input) ? String(calculateCorrectNumber(input)) : ''
+    case 'percent' : return String(calculateCorrectNumber(input))
+  }
+  return ''
+}
+
+function calculateCorrectNumber (input: string) : number {
+  let num = !isThisAvalidInput(input) ? (props.default ?? 0) : Number(input)
+  if (type.value === 'percent') {
+    if (num < 1) { num = 1 }
+    if (num > 100) { num = 100 }
+  }
+  return num
+}
+
+function isThisAvalidInput (input: string) : boolean {
+  return !!input && !isNaN(Number(input)) && Number(input) >= 0
 }
 
 const tooltipLines = computed(() => {
@@ -46,7 +85,7 @@ const tooltipLines = computed(() => {
   } else {
     let plural: number
     if (type.value === 'amount' || type.value === 'percent') {
-      plural = calculateCorrectNumber(inputted)
+      plural = calculateCorrectNumber(checkboxAndText.value.text)
     } else {
       plural = state.value ? 2 : 1
     }
@@ -55,49 +94,10 @@ const tooltipLines = computed(() => {
   return tAll(t, props.tPath + '.hint', options)
 })
 
-function outputSetting () : void {
-  // outputs the setting
-  switch (type.value) {
-    case 'amount' :
-      state.value = checked.value && isThisAvalidInput(inputted) ? calculateCorrectNumber(inputted) : -1
-      break
-    case 'percent' :
-      state.value = checked.value ? calculateCorrectNumber(inputted) : -1
-      break
-    case 'binary' :
-      state.value = checked.value
-      break
-  }
-}
+const textField = ref('')
 
-function correctUserInput () : void {
-  switch (type.value) {
-    case 'amount' :
-      inputted.value = isThisAvalidInput(inputted) ? String(calculateCorrectNumber(inputted)) : ''
-      break
-    case 'percent' :
-      inputted.value = String(calculateCorrectNumber(inputted))
-      break
-  }
-}
-
-function calculateCorrectNumber (input: string | Ref<string>) : number {
-  if (typeof input !== 'string') {
-    input = input.value
-  }
-  let num = !isThisAvalidInput(input) ? (props.default ?? 0) : Number(input)
-  if (type.value === 'percent') {
-    if (num < 1) { num = 1 }
-    if (num > 100) { num = 100 }
-  }
-  return num
-}
-
-function isThisAvalidInput (input: string | Ref<string>) : boolean {
-  if (typeof input !== 'string') {
-    input = input.value
-  }
-  return !!input && !isNaN(Number(input)) && Number(input) >= 0
+if (checkboxAndText) {
+  watch(() => checkboxAndText.value.text, () => { textField.value = checkboxAndText.value.text }, { immediate: true })
 }
 
 const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
@@ -118,22 +118,20 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <div v-if="type != 'networks'" class="right">
       <div v-if="type == 'amount' || type == 'percent'" class="input">
         <InputText
-          v-model="inputted"
+          v-model="textField"
           type="text"
           :placeholder="t(tPath + '.placeholder')"
           :class="[deactivationClass,type]"
-          @change="outputSetting"
-          @blur="correctUserInput"
+          @blur="checkboxAndText.text = correctUserInput(textField)"
         />
         &nbsp;
       </div>
       <span v-if="type == 'percent'" :class="deactivationClass">%</span>
       <Checkbox
-        v-model="checked"
+        v-model="checkboxAndText.check"
         :binary="true"
         class="checkbox"
         :class="deactivationClass"
-        @change="outputSetting"
       />
     </div>
     <div v-else class="right">
