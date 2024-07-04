@@ -14,6 +14,7 @@
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
     "every_x": "Every {duration}",
+    "last_x": "Last {duration}",
     "id": "ID",
     "average": "Average",
     "index": "Index",
@@ -132,7 +133,11 @@
     "last_24h": "Last 24h",
     "last_7d": "Last 7d",
     "last_30d": "Last 30d",
-    "all_time": "All time"
+    "all_time": "All time",
+    "epoch": "Epoch",
+    "hourly": "Hourly",
+    "daily": "Daily",
+    "weekly": "Weekly"
   },
   "statistics": {
     "last_24h": "24h",
@@ -737,6 +742,7 @@
     "per_validator": "{amount} per validator",
     "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
     "get_started": "Get started now",
+    "full_history": "Full history",
     "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
     "premium_product": {
       "popular": "Popular!",
@@ -763,7 +769,8 @@
       "general": "General",
       "dashboard": "Dashboard",
       "notification": "v2 Notification",
-      "mobille_app": "Mobile App"
+      "mobille_app": "Mobile App",
+      "dashboard_charts": "Validator Dashboard Charts"
     },
     "percs": {
       "ad_free": "Ad free",
@@ -775,8 +782,8 @@
       "manage_dashboard_via_api": "Manage dashboard via API",
       "bulk_adding": "Bulk adding",
       "bulk_adding_subtext": "(deposit address, withdrawal credentials, graffiti)",
-      "heatmap_history_seconds": "Heatmap history",
-      "summary_chart_history_seconds": "Summary chart history",
+      "heatmap_history": "Heatmap history",
+      "summary_chart_history": "Summary chart history",
       "email_notifications_per_day": "Email notifications per day",
       "configure_notifications_via_api": "Configure notifications via API",
       "validator_group_notifications": "Validator group notifications",
