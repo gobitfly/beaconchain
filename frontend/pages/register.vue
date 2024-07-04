@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { object as yupObject } from 'yup'
 import { useField, useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
-import { setTranslator, validateEmailAddress, validatePassword, validateAgreement } from '~/utils/userValidation'
+import { setTranslator, validateAgreement } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -11,13 +12,21 @@ const toast = useBcToast()
 
 useBcSeo('login_and_register.title_register')
 
-const { handleSubmit, errors } = useForm()
-const { value: email } = useField<string>('email', value => validateEmailAddress(value))
-const { value: password } = useField<string>('password', value => validatePassword(value))
-const { value: passwordConfirm } = useField<string>('passwordConfirm', value => validatePassword(value, password.value))
 const { value: agreement } = useField<boolean>('agreement', validateAgreement)
 
 setTranslator($t)
+
+const { handleSubmit, errors, defineField } = useForm({
+  validationSchema: yupObject({
+    email: emailValidation($t),
+    password: passwordValidation($t),
+    confirmPassword: confirmPasswordValidation($t, 'password')
+  })
+})
+
+const [email, emailAttrs] = defineField('email')
+const [password, passwordAttrs] = defineField('password')
+const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
 
 const onSubmit = handleSubmit(async (values) => {
   try {
@@ -34,10 +43,7 @@ const onSubmit = handleSubmit(async (values) => {
   }
 })
 
-const canSubmit = computed(() => email.value && password.value && passwordConfirm.value && agreement.value && !Object.keys(errors.value).length)
-const addressError = ref<string|undefined>(undefined)
-const passwordError = ref<string|undefined>(undefined)
-const passwordConfirmError = ref<string|undefined>(undefined)
+const canSubmit = computed(() => email.value && password.value && confirmPassword.value && agreement.value && !Object.keys(errors.value).length)
 const agreementError = ref<string|undefined>(undefined)
 </script>
 
@@ -59,14 +65,13 @@ const agreementError = ref<string|undefined>(undefined)
             <InputText
               id="email"
               v-model="email"
+              v-bind="emailAttrs"
               type="text"
               :class="{ 'p-invalid': errors?.email }"
               aria-describedby="text-error"
-              @focus="addressError = undefined"
-              @blur="addressError = errors?.email"
             />
             <div class="p-error">
-              {{ addressError || '&nbsp;' }}
+              {{ errors?.email }}
             </div>
           </div>
           <div class="input-row">
@@ -74,29 +79,27 @@ const agreementError = ref<string|undefined>(undefined)
             <InputText
               id="password"
               v-model="password"
+              v-bind="passwordAttrs"
               type="password"
               :class="{ 'p-invalid': errors?.password }"
               aria-describedby="text-error"
-              @focus="passwordError = undefined"
-              @blur="passwordError = errors?.password"
             />
             <div class="p-error">
-              {{ passwordError || '&nbsp;' }}
+              {{ errors?.password }}
             </div>
           </div>
           <div class="input-row">
-            <label for="passwordConfirm" class="label">{{ $t('login_and_register.confirm_password') }}</label>
+            <label for="confirmPassword" class="label">{{ $t('login_and_register.confirm_password') }}</label>
             <InputText
-              id="passwordConfirm"
-              v-model="passwordConfirm"
+              id="confirmPassword"
+              v-model="confirmPassword"
+              v-bind="confirmPasswordAttrs"
               type="password"
-              :class="{ 'p-invalid': errors?.passwordConfirm }"
+              :class="{ 'p-invalid': errors?.confirmPassword }"
               aria-describedby="text-error"
-              @focus="passwordConfirmError = undefined"
-              @blur="passwordConfirmError = errors?.passwordConfirm"
             />
             <div class="p-error">
-              {{ passwordConfirmError || '&nbsp;' }}
+              {{ errors?.confirmPassword }}
             </div>
           </div>
           <div class="input-row">
@@ -217,6 +220,7 @@ const agreementError = ref<string|undefined>(undefined)
       }
 
       .p-error {
+        min-height: 17px;
         @include fonts.small_text;
       }
     }

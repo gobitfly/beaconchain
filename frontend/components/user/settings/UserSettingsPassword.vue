@@ -1,18 +1,25 @@
 <script lang="ts" setup>
-import { useField, useForm } from 'vee-validate'
+import { object as yupObject } from 'yup'
+import { useForm } from 'vee-validate'
 import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
-const { handleSubmit, errors } = useForm()
-const { value: oldPassword } = useField<string>('oldPassword', value => validatePassword(value))
-const { value: newPassword } = useField<string>('newPassword', value => validatePassword(value))
-const { value: confirmPassword } = useField<string>('confirmPassword', value => validatePassword(value, newPassword.value))
+
+const { handleSubmit, errors, defineField } = useForm({
+  validationSchema: yupObject({
+    oldPassword: passwordValidation($t),
+    newPassword: passwordValidation($t),
+    confirmPassword: confirmPasswordValidation($t, 'newPassword')
+  })
+})
+
+const [oldPassword, oldPasswordAttrs] = defineField('oldPassword')
+const [newPassword, newPasswordAttrs] = defineField('newPassword')
+const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
-
-setTranslator($t)
 
 const onSubmit = handleSubmit(async (values) => {
   if (!canSubmit.value) {
@@ -37,10 +44,6 @@ const onSubmit = handleSubmit(async (values) => {
   buttonsDisabled.value = false
 })
 
-const oldPasswordError = ref<string|undefined>(undefined)
-const newPasswordError = ref<string|undefined>(undefined)
-const confirmPasswordError = ref<string|undefined>(undefined)
-
 const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value && !Object.keys(errors.value).length)
 
 </script>
@@ -57,14 +60,13 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       <InputText
         id="old-password"
         v-model="oldPassword"
+        v-bind="oldPasswordAttrs"
         type="password"
         :class="{ 'p-invalid': errors?.oldPassword }"
         aria-describedby="text-error"
-        @focusin="oldPasswordError = undefined"
-        @focusout="oldPasswordError = errors?.oldPassword"
       />
       <div class="p-error">
-        {{ oldPasswordError || '&nbsp;' }}
+        {{ errors?.oldPassword }}
       </div>
     </div>
     <label for="new-password">
@@ -74,14 +76,13 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       <InputText
         id="new-password"
         v-model="newPassword"
+        v-bind="newPasswordAttrs"
         type="password"
         :class="{ 'p-invalid': errors?.newPassword }"
         aria-describedby="text-error"
-        @focusin="newPasswordError = undefined"
-        @focusout="newPasswordError = errors?.newPassword"
       />
       <div class="p-error">
-        {{ newPasswordError || '&nbsp;' }}
+        {{ errors?.newPassword }}
       </div>
     </div>
     <label for="confirm-password">
@@ -91,14 +92,13 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       <InputText
         id="confirm-password"
         v-model="confirmPassword"
+        v-bind="confirmPasswordAttrs"
         type="password"
         :class="{ 'p-invalid': errors?.confirmPassword }"
         aria-describedby="text-error"
-        @focusin="confirmPasswordError = undefined"
-        @focusout="confirmPasswordError = errors?.confirmPassword"
       />
       <div class="p-error">
-        {{ confirmPasswordError || '&nbsp;' }}
+        {{ errors?.confirmPassword }}
       </div>
     </div>
     <div class="button-row">
@@ -134,6 +134,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
     }
 
     .p-error {
+      min-height: 17px;
       @include fonts.small_text;
     }
   }

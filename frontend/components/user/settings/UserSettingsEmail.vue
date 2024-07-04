@@ -1,19 +1,25 @@
 <script lang="ts" setup>
-import { useField, useForm } from 'vee-validate'
+import { object as yupObject } from 'yup'
+import { useForm } from 'vee-validate'
 import { API_PATH } from '~/types/customFetch'
-import { setTranslator, validateEmailAddress } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
-const { handleSubmit, errors } = useForm()
-const { value: password } = useField<string>('password', value => validatePassword(value))
-const { value: newEmail } = useField<string>('newEmail', value => validateEmailAddress(value))
-const { value: confirmEmail } = useField<string>('confirmEmail', value => validateEmailAddress(value, newEmail.value))
+
+const { handleSubmit, errors, defineField } = useForm({
+  validationSchema: yupObject({
+    password: passwordValidation($t),
+    newEmail: emailValidation($t),
+    confirmEmail: confirmEmailValidation($t, 'newEmail')
+  })
+})
+
+const [password, passwordAttrs] = defineField('password')
+const [newEmail, newEmailAttrs] = defineField('newEmail')
+const [confirmEmail, confirmEmailAttrs] = defineField('confirmEmail')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
-
-setTranslator($t)
 
 const onSubmit = handleSubmit(async (values) => {
   if (!canSubmit.value) {
@@ -39,10 +45,6 @@ const onSubmit = handleSubmit(async (values) => {
   buttonsDisabled.value = false
 })
 
-const passwordError = ref<string|undefined>(undefined)
-const newEmailError = ref<string|undefined>(undefined)
-const confirmEmailError = ref<string|undefined>(undefined)
-
 const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && confirmEmail.value && newEmail.value === confirmEmail.value && password.value && !Object.keys(errors.value).length)
 
 </script>
@@ -59,14 +61,13 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
       <InputText
         id="password"
         v-model="password"
+        v-bind="passwordAttrs"
         type="password"
         :class="{ 'p-invalid': errors?.password }"
         aria-describedby="text-error"
-        @focusin="passwordError = undefined"
-        @focusout="passwordError = errors?.password"
       />
       <div class="p-error">
-        {{ passwordError || '&nbsp;' }}
+        {{ errors?.password }}
       </div>
     </div>
     <label for="new-email">
@@ -76,13 +77,13 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
       <InputText
         id="new-email"
         v-model="newEmail"
+        v-bind="newEmailAttrs"
+        type="text"
         :class="{ 'p-invalid': errors?.newEmail }"
         aria-describedby="text-error"
-        @focusin="newEmailError = undefined"
-        @focusout="newEmailError = errors?.newEmail"
       />
       <div class="p-error">
-        {{ newEmailError || '&nbsp;' }}
+        {{ errors?.newEmail }}
       </div>
     </div>
     <label for="confirm-email">
@@ -92,13 +93,13 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
       <InputText
         id="confirm-email"
         v-model="confirmEmail"
+        v-bind="confirmEmailAttrs"
+        type="text"
         :class="{ 'p-invalid': errors?.confirmEmail }"
         aria-describedby="text-error"
-        @focusin="confirmEmailError = undefined"
-        @focusout="confirmEmailError = errors?.confirmEmail"
       />
       <div class="p-error">
-        {{ confirmEmailError || '&nbsp;' }}
+        {{ errors?.confirmEmail }}
       </div>
     </div>
     <div class="button-row">
@@ -134,6 +135,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
     }
 
     .p-error {
+      min-height: 17px;
       @include fonts.small_text;
     }
   }
