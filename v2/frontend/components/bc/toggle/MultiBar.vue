@@ -32,6 +32,7 @@ function convertButtonStatesToInOutSelection (states: ButtonStates) : string[] {
   return selection
 }
 
+// this line is independent of the bridge above (that addresses the on/off states), this line updates the component if the list of buttons comes late
 watch(() => props.buttons, () => { buttonStates.value = convertInOutSelectionToButtonStates(inOutSelection.value) })
 
 const displayModeClass = computed(() => props.displayMode ? 'read-only' : '')
