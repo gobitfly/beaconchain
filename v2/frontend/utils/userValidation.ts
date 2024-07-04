@@ -10,7 +10,7 @@ export function confirmPasswordValidation (t: ComposerTranslation, comparerRefNa
 }
 
 export function emailValidation (t: ComposerTranslation) : StringSchema {
-  return yupString().required(t('validation.email.empty')).email(t('validation.email.invalid'))
+  return yupString().required(t('validation.email.empty')).matches(REGEXP_VALID_EMAIL, t('validation.email.invalid'))
 }
 
 export function confirmEmailValidation (t: ComposerTranslation, comparerRefName: string) : StringSchema {
