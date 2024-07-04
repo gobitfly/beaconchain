@@ -86,7 +86,7 @@ const openManageNotifications = () => {
           <template #header>
             <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faGaugeSimpleMax" />
           </template>
-          <div>TODO: Dashboards Table</div>
+          <NotificationsDashboardsTable @open-dialog="openManageNotifications" />
         </TabPanel>
         <TabPanel :disabled="tabs.machines.disabled">
           <template #header>
