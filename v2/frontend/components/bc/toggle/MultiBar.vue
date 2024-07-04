@@ -12,21 +12,27 @@ const props = defineProps<Props>()
 type ButtonStates = Record<string, boolean>
 
 const inOutSelection = defineModel<string[]>({ required: true })
+const buttonStates = useObjectRefBridge<string[], ButtonStates>(inOutSelection, convertInOutSelectionToButtonStates, convertButtonStatesToInOutSelection, true)
 
-const buttonStates = ref<ButtonStates>(props.buttons.reduce((map, { value }) => {
-  map[value] = inOutSelection.value.includes(value)
-  return map
-}, {} as ButtonStates))
+function convertInOutSelectionToButtonStates (selection: string[]) : ButtonStates {
+  const states = props.buttons.reduce((map, { value }) => {
+    map[value] = selection.includes(value)
+    return map
+  }, {} as ButtonStates)
+  return states
+}
 
-watch(buttonStates, () => {
-  const list: string[] = []
-  Object.entries(buttonStates.value).forEach(([key, value]) => {
+function convertButtonStatesToInOutSelection (states: ButtonStates) : string[] {
+  const selection: string[] = []
+  Object.entries(states).forEach(([key, value]) => {
     if (value) {
-      list.push(key)
+      selection.push(key)
     }
   })
-  inOutSelection.value = list
-}, { deep: true })
+  return selection
+}
+
+watch(() => props.buttons, () => { buttonStates.value = convertInOutSelectionToButtonStates(inOutSelection.value) })
 
 const displayModeClass = computed(() => props.displayMode ? 'read-only' : '')
 </script>
