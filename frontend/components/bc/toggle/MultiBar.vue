@@ -10,11 +10,10 @@ const props = defineProps<Props>()
 
 const selected = defineModel<string[]>({ required: true })
 
-const inital: Record<string, boolean> = {}
 const modelValues = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
   map[value] = selected.value.includes(value)
   return map
-}, inital))
+}, {} as Record<string, boolean>))
 
 watch(modelValues, () => {
   const list: string[] = []
@@ -25,24 +24,23 @@ watch(modelValues, () => {
   })
   selected.value = list
 }, { deep: true })
-
 </script>
 
 <template>
   <div class="bc-togglebar">
     <BcToggleMultiBarButton
-      v-for="icon in props.buttons"
-      :key="icon.value"
-      v-model="modelValues[icon.value]"
-      :class="icon.className"
-      :icon="icon.icon"
-      :tooltip="icon.tooltip"
-      :disabled="icon.disabled"
+      v-for="button in props.buttons"
+      :key="button.value"
+      v-model="modelValues[button.value]"
+      :class="button.className"
+      :icon="button.icon"
+      :tooltip="button.tooltip"
+      :disabled="button.disabled"
     >
       <template #icon>
-        <slot :name="icon.value">
-          <component :is="icon.component" v-if="icon.component" v-bind="icon.componentProps" :class="icon.componentClass" />
-          <FontAwesomeIcon v-else-if="icon.icon" :icon="icon.icon" />
+        <slot :name="button.value">
+          <component :is="button.component" v-if="button.component" v-bind="button.componentProps" :class="button.componentClass" />
+          <FontAwesomeIcon v-else-if="button.icon" :icon="button.icon" />
         </slot>
       </template>
     </BcToggleMultiBarButton>

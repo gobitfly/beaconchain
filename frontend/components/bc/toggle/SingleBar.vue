@@ -2,7 +2,9 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { Component } from 'vue'
 interface Props {
+  layout: 'minimal' | 'gaudy'
   buttons: {
+    className?: string,
     icon?: IconDefinition,
     text?: string,
     subText?: string,
@@ -12,7 +14,6 @@ interface Props {
     value: string,
     tooltip?: string,
     disabled?: boolean,
-
   }[],
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
@@ -41,7 +42,7 @@ function onButtonClicked (value: string) {
 </script>
 
 <template>
-  <div class="bc-togglebar">
+  <div class="bc-togglebar" :class="layout">
     <BcToggleSingleBarButton
       v-for="button in props.buttons"
       :key="button.value"
@@ -51,6 +52,8 @@ function onButtonClicked (value: string) {
       :selected="values[button.value]"
       :tooltip="button.tooltip"
       :disabled="button.disabled"
+      :class="button.className"
+      :layout="layout"
       @click="!button.disabled && onButtonClicked(button.value)"
     >
       <template #icon>
@@ -65,6 +68,15 @@ function onButtonClicked (value: string) {
 <style lang="scss" scoped>
 .bc-togglebar {
   display: inline-flex;
-  gap: var(--padding);
+  &.gaudy {
+    gap: var(--padding);
+  }
+  &.minimal {
+    gap: var(--padding-small);
+    padding: 7px 10px;
+    background-color: var(--container-background);
+    border: solid 1px var(--container-border-color);
+    border-radius: var(--border-radius);
+  }
 }
 </style>

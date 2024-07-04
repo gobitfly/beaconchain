@@ -13,6 +13,7 @@ watch(selection, (value) => { network.value = Number(value) as ChainID })
 const buttonList = availableNetworks.value.map((chainId) => {
   return {
     value: String(chainId),
+    className: 'dashboard-creation-singletoggle-button',
     text: ChainInfo[chainId].family as string,
     subText: (ChainInfo[chainId].name !== ChainInfo[chainId].family as string) ? ChainInfo[chainId].name : ChainInfo[chainId].description,
     disabled: isNetworkDisabled(chainId),
@@ -46,6 +47,7 @@ const continueDisabled = computed(() => {
         :buttons="buttonList"
         :initial="String(currentNetwork)"
         :are-buttons-networks="true"
+        layout="gaudy"
       />
       <div class="row-container">
         <Button @click="emit('back')">
@@ -85,6 +87,9 @@ const continueDisabled = computed(() => {
 </style>
 
 <style lang="scss">
+  .dashboard-creation-singletoggle-button {
+    width: 100%;
+  }
   .dashboard-creation-button-network-icon {
     width: 100%;
     height: 100%;

@@ -25,7 +25,7 @@ const completeList = [{ value: 'attestation' }, { value: 'proposal', component: 
 const selectedList = ref<string[]>(['attestation', 'proposal'])
 
 const selectedType = ref<string>('Validators')
-const allTypes = [{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }]
+const allTypes = [{ text: 'Accounts', value: 'Accounts', component: IconAccount, className: 'singletoggle-button' }, { text: 'Validators', value: 'Validators', component: IconValidator, className: 'singletoggle-button' }]
 
 const dropodownSelection = ref<string | undefined>()
 const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
@@ -141,7 +141,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
       <h1>Single Toggle</h1>
       <div class="element_container">
         selectedType: {{ selectedType }}
-        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" class="single_bar_container" :allow-deselect="true" />
+        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" class="single_bar_container" layout="gaudy" :allow-deselect="true" />
       </div>
     </TabPanel>
     <TabPanel header="Dropdown">
@@ -214,5 +214,11 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
 
 .single_bar_container {
   width: 600px
+}
+</style>
+
+<style lang="scss">
+.singletoggle-button {
+  width: 100%;
 }
 </style>

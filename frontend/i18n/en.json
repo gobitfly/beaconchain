@@ -49,7 +49,9 @@
     "current": "Current",
     "upcoming": "Upcoming", 
     "past": "Past",
-    "total": "Total"
+    "total": "Total",
+    "selected": "Selected",
+    "deselected": "Not selected"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -694,8 +696,6 @@
     "all_networks": "All"
   },
   "notifications": {
-    "TODO: INSERT HERE":" THE TRANSLATIONS FOR THE PARENT DIALOG",
-
     "subscriptions": {
       "dialog_title": "Edit Subscriptions",
       "validators" : {

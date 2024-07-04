@@ -15,6 +15,7 @@ const type = defineModel<DashboardType | ''>('type', { required: true })
 
 const typeButtons = [
   {
+    className: 'dashboard-network-creation-singletoggle-button',
     text: $t('dashboard.creation.type.accounts'),
     subText: $t('common.coming_soon'),
     value: 'account',
@@ -22,6 +23,7 @@ const typeButtons = [
     disabled: props.accountsDisabled
   },
   {
+    className: 'dashboard-network-creation-singletoggle-button',
     text: $t('dashboard.creation.type.validators'),
     value: 'validator',
     component: IconValidator,
@@ -56,7 +58,7 @@ const next = () => {
       <div class="subtitle_text">
         {{ $t('dashboard.creation.type.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" :initial="type" />
+      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" :initial="type" layout="gaudy" />
       <div class="row-container">
         <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="next" />
         <Button class="button" :disabled="continueDisabled" @click="next">
@@ -96,4 +98,10 @@ const next = () => {
       }
     }
   }
+</style>
+
+<style lang="scss">
+.dashboard-network-creation-singletoggle-button {
+  width: 100%;
+}
 </style>
