@@ -26,7 +26,7 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
         <template #header>
           <BcTabHeader :header="$t('dashboard.notifications.management.tabs.general')" :icon="faCog" />
         </template>
-        General coming soon!
+        <DashboardNotificationsManagementGeneralTab />
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
