@@ -51,7 +51,8 @@
     "past": "Past",
     "total": "Total",
     "selected": "Selected",
-    "deselected": "Not selected"
+    "deselected": "Not selected",
+    "unavailable": "Unavailable"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",

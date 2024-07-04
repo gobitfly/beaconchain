@@ -52,7 +52,7 @@ function onButtonClicked (value: string) {
       :selected="values[button.value]"
       :tooltip="button.tooltip"
       :disabled="button.disabled"
-      :class="button.className"
+      :class="[layout, button.className]"
       :layout="layout"
       @click="!button.disabled && onButtonClicked(button.value)"
     >
@@ -77,6 +77,10 @@ function onButtonClicked (value: string) {
     background-color: var(--container-background);
     border: solid 1px var(--container-border-color);
     border-radius: var(--border-radius);
+  }
+  .gaudy {
+    width: 100%;
+    height: 100%;
   }
 }
 </style>

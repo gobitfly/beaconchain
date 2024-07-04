@@ -13,23 +13,28 @@ interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
  *  3. At the moment the binding is created, it is typical that one array has initial data and the other is
  *     empty. You do not want the empty one to erase the initial data when the binding starts.
  * @param origRef Ref that you want to bridge with the new ref that this function will create for you.
+ * @param arraysInDifferentOrdersAreTheSame Tells whether arrays with the same content in different orders must be considered identical.
  * @param origToCreated (optional) Callback/Arrow function that converts an element in the original array into the type of the elements in the created array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
  * @param createdToOrig (optional) Callback/Arrow function that converts an element in the created array into the type of the elements in the original array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
  * */
-export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelRef<Torig[]>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated[]> {
+export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelRef<Torig[]>, arraysInDifferentOrdersAreTheSame: boolean, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated[]> {
   const createdRef = ref<Tcreated[]>()
   const stopperForth = watch(origRef, () => {
-    const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : convertPrimitiveByDefault<Tcreated>(el)) : undefined
-    if (JSON.stringify(OasC) !== JSON.stringify(createdRef.value)) {
+    let OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : convertPrimitiveByDefault<Tcreated>(el)) : undefined
+    if (arraysInDifferentOrdersAreTheSame && OasC) { OasC = OasC.sort() }
+    const createdValue = (arraysInDifferentOrdersAreTheSame && createdRef.value) ? createdRef.value.sort() : createdRef.value
+    if (JSON.stringify(OasC) !== JSON.stringify(createdValue)) {
       createdRef.value = OasC
     }
-  }, { immediate: true })
+  }, { immediate: true, deep: true })
   const stopperBack = watch(createdRef, () => {
-    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : convertPrimitiveByDefault<Torig>(el)) : undefined
-    if (JSON.stringify(CasO) !== JSON.stringify(origRef.value)) {
+    let CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : convertPrimitiveByDefault<Torig>(el)) : undefined
+    if (arraysInDifferentOrdersAreTheSame && CasO) { CasO = CasO.sort() }
+    const originalValue = (arraysInDifferentOrdersAreTheSame && origRef.value) ? origRef.value.sort() : origRef.value
+    if (JSON.stringify(CasO) !== JSON.stringify(originalValue)) {
       origRef.value = CasO as Torig[]
     }
-  })
+  }, { deep: true })
 
   onUnmounted(() => {
     stopperBack()
@@ -52,21 +57,26 @@ export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelR
  * @param origRef Ref that you want to bridge with the new ref that this function will create for you.
  * @param origToCreated Callback/Arrow function that converts the object in the original ref into the structure of the object in the created ref.
  * @param createdToOrig Callback/Arrow function that converts the object in the created ref into the structure of the object in the original ref.
+ * @param arraysInDifferentOrdersAreTheSame (optional, `true` by default) If one of the reactive objects is an array, tells whether arrays with the same content in different orders must be considered identical.
  * */
-export function useOBjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated: ConverterCallback<Torig, Tcreated>, createdToOrig: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated> {
+export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated: ConverterCallback<Torig, Tcreated>, createdToOrig: ConverterCallback<Tcreated, Torig>, arraysInDifferentOrdersAreTheSame: boolean = true) : Ref<Tcreated> {
   const createdRef = ref<Tcreated>()
   const stopperForth = watch(origRef, () => {
-    const OasC = (origRef.value !== undefined) ? origToCreated(origRef.value) : undefined
-    if (JSON.stringify(OasC) !== JSON.stringify(createdRef.value)) {
+    let OasC = (origRef.value !== undefined) ? origToCreated(origRef.value) : undefined
+    if (Array.isArray(OasC) && arraysInDifferentOrdersAreTheSame) { OasC = OasC.sort() }
+    const createdValue = (Array.isArray(createdRef.value) && arraysInDifferentOrdersAreTheSame) ? createdRef.value.sort() : createdRef.value
+    if (JSON.stringify(OasC) !== JSON.stringify(createdValue)) {
       createdRef.value = OasC
     }
-  }, { immediate: true })
+  }, { immediate: true, deep: true })
   const stopperBack = watch(createdRef, () => {
-    const CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined
-    if (JSON.stringify(CasO) !== JSON.stringify(origRef.value)) {
+    let CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined
+    if (Array.isArray(CasO) && arraysInDifferentOrdersAreTheSame) { CasO = CasO.sort() }
+    const originalValue = (Array.isArray(origRef.value) && arraysInDifferentOrdersAreTheSame) ? origRef.value.sort() : origRef.value
+    if (JSON.stringify(CasO) !== JSON.stringify(originalValue)) {
       origRef.value = CasO as Torig
     }
-  })
+  }, { deep: true })
 
   onUnmounted(() => {
     stopperBack()
