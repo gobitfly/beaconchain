@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useField, useForm } from 'vee-validate'
+import { object as yupObject } from 'yup'
+import { useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 import { Target } from '~/types/links'
-import { setTranslator, validateEmailAddress, validatePassword } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { doLogin } = useUserStore()
@@ -10,11 +10,15 @@ const toast = useBcToast()
 
 useBcSeo('login_and_register.title_login')
 
-const { handleSubmit, errors } = useForm()
-const { value: email } = useField<string>('email', value => validateEmailAddress(value))
-const { value: password } = useField<string>('password', value => validatePassword(value))
+const { handleSubmit, errors, defineField } = useForm({
+  validationSchema: yupObject({
+    email: emailValidation($t),
+    password: passwordValidation($t)
+  })
+})
 
-setTranslator($t)
+const [email, emailAttrs] = defineField('email')
+const [password, passwordAttrs] = defineField('password')
 
 const onSubmit = handleSubmit(async (values) => {
   try {
@@ -27,8 +31,6 @@ const onSubmit = handleSubmit(async (values) => {
 })
 
 const canSubmit = computed(() => email.value && password.value && !Object.keys(errors.value).length)
-const addressError = ref<string|undefined>(undefined)
-const passwordError = ref<string|undefined>(undefined)
 </script>
 
 <template>
@@ -40,14 +42,13 @@ const passwordError = ref<string|undefined>(undefined)
           <InputText
             id="email"
             v-model="email"
+            v-bind="emailAttrs"
             type="text"
             :class="{ 'p-invalid': errors?.email }"
             aria-describedby="text-error"
-            @focus="addressError = undefined"
-            @blur="addressError = errors?.email"
           />
           <div class="p-error">
-            {{ addressError || '&nbsp;' }}
+            {{ errors?.email }}
           </div>
         </div>
         <div class="input-row">
@@ -55,14 +56,13 @@ const passwordError = ref<string|undefined>(undefined)
           <InputText
             id="password"
             v-model="password"
+            v-bind="passwordAttrs"
             type="password"
             :class="{ 'p-invalid': errors?.password }"
             aria-describedby="text-error"
-            @focus="passwordError = undefined"
-            @blur="passwordError = errors?.password"
           />
           <div class="p-error">
-            {{ passwordError || '&nbsp;' }}
+            {{ errors?.password }}
           </div>
         </div>
         <div class="last-row">
@@ -130,6 +130,7 @@ const passwordError = ref<string|undefined>(undefined)
     }
 
     .p-error {
+      min-height: 17px;
       @include fonts.small_text;
     }
   }
