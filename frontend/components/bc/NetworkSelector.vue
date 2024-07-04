@@ -10,10 +10,10 @@ const props = defineProps<{
 const { availableNetworks, isNetworkDisabled } = useNetworkStore()
 
 /** If the v-model is:
- *  - A ChainID: only one network can be selected by the user. Prop `displayOnly` must be false or omitted.
+ *  - A ChainID: only one network can be selected by the user. Prop `:display-only` must be false or omitted.
  *  - An array of ChainID:
- *    - and prop `displayOnly` is `false`/omitted: several networks can be selected by the user,
- *    - and prop `displayOnly` is `true`: the networks in the array are shown to the user but they are unclickable. */
+ *    - and prop `:display-only` is `false`/omitted: several networks can be selected by the user,
+ *    - and prop `:display-only` is `true`: the networks in the array are shown to the user but they are unclickable. */
 const liveState = defineModel<ChainID|ChainID[]>({ required: false })
 
 const selection = Array.isArray(liveState.value)
