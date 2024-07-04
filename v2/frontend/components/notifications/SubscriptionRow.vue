@@ -100,8 +100,6 @@ function isThisAvalidInput (input: string | Ref<string>) : boolean {
   return !!input && !isNaN(Number(input)) && Number(input) >= 0
 }
 
-const test = ref<number>(10200)
-
 const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
 </script>
 
@@ -139,7 +137,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       />
     </div>
     <div v-else class="right">
-      <BcNetworkSelector v-model="test" />
+      <BcNetworkSelector v-model="networkSelectorState" />
     </div>
   </div>
 </template>

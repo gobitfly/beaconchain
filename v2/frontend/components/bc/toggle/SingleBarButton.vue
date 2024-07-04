@@ -24,7 +24,7 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
         <div v-if="tooltip" class="individual">
           {{ tooltip }}
         </div>
-        <div>{{ selected ? $t('common.selected'): $t('common.deselected') }}</div>
+        <div>{{ disabled ? $t('common.unavailable') : (selected ? $t('common.selected') : $t('common.deselected')) }}</div>
       </div>
     </template>
     <ToggleButton class="bc-toggle" :class="layout" :disabled="disabled" :model-value="selected">

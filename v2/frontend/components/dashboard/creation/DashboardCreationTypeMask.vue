@@ -15,7 +15,6 @@ const type = defineModel<DashboardType | ''>('type', { required: true })
 
 const typeButtons = [
   {
-    className: 'dashboard-network-creation-singletoggle-button',
     text: $t('dashboard.creation.type.accounts'),
     subText: $t('common.coming_soon'),
     value: 'account',
@@ -23,7 +22,6 @@ const typeButtons = [
     disabled: props.accountsDisabled
   },
   {
-    className: 'dashboard-network-creation-singletoggle-button',
     text: $t('dashboard.creation.type.validators'),
     value: 'validator',
     component: IconValidator,
@@ -98,10 +96,4 @@ const next = () => {
       }
     }
   }
-</style>
-
-<style lang="scss">
-.dashboard-network-creation-singletoggle-button {
-  width: 100%;
-}
 </style>

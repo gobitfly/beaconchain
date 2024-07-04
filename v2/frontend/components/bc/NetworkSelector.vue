@@ -3,32 +3,48 @@ import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
 import { ChainInfo, ChainID } from '~/types/network'
 
+const props = defineProps<{
+  displayOnly?: boolean
+}>()
+
 const { availableNetworks, isNetworkDisabled } = useNetworkStore()
 
-/** This ref is a chain ID if only one network can be selected, or an array of chain IDs if several networks can be selected. */
-const liveState = defineModel<ChainID|ChainID[]>()
+/** If the v-model is:
+ *  - A ChainID: only one network can be selected by the user. Prop `displayOnly` must be false or omitted.
+ *  - An array of ChainID:
+ *    - and prop `displayOnly` is `false`/omitted: several networks can be selected by the user,
+ *    - and prop `displayOnly` is `true`: the networks in the array are shown to the user but they are unclickable. */
+const liveState = defineModel<ChainID|ChainID[]>({ required: false })
 
 const selection = Array.isArray(liveState.value)
-  ? useArrayRefBridge<ChainID, string>(liveState as Ref<ChainID[]>)
+  ? useArrayRefBridge<ChainID, string>(liveState as Ref<ChainID[]>, true)
   : usePrimitiveRefBridge<ChainID, string>(liveState as Ref<ChainID>)
 
-const buttons = computed(() => {
-  const list: MultiBarItem[] = []
-  availableNetworks.value.forEach(chainId => list.push({
-    className: 'button-size',
-    component: IconNetwork,
-    componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
-    componentClass: 'maximum',
-    value: String(chainId),
-    disabled: isNetworkDisabled(chainId),
-    tooltip: ChainInfo[chainId].name + ' ' + ChainInfo[chainId].description
-  }))
-  return list
-})
+const buttons = shallowRef<MultiBarItem[]>([])
+
+if (props.displayOnly) {
+  watch(liveState as Ref<ChainID[]>, updateButtons, { immediate: true })
+} else {
+  watch(availableNetworks, updateButtons, { immediate: true })
+}
+
+function updateButtons (source: ChainID[]) : void {
+  buttons.value = []
+  source.forEach((chainId) => {
+      buttons.value!.push({
+        component: IconNetwork,
+        componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
+        componentClass: 'maximum',
+        value: String(chainId),
+        disabled: isNetworkDisabled(chainId),
+        tooltip: ChainInfo[chainId].name + ' ' + ChainInfo[chainId].description
+      })
+  })
+}
 </script>
 
 <template>
-  <BcToggleMultiBar v-if="Array.isArray(selection)" v-model="selection" :buttons="buttons" />
+  <BcToggleMultiBar v-if="Array.isArray(selection)" v-model="selection" :buttons="buttons" :display-mode="displayOnly" />
   <BcToggleSingleBar v-else v-model="selection" :buttons="buttons" layout="minimal" />
 </template>
 

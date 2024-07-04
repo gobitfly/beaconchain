@@ -8,6 +8,7 @@ interface Props {
   falseIcon?: IconDefinition,
   disabled?:boolean,
   tooltip?: string,
+  displayModeClass?: string
 }
 
 const props = defineProps<Props>()
@@ -22,14 +23,23 @@ const icon = computed(() => {
 <template>
   <BcTooltip :dont-open-permanently="true" :hover-delay="350">
     <template #tooltip>
-      <div class="button-tooltip">
+      <div class="button-tooltip" :class="displayModeClass">
         <div v-if="tooltip" class="individual">
           {{ tooltip }}
         </div>
-        <div>{{ selected ? $t('filter.enabled'): $t('filter.disabled') }}</div>
+        <div v-if="displayModeClass !== 'read-only'">
+          {{ disabled ? $t('common.unavailable') : (selected ? $t('filter.enabled'): $t('filter.disabled')) }}
+        </div>
       </div>
     </template>
-    <ToggleButton v-model="selected" class="bc-toggle" on-label="''" off-icon="''" :disabled="disabled">
+    <ToggleButton
+      v-model="selected"
+      class="bc-toggle"
+      :class="displayModeClass"
+      on-label="''"
+      off-icon="''"
+      :disabled="disabled || displayModeClass === 'read-only'"
+    >
       <template #icon="slotProps">
         <slot name="icon" v-bind="slotProps">
           <FontAwesomeIcon v-if="icon" :icon="icon" />
@@ -43,7 +53,7 @@ const icon = computed(() => {
 .button-tooltip {
   width: max-content;
   text-align: left;
-  .individual{
+  .individual::not(.read-only) {
     margin-bottom: var(--padding);
   }
 }
@@ -57,7 +67,8 @@ const icon = computed(() => {
       color: var(--container-color);
       background-color: var(--container-border-color);
 
-      &:not(.p-highlight) {
+      &:not(.p-highlight),
+      &.read-only {
         background-color: var(--container-background);
       }
 
@@ -65,8 +76,10 @@ const icon = computed(() => {
       :deep(.p-button-label) {
         display: none;
       }
-      &.p-disabled{
-        opacity: 0.5;
+      &.p-disabled {
+        &:not(.read-only) {
+          opacity: 0.5;
+        }
         cursor: default;
       }
     }
