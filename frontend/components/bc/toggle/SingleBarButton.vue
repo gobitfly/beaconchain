@@ -59,11 +59,11 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
   &.p-button {
     &.p-togglebutton {
       &.gaudy {
-        width: 100%;
-        height: 100%;
         display: flex;
         flex-grow: 1;
         flex-direction: column;
+        width: 100%;
+        height: 100%;
         gap: 11px;
         padding: v-bind(topBottomPadding) 0;
         border: 1px var(--container-border-color) solid;
