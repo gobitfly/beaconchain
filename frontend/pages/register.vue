@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { object as yupObject } from 'yup'
-import { useField, useForm } from 'vee-validate'
+import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
-import { setTranslator, validateAgreement } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -12,23 +11,25 @@ const toast = useBcToast()
 
 useBcSeo('login_and_register.title_register')
 
-const { value: agreement } = useField<boolean>('agreement', validateAgreement)
-
-setTranslator($t)
-
 const { handleSubmit, errors, defineField } = useForm({
   validationSchema: yupObject({
     email: emailValidation($t),
     password: passwordValidation($t),
-    confirmPassword: confirmPasswordValidation($t, 'password')
+    confirmPassword: confirmPasswordValidation($t, 'password'),
+    agreement: checkboxValidation($t('validation.tos_not_agreed'))
   })
 })
 
 const [email, emailAttrs] = defineField('email')
 const [password, passwordAttrs] = defineField('password')
 const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
+const [agreement, agreementAttrs] = defineField('agreement')
 
 const onSubmit = handleSubmit(async (values) => {
+  if (!canSubmit.value) {
+    return
+  }
+
   try {
     await fetch(API_PATH.REGISTER, {
       method: 'POST',
@@ -44,7 +45,6 @@ const onSubmit = handleSubmit(async (values) => {
 })
 
 const canSubmit = computed(() => email.value && password.value && confirmPassword.value && agreement.value && !Object.keys(errors.value).length)
-const agreementError = ref<string|undefined>(undefined)
 </script>
 
 <template>
@@ -106,11 +106,12 @@ const agreementError = ref<string|undefined>(undefined)
             <div class="agreement">
               <Checkbox
                 v-model="agreement"
+                v-bind="agreementAttrs"
                 input-id="agreement"
                 :binary="true"
+                type="checkbox"
                 class="checkbox"
-                @focus="agreementError = undefined"
-                @blur="agreementError = errors?.agreement"
+                aria-describedby="text-error"
               />
               <div>
                 <label for="agreement">{{ tOf($t, 'login_and_register.please_agree', 0) + ' ' }}</label>
@@ -124,7 +125,7 @@ const agreementError = ref<string|undefined>(undefined)
               </div>
             </div>
             <div class="p-error">
-              {{ agreementError || '&nbsp;' }}
+              {{ errors?.agreement }}
             </div>
           </div>
           <div class="last-row">

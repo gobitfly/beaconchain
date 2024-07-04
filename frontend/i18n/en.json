@@ -864,6 +864,6 @@
       "max": "Your password must contain at most {amount} characters.",
       "no_match": "The passwords don't match."
     },
-    "not_agreed": "Please accept the ToS & Privacy Policy."
+    "tos_not_agreed": "Please accept the ToS & Privacy Policy."
   }
 }
