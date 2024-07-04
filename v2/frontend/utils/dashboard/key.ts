@@ -1,4 +1,4 @@
-export function isPublicKey (value?: string): boolean {
+export function isPublicDashboardKey (value?: string): boolean {
   if (!value) {
     return true
   }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -63,6 +64,7 @@ var (
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
+	reEmailConfirmationHash        = regexp.MustCompile(`^[a-z0-9]{40}$`)
 )
 
 const (
@@ -84,6 +86,7 @@ var (
 	errBadRequest   = errors.New("bad request")
 	errUnauthorized = errors.New("unauthorized")
 	errForbidden    = errors.New("forbidden")
+	errConflict     = errors.New("conflict")
 )
 
 type Paging struct {
@@ -156,6 +159,10 @@ func (v *validationError) checkEmail(email string) string {
 
 func (v *validationError) checkPassword(password string) string {
 	return v.checkRegex(rePassword, password, "password")
+}
+
+func (v *validationError) checkConfirmationHash(hash string) string {
+	return v.checkRegex(reEmailConfirmationHash, hash, "token")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -263,12 +270,12 @@ func parseDashboardId(id string) (interface{}, error) {
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
-func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
+func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam interface{}) (*types.VDBId, error) {
 	switch dashboardId := dashboardIdParam.(type) {
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
-		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(dashboardId)
+		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(ctx, dashboardId)
 		if err != nil {
 			return nil, err
 		}
@@ -291,14 +298,14 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard handlers.
-func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
+func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
 		return nil, err
 	}
 	// convert to VDBId
-	dashboardId, err := h.getDashboardId(dashboardIdParam)
+	dashboardId, err := h.getDashboardId(ctx, dashboardIdParam)
 	if err != nil {
 		return nil, err
 	}
@@ -588,6 +595,9 @@ func handleErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, errForbidden) {
 		returnForbidden(w, err)
 		return
+	} else if errors.Is(err, errConflict) {
+		returnConflict(w, err)
+		return
 	}
 	returnInternalServerError(w, err)
 }
@@ -610,6 +620,10 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
+}
+
+func newConflictErr(format string, args ...interface{}) error {
+	return errWithMsg(errConflict, format, args...)
 }
 
 func newNotFoundErr(format string, args ...interface{}) error {

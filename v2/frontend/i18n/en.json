@@ -285,13 +285,24 @@
       "proposer_slashing": "Proposer Slashing Reward"
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "login_question": "Do you want to login to set notifications?",
+    "manage": "Manage Notifications",
+    "tabs":{
+      "dashboards": "Dashboards",
+      "machines": "Machines",
+      "clients": "Clients",
+      "rocketpool": "Rocket Pool",
+      "network": "Network"
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
     "account_dashboard": "Account Dashboard",
     "public_validator_dashboard": "Dashboard",
     "public_account_dashboard": "Dashboard",
-    "notifications": "Notifications",
     "share": "Share",
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
@@ -563,6 +574,20 @@
           "result": "Result",
           "rewards": "Rewards",
           "validator": "Validator"
+        }
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "management": {
+        "title": "Manage Notifications",
+        "tabs": {
+          "general": "General",
+          "dashboards": "Dashboards",
+          "machines": "Machines",
+          "clients": "Clients",
+          "rocketpool": "Rocket Pool",
+          "network": "Network"
         }
       }
     }

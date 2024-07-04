@@ -898,7 +898,7 @@ func GetLastExportedHour() (*EpochBounds, error) {
 
 func GetLastExportedDay() (*DayBounds, error) {
 	var epoch DayBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %s ORDER BY day DESC LIMIT 1", DayWriterTableName))
+	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %[1]s WHERE day = (select max(day) from %[1]s) limit 1;", DayWriterTableName))
 	return &epoch, err
 }
 
