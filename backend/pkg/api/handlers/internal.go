@@ -17,7 +17,7 @@ import (
 // Premium Plans
 
 func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *http.Request) {
-	data, err := h.dai.GetProductSummary()
+	data, err := h.dai.GetProductSummary(r.Context())
 	if err != nil {
 		handleErr(w, err)
 		return

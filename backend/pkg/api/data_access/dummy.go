@@ -111,19 +111,19 @@ func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (ui
 	return r, err
 }
 
-func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
+func (d *DummyService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
 	r := t.ProductSummary{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetFreeTierPerks() (*t.PremiumPerks, error) {
+func (d *DummyService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
 	r := t.PremiumPerks{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardInfo(dctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
+func (d *DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	r := t.DashboardInfo{}
 	err := commonFakeData(&r)
 	return &r, err

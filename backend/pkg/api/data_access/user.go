@@ -115,7 +115,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		Subscriptions: []t.UserSubscription{},
 	}
 
-	productSummary, err := d.GetProductSummary()
+	productSummary, err := d.GetProductSummary(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
@@ -300,7 +300,7 @@ var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 	ProductIdYearly:  "premium_free.yearly",
 }
 
-func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
+func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
 	// TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
 		ValidatorsPerDashboardLimit: 102_000,
@@ -481,7 +481,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 				PricePerMonthEur:         74.99,
 				PricePerYearEur:          719.88,
 				ProductIdMonthly:         "vdb_addon_1k",
-				ProductIdYearly:          "vdb_addon_1k.year	ly",
+				ProductIdYearly:          "vdb_addon_1k.yearly",
 				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon1k,
 				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon1kYearly,
 			},
@@ -499,7 +499,7 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 	}, nil
 }
 
-func (d *DataAccessService) GetFreeTierPerks() (*t.PremiumPerks, error) {
+func (d *DataAccessService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
 	return &freeTierProduct.PremiumPerks, nil
 }
 
