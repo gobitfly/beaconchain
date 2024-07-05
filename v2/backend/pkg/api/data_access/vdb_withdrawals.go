@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -407,53 +406,6 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	}
 
 	return nextData, nil
-}
-
-func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex t.VDBValidator, cursor uint64) (uint64, error) {
-	// the validators' balance will not be checked here as this is only a rough estimation
-	// checking the balance for hundreds of thousands of validators is too expensive
-
-	stats := cache.LatestStats.Get()
-	if stats == nil || stats.ActiveValidatorCount == nil || stats.TotalValidatorCount == nil {
-		return 0, errors.New("stats not available")
-	}
-
-	var maxValidatorIndex t.VDBValidator
-	if *stats.TotalValidatorCount > 0 {
-		maxValidatorIndex = *stats.TotalValidatorCount - 1
-	}
-	if maxValidatorIndex == 0 {
-		return 0, nil
-	}
-
-	activeValidators := *stats.ActiveValidatorCount
-	if activeValidators == 0 {
-		activeValidators = maxValidatorIndex
-	}
-
-	if validatorindex > cursor {
-		// if the validatorindex is after the cursor, simply return the number of validators between the cursor and the validatorindex
-		// the returned data is then scaled using the number of currently active validators in order to account for exited / entering validators
-		return (validatorindex - cursor) * activeValidators / maxValidatorIndex, nil
-	} else if validatorindex < cursor {
-		// if the validatorindex is before the cursor (wraparound case) return the number of validators between the cursor and the most recent validator plus the amount of validators from the validator 0 to the validatorindex
-		// the returned data is then scaled using the number of currently active validators in order to account for exited / entering validators
-		return (maxValidatorIndex - cursor + validatorindex) * activeValidators / maxValidatorIndex, nil
-	} else {
-		return 0, nil
-	}
-}
-
-// GetTimeToNextWithdrawal calculates the time it takes for the validators next withdrawal to be processed.
-func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
-	minTimeToWithdrawal := time.Now().Add(time.Second * time.Duration((distance/utils.Config.Chain.ClConfig.MaxValidatorsPerWithdrawalSweep)*utils.Config.Chain.ClConfig.SecondsPerSlot))
-	timeToWithdrawal := time.Now().Add(time.Second * time.Duration((float64(distance)/float64(utils.Config.Chain.ClConfig.MaxWithdrawalsPerPayload))*float64(utils.Config.Chain.ClConfig.SecondsPerSlot)))
-
-	if timeToWithdrawal.Before(minTimeToWithdrawal) {
-		return minTimeToWithdrawal
-	}
-
-	return timeToWithdrawal
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
