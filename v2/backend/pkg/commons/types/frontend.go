@@ -266,6 +266,22 @@ type Subscription struct {
 	EventThreshold  float64        `db:"event_threshold"`
 	UnsubscribeHash sql.NullString `db:"unsubscribe_hash" swaggertype:"string"`
 	State           sql.NullString `db:"internal_state" swaggertype:"string"`
+	GroupId         *uint32
+	DashboardId     *uint32
+}
+
+type ValidatorDashboardConfig struct {
+	DashboardsByUserId map[uint64]map[uint32]*ValidatorDashboard
+}
+
+type ValidatorDashboard struct {
+	Name   string `db:"name"`
+	Groups map[uint32]*ValidatorDashboardGroup
+}
+
+type ValidatorDashboardGroup struct {
+	Name       string `db:"name"`
+	Validators [][]byte
 }
 
 type TaggedValidators struct {
