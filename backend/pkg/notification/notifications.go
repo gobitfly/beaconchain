@@ -1315,6 +1315,7 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 			log.Infof("creating %v notification for validator %v in epoch %v", eventName, event.Proposer, epoch)
 			n := &validatorProposalNotification{
 				SubscriptionID: *sub.ID,
+				UserID:         *sub.UserID,
 				ValidatorIndex: event.Proposer,
 				Epoch:          epoch,
 				Status:         event.Status,
@@ -1323,13 +1324,7 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 				EventFilter:    hex.EncodeToString(pubkey),
 				Slot:           event.Slot,
 			}
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-			notificationsByUserID[*sub.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1339,6 +1334,7 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 
 type validatorProposalNotification struct {
 	SubscriptionID     uint64
+	UserID             types.UserId
 	ValidatorIndex     uint64
 	ValidatorPublicKey string
 	Epoch              uint64
@@ -1348,6 +1344,10 @@ type validatorProposalNotification struct {
 	EventFilter        string
 	Reward             float64
 	UnsubscribeHash    sql.NullString
+}
+
+func (n *validatorProposalNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *validatorProposalNotification) GetLatestState() string {
@@ -1505,19 +1505,14 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 			log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorMissedAttestationEventName, event.ValidatorIndex, event.Epoch)
 			n := &validatorAttestationNotification{
 				SubscriptionID: *sub.ID,
+				UserID:         *sub.UserID,
 				ValidatorIndex: event.ValidatorIndex,
 				Epoch:          event.Epoch,
 				Status:         event.Status,
 				EventName:      types.ValidatorMissedAttestationEventName,
 				EventFilter:    hex.EncodeToString(event.EventFilter),
 			}
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-			notificationsByUserID[*sub.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1622,14 +1617,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 				EventFilter:    hex.EncodeToString(validator.Pubkey),
 			}
 
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-
-			notificationsByUserID[*sub.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1662,6 +1650,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 			n := &validatorIsOfflineNotification{
 				SubscriptionID: *sub.ID,
+				UserID:         *sub.UserID,
 				ValidatorIndex: validator.Index,
 				IsOffline:      false,
 				EventEpoch:     epoch,
@@ -1671,13 +1660,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 				EpochsOffline:  epochsSinceOffline,
 			}
 
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-			notificationsByUserID[*sub.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1687,6 +1670,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 type validatorIsOfflineNotification struct {
 	SubscriptionID  uint64
+	UserID          types.UserId
 	ValidatorIndex  uint64
 	EventEpoch      uint64
 	EpochsOffline   uint64
@@ -1695,6 +1679,10 @@ type validatorIsOfflineNotification struct {
 	EventFilter     string
 	UnsubscribeHash sql.NullString
 	InternalState   string
+}
+
+func (n *validatorIsOfflineNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *validatorIsOfflineNotification) GetLatestState() string {
@@ -1762,6 +1750,7 @@ func (n *validatorIsOfflineNotification) GetInfoMarkdown() string {
 
 type validatorAttestationNotification struct {
 	SubscriptionID     uint64
+	UserID             types.UserId
 	ValidatorIndex     uint64
 	ValidatorPublicKey string
 	Epoch              uint64
@@ -1769,6 +1758,10 @@ type validatorAttestationNotification struct {
 	EventName          types.EventName
 	EventFilter        string
 	UnsubscribeHash    sql.NullString
+}
+
+func (n *validatorAttestationNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *validatorAttestationNotification) GetLatestState() string {
@@ -1846,12 +1839,17 @@ func (n *validatorAttestationNotification) GetInfoMarkdown() string {
 
 type validatorGotSlashedNotification struct {
 	SubscriptionID  uint64
+	UserID          types.UserId
 	ValidatorIndex  uint64
 	Epoch           uint64
 	Slasher         uint64
 	Reason          string
 	EventFilter     string
 	UnsubscribeHash sql.NullString
+}
+
+func (n *validatorGotSlashedNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *validatorGotSlashedNotification) GetLatestState() string {
@@ -1943,6 +1941,7 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 
 		n := &validatorGotSlashedNotification{
 			SubscriptionID:  sub.Id,
+			UserID:          sub.UserId,
 			Slasher:         event.SlasherIndex,
 			Epoch:           event.Epoch,
 			Reason:          event.Reason,
@@ -1950,14 +1949,7 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 			EventFilter:     hex.EncodeToString(event.SlashedValidatorPubkey),
 			UnsubscribeHash: sub.UnsubscribeHash,
 		}
-
-		if _, exists := notificationsByUserID[sub.UserId]; !exists {
-			notificationsByUserID[sub.UserId] = map[types.EventName]map[types.EventFilter]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[sub.UserId][n.GetEventName()]; !exists {
-			notificationsByUserID[sub.UserId][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-		}
-		notificationsByUserID[sub.UserId][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
@@ -1965,6 +1957,7 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 }
 
 type validatorWithdrawalNotification struct {
+	UserID          types.UserId
 	SubscriptionID  uint64
 	ValidatorIndex  uint64
 	Epoch           uint64
@@ -1973,6 +1966,10 @@ type validatorWithdrawalNotification struct {
 	Address         []byte
 	EventFilter     string
 	UnsubscribeHash sql.NullString
+}
+
+func (n *validatorWithdrawalNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *validatorWithdrawalNotification) GetLatestState() string {
@@ -2054,6 +2051,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 				// log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
 				n := &validatorWithdrawalNotification{
 					SubscriptionID:  *sub.ID,
+					UserID:          *sub.UserID,
 					ValidatorIndex:  event.ValidatorIndex,
 					Epoch:           epoch,
 					Slot:            event.Slot,
@@ -2062,13 +2060,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 					EventFilter:     hex.EncodeToString(event.Pubkey),
 					UnsubscribeHash: sub.UnsubscribeHash,
 				}
-				if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-					notificationsByUserID[*sub.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-				}
-				if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-					notificationsByUserID[*sub.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-				}
-				notificationsByUserID[*sub.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+				notificationsByUserID.AddNotification(n)
 				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 			}
 		}
@@ -2084,6 +2076,10 @@ type ethClientNotification struct {
 	EthClient       string
 	EventFilter     string
 	UnsubscribeHash sql.NullString
+}
+
+func (n *ethClientNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *ethClientNotification) GetLatestState() string {
@@ -2223,13 +2219,7 @@ func collectEthClientNotifications(notificationsByUserID types.NotificationsPerU
 				EthClient:       client.Name,
 				UnsubscribeHash: r.UnsubscribeHash,
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -2422,13 +2412,7 @@ func collectMonitoringMachine(
 			UnsubscribeHash: r.UnsubscribeHash,
 		}
 		//logrus.Infof("notify %v %v", eventName, n)
-		if _, exists := notificationsByUserID[r.UserID]; !exists {
-			notificationsByUserID[r.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[r.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-		}
-		notificationsByUserID[r.UserID][n.GetEventName()][types.EventFilter(n.GetEventFilter())] = n
+		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
@@ -2447,6 +2431,10 @@ type monitorMachineNotification struct {
 	Epoch           uint64
 	EventName       types.EventName
 	UnsubscribeHash sql.NullString
+}
+
+func (n *monitorMachineNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *monitorMachineNotification) GetLatestState() string {
@@ -2526,6 +2514,10 @@ type taxReportNotification struct {
 	Epoch           uint64
 	EventFilter     string
 	UnsubscribeHash sql.NullString
+}
+
+func (n *taxReportNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *taxReportNotification) GetLatestState() string {
@@ -2647,13 +2639,7 @@ func collectTaxReportNotificationNotifications(notificationsByUserID types.Notif
 			EventFilter:     r.EventFilter,
 			UnsubscribeHash: r.UnsubscribeHash,
 		}
-		if _, exists := notificationsByUserID[r.UserID]; !exists {
-			notificationsByUserID[r.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[r.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-		}
-		notificationsByUserID[r.UserID][n.GetEventName()][types.EventFilter(n.GetEventFilter())] = n
+		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
@@ -2666,6 +2652,10 @@ type networkNotification struct {
 	Epoch           uint64
 	EventFilter     string
 	UnsubscribeHash sql.NullString
+}
+
+func (n *networkNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *networkNotification) GetLatestState() string {
@@ -2751,13 +2741,8 @@ func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUse
 				EventFilter:     r.EventFilter,
 				UnsubscribeHash: r.UnsubscribeHash,
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -2773,6 +2758,10 @@ type rocketpoolNotification struct {
 	EventName       types.EventName
 	ExtraData       string
 	UnsubscribeHash sql.NullString
+}
+
+func (n *rocketpoolNotification) GetUserId() types.UserId {
+	return n.UserID
 }
 
 func (n *rocketpoolNotification) GetLatestState() string {
@@ -2885,13 +2874,8 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 				ExtraData:       strconv.FormatInt(int64(fee*100), 10) + "%",
 				UnsubscribeHash: r.UnsubscribeHash,
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -2938,13 +2922,8 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 				EventName:       eventName,
 				UnsubscribeHash: r.UnsubscribeHash,
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -3076,13 +3055,8 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.Not
 			ExtraData:       strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", threshold*100), "0"), "."),
 			UnsubscribeHash: sub.UnsubscribeHash,
 		}
-		if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-			notificationsByUserID[*sub.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[*sub.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-		}
-		notificationsByUserID[*sub.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+
+		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
@@ -3185,13 +3159,7 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ev
 			ExtraData:       fmt.Sprintf("%v|%v|%v", mapping[r.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
 			UnsubscribeHash: r.UnsubscribeHash,
 		}
-		if _, exists := notificationsByUserID[r.UserID]; !exists {
-			notificationsByUserID[r.UserID] = map[types.EventName]map[types.EventFilter]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[r.UserID][n.GetEventName()] = map[types.EventFilter]types.Notification{}
-		}
-		notificationsByUserID[r.UserID][n.GetEventName()][types.EventFilter(n.EventFilter)] = n
+		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
