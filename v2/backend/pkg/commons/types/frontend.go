@@ -12,6 +12,7 @@ import (
 	"firebase.google.com/go/messaging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -164,7 +165,7 @@ type EventNameDesc struct {
 }
 
 type MachineMetricSystemUser struct {
-	UserID                    uint64
+	UserID                    UserId
 	Machine                   string
 	CurrentData               *MachineMetricSystem
 	CurrentDataInsertTs       int64
@@ -255,7 +256,7 @@ type Notification interface {
 
 type Subscription struct {
 	ID          *uint64    `db:"id,omitempty"`
-	UserID      *uint64    `db:"user_id,omitempty"`
+	UserID      *UserId    `db:"user_id,omitempty"`
 	EventName   string     `db:"event_name"`
 	EventFilter string     `db:"event_filter"`
 	LastSent    *time.Time `db:"last_sent_ts"`
@@ -266,22 +267,25 @@ type Subscription struct {
 	EventThreshold  float64        `db:"event_threshold"`
 	UnsubscribeHash sql.NullString `db:"unsubscribe_hash" swaggertype:"string"`
 	State           sql.NullString `db:"internal_state" swaggertype:"string"`
-	GroupId         *uint32
-	DashboardId     *uint32
+	GroupId         *int64
+	DashboardId     *int64
 }
 
+type UserId uint64
+type DashboardId uint64
+type DashboardGroupId uint64
 type ValidatorDashboardConfig struct {
-	DashboardsByUserId map[uint64]map[uint32]*ValidatorDashboard
+	DashboardsByUserId map[UserId]map[DashboardId]*ValidatorDashboard
 }
 
 type ValidatorDashboard struct {
 	Name   string `db:"name"`
-	Groups map[uint32]*ValidatorDashboardGroup
+	Groups map[DashboardGroupId]*ValidatorDashboardGroup
 }
 
 type ValidatorDashboardGroup struct {
 	Name       string `db:"name"`
-	Validators [][]byte
+	Validators []types.ValidatorIndex
 }
 
 type TaggedValidators struct {

@@ -194,7 +194,7 @@ func (bigtable *Bigtable) GetClient() *gcp_bigtable.Client {
 	return bigtable.client
 }
 
-func (bigtable *Bigtable) SaveMachineMetric(process string, userID uint64, machine string, data []byte) error {
+func (bigtable *Bigtable) SaveMachineMetric(process string, userID types.UserId, machine string, data []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
@@ -234,7 +234,7 @@ func (bigtable *Bigtable) SaveMachineMetric(process string, userID uint64, machi
 	return nil
 }
 
-func (bigtable Bigtable) getMachineMetricNamesMap(userID uint64, searchDepth int) (map[string]bool, error) {
+func (bigtable Bigtable) getMachineMetricNamesMap(userID types.UserId, searchDepth int) (map[string]bool, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*30))
 	defer cancel()
 
@@ -265,7 +265,7 @@ func (bigtable Bigtable) getMachineMetricNamesMap(userID uint64, searchDepth int
 	return machineNames, nil
 }
 
-func (bigtable Bigtable) GetMachineMetricsMachineNames(userID uint64) ([]string, error) {
+func (bigtable Bigtable) GetMachineMetricsMachineNames(userID types.UserId) ([]string, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
 			"userId":   userID,
@@ -288,7 +288,7 @@ func (bigtable Bigtable) GetMachineMetricsMachineNames(userID uint64) ([]string,
 	return result, nil
 }
 
-func (bigtable Bigtable) GetMachineMetricsMachineCount(userID uint64) (uint64, error) {
+func (bigtable Bigtable) GetMachineMetricsMachineCount(userID types.UserId) (uint64, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
 			"userId":   userID,
@@ -310,7 +310,7 @@ func (bigtable Bigtable) GetMachineMetricsMachineCount(userID uint64) (uint64, e
 	return uint64(card), nil
 }
 
-func (bigtable Bigtable) GetMachineMetricsNode(userID uint64, limit, offset int) ([]*types.MachineMetricNode, error) {
+func (bigtable Bigtable) GetMachineMetricsNode(userID types.UserId, limit, offset int) ([]*types.MachineMetricNode, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
 			"userId":   userID,
@@ -335,7 +335,7 @@ func (bigtable Bigtable) GetMachineMetricsNode(userID uint64, limit, offset int)
 	)
 }
 
-func (bigtable Bigtable) GetMachineMetricsValidator(userID uint64, limit, offset int) ([]*types.MachineMetricValidator, error) {
+func (bigtable Bigtable) GetMachineMetricsValidator(userID types.UserId, limit, offset int) ([]*types.MachineMetricValidator, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
 			"userId":   userID,
@@ -360,7 +360,7 @@ func (bigtable Bigtable) GetMachineMetricsValidator(userID uint64, limit, offset
 	)
 }
 
-func (bigtable Bigtable) GetMachineMetricsSystem(userID uint64, limit, offset int) ([]*types.MachineMetricSystem, error) {
+func (bigtable Bigtable) GetMachineMetricsSystem(userID types.UserId, limit, offset int) ([]*types.MachineMetricSystem, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
 			"userId":   userID,
@@ -385,7 +385,7 @@ func (bigtable Bigtable) GetMachineMetricsSystem(userID uint64, limit, offset in
 	)
 }
 
-func getMachineMetrics[T types.MachineMetricSystem | types.MachineMetricNode | types.MachineMetricValidator](bigtable Bigtable, process string, userID uint64, limit, offset int, marshler func(data []byte, machine string) *T) ([]*T, error) {
+func getMachineMetrics[T types.MachineMetricSystem | types.MachineMetricNode | types.MachineMetricValidator](bigtable Bigtable, process string, userID types.UserId, limit, offset int, marshler func(data []byte, machine string) *T) ([]*T, error) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*30))
 	defer cancel()
 
@@ -429,7 +429,7 @@ func getMachineMetrics[T types.MachineMetricSystem | types.MachineMetricNode | t
 	return res, nil
 }
 
-func (bigtable Bigtable) GetMachineRowKey(userID uint64, process string, machine string) string {
+func (bigtable Bigtable) GetMachineRowKey(userID types.UserId, process string, machine string) string {
 	return fmt.Sprintf("u:%s:p:%s:m:%s", bigtable.reversePaddedUserID(userID), process, machine)
 }
 
@@ -437,7 +437,7 @@ func (bigtable Bigtable) GetMachineRowKey(userID uint64, process string, machine
 // machineData contains the latest machine data in CurrentData
 // and 5 minute old data in fiveMinuteOldData (defined in limit)
 // as well as the insert timestamps of both
-func (bigtable Bigtable) GetMachineMetricsForNotifications(rowKeys gcp_bigtable.RowList) (map[uint64]map[string]*types.MachineMetricSystemUser, error) {
+func (bigtable Bigtable) GetMachineMetricsForNotifications(rowKeys gcp_bigtable.RowList) (map[types.UserId]map[string]*types.MachineMetricSystemUser, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
 			"rowKeys":  rowKeys,
@@ -449,7 +449,7 @@ func (bigtable Bigtable) GetMachineMetricsForNotifications(rowKeys gcp_bigtable.
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*200))
 	defer cancel()
 
-	res := make(map[uint64]map[string]*types.MachineMetricSystemUser) // userID -> machine -> data
+	res := make(map[types.UserId]map[string]*types.MachineMetricSystemUser) // userID -> machine -> data
 
 	limit := 5
 
@@ -509,7 +509,7 @@ func (bigtable Bigtable) GetMachineMetricsForNotifications(rowKeys gcp_bigtable.
 }
 
 //nolint:unparam
-func machineMetricRowParts(r string) (bool, uint64, string, string) {
+func machineMetricRowParts(r string) (bool, types.UserId, string, string) {
 	keySplit := strings.Split(r, ":")
 
 	userID, err := strconv.ParseUint(keySplit[1], 10, 64)
@@ -526,7 +526,7 @@ func machineMetricRowParts(r string) (bool, uint64, string, string) {
 
 	process := keySplit[3]
 
-	return true, userID, machine, process
+	return true, types.UserId(userID), machine, process
 }
 
 func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*types.Validator) error {
@@ -2678,8 +2678,8 @@ func GetCurrentDayClIncome(validator_indices []uint64) (map[uint64]int64, error)
 	return dayIncome, nil
 }
 
-func (bigtable *Bigtable) reversePaddedUserID(userID uint64) string {
-	return fmt.Sprintf("%09d", ^uint64(0)-userID)
+func (bigtable *Bigtable) reversePaddedUserID(userID types.UserId) string {
+	return fmt.Sprintf("%09d", ^uint64(0)-uint64(userID))
 }
 
 func (bigtable *Bigtable) reversedPaddedEpoch(epoch uint64) string {
