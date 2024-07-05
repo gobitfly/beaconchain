@@ -12,6 +12,7 @@ const props = defineProps<{
 }>()
 
 const type = computed(() => props.inputType || 'binary')
+// const textField = ref('')
 
 const { t } = useI18n()
 
@@ -20,9 +21,14 @@ interface CheckboxAndText {
   text: string
 }
 
+/** - if boolean: checked state of the checkbox
+ *  - if number: -1 means unchecked, another value means checked and copies the textfield (converted in a number)
+ *  - if array: list of selected networks */
 const state = defineModel<boolean|number|ChainID[]>({ required: true })
 let networkSelectorState: ModelRef<ChainID[]>
-let checkboxAndText = undefined as unknown as Ref<CheckboxAndText>
+let checkboxAndText: Ref<CheckboxAndText> | undefined
+
+// bridging the v-model with the data structures of this component
 
 if (type.value === 'networks') {
   networkSelectorState = state as ModelRef<ChainID[]>
@@ -35,8 +41,8 @@ function receiveFromVModel (state: boolean|number) : CheckboxAndText {
   switch (type.value) {
     case 'amount' :
     case 'percent' :
-      output.text = correctUserInput(String(state))
       output.check = (state as number >= 0)
+      output.text = correctUserInput(output.check, output.check ? String(state) : checkboxAndText!.value.text /* textField.value */)
       break
     case 'binary' :
       output.check = state as boolean
@@ -48,7 +54,6 @@ function receiveFromVModel (state: boolean|number) : CheckboxAndText {
 function sendToVModel (state: CheckboxAndText) : boolean|number {
   switch (type.value) {
     case 'amount' :
-      return state.check && isThisAvalidInput(state.text) ? calculateCorrectNumber(state.text) : -1
     case 'percent' :
       return state.check ? calculateCorrectNumber(state.text) : -1
     case 'binary' :
@@ -57,9 +62,11 @@ function sendToVModel (state: CheckboxAndText) : boolean|number {
   return 0
 }
 
-function correctUserInput (input: string) : string {
+// input validation / autocorrection
+
+function correctUserInput (checked: boolean, input: string) : string {
   switch (type.value) {
-    case 'amount' : return isThisAvalidInput(input) ? String(calculateCorrectNumber(input)) : ''
+    case 'amount' : return (isThisAvalidInput(input) || checked) ? String(calculateCorrectNumber(input)) : ''
     case 'percent' : return String(calculateCorrectNumber(input))
   }
   return ''
@@ -78,6 +85,8 @@ function isThisAvalidInput (input: string) : boolean {
   return !!input && !isNaN(Number(input)) && Number(input) >= 0
 }
 
+// calculation of the information to show in the tooltip
+
 const tooltipLines = computed(() => {
   let options
   if (Array.isArray(state.value)) {
@@ -85,7 +94,7 @@ const tooltipLines = computed(() => {
   } else {
     let plural: number
     if (type.value === 'amount' || type.value === 'percent') {
-      plural = calculateCorrectNumber(checkboxAndText.value.text)
+      plural = calculateCorrectNumber(checkboxAndText!.value.text)
     } else {
       plural = state.value ? 2 : 1
     }
@@ -94,10 +103,20 @@ const tooltipLines = computed(() => {
   return tAll(t, props.tPath + '.hint', options)
 })
 
-const textField = ref('')
-
+/*
+// input: keeping the text field up-to-date with new data coming from the parent through the bridge
 if (checkboxAndText) {
-  watch(() => checkboxAndText.value.text, () => { textField.value = checkboxAndText.value.text }, { immediate: true })
+  watch(checkboxAndText, (cat) => {
+    textField.value = cat.text
+  }, { immediate: true, deep: true })
+} */
+
+// output: on blur or enter, auto-correcting the text field /*and sending the corrected data to the bridge*/
+
+function acknowledgeInputtedText () {
+  // textField.value = correctUserInput(checkboxAndText!.value.check, textField.value)
+  // checkboxAndText!.value.text = textField.value
+  checkboxAndText!.value.text = correctUserInput(checkboxAndText!.value.check, checkboxAndText!.value.text)
 }
 
 const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
@@ -118,17 +137,19 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <div v-if="type != 'networks'" class="right">
       <div v-if="type == 'amount' || type == 'percent'" class="input">
         <InputText
-          v-model="textField"
+          v-if="checkboxAndText"
+          v-model="checkboxAndText.text"
           type="text"
           :placeholder="t(tPath + '.placeholder')"
           :class="[deactivationClass,type]"
-          @blur="checkboxAndText.text = correctUserInput(textField)"
+          @blur="acknowledgeInputtedText"
+          @keypress.enter="acknowledgeInputtedText"
         />
         &nbsp;
       </div>
       <span v-if="type == 'percent'" :class="deactivationClass">%</span>
       <Checkbox
-        v-model="checkboxAndText.check"
+        v-model="checkboxAndText!.check"
         :binary="true"
         class="checkbox"
         :class="deactivationClass"
