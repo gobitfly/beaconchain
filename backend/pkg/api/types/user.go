@@ -20,6 +20,14 @@ type UserSubscription struct {
 
 type InternalGetUserInfoResponse ApiDataResponse[UserInfo]
 
+type EmailUpdate struct {
+	Id           uint64 `json:"id"`
+	CurrentEmail string `json:"current_email"`
+	PendingEmail string `json:"pending_email"`
+}
+
+type InternalPutUserEmailResponse ApiDataResponse[EmailUpdate]
+
 type ProductCategory string
 
 const ProductCategoryApi ProductCategory = "api"

@@ -22,6 +22,12 @@ export interface UserSubscription {
   end: number /* int64 */;
 }
 export type InternalGetUserInfoResponse = ApiDataResponse<UserInfo>;
+export interface EmailUpdate {
+  id: number /* uint64 */;
+  current_email: string;
+  pending_email: string;
+}
+export type InternalPutUserEmailResponse = ApiDataResponse<EmailUpdate>;
 export type ProductCategory = string;
 export const ProductCategoryApi: ProductCategory = "api";
 export const ProductCategoryPremium: ProductCategory = "premium";
