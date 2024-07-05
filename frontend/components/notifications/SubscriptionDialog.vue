@@ -133,10 +133,10 @@ async function sendUserPreferencesToAPI () {
 
 const isOptionAvailable = (key: string) => props.value?.premiumUser || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
 
-const closeDialog = () => {
+function closeDialog () : void {
   if (lastSaveFailed) {
-    // second chance: we try not lose what the user has set
-    debouncer.bounce(dataNonce, false, true)
+    // second chance: we try not to lose what the user has set
+    sendUserPreferencesToAPI()
   }
   dialogRef?.value.close(true)
 }
