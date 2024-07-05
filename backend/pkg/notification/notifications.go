@@ -1207,7 +1207,7 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 		ExecRewardETH float64
 	}
 
-	_, subMap, err := GetSubsForEventFilter(eventName)
+	subMap, err := GetSubsForEventFilter(eventName)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for (missed) block proposals %w", err)
 	}
@@ -1394,7 +1394,7 @@ func (n *validatorProposalNotification) GetInfoMarkdown() string {
 }
 
 func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
-	_, subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName)
+	subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for missted attestations %w", err)
 	}
@@ -1573,7 +1573,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 		return fmt.Errorf("retrieved more than %v online validators notifications: %v, exiting", onlineValidatorsLimit, len(onlineValidators))
 	}
 
-	_, subMap, err = GetSubsForEventFilter(types.ValidatorIsOfflineEventName)
+	subMap, err = GetSubsForEventFilter(types.ValidatorIsOfflineEventName)
 	if err != nil {
 		return fmt.Errorf("failed to get subs for %v: %v", types.ValidatorIsOfflineEventName, err)
 	}
@@ -2022,7 +2022,7 @@ func (n *validatorWithdrawalNotification) GetInfoMarkdown() string {
 // collectWithdrawalNotifications collects all notifications validator withdrawals
 func collectWithdrawalNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
 	// get all users that are subscribed to this event (scale: a few thousand rows depending on how many users we have)
-	_, subMap, err := GetSubsForEventFilter(types.ValidatorReceivedWithdrawalEventName)
+	subMap, err := GetSubsForEventFilter(types.ValidatorReceivedWithdrawalEventName)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for missed attestations %w", err)
 	}
@@ -2947,7 +2947,7 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID map[ui
 }
 
 func collectRocketpoolRPLCollateralNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName, epoch uint64) error {
-	pubkeys, subMap, err := GetSubsForEventFilter(eventName)
+	subMap, err := GetSubsForEventFilter(eventName)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for RocketpoolRPLCollateral %w", err)
 	}
@@ -2964,7 +2964,7 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID map[uint6
 	stakeInfoPerNode := make([]dbResult, 0)
 	batchSize := 5000
 	keys := make([][]byte, 0, batchSize)
-	for pubkey := range pubkeys {
+	for pubkey := range subMap {
 		b, err := hex.DecodeString(pubkey)
 		if err != nil {
 			log.Error(err, fmt.Sprintf("error decoding pubkey %s", pubkey), 0)

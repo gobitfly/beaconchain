@@ -7,7 +7,11 @@ import (
 	"github.com/lib/pq"
 )
 
-func GetSubsForEventFilter(eventName types.EventName) (map[string]bool, map[string][]types.Subscription, error) {
+// Retrieves all subscription for a given event filter
+// Map key corresponds to the event filter which can be
+// a validator pubkey or an eth1 address (for RPL notifications)
+// or a list of validators for the tax report notifications
+func GetSubsForEventFilter(eventName types.EventName) (map[string][]types.Subscription, error) {
 	var subs []types.Subscription
 	subQuery := `
 		SELECT id, user_id, event_filter, last_sent_epoch, created_epoch, event_threshold, ENCODE(unsubscribe_hash, 'hex') as unsubscribe_hash, internal_state from users_subscriptions where event_name = $1
@@ -16,10 +20,9 @@ func GetSubsForEventFilter(eventName types.EventName) (map[string]bool, map[stri
 	subMap := make(map[string][]types.Subscription, 0)
 	err := db.FrontendWriterDB.Select(&subs, subQuery, utils.GetNetwork()+":"+string(eventName))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	filtersEncode := make(map[string]bool, len(subs))
 	for _, sub := range subs {
 		if _, ok := subMap[sub.EventFilter]; !ok {
 			subMap[sub.EventFilter] = make([]types.Subscription, 0)
@@ -33,10 +36,8 @@ func GetSubsForEventFilter(eventName types.EventName) (map[string]bool, map[stri
 			EventThreshold: sub.EventThreshold,
 			State:          sub.State,
 		})
-
-		filtersEncode[sub.EventFilter] = true
 	}
-	return filtersEncode, subMap, nil
+	return subMap, nil
 }
 
 func GetUserPushTokenByIds(ids []uint64) (map[uint64][]string, error) {
