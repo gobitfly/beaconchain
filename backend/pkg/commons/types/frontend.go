@@ -20,6 +20,8 @@ import (
 )
 
 type EventName string
+type EventFilter string
+type NotificationsPerUserId map[UserId]map[EventName]map[EventFilter]Notification
 
 const (
 	ValidatorBalanceDecreasedEventName               EventName = "validator_balance_decreased"
