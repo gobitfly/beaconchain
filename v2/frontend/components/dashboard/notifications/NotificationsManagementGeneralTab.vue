@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-
+const emailToggle = ref(false)
+const pushToggle = ref(false)
 </script>
 
 <template>
@@ -9,7 +10,7 @@
         E-Mail Notifications
       </div>
       <div>
-        Switch
+        <BcToggle v-model="emailToggle" />
       </div>
     </div>
     <div class="row">
@@ -17,7 +18,7 @@
         Push Notifications
       </div>
       <div>
-        Switch
+        <BcToggle v-model="pushToggle" />
       </div>
     </div>
   </div>
