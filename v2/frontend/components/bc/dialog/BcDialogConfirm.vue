@@ -26,9 +26,9 @@ const closeDialog = (response: boolean) => {
     <div v-if="props?.question" class="question">
       {{ props?.question }}
     </div>
-    <div class="footer" :class="{'danger': props?.severity === 'danger'}">
+    <div class="footer">
       <Button v-if="props?.severity !== 'danger'" type="button" :label="noLabel" @click="closeDialog(false)" />
-      <div v-else @click="closeDialog(false)">
+      <div v-else class="discreet-button" @click="closeDialog(false)">
         {{ noLabel }}
       </div>
       <Button type="button" :severity="props?.severity === 'danger' ? `danger` : undefined" :label="yesLabel" @click="closeDialog(true)" />
@@ -63,7 +63,7 @@ const closeDialog = (response: boolean) => {
     margin-top: var(--padding);
     gap: var(--padding);
 
-    &.danger>:first-child {
+    .discreet-button{
       @include fonts.button_text;
       cursor: pointer;
       color: var(--text-color-discreet);
