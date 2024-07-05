@@ -314,7 +314,7 @@ func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrima
 func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
 	// for guest dashboards, return free tier perks
 	if id.Validators != nil {
-		perk, err := h.dai.GetFreeTierPerks()
+		perk, err := h.dai.GetFreeTierPerks(ctx)
 		if err != nil {
 			return nil, err
 		}
