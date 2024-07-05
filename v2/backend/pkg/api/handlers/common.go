@@ -659,7 +659,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 		appendData("deposited", v.Deposited)
 		pendingValidators := make([]types.VDBSummaryValidator, len(v.Pending))
 		for i, pending := range v.Pending {
-			pendingValidators[i] = types.VDBSummaryValidator{Index: pending.Index, DutyObjects: []uint64{pending.ActivationTimestamp}}
+			pendingValidators[i] = types.VDBSummaryValidator{Index: pending.Index, DutyObjects: []uint64{pending.Timestamp}}
 		}
 		data = append(data, types.VDBSummaryValidatorsData{
 			Category:   "pending",
@@ -670,7 +670,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		appendData("sync_current", v.Current)
 		appendData("sync_upcoming", v.Upcoming)
-		appendData("sync_past", v.Past)
+		// appendData("sync_past", v.Past)
 		return data, nil
 
 	case *types.VDBSlashingsSummaryValidators:
