@@ -9,6 +9,10 @@ export function confirmPasswordValidation (t: ComposerTranslation, comparerRefNa
   return passwordValidation(t).oneOf([yupRef(comparerRefName)], t('validation.password.no_match'))
 }
 
+export function newPasswordValidation (t: ComposerTranslation, oldRefName: string) : StringSchema {
+  return passwordValidation(t).notOneOf([yupRef(oldRefName)], t('validation.password.not_new'))
+}
+
 export function emailValidation (t: ComposerTranslation) : StringSchema {
   return yupString().required(t('validation.email.empty')).matches(REGEXP_VALID_EMAIL, t('validation.email.invalid'))
 }

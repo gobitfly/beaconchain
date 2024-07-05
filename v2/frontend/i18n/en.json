@@ -862,7 +862,8 @@
       "empty": "Please enter your password.",
       "min": "Your password must contain at least {amount} characters.",
       "max": "Your password must contain at most {amount} characters.",
-      "no_match": "The passwords don't match."
+      "no_match": "The passwords don't match.",
+      "not_new": "The new password must differ from the old one."
     },
     "tos_not_agreed": "Please accept the ToS & Privacy Policy."
   }
