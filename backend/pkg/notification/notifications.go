@@ -2959,20 +2959,34 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID map[uint6
 		RPLStakeMax BigFloat `db:"max_rpl_stake"`
 	}
 
+	// filter nodes with no minipools (anymore) because they have min/max stake of 0
+	// TODO properly remove notification entry from db
 	stakeInfoPerNode := make([]dbResult, 0)
 	batchSize := 5000
-	dataLen := len(pubkeys)
-	for i := 0; i < dataLen; i += batchSize {
-		var keys [][]byte
-		start := i
-		end := i + batchSize
-
-		if dataLen < end {
-			end = dataLen
+	keys := make([][]byte, 0, batchSize)
+	for pubkey := range pubkeys {
+		b, err := hex.DecodeString(pubkey)
+		if err != nil {
+			log.Error(err, fmt.Sprintf("error decoding pubkey %s", pubkey), 0)
+			continue
 		}
+		keys = append(keys, b)
 
-		keys = pubkeys[start:end]
+		if len(keys) > batchSize {
+			var partial []dbResult
 
+			err = db.WriterDb.Select(&partial, `
+			SELECT address, rpl_stake, min_rpl_stake, max_rpl_stake
+			FROM rocketpool_nodes
+			WHERE address = ANY($1) AND min_rpl_stake != 0 AND max_rpl_stake != 0`, pq.ByteaArray(keys))
+			if err != nil {
+				return err
+			}
+			stakeInfoPerNode = append(stakeInfoPerNode, partial...)
+			keys = make([][]byte, 0, batchSize)
+		}
+	}
+	if len(keys) > 0 {
 		var partial []dbResult
 
 		// filter nodes with no minipools (anymore) because they have min/max stake of 0
