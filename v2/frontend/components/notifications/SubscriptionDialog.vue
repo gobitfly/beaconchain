@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ValidatorSubscriptionState, AccountSubscriptionState, CheckboxAndNumber } from '~/types/subscriptionModal'
 import type { ChainID } from '~/types/network'
+import type { ApiErrorResponse } from '~/types/api/common'
+import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   validatorSub?: ValidatorSubscriptionState,
@@ -8,49 +10,51 @@ interface Props {
   premiumUser: boolean
 }
 
-const MinimumTimeBetweenAPIcalls = 500 // ms
+const TimeoutForSavingFailures = 2000 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost what you did half a minute ago, we hope you remember your preferences and do not mind going back to that dialog"
+const MinimumTimeBetweenAPIcalls = 700 // ms
 const DefaultValueOfValidatorOptionsNeedingPremium = {
   offlineGroup: -10, // means "10% and unchecked"
   realTime: false
-  // ... add lines here if some options become premium in the future
+  // ... add lines here to make options available to premium accounts only
 }
 const DefaultValueOfAccountOptionsNeedingPremium = {
-  // ... add lines here if some options become premium in the future
+  // add lines here to make options available to premium accounts only
 }
 const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(ValidatorSubscriptionState & AccountSubscriptionState)> =
-      ['networks', 'ignoreSpam']
+      ['networks', 'ignoreSpam'] // options that are not in the group of the all-checkbox
 
 type AllPossibleOptions = ValidatorSubscriptionState & AccountSubscriptionState & typeof DefaultValueOfValidatorOptionsNeedingPremium & typeof DefaultValueOfAccountOptionsNeedingPremium
 type ModifiableOptions = Record<keyof AllPossibleOptions, CheckboxAndNumber|ChainID[]>
 
 const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
 const { t } = useI18n()
+const { fetch, setTimeout } = useCustomFetch()
+const toast = useBcToast()
 
 const tPath = ref('')
+let originalSettings = {} as AllPossibleOptions
 const modifiableOptions = ref({} as ModifiableOptions)
 const allCheckbox = ref({ check: false } as CheckboxAndNumber)
 
-const debouncer = useDebounceValue<ModifiableOptions>({} as ModifiableOptions, MinimumTimeBetweenAPIcalls)
+const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
 watch(debouncer.value, sendUserPreferencesToAPI)
 
-let newDataJustLoaded = true // is used by the watcher of `modifiableOptions` to know when it is unnecessary to ouptut apparent changes to the API
+let dataNonce = 0 // is used by the watcher of `modifiableOptions` to know when it is unnecessary to send apparent changes to the API (it doesn't send if the nonce is 0)
 
 watch(props, (props) => {
   if (!props || (!props.validatorSub && !props.accountSub)) {
     return
   }
-  newDataJustLoaded = true
-  let options: AllPossibleOptions
   if (props.validatorSub) {
     tPath.value = 'notifications.subscriptions.validators.'
-    options = { ...DefaultValueOfValidatorOptionsNeedingPremium, ...structuredClone(toRaw(props.validatorSub)) } as AllPossibleOptions
+    originalSettings = { ...DefaultValueOfValidatorOptionsNeedingPremium, ...structuredClone(toRaw(props.validatorSub)) } as AllPossibleOptions
   } else {
     tPath.value = 'notifications.subscriptions.accounts.'
-    options = { ...DefaultValueOfAccountOptionsNeedingPremium, ...structuredClone(toRaw(props.accountSub)) } as AllPossibleOptions
+    originalSettings = { ...DefaultValueOfAccountOptionsNeedingPremium, ...structuredClone(toRaw(props.accountSub)) } as AllPossibleOptions
   }
   modifiableOptions.value = {} as ModifiableOptions
-  for (const entry of Object.entries(options)) {
-    const key = entry[0] as keyof typeof options
+  for (const entry of Object.entries(originalSettings)) {
+    const key = entry[0] as keyof typeof originalSettings
     if (Array.isArray(entry[1])) {
       modifiableOptions.value[key] = entry[1]
     } else {
@@ -60,6 +64,7 @@ watch(props, (props) => {
       }
     }
   }
+  dataNonce = 0
 }, { immediate: true })
 
 watch(allCheckbox, (option) => {
@@ -74,28 +79,66 @@ watch(allCheckbox, (option) => {
 
 watch(modifiableOptions, (options) => {
   allCheckbox.value.check = true
-  for (const k of Object.keys(modifiableOptions.value)) {
+  for (const k of Object.keys(options)) {
     const key = k as keyof ModifiableOptions
     if (isOptionAvailable(key) && !OptionsOutsideTheScopeOfCheckboxall.includes(key)) {
-      allCheckbox.value.check &&= (modifiableOptions.value[key] as CheckboxAndNumber).check
+      allCheckbox.value.check &&= (options[key] as CheckboxAndNumber).check
     }
   }
-  if (!newDataJustLoaded) {
+  if (dataNonce > 0) {
     // it will call `sendUserPreferencesToAPI()`
-    debouncer.bounce(options)
+    debouncer.bounce(dataNonce, false, true)
   }
-  newDataJustLoaded = false
+  dataNonce++
 }, { immediate: true, deep: true })
 
-function sendUserPreferencesToAPI () : void {
-// envoyer ce qi achange
+let lastSaveFailed = false
+
+async function sendUserPreferencesToAPI () {
+  // first we convert our internal structures to the format of the API
+  const output = {} as Record<string, any>
+  for (const entry of Object.entries(modifiableOptions.value)) {
+    const key = entry[0] as keyof ModifiableOptions
+    const snaKey = camelToSnakeCase(key)
+    if (Array.isArray(entry[1])) {
+      output[snaKey] = entry[1]
+    } else {
+      switch (typeof originalSettings[key]) {
+        case 'boolean' : output[snaKey] = entry[1].check; break
+        case 'number' : output[snaKey] = entry[1].num * (entry[1].check ? 1 : -1); break
+      }
+    }
+  }
+  // now we send the data
+  let response: ApiErrorResponse | undefined
+  try {
+    setTimeout(TimeoutForSavingFailures)
+    response = await fetch<ApiErrorResponse>(API_PATH.NOTIFICATION_SUBSCRIPTIONS, {
+      method: 'POST',
+      body: {
+        category: props.value?.accountSub ? 'accounts' : 'validators',
+        subscriptions: output
+      }
+    })
+  } catch {
+    response = undefined
+  }
+  if (!response || response.error) {
+    toast.showError({ summary: t('notifications.subscriptions.error_title'), group: t('notifications.subscriptions.error_group'), detail: t('notifications.subscriptions.error_message') })
+    lastSaveFailed = true // we will try again when the dialog closes
+  } else {
+    lastSaveFailed = false
+  }
 }
 
 const isOptionAvailable = (key: string) => props.value?.premiumUser || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
 
 const closeDialog = () => {
-  const modified = true
-  dialogRef?.value.close(modified)
+  if (lastSaveFailed) {
+    // second chance: we try not lose what the user has set
+    debouncer.bounce(dataNonce, false, true)
+  }
+  dialogRef?.value.close(true)
 }
 </script>
 
@@ -143,7 +186,7 @@ const closeDialog = () => {
     </div>
 
     <div class="footer">
-      <Button type="button" :label="t('notifications.subscriptions.save')" @click="closeDialog" />
+      <Button type="button" :label="t('notifications.subscriptions.button')" @click="closeDialog" />
     </div>
   </div>
 </template>

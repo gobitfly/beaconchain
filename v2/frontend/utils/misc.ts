@@ -33,3 +33,7 @@ export function generateUUID () {
       return v.toString(16)
     })
 }
+
+export function camelToSnakeCase (str: string) : string {
+  return str.replace(/[A-Z]/g, big => '_' + big.toLowerCase())
+}

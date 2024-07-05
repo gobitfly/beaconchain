@@ -112,7 +112,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
         <BcMiniParser :input="tooltipLines" class="tt-content" />
       </template>
     </BcTooltip>
-    <BcPremiumGem v-if="lacksPremiumSubscription" />
+    <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
     <div v-if="type != 'networks'" class="right">
       <div v-if="type == 'amount' || type == 'percent'" class="input">
         <InputText
@@ -154,10 +154,18 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
   @include fonts.small_text;
   align-items: center;
 
-  .info {
-    margin-left: 6px;
-    margin-right: 6px;
+  .caption {
+    margin-right: 3px;
   }
+
+  .info {
+    margin-left: 3px;
+    margin-right: 3px;
+  }
+  .gem {
+    margin-left: 3px;
+  }
+
   .right {
     display: flex;
     position: relative;
