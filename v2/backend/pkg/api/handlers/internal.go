@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -16,7 +17,7 @@ import (
 // Premium Plans
 
 func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *http.Request) {
-	data, err := h.dai.GetProductSummary()
+	data, err := h.dai.GetProductSummary(r.Context())
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -100,9 +101,9 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 // Dashboards
 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.GetUserIdBySession(r)
-	if err != nil {
-		handleErr(w, err)
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
 		return
 	}
 	data, err := h.dai.GetUserDashboards(r.Context(), userId)
@@ -180,9 +181,9 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, err := h.GetUserIdBySession(r)
-	if err != nil {
-		handleErr(w, err)
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
 		return
 	}
 	req := struct {
@@ -247,11 +248,18 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 		return
 	}
 
+	// add premium chart perk info for shared dashboards
+	premiumPerks, err := h.getDashboardPremiumPerks(r.Context(), *dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 	data, err := h.dai.GetValidatorDashboardOverview(r.Context(), *dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
+	data.ChartHistorySeconds = premiumPerks.ChartHistorySeconds
 	data.Name = name
 
 	response := types.InternalGetValidatorDashboardResponse{
@@ -785,12 +793,39 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
-	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	var v validationError
+	ctx := r.Context()
+	dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardSummaryChart(r.Context(), *dashboardId)
+	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	q := r.URL.Query()
+	groupIds := v.checkGroupIdList(q.Get("group_ids"))
+	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
+	aggregation := checkEnum[enums.ChartAggregation](&v, q.Get("aggregation"), "aggregation")
+	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds)
+	beforeTs, afterTs := v.checkTimestamps(q.Get("before_ts"), q.Get("after_ts"), maxAge)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	if maxAge == 0 {
+		returnConflict(w, fmt.Errorf("requested aggregation is not available for dashboard owner's premium subscription"))
+		return
+	}
+	minAllowedTs := uint64(time.Now().Unix()) - maxAge
+	if beforeTs <= minAllowedTs || afterTs <= minAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription is %v seconds", maxAge))
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardSummaryChart(ctx, *dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
 	if err != nil {
 		handleErr(w, err)
 		return

@@ -316,6 +316,29 @@ func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrima
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
 }
 
+// getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
+func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
+	// for guest dashboards, return free tier perks
+	if id.Validators != nil {
+		perk, err := h.dai.GetFreeTierPerks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return perk, nil
+	}
+	// could be made into a single query if needed
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(ctx, id.Id)
+	if err != nil {
+		return nil, err
+	}
+	userInfo, err := h.dai.GetUserInfo(ctx, dashboardInfo.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userInfo.PremiumPerks, nil
+}
+
 // checkGroupId validates the given group id and returns it as an int64.
 // If the given group id is empty and allowEmpty is true, it returns -1 (all groups).
 func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
@@ -504,6 +527,56 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func (v *validationError) checkTimestamps(beforeParam string, afterParam string, maxAge uint64) (before uint64, after uint64) {
+	beforeTs := v.checkUint(beforeParam, "before_ts")
+	afterTs := v.checkUint(afterParam, "after_ts")
+	if beforeTs < afterTs {
+		v.add("before_ts", "must not be smaller than after_ts")
+	}
+	// set default values if values were omitted
+	// since maxAge can be very large, we need to avoid overflows here
+	if beforeTs == 0 && afterTs == 0 {
+		beforeTs = uint64(time.Now().Unix())
+		afterTs = beforeTs - minUint64(maxAge, beforeTs)
+	} else if beforeTs == 0 {
+		beforeTs = maxUint64(afterTs+maxAge, maxAge)
+	} else if afterTs == 0 {
+		afterTs = beforeTs - minUint64(maxAge, beforeTs)
+	}
+	return beforeTs, afterTs
+}
+
+func maxUint64(a, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func minUint64(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
+func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartHistorySeconds) uint64 {
+	aggregations := enums.ChartAggregations
+	switch aggregation {
+	case aggregations.Epoch:
+		return perkSeconds.Epoch
+	case aggregations.Hourly:
+		return perkSeconds.Hourly
+	case aggregations.Daily:
+		return perkSeconds.Daily
+	case aggregations.Weekly:
+		return perkSeconds.Weekly
+	default:
+		return 0
+	}
 }
 
 // --------------------------------------
