@@ -38,10 +38,10 @@ const validatorSub: ValidatorSubscriptionState = {
 const accountSub: AccountSubscriptionState = {
   incoming: true,
   outgoing: true,
-  erc20: -1,
+  erc20: NaN,
   erc721: true,
   erc1155: false,
-  networks: [17000, 10200],
+  networks: [17000],
   ignoreSpam: true
 }
 

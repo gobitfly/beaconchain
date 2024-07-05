@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { ModelRef } from 'vue'
 import type { ChainID } from '~/types/network'
+import type { CheckboxAndNumber } from '~/types/subscriptionModal'
 
 const props = defineProps<{
   tPath: string,
@@ -11,8 +12,7 @@ const props = defineProps<{
   default?: number
 }>()
 
-const type = computed(() => props.inputType || 'binary')
-// const textField = ref('')
+const type = computed(() => props.inputType ?? 'binary')
 
 const { t } = useI18n()
 
@@ -21,59 +21,49 @@ interface CheckboxAndText {
   text: string
 }
 
-/** - if boolean: checked state of the checkbox
- *  - if number: -1 means unchecked, another value means checked and copies the textfield (converted in a number)
- *  - if array: list of selected networks */
-const state = defineModel<boolean|number|ChainID[]>({ required: true })
+const state = defineModel<CheckboxAndNumber|ChainID[]>({ required: true })
 let networkSelectorState: ModelRef<ChainID[]>
 let checkboxAndText: Ref<CheckboxAndText> | undefined
 
-// bridging the v-model with the data structures of this component
+// bridging the v-model (CheckboxAndNumber | ChainID[]) with the data of this component (CheckboxAndText | ChainID[])
 
 if (type.value === 'networks') {
   networkSelectorState = state as ModelRef<ChainID[]>
 } else {
-  checkboxAndText = useObjectRefBridge<boolean|number, CheckboxAndText>(state as Ref<boolean|number>, receiveFromVModel, sendToVModel)
+  checkboxAndText = useObjectRefBridge<CheckboxAndNumber, CheckboxAndText>(state as Ref<CheckboxAndNumber>, receiveFromVModel, sendToVModel)
 }
 
-function receiveFromVModel (state: boolean|number) : CheckboxAndText {
+function receiveFromVModel (state: CheckboxAndNumber) : CheckboxAndText {
   const output = {} as CheckboxAndText
-  switch (type.value) {
-    case 'amount' :
-    case 'percent' :
-      output.check = (state as number >= 0)
-      output.text = correctUserInput(output.check, output.check ? String(state) : checkboxAndText!.value.text /* textField.value */)
-      break
-    case 'binary' :
-      output.check = state as boolean
-      break
+  output.check = state.check
+  if (type.value === 'amount' || type.value === 'percent') {
+    output.text = isNaN(state.num) ? '' : String(state.num)
   }
   return output
 }
 
-function sendToVModel (state: CheckboxAndText) : boolean|number {
-  switch (type.value) {
-    case 'amount' :
-    case 'percent' :
-      return state.check ? calculateCorrectNumber(state.text) : -1
-    case 'binary' :
-      return state.check
+function sendToVModel (state: CheckboxAndText) : CheckboxAndNumber {
+  const output = {} as CheckboxAndNumber
+  output.check = state.check
+  if (type.value === 'amount' || type.value === 'percent') {
+    const corrected = correctUserInput(state.text)
+    output.num = (corrected === '') ? NaN : Number(corrected)
   }
-  return 0
+  return output
 }
 
 // input validation / autocorrection
 
-function correctUserInput (checked: boolean, input: string) : string {
+function correctUserInput (input: string) : string {
   switch (type.value) {
-    case 'amount' : return (isThisAvalidInput(input) || checked) ? String(calculateCorrectNumber(input)) : ''
+    case 'amount' : return isThisAvalidInput(input) ? String(calculateCorrectNumber(input)) : ''
     case 'percent' : return String(calculateCorrectNumber(input))
   }
   return ''
 }
 
 function calculateCorrectNumber (input: string) : number {
-  let num = !isThisAvalidInput(input) ? (props.default ?? 0) : Number(input)
+  let num = !isThisAvalidInput(input) ? Math.abs(props.default ?? 0) : Number(input)
   if (type.value === 'percent') {
     if (num < 1) { num = 1 }
     if (num > 100) { num = 100 }
@@ -103,20 +93,9 @@ const tooltipLines = computed(() => {
   return tAll(t, props.tPath + '.hint', options)
 })
 
-/*
-// input: keeping the text field up-to-date with new data coming from the parent through the bridge
-if (checkboxAndText) {
-  watch(checkboxAndText, (cat) => {
-    textField.value = cat.text
-  }, { immediate: true, deep: true })
-} */
-
-// output: on blur or enter, auto-correcting the text field /*and sending the corrected data to the bridge*/
-
+// output: on blur or enter, auto-correcting the text field
 function acknowledgeInputtedText () {
-  // textField.value = correctUserInput(checkboxAndText!.value.check, textField.value)
-  // checkboxAndText!.value.text = textField.value
-  checkboxAndText!.value.text = correctUserInput(checkboxAndText!.value.check, checkboxAndText!.value.text)
+  checkboxAndText!.value.text = correctUserInput(checkboxAndText!.value.text)
 }
 
 const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
@@ -156,7 +135,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       />
     </div>
     <div v-else class="right">
-      <BcNetworkSelector v-model="networkSelectorState" />
+      <BcNetworkSelector v-model="networkSelectorState" :class="deactivationClass" />
     </div>
   </div>
 </template>
