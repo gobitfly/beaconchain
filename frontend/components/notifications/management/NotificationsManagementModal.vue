@@ -64,18 +64,18 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
         Network coming soon!
       </TabPanel>
     </TabView>
-    <Button class="done-button" :label="$t('navigation.done')" @click="visible=false" />
+    <Button class="done-button" :label="$t('navigation.done')" @click="visible = false" />
   </BcDialog>
 </template>
 
 <style lang="scss" scoped>
-
-#notifications-management-search-placholder{
+#notifications-management-search-placholder {
   position: absolute;
   top: 70px;
   right: var(--padding-large);
+
   @media (max-width: 1100px) {
-      top: var(--padding-large);
+    top: var(--padding-large);
   }
 }
 
@@ -83,9 +83,10 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
   position: relative;
   width: 1400px;
   height: 786px;
-  .p-dialog-header{
-    margin-right: 40px;
-  }
+}
+
+:global(.notifications-management-modal-container .p-dialog-header) {
+  margin-right: 40px;
 }
 
 :global(.notifications-management-tab-view >.p-tabview-panels) {
@@ -96,10 +97,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
   margin-top: var(--padding-large);
 }
 
-.done-button{
+.done-button {
   position: absolute;
   bottom: calc(var(--padding-large) + var(--padding));
   right: calc(var(--padding-large) + var(--padding));
 }
-
 </style>

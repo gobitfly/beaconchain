@@ -21,10 +21,9 @@ const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    duty: width.value > 1180,
-    clRewards: width.value >= 900,
-    elRewards: width.value >= 780,
-    age: width.value >= 660
+    networks: width.value > 1101,
+    webhook: width.value >= 945,
+    subscriptions: width.value >= 725
   }
 })
 
@@ -93,22 +92,17 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
 <template>
   <div>
     <Teleport to="#notifications-management-search-placholder">
-      <BcContentFilter
-        :search-placeholder="$t('placeholder')"
-        class="search"
-        @filter-changed="setSearch"
-      />
+      <BcContentFilter :search-placeholder="$t('placeholder')" class="search" @filter-changed="setSearch" />
     </Teleport>
 
     <ClientOnly fallback-tag="span">
       <BcTable
         :data="wrappedDashboards"
         data-key="identifier"
-        :expandable="true"
+        :expandable="!colsVisible.networks"
         class="notifications-management-dashboard-table"
         :cursor="cursor"
         :page-size="pageSize"
-        :add-spacer="colsVisible.age"
         :selected-sort="tempQuery?.sort"
         :loading="isLoading"
         @set-cursor="setCursor"
@@ -142,47 +136,60 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
           </template>
         </Column>
         <Column
+          v-if="colsVisible.subscriptions"
           field="subscriptions"
           body-class="subscriptions-col"
           header-class="subscriptions-col"
           :header="$t('notifications.col.subscriptions')"
         >
           <template #body="slotProps">
-            <BcTablePopoutEdit :label="slotProps.data.subscriptions.join(', ')" @on-edit="onEdit('subscriptions',slotProps.data)" />
+            <BcTablePopoutEdit
+              :truncate-text="true"
+              :label="slotProps.data.subscriptions.join(', ')"
+              @on-edit="onEdit('subscriptions', slotProps.data)"
+            />
           </template>
         </Column>
         <Column
+          v-if="colsVisible.webhook"
           field="webhook"
           body-class="webhook-col"
           header-class="webhook-col"
           :header="$t('notifications.col.webhook')"
         >
           <template #body="slotProps">
-            <BcTablePopoutEdit :label="slotProps.data.webhook.url" @on-edit="()=>onEdit('webhook', slotProps.data)" />
+            <BcTablePopoutEdit :truncate-text="true" :label="slotProps.data.webhook.url" @on-edit="() => onEdit('webhook', slotProps.data)" />
           </template>
         </Column>
         <Column
+          v-if="colsVisible.networks"
           field="networks"
           body-class="networks-col"
           header-class="networks-col"
           :header="$t('notifications.col.networks')"
         >
           <template #body="slotProps">
-            <BcTablePopoutEdit @on-edit="onEdit('networks', slotProps.data)">
+            <BcTablePopoutEdit
+              :truncate-text="true"
+              :no-icon="slotProps.data.dashboard_type === 'validator'"
+              @on-edit="onEdit('networks', slotProps.data)"
+            >
               <template #content>
-                <IconNetwork v-for="chainId in slotProps.data.networks" :key="chainId" :colored="true" class="network-icon" :chain-id="chainId" />
+                <IconNetwork
+                  v-for="chainId in slotProps.data.networks"
+                  :key="chainId"
+                  :colored="true"
+                  class="network-icon"
+                  :chain-id="chainId"
+                />
               </template>
             </BcTablePopoutEdit>
           </template>
         </Column>
-        <Column
-          field="action"
-          body-class="action-col"
-          header-class="action-col"
-        >
+        <Column field="action" body-class="action-col" header-class="action-col">
           <template #body="slotProps">
             <!--TODO: once we have our api check how to identify 'deleted' rows-->
-            <div>
+            <div class="action-row">
               <FontAwesomeIcon
                 :disabled="!slotProps.data.subscriptions?.length ? true : null"
                 :icon="faTrash"
@@ -193,7 +200,53 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
           </template>
         </Column>
         <template #expansion="slotProps">
-          TODO: expansion {{ slotProps }}
+          <div class="expansion">
+            <div class="info">
+              <div class="label">
+                {{ $t('notifications.col.subscriptions') }}
+              </div>
+
+              <BcTablePopoutEdit
+                class="value"
+                :label="slotProps.data.subscriptions.join(', ')"
+                @on-edit="onEdit('subscriptions', slotProps.data)"
+              />
+            </div>
+            <div class="info">
+              <div class="label">
+                {{ $t('notifications.col.webhook') }}
+              </div>
+
+              <BcTablePopoutEdit
+                class="value"
+                :label="slotProps.data.webhook.url"
+                @on-edit="() => onEdit('webhook', slotProps.data)"
+              />
+            </div>
+            <div class="info">
+              <div class="label">
+                {{ $t('notifications.col.networks') }}
+              </div>
+
+              <BcTablePopoutEdit
+                class="value"
+                :no-icon="slotProps.data.dashboard_type === 'validator'"
+                @on-edit="onEdit('networks', slotProps.data)"
+              >
+                <template #content>
+                  <div class="newtork-row">
+                    <IconNetwork
+                      v-for="chainId in slotProps.data.networks"
+                      :key="chainId"
+                      :colored="true"
+                      class="network-icon"
+                      :chain-id="chainId"
+                    />
+                  </div>
+                </template>
+              </BcTablePopoutEdit>
+            </div>
+          </div>
         </template>
       </BcTable>
     </ClientOnly>
@@ -201,31 +254,77 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/main.scss";
 @use "~/assets/css/utils.scss";
-.network-icon{
+
+.expansion {
+  @include main.container;
+  padding: var(--padding);
+  display: flex;
+  flex-direction: column;
+  gap: var(--padding);
+  font-size: var(--small_text_font_size);
+
+  .info {
+    display: flex;
+    gap: var(--padding);
+
+    .label {
+      flex-shrink: 0;
+      font-weight: var(--standard_text_bold_font_weight);
+      width: 100px;
+    }
+
+    .value {
+      width: 197px;
+    }
+  }
+}
+
+.network-icon {
   margin-right: var(--padding);
   height: 20px;
   width: 20px;
 }
+.newtork-row{
+  display: flex;
+}
 
-:deep(.notifications-management-dashboard-table){
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+:deep(.notifications-management-dashboard-table) {
+
   .dashboard-col,
-  .group-col{
+  .group-col {
     @include utils.truncate-text;
     @include utils.set-all-width(210px);
+
     @media (max-width: 1460px) {
       @include utils.set-all-width(140px);
     }
+
+    @media (max-width: 5205px) {
+      @include utils.set-all-width(120px);
+    }
   }
+
   .webhook-col,
-  .subscriptions-col{
+  .subscriptions-col {
     @include utils.set-all-width(340px);
+
     @media (max-width: 1360px) {
       @include utils.set-all-width(240px);
     }
   }
-  .action-col{
+
+  /*.action-col{
     @include utils.set-all-width(40px);
+  }*/
+  .networks-col {
+    @include utils.set-all-width(156px);
   }
 }
 </style>

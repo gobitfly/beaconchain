@@ -8,19 +8,22 @@ const emit = defineEmits<{(e: 'onEdit'): void }>()
 
 interface Props {
   label?: string,
-  noIcon?: boolean
+  noIcon?: boolean,
+  truncateText?: boolean,
 }
 defineProps<Props>()
 
 </script>
 <template>
-  <div class="bc-poput-edit">
+  <div class="bc-poput-edit" :class="{ 'truncate-text': truncateText }">
     <slot name="content">
       <span v-if="label" class="content">
         {{ label }}
       </span>
     </slot>
-    <FontAwesomeIcon v-if="!noIcon" class="link" :icon="faEdit" @click="() => emit('onEdit')" />
+    <div class="icon">
+      <FontAwesomeIcon v-if="!noIcon" class="link" :icon="faEdit" @click="() => emit('onEdit')" />
+    </div>
   </div>
 </template>
 <style lang="scss" scoped>
@@ -28,10 +31,24 @@ defineProps<Props>()
 
 .bc-poput-edit {
   display: flex;
-  align-items: center;
+
+  &.truncate-text {
+    align-items: center;
+
+    .content {
+      @include utils.truncate-text;
+    }
+  }
+
+  &:not(.truncate-text) {
+    .icon {
+      flex-grow: 1;
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
 
   .content {
-    @include utils.truncate-text;
     padding-right: var(--padding);
   }
 }
