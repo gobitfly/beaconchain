@@ -10,8 +10,8 @@ interface Props {
   premiumUser: boolean
 }
 
-const TimeoutForSavingFailures = 2000 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost what you did half a minute ago, we hope you remember your preferences and do not mind going back to that dialog"
-const MinimumTimeBetweenAPIcalls = 700 // ms
+const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
+const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
 const DefaultValueOfValidatorOptionsNeedingPremium = {
   offlineGroup: -10, // means "10% and unchecked"
   realTime: false
