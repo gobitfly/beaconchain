@@ -34,6 +34,12 @@ const onSubmit = handleSubmit(async (values) => {
         email: values.newEmail
       }
     })
+    toast.showSuccess(
+      {
+        summary: $t('user_settings.email.success.toast_title'),
+        group: $t('user_settings.email.success.toast_group'),
+        detail: $t('user_settings.email.success.toast_message')
+      })
   } catch (error) {
     toast.showError(
       {

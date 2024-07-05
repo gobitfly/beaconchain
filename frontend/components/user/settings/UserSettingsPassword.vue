@@ -33,6 +33,12 @@ const onSubmit = handleSubmit(async (values) => {
         password: values.newPassword
       }
     })
+    toast.showSuccess(
+      {
+        summary: $t('user_settings.password.success.toast_title'),
+        group: $t('user_settings.password.success.toast_group'),
+        detail: $t('user_settings.password.success.toast_message')
+      })
   } catch (error) {
     toast.showError(
       {
