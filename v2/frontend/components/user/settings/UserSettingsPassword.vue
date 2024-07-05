@@ -21,7 +21,7 @@ const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-const onSubmit = handleSubmit(async (values) => {
+const onSubmit = handleSubmit(async (values, { resetForm }) => {
   if (!canSubmit.value) {
     return
   }
@@ -39,6 +39,7 @@ const onSubmit = handleSubmit(async (values) => {
         group: $t('user_settings.password.success.toast_group'),
         detail: $t('user_settings.password.success.toast_message')
       })
+    resetForm()
   } catch (error) {
     toast.showError(
       {

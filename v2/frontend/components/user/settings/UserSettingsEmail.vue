@@ -21,7 +21,7 @@ const [confirmEmail, confirmEmailAttrs] = defineField('confirmEmail')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-const onSubmit = handleSubmit(async (values) => {
+const onSubmit = handleSubmit(async (values, { resetForm }) => {
   if (!canSubmit.value) {
     return
   }
@@ -40,6 +40,7 @@ const onSubmit = handleSubmit(async (values) => {
         group: $t('user_settings.email.success.toast_group'),
         detail: $t('user_settings.email.success.toast_message')
       })
+    resetForm()
   } catch (error) {
     toast.showError(
       {
