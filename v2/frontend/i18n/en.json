@@ -816,10 +816,15 @@
       "title": "Email",
       "new": "New Email Address",
       "confirm": "Confirm Email Address",
+      "success": {
+        "toast_title": "Success",
+        "toast_group": "Email success",
+        "toast_message": "Your email address has been updated."
+      },
       "error": {
         "toast_title": "Error",
-        "toast_group": "Cannot update email",
-        "toast_message": "something went wrong."
+        "toast_group": "Could not update your email address",
+        "toast_message": "Please try again."
       }
     },
     "password": {
@@ -827,10 +832,15 @@
       "old": "Old password",
       "new": "New password",
       "confirm": "Confirm new password",
+      "success": {
+        "toast_title": "Success",
+        "toast_group": "Password success",
+        "toast_message": "Your password has been updated."
+      },
       "error": {
         "toast_title": "Error",
-        "toast_group": "Cannot update password",
-        "toast_message": "something went wrong."
+        "toast_group": "Could not update your password",
+        "toast_message": "Please try again."
       }
     },
     "delete_account": {
