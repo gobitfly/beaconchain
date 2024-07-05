@@ -17,7 +17,7 @@ const { availableNetworks, isNetworkDisabled } = useNetworkStore()
 const liveState = defineModel<ChainID|ChainID[]>({ required: false })
 
 const selection = Array.isArray(liveState.value)
-  ? useArrayRefBridge<ChainID, string>(liveState as Ref<ChainID[]>, true)
+  ? useArrayRefBridge<ChainID, string>(liveState as Ref<ChainID[]>)
   : usePrimitiveRefBridge<ChainID, string>(liveState as Ref<ChainID>)
 
 const buttons = shallowRef<MultiBarItem[]>([])

@@ -11,20 +11,20 @@ const props = defineProps<Props>()
 
 type ButtonStates = Record<string, boolean>
 
-const inOutSelection = defineModel<string[]>({ required: true })
-const buttonStates = useObjectRefBridge<string[], ButtonStates>(inOutSelection, receiveFromVModel, sendToVModel, true)
+const selection = defineModel<string[]>({ required: true })
+const buttonStates = useObjectRefBridge<string[], ButtonStates>(selection, receiveFromVModel, sendToVModel)
 
-function receiveFromVModel (selection: string[]) : ButtonStates {
+function receiveFromVModel (data: string[]) : ButtonStates {
   const states = props.buttons.reduce((map, { value }) => {
-    map[value] = selection.includes(value)
+    map[value] = data.includes(value)
     return map
   }, {} as ButtonStates)
   return states
 }
 
-function sendToVModel (states: ButtonStates) : string[] {
+function sendToVModel (data: ButtonStates) : string[] {
   const selection: string[] = []
-  Object.entries(states).forEach(([key, value]) => {
+  Object.entries(data).forEach(([key, value]) => {
     if (value) {
       selection.push(key)
     }
@@ -33,7 +33,7 @@ function sendToVModel (states: ButtonStates) : string[] {
 }
 
 // this line is independent of the bridge above (that addresses the on/off states), this line updates the component if the list of buttons comes late
-watch(() => props.buttons, () => { buttonStates.value = receiveFromVModel(inOutSelection.value) })
+watch(() => props.buttons, () => { buttonStates.value = receiveFromVModel(selection.value) })
 
 const displayModeClass = computed(() => props.displayMode ? 'read-only' : '')
 </script>

@@ -15,23 +15,20 @@ interface Props {
 const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
 const { t } = useI18n()
 
-const newDataReceived = ref<number>(0) // used in <template> to trigger Vue to refresh or hide the content
-let tPath: string
+const tPath = ref('')
 const validatorSubModifiable = ref({} as ValidatorSubscriptionStateComplete)
 const accountSubModifiable = ref({} as AccountSubscriptionState)
 const all = ref(false)
 
 watch(props, (props) => {
   if (!props || (!props.validatorSub && !props.accountSub)) {
-    newDataReceived.value = 0
     return
   }
-  newDataReceived.value++
   if (props.validatorSub) {
-    tPath = 'notifications.subscriptions.validators.'
+    tPath.value = 'notifications.subscriptions.validators.'
     validatorSubModifiable.value = { offlineGroup: -1, realTime: false, ...structuredClone(toRaw(props.validatorSub)) }
   } else if (props.accountSub) {
-    tPath = 'notifications.subscriptions.accounts.'
+    tPath.value = 'notifications.subscriptions.accounts.'
     accountSubModifiable.value = structuredClone(toRaw(props.accountSub))
   }
 }, { immediate: true })
@@ -43,7 +40,7 @@ const closeDialog = () => {
 </script>
 
 <template>
-  <div v-if="newDataReceived" class="content">
+  <div v-if="props && tPath" class="content">
     <div class="title">
       {{ t('notifications.subscriptions.dialog_title') }}
     </div>
@@ -52,7 +49,7 @@ const closeDialog = () => {
       {{ t(tPath+'explanation') }}
     </div>
 
-    <div v-if="props?.validatorSub">
+    <div v-if="props.validatorSub">
       <NotificationsSubscriptionRow v-model="validatorSubModifiable.offlineValidator" :t-path="tPath+'offline_validator'" :lacks-premium-subscription="false" class="row" />
       <NotificationsSubscriptionRow
         v-model="validatorSubModifiable.offlineGroup"
@@ -73,7 +70,7 @@ const closeDialog = () => {
       <NotificationsSubscriptionRow v-model="all" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" />
     </div>
 
-    <div v-else-if="props?.accountSub">
+    <div v-else-if="props.accountSub">
       <NotificationsSubscriptionRow v-model="accountSubModifiable.incoming" :t-path="tPath+'incoming'" :lacks-premium-subscription="false" class="row" />
       <NotificationsSubscriptionRow v-model="accountSubModifiable.outgoing" :t-path="tPath+'outgoing'" :lacks-premium-subscription="false" class="row" />
       <NotificationsSubscriptionRow v-model="accountSubModifiable.erc20" :t-path="tPath+'erc20'" :lacks-premium-subscription="false" input-type="amount" class="row" />
