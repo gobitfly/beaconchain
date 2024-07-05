@@ -40,14 +40,14 @@ func GetSubsForEventFilter(eventName types.EventName) (map[string][]types.Subscr
 	return subMap, nil
 }
 
-func GetUserPushTokenByIds(ids []uint64) (map[uint64][]string, error) {
-	pushByID := map[uint64][]string{}
+func GetUserPushTokenByIds(ids []types.UserId) (map[types.UserId][]string, error) {
+	pushByID := map[types.UserId][]string{}
 	if len(ids) == 0 {
 		return pushByID, nil
 	}
 	var rows []struct {
-		ID    uint64 `db:"user_id"`
-		Token string `db:"notification_token"`
+		ID    types.UserId `db:"user_id"`
+		Token string       `db:"notification_token"`
 	}
 
 	err := db.FrontendWriterDB.Select(&rows, "SELECT DISTINCT ON (user_id, notification_token) user_id, notification_token FROM users_devices WHERE (user_id = ANY($1) AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)) AND notify_enabled = true AND active = true AND notification_token IS NOT NULL AND LENGTH(notification_token) > 20 ORDER BY user_id, notification_token, id DESC", pq.Array(ids), types.PushNotificationChannel)
@@ -67,14 +67,14 @@ func GetUserPushTokenByIds(ids []uint64) (map[uint64][]string, error) {
 }
 
 // GetUserEmailsByIds returns the emails of users.
-func GetUserEmailsByIds(ids []uint64) (map[uint64]string, error) {
-	mailsByID := map[uint64]string{}
+func GetUserEmailsByIds(ids []types.UserId) (map[types.UserId]string, error) {
+	mailsByID := map[types.UserId]string{}
 	if len(ids) == 0 {
 		return mailsByID, nil
 	}
 	var rows []struct {
-		ID    uint64 `db:"id"`
-		Email string `db:"email"`
+		ID    types.UserId `db:"id"`
+		Email string       `db:"email"`
 	}
 	//
 	err := db.FrontendWriterDB.Select(&rows, "SELECT id, email FROM users WHERE id = ANY($1) AND id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)", pq.Array(ids), types.EmailNotificationChannel)
