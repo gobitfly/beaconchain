@@ -779,7 +779,10 @@
           "hint": ["Ignores *zero value transfer tx's* and token tx's that have the *\"hidden\" token label*."]
         }
       },
-      "save":"Save"
+      "button":"Close",
+      "error_title": "Error",
+      "error_group": "Saving",
+      "error_message": "We could not save your preferences."
     }
   },
   "pricing": {

@@ -17,6 +17,7 @@ export function useCustomFetch () {
   const { t: $t } = useI18n()
   const { $bcLogger } = useNuxtApp()
   const uuid = inject<{value: string}>('app-uuid')
+  let timeout = APIcallTimeout
 
   async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
@@ -25,7 +26,7 @@ export function useCustomFetch () {
     }
 
     if (options.signal === undefined) {
-      options.signal = AbortSignal.timeout(APIcallTimeout)
+      options.signal = AbortSignal.timeout(timeout)
     }
 
     if (map.mockFunction !== undefined && map.mock) {
@@ -87,5 +88,10 @@ export function useCustomFetch () {
       throw (e)
     }
   }
-  return { fetch }
+
+  function setTimeout (delay: number) {
+    timeout = delay
+  }
+
+  return { fetch, setTimeout }
 }

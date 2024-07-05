@@ -25,7 +25,7 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
 
 const validatorSub: ValidatorSubscriptionState = {
   offlineValidator: true,
-  offlineGroup: 40,
+  offlineGroup: -40, // means "40% and deselected/unchecked"
   missedAttestations: true,
   proposedBlock: true,
   upcomingProposal: false,
@@ -38,7 +38,7 @@ const validatorSub: ValidatorSubscriptionState = {
 const accountSub: AccountSubscriptionState = {
   incoming: true,
   outgoing: true,
-  erc20: NaN,
+  erc20: NaN, // means "not in the database yet" (will leave the input field empty with a placeholder)
   erc721: true,
   erc1155: false,
   networks: [17000],
@@ -48,7 +48,7 @@ const accountSub: AccountSubscriptionState = {
 function openSubscriptions (props: any) {
   dialog.open(NotificationsSubscriptionDialog, {
     data: props,
-    onClose: modified => onClose(modified?.data)
+    onClose: response => onClose(response?.data)
   })
 }
 </script>
