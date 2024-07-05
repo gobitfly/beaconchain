@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"math/big"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"firebase.google.com/go/messaging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -21,7 +23,29 @@ import (
 
 type EventName string
 type EventFilter string
+
 type NotificationsPerUserId map[UserId]map[EventName]map[EventFilter]Notification
+
+func (npui NotificationsPerUserId) AddNotification(n Notification) {
+
+	if n.GetUserId() == 0 {
+		log.Fatal(fmt.Errorf("Notification user id is 0"), fmt.Sprintf("Notification: %v", n), 0)
+	}
+	if n.GetEventName() == "" {
+		log.Fatal(fmt.Errorf("Notification event name is empty"), fmt.Sprintf("Notification: %v", n), 0)
+	}
+	if n.GetEventFilter() == "" {
+		log.Fatal(fmt.Errorf("Notification event filter is empty"), fmt.Sprintf("Notification: %v", n), 0)
+	}
+
+	if _, ok := npui[n.GetUserId()]; !ok {
+		npui[n.GetUserId()] = make(map[EventName]map[EventFilter]Notification)
+	}
+	if _, ok := npui[n.GetUserId()][n.GetEventName()]; !ok {
+		npui[n.GetUserId()][EventName(n.GetEventFilter())] = make(map[EventFilter]Notification)
+	}
+	npui[n.GetUserId()][n.GetEventName()][EventFilter(n.GetEventFilter())] = n
+}
 
 const (
 	ValidatorBalanceDecreasedEventName               EventName = "validator_balance_decreased"
@@ -252,6 +276,7 @@ type Notification interface {
 	GetEmailAttachment() *EmailAttachment
 	GetUnsubscribeHash() string
 	GetInfoMarkdown() string
+	GetUserId() UserId
 }
 
 // func UnMarschal
