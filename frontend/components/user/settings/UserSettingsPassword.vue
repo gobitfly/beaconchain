@@ -10,7 +10,7 @@ const toast = useBcToast()
 const { handleSubmit, errors, defineField } = useForm({
   validationSchema: yupObject({
     oldPassword: passwordValidation($t),
-    newPassword: passwordValidation($t),
+    newPassword: newPasswordValidation($t, 'oldPassword'),
     confirmPassword: confirmPasswordValidation($t, 'newPassword')
   })
 })
