@@ -1,15 +1,13 @@
 package notification
 
 import (
-	"encoding/hex"
-
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 )
 
-func GetSubsForEventFilter(eventName types.EventName) ([][]byte, map[string][]types.Subscription, error) {
+func GetSubsForEventFilter(eventName types.EventName) (map[string]bool, map[string][]types.Subscription, error) {
 	var subs []types.Subscription
 	subQuery := `
 		SELECT id, user_id, event_filter, last_sent_epoch, created_epoch, event_threshold, ENCODE(unsubscribe_hash, 'hex') as unsubscribe_hash, internal_state from users_subscriptions where event_name = $1
@@ -21,7 +19,7 @@ func GetSubsForEventFilter(eventName types.EventName) ([][]byte, map[string][]ty
 		return nil, nil, err
 	}
 
-	filtersEncode := make([][]byte, 0, len(subs))
+	filtersEncode := make(map[string]bool, len(subs))
 	for _, sub := range subs {
 		if _, ok := subMap[sub.EventFilter]; !ok {
 			subMap[sub.EventFilter] = make([]types.Subscription, 0)
@@ -36,8 +34,7 @@ func GetSubsForEventFilter(eventName types.EventName) ([][]byte, map[string][]ty
 			State:          sub.State,
 		})
 
-		b, _ := hex.DecodeString(sub.EventFilter)
-		filtersEncode = append(filtersEncode, b)
+		filtersEncode[sub.EventFilter] = true
 	}
 	return filtersEncode, subMap, nil
 }
