@@ -16,7 +16,7 @@ type CompareValue = {
   class?: string
 }
 
-type RowType = 'header' | 'group' | 'perc'
+type RowType = 'header' | 'group' | 'perc' | 'label'
 
 type CompareRow = {
   type: RowType,
@@ -36,10 +36,15 @@ const rows = computed(() => {
       return { value: perks.ad_free }
     }
     let value = get(perks, property)
-    if (value === 0) {
+
+    if (!value) {
       value = false
     } else if (property.includes('_seconds')) {
-      value = formatTimeDuration(value as number, $t)
+      if (value === Number.MAX_SAFE_INTEGER) {
+        value = $t('pricing.full_history')
+      } else {
+        value = $t('common.last_x', { duration: formatTimeDuration(value as number, $t) })
+      }
     }
 
     let tooltip: string | undefined
@@ -52,7 +57,7 @@ const rows = computed(() => {
       tooltip
     }
   }
-  const addRow = (type: RowType, property?: string, className?: string, subText?: string, hidePositiveValues = false) => {
+  const addRow = (type: RowType, property?: string, className?: string, subText?: string, hidePositiveValues = false, translationKey?: string) => {
     const row: CompareRow = { type, subText, className }
     switch (type) {
       case 'header':
@@ -62,8 +67,12 @@ const rows = computed(() => {
         row.label = $t(`pricing.groups.${property}`)
         row.values = sorted.map(_p => ({}))
         break
+      case 'label':
+        row.label = $t(translationKey || `pricing.percs.${property}`)
+        row.values = sorted.map(_p => ({}))
+        break
       case 'perc':
-        row.label = $t(`pricing.percs.${property}`)
+        row.label = $t(translationKey || `pricing.percs.${property}`)
         row.values = sorted.map((p) => {
           if (!property) {
             return {}
@@ -94,13 +103,18 @@ const rows = computed(() => {
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
   addRow('perc', 'manage_dashboard_via_api', undefined, comingSoon)
-  addRow('perc', 'bulk_adding', undefined, $t('pricing.percs.bulk_adding_subtext'))
-  addRow('perc', 'heatmap_history_seconds', undefined, undefined, !showInDevelopment)
-  addRow('perc', 'summary_chart_history_seconds', 'last-in-group', undefined, !showInDevelopment)
+  addRow('perc', 'bulk_adding', 'last-in-group', $t('pricing.percs.bulk_adding_subtext'))
+  addRow('group', 'dashboard_charts')
+  addRow('label', 'summary_chart_history', 'first-in-group')
+  const chartProps = ['epoch', 'hourly', 'daily', 'weekly']
+  chartProps.forEach(p => addRow('perc', `chart_history_seconds.${p}`, undefined, undefined, undefined, `time_frames.${p}`))
+
+  addRow('label', 'heatmap_history', 'last-in-group', comingSoon)
 
   addRow('group', 'notification', undefined, showInDevelopment ? undefined : comingSoon)
   addRow('perc', 'email_notifications_per_day', 'first-in-group', undefined, !showInDevelopment)
   addRow('perc', 'configure_notifications_via_api')
+
   addRow('perc', 'validator_group_notifications', undefined, undefined, !showInDevelopment)
   addRow('perc', 'webhook_endpoints', 'last-in-group', undefined, !showInDevelopment)
 
@@ -207,6 +221,7 @@ const rows = computed(() => {
       min-width: fit-content;
       border-left: 1px solid transparent;
 
+      &.label,
       &.header,
       &.group {
         font-size: 18px;
@@ -221,6 +236,7 @@ const rows = computed(() => {
         }
       }
 
+      &.label,
       &.perc {
         min-height: 36px;
       }

@@ -131,8 +131,14 @@ func (d *DummyService) GetUserIdByConfirmationHash(hash string) (uint64, error) 
 	return r, err
 }
 
-func (d *DummyService) GetProductSummary() (*t.ProductSummary, error) {
+func (d *DummyService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
 	r := t.ProductSummary{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
+	r := t.PremiumPerks{}
 	err := commonFakeData(&r)
 	return &r, err
 }
@@ -294,7 +300,7 @@ func (d *DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, da
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId) (*t.ChartData[int, float64], error) {
+func (d *DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []uint64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
 	r := t.ChartData[int, float64]{}
 	err := commonFakeData(&r)
 	return &r, err
