@@ -24,9 +24,9 @@
  *    For each line:
  *      # or ## or ### at the beginning will show the line as a title (respectively h1, h2, h3)
  *      - at the beginning will show the line as an item in a list.
- *      words surrounded with _ will be surrounded with <i> tags
- *      words surrounded with * will be surrounded with <b> tags
- *      words surrounded with ` will be shown with a type-writter font and not parsed (formatting tags inside ` and ` are ineffective)
+ *      parts surrounded with _ will be surrounded with <i> tags
+ *      parts surrounded with * will be surrounded with <b> tags
+ *      parts surrounded with ` will be shown with a type-writter font and not parsed (formatting tags between ` and ` are ineffective)
  *      a link can be created by writing [a caption](and-a-url). The url can written directly or tell the name of a member of the object in props links.
  *    Mixes are possible: italic inside bold or bold inside italic, code in italic or bold (if you surround ` and ` with the tags)...
  *
@@ -39,8 +39,8 @@
  *    Depending on the stylesheet of your website, those tags might not display your text in italic and bold.
  *    If you want to force them to display italic and bold text against the style preferences of your website, you can define a class like so:
  *      .my-own-bi {
- *        :deep(b) { font-weight: bold }
  *        :deep(i) { font-style: italic }
+ *        :deep(b) { font-weight: bold }
  *      }
  *    and assign it to the parser:
  *      <BcMiniParser ... class="my-own-bi" />
