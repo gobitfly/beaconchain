@@ -111,7 +111,7 @@ watch(() => props, () => {
         <BcToggleMultiBar v-model="selectedCategories" :buttons="icons" />
       </div>
       <h1 class="network">
-        {{ networkInfo?.family }} {{ networkInfo?.name }}
+        {{ networkInfo?.name.join(' ') }}
       </h1>
       <div class="header-right">
         <slot name="header-right" />
