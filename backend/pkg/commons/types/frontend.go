@@ -279,6 +279,67 @@ type Notification interface {
 	GetUserId() UserId
 }
 
+type NotificationBaseImpl struct {
+	LatestState     string
+	SubscriptionID  uint64
+	EventName       EventName
+	Epoch           uint64
+	Info            string
+	Title           string
+	EventFilter     string
+	EmailAttachment *EmailAttachment
+	UnsubscribeHash sql.NullString
+	InfoMarkdown    string
+	UserID          UserId
+}
+
+func (n NotificationBaseImpl) GetLatestState() string {
+	return n.LatestState
+}
+
+func (n NotificationBaseImpl) GetSubscriptionID() uint64 {
+	return n.SubscriptionID
+}
+
+func (n NotificationBaseImpl) GetEventName() EventName {
+	return n.EventName
+}
+
+func (n NotificationBaseImpl) GetEpoch() uint64 {
+	return n.Epoch
+}
+
+func (n NotificationBaseImpl) GetInfo(includeUrl bool) string {
+	return n.Info
+}
+
+func (n NotificationBaseImpl) GetTitle() string {
+	return n.Title
+}
+
+func (n NotificationBaseImpl) GetEventFilter() string {
+	return n.EventFilter
+}
+
+func (n NotificationBaseImpl) GetEmailAttachment() *EmailAttachment {
+	return n.EmailAttachment
+}
+
+func (n NotificationBaseImpl) GetUnsubscribeHash() string {
+	if n.UnsubscribeHash.Valid {
+		return n.UnsubscribeHash.String
+	}
+	return ""
+}
+
+func (n NotificationBaseImpl) GetInfoMarkdown() string {
+	return n.InfoMarkdown
+}
+
+func (n NotificationBaseImpl) GetUserId() UserId {
+	return n.UserID
+}
+
 // func UnMarschal
 
 type Subscription struct {

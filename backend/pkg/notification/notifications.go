@@ -1504,13 +1504,15 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 			log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorMissedAttestationEventName, event.ValidatorIndex, event.Epoch)
 			n := &validatorAttestationNotification{
-				SubscriptionID: *sub.ID,
-				UserID:         *sub.UserID,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          event.Epoch,
+					EventName:      types.ValidatorMissedAttestationEventName,
+					EventFilter:    hex.EncodeToString(event.EventFilter),
+				},
 				ValidatorIndex: event.ValidatorIndex,
-				Epoch:          event.Epoch,
 				Status:         event.Status,
-				EventName:      types.ValidatorMissedAttestationEventName,
-				EventFilter:    hex.EncodeToString(event.EventFilter),
 			}
 			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
@@ -1608,13 +1610,15 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 			log.Infof("new event: validator %v detected as offline since epoch %v", validator.Index, epoch)
 
 			n := &validatorIsOfflineNotification{
-				SubscriptionID: *sub.ID,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					Epoch:          epoch,
+					EventName:      types.ValidatorIsOfflineEventName,
+					LatestState:    fmt.Sprint(epoch - 2), // first epoch the validator stopped attesting
+					EventFilter:    hex.EncodeToString(validator.Pubkey),
+				},
 				ValidatorIndex: validator.Index,
 				IsOffline:      true,
-				EventEpoch:     epoch,
-				EventName:      types.ValidatorIsOfflineEventName,
-				InternalState:  fmt.Sprint(epoch - 2), // first epoch the validator stopped attesting
-				EventFilter:    hex.EncodeToString(validator.Pubkey),
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -1632,7 +1636,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 			originalLastSeenEpoch, err := strconv.ParseUint(sub.State.String, 10, 64)
 			if err != nil {
-				// i have no idea what just happened.
+				// I have no idea what just happened.
 				return fmt.Errorf("this should never happen. couldn't parse state as uint64: %v", err)
 			}
 
@@ -1649,14 +1653,16 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 			log.Infof("new event: validator %v detected as online again at epoch %v", validator.Index, epoch)
 
 			n := &validatorIsOfflineNotification{
-				SubscriptionID: *sub.ID,
-				UserID:         *sub.UserID,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventName:      types.ValidatorIsOfflineEventName,
+					EventFilter:    hex.EncodeToString(validator.Pubkey),
+					LatestState:    "-",
+				},
 				ValidatorIndex: validator.Index,
 				IsOffline:      false,
-				EventEpoch:     epoch,
-				EventName:      types.ValidatorIsOfflineEventName,
-				InternalState:  "-",
-				EventFilter:    hex.EncodeToString(validator.Pubkey),
 				EpochsOffline:  epochsSinceOffline,
 			}
 
@@ -1669,50 +1675,26 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 }
 
 type validatorIsOfflineNotification struct {
-	SubscriptionID  uint64
-	UserID          types.UserId
-	ValidatorIndex  uint64
-	EventEpoch      uint64
-	EpochsOffline   uint64
-	IsOffline       bool
-	EventName       types.EventName
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-	InternalState   string
+	types.NotificationBaseImpl
+
+	ValidatorIndex uint64
+	EpochsOffline  uint64
+	IsOffline      bool
 }
 
-func (n *validatorIsOfflineNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *validatorIsOfflineNotification) GetLatestState() string {
-	return n.InternalState
-}
-
-func (n *validatorIsOfflineNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorIsOfflineNotification) GetEventName() types.EventName {
-	return n.EventName
-}
-
-func (n *validatorIsOfflineNotification) GetEpoch() uint64 {
-	return n.EventEpoch
-}
-
+// Overwrite specific methods
 func (n *validatorIsOfflineNotification) GetInfo(includeUrl bool) string {
 	if n.IsOffline {
 		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is offline since epoch <a href="https://%[3]v/epoch/%[2]s">%[2]s</a>).`, n.ValidatorIndex, n.InternalState, utils.Config.Frontend.SiteDomain)
+			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is offline since epoch <a href="https://%[3]v/epoch/%[2]s">%[2]s</a>).`, n.ValidatorIndex, n.LatestState, utils.Config.Frontend.SiteDomain)
 		} else {
-			return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.InternalState)
+			return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.LatestState)
 		}
 	} else {
 		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is back online since epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a> (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.EventEpoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
+			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is back online since epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a> (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
 		} else {
-			return fmt.Sprintf(`Validator %v is back online since epoch %v (was offline for %v epoch(s)).`, n.ValidatorIndex, n.EventEpoch, n.EpochsOffline)
+			return fmt.Sprintf(`Validator %v is back online since epoch %v (was offline for %v epoch(s)).`, n.ValidatorIndex, n.Epoch, n.EpochsOffline)
 		}
 	}
 }
@@ -1725,59 +1707,24 @@ func (n *validatorIsOfflineNotification) GetTitle() string {
 	}
 }
 
-func (n *validatorIsOfflineNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
-func (n *validatorIsOfflineNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorIsOfflineNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
 func (n *validatorIsOfflineNotification) GetInfoMarkdown() string {
 	if n.IsOffline {
-		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is offline since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.EventEpoch, utils.Config.Frontend.SiteDomain)
+		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is offline since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
 	} else {
-		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is back online since epoch [%[2]v](https://%[3]v/epoch/%[2]v) (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.EventEpoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
+		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is back online since epoch [%[2]v](https://%[3]v/epoch/%[2]v) (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
 	}
+}
+
+func (n *validatorIsOfflineNotification) GetEventName() types.EventName {
+	return types.ValidatorIsOfflineEventName
 }
 
 type validatorAttestationNotification struct {
-	SubscriptionID     uint64
-	UserID             types.UserId
+	types.NotificationBaseImpl
+
 	ValidatorIndex     uint64
 	ValidatorPublicKey string
-	Epoch              uint64
 	Status             uint64 // * Can be 0 = scheduled | missed, 1 executed
-	EventName          types.EventName
-	EventFilter        string
-	UnsubscribeHash    sql.NullString
-}
-
-func (n *validatorAttestationNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *validatorAttestationNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorAttestationNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorAttestationNotification) GetEventName() types.EventName {
-	return n.EventName
-}
-
-func (n *validatorAttestationNotification) GetEpoch() uint64 {
-	return n.Epoch
 }
 
 func (n *validatorAttestationNotification) GetInfo(includeUrl bool) string {
@@ -1811,21 +1758,6 @@ func (n *validatorAttestationNotification) GetTitle() string {
 	return "-"
 }
 
-func (n *validatorAttestationNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
-func (n *validatorAttestationNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorAttestationNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
 func (n *validatorAttestationNotification) GetInfoMarkdown() string {
 	var generalPart = ""
 	switch n.Status {
@@ -1837,46 +1769,16 @@ func (n *validatorAttestationNotification) GetInfoMarkdown() string {
 	return generalPart
 }
 
+func (n *validatorAttestationNotification) GetEventName() types.EventName {
+	return types.ValidatorMissedAttestationEventName
+}
+
 type validatorGotSlashedNotification struct {
-	SubscriptionID  uint64
-	UserID          types.UserId
-	ValidatorIndex  uint64
-	Epoch           uint64
-	Slasher         uint64
-	Reason          string
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *validatorGotSlashedNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *validatorGotSlashedNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorGotSlashedNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *validatorGotSlashedNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorGotSlashedNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorGotSlashedNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *validatorGotSlashedNotification) GetEventName() types.EventName {
-	return types.ValidatorGotSlashedEventName
+	ValidatorIndex uint64
+	Slasher        uint64
+	Reason         string
 }
 
 func (n *validatorGotSlashedNotification) GetInfo(includeUrl bool) string {
@@ -1891,8 +1793,8 @@ func (n *validatorGotSlashedNotification) GetTitle() string {
 	return "Validator got Slashed"
 }
 
-func (n *validatorGotSlashedNotification) GetEventFilter() string {
-	return n.EventFilter
+func (n *validatorGotSlashedNotification) GetEventName() types.EventName {
+	return types.ValidatorGotSlashedEventName
 }
 
 func (n *validatorGotSlashedNotification) GetInfoMarkdown() string {
@@ -1940,14 +1842,16 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 		log.Infof("creating %v notification for validator %v in epoch %v", event.SlashedValidatorPubkey, event.Reason, epoch)
 
 		n := &validatorGotSlashedNotification{
-			SubscriptionID:  sub.Id,
-			UserID:          sub.UserId,
-			Slasher:         event.SlasherIndex,
-			Epoch:           event.Epoch,
-			Reason:          event.Reason,
-			ValidatorIndex:  event.SlashedValidatorIndex,
-			EventFilter:     hex.EncodeToString(event.SlashedValidatorPubkey),
-			UnsubscribeHash: sub.UnsubscribeHash,
+			NotificationBaseImpl: types.NotificationBaseImpl{
+				SubscriptionID:  sub.Id,
+				UserID:          sub.UserId,
+				Epoch:           event.Epoch,
+				EventFilter:     hex.EncodeToString(event.SlashedValidatorPubkey),
+				UnsubscribeHash: sub.UnsubscribeHash,
+			},
+			Slasher:        event.SlasherIndex,
+			Reason:         event.Reason,
+			ValidatorIndex: event.SlashedValidatorIndex,
 		}
 		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
@@ -1957,42 +1861,13 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 }
 
 type validatorWithdrawalNotification struct {
-	UserID          types.UserId
-	SubscriptionID  uint64
-	ValidatorIndex  uint64
-	Epoch           uint64
-	Slot            uint64
-	Amount          uint64
-	Address         []byte
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *validatorWithdrawalNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *validatorWithdrawalNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorWithdrawalNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *validatorWithdrawalNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorWithdrawalNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorWithdrawalNotification) GetEpoch() uint64 {
-	return n.Epoch
+	ValidatorIndex uint64
+	Epoch          uint64
+	Slot           uint64
+	Amount         uint64
+	Address        []byte
 }
 
 func (n *validatorWithdrawalNotification) GetEventName() types.EventName {
@@ -2009,10 +1884,6 @@ func (n *validatorWithdrawalNotification) GetInfo(includeUrl bool) string {
 
 func (n *validatorWithdrawalNotification) GetTitle() string {
 	return "Withdrawal Processed"
-}
-
-func (n *validatorWithdrawalNotification) GetEventFilter() string {
-	return n.EventFilter
 }
 
 func (n *validatorWithdrawalNotification) GetInfoMarkdown() string {
@@ -2050,15 +1921,17 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 				}
 				// log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
 				n := &validatorWithdrawalNotification{
-					SubscriptionID:  *sub.ID,
-					UserID:          *sub.UserID,
-					ValidatorIndex:  event.ValidatorIndex,
-					Epoch:           epoch,
-					Slot:            event.Slot,
-					Amount:          event.Amount,
-					Address:         event.Address,
-					EventFilter:     hex.EncodeToString(event.Pubkey),
-					UnsubscribeHash: sub.UnsubscribeHash,
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID:  *sub.ID,
+						UserID:          *sub.UserID,
+						EventFilter:     hex.EncodeToString(event.Pubkey),
+						UnsubscribeHash: sub.UnsubscribeHash,
+					},
+					ValidatorIndex: event.ValidatorIndex,
+					Epoch:          epoch,
+					Slot:           event.Slot,
+					Amount:         event.Amount,
+					Address:        event.Address,
 				}
 				notificationsByUserID.AddNotification(n)
 				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
@@ -2070,39 +1943,9 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 }
 
 type ethClientNotification struct {
-	SubscriptionID  uint64
-	UserID          types.UserId
-	Epoch           uint64
-	EthClient       string
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *ethClientNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *ethClientNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *ethClientNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *ethClientNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *ethClientNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *ethClientNotification) GetEpoch() uint64 {
-	return n.Epoch
+	EthClient string
 }
 
 func (n *ethClientNotification) GetEventName() types.EventName {
@@ -2145,10 +1988,6 @@ func (n *ethClientNotification) GetInfo(includeUrl bool) string {
 
 func (n *ethClientNotification) GetTitle() string {
 	return fmt.Sprintf("New %s update", n.EthClient)
-}
-
-func (n *ethClientNotification) GetEventFilter() string {
-	return n.EventFilter
 }
 
 func (n *ethClientNotification) GetInfoMarkdown() string {
@@ -2212,12 +2051,14 @@ func collectEthClientNotifications(notificationsByUserID types.NotificationsPerU
 
 		for _, r := range dbResult {
 			n := &ethClientNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				EthClient:       client.Name,
-				UnsubscribeHash: r.UnsubscribeHash,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID:  r.SubscriptionID,
+					UserID:          r.UserID,
+					Epoch:           r.Epoch,
+					EventFilter:     r.EventFilter,
+					UnsubscribeHash: r.UnsubscribeHash,
+				},
+				EthClient: client.Name,
 			}
 			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
@@ -2404,12 +2245,14 @@ func collectMonitoringMachine(
 
 	for _, r := range result {
 		n := &monitorMachineNotification{
-			SubscriptionID:  r.SubscriptionID,
-			MachineName:     r.MachineName,
-			UserID:          r.UserID,
-			EventName:       eventName,
-			Epoch:           epoch,
-			UnsubscribeHash: r.UnsubscribeHash,
+			NotificationBaseImpl: types.NotificationBaseImpl{
+				SubscriptionID:  r.SubscriptionID,
+				UserID:          r.UserID,
+				EventName:       eventName,
+				Epoch:           epoch,
+				UnsubscribeHash: r.UnsubscribeHash,
+			},
+			MachineName: r.MachineName,
 		}
 		//logrus.Infof("notify %v %v", eventName, n)
 		notificationsByUserID.AddNotification(n)
@@ -2425,43 +2268,9 @@ func collectMonitoringMachine(
 }
 
 type monitorMachineNotification struct {
-	SubscriptionID  uint64
-	MachineName     string
-	UserID          types.UserId
-	Epoch           uint64
-	EventName       types.EventName
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *monitorMachineNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *monitorMachineNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *monitorMachineNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *monitorMachineNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *monitorMachineNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *monitorMachineNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *monitorMachineNotification) GetEventName() types.EventName {
-	return n.EventName
+	MachineName string
 }
 
 func (n *monitorMachineNotification) GetInfo(includeUrl bool) string {
