@@ -29,8 +29,8 @@ export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelR
   }, { immediate: true, deep: true })
   const stopperBack = watch(createdRef, () => {
     if (pauseBack) { return }
-    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : convertPrimitiveByDefault<Torig>(el)) : undefined
-    origRef.value = CasO as Torig[]
+    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : convertPrimitiveByDefault<Torig>(el)) : undefined as unknown as Torig[]
+    origRef.value = CasO
     pauseForth = true
     nextTick(() => { pauseForth = false })
   }, { deep: true })
@@ -70,8 +70,8 @@ export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRe
   }, { immediate: true, deep: true })
   const stopperBack = watch(createdRef, () => {
     if (pauseBack) { return }
-    const CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined
-    origRef.value = CasO as Torig
+    const CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined as unknown as Torig
+    origRef.value = CasO
     pauseForth = true
     nextTick(() => { pauseForth = false })
   }, { deep: true })
@@ -106,6 +106,7 @@ function convertPrimitiveByDefault<TO> (from: any) : TO {
   switch (typeof from) {
     case 'number' : return String(from) as TO
     case 'string' : return Number(from) as TO
-    default : return from as TO
+    case 'undefined' : return undefined as TO
+    default : throw new TypeError('Type ' + typeof from + ' cannot be converted implicitely, please give the bridge a callback function achieving the conversion.')
   }
 }

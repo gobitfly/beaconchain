@@ -4,17 +4,17 @@ import type { ApiDataResponse } from '~/types/api/common'
 import * as networkTs from '~/types/network'
 
 interface ApiChainInfo {
-  chain_id: networkTs.ChainID,
+  chain_id: networkTs.ChainIDs,
   name: string
 }
 
 const store = defineStore('network-store', () => {
   const data = ref<{
-    availableNetworks: networkTs.ChainID[],
-    currentNetwork: networkTs.ChainID
+    availableNetworks: networkTs.ChainIDs[],
+    currentNetwork: networkTs.ChainIDs
   }>({
-    availableNetworks: [networkTs.ChainID.Ethereum],
-    currentNetwork: networkTs.ChainID.Any // this impossible value by defaut must be kept, it ensures that the `computed` of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
+    availableNetworks: [networkTs.ChainIDs.Ethereum],
+    currentNetwork: networkTs.ChainIDs.Any // this impossible value by defaut must be kept, it ensures that the `computed` of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
   })
   return { data }
 })
@@ -43,12 +43,12 @@ export function useNetworkStore () {
   const currentNetwork = computed(() => availableNetworks.value.includes(data.value.currentNetwork) ? data.value.currentNetwork : availableNetworks.value[0])
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
-  function isNetworkDisabled (chainId: networkTs.ChainID) : boolean {
+  function isNetworkDisabled (chainId: networkTs.ChainIDs) : boolean {
     // TODO: return `false` for everything once we are ready
     return !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value
   }
 
-  function setCurrentNetwork (chainId: networkTs.ChainID) {
+  function setCurrentNetwork (chainId: networkTs.ChainIDs) {
     data.value.currentNetwork = chainId
   }
 

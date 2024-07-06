@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChainFamily, ChainID, ChainInfo } from '~/types/network'
+import { ChainFamily, ChainIDs, ChainInfo } from '~/types/network'
 const colorMode = useColorMode()
 
 // Usage :
@@ -12,7 +12,7 @@ const props = defineProps({
   harmonizePerceivedSize: { type: Boolean, default: false } // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
 })
 
-const family = computed(() => ChainInfo[props.chainId as ChainID].family)
+const family = computed(() => ChainInfo[props.chainId as ChainIDs].family)
 const coloring = computed(() => !props.colored ? 'monochromatic' : (colorMode.value !== 'dark' || props.doNotAdaptToColorTheme ? '' : 'pastel'))
 const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
 </script>

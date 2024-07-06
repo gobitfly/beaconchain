@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ValidatorSubscriptionState, AccountSubscriptionState, CheckboxAndNumber } from '~/types/subscriptionModal'
-import type { ChainID } from '~/types/network'
+import type { ChainIDs } from '~/types/network'
 import type { ApiErrorResponse } from '~/types/api/common'
 import { API_PATH } from '~/types/customFetch'
 
@@ -24,7 +24,7 @@ const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(ValidatorSubscriptionStat
       ['networks', 'ignoreSpam'] // options that are not in the group of the all-checkbox
 
 type AllPossibleOptions = ValidatorSubscriptionState & AccountSubscriptionState & typeof DefaultValueOfValidatorOptionsNeedingPremium & typeof DefaultValueOfAccountOptionsNeedingPremium
-type ModifiableOptions = Record<keyof AllPossibleOptions, CheckboxAndNumber|ChainID[]>
+type ModifiableOptions = Record<keyof AllPossibleOptions, CheckboxAndNumber|ChainIDs[]>
 
 const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
 const { t } = useI18n()

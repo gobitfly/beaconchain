@@ -5,7 +5,7 @@ import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
 import { type DashboardKey, type DashboardType, type CookieDashboard, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
 import { API_PATH } from '~/types/customFetch'
-import type { ChainID } from '~/types/network'
+import type { ChainIDs } from '~/types/network'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -66,7 +66,7 @@ export function useUserDashboardStore () {
     dashboardCookie.value = JSON.stringify(db)
   }
 
-  async function createValidatorDashboard (name: string, network: ChainID, dashboardKey?: string):Promise<CookieDashboard |undefined> {
+  async function createValidatorDashboard (name: string, network: ChainIDs, dashboardKey?: string):Promise<CookieDashboard |undefined> {
     if (!isLoggedIn.value) {
       // Create local Validator dashboard
       const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', hash: dashboardKey ?? '' }

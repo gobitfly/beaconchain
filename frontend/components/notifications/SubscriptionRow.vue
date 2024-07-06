@@ -2,7 +2,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { ModelRef } from 'vue'
-import type { ChainID } from '~/types/network'
+import type { ChainIDs } from '~/types/network'
 import type { CheckboxAndNumber } from '~/types/subscriptionModal'
 
 const props = defineProps<{
@@ -21,14 +21,14 @@ interface CheckboxAndText {
   text: string
 }
 
-const state = defineModel<CheckboxAndNumber|ChainID[]>({ required: true })
-let networkSelectorState: ModelRef<ChainID[]>
+const state = defineModel<CheckboxAndNumber|ChainIDs[]>({ required: true })
+let networkSelectorState: ModelRef<ChainIDs[]>
 let checkboxAndText: Ref<CheckboxAndText> | undefined
 
-// bridging the v-model (CheckboxAndNumber | ChainID[]) with the data of this component (CheckboxAndText | ChainID[])
+// bridging the v-model (CheckboxAndNumber | ChainIDs[]) with the data of this component (CheckboxAndText | ChainIDs[])
 
 if (type.value === 'networks') {
-  networkSelectorState = state as ModelRef<ChainID[]>
+  networkSelectorState = state as ModelRef<ChainIDs[]>
 } else {
   checkboxAndText = useObjectRefBridge<CheckboxAndNumber, CheckboxAndText>(state as Ref<CheckboxAndNumber>, receiveFromVModel, sendToVModel)
 }
