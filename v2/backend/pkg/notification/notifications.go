@@ -1314,14 +1314,16 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 			}
 			log.Infof("creating %v notification for validator %v in epoch %v", eventName, event.Proposer, epoch)
 			n := &validatorProposalNotification{
-				SubscriptionID: *sub.ID,
-				UserID:         *sub.UserID,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventName:      eventName,
+					EventFilter:    hex.EncodeToString(pubkey),
+				},
 				ValidatorIndex: event.Proposer,
-				Epoch:          epoch,
 				Status:         event.Status,
-				EventName:      eventName,
 				Reward:         event.ExecRewardETH,
-				EventFilter:    hex.EncodeToString(pubkey),
 				Slot:           event.Slot,
 			}
 			notificationsByUserID.AddNotification(n)
@@ -1333,48 +1335,12 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 }
 
 type validatorProposalNotification struct {
-	SubscriptionID     uint64
-	UserID             types.UserId
-	ValidatorIndex     uint64
-	ValidatorPublicKey string
-	Epoch              uint64
-	Slot               uint64
-	Status             uint64 // * Can be 0 = scheduled, 1 executed, 2 missed */
-	EventName          types.EventName
-	EventFilter        string
-	Reward             float64
-	UnsubscribeHash    sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *validatorProposalNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *validatorProposalNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorProposalNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *validatorProposalNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorProposalNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorProposalNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *validatorProposalNotification) GetEventName() types.EventName {
-	return n.EventName
+	ValidatorIndex uint64
+	Slot           uint64
+	Status         uint64 // * Can be 0 = scheduled, 1 executed, 2 missed */
+	Reward         float64
 }
 
 func (n *validatorProposalNotification) GetInfo(includeUrl bool) string {
@@ -1407,10 +1373,6 @@ func (n *validatorProposalNotification) GetTitle() string {
 		return "Block Proposal Missed"
 	}
 	return "-"
-}
-
-func (n *validatorProposalNotification) GetEventFilter() string {
-	return n.EventFilter
 }
 
 func (n *validatorProposalNotification) GetInfoMarkdown() string {
@@ -2318,26 +2280,7 @@ func (n *monitorMachineNotification) GetInfoMarkdown() string {
 }
 
 type taxReportNotification struct {
-	SubscriptionID  uint64
-	UserID          types.UserId
-	Epoch           uint64
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
-
-func (n *taxReportNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *taxReportNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *taxReportNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
+	types.NotificationBaseImpl
 }
 
 func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
@@ -2372,14 +2315,6 @@ func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
 	pdf := services.GetPdfReport(validators, currency, uint64(firstDay.Unix()), uint64(lastDay.Unix()))
 
 	return &types.EmailAttachment{Attachment: pdf, Name: fmt.Sprintf("income_history_%v_%v.pdf", firstDay.Format("20060102"), lastDay.Format("20060102"))}
-}
-
-func (n *taxReportNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *taxReportNotification) GetEpoch() uint64 {
-	return n.Epoch
 }
 
 func (n *taxReportNotification) GetEventName() types.EventName {
@@ -2442,11 +2377,13 @@ func collectTaxReportNotificationNotifications(notificationsByUserID types.Notif
 
 	for _, r := range dbResult {
 		n := &taxReportNotification{
-			SubscriptionID:  r.SubscriptionID,
-			UserID:          r.UserID,
-			Epoch:           r.Epoch,
-			EventFilter:     r.EventFilter,
-			UnsubscribeHash: r.UnsubscribeHash,
+			NotificationBaseImpl: types.NotificationBaseImpl{
+				SubscriptionID:  r.SubscriptionID,
+				UserID:          r.UserID,
+				Epoch:           r.Epoch,
+				EventFilter:     r.EventFilter,
+				UnsubscribeHash: r.UnsubscribeHash,
+			},
 		}
 		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
@@ -2456,38 +2393,7 @@ func collectTaxReportNotificationNotifications(notificationsByUserID types.Notif
 }
 
 type networkNotification struct {
-	SubscriptionID  uint64
-	UserID          types.UserId
-	Epoch           uint64
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
-
-func (n *networkNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *networkNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *networkNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *networkNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *networkNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *networkNotification) GetEpoch() uint64 {
-	return n.Epoch
+	types.NotificationBaseImpl
 }
 
 func (n *networkNotification) GetEventName() types.EventName {
@@ -2501,10 +2407,6 @@ func (n *networkNotification) GetInfo(includeUrl bool) string {
 
 func (n *networkNotification) GetTitle() string {
 	return "Beaconchain Network Issues"
-}
-
-func (n *networkNotification) GetEventFilter() string {
-	return n.EventFilter
 }
 
 func (n *networkNotification) GetInfoMarkdown() string {
@@ -2544,11 +2446,13 @@ func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUse
 
 		for _, r := range dbResult {
 			n := &networkNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				UnsubscribeHash: r.UnsubscribeHash,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID:  r.SubscriptionID,
+					UserID:          r.UserID,
+					Epoch:           r.Epoch,
+					EventFilter:     r.EventFilter,
+					UnsubscribeHash: r.UnsubscribeHash,
+				},
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -2560,44 +2464,8 @@ func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUse
 }
 
 type rocketpoolNotification struct {
-	SubscriptionID  uint64
-	UserID          types.UserId
-	Epoch           uint64
-	EventFilter     string
-	EventName       types.EventName
-	ExtraData       string
-	UnsubscribeHash sql.NullString
-}
-
-func (n *rocketpoolNotification) GetUserId() types.UserId {
-	return n.UserID
-}
-
-func (n *rocketpoolNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *rocketpoolNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *rocketpoolNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *rocketpoolNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *rocketpoolNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *rocketpoolNotification) GetEventName() types.EventName {
-	return n.EventName
+	types.NotificationBaseImpl
+	ExtraData string
 }
 
 func (n *rocketpoolNotification) GetInfo(includeUrl bool) string {
@@ -2633,10 +2501,6 @@ func (n *rocketpoolNotification) GetTitle() string {
 		return `Sync Committee Duty`
 	}
 	return ""
-}
-
-func (n *rocketpoolNotification) GetEventFilter() string {
-	return n.EventFilter
 }
 
 func (n *rocketpoolNotification) GetInfoMarkdown() string {
@@ -2675,13 +2539,15 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 
 		for _, r := range dbResult {
 			n := &rocketpoolNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				EventName:       eventName,
-				ExtraData:       strconv.FormatInt(int64(fee*100), 10) + "%",
-				UnsubscribeHash: r.UnsubscribeHash,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID:  r.SubscriptionID,
+					UserID:          r.UserID,
+					Epoch:           r.Epoch,
+					EventFilter:     r.EventFilter,
+					EventName:       eventName,
+					UnsubscribeHash: r.UnsubscribeHash,
+				},
+				ExtraData: strconv.FormatInt(int64(fee*100), 10) + "%",
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -2724,12 +2590,14 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 
 		for _, r := range dbResult {
 			n := &rocketpoolNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				EventName:       eventName,
-				UnsubscribeHash: r.UnsubscribeHash,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID:  r.SubscriptionID,
+					UserID:          r.UserID,
+					Epoch:           r.Epoch,
+					EventFilter:     r.EventFilter,
+					EventName:       eventName,
+					UnsubscribeHash: r.UnsubscribeHash,
+				},
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -2856,13 +2724,15 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.Not
 		}
 
 		n := &rocketpoolNotification{
-			SubscriptionID:  *sub.ID,
-			UserID:          *sub.UserID,
-			Epoch:           epoch,
-			EventFilter:     sub.EventFilter,
-			EventName:       eventName,
-			ExtraData:       strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", threshold*100), "0"), "."),
-			UnsubscribeHash: sub.UnsubscribeHash,
+			NotificationBaseImpl: types.NotificationBaseImpl{
+				SubscriptionID:  *sub.ID,
+				UserID:          *sub.UserID,
+				Epoch:           epoch,
+				EventFilter:     sub.EventFilter,
+				EventName:       eventName,
+				UnsubscribeHash: sub.UnsubscribeHash,
+			},
+			ExtraData: strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", threshold*100), "0"), "."),
 		}
 
 		notificationsByUserID.AddNotification(n)
@@ -2960,13 +2830,15 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ev
 
 	for _, r := range dbResult {
 		n := &rocketpoolNotification{
-			SubscriptionID:  r.SubscriptionID,
-			UserID:          r.UserID,
-			Epoch:           epoch,
-			EventFilter:     r.EventFilter,
-			EventName:       eventName,
-			ExtraData:       fmt.Sprintf("%v|%v|%v", mapping[r.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
-			UnsubscribeHash: r.UnsubscribeHash,
+			NotificationBaseImpl: types.NotificationBaseImpl{
+				SubscriptionID:  r.SubscriptionID,
+				UserID:          r.UserID,
+				Epoch:           epoch,
+				EventFilter:     r.EventFilter,
+				EventName:       eventName,
+				UnsubscribeHash: r.UnsubscribeHash,
+			},
+			ExtraData: fmt.Sprintf("%v|%v|%v", mapping[r.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
 		}
 		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
