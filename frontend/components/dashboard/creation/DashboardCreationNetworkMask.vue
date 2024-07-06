@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainIDs } from '~/types/network'
+import { ChainInfo, ChainIDs, isL1 } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
@@ -10,16 +10,22 @@ const selection = ref<string>('')
 
 watch(selection, (value) => { network.value = Number(value) as ChainIDs })
 
-const buttonList = availableNetworks.value.map((chainId) => {
-  return {
-    value: String(chainId),
-    text: ChainInfo[chainId].name[0],
-    subText: ChainInfo[chainId].name[1],
-    disabled: isNetworkDisabled(chainId),
-    component: IconNetwork,
-    componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
-    componentClass: 'dashboard-creation-button-network-icon'
-  }
+const buttonList = computed(() => {
+  const list = [] as any[]
+  availableNetworks.value.forEach((chainId) => {
+    if (isL1(chainId)) {
+      list.push({
+        value: String(chainId),
+        text: ChainInfo[chainId].name[0],
+        subText: ChainInfo[chainId].name[1],
+        disabled: isNetworkDisabled(chainId),
+        component: IconNetwork,
+        componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
+        componentClass: 'dashboard-creation-button-network-icon'
+      })
+    }
+  })
+  return list
 })
 
 const { t: $t } = useI18n()

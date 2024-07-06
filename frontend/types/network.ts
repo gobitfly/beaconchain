@@ -41,7 +41,6 @@ export interface ChainInfoFields {
   timeStampSlot0: number, // if this property is 0, it means that the network has no slots
   secondsPerSlot: number, // if this property is 0, it means that the network has no slots
   slotsPerEpoch: number, // if this property is 0, it means that the network has no slots
-  path: string,
   priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
 
@@ -57,7 +56,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/undefined',
     priority: 0 // data belonging to all networks is displayed first by default
   },
 
@@ -72,7 +70,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1606824023,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/ethereum',
     priority: 1
   },
   [ChainIDs.Holesky]: {
@@ -86,7 +83,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1695902400,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/holesky',
     priority: 2
   },
   [ChainIDs.Sepolia]: {
@@ -100,12 +96,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1655733600,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/sepolia',
     priority: 3
   },
 
   [ChainIDs.ArbitrumOneEthereum]: {
-    name: ['Arbitrum', 'One'],
+    name: ['Arbitrum One', 'Mainnet'],
     description: 'L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
@@ -115,11 +110,10 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/arbitrum-one-ethereum',
     priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
-    name: ['Arbitrum', 'Nova'],
+    name: ['Arbitrum Nova', 'Mainnet'],
     description: 'L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumNovaEthereum,
@@ -129,7 +123,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/arbitrum-nova-ethereum',
     priority: 11
   },
   [ChainIDs.ArbitrumOneSepolia]: {
@@ -143,12 +136,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/arbitrum-one-sepolia',
     priority: 12
   },
 
   [ChainIDs.OptimismEthereum]: {
-    name: ['Optimism', 'L2'],
+    name: ['Optimism', 'Mainnet'],
     description: 'L2',
     family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
@@ -158,7 +150,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/optimism-ethereum',
     priority: 20
   },
   [ChainIDs.OptimismSepolia]: {
@@ -172,12 +163,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/optimism-sepolia',
     priority: 21
   },
 
   [ChainIDs.BaseEthereum]: {
-    name: ['Base', 'L2'],
+    name: ['Base', 'Mainnet'],
     description: 'L2',
     family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
@@ -187,7 +177,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/base-ethereum',
     priority: 30
   },
   [ChainIDs.BaseSepolia]: {
@@ -201,7 +190,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/base-sepolia',
     priority: 31
   },
 
@@ -216,7 +204,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1638993340,
     secondsPerSlot: 5,
     slotsPerEpoch: 16,
-    path: '/gnosis',
     priority: 40
   },
   [ChainIDs.Chiado]: {
@@ -230,7 +217,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1665396300,
     secondsPerSlot: 5,
     slotsPerEpoch: 16,
-    path: '/chiado',
     priority: 41
   }
 }
