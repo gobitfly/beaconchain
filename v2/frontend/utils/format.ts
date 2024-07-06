@@ -2,7 +2,7 @@ import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
 import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
-import { ChainID, epochToTs, slotToTs } from '~/types/network'
+import { ChainIDs, epochToTs, slotToTs } from '~/types/network'
 
 export const ONE_MINUTE = 60
 export const ONE_HOUR = ONE_MINUTE * 60
@@ -144,7 +144,7 @@ export function formatGoTimestamp (timestamp: string | number, compareTimestamp?
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `formatEpochToDateTime(currentNetwork.value, ...)` you should rather use `formatEpochToDateTime(...)` from `useFormat.ts`.
  */
-export function formatEpochToDateTime (chainId: ChainID, epoch: number, timestamp?: number, format?: AgeFormat, style?: StringUnitLength, locales?: string, withTime?: boolean) : string | null | undefined {
+export function formatEpochToDateTime (chainId: ChainIDs, epoch: number, timestamp?: number, format?: AgeFormat, style?: StringUnitLength, locales?: string, withTime?: boolean) : string | null | undefined {
   return formatTs(epochToTs(chainId, epoch), timestamp, format, style, locales, withTime)
 }
 
@@ -152,7 +152,7 @@ export function formatEpochToDateTime (chainId: ChainID, epoch: number, timestam
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `formatSlotToDateTime(currentNetwork.value, ...)` you should rather use `formatSlotToDateTime(...)` from `useFormat.ts`.
  */
-export function formatSlotToDateTime (chainId: ChainID, slot: number, timestamp?: number, format?: AgeFormat, style?: StringUnitLength, locales?: string, withTime?: boolean) : string | null | undefined {
+export function formatSlotToDateTime (chainId: ChainIDs, slot: number, timestamp?: number, format?: AgeFormat, style?: StringUnitLength, locales?: string, withTime?: boolean) : string | null | undefined {
   return formatTs(slotToTs(chainId, slot), timestamp, format, style, locales, withTime)
 }
 
@@ -160,7 +160,7 @@ export function formatSlotToDateTime (chainId: ChainID, slot: number, timestamp?
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `formatEpochToDate(currentNetwork.value, ...)` you should rather use `formatEpochToDate(...)` from `useFormat.ts`.
  */
-export function formatEpochToDate (chainId: ChainID, epoch: number, locales: string): string | null | undefined {
+export function formatEpochToDate (chainId: ChainIDs, epoch: number, locales: string): string | null | undefined {
   return formatEpochToDateTime(chainId, epoch, undefined, 'absolute', undefined, locales, false)
 }
 

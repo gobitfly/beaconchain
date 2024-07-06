@@ -9,7 +9,7 @@ export enum ChainFamily {
   Gnosis = 'Gnosis'
 }
 
-export enum ChainID {
+export enum ChainIDs {
   Any = 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
 
   Ethereum = 1,
@@ -31,11 +31,11 @@ export enum ChainID {
 }
 
 export interface ChainInfoFields {
-  name: string,
+  name: string[],
   description: string,
   family: ChainFamily,
-  mainNet: ChainID, // if the network is a testnet, this field points to the non-test network
-  L1: ChainID, // if the network is a L2, this field points to the L1
+  mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
+  L1: ChainIDs, // if the network is a L2, this field points to the L1
   clCurrency: CryptoCurrency,
   elCurrency: CryptoCurrency,
   timeStampSlot0: number, // if this property is 0, it means that the network has no slots
@@ -45,13 +45,13 @@ export interface ChainInfoFields {
   priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
 
-export const ChainInfo: Record<ChainID, ChainInfoFields> = {
-  [ChainID.Any]: {
-    name: 'Any',
+export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
+  [ChainIDs.Any]: {
+    name: ['Any', 'network'],
     description: 'Any network',
     family: ChainFamily.Any,
-    mainNet: ChainID.Any,
-    L1: ChainID.Any,
+    mainNet: ChainIDs.Any,
+    L1: ChainIDs.Any,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -61,12 +61,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     priority: 0 // data belonging to all networks is displayed first by default
   },
 
-  [ChainID.Ethereum]: {
-    name: 'Ethereum',
+  [ChainIDs.Ethereum]: {
+    name: ['Ethereum', 'Mainnet'],
     description: 'Mainnet',
     family: ChainFamily.Ethereum,
-    mainNet: ChainID.Ethereum,
-    L1: ChainID.Ethereum,
+    mainNet: ChainIDs.Ethereum,
+    L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 1606824023,
@@ -75,12 +75,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     path: '/ethereum',
     priority: 1
   },
-  [ChainID.Holesky]: {
-    name: 'Holesky',
+  [ChainIDs.Holesky]: {
+    name: ['Ethereum', 'Holesky'],
     description: 'Testnet',
     family: ChainFamily.Ethereum,
-    mainNet: ChainID.Ethereum,
-    L1: ChainID.Holesky,
+    mainNet: ChainIDs.Ethereum,
+    L1: ChainIDs.Holesky,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 1695902400,
@@ -89,12 +89,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     path: '/holesky',
     priority: 2
   },
-  [ChainID.Sepolia]: {
-    name: 'Sepolia',
+  [ChainIDs.Sepolia]: {
+    name: ['Ethereum', 'Sepolia'],
     description: 'Testnet',
     family: ChainFamily.Ethereum,
-    mainNet: ChainID.Ethereum,
-    L1: ChainID.Sepolia,
+    mainNet: ChainIDs.Ethereum,
+    L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 1655733600,
@@ -104,12 +104,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     priority: 3
   },
 
-  [ChainID.ArbitrumOneEthereum]: {
-    name: 'Arbitrum One',
+  [ChainIDs.ArbitrumOneEthereum]: {
+    name: ['Arbitrum', 'One'],
     description: 'L2',
     family: ChainFamily.Arbitrum,
-    mainNet: ChainID.ArbitrumOneEthereum,
-    L1: ChainID.Ethereum,
+    mainNet: ChainIDs.ArbitrumOneEthereum,
+    L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -118,12 +118,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     path: '/arbitrum-one-ethereum',
     priority: 10
   },
-  [ChainID.ArbitrumNovaEthereum]: {
-    name: 'Arbitrum Nova',
+  [ChainIDs.ArbitrumNovaEthereum]: {
+    name: ['Arbitrum', 'Nova'],
     description: 'L2',
     family: ChainFamily.Arbitrum,
-    mainNet: ChainID.ArbitrumNovaEthereum,
-    L1: ChainID.Ethereum,
+    mainNet: ChainIDs.ArbitrumNovaEthereum,
+    L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -132,12 +132,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     path: '/arbitrum-nova-ethereum',
     priority: 11
   },
-  [ChainID.ArbitrumOneSepolia]: {
-    name: 'Arbitrum Sepolia',
+  [ChainIDs.ArbitrumOneSepolia]: {
+    name: ['Arbitrum', 'Sepolia'],
     description: 'Testnet',
     family: ChainFamily.Arbitrum,
-    mainNet: ChainID.ArbitrumOneEthereum,
-    L1: ChainID.Sepolia,
+    mainNet: ChainIDs.ArbitrumOneEthereum,
+    L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -147,12 +147,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     priority: 12
   },
 
-  [ChainID.OptimismEthereum]: {
-    name: 'Optimism',
+  [ChainIDs.OptimismEthereum]: {
+    name: ['Optimism', 'L2'],
     description: 'L2',
     family: ChainFamily.Optimism,
-    mainNet: ChainID.OptimismEthereum,
-    L1: ChainID.Ethereum,
+    mainNet: ChainIDs.OptimismEthereum,
+    L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -161,12 +161,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     path: '/optimism-ethereum',
     priority: 20
   },
-  [ChainID.OptimismSepolia]: {
-    name: 'Optimism Sepolia',
+  [ChainIDs.OptimismSepolia]: {
+    name: ['Optimism', 'Sepolia'],
     description: 'Testnet',
     family: ChainFamily.Optimism,
-    mainNet: ChainID.OptimismEthereum,
-    L1: ChainID.Sepolia,
+    mainNet: ChainIDs.OptimismEthereum,
+    L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -176,12 +176,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     priority: 21
   },
 
-  [ChainID.BaseEthereum]: {
-    name: 'Base',
+  [ChainIDs.BaseEthereum]: {
+    name: ['Base', 'L2'],
     description: 'L2',
     family: ChainFamily.Base,
-    mainNet: ChainID.BaseEthereum,
-    L1: ChainID.Ethereum,
+    mainNet: ChainIDs.BaseEthereum,
+    L1: ChainIDs.Ethereum,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -190,12 +190,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     path: '/base-ethereum',
     priority: 30
   },
-  [ChainID.BaseSepolia]: {
-    name: 'Base Sepolia',
+  [ChainIDs.BaseSepolia]: {
+    name: ['Base', 'Sepolia'],
     description: 'Testnet',
     family: ChainFamily.Base,
-    mainNet: ChainID.BaseEthereum,
-    L1: ChainID.Sepolia,
+    mainNet: ChainIDs.BaseEthereum,
+    L1: ChainIDs.Sepolia,
     clCurrency: 'ETH',
     elCurrency: 'ETH',
     timeStampSlot0: 0,
@@ -205,12 +205,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     priority: 31
   },
 
-  [ChainID.Gnosis]: {
-    name: 'Gnosis',
+  [ChainIDs.Gnosis]: {
+    name: ['Gnosis', 'Mainnet'],
     description: 'Mainnet',
     family: ChainFamily.Gnosis,
-    mainNet: ChainID.Gnosis,
-    L1: ChainID.Gnosis,
+    mainNet: ChainIDs.Gnosis,
+    L1: ChainIDs.Gnosis,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
     timeStampSlot0: 1638993340,
@@ -219,12 +219,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
     path: '/gnosis',
     priority: 40
   },
-  [ChainID.Chiado]: {
-    name: 'Chiado',
+  [ChainIDs.Chiado]: {
+    name: ['Gnosis', 'Chiado'],
     description: 'Testnet',
     family: ChainFamily.Gnosis,
-    mainNet: ChainID.Gnosis,
-    L1: ChainID.Chiado,
+    mainNet: ChainIDs.Gnosis,
+    L1: ChainIDs.Chiado,
     clCurrency: 'GNO',
     elCurrency: 'xDAI',
     timeStampSlot0: 1665396300,
@@ -235,12 +235,12 @@ export const ChainInfo: Record<ChainID, ChainInfoFields> = {
   }
 }
 
-export function getAllExistingChainIDs (sortByPriority : boolean) : ChainID[] {
-  const list : ChainID[] = []
+export function getAllExistingChainIDs (sortByPriority : boolean) : ChainIDs[] {
+  const list : ChainIDs[] = []
 
-  for (const id in ChainID) {
+  for (const id in ChainIDs) {
     if (isNaN(Number(id))) {
-      list.push(ChainID[id as keyof typeof ChainID])
+      list.push(ChainIDs[id as keyof typeof ChainIDs])
     }
   }
   if (sortByPriority) {
@@ -253,7 +253,7 @@ export function getAllExistingChainIDs (sortByPriority : boolean) : ChainID[] {
  * Should be used only when you test a network different from the current one.
  * Whereever you would write `isMainNet(currentNetwork.value)` you should rather use `isMainNet()` from `useNetworkStore.ts`.
  */
-export function isMainNet (network: ChainID) : boolean {
+export function isMainNet (network: ChainIDs) : boolean {
   return (ChainInfo[network].mainNet === network)
 }
 
@@ -261,7 +261,7 @@ export function isMainNet (network: ChainID) : boolean {
  * Should be used only when you test a network different from the current one.
  * Wherever you would write `isL1(currentNetwork.value)` you should rather use `isL1()` from `useNetworkStore.ts`.
  */
-export function isL1 (network: ChainID) : boolean {
+export function isL1 (network: ChainIDs) : boolean {
   return (ChainInfo[network].L1 === network)
 }
 
@@ -269,7 +269,7 @@ export function isL1 (network: ChainID) : boolean {
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `epochsPerDay(currentNetwork.value)` you should rather use `epochsPerDay()` from `useNetworkStore.ts`.
  */
-export function epochsPerDay (chainId: ChainID): number {
+export function epochsPerDay (chainId: ChainIDs): number {
   const info = ChainInfo[chainId]
   if (info.timeStampSlot0 === undefined) {
     return 0
@@ -281,7 +281,7 @@ export function epochsPerDay (chainId: ChainID): number {
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `epochToTs(currentNetwork.value, epoch)` you should rather use `epochToTs(epoch)` from `useNetworkStore.ts`.
  */
-export function epochToTs (chainId: ChainID, epoch: number): number | undefined {
+export function epochToTs (chainId: ChainIDs, epoch: number): number | undefined {
   const info = ChainInfo[chainId]
   if (info.timeStampSlot0 === undefined || epoch < 0) {
     return undefined
@@ -294,7 +294,7 @@ export function epochToTs (chainId: ChainID, epoch: number): number | undefined 
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `slotToTs(currentNetwork.value, slot)` you should rather use `slotToTs(slot)` from `useNetworkStore.ts`.
  */
-export function slotToTs (chainId: ChainID, slot: number): number | undefined {
+export function slotToTs (chainId: ChainIDs, slot: number): number | undefined {
   const info = ChainInfo[chainId]
   if (info.timeStampSlot0 === undefined || slot < 0) {
     return undefined
@@ -307,7 +307,7 @@ export function slotToTs (chainId: ChainID, slot: number): number | undefined {
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `tsToSlot(currentNetwork.value, ts)` you should rather use `tsToSlot(ts)` from `useNetworkStore.ts`.
  */
-export function tsToSlot (chainId: ChainID, ts: number): number {
+export function tsToSlot (chainId: ChainIDs, ts: number): number {
   const info = ChainInfo[chainId]
   if (info.timeStampSlot0 === undefined) {
     return -1
@@ -319,7 +319,7 @@ export function tsToSlot (chainId: ChainID, ts: number): number {
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `slotToEpoch(currentNetwork.value, slot)` you should rather use `slotToEpoch(slot)` from `useNetworkStore.ts`.
  */
-export function slotToEpoch (chainId: ChainID, slot: number): number {
+export function slotToEpoch (chainId: ChainIDs, slot: number): number {
   const info = ChainInfo[chainId]
   if (info.timeStampSlot0 === undefined) {
     return -1
@@ -331,6 +331,6 @@ export function slotToEpoch (chainId: ChainID, slot: number): number {
  * @param list List to sort. Its order will be modified because the function sorts in place.
  * @returns List sorted in place, so the same as parameter `list`.
  */
-export function sortChainIDsByPriority (list : ChainID[]) : ChainID[] {
+export function sortChainIDsByPriority (list : ChainIDs[]) : ChainIDs[] {
   return list.sort((a, b) => ChainInfo[a].priority - ChainInfo[b].priority)
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainID } from '~/types/network'
+import { ChainInfo, ChainIDs } from '~/types/network'
 
 const props = defineProps<{
   displayOnly?: boolean
@@ -10,25 +10,25 @@ const props = defineProps<{
 const { availableNetworks, isNetworkDisabled } = useNetworkStore()
 
 /** If the v-model is:
- *  - A ChainID: only one network can be selected by the user. Prop `:display-only` must be false or omitted.
- *  - An array of ChainID:
+ *  - A ChainIDs: only one network can be selected by the user. Prop `:display-only` must be false or omitted.
+ *  - An array of ChainIDs:
  *    - and prop `:display-only` is `false`/omitted: several networks can be selected by the user,
  *    - and prop `:display-only` is `true`: the networks in the array are shown to the user but they are unclickable. */
-const liveState = defineModel<ChainID|ChainID[]>({ required: false })
+const liveState = defineModel<ChainIDs|ChainIDs[]>({ required: false })
 
 const selection = Array.isArray(liveState.value)
-  ? useArrayRefBridge<ChainID, string>(liveState as Ref<ChainID[]>)
-  : usePrimitiveRefBridge<ChainID, string>(liveState as Ref<ChainID>)
+  ? useArrayRefBridge<ChainIDs, string>(liveState as Ref<ChainIDs[]>)
+  : usePrimitiveRefBridge<ChainIDs, string>(liveState as Ref<ChainIDs>)
 
 const buttons = shallowRef<MultiBarItem[]>([])
 
 if (props.displayOnly) {
-  watch(liveState as Ref<ChainID[]>, updateButtons, { immediate: true })
+  watch(liveState as Ref<ChainIDs[]>, updateButtons, { immediate: true })
 } else {
   watch(availableNetworks, updateButtons, { immediate: true })
 }
 
-function updateButtons (source: ChainID[]) : void {
+function updateButtons (source: ChainIDs[]) : void {
   buttons.value = []
   source.forEach((chainId) => {
       buttons.value!.push({
@@ -37,7 +37,7 @@ function updateButtons (source: ChainID[]) : void {
         componentClass: 'maximum',
         value: String(chainId),
         disabled: isNetworkDisabled(chainId),
-        tooltip: ChainInfo[chainId].name + ' ' + ChainInfo[chainId].description
+        tooltip: ChainInfo[chainId].name.join(' ')
       })
   })
 }

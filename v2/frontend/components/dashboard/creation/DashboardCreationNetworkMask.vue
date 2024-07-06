@@ -1,20 +1,20 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainID } from '~/types/network'
+import { ChainInfo, ChainIDs } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
 
-const network = defineModel<ChainID>('network')
+const network = defineModel<ChainIDs>('network')
 const selection = ref<string>('')
 
-watch(selection, (value) => { network.value = Number(value) as ChainID })
+watch(selection, (value) => { network.value = Number(value) as ChainIDs })
 
 const buttonList = availableNetworks.value.map((chainId) => {
   return {
     value: String(chainId),
-    text: ChainInfo[chainId].family as string,
-    subText: (ChainInfo[chainId].name !== ChainInfo[chainId].family as string) ? ChainInfo[chainId].name : ChainInfo[chainId].description,
+    text: ChainInfo[chainId].name[0],
+    subText: ChainInfo[chainId].name[1],
     disabled: isNetworkDisabled(chainId),
     component: IconNetwork,
     componentProps: { chainId, colored: false, harmonizePerceivedSize: true },

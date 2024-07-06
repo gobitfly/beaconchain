@@ -1,5 +1,5 @@
 import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
-import { ChainID } from '~/types/network'
+import { ChainIDs } from '~/types/network'
 import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
 export enum SearchbarShape { // do not change the litterals, they are used as class names
@@ -79,7 +79,7 @@ export enum ResultType {
 // and the function returns one `Matching` element (or undefined).
 export type Matching = {
   closeness: number, // how close this result is to what the user inputted (lower value = better similarity)
-  network: ChainID, // the network that this result belongs to
+  network: ChainIDs, // the network that this result belongs to
   type: ResultType // the type of the result
 }
 /* When the user presses Enter, the callback function receives a simplified representation of the suggested results and returns one
@@ -92,7 +92,7 @@ export interface PickingCallBackFunction { (possibilities : Matching[]) : Matchi
 
 export interface SearchRequest {
   input: string,
-  networks: ChainID[],
+  networks: ChainIDs[],
   types: ResultType[],
   count?: boolean
 }
@@ -135,7 +135,7 @@ export interface ResultSuggestion {
   queryParam: string, // Data returned by the API that identifies this very result in the back-end. This is the most important data for callback function '@go' given in the props of the Searchbar component.
   closeness: number, // How close the suggested result is to the user input (important for graffitis and token names, later for other things if the back-end evolves to find other approximate results).
   count : number, // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
-  chainId : ChainID, // Network that the result belongs to. If the result exists on all networks, it is `ChainID.Any` (so 0).
+  chainId : ChainIDs, // Network that the result belongs to. If the result exists on all networks, it is `ChainIDs.Any` (so 0).
   type : ResultType, // Tells what thing(s) this result corresponds to.
   rawResult: SingleAPIresult // Original data given by the API.
 }
@@ -148,7 +148,7 @@ export interface ResultSuggestionInternal extends ResultSuggestion {
 
 export interface OrganizedResults {
   networks: {
-    chainId: ChainID,
+    chainId: ChainIDs,
     types: {
       type: ResultType,
       suggestions: ResultSuggestionInternal[]
@@ -490,7 +490,7 @@ export interface SearchBar // your ref to the search-bar component must be of th
        extends ComponentPublicInstance, ExposedSearchbarMethods {}
 
 export type CategoryFilter = Map<Category, boolean> // for internal use
-export type NetworkFilter = Map<ChainID, boolean> // for internal use
+export type NetworkFilter = Map<ChainIDs, boolean> // for internal use
 export type SearchbarDropdownLayout = 'narrow-dropdown' | 'large-dropdown' // for internal use (do not change the litterals, they are used as class names)
 
 export function wasOutputDataGivenByTheAPI (type : ResultType, resultSuggestionOutputField : keyof HowToFillresultSuggestionOutput) : boolean {

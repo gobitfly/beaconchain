@@ -2,7 +2,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
 import { SearchbarShape, type SearchbarColors, type SearchbarDropdownLayout, type NetworkFilter } from '~/types/searchbar'
-import { ChainInfo, ChainID } from '~/types/network'
+import { ChainInfo, ChainIDs } from '~/types/network'
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
@@ -10,7 +10,7 @@ defineProps<{
   colorTheme: SearchbarColors,
   dropdownLayout : SearchbarDropdownLayout
 }>()
-const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainID as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
 const { t } = useI18n()
 
@@ -19,7 +19,7 @@ const headState = ref<{look : 'on'|'off', network : string}>({
   network: ''
 })
 const listInDropdown = ref<{
-  chainId: ChainID,
+  chainId: ChainIDs,
   label: string,
   selected: boolean
 }[]>([])
@@ -73,15 +73,15 @@ function updateLocalState () {
   headState.value.look = (howManyAreSelected === 0) ? 'off' : 'on'
   // now we update the list used to fill the dropdown
   listInDropdown.value.length = 0
-  listInDropdown.value.push({ chainId: ChainID.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
+  listInDropdown.value.push({ chainId: ChainIDs.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
   for (const filter of liveState.value) {
-    listInDropdown.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].name, selected: filter[1] })
+    listInDropdown.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].name.join(' '), selected: filter[1] })
   }
 }
 
 function oneOptionChanged (index : number) {
   const selected = listInDropdown.value[index].selected
-  if (listInDropdown.value[index].chainId !== ChainID.Any) {
+  if (listInDropdown.value[index].chainId !== ChainIDs.Any) {
     liveState.value.set(listInDropdown.value[index].chainId, selected)
   } else {
     for (const filter of liveState.value) {
