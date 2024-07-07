@@ -45,6 +45,20 @@
     padding: 8px;
     width: var(--default-button-height);
   }
+
+  &.p-button-danger {
+    color: var(--button-text-color-dangerous);
+  
+    &:not(:disabled) {
+      background-color: var(--button-color-dangerous);
+      border-color: var(--button-color-dangerous);
+  
+      &:hover {
+        background-color: var(--button-color-dangerous-hover);
+        border-color: var(--button-color-dangerous-hover);
+      }
+    }
+  }
 }
 
 // Dialog

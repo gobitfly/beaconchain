@@ -71,7 +71,7 @@ watch(props, async (p) => {
         break
     }
 
-    const res = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame?.replace('last_', ''), duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
+    const res = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_INDICES, { query: { period: p?.timeFrame, duty, group_id: p?.groupId } }, { dashboardKey: `${p?.dashboardKey}` })
     data.value = res.data
     isLoading.value = false
   }

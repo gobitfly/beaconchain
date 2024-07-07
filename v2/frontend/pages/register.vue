@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useField, useForm } from 'vee-validate'
+import { object as yupObject } from 'yup'
+import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
-import { setTranslator, validateAddress, validatePassword, validateAgreement } from '~/utils/userValidation'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
@@ -11,25 +11,25 @@ const toast = useBcToast()
 
 useBcSeo('login_and_register.title_register')
 
-const { handleSubmit, errors } = useForm()
-const { value: email } = useField<string>('email', validateAddress)
-const { value: password } = useField<string>('password', validatePassword)
-const { value: passwordConfirm } = useField<string>('passwordConfirm', validatePasswordConfirmation)
-const { value: agreement } = useField<boolean>('agreement', validateAgreement)
+const { handleSubmit, errors, defineField } = useForm({
+  validationSchema: yupObject({
+    email: emailValidation($t),
+    password: passwordValidation($t),
+    confirmPassword: confirmPasswordValidation($t, 'password'),
+    agreement: checkboxValidation($t('validation.tos_not_agreed'))
+  })
+})
 
-setTranslator($t)
-
-function validatePasswordConfirmation (value: string) : true|string {
-  if (!value) {
-    return $t('login_and_register.retype_password')
-  }
-  if (value !== password.value) {
-    return $t('login_and_register.passwords_dont_match')
-  }
-  return true
-}
+const [email, emailAttrs] = defineField('email')
+const [password, passwordAttrs] = defineField('password')
+const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
+const [agreement, agreementAttrs] = defineField('agreement')
 
 const onSubmit = handleSubmit(async (values) => {
+  if (!canSubmit.value) {
+    return
+  }
+
   try {
     await fetch(API_PATH.REGISTER, {
       method: 'POST',
@@ -44,11 +44,7 @@ const onSubmit = handleSubmit(async (values) => {
   }
 })
 
-const canSubmit = computed(() => email.value && password.value && passwordConfirm.value && agreement.value && !Object.keys(errors.value).length)
-const addressError = ref<string|undefined>(undefined)
-const passwordError = ref<string|undefined>(undefined)
-const passwordConfirmError = ref<string|undefined>(undefined)
-const agreementError = ref<string|undefined>(undefined)
+const canSubmit = computed(() => email.value && password.value && confirmPassword.value && agreement.value && !Object.keys(errors.value).length)
 </script>
 
 <template>
@@ -69,14 +65,13 @@ const agreementError = ref<string|undefined>(undefined)
             <InputText
               id="email"
               v-model="email"
+              v-bind="emailAttrs"
               type="text"
               :class="{ 'p-invalid': errors?.email }"
               aria-describedby="text-error"
-              @focus="addressError = undefined"
-              @blur="addressError = errors?.email"
             />
             <div class="p-error">
-              {{ addressError || '&nbsp;' }}
+              {{ errors?.email }}
             </div>
           </div>
           <div class="input-row">
@@ -84,40 +79,39 @@ const agreementError = ref<string|undefined>(undefined)
             <InputText
               id="password"
               v-model="password"
+              v-bind="passwordAttrs"
               type="password"
               :class="{ 'p-invalid': errors?.password }"
               aria-describedby="text-error"
-              @focus="passwordError = undefined"
-              @blur="passwordError = errors?.password"
             />
             <div class="p-error">
-              {{ passwordError || '&nbsp;' }}
+              {{ errors?.password }}
             </div>
           </div>
           <div class="input-row">
-            <label for="passwordConfirm" class="label">{{ $t('login_and_register.confirm_password') }}</label>
+            <label for="confirmPassword" class="label">{{ $t('login_and_register.confirm_password') }}</label>
             <InputText
-              id="passwordConfirm"
-              v-model="passwordConfirm"
+              id="confirmPassword"
+              v-model="confirmPassword"
+              v-bind="confirmPasswordAttrs"
               type="password"
-              :class="{ 'p-invalid': errors?.passwordConfirm }"
+              :class="{ 'p-invalid': errors?.confirmPassword }"
               aria-describedby="text-error"
-              @focus="passwordConfirmError = undefined"
-              @blur="passwordConfirmError = errors?.passwordConfirm"
             />
             <div class="p-error">
-              {{ passwordConfirmError || '&nbsp;' }}
+              {{ errors?.confirmPassword }}
             </div>
           </div>
           <div class="input-row">
             <div class="agreement">
               <Checkbox
                 v-model="agreement"
+                v-bind="agreementAttrs"
                 input-id="agreement"
                 :binary="true"
+                type="checkbox"
                 class="checkbox"
-                @focus="agreementError = undefined"
-                @blur="agreementError = errors?.agreement"
+                aria-describedby="text-error"
               />
               <div>
                 <label for="agreement">{{ tOf($t, 'login_and_register.please_agree', 0) + ' ' }}</label>
@@ -131,7 +125,7 @@ const agreementError = ref<string|undefined>(undefined)
               </div>
             </div>
             <div class="p-error">
-              {{ agreementError || '&nbsp;' }}
+              {{ errors?.agreement }}
             </div>
           </div>
           <div class="last-row">
@@ -227,6 +221,7 @@ const agreementError = ref<string|undefined>(undefined)
       }
 
       .p-error {
+        min-height: 17px;
         @include fonts.small_text;
       }
     }

@@ -34,6 +34,14 @@ export function generateUUID () {
     })
 }
 
+export function isInt (value?: string): boolean {
+  if (!value) {
+    return false
+  }
+  const parsed = parseInt(value)
+  return !isNaN(parsed) && `${parsed}` === value
+}
+
 export function camelToSnakeCase (str: string) : string {
   return str[0].toLowerCase() + str.slice(1).replace(/[A-Z]/g, big => '_' + big.toLowerCase())
 }
