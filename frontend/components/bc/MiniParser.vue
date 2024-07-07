@@ -69,7 +69,7 @@ function parse (props: {input: string|string[]}) : VDOMnodes {
   } else {
     inputArray.lines = props.input
   }
-  inputArray.lines = inputArray.lines.map(line => replaceEscapements(line))
+  inputArray.lines = inputArray.lines.map(line => removeLeadingSpacesAndReplaceEscapements(line))
   inputArray.pos = 0
   const output: VDOMnodes = []
   while (inputArray.pos < inputArray.lines.length) {
@@ -109,27 +109,27 @@ function parseTextLine () : VNode|string {
 }
 
 function parseText (text: string) : VDOMnodes {
-  const { pos: openingTagPos, tag: openingTag } = findTag(text, 0)
-  const { pos: closingTagPos } = findTag(text, openingTagPos + openingTag.length, ClosingTags[openingTag])
-  if (openingTagPos < 0 || closingTagPos < 0) { // First case: no tag, we can copy the raw line. Second case: syntax error (either the closing tag has been forgotten or nested tags have their closure swapped)
-    return [cleanText(text)] // so we output the text without parsing it
-  }
-  // opening tag found.
-  const threeParts : VDOMnodes = []
-  if (openingTagPos > 0) {
-    threeParts.push(cleanText(text.slice(0, openingTagPos)))
-  }
-  const middle = text.slice(openingTagPos + openingTag.length, closingTagPos)
-  switch (openingTag) {
-    case Tag.Italic : threeParts.push(h('i', {}, parseText(middle))); break
-    case Tag.Bold : threeParts.push(h('b', {}, parseText(middle))); break
-    case Tag.Code : threeParts.push(h('span', { style: 'font-family: monospace;' }, cleanText(middle, true))); break
-    case Tag.LinkStart : threeParts.push(parseLink(middle)); break
-  }
-  if (closingTagPos + ClosingTags[openingTag].length < text.length) {
-    threeParts.push(...parseText(text.slice(closingTagPos + ClosingTags[openingTag].length)))
-  }
-  return threeParts
+  const parts: VDOMnodes = []
+  do {
+    const { pos: openingTagPos, tag: openingTag } = findTag(text, 0)
+    const { pos: closingTagPos } = findTag(text, openingTagPos + openingTag.length, ClosingTags[openingTag])
+    if (openingTagPos < 0 || closingTagPos < 0) { // First case: no tag, we can copy the raw line. Second case: syntax error (either the closing tag has been forgotten or nested tags have their closure swapped)
+      parts.push(cleanText(text)) // in both cases we output the text without parsing it
+      break
+    }
+    if (openingTagPos > 0) {
+      parts.push(cleanText(text.slice(0, openingTagPos)))
+    }
+    const middle = text.slice(openingTagPos + openingTag.length, closingTagPos)
+    switch (openingTag) {
+      case Tag.Italic : parts.push(h('i', {}, parseText(middle))); break
+      case Tag.Bold : parts.push(h('b', {}, parseText(middle))); break
+      case Tag.Code : parts.push(h('span', { style: 'font-family: monospace;' }, cleanText(middle, true))); break
+      case Tag.LinkStart : parts.push(parseLink(middle)); break
+    }
+    text = text.slice(closingTagPos + ClosingTags[openingTag].length)
+  } while (text)
+  return parts
 }
 
 function parseLink (text: string) : VNode|string {
@@ -157,15 +157,15 @@ function findTag (text: string, start: number, wanted?: Tag) : { pos: number, ta
   let closest = { pos: -1, tag: Tag.Italic }
   for (const tag of OpeningTags) {
     const found = findTag(text, start, tag)
-    if (found.pos >= 0 && (found.pos < closest.pos || closest.pos < 0)) {
+    if (found.pos >= 0 && (found.pos <= closest.pos || closest.pos < 0)) {
       closest = found
     }
   }
   return closest
 }
 
-/** replaces all `\` with `\u001B` and all `\\` with `\`  */
-function replaceEscapements (input: string) : string {
+/** replaces all `\` with `\u001B` and all `\\` with `\`  and removes spaces at the beginning */
+function removeLeadingSpacesAndReplaceEscapements (input: string) : string {
   const DoubleEsc = Escapement + Escapement
   let posIn = 0
   let output = ''
@@ -183,7 +183,7 @@ function replaceEscapements (input: string) : string {
         break
       }
   }
-  return (output + input.slice(posIn))
+  return (output + input.slice(posIn)).trimStart()
 }
 
 function cleanText (raw: string, forceSpaces = false) {
