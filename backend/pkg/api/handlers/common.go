@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -63,6 +64,7 @@ var (
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
+	reEmailConfirmationHash        = regexp.MustCompile(`^[a-z0-9]{40}$`)
 )
 
 const (
@@ -84,6 +86,7 @@ var (
 	errBadRequest   = errors.New("bad request")
 	errUnauthorized = errors.New("unauthorized")
 	errForbidden    = errors.New("forbidden")
+	errConflict     = errors.New("conflict")
 )
 
 type Paging struct {
@@ -156,6 +159,10 @@ func (v *validationError) checkEmail(email string) string {
 
 func (v *validationError) checkPassword(password string) string {
 	return v.checkRegex(rePassword, password, "password")
+}
+
+func (v *validationError) checkConfirmationHash(hash string) string {
+	return v.checkRegex(reEmailConfirmationHash, hash, "token")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -263,12 +270,12 @@ func parseDashboardId(id string) (interface{}, error) {
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
-func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
+func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam interface{}) (*types.VDBId, error) {
 	switch dashboardId := dashboardIdParam.(type) {
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
-		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(dashboardId)
+		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(ctx, dashboardId)
 		if err != nil {
 			return nil, err
 		}
@@ -291,14 +298,14 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard handlers.
-func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
+func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
 		return nil, err
 	}
 	// convert to VDBId
-	dashboardId, err := h.getDashboardId(dashboardIdParam)
+	dashboardId, err := h.getDashboardId(ctx, dashboardIdParam)
 	if err != nil {
 		return nil, err
 	}
@@ -307,6 +314,29 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
+}
+
+// getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
+func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
+	// for guest dashboards, return free tier perks
+	if id.Validators != nil {
+		perk, err := h.dai.GetFreeTierPerks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return perk, nil
+	}
+	// could be made into a single query if needed
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(ctx, id.Id)
+	if err != nil {
+		return nil, err
+	}
+	userInfo, err := h.dai.GetUserInfo(ctx, dashboardInfo.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userInfo.PremiumPerks, nil
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
@@ -499,6 +529,56 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
+func (v *validationError) checkTimestamps(beforeParam string, afterParam string, maxAge uint64) (before uint64, after uint64) {
+	beforeTs := v.checkUint(beforeParam, "before_ts")
+	afterTs := v.checkUint(afterParam, "after_ts")
+	if beforeTs < afterTs {
+		v.add("before_ts", "must not be smaller than after_ts")
+	}
+	// set default values if values were omitted
+	// since maxAge can be very large, we need to avoid overflows here
+	if beforeTs == 0 && afterTs == 0 {
+		beforeTs = uint64(time.Now().Unix())
+		afterTs = beforeTs - minUint64(maxAge, beforeTs)
+	} else if beforeTs == 0 {
+		beforeTs = maxUint64(afterTs+maxAge, maxAge)
+	} else if afterTs == 0 {
+		afterTs = beforeTs - minUint64(maxAge, beforeTs)
+	}
+	return beforeTs, afterTs
+}
+
+func maxUint64(a, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func minUint64(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
+func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartHistorySeconds) uint64 {
+	aggregations := enums.ChartAggregations
+	switch aggregation {
+	case aggregations.Epoch:
+		return perkSeconds.Epoch
+	case aggregations.Hourly:
+		return perkSeconds.Hourly
+	case aggregations.Daily:
+		return perkSeconds.Daily
+	case aggregations.Weekly:
+		return perkSeconds.Weekly
+	default:
+		return 0
+	}
+}
+
 // --------------------------------------
 //   Response handling
 
@@ -588,6 +668,9 @@ func handleErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, errForbidden) {
 		returnForbidden(w, err)
 		return
+	} else if errors.Is(err, errConflict) {
+		returnConflict(w, err)
+		return
 	}
 	returnInternalServerError(w, err)
 }
@@ -610,6 +693,10 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
+}
+
+func newConflictErr(format string, args ...interface{}) error {
+	return errWithMsg(errConflict, format, args...)
 }
 
 func newNotFoundErr(format string, args ...interface{}) error {
@@ -645,7 +732,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 		appendData("deposited", v.Deposited)
 		pendingValidators := make([]types.VDBSummaryValidator, len(v.Pending))
 		for i, pending := range v.Pending {
-			pendingValidators[i] = types.VDBSummaryValidator{Index: pending.Index, DutyObjects: []uint64{pending.ActivationTimestamp}}
+			pendingValidators[i] = types.VDBSummaryValidator{Index: pending.Index, DutyObjects: []uint64{pending.Timestamp}}
 		}
 		data = append(data, types.VDBSummaryValidatorsData{
 			Category:   "pending",
@@ -656,7 +743,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		appendData("sync_current", v.Current)
 		appendData("sync_upcoming", v.Upcoming)
-		appendData("sync_past", v.Past)
+		// appendData("sync_past", v.Past)
 		return data, nil
 
 	case *types.VDBSlashingsSummaryValidators:

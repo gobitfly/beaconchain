@@ -49,6 +49,10 @@ const isMobileMegaMenuOpen = computed(() => megaMenu.value?.isMobileMenuOpen)
 const userMenu = computed(() => {
   return [
     {
+      label: $t('header.settings'),
+      command: async () => { await navigateTo('../user/settings') }
+    },
+    {
       label: $t('header.logout'),
       command: () => doLogout()
     }

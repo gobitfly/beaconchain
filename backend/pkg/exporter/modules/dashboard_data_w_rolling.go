@@ -571,7 +571,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 
 	timeout := 60 * time.Minute
 	if debugDeadlockBandaid {
-		timeout = 15 * time.Minute
+		timeout = 35 * time.Minute
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
