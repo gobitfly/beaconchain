@@ -126,10 +126,12 @@ class Eye {
   readonly lowestImax: number
 
   // constants of our perception model, all obtained empirically
-  protected static readonly sensicol = [30, 55, 15] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
-  protected static readonly intercol = [35, 45, 20] // coeffients correlated with the relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color (their effect is to shift the position of the 3 secondaries (and all intermediaries) on the rainbow)
-  protected static readonly overwhite = [10, 20, 5] // ability of the primaries to tint a white light when added to it
-  protected static readonly phi = 1.5
+  protected static readonly sensicol = [15, 20, 6] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
+  protected static readonly intercol = [35, 45, 20] // relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color (shifts the position of the 3 secondaries (and all intermediaries) on the rainbow)
+  protected static readonly overwhite = [7, 10, 2] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
+  protected static readonly phi = 1.7 // power law on the purity to make it feel linear to the human eye
+  protected static readonly iotaD = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
+  protected static readonly iotaM = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
   // the following constants will be filled by the constructor
   protected static readonly sensicolNorm = [0, 0, 0]
   protected static readonly rKey = [0, 0, 0, 0, 0, 0, 0] // coordinates of the primaries and secondaries on the rainbow
@@ -233,7 +235,6 @@ class Eye {
     return to
   }
 
-  static alpha = 0.5
   protected convertToRGB (to: RGB, i: number, j: number) {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
@@ -257,12 +258,9 @@ class Eye {
       }
       ratio[h2] = 1
       if (this.space === CS.EyePercI) {
-        // const Ir = [Eye.sensicolNorm[R] * ratio[R], Eye.sensicolNorm[G] * ratio[G], Eye.sensicolNorm[B] * ratio[B]]
-        // const [y, z] = Eye.RGBtoAnchorOrder(Ir)
-        // to.chan[h2] = i ** gamma / (Ir[y] + Ir[z])
         const Ir = [Eye.sensicolNorm[R] * ratio[R], Eye.sensicolNorm[G] * ratio[G], Eye.sensicolNorm[B] * ratio[B]]
         const [x, y, z] = Eye.RGBtoOrder(Ir)
-        to.chan[h2] = i ** gamma / (Ir[x] * Eye.alpha * Eye.alpha + Ir[y] * Eye.alpha + Ir[z])
+        to.chan[h2] = i ** gamma / (Ir[x] * Eye.iotaD + Ir[y] * Eye.iotaM + Ir[z])
         to.chan[h1] = to.chan[h2] * ratio[h1]
       } else { // (this.space === CS.EyeNormJ)
         to.chan[h] = j ** gamma
@@ -278,15 +276,12 @@ class Eye {
 
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
-      // const I = [Eye.sensicolNorm[R] * rgb[R], Eye.sensicolNorm[G] * rgb[G], Eye.sensicolNorm[B] * rgb[B]]
-      // const [y, z] = Eye.RGBtoAnchorOrder(I)
-      // this.i = (I[y] + I[z]) ** gammaInv
       const I = [Eye.sensicolNorm[R] * rgb[R], Eye.sensicolNorm[G] * rgb[G], Eye.sensicolNorm[B] * rgb[B]]
       const [x, y, z] = Eye.RGBtoOrder(I)
-      this.i = (I[x] * Eye.alpha * Eye.alpha + I[y] * Eye.alpha + I[z]) ** gammaInv
+      this.i = (I[x] * Eye.iotaD + I[y] * Eye.iotaM + I[z]) ** gammaInv
     } else {
-      // due to our definitions of r and p, this value turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       const h = Eye.RGBtoHighestChannel(rgb)
+      // due to our definitions of r and p, rgb[h] turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
       this.j = rgb[h] ** gammaInv
     }
   }
@@ -427,37 +422,50 @@ for (let k = 0; k <= 16; k++) {
 </script>
 
 <template>
-  <div style="background-color: rgb(126,126,126)">
-    <br><br>
-    <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
-    <br><br>
-    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+  <div style="background-color: rgb(128,128,128)">
+    <br>
+    <h1>Adjustement of sensicol</h1>
+    These pure colors must all have the same perceived intensity: <br><br>
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[0].chan[R] + ',' + rainbowSameI[0].chan[G] + ',' + rainbowSameI[0].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[B] + ')'" />
     <br><br>
 
+    <h1>Adjustement of iotaM</h1>
+    The secondaries colors must all have the same perceived intensity as their surrounding primaries: <br><br>
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[0].chan[R] + ',' + rainbowSameI[0].chan[G] + ',' + rainbowSameI[0].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*1/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*1/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*1/6)].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*3/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*3/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*3/6)].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*5/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*5/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*5/6)].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[rainbowSameI.length-1].chan[R] + ',' + rainbowSameI[rainbowSameI.length-1].chan[G] + ',' + rainbowSameI[rainbowSameI.length-1].chan[B] + ')'" />
+    <br><br>
+
+    <h1>Adjustement of iotaD </h1>
+    <div style="background-color: rgb(160,160,160)">
+      iotaD adjust the perceived intensity of the grey, that should feel as bright as the primaries
+      <div v-for="(rRow,r) of colors" :key="r" style="text-align: center;">
+        <br>
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <br>
+      </div>
+    </div>
+
+    <h1>Adjustement of overwhite and phi </h1>
+    overwhite adjusts the width of the the grey part in each row. <br>
+    phi adjusts the linearity of the transition from grey to pure. <br> <br>
     <div v-for="(rRow,r) of colors" :key="r" style="border: 0px;">
       <span v-for="(pRow,p) of rRow" :key="p">
         <div style="display: inline-block; width: 10px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
       </span>
-      <span style="display: inline-block; width: 10px; height: 40px; border: 0px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
     </div>
     <br>
 
-    <div v-for="(rRow,r) of colors" :key="r">
-      <div v-for="(pRow,p) of rRow" :key="p">
-        <div v-if="!(p%3)">
-          <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'">
-            {{ (c.rgb.chan[R] > 255 || c.rgb.chan[G] > 255 || c.rgb.chan[B] > 255) ? 'E+' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
-            {{ (c.rgb.chan[R] < 0 || c.rgb.chan[G] < 0 || c.rgb.chan[B] < 0) ? 'E-' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
-          </div>
-        </div>
-      </div>
-      <br>
-    </div>
-
-    <h1>Adjustement of rhoG and rhoB</h1>
-    1. Each middle square must feel as different from its left square as from its right square.
-    The better this criterion is approched, the more linear in `p` the perceived purity is.
     <div style="background-color: rgb(160,160,160)">
+      Each middle square must feel as different from its left square as from its right square.
+      The better this criterion is approched, the more linear in `p` the perceived purity is.
       <div v-for="(rRow,r) of colors" :key="r" style="text-align: center;">
         <br>
         <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
@@ -467,17 +475,21 @@ for (let k = 0; k <= 16; k++) {
       </div>
     </div>
     <br>
-    TODO: test separé pour ajuster la linearité de r
-    2. At the same time, try to balance the widths of the color domains on the rainbow.
+
+    <h1>Adjustement of intercol</h1>
+
+    TODO: test separé pour ajuster la linearité de r: couper le rainbow en 3
+    try to balance the widths of the color domains on the rainbow.
     The better this criterion is approched, the more linear in `r` the perceived hue is.
     <br><br>
     <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
 
-    TODO: test de balance des primaires (les secondaires doivent etre au milieu)
+    <h1>Screen calibration: color balance</h1>
+    TODO: test de balance des primaires (les secondaires doivent etre au milieu) : dessiner trois colonnes sur le rainbow
 
-    <h1>Screen calibration of extremes greys</h1>
-    Your screen has a good linearity in extreme greys (near black and white) if each middle square feels as different from its left square as from its right square.
+    <h1>Screen calibration: linearity of extremes greys</h1>
+    The perceived linearity of your screen in extreme greys (near black and white) is good if each middle square feels as different from its left square as from its right square.
     <br><br>
     <div v-for="k of linearCount14" :key="k" style="text-align: center; background-color: #7030f0">
       <span v-if="k == 0 || k==1 || k==2 || k==12 || k==13 || k==14">
@@ -505,8 +517,8 @@ for (let k = 0; k <= 16; k++) {
       </span>
     </div>
 
-    <h1>Screen calibration of middle greys.</h1>
-    Your screen is perfectly linear in mid-greys if the following squares look plain (the center parts must not look brighter or dimmer).<br>
+    <h1>Screen calibration: gamma in medium intensities.</h1>
+    Your screen gamma is 2.2 on the three channels if the following squares look plain (the center parts must not look brighter or dimmer).<br>
     For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
     <br><br>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,135,135)">
@@ -573,6 +585,19 @@ for (let k = 0; k <= 16; k++) {
       <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" />
     </div>
     <br><br>
+    <h1>All wavelenghts, purities and perceived intensities :</h1>
+    <br>
+    <div v-for="(rRow,r) of colors" :key="r">
+      <div v-for="(pRow,p) of rRow" :key="p">
+        <div v-if="!(p%3)">
+          <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'">
+            {{ (c.rgb.chan[R] > 255 || c.rgb.chan[G] > 255 || c.rgb.chan[B] > 255) ? 'E+' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
+            {{ (c.rgb.chan[R] < 0 || c.rgb.chan[G] < 0 || c.rgb.chan[B] < 0) ? 'E-' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
+          </div>
+        </div>
+      </div>
+      <br>
+    </div>
   </div>
 </template>
 
