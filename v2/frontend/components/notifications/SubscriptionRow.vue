@@ -67,6 +67,7 @@ function calculateCorrectNumber (input: string) : number {
   if (type.value === 'percent') {
     if (num < 1) { num = 1 }
     if (num > 100) { num = 100 }
+    num = Math.round(10 * num) / 10
   }
   return num
 }
@@ -189,7 +190,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
         width: 110px;
       }
       .percent {
-        width: 43px;
+        width: 48px;
       }
     }
     .checkbox {
