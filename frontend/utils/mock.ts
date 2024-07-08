@@ -1,6 +1,7 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import type { ApiDataResponse } from '~/types/api/common'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
+import { type NotificationsManagementDashboardResponse } from '~/types/notifications/general'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -362,4 +363,16 @@ export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChai
   )
 
   return result
+}
+
+export function mockManageNotificationsGeneral (): NotificationsManagementDashboardResponse {
+  return {
+    data: {
+      enabled_notifications: {
+        general_do_not_disturb_expire_ts: 9000,
+        general_email: false,
+        general_push: true
+      }
+    }
+  }
 }

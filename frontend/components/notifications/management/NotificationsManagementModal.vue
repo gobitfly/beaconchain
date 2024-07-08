@@ -6,12 +6,16 @@ import {
   faBolt,
   faNetworkWired
 } from '@fortawesome/pro-solid-svg-icons'
+import { useUseNotificationsManagementGeneralProvider } from '~/composables/notifications/useNotificationsManagementGeneralProvider'
 
 const { t: $t } = useI18n()
 
 const visible = defineModel<boolean>()
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
+const { refreshGeneralSettings } = useUseNotificationsManagementGeneralProvider()
+await refreshGeneralSettings()
 
 </script>
 
