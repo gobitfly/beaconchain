@@ -1,6 +1,6 @@
 import { ChainIDs } from './network'
 
-/** translates our the names of our object members to/from the names used by the API  // TODO: write here the identifiers actually used by the API */
+/** translates the names of the members of our objects to/from the names used by the API  // TODO: write here the identifiers actually used by the API */
 export enum SubscriptionJSONfields {
   offlineValidator = 'offline_validator',
   offline_validator = 'offlineValidator',
