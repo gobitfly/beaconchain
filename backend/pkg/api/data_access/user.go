@@ -31,9 +31,13 @@ type UserRepository interface {
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
-	// TODO @DATA-ACCESS
-	// return dataaccess.ErrNotFound if not present
-	return d.dummy.GetUserByEmail(ctx, email)
+	// TODO @DATA-ACCESS i quickly hacked this together, maybe improve
+	result := uint64(0)
+	err := d.userReader.GetContext(ctx, &result, `SELECT id FROM users WHERE email = $1 LIMIT 1`, email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("%w: user not found", ErrNotFound)
+	}
+	return result, err
 }
 
 func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
@@ -83,14 +87,14 @@ func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, use
 
 func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
 	// TODO @patrick post-beta improve product-mgmt
-	// TODO @DATA-ACCESS adjust to return struct changes (email + email_confirmed)
-	/*result := &t.UserCredentialInfo{}
-	err := d.userReader.Get(result, `
+	// TODO @DATA-ACCESS i quickly hacked this together, maybe improve
+	result := &t.UserCredentialInfo{}
+	err := d.userReader.GetContext(ctx, result, `
 		WITH
 			latest_and_greatest_sub AS (
 				SELECT user_id, product_id FROM users_app_subscriptions
 				LEFT JOIN users ON users.id = user_id AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
-				WHERE users.email = $1 AND active = true
+				WHERE users.id = $1 AND active = true
 				ORDER BY CASE product_id
 					WHEN 'orca.yearly'    THEN  1
 					WHEN 'orca'           THEN  2
@@ -104,15 +108,14 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId ui
 					ELSE                       10  -- For any other product_id values
 				END, users_app_subscriptions.created_at DESC LIMIT 1
 			)
-		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group
+		SELECT users.id AS id, users.email, users.email_confirmed, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group
 		FROM users
 		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id
-		WHERE email = $1`, email)
+		WHERE users.id = $1`, userId)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
+		return nil, fmt.Errorf("%w: user not found", ErrNotFound)
 	}
-	return result, err*/
-	return d.dummy.GetUserCredentialInfo(ctx, userId)
+	return result, err
 }
 
 func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
