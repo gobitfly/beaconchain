@@ -24,6 +24,26 @@ export type AccountSubscriptionState = {
   ignoreSpam: boolean
 }
 
+/** for the communication with the API  // TODO: write here the identifiers actually used by the API */
+export const SubscriptionJSONfields: Record<keyof (ValidatorSubscriptionState&AccountSubscriptionState), string> = {
+  offlineValidator: 'offline_validator',
+  offlineGroup: 'offline_group',
+  missedAttestations: 'missed_attestations',
+  proposedBlock: 'proposed_block',
+  upcomingProposal: 'upcoming_proposal',
+  syncCommittee: 'sync_committee',
+  withdrawn: 'withdrawn',
+  slashed: 'slashed',
+  realTime: 'real_time',
+  incoming: 'incoming',
+  outgoing: 'outgoing',
+  erc20: 'erc20',
+  erc721: 'erc721',
+  erc1155: 'erc1155',
+  networks: 'networks',
+  ignoreSpam: 'ignore_spam'
+}
+
 /** for internal use */
 export interface CheckboxAndNumber {
   check: boolean,

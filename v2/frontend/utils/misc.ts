@@ -41,7 +41,3 @@ export function isInt (value?: string): boolean {
   const parsed = parseInt(value)
   return !isNaN(parsed) && `${parsed}` === value
 }
-
-export function camelToSnakeCase (str: string) : string {
-  return str[0].toLowerCase() + str.slice(1).replace(/[A-Z]/g, big => '_' + big.toLowerCase())
-}
