@@ -12,7 +12,7 @@ import { useNotificationsManagementDashboards } from '~/composables/notification
 
 const { t: $t } = useI18n()
 
-const { dashboards, query, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch } = useNotificationsManagementDashboards()
+const { dashboardGroups, query, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch } = useNotificationsManagementDashboards()
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -29,13 +29,13 @@ const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
-const wrappedDashboards = computed(() => {
-  if (!dashboards.value) {
+const wrappedDashboardGroups = computed(() => {
+  if (!dashboardGroups.value) {
     return
   }
   return {
-    paging: dashboards.value.paging,
-    data: dashboards.value.data.map(d => ({ ...d, identifier: `${d.dashboard_type}-${d.dashboard_id}-${d.group_id}` }))
+    paging: dashboardGroups.value.paging,
+    data: dashboardGroups.value.data.map(d => ({ ...d, identifier: `${d.dashboard_type}-${d.dashboard_id}-${d.group_id}` }))
   }
 })
 
@@ -73,7 +73,7 @@ function getTypeIcon (type: DashboardType) {
 
     <ClientOnly fallback-tag="span">
       <BcTable
-        :data="wrappedDashboards"
+        :data="wrappedDashboardGroups"
         data-key="identifier"
         :expandable="!colsVisible.networks"
         class="notifications-management-dashboard-table"

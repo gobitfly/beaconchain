@@ -9,7 +9,7 @@ export function useNotificationsManagementDashboards () {
   const { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery } = useTableQuery({ limit: 10, sort: 'dashboard_id:desc' }, 10)
   const isLoading = ref(false)
 
-  const dashboards = computed(() => data.value)
+  const dashboardGroups = computed(() => data.value)
 
   async function getDashboards (q?: TableQueryParams) {
     isLoading.value = true
@@ -29,5 +29,5 @@ export function useNotificationsManagementDashboards () {
     getDashboards(q)
   }, { immediate: true })
 
-  return { dashboards, query: pendingQuery, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch }
+  return { dashboardGroups, query: pendingQuery, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch }
 }
