@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 // TODO: Use translations everywhere
+// TODO: Add provider on modal to collect/handle all data coming from /api/i/users/me/notifications/settings/general
 // TODO: Re-style toggles (deactivated does not look deactivated right now)
-// TODO: Gather all data in on object and call API (use debounce)
 // TODO: Hide Push Notifications slider if user das not has the app linked
 // TODO: Implement Do not disturb feature
-// TOOD: Implement "Paird devices" modal
+// TOOD: Implement "Paired devices" modal
 
 import {
   faPaperPlane
