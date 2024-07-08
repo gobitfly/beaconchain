@@ -231,6 +231,7 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 	var err error
 	var dbIsCoherent bool
 
+	// do a consistency check to make sure that we have all the data we need in the db
 	err = db.WriterDb.Get(&dbIsCoherent, `
 		SELECT
 			NOT (array[false] && array_agg(is_coherent)) AS is_coherent
@@ -263,6 +264,8 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 	}
 
 	log.Infof("retrieving dashboard definitions")
+	// Retrieve all dashboard definitions to be able to retrieve validators included in
+	// the group notification subscriptions
 	// TODO: add a filter to retrieve only groups that have notifications enabled
 	// Needs a new field in the db
 	var dashboardDefinitions []dashboardDefinitionRow
@@ -304,6 +307,8 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 		}
 		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators = append(validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators, uint64(row.ValidatorIndex))
 	}
+
+	// TODO: pass the validatorDashboardConfig to the notification collection functions
 
 	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch)
 	if err != nil {
@@ -1389,7 +1394,9 @@ func (n *validatorProposalNotification) GetInfoMarkdown() string {
 	return generalPart
 }
 
+// collectAttestationAndOfflineValidatorNotifications collects notifications for missed attestations and offline validators
 func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+	// Retrieve subscriptions for missed attestations
 	subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for missted attestations %w", err)
@@ -1403,12 +1410,13 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 	}
 
 	// get attestations for all validators for the last 4 epochs
-
+	// we need 4 epochs so that can detect the online / offline status of validators
 	validators, err := db.GetValidatorIndices()
 	if err != nil {
 		return err
 	}
 
+	// this reads the submitted attestations for the last 4 epochs
 	participationPerEpoch, err := db.GetValidatorAttestationHistoryForNotifications(epoch-3, epoch)
 	if err != nil {
 		return fmt.Errorf("error getting validator attestations from db %w", err)
@@ -1988,7 +1996,6 @@ func (n *ethClientNotification) GetInfoMarkdown() string {
 func collectEthClientNotifications(notificationsByUserID types.NotificationsPerUserId, eventName types.EventName) error {
 	updatedClients := ethclients.GetUpdatedClients() //only check if there are new updates
 	for _, client := range updatedClients {
-
 		// err := db.FrontendWriterDB.Select(&dbResult, `
 		// 	SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
 		// 	FROM users_subscriptions AS us
@@ -2362,7 +2369,7 @@ func collectTaxReportNotificationNotifications(notificationsByUserID types.Notif
 	// 	name, firstDayOfMonth)
 
 	dbResults, err := GetSubsForEventFilter(
-		types.TaxReportEventName,
+		eventName,
 		"us.last_sent_ts < ? OR (us.last_sent_ts IS NULL AND us.created_ts < ?)",
 		[]interface{}{firstDayOfMonth, firstDayOfMonth},
 		nil,
