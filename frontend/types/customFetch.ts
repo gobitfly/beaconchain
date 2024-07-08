@@ -3,6 +3,9 @@ import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   USER = '/user/me',
+  USER_CHANGE_EMAIL = '/user/changeEmail',
+  USER_CHANGE_PASSWORD = '/user/changePassword',
+  USER_DELETE = '/user/delete',
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
@@ -99,6 +102,21 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.USER]: {
     path: '/users/me',
     mock: false
+  },
+  [API_PATH.USER_CHANGE_EMAIL]: {
+    path: '/users/me/email',
+    mock: true,
+    method: 'PUT'
+  },
+  [API_PATH.USER_CHANGE_PASSWORD]: {
+    path: '/users/me/password',
+    mock: true,
+    method: 'PUT'
+  },
+  [API_PATH.USER_DELETE]: {
+    path: '/users/me',
+    mock: true,
+    method: 'DELETE'
   },
   [API_PATH.USER_DASHBOARDS]: {
     path: '/users/me/dashboards',

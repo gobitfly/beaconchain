@@ -29,7 +29,8 @@ type DataAccessor interface {
 	GetLatestSlot() (uint64, error)
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
-	GetProductSummary() (*t.ProductSummary, error)
+	GetProductSummary(ctx context.Context) (*t.ProductSummary, error)
+	GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error)
 
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
 }
