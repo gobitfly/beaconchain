@@ -717,8 +717,11 @@ func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWri
 		return
 	}
 
-	groupIds := v.checkGroupIdList(r.URL.Query().Get("group_ids"))
-
+	groupIds := v.checkExistingGroupIdList(r.URL.Query().Get("group_ids"))
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 	data, err := h.dai.GetValidatorDashboardSlotViz(r.Context(), *dashboardId, groupIds)
 	if err != nil {
 		handleErr(w, err)
@@ -810,7 +813,8 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 	aggregation := checkEnum[enums.ChartAggregation](&v, q.Get("aggregation"), "aggregation")
 	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds)
-	beforeTs, afterTs := v.checkTimestamps(q.Get("before_ts"), q.Get("after_ts"), maxAge)
+	minAllowedTs := uint64(time.Now().Unix()) - maxAge
+	afterTs, beforeTs := v.checkTimestamps(q.Get("after_ts"), q.Get("before_ts"), minAllowedTs)
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -819,8 +823,8 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 		returnConflict(w, fmt.Errorf("requested aggregation is not available for dashboard owner's premium subscription"))
 		return
 	}
-	minAllowedTs := uint64(time.Now().Unix()) - maxAge
-	if beforeTs <= minAllowedTs || afterTs <= minAllowedTs {
+	// afterTs is inclusive, beforeTs is exclusive
+	if afterTs < minAllowedTs || beforeTs <= minAllowedTs {
 		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription is %v seconds", maxAge))
 		return
 	}
