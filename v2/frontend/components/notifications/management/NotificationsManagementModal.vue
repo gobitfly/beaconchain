@@ -18,37 +18,38 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 <template>
   <BcDialog
     v-model="visible"
-    :header="$t('dashboard.notifications.management.title')"
+    :header="$t('notifications.management.title')"
     class="notifications-management-modal-container"
   >
+    <div id="notifications-management-search-placholder" />
     <TabView lazy class="notifications-management-tab-view">
       <TabPanel>
         <template #header>
-          <BcTabHeader :header="$t('dashboard.notifications.management.tabs.general')" :icon="faCog" />
+          <BcTabHeader :header="$t('notifications.tabs.general')" :icon="faCog" />
         </template>
         <DashboardNotificationsManagementGeneralTab />
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('dashboard.notifications.management.tabs.dashboards')" :icon="faGaugeSimpleMax" />
+          <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faGaugeSimpleMax" />
         </template>
-        Dashboards coming soon!
+        <NotificationsManagementDashboards />
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('dashboard.notifications.management.tabs.machines')" :icon="faMonitorWaveform" />
+          <BcTabHeader :header="$t('notifications.tabs.machines')" :icon="faMonitorWaveform" />
         </template>
         Machines coming soon!
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('dashboard.notifications.management.tabs.clients')" :icon="faBolt" />
+          <BcTabHeader :header="$t('notifications.tabs.clients')" :icon="faBolt" />
         </template>
         Clients coming soon!
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('dashboard.notifications.management.tabs.rocketpool')">
+          <BcTabHeader :header="$t('notifications.tabs.rocketpool')">
             <template #icon>
               <IconRocketPool />
             </template>
@@ -58,19 +59,35 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('dashboard.notifications.management.tabs.network')" :icon="faNetworkWired" />
+          <BcTabHeader :header="$t('notifications.tabs.network')" :icon="faNetworkWired" />
         </template>
         Network coming soon!
       </TabPanel>
     </TabView>
-    <Button class="done-button" :label="$t('navigation.done')" @click="visible=false" />
+    <Button class="done-button" :label="$t('navigation.done')" @click="visible = false" />
   </BcDialog>
 </template>
 
 <style lang="scss" scoped>
+#notifications-management-search-placholder {
+  position: absolute;
+  top: 70px;
+  right: var(--padding-large);
+  z-index: 2;
+
+  @media (max-width: 1100px) {
+    top: var(--padding-large);
+  }
+}
+
 :global(.notifications-management-modal-container) {
+  position: relative;
   width: 1400px;
   height: 786px;
+}
+
+:global(.notifications-management-modal-container .p-dialog-header) {
+  margin-right: 40px;
 }
 
 :global(.notifications-management-tab-view >.p-tabview-panels) {
@@ -81,10 +98,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
   margin-top: var(--padding-large);
 }
 
-.done-button{
+.done-button {
   position: absolute;
   bottom: calc(var(--padding-large) + var(--padding));
   right: calc(var(--padding-large) + var(--padding));
 }
-
 </style>
