@@ -295,11 +295,22 @@
     "login_question": "Do you want to login to set notifications?",
     "manage": "Manage Notifications",
     "tabs":{
+      "general": "General",
       "dashboards": "Dashboards",
       "machines": "Machines",
       "clients": "Clients",
       "rocketpool": "Rocket Pool",
       "network": "Network"
+    },
+    "management": {
+      "title": "Manage Notifications"
+    },
+    "col": {
+      "dashboard": "Dashboard",
+      "group": "Group",
+      "subscriptions": "Subscriptions",
+      "webhook": "Webhook",
+      "networks": "Networks"
     }
   },
   "dashboard": {
@@ -579,20 +590,6 @@
           "result": "Result",
           "rewards": "Rewards",
           "validator": "Validator"
-        }
-      }
-    },
-    "notifications": {
-      "title": "Notifications",
-      "management": {
-        "title": "Manage Notifications",
-        "tabs": {
-          "general": "General",
-          "dashboards": "Dashboards",
-          "machines": "Machines",
-          "clients": "Clients",
-          "rocketpool": "Rocket Pool",
-          "network": "Network"
         }
       }
     }
