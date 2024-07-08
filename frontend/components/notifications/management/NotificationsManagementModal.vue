@@ -73,6 +73,7 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
   position: absolute;
   top: 70px;
   right: var(--padding-large);
+  z-index: 2;
 
   @media (max-width: 1100px) {
     top: var(--padding-large);

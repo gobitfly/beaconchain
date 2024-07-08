@@ -1,20 +1,18 @@
 <script lang="ts" setup>import {
-  faTrash
+  faTrash,
+  faDesktop,
+  faUser
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-import type { DataTableSortEvent } from 'primevue/datatable'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
-import { useNotificationsManagementDashboardStore } from '~/stores/notifications/useNotificationsManagementDashboardStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { type NotificationsManagementDashboardRow } from '~/types/notifications/management'
+import type { DashboardType } from '~/types/dashboard'
+import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
 
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 
-const { dashboards, query: lastQuery, isLoading, getDashboards } = useNotificationsManagementDashboardStore()
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>({ limit: pageSize.value, sort: 'dashboard_id:desc' }, 500)
+const { dashboards, query, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch } = useNotificationsManagementDashboards()
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -27,37 +25,8 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value, sort: 'dashboard_id:desc' }
-  }
-  setQuery(query, true, true)
-}
-
-watch(query, (q) => {
-  getDashboards(q)
-}, { immediate: true })
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
-}
-
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
-}
-
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
-}
-
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
-}
-
-const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery.value))
 }
 
 const wrappedDashboards = computed(() => {
@@ -87,6 +56,13 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
   }
 }
 
+function getTypeIcon (type: DashboardType) {
+  if (type === 'validator') {
+    return faDesktop
+  }
+  return faUser
+}
+
 </script>
 
 <template>
@@ -103,7 +79,7 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
         class="notifications-management-dashboard-table"
         :cursor="cursor"
         :page-size="pageSize"
-        :selected-sort="tempQuery?.sort"
+        :selected-sort="query?.sort"
         :loading="isLoading"
         @set-cursor="setCursor"
         @sort="onSort"
@@ -118,6 +94,7 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
         >
           <template #body="slotProps">
             <span>
+              <FontAwesomeIcon :icon="getTypeIcon(slotProps.data.dashboard_type)" class="type-icon" />
               {{ slotProps.data.dashboard_name }}
             </span>
           </template>
@@ -158,7 +135,11 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
           :header="$t('notifications.col.webhook')"
         >
           <template #body="slotProps">
-            <BcTablePopoutEdit :truncate-text="true" :label="slotProps.data.webhook.url" @on-edit="() => onEdit('webhook', slotProps.data)" />
+            <BcTablePopoutEdit
+              :truncate-text="true"
+              :label="slotProps.data.webhook.url"
+              @on-edit="() => onEdit('webhook', slotProps.data)"
+            />
           </template>
         </Column>
         <Column
@@ -281,12 +262,17 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
   }
 }
 
+.type-icon {
+  margin-right: var(--padding);
+}
+
 .network-icon {
   margin-right: var(--padding);
   height: 20px;
   width: 20px;
 }
-.newtork-row{
+
+.newtork-row {
   display: flex;
 }
 
@@ -303,11 +289,15 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
     @include utils.set-all-width(210px);
 
     @media (max-width: 1460px) {
+      @include utils.set-all-width(180px);
+    }
+
+    @media (max-width: 1260px) {
       @include utils.set-all-width(140px);
     }
 
-    @media (max-width: 5205px) {
-      @include utils.set-all-width(120px);
+    @media (max-width: 520px) {
+      @include utils.set-all-width(130px);
     }
   }
 
@@ -315,14 +305,15 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
   .subscriptions-col {
     @include utils.set-all-width(340px);
 
-    @media (max-width: 1360px) {
+    @media (max-width: 1300px) {
+      @include utils.set-all-width(260px);
+    }
+
+    @media (max-width: 1200px) {
       @include utils.set-all-width(240px);
     }
   }
 
-  /*.action-col{
-    @include utils.set-all-width(40px);
-  }*/
   .networks-col {
     @include utils.set-all-width(156px);
   }
