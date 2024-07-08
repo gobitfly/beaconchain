@@ -1,4 +1,12 @@
 <script lang="ts" setup>
+// TODO: Use translations everywhere
+// TODO: Re-style toggles (deactivated does not look deactivated right now)
+// TODO: Gather all data in on object and call API (use debounce)
+// TODO: Hide Push Notifications slider if user das not has the app linked
+// TODO: Implement call of "Send Test E-Mail/Push Notification" buttons
+// TODO: Implement Do not disturb feature
+// TOOD: Implement "Paird devices" modal
+
 const doNotDisturbToggle = ref(false)
 const emailToggle = ref(false)
 const pushToggle = ref(false)
