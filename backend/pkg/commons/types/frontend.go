@@ -41,7 +41,7 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 		npui[n.GetUserId()] = make(map[EventName]map[EventFilter]Notification)
 	}
 	if _, ok := npui[n.GetUserId()][n.GetEventName()]; !ok {
-		npui[n.GetUserId()][EventName(n.GetEventFilter())] = make(map[EventFilter]Notification)
+		npui[n.GetUserId()][n.GetEventName()] = make(map[EventFilter]Notification)
 	}
 	npui[n.GetUserId()][n.GetEventName()][EventFilter(n.GetEventFilter())] = n
 }
@@ -344,7 +344,7 @@ func (n NotificationBaseImpl) GetUserId() UserId {
 type Subscription struct {
 	ID          *uint64    `db:"id,omitempty"`
 	UserID      *UserId    `db:"user_id,omitempty"`
-	EventName   string     `db:"event_name"`
+	EventName   EventName  `db:"event_name"`
 	EventFilter string     `db:"event_filter"`
 	LastSent    *time.Time `db:"last_sent_ts"`
 	LastEpoch   *uint64    `db:"last_sent_epoch"`
