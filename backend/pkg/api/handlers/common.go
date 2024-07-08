@@ -238,6 +238,9 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 
 //nolint:unparam
 func (v *validationError) checkBool(param, paramName string) bool {
+	if param == "" {
+		return false
+	}
 	b, err := strconv.ParseBool(param)
 	if err != nil {
 		v.add(paramName, fmt.Sprintf("given value %s is not a boolean", param))
