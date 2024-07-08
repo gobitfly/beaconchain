@@ -3,13 +3,21 @@
 // TODO: Re-style toggles (deactivated does not look deactivated right now)
 // TODO: Gather all data in on object and call API (use debounce)
 // TODO: Hide Push Notifications slider if user das not has the app linked
-// TODO: Implement call of "Send Test E-Mail/Push Notification" buttons
 // TODO: Implement Do not disturb feature
 // TOOD: Implement "Paird devices" modal
+
+import {
+  faPaperPlane
+} from '@fortawesome/pro-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const doNotDisturbToggle = ref(false)
 const emailToggle = ref(false)
 const pushToggle = ref(false)
+
+const sendTestNotification = (type: 'email' | 'push') => {
+  alert('TODO: Sending test ' + type + ' notification')
+}
 </script>
 
 <template>
@@ -27,11 +35,27 @@ const pushToggle = ref(false)
       </div>
       <BcToggle v-model="emailToggle" />
     </div>
-    <div class="row">
+    <div class="row divider">
       <div>
         Push Notifications
       </div>
       <BcToggle v-model="pushToggle" />
+    </div>
+    <div class="row">
+      <div>
+        Send Test E-Mail
+      </div>
+      <Button class="p-button-icon-only" @click="sendTestNotification('email')">
+        <FontAwesomeIcon :icon="faPaperPlane" />
+      </Button>
+    </div>
+    <div class="row">
+      <div>
+        Send Test Push Notification
+      </div>
+      <Button class="p-button-icon-only" @click="sendTestNotification('push')">
+        <FontAwesomeIcon :icon="faPaperPlane" />
+      </Button>
     </div>
   </div>
 </template>
