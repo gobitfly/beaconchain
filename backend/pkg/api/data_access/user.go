@@ -89,7 +89,7 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId ui
 	// TODO @patrick post-beta improve product-mgmt
 	// TODO @DATA-ACCESS i quickly hacked this together, maybe improve
 	result := &t.UserCredentialInfo{}
-	err := d.userReader.Get(result, `
+	err := d.userReader.GetContext(ctx, result, `
 		WITH
 			latest_and_greatest_sub AS (
 				SELECT user_id, product_id FROM users_app_subscriptions
