@@ -35,6 +35,8 @@ export enum API_PATH {
   DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
+  NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
+  NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   LATEST_STATE = '/latestState',
   REGISTER = '/register',
   LOGIN = '/login',
@@ -237,6 +239,16 @@ export const mapping: Record<string, MappingData> = {
     path: '/validator-dashboards/{dashboard_id}/summary/validators',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false
+  },
+  [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
+    path: '/users/me/notifications/test-push',
+    method: 'POST',
+    mock: true
+  },
+  [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
+    path: '/users/me/notifications/test-emails',
+    method: 'POST',
+    mock: true
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',

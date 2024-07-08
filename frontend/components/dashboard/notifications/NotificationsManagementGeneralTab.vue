@@ -10,13 +10,23 @@ import {
   faPaperPlane
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { API_PATH } from '~/types/customFetch'
+
+const { fetch } = useCustomFetch()
 
 const doNotDisturbToggle = ref(false)
 const emailToggle = ref(false)
 const pushToggle = ref(false)
+const testButtonsDisabled = ref(false)
 
-const sendTestNotification = (type: 'email' | 'push') => {
-  alert('TODO: Sending test ' + type + ' notification')
+const sendTestNotification = async (type: 'email' | 'push') => {
+  testButtonsDisabled.value = true
+  if (type === 'email') {
+    await fetch(API_PATH.NOTIFICATIONS_TEST_EMAIL)
+  } else {
+    await fetch(API_PATH.NOTIFICATIONS_TEST_PUSH)
+  }
+  testButtonsDisabled.value = false
 }
 </script>
 
@@ -45,7 +55,7 @@ const sendTestNotification = (type: 'email' | 'push') => {
       <div>
         Send Test E-Mail
       </div>
-      <Button class="p-button-icon-only" @click="sendTestNotification('email')">
+      <Button class="p-button-icon-only" :disabled="testButtonsDisabled" @click="sendTestNotification('email')">
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
     </div>
@@ -53,7 +63,7 @@ const sendTestNotification = (type: 'email' | 'push') => {
       <div>
         Send Test Push Notification
       </div>
-      <Button class="p-button-icon-only" @click="sendTestNotification('push')">
+      <Button class="p-button-icon-only" :disabled="testButtonsDisabled" @click="sendTestNotification('push')">
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
     </div>
