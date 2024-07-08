@@ -30,6 +30,7 @@ const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
 const { t } = useI18n()
 const { fetch, setTimeout } = useCustomFetch()
 const toast = useBcToast()
+const { networkInfo } = useNetworkStore()
 
 const tPath = ref('')
 let originalSettings = {} as AllPossibleOptions
@@ -162,7 +163,13 @@ function closeDialog () : void {
         :default="DefaultValueOfValidatorOptionsNeedingPremium.offlineGroup"
         class="row"
       />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.missedAttestations" :t-path="tPath+'missed_attestations'" :lacks-premium-subscription="!isOptionAvailable('missedAttestations')" class="row" />
+      <NotificationsSubscriptionRow
+        v-model="modifiableOptions.missedAttestations"
+        :t-path="tPath+'missed_attestations'"
+        :lacks-premium-subscription="!isOptionAvailable('missedAttestations')"
+        class="row"
+        :value-in-text="Math.round(networkInfo.secondsPerSlot*networkInfo.slotsPerEpoch/6)/10"
+      />
       <NotificationsSubscriptionRow v-model="modifiableOptions.proposedBlock" :t-path="tPath+'proposed_block'" :lacks-premium-subscription="!isOptionAvailable('proposedBlock')" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.upcomingProposal" :t-path="tPath+'upcoming_proposal'" :lacks-premium-subscription="!isOptionAvailable('upcomingProposal')" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.syncCommittee" :t-path="tPath+'sync_committee'" :lacks-premium-subscription="!isOptionAvailable('syncCommittee')" class="row" />

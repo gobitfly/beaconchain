@@ -10,6 +10,7 @@ const props = defineProps<{
   lacksPremiumSubscription: boolean,
   inputType?: 'binary' | 'amount' | 'percent' | 'networks',
   default?: number
+  valueInText?: number
 }>()
 
 const type = computed(() => props.inputType ?? 'binary')
@@ -80,17 +81,20 @@ function isThisAvalidInput (input: string) : boolean {
 
 const tooltipLines = computed(() => {
   let options
-  if (Array.isArray(state.value)) {
-    options = { plural: state.value.length, list: state.value.join(', ') }
-  } else {
-    let plural: number
-    if (type.value === 'amount' || type.value === 'percent') {
-      plural = calculateCorrectNumber(checkboxAndText!.value.text)
+  if (props.valueInText !== undefined) {
+    options = { plural: props.valueInText }
+  } else
+    if (Array.isArray(state.value)) {
+      options = { plural: state.value.length, list: state.value.join(', ') }
     } else {
-      plural = state.value ? 2 : 1
+      let plural: number
+      if (type.value === 'amount' || type.value === 'percent') {
+        plural = calculateCorrectNumber(checkboxAndText!.value.text)
+      } else {
+        plural = state.value ? 2 : 1
+      }
+      options = { plural }
     }
-    options = { plural }
-  }
   return tAll(t, props.tPath + '.hint', options)
 })
 
