@@ -27,7 +27,6 @@ type EventFilter string
 type NotificationsPerUserId map[UserId]map[EventName]map[EventFilter]Notification
 
 func (npui NotificationsPerUserId) AddNotification(n Notification) {
-
 	if n.GetUserId() == 0 {
 		log.Fatal(fmt.Errorf("Notification user id is 0"), fmt.Sprintf("Notification: %v", n), 0)
 	}
