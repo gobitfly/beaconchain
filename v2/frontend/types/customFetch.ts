@@ -235,16 +235,6 @@ export const mapping: Record<string, MappingData> = {
     path: '/notifications/management/dashboard',
     mock: true
   },
-  [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
-    path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
-    mock: false
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
-    path: '/validator-dashboards/{dashboard_id}/summary/validators',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
-    mock: false
-  },
   [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
     path: '/users/me/notifications/test-push',
     method: 'POST',
@@ -254,6 +244,16 @@ export const mapping: Record<string, MappingData> = {
     path: '/users/me/notifications/test-emails',
     method: 'POST',
     mock: true
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
+    path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
+    mock: false
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
+    path: '/validator-dashboards/{dashboard_id}/summary/validators',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
+    mock: false
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',
