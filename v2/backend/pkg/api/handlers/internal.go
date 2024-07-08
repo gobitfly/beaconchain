@@ -486,6 +486,10 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		return
 	}
 	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding {
+		returnConflict(w, errors.New("bulk adding not allowed with current subscription plan"))
+		return
+	}
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
