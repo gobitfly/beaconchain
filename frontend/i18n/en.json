@@ -388,7 +388,7 @@
       },
       "button":"Close",
       "error_title": "Error",
-      "error_group": "Saving",
+      "error_group": "Notification subscriptions",
       "error_message": "We could not save your preferences."
     }
   },

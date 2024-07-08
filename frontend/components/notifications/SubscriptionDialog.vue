@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ValidatorSubscriptionState, AccountSubscriptionState, CheckboxAndNumber } from '~/types/subscriptionModal'
+import { type ValidatorSubscriptionState, type AccountSubscriptionState, SubscriptionJSONfields, type CheckboxAndNumber } from '~/types/subscriptionModal'
 import type { ChainIDs } from '~/types/network'
 import type { ApiErrorResponse } from '~/types/api/common'
 import { API_PATH } from '~/types/customFetch'
@@ -100,13 +100,13 @@ async function sendUserPreferencesToAPI () {
   const output = {} as Record<string, any>
   for (const entry of Object.entries(modifiableOptions.value)) {
     const key = entry[0] as keyof ModifiableOptions
-    const snaKey = camelToSnakeCase(key)
+    const apiKey = SubscriptionJSONfields[key]
     if (Array.isArray(entry[1])) {
-      output[snaKey] = entry[1]
+      output[apiKey] = entry[1]
     } else {
       switch (typeof originalSettings[key]) {
-        case 'boolean' : output[snaKey] = entry[1].check; break
-        case 'number' : output[snaKey] = entry[1].num * (entry[1].check ? 1 : -1); break
+        case 'boolean' : output[apiKey] = entry[1].check; break
+        case 'number' : output[apiKey] = entry[1].num * (entry[1].check ? 1 : -1); break
       }
     }
   }
@@ -117,7 +117,7 @@ async function sendUserPreferencesToAPI () {
     response = await fetch<ApiErrorResponse>(API_PATH.NOTIFICATION_SUBSCRIPTIONS, {
       method: 'POST',
       body: {
-        category: props.value?.accountSub ? 'accounts' : 'validators',
+        category: props.value!.accountSub ? 'accounts' : 'validators',
         subscriptions: output
       }
     })
