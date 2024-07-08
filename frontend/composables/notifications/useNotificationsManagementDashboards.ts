@@ -11,7 +11,7 @@ export function useNotificationsManagementDashboards () {
 
   const dashboardGroups = computed(() => data.value)
 
-  async function getDashboards (q?: TableQueryParams) {
+  async function getDashboardGroups (q?: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
     const res = await fetch<NotificationsManagementDashboardResponse>(API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD, undefined, undefined, q)
@@ -26,7 +26,7 @@ export function useNotificationsManagementDashboards () {
   }
 
   watch(query, (q) => {
-    getDashboards(q)
+    getDashboardGroups(q)
   }, { immediate: true })
 
   return { dashboardGroups, query: pendingQuery, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch }
