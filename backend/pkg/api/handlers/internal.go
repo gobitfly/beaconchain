@@ -101,9 +101,9 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 // Dashboards
 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := h.GetUserIdBySession(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetUserDashboards(r.Context(), userId)
