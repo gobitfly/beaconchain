@@ -14,6 +14,9 @@ import { API_PATH } from '~/types/customFetch'
 
 const { fetch } = useCustomFetch()
 
+const { generalSettings } = useNotificationsManagementGeneral()
+console.log('generalSettings', generalSettings?.value) // TODO: Testcode, remove
+
 const doNotDisturbToggle = ref(false)
 const emailToggle = ref(false)
 const pushToggle = ref(false)
