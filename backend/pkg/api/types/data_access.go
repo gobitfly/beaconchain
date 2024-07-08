@@ -11,6 +11,7 @@ import (
 
 const DefaultGroupId = 0
 const AllGroups = -1
+const NetworkAverage = -2
 const DefaultGroupName = "default"
 
 type Sort[T enums.Enum] struct {

@@ -300,7 +300,7 @@ func (d *DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, da
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []uint64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
+func (d *DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
 	r := t.ChartData[int, float64]{}
 	err := commonFakeData(&r)
 	return &r, err
