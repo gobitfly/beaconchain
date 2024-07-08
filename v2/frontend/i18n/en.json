@@ -303,6 +303,93 @@
       "clients": "Clients",
       "rocketpool": "Rocket Pool",
       "network": "Network"
+    },
+    "subscriptions": {
+      "dialog_title": "Edit Subscriptions",
+      "validators" : {
+        "explanation": "All notifications are sent after network finality (~20mins).",
+        "offline_validator": {
+          "option": "Validator is offline",
+          "hint": [
+            "We will trigger a notification:",
+            "- Once the validator has been offline for 3 epochs.",
+            "- Every 32 Epochs (~3 hours) during your downtime.",
+            "- Once you are back online again."
+          ]
+        },
+        "offline_group": {
+          "option":"Group is offline",
+          "hint": [
+            "We will trigger a notification:",
+            "- Once {count}% of your group is offline.",
+            "- Once you have been offline for 3 epochs.",
+            "- Every 32 Epochs (~3 hours) during your downtime.",
+            "- Once you are back online.",
+            "*Note:* Notification resets if you do not meet the threshold of {count}%."
+          ],
+          "placeholder": ""
+        },
+        "missed_attestations": {
+          "option":"Attestations missed",
+          "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime."
+        },
+        "proposed_block": {
+          "option":"Block proposal (missed & success)"
+        },
+        "upcoming_proposal": {
+          "option":"Upcoming block proposal",
+          "hint": "May trigger false positive notifications during reorgs."
+        },
+        "sync_committee": {
+          "option":"Sync committee"
+        },
+        "withdrawn": {
+          "option":"Withdrawal processed"
+        },
+        "slashed": {
+          "option":"Validator got slashed"
+        },
+        "real_time": {
+          "option":"Realtime mode",
+          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
+        },
+        "all": {
+          "option":"All events"
+        }
+      },
+      "accounts": {
+        "explanation": "",
+        "incoming": {
+          "option":"Incoming transactions"
+        },
+        "outgoing": {
+          "option":"Outgoing transactions"
+        },
+        "erc20": {
+          "option":"Track ERC20 token transfers",
+          "placeholder": "value > $0"
+        },
+        "erc721": {
+          "option":"Track ERC721 token transfers"
+        },
+        "erc1155": {
+          "option":"Track ERC1155 token transfers"
+        },
+        "all": {
+          "option":"All events"
+        },
+        "networks": {
+          "option":"Networks"
+        },
+        "ignore_spam": {
+          "option":"Ignore spam transactions",
+          "hint": ["Ignores *zero value transfer tx's* and token tx's that have the *\"hidden\" token label*."]
+        }
+      },
+      "button":"Close",
+      "error_title": "Error",
+      "error_group": "Saving",
+      "error_message": "We could not save your preferences."
     }
   },
   "dashboard": {
@@ -728,95 +815,6 @@
     "validator_by_name": "Validator by name",
     "network_filter_label": "Networks:",
     "all_networks": "All"
-  },
-  "notifications": {
-    "subscriptions": {
-      "dialog_title": "Edit Subscriptions",
-      "validators" : {
-        "explanation": "All notifications are sent after network finality (~20mins).",
-        "offline_validator": {
-          "option": "Validator is offline",
-          "hint": [
-            "We will trigger a notification:",
-            "- Once the validator has been offline for 3 epochs.",
-            "- Every 32 Epochs (~3 hours) during your downtime.",
-            "- Once you are back online again."
-          ]
-        },
-        "offline_group": {
-          "option":"Group is offline",
-          "hint": [
-            "We will trigger a notification:",
-            "- Once {count}% of your group is offline.",
-            "- Once you have been offline for 3 epochs.",
-            "- Every 32 Epochs (~3 hours) during your downtime.",
-            "- Once you are back online.",
-            "*Note:* Notification resets if you do not meet the threshold of {count}%."
-          ],
-          "placeholder": ""
-        },
-        "missed_attestations": {
-          "option":"Attestations missed",
-          "hint": "We will trigger every epoch (6.4 minutes) during downtime."
-        },
-        "proposed_block": {
-          "option":"Block proposal (missed & success)"
-        },
-        "upcoming_proposal": {
-          "option":"Upcoming block proposal",
-          "hint": "May trigger false positive notifications during reorgs."
-        },
-        "sync_committee": {
-          "option":"Sync committee"
-        },
-        "withdrawn": {
-          "option":"Withdrawal processed"
-        },
-        "slashed": {
-          "option":"Validator got slashed"
-        },
-        "real_time": {
-          "option":"Realtime mode",
-          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
-        },
-        "all": {
-          "option":"All events"
-        }
-      },
-      "accounts": {
-        "explanation": "",
-        "incoming": {
-          "option":"Incoming transactions"
-        },
-        "outgoing": {
-          "option":"Outgoing transactions"
-        },
-        "erc20": {
-          "option":"Track ERC20 token transfers",
-          "placeholder": "value > $0"
-        },
-        "erc721": {
-          "option":"Track ERC721 token transfers"
-        },
-        "erc1155": {
-          "option":"Track ERC1155 token transfers"
-        },
-        "all": {
-          "option":"All events"
-        },
-        "networks": {
-          "option":"Networks"
-        },
-        "ignore_spam": {
-          "option":"Ignore spam transactions",
-          "hint": ["Ignores *zero value transfer tx's* and token tx's that have the *\"hidden\" token label*."]
-        }
-      },
-      "button":"Close",
-      "error_title": "Error",
-      "error_group": "Saving",
-      "error_message": "We could not save your preferences."
-    }
   },
   "pricing": {
     "seo_title": "Premium Pricing",
