@@ -127,14 +127,15 @@ class Eye {
 
   // constants of our perception model, all obtained empirically
   protected static readonly sensicol = [15, 20, 6] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
-  protected static readonly intercol = [35, 45, 20] // relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color (shifts the position of the 3 secondaries (and all intermediaries) on the rainbow)
+  protected static readonly intercol = [10, 20, 5] // relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color
   protected static readonly overwhite = [7, 10, 2] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
   protected static readonly phi = 1.7 // power law on the purity to make it feel linear to the human eye
   protected static readonly iotaD = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
   protected static readonly iotaM = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
   // the following constants will be filled by the constructor
   protected static readonly sensicolNorm = [0, 0, 0]
-  protected static readonly rKey = [0, 0, 0, 0, 0, 0, 0] // coordinates of the primaries and secondaries on the rainbow
+  protected static readonly rPowers = [0, 0, 0] // accessed by the index of the dimmest primary
+  protected static readonly rPowersInv = [0, 0, 0]
   protected static readonly overwhiteNorm = [0, 0, 0]
   protected static readonly phiInv = 1 / Eye.phi
 
@@ -145,19 +146,13 @@ class Eye {
     if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
       throw new Error('an Eye object can carry RPI/J information only')
     }
-    if (!Eye.rKey[1]) {
+    if (!Eye.sensicolNorm[0]) {
       for (let k = R; k <= B; k++) {
         Eye.sensicolNorm[k] = Eye.sensicol[k] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])
         Eye.overwhiteNorm[k] = Eye.overwhite[k] / (Eye.overwhite[R] + Eye.overwhite[G] + Eye.overwhite[B])
-      }
-      const lSequence = [B, R, G]
-      for (let k = 0; k <= 6; k++) {
-        if (k % 2) {
-          const [h1, h2] = Eye.lowestChanToAnchors(lSequence[Math.floor(k / 2)])
-          Eye.rKey[k] = (h1 + 1 * Eye.intercol[h2] / (Eye.intercol[h1] + Eye.intercol[h2])) / 3
-        } else {
-          Eye.rKey[k] = k / 6
-        }
+        const [h1, h2] = Eye.lowestChanToAnchors(k)
+        Eye.rPowers[k] = 1 / Math.log2(Eye.intercol[h1] / Eye.intercol[h2] + 1)
+        Eye.rPowersInv[k] = 1 / Eye.rPowers[k]
       }
     }
     this.lowestImax = Eye.sensicolNorm[B] ** gammaInv
@@ -191,7 +186,7 @@ class Eye {
         this.r = 0.5
         this.p = 0
       } else {
-        this.r = (h1 + anchor2Contribution / anchors12Contributions) / 3
+        this.r = (h1 + (anchor2Contribution / anchors12Contributions) ** Eye.rPowers[l]) / 3
         this.p = ((rgb[h1] - rgb[l]) * Eye.overwhiteNorm[h1] + (rgb[h2] - rgb[l]) * Eye.overwhiteNorm[h2]) / (rgb[l] * Eye.overwhiteNorm[l] + rgb[h1] * Eye.overwhiteNorm[h1] + rgb[h2] * Eye.overwhiteNorm[h2])
         this.p **= Eye.phiInv
       }
@@ -239,7 +234,7 @@ class Eye {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
     const ratio = [0, 0, 0]
-    const D = 3 * this.r - h1
+    const D = (3 * this.r - h1) ** Eye.rPowersInv[l]
     const p = this.p ** Eye.phi
     if (D < 0.001 && p > 0.999) {
       to.chan[l] = 0
@@ -324,24 +319,24 @@ class Eye {
   }
 
   /** @returns the anchor having the lowest value followed by the highest-value anchor */
-  protected static RGBtoAnchorOrder (rgb : number[]) : Channel[] {
+  /* protected static RGBtoAnchorOrder (rgb : number[]) : Channel[] {
     if (rgb[R] < rgb[G]) {
       if (rgb[G] < rgb[B]) { return [G, B] }
       return (rgb[R] < rgb[B]) ? [B, G] : [R, G]
     }
     if (rgb[R] < rgb[B]) { return [R, B] }
     return (rgb[G] < rgb[B]) ? [B, R] : [G, R] // note that white, grey and black return [G, R], which is what we want (they are the primaries bringing the most brightness to the human eye)
-  }
+  } */
 
   /** @returns the order of the channels from the lowest value to the highest-value */
   protected static rToChannelOrder (r : number) : Channel[] {
-    if (r < Eye.rKey[2]) {
-      return (r < Eye.rKey[1]) ? [B, G, R] : [B, R, G]
+    if (r < 2 / 6) {
+      return (r < 1 / 6) ? [B, G, R] : [B, R, G]
     }
-    if (r < Eye.rKey[4]) {
-      return (r < Eye.rKey[3]) ? [R, B, G] : [R, G, B]
+    if (r < 4 / 6) {
+      return (r < 3 / 6) ? [R, B, G] : [R, G, B]
     }
-    return (r < Eye.rKey[5]) ? [G, R, B] : [G, B, R]
+    return (r < 5 / 6) ? [G, R, B] : [G, B, R]
   }
 }
 
@@ -478,9 +473,10 @@ for (let k = 0; k <= 16; k++) {
 
     <h1>Adjustement of intercol</h1>
 
-    TODO: test separé pour ajuster la linearité de r: couper le rainbow en 3
-    try to balance the widths of the color domains on the rainbow.
+    TODO: test pour ajuster la linearité de r: couper le rainbow en 6
     The better this criterion is approched, the more linear in `r` the perceived hue is.
+    <br><br>
+    <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
     <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
