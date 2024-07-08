@@ -236,6 +236,15 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 	return num
 }
 
+//nolint:unparam
+func (v *validationError) checkBool(param, paramName string) bool {
+	b, err := strconv.ParseBool(param)
+	if err != nil {
+		v.add(paramName, fmt.Sprintf("given value %s is not a boolean", param))
+	}
+	return b
+}
+
 type validatorSet struct {
 	Indexes    []types.VDBValidator
 	PublicKeys []string
