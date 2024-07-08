@@ -168,7 +168,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	userId, ok := ctx.Value(ctxUserIdKey).(uint64)
 	if !ok {
 		handleErr(w, errors.New("error getting user id from context"))
 		return
@@ -179,6 +179,10 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding {
+		returnConflict(w, errors.New("bulk adding not allowed with current subscription plan"))
+		return
+	}
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
@@ -214,7 +218,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
 
 	case req.WithdrawalAddress != "":
-		withdrawalAddress := v.checkRegex(reEthereumAddress, req.WithdrawalAddress, "withdrawal_address")
+		withdrawalAddress := v.checkRegex(reWithdrawalCredential, req.WithdrawalAddress, "withdrawal_address")
 		if v.hasErrors() {
 			handleErr(w, v)
 			return
