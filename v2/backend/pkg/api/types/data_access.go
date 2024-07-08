@@ -11,6 +11,7 @@ import (
 
 const DefaultGroupId = 0
 const AllGroups = -1
+const NetworkAverage = -2
 const DefaultGroupName = "default"
 
 type Sort[T enums.Enum] struct {
@@ -131,20 +132,31 @@ type NetworkInfo struct {
 
 type VDBGeneralSummaryValidators struct {
 	// fill slices with indices of validators
-	Online    []uint64
-	Offline   []uint64
-	Deposited []uint64
-	Pending   []struct {
-		Index               uint64
-		ActivationTimestamp uint64
-	}
+	Deposited   []uint64
+	Pending     []IndexTimestamp
+	Online      []uint64
+	Offline     []uint64
+	Slashing    []uint64
+	Exiting     []IndexTimestamp
+	Slashed     []uint64
+	Exited      []uint64
+	Withdrawing []IndexTimestamp
+	Withdrawn   []uint64
+}
+
+type IndexTimestamp struct {
+	Index     uint64
+	Timestamp uint64
 }
 
 type VDBSyncSummaryValidators struct {
 	// fill slices with indices of validators
 	Upcoming []uint64
 	Current  []uint64
-	Past     []uint64
+	Past     []struct {
+		Index uint64
+		Count uint64
+	}
 }
 
 type VDBSlashingsSummaryValidators struct {

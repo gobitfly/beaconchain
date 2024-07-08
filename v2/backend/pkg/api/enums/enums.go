@@ -407,6 +407,8 @@ func (t TimePeriod) Duration() time.Duration {
 
 type ValidatorDuty int
 
+var _ EnumFactory[ValidatorDuty] = ValidatorDuty(0)
+
 const (
 	DutyNone ValidatorDuty = iota
 	DutySync
@@ -517,4 +519,92 @@ var ValidatorStatuses = struct {
 	ValidatorStatusOnline,
 	ValidatorStatusSlashed,
 	ValidatorStatusExited,
+}
+
+// Validator Reward Chart Efficiency Filter
+
+type VDBSummaryChartEfficiencyType int
+
+var _ EnumFactory[VDBSummaryChartEfficiencyType] = VDBSummaryChartEfficiencyType(0)
+
+const (
+	VDBSummaryChartAll VDBSummaryChartEfficiencyType = iota
+	VDBSummaryChartAttestation
+	VDBSummaryChartSync
+	VDBSummaryChartProposal
+)
+
+func (c VDBSummaryChartEfficiencyType) Int() int {
+	return int(c)
+}
+
+func (VDBSummaryChartEfficiencyType) NewFromString(s string) VDBSummaryChartEfficiencyType {
+	switch s {
+	case "", "all":
+		return VDBSummaryChartAll
+	case "attestation":
+		return VDBSummaryChartAttestation
+	case "sync":
+		return VDBSummaryChartSync
+	case "proposal":
+		return VDBSummaryChartProposal
+	default:
+		return VDBSummaryChartEfficiencyType(-1)
+	}
+}
+
+var VDBSummaryChartEfficiencyFilters = struct {
+	All         VDBSummaryChartEfficiencyType
+	Attestation VDBSummaryChartEfficiencyType
+	Sync        VDBSummaryChartEfficiencyType
+	Proposal    VDBSummaryChartEfficiencyType
+}{
+	VDBSummaryChartAll,
+	VDBSummaryChartAttestation,
+	VDBSummaryChartSync,
+	VDBSummaryChartProposal,
+}
+
+// Chart Aggregation Interval
+
+type ChartAggregation int
+
+var _ EnumFactory[ChartAggregation] = ChartAggregation(0)
+
+const (
+	IntervalEpoch ChartAggregation = iota
+	IntervalHourly
+	IntervalDaily
+	IntervalWeekly
+)
+
+func (c ChartAggregation) Int() int {
+	return int(c)
+}
+
+func (ChartAggregation) NewFromString(s string) ChartAggregation {
+	switch s {
+	case "epoch":
+		return IntervalEpoch
+	case "", "hourly":
+		return IntervalHourly
+	case "daily":
+		return IntervalDaily
+	case "weekly":
+		return IntervalWeekly
+	default:
+		return ChartAggregation(-1)
+	}
+}
+
+var ChartAggregations = struct {
+	Epoch  ChartAggregation
+	Hourly ChartAggregation
+	Daily  ChartAggregation
+	Weekly ChartAggregation
+}{
+	IntervalEpoch,
+	IntervalHourly,
+	IntervalDaily,
+	IntervalWeekly,
 }

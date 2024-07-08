@@ -14,6 +14,7 @@
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
     "every_x": "Every {duration}",
+    "last_x": "Last {duration}",
     "id": "ID",
     "average": "Average",
     "index": "Index",
@@ -81,7 +82,9 @@
     "save": "Save",
     "publish": "Publish",
     "unpublish": "Unpublish",
-    "update": "Update"
+    "update": "Update",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "error": {
     "multiple_times": "The error {error} happened {count} times",
@@ -132,7 +135,11 @@
     "last_24h": "Last 24h",
     "last_7d": "Last 7d",
     "last_30d": "Last 30d",
-    "all_time": "All time"
+    "all_time": "All time",
+    "epoch": "Epoch",
+    "hourly": "Hourly",
+    "daily": "Daily",
+    "weekly": "Weekly"
   },
   "statistics": {
     "last_24h": "24h",
@@ -362,9 +369,16 @@
       }
     },
     "deletion": {
-      "title": "Delete Dashboard",
-      "delete_text": "Do you want to delete dashboard {dashboard}?",
-      "clear_text": "Do you want to clear this {dashboard}?"
+      "delete": {
+        "title": "Delete Dashboard",
+        "text": "This will delete dashboard {dashboard} from the archive and is irreversible.",
+        "no_label": "Cancel",
+        "yes_label": "Delete Dashboard"
+      },
+      "clear": {
+        "title": "Clear Dashboard",
+        "text": "Do you want to clear this {dashboard}?"
+      }
     },
     "validator": {
       "manage_validators": "Manage Validators",
@@ -594,14 +608,7 @@
     "password": "Password",
     "choose_password": "Choose a password",
     "confirm_password": "Confirm your password",
-    "no_email": "Please enter your email address.",
-    "invalid_email": "Please enter a valid email address.",
-    "no_password": "Please enter your password.",
-    "invalid_password": "Your password must contain at least 5 characters.",
-    "retype_password": "Please enter your password again",
-    "passwords_dont_match": "The same password must be entered twice.",
     "please_agree": ["I agree to the", "Terms and Conditions", "and", "Privacy Policy"],
-    "not_agreed": "Please accept the ToS & Privacy Policy.",
     "error_title": "Error",
     "error_login_group": "Cannot log in",
     "error_login_message": "your email or your password is unknown.",
@@ -617,6 +624,7 @@
     "current_epoch": "Current Epoch",
     "login": "Log in",
     "logout": "Log out",
+    "settings": "Account Settings",
     "register": "Sign up",
     "megamenu": {
       "select_currency": "Select currency",
@@ -737,6 +745,7 @@
     "per_validator": "{amount} per validator",
     "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
     "get_started": "Get started now",
+    "full_history": "Full history",
     "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
     "premium_product": {
       "popular": "Popular!",
@@ -763,7 +772,8 @@
       "general": "General",
       "dashboard": "Dashboard",
       "notification": "v2 Notification",
-      "mobille_app": "Mobile App"
+      "mobille_app": "Mobile App",
+      "dashboard_charts": "Validator Dashboard Charts"
     },
     "percs": {
       "ad_free": "Ad free",
@@ -775,8 +785,8 @@
       "manage_dashboard_via_api": "Manage dashboard via API",
       "bulk_adding": "Bulk adding",
       "bulk_adding_subtext": "(deposit address, withdrawal credentials, graffiti)",
-      "heatmap_history_seconds": "Heatmap history",
-      "summary_chart_history_seconds": "Summary chart history",
+      "heatmap_history": "Heatmap history",
+      "summary_chart_history": "Summary chart history",
       "email_notifications_per_day": "Email notifications per day",
       "configure_notifications_via_api": "Configure notifications via API",
       "validator_group_notifications": "Validator group notifications",
@@ -802,11 +812,76 @@
       }
     }
   },
+  "user_settings": {
+    "title": "User Settings",
+    "subscriptions": {
+      "title": "Subscriptions",
+      "explanation": "Premium features for web and beaconcha.in mobile app experience."
+    },
+    "email": {
+      "password": "Password",
+      "title": "Email",
+      "new": "New Email Address",
+      "confirm": "Confirm Email Address",
+      "success": {
+        "toast_title": "Success",
+        "toast_group": "Email success",
+        "toast_message": "Your email address has been updated."
+      },
+      "error": {
+        "toast_title": "Error",
+        "toast_group": "Could not update your email address",
+        "toast_message": "Please try again."
+      }
+    },
+    "password": {
+      "title": "Password",
+      "old": "Old password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "success": {
+        "toast_title": "Success",
+        "toast_group": "Password success",
+        "toast_message": "Your password has been updated."
+      },
+      "error": {
+        "toast_title": "Error",
+        "toast_group": "Could not update your password",
+        "toast_message": "Please try again."
+      }
+    },
+    "delete_account": {
+      "title": "Delete Account",
+      "warning": "Warning! You will not be able to recover your account!",
+      "button": "Delete My Account",
+      "dialog": {
+        "title": "Delete Account",
+        "warning": "This will delete your account from the archive and is irreversible.",
+        "no_label": "Cancel",
+        "yes_label": "Delete Account"
+      }
+    }
+  },
   "time_duration": {
     "seconds": "{amount} second | {amount} seconds",
     "minutes": "{amount} minute | {amount} minutes",
     "hours": "{amount} hour | {amount} hours",
     "days": "{amount} day | {amount} days",
     "years": "{amount} year | {amount} years"
+  },
+  "validation": {
+    "email" : {
+      "empty": "Please enter your email address.",
+      "invalid": "Please enter a valid email address.",
+      "no_match": "The email addresses don't match."
+    },
+    "password": {
+      "empty": "Please enter your password.",
+      "min": "Your password must contain at least {amount} characters.",
+      "max": "Your password must contain at most {amount} characters.",
+      "no_match": "The passwords don't match.",
+      "not_new": "The new password must differ from the old one."
+    },
+    "tos_not_agreed": "Please accept the ToS & Privacy Policy."
   }
 }

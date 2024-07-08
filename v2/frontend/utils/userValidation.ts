@@ -1,35 +1,26 @@
 import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
+import { ref as yupRef, string as yupString, boolean as yupBool, StringSchema, BooleanSchema } from 'yup'
 
-let t: ComposerTranslation
-
-export function setTranslator (translator: ComposerTranslation) {
-  t = translator
+export function passwordValidation (t: ComposerTranslation) : StringSchema {
+  return yupString().required(t('validation.password.empty')).min(5, t('validation.password.min', { amount: 5 })).max(64, t('validation.password.max', { amount: 64 }))
 }
 
-export function validateAddress (value: string) : true|string {
-  if (!value) {
-    return t('login_and_register.no_email')
-  }
-  if (value.length > 100 || !REGEXP_VALID_EMAIL.test(value)) {
-    return t('login_and_register.invalid_email')
-  }
-  return true
+export function confirmPasswordValidation (t: ComposerTranslation, comparerRefName: string) : StringSchema {
+  return passwordValidation(t).oneOf([yupRef(comparerRefName)], t('validation.password.no_match'))
 }
 
-export function validatePassword (value: string) : true|string {
-  if (!value) {
-    return t('login_and_register.no_password')
-  }
-  // TODO: ask for a complex password with special characters and son on?
-  if (value.length < 5 || value.length > 256) {
-    return t('login_and_register.invalid_password')
-  }
-  return true
+export function newPasswordValidation (t: ComposerTranslation, oldRefName: string) : StringSchema {
+  return passwordValidation(t).notOneOf([yupRef(oldRefName)], t('validation.password.not_new'))
 }
 
-export function validateAgreement (value : boolean) : true|string {
-  if (!value) {
-    return t('login_and_register.not_agreed')
-  }
-  return true
+export function emailValidation (t: ComposerTranslation) : StringSchema {
+  return yupString().required(t('validation.email.empty')).matches(REGEXP_VALID_EMAIL, t('validation.email.invalid'))
+}
+
+export function confirmEmailValidation (t: ComposerTranslation, comparerRefName: string) : StringSchema {
+  return emailValidation(t).oneOf([yupRef(comparerRefName)], t('validation.email.no_match'))
+}
+
+export function checkboxValidation (errorMessage: string) : BooleanSchema {
+  return yupBool().test('is-true', errorMessage, value => value === true)
 }

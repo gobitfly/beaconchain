@@ -119,16 +119,18 @@ const deleteButtonOptions = computed(() => {
 })
 
 const onDelete = () => {
-  const languageKey = deleteButtonOptions.value.deleteDashboard ? 'dashboard.deletion.delete_text' : 'dashboard.deletion.clear_text'
+  const isDelete = deleteButtonOptions.value.deleteDashboard
+  const dialogData = {
+    title: $t(isDelete ? 'dashboard.deletion.delete.title' : 'dashboard.deletion.clear.title'),
+    question: $t(isDelete ? 'dashboard.deletion.delete.text' : 'dashboard.deletion.clear.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) }),
+    noLabel: isDelete ? $t('dashboard.deletion.delete.no_label') : undefined,
+    yesLabel: isDelete ? $t('dashboard.deletion.delete.yes_label') : undefined,
+    severity: isDelete ? 'danger' : undefined
+  }
 
   dialog.open(BcDialogConfirm, {
-    props: {
-      header: $t('dashboard.deletion.title')
-    },
-    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
-    data: {
-      question: $t(languageKey, { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) })
-    }
+    data: dialogData,
+    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward)
   })
 }
 

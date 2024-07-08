@@ -56,5 +56,10 @@ export default function ({ name, params, query }: RouteLocationNormalizedLoaded)
       )
     case 'mobile':
       return navigateTo(`${v1Domain}/mobile`, { external: true })
+    case 'user-settings':
+      // TODO: Remove once backend for this page is ready
+      if (!showInDevelopment) {
+        return navigateTo(`${v1Domain}/user/settings`, { external: true })
+      }
   }
 }
