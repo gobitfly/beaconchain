@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -11,14 +12,54 @@ import (
 // Map key corresponds to the event filter which can be
 // a validator pubkey or an eth1 address (for RPL notifications)
 // or a list of validators for the tax report notifications
-func GetSubsForEventFilter(eventName types.EventName) (map[string][]types.Subscription, error) {
+// optionally it is possible to set a filter on the last sent ts and the event filter
+// fields
+func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string) (map[string][]types.Subscription, error) {
 	var subs []types.Subscription
-	subQuery := `
-		SELECT id, user_id, event_filter, last_sent_epoch, created_epoch, event_threshold, ENCODE(unsubscribe_hash, 'hex') as unsubscribe_hash, internal_state from users_subscriptions where event_name = $1
-		`
+
+	// subQuery := `
+	// 	SELECT
+	// 		id,
+	// 		user_id,
+	// 		event_filter,
+	// 		last_sent_epoch,
+	// 		created_epoch,
+	// 		event_threshold,
+	// 		ENCODE(unsubscribe_hash, 'hex') as unsubscribe_hash,
+	// 		internal_state
+	// 	from users_subscriptions
+	// 	where event_name = $1
+	// 	`
+
+	ds := goqu.Dialect("postgres").From("users_subscriptions").Select(
+		goqu.C("id"),
+		goqu.C("user_id"),
+		goqu.C("event_filter"),
+		goqu.C("last_sent_epoch"),
+		goqu.C("created_epoch"),
+		goqu.C("event_threshold"),
+		goqu.L("ENCODE(unsubscribe_hash, 'hex') as unsubscribe_hash"),
+		goqu.C("internal_state"),
+	).Where(goqu.C("event_name").Eq(utils.GetNetwork() + ":" + string(eventName)))
+
+	if lastSentFilter != "" {
+		if len(lastSentFilterArgs) > 0 {
+			ds = ds.Where(goqu.L(lastSentFilter, lastSentFilterArgs...))
+		} else {
+			ds = ds.Where(goqu.L(lastSentFilter))
+		}
+	}
+	if len(eventFilters) > 0 {
+		ds = ds.Where(goqu.L("event_filter = ANY(?)", pq.StringArray(eventFilters)))
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 
 	subMap := make(map[string][]types.Subscription, 0)
-	err := db.FrontendWriterDB.Select(&subs, subQuery, utils.GetNetwork()+":"+string(eventName))
+	err = db.FrontendWriterDB.Select(&subs, query, args)
 	if err != nil {
 		return nil, err
 	}
