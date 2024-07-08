@@ -26,7 +26,9 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   } else {
     await fetch(API_PATH.NOTIFICATIONS_TEST_PUSH)
   }
-  testButtonsDisabled.value = false
+  setTimeout(() => {
+    testButtonsDisabled.value = false
+  }, 5000)
 }
 </script>
 
