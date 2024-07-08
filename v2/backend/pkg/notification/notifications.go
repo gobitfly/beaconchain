@@ -3,7 +3,6 @@ package notification
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/hex"
@@ -11,7 +10,6 @@ import (
 	"errors"
 
 	"fmt"
-	"html"
 	"html/template"
 	"io"
 	"math/big"
@@ -598,6 +596,9 @@ func queuePushNotification(notificationsByUserID types.NotificationsPerUserId, u
 			continue
 		}
 
+		// todo: this looks like a flawed approach to queue the notifications
+		// this will issue one db write per user, which is not optimal
+		// we should batch the notifications and write them in one go
 		go func(userTokens []string, userNotifications map[types.EventName]map[types.EventFilter]types.Notification) {
 			var batch []*messaging.Message
 			for event, ns := range userNotifications {
@@ -727,7 +728,6 @@ func queueEmailNotifications(notificationsByUserID types.NotificationsPerUserId,
 				}
 				//nolint:gosec // this is a static string
 				msg.Body += template.HTML(fmt.Sprintf("%s<br>====<br><br>", types.EventLabel[event_title]))
-				unsubURL := "https://" + utils.Config.Frontend.SiteDomain + "/notifications/unsubscribe"
 				i := 0
 				for _, n := range ns {
 					// Find all unique notification titles for the subject
@@ -736,64 +736,6 @@ func queueEmailNotifications(notificationsByUserID types.NotificationsPerUserId,
 						notificationTitlesMap[title] = true
 						notificationTitles = append(notificationTitles, title)
 					}
-
-					// TODO: this is bad and will break in case there are a lot of unsubscribe hashes to generate
-					// the unsubscribe hash should be set when we add the subscription to the db
-					unsubHash := n.GetUnsubscribeHash()
-					if unsubHash == "" {
-						id := n.GetSubscriptionID()
-
-						tx, err := db.FrontendWriterDB.Beginx()
-						if err != nil {
-							log.Error(err, "error starting transaction", 0)
-						}
-						var sub types.Subscription
-						err = tx.Get(&sub, `
-							SELECT
-								id,
-								user_id,
-								event_name,
-								event_filter,
-								last_sent_ts,
-								last_sent_epoch,
-								created_ts,
-								created_epoch,
-								event_threshold
-							FROM users_subscriptions
-							WHERE id = $1
-						`, id)
-						if err != nil {
-							log.Error(err, "error getting user subscription by subscription id", 0)
-							utils.Rollback(tx)
-							continue
-						}
-
-						raw := fmt.Sprintf("%v%v%v%v", sub.ID, sub.UserID, sub.EventName, sub.CreatedTime)
-						digest := sha256.Sum256([]byte(raw))
-
-						_, err = tx.Exec("UPDATE users_subscriptions set unsubscribe_hash = $1 WHERE id = $2", digest[:], id)
-						if err != nil {
-							log.Error(err, "error updating users subscriptions table with unsubscribe hash", 0)
-							utils.Rollback(tx)
-							continue
-						}
-
-						err = tx.Commit()
-						if err != nil {
-							log.Error(err, "error committing transaction to update users subscriptions with an unsubscribe hash", 0)
-							utils.Rollback(tx)
-							continue
-						}
-
-						unsubHash = hex.EncodeToString(digest[:])
-					}
-					if i == 0 {
-						unsubURL += "?hash=" + html.EscapeString(unsubHash)
-					} else {
-						unsubURL += "&hash=" + html.EscapeString(unsubHash)
-					}
-					//nolint:gosec // this is a static string
-					msg.UnsubURL = template.HTML(fmt.Sprintf(`<a style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'" href="%v">Unsubscribe</a>`, unsubURL))
 
 					if event != types.SyncCommitteeSoon {
 						// SyncCommitteeSoon notifications are summed up in getEventInfo for all validators
@@ -1150,6 +1092,8 @@ func sendDiscordNotifications(useDB *sqlx.DB) error {
 		notifMap[n.Content.Webhook.ID] = append(notifMap[n.Content.Webhook.ID], n)
 	}
 	for _, webhook := range webhookMap {
+		// todo: this has the potential to spin up thousands of go routines
+		// should use an errgroup instead if we decide to keep the aproach
 		go func(webhook types.UserWebhook, reqs []types.TransitDiscord) {
 			defer func() {
 				// update retries counters in db based on end result
@@ -1780,7 +1724,7 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 	resultsLen := len(dbResult)
 	for i, event := range dbResult {
 		// TODO: clarify why we need the id here?!
-		query += fmt.Sprintf(`SELECT %d AS ref, id, user_id, ENCODE(unsubscribe_hash, 'hex') AS unsubscribe_hash, event_name from users_subscriptions where event_name = $1 AND event_filter = '%x'`, i, event.SlashedValidatorPubkey)
+		query += fmt.Sprintf(`SELECT %d AS ref, id, user_id, event_name from users_subscriptions where event_name = $1 AND event_filter = '%x'`, i, event.SlashedValidatorPubkey)
 		if i < resultsLen-1 {
 			query += " UNION "
 		}
@@ -1791,11 +1735,10 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 	}
 
 	var subscribers []struct {
-		Ref             uint64          `db:"ref"`
-		Id              uint64          `db:"id"`
-		UserId          types.UserId    `db:"user_id"`
-		UnsubscribeHash sql.NullString  `db:"unsubscribe_hash"`
-		EventName       types.EventName `db:"event_name"`
+		Ref       uint64          `db:"ref"`
+		Id        uint64          `db:"id"`
+		UserId    types.UserId    `db:"user_id"`
+		EventName types.EventName `db:"event_name"`
 	}
 
 	name := string(types.ValidatorGotSlashedEventName)
@@ -1814,12 +1757,11 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 
 		n := &validatorGotSlashedNotification{
 			NotificationBaseImpl: types.NotificationBaseImpl{
-				SubscriptionID:  sub.Id,
-				UserID:          sub.UserId,
-				Epoch:           event.Epoch,
-				EventFilter:     hex.EncodeToString(event.SlashedValidatorPubkey),
-				UnsubscribeHash: sub.UnsubscribeHash,
-				EventName:       sub.EventName,
+				SubscriptionID: sub.Id,
+				UserID:         sub.UserId,
+				Epoch:          event.Epoch,
+				EventFilter:    hex.EncodeToString(event.SlashedValidatorPubkey),
+				EventName:      sub.EventName,
 			},
 			Slasher:        event.SlasherIndex,
 			Reason:         event.Reason,
@@ -1894,11 +1836,10 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 				// log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
 				n := &validatorWithdrawalNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID:  *sub.ID,
-						UserID:          *sub.UserID,
-						EventFilter:     hex.EncodeToString(event.Pubkey),
-						UnsubscribeHash: sub.UnsubscribeHash,
-						EventName:       sub.EventName,
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						EventFilter:    hex.EncodeToString(event.Pubkey),
+						EventName:      sub.EventName,
 					},
 					ValidatorIndex: event.ValidatorIndex,
 					Epoch:          epoch,
@@ -2023,12 +1964,11 @@ func collectEthClientNotifications(notificationsByUserID types.NotificationsPerU
 			for _, sub := range subs {
 				n := &ethClientNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID:  *sub.ID,
-						UserID:          *sub.UserID,
-						Epoch:           sub.CreatedEpoch,
-						EventFilter:     sub.EventFilter,
-						UnsubscribeHash: sub.UnsubscribeHash,
-						EventName:       sub.EventName,
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
 					},
 					EthClient: client.Name,
 				}
@@ -2221,12 +2161,11 @@ func collectMonitoringMachine(
 	for _, r := range result {
 		n := &monitorMachineNotification{
 			NotificationBaseImpl: types.NotificationBaseImpl{
-				SubscriptionID:  *r.ID,
-				UserID:          *r.UserID,
-				EventName:       r.EventName,
-				Epoch:           epoch,
-				UnsubscribeHash: r.UnsubscribeHash,
-				EventFilter:     r.EventFilter,
+				SubscriptionID: *r.ID,
+				UserID:         *r.UserID,
+				EventName:      r.EventName,
+				Epoch:          epoch,
+				EventFilter:    r.EventFilter,
 			},
 			MachineName: r.EventFilter,
 		}
@@ -2386,12 +2325,11 @@ func collectTaxReportNotificationNotifications(notificationsByUserID types.Notif
 		for _, sub := range subs {
 			n := &taxReportNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID:  *sub.ID,
-					UserID:          *sub.UserID,
-					Epoch:           sub.CreatedEpoch,
-					EventFilter:     sub.EventFilter,
-					UnsubscribeHash: sub.UnsubscribeHash,
-					EventName:       sub.EventName,
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          sub.CreatedEpoch,
+					EventFilter:    sub.EventFilter,
+					EventName:      sub.EventName,
 				},
 			}
 			notificationsByUserID.AddNotification(n)
@@ -2456,12 +2394,11 @@ func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUse
 			for _, sub := range subs {
 				n := &networkNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID:  *sub.ID,
-						UserID:          *sub.UserID,
-						Epoch:           sub.CreatedEpoch,
-						EventFilter:     sub.EventFilter,
-						UnsubscribeHash: sub.UnsubscribeHash,
-						EventName:       sub.EventName,
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
 					},
 				}
 
@@ -2550,12 +2487,11 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 			for _, sub := range subs {
 				n := &rocketpoolNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID:  *sub.ID,
-						UserID:          *sub.UserID,
-						Epoch:           sub.CreatedEpoch,
-						EventFilter:     sub.EventFilter,
-						EventName:       sub.EventName,
-						UnsubscribeHash: sub.UnsubscribeHash,
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
 					},
 					ExtraData: strconv.FormatInt(int64(fee*100), 10) + "%",
 				}
@@ -2603,12 +2539,11 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 			for _, sub := range subs {
 				n := &rocketpoolNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID:  *sub.ID,
-						UserID:          *sub.UserID,
-						Epoch:           sub.CreatedEpoch,
-						EventFilter:     sub.EventFilter,
-						EventName:       sub.EventName,
-						UnsubscribeHash: sub.UnsubscribeHash,
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
 					},
 				}
 
@@ -2738,12 +2673,11 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.Not
 
 		n := &rocketpoolNotification{
 			NotificationBaseImpl: types.NotificationBaseImpl{
-				SubscriptionID:  *sub.ID,
-				UserID:          *sub.UserID,
-				Epoch:           epoch,
-				EventFilter:     sub.EventFilter,
-				EventName:       sub.EventName,
-				UnsubscribeHash: sub.UnsubscribeHash,
+				SubscriptionID: *sub.ID,
+				UserID:         *sub.UserID,
+				Epoch:          epoch,
+				EventFilter:    sub.EventFilter,
+				EventName:      sub.EventName,
 			},
 			ExtraData: strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", threshold*100), "0"), "."),
 		}
@@ -2839,12 +2773,11 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ep
 		for _, sub := range subs {
 			n := &rocketpoolNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID:  *sub.ID,
-					UserID:          *sub.UserID,
-					Epoch:           epoch,
-					EventFilter:     sub.EventFilter,
-					EventName:       sub.EventName,
-					UnsubscribeHash: sub.UnsubscribeHash,
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventFilter:    sub.EventFilter,
+					EventName:      sub.EventName,
 				},
 				ExtraData: fmt.Sprintf("%v|%v|%v", mapping[sub.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
 			}

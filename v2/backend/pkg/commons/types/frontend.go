@@ -273,7 +273,6 @@ type Notification interface {
 	GetTitle() string
 	GetEventFilter() string
 	GetEmailAttachment() *EmailAttachment
-	GetUnsubscribeHash() string
 	GetInfoMarkdown() string
 	GetUserId() UserId
 }
@@ -287,7 +286,6 @@ type NotificationBaseImpl struct {
 	Title           string
 	EventFilter     string
 	EmailAttachment *EmailAttachment
-	UnsubscribeHash sql.NullString
 	InfoMarkdown    string
 	UserID          UserId
 }
@@ -324,13 +322,6 @@ func (n NotificationBaseImpl) GetEmailAttachment() *EmailAttachment {
 	return n.EmailAttachment
 }
 
-func (n NotificationBaseImpl) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
 func (n NotificationBaseImpl) GetInfoMarkdown() string {
 	return n.InfoMarkdown
 }
@@ -349,13 +340,12 @@ type Subscription struct {
 	LastSent    *time.Time `db:"last_sent_ts"`
 	LastEpoch   *uint64    `db:"last_sent_epoch"`
 	// Channels        pq.StringArray `db:"channels"`
-	CreatedTime     time.Time      `db:"created_ts"`
-	CreatedEpoch    uint64         `db:"created_epoch"`
-	EventThreshold  float64        `db:"event_threshold"`
-	UnsubscribeHash sql.NullString `db:"unsubscribe_hash" swaggertype:"string"`
-	State           sql.NullString `db:"internal_state" swaggertype:"string"`
-	GroupId         *int64
-	DashboardId     *int64
+	CreatedTime    time.Time      `db:"created_ts"`
+	CreatedEpoch   uint64         `db:"created_epoch"`
+	EventThreshold float64        `db:"event_threshold"`
+	State          sql.NullString `db:"internal_state" swaggertype:"string"`
+	GroupId        *int64
+	DashboardId    *int64
 }
 
 type UserId uint64
@@ -562,7 +552,6 @@ type Email struct {
 	Title                 string
 	Body                  template.HTML
 	SubscriptionManageURL template.HTML
-	UnsubURL              template.HTML
 }
 
 type UserWebhook struct {

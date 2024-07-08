@@ -38,7 +38,6 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		goqu.C("last_sent_epoch"),
 		goqu.C("created_epoch"),
 		goqu.C("event_threshold"),
-		goqu.L("ENCODE(unsubscribe_hash, 'hex') as unsubscribe_hash"),
 		goqu.C("internal_state"),
 	).Where(goqu.C("event_name").Eq(utils.GetNetwork() + ":" + string(eventName)))
 
@@ -68,15 +67,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		if _, ok := subMap[sub.EventFilter]; !ok {
 			subMap[sub.EventFilter] = make([]types.Subscription, 0)
 		}
-		subMap[sub.EventFilter] = append(subMap[sub.EventFilter], types.Subscription{
-			UserID:         sub.UserID,
-			ID:             sub.ID,
-			LastEpoch:      sub.LastEpoch,
-			EventFilter:    sub.EventFilter,
-			CreatedEpoch:   sub.CreatedEpoch,
-			EventThreshold: sub.EventThreshold,
-			State:          sub.State,
-		})
+		subMap[sub.EventFilter] = append(subMap[sub.EventFilter], sub)
 	}
 	return subMap, nil
 }
