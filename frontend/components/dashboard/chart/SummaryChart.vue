@@ -18,6 +18,7 @@ import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/
 import { type ChartData } from '~/types/api/common'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { API_PATH } from '~/types/customFetch'
+import { SUMMARY_CHART_GROUP_NETWORK_AVERAGE, SUMMARY_CHART_GROUP_TOTAL, type SummaryChartFilter } from '~/types/dashboard/summary'
 
 use([
   CanvasRenderer,
@@ -28,23 +29,33 @@ use([
   GridComponent
 ])
 
+interface Props {
+  filter?: SummaryChartFilter
+}
+
+const props = defineProps<Props>()
+
 const { fetch } = useCustomFetch()
 const { formatEpochToDate } = useFormat()
 const { dashboardKey } = useDashboardKey()
 
 const data = ref<ChartData<number, number> | undefined >()
 const isLoading = ref(false)
-await useAsyncData('validator_dashboard_summary_chart', async () => {
+const loadData = async () => {
   if (!dashboardKey.value) {
     data.value = undefined
     return
   }
   isLoading.value = true
-  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: dashboardKey.value })
+  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, { query: { group_ids: props.filter?.groupIds.join(','), efficiency_type: props.filter?.efficiency, aggregation: props.filter?.aggregation } }, { dashboardKey: dashboardKey.value })
 
   isLoading.value = false
   data.value = res.data
-}, { watch: [dashboardKey], server: false })
+}
+
+watch([dashboardKey, () => props.filter], () => {
+  loadData()
+}, { immediate: true, deep: true })
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -82,7 +93,14 @@ const option = computed(() => {
   if (data.value?.series) {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     data.value.series.forEach((element) => {
-      const name = getGroupLabel($t, element.id, groups.value, allGroups)
+      let name: string
+      if (element.id === SUMMARY_CHART_GROUP_TOTAL) {
+        name = $t('dashboard.validator.summary.chart.total')
+      } else if (element.id === SUMMARY_CHART_GROUP_NETWORK_AVERAGE) {
+        name = $t('dashboard.validator.summary.chart.average')
+      } else {
+        name = getGroupLabel($t, element.id, groups.value, allGroups)
+      }
       const newObj: SeriesObject = {
         data: element.data,
         type: 'line',
@@ -119,7 +137,7 @@ const option = computed(() => {
       }
     },
     yAxis: {
-      name: $t('dashboard.validator.summary.chart.efficiency'),
+      name: $t(`dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`),
       nameLocation: 'center',
       nameTextStyle: {
         padding: [0, 0, 30, 0]
@@ -162,9 +180,6 @@ const option = computed(() => {
       trigger: 'axis',
       padding: 0,
       borderColor: colors.value.background,
-      valueFormatter: (value: number) => {
-        return `${value}% ${$t('dashboard.validator.summary.chart.efficiency')}`
-      },
       formatter (params : any) : HTMLElement {
         const startEpoch = parseInt(params[0].axisValue)
         const groupInfos = params.map((param: any) => {
