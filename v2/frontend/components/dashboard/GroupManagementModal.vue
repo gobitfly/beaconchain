@@ -215,8 +215,13 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
                 />
               </template>
             </Column>
-            <Column field="id" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.id')" />
-
+            <Column field="id" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.id')">
+              <template #body="slotProps">
+                <div class="id-cell">
+                  {{ slotProps.data.id }}
+                </div>
+              </template>
+            </Column>
             <Column field="count" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.count')">
               <template #body="slotProps">
                 <BcFormatNumber :value="slotProps.data.count" default="0" />
@@ -294,6 +299,10 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
   max-width: 180px;
 }
 
+.id-cell {
+  @include utils.set-all-width(64px);
+}
+
 .small-title {
   @include utils.truncate-text;
   @include fonts.big_text;
@@ -335,7 +344,7 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
 
 .left {
   display: flex;
-  align-items: center;
+  margin-top: 4px;
   gap: var(--padding-small);
 
   .labels {
@@ -354,10 +363,6 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
   .gem {
     color: var(--primary-color);
   }
-}
-
-.public-key {
-  width: 134px;
 }
 
 .edit-icon {
