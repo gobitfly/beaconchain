@@ -1741,7 +1741,6 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 
 	for _, subs := range subscribedUsers {
 		for _, sub := range subs {
-
 			event := pubkeyToSlashingInfoMap[sub.EventFilter]
 			if event == nil {
 				log.Error(fmt.Errorf("error retrieving slashing info for public key %s", sub.EventFilter), "", 0)
