@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { ModelRef } from 'vue'
 import type { ChainIDs } from '~/types/network'
-import type { CheckboxAndNumber } from '~/types/subscriptionModal'
+import type { CheckboxAndNumber } from '~/types/notifications/subscriptionModal'
 
 const props = defineProps<{
   tPath: string,
@@ -25,8 +25,6 @@ interface CheckboxAndText {
 const state = defineModel<CheckboxAndNumber|ChainIDs[]>({ required: true })
 let networkSelectorState: ModelRef<ChainIDs[]>
 let checkboxAndText: Ref<CheckboxAndText> | undefined
-
-// bridging the v-model (CheckboxAndNumber | ChainIDs[]) with the data of this component (CheckboxAndText | ChainIDs[])
 
 if (type.value === 'networks') {
   networkSelectorState = state as ModelRef<ChainIDs[]>
@@ -53,8 +51,6 @@ function sendToVModel (state: CheckboxAndText) : CheckboxAndNumber {
   return output
 }
 
-// input validation / autocorrection
-
 function correctUserInput (input: string) : string {
   switch (type.value) {
     case 'amount' : return isThisAvalidInput(input) ? String(calculateCorrectNumber(input)) : ''
@@ -77,8 +73,6 @@ function isThisAvalidInput (input: string) : boolean {
   return !!input && !isNaN(Number(input)) && Number(input) >= 0
 }
 
-// calculation of the information to show in the tooltip
-
 const tooltipLines = computed(() => {
   let options
   if (props.valueInText !== undefined) {
@@ -98,7 +92,6 @@ const tooltipLines = computed(() => {
   return tAll(t, props.tPath + '.hint', options)
 })
 
-// output: on blur or enter, auto-correcting the text field
 function acknowledgeInputtedText () {
   checkboxAndText!.value.text = correctUserInput(checkboxAndText!.value.text)
 }
@@ -111,6 +104,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <span class="caption" :class="deactivationClass">
       {{ t(tPath+'.option') }}
     </span>
+    <InputNumber />
     <BcTooltip v-if="tooltipLines[0]" :fit-content="true">
       <FontAwesomeIcon :icon="faInfoCircle" class="info" />
       <template #tooltip>
@@ -160,15 +154,19 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
   align-items: center;
 
   .caption {
-    margin-right: 3px;
+    margin-right: var(--padding-small);
+    &.deactivated {
+      opacity: unset;
+      color: var(--text-color-disabled);
+    }
   }
 
   .info {
-    margin-left: 3px;
-    margin-right: 3px;
+    margin-left: var(--padding-small);
+    margin-right: var(--padding-small);
   }
   .gem {
-    margin-left: 3px;
+    margin-left: var(--padding-small);
   }
 
   .right {

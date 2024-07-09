@@ -22,14 +22,14 @@ export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelR
   let pauseForth = false
   const stopperForth = watch(origRef, () => {
     if (pauseForth) { return }
-    const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : convertPrimitiveByDefault<Tcreated>(el)) : undefined
+    const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : stringNumberConversion<Tcreated>(el)) : undefined
     createdRef.value = OasC
     pauseBack = true
     nextTick(() => { pauseBack = false })
   }, { immediate: true, deep: true })
   const stopperBack = watch(createdRef, () => {
     if (pauseBack) { return }
-    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : convertPrimitiveByDefault<Torig>(el)) : undefined as unknown as Torig[]
+    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : stringNumberConversion<Torig>(el)) : undefined as unknown as Torig[]
     origRef.value = CasO
     pauseForth = true
     nextTick(() => { pauseForth = false })
@@ -99,10 +99,10 @@ export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRe
  * @param createdToOrig (optional) Callback/Arrow function that converts the value in the created ref into the type of the value in the original ref. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
  * */
 export function usePrimitiveRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated> {
-  return useObjectRefBridge<Torig, Tcreated>(origRef, origToCreated ?? convertPrimitiveByDefault, createdToOrig ?? convertPrimitiveByDefault)
+  return useObjectRefBridge<Torig, Tcreated>(origRef, origToCreated ?? stringNumberConversion, createdToOrig ?? stringNumberConversion)
 }
 
-function convertPrimitiveByDefault<TO> (from: any) : TO {
+function stringNumberConversion<TO> (from: any) : TO {
   switch (typeof from) {
     case 'number' : return String(from) as TO
     case 'string' : return Number(from) as TO

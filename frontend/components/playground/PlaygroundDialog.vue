@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BcDialogConfirm, NotificationsSubscriptionDialog } from '#components'
-import type { ValidatorSubscriptionState, AccountSubscriptionState } from '~/types/subscriptionModal'
+import type { ValidatorSubscriptionState, AccountSubscriptionState } from '~/types/notifications/subscriptionModal'
 
 const dialog = useDialog()
 
@@ -55,7 +55,7 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
-    <Button @click="openSubscriptions({validatorSub, premiumUser: true})">
+    <Button @click="openSubscriptions({validatorSub, premiumUser: false})">
       Subscribe to notifications for your validators
     </Button>
     <Button @click="openSubscriptions({accountSub, premiumUser: true})">

@@ -8,7 +8,7 @@ interface Props {
   falseIcon?: IconDefinition,
   disabled?:boolean,
   tooltip?: string,
-  displayModeClass?: string
+  readonlyClass?: string
 }
 
 const props = defineProps<Props>()
@@ -23,11 +23,11 @@ const icon = computed(() => {
 <template>
   <BcTooltip :dont-open-permanently="true" :hover-delay="350">
     <template #tooltip>
-      <div class="button-tooltip" :class="displayModeClass">
+      <div class="button-tooltip" :class="readonlyClass">
         <div v-if="tooltip" class="individual">
           {{ tooltip }}
         </div>
-        <div v-if="displayModeClass !== 'read-only'">
+        <div v-if="readonlyClass !== 'read-only'">
           {{ disabled ? $t('common.unavailable') : (selected ? $t('filter.enabled'): $t('filter.disabled')) }}
         </div>
       </div>
@@ -35,10 +35,10 @@ const icon = computed(() => {
     <ToggleButton
       v-model="selected"
       class="bc-toggle"
-      :class="displayModeClass"
+      :class="readonlyClass"
       on-label="''"
       off-icon="''"
-      :disabled="disabled || displayModeClass === 'read-only'"
+      :disabled="disabled || readonlyClass === 'read-only'"
     >
       <template #icon="slotProps">
         <slot name="icon" v-bind="slotProps">

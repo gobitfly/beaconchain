@@ -16,8 +16,8 @@ const buttonList = computed(() => {
     if (isL1(chainId)) {
       list.push({
         value: String(chainId),
-        text: ChainInfo[chainId].name[0],
-        subText: ChainInfo[chainId].name[1],
+        text: ChainInfo[chainId].nameParts[0],
+        subText: ChainInfo[chainId].nameParts[1],
         disabled: isNetworkDisabled(chainId),
         component: IconNetwork,
         componentProps: { chainId, colored: false, harmonizePerceivedSize: true },

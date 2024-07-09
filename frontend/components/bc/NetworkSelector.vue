@@ -4,48 +4,48 @@ import { IconNetwork } from '#components'
 import { ChainInfo, ChainIDs } from '~/types/network'
 
 const props = defineProps<{
-  displayOnly?: boolean
+  readonlyNetworks?: ChainIDs[]
 }>()
 
 const { availableNetworks, isNetworkDisabled } = useNetworkStore()
 
-/** If the v-model is:
- *  - A ChainIDs: only one network can be selected by the user. Prop `:display-only` must be false or omitted.
- *  - An array of ChainIDs:
- *    - and prop `:display-only` is `false`/omitted: several networks can be selected by the user,
- *    - and prop `:display-only` is `true`: the networks in the array are shown to the user but they are unclickable. */
-const liveState = defineModel<ChainIDs|ChainIDs[]>({ required: false })
+/** If prop `:readonly-networks` is given:
+ *   the networks in array `:readonly-networks` are shown to the user and they are unclickable,
+ *  Otherwise, give a v-model. If the v-model is
+ *   a ChainIDs: only one network can be selected by the user,
+ *   an array of ChainIDs: several networks can be selected by the user */
+const selection = defineModel<ChainIDs|ChainIDs[]>({ required: false })
 
-const selection = Array.isArray(liveState.value)
-  ? useArrayRefBridge<ChainIDs, string>(liveState as Ref<ChainIDs[]>)
-  : usePrimitiveRefBridge<ChainIDs, string>(liveState as Ref<ChainIDs>)
+let barSelection: Ref<string> | Ref<string[]>
+if (props.readonlyNetworks) {
+  barSelection = ref<string[]>([])
+} else
+  if (Array.isArray(selection.value)) {
+    barSelection = useArrayRefBridge<ChainIDs, string>(selection as Ref<ChainIDs[]>)
+  } else {
+    barSelection = usePrimitiveRefBridge<ChainIDs, string>(selection as Ref<ChainIDs>)
+  }
 
-const buttons = shallowRef<MultiBarItem[]>([])
-
-if (props.displayOnly) {
-  watch(liveState as Ref<ChainIDs[]>, updateButtons, { immediate: true })
-} else {
-  watch(availableNetworks, updateButtons, { immediate: true })
-}
-
-function updateButtons (source: ChainIDs[]) : void {
-  buttons.value = []
-  source.forEach((chainId) => {
-      buttons.value!.push({
-        component: IconNetwork,
-        componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
-        componentClass: 'maximum',
-        value: String(chainId),
-        disabled: isNetworkDisabled(chainId),
-        tooltip: ChainInfo[chainId].name.join(' ')
-      })
-  })
-}
+const buttons = computed(() => {
+  const list: MultiBarItem[] = []
+  const source = props.readonlyNetworks || availableNetworks.value
+  for (const chainId of source) {
+    list.push({
+      component: IconNetwork,
+      componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
+      componentClass: 'maximum',
+      value: String(chainId),
+      disabled: isNetworkDisabled(chainId),
+      tooltip: ChainInfo[chainId].name
+    })
+  }
+  return list
+})
 </script>
 
 <template>
-  <BcToggleMultiBar v-if="Array.isArray(selection)" v-model="selection" :buttons="buttons" :display-mode="displayOnly" />
-  <BcToggleSingleBar v-else v-model="selection" :buttons="buttons" layout="minimal" />
+  <BcToggleMultiBar v-if="Array.isArray(barSelection)" v-model="barSelection" :buttons="buttons" :readonly-mode="!!readonlyNetworks" />
+  <BcToggleSingleBar v-else v-model="barSelection" :buttons="buttons" layout="minimal" />
 </template>
 
 <style lang="scss">

@@ -1,4 +1,4 @@
-import { ChainIDs } from './network'
+import { ChainIDs } from '../network'
 
 /** translates the names of the members of our objects to/from the names used by the API  // TODO: write here the identifiers actually used by the API */
 export enum SubscriptionJSONfields {
@@ -44,7 +44,7 @@ export enum SubscriptionJSONfields {
 }
 
 /** for an option of type `number`: to mean that no value exists in the DB yet, set it to NaN; to mean that it is has a value but it is deactivated, set it to a negative value (for example 10% becomes -10) */
-export type ValidatorSubscriptionState = {
+export type ValidatorSubscriptionState = { // TODO: update the types once they are defined by the API
   offlineValidator: boolean,
   offlineGroup?: number,
   missedAttestations: boolean,
@@ -57,7 +57,7 @@ export type ValidatorSubscriptionState = {
 }
 
 /** for an option of type `number`: to mean that no value exists in the DB yet, set it to NaN; to mean that it is has a value but it is deactivated, set it to a negative value (for example $50 becomes -50) */
-export type AccountSubscriptionState = {
+export type AccountSubscriptionState = { // TODO: update the types once they are defined by the API
   incoming: boolean,
   outgoing: boolean,
   erc20: number,
