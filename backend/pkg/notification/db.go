@@ -12,6 +12,7 @@ import (
 // Map key corresponds to the event filter which can be
 // a validator pubkey or an eth1 address (for RPL notifications)
 // or a list of validators for the tax report notifications
+// or a machine name for machine notifications or a eth client name for ethereum client update notifications
 // optionally it is possible to set a filter on the last sent ts and the event filter
 // fields
 func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string) (map[string][]types.Subscription, error) {

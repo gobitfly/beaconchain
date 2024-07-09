@@ -1726,55 +1726,44 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 	if err != nil {
 		return fmt.Errorf("error getting slashed validators from database, err: %w", err)
 	}
-	query := ""
-	resultsLen := len(dbResult)
-	for i, event := range dbResult {
-		// TODO: clarify why we need the id here?!
-		query += fmt.Sprintf(`SELECT %d AS ref, id, user_id, event_name from users_subscriptions where event_name = $1 AND event_filter = '%x'`, i, event.SlashedValidatorPubkey)
-		if i < resultsLen-1 {
-			query += " UNION "
-		}
+	slashedPubkeys := make([]string, 0, len(dbResult))
+	pubkeyToSlashingInfoMap := make(map[string]*types.SlashingInfo)
+	for _, event := range dbResult {
+		pubkeyStr := hex.EncodeToString(event.SlashedValidatorPubkey)
+		slashedPubkeys = append(slashedPubkeys, pubkeyStr)
+		pubkeyToSlashingInfoMap[pubkeyStr] = event
 	}
 
-	if query == "" {
-		return nil
-	}
-
-	var subscribers []struct {
-		Ref       uint64          `db:"ref"`
-		Id        uint64          `db:"id"`
-		UserId    types.UserId    `db:"user_id"`
-		EventName types.EventName `db:"event_name"`
-	}
-
-	name := string(types.ValidatorGotSlashedEventName)
-	if utils.Config.Chain.ClConfig.ConfigName != "" {
-		name = utils.Config.Chain.ClConfig.ConfigName + ":" + name
-	}
-	err = db.FrontendWriterDB.Select(&subscribers, query, name)
+	subscribedUsers, err := GetSubsForEventFilter(types.ValidatorGotSlashedEventName, "", nil, slashedPubkeys)
 	if err != nil {
-		return fmt.Errorf("error querying subscribers, err: %w", err)
+		return fmt.Errorf("failed to get subs for %v: %v", types.ValidatorGotSlashedEventName, err)
 	}
 
-	for _, sub := range subscribers {
-		event := dbResult[sub.Ref]
+	for _, subs := range subscribedUsers {
+		for _, sub := range subs {
 
-		log.Infof("creating %v notification for validator %v in epoch %v", event.SlashedValidatorPubkey, event.Reason, epoch)
+			event := pubkeyToSlashingInfoMap[sub.EventFilter]
+			if event == nil {
+				log.Error(fmt.Errorf("error retrieving slashing info for public key %s", sub.EventFilter), "", 0)
+				continue
+			}
+			log.Infof("creating %v notification for validator %v in epoch %v", event.Reason, sub.EventFilter, epoch)
 
-		n := &validatorGotSlashedNotification{
-			NotificationBaseImpl: types.NotificationBaseImpl{
-				SubscriptionID: sub.Id,
-				UserID:         sub.UserId,
-				Epoch:          event.Epoch,
-				EventFilter:    hex.EncodeToString(event.SlashedValidatorPubkey),
-				EventName:      sub.EventName,
-			},
-			Slasher:        event.SlasherIndex,
-			Reason:         event.Reason,
-			ValidatorIndex: event.SlashedValidatorIndex,
+			n := &validatorGotSlashedNotification{
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventFilter:    sub.EventFilter,
+					EventName:      sub.EventName,
+				},
+				Slasher:        event.SlasherIndex,
+				Reason:         event.Reason,
+				ValidatorIndex: event.SlashedValidatorIndex,
+			}
+			notificationsByUserID.AddNotification(n)
+			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
-		notificationsByUserID.AddNotification(n)
-		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
 	return nil
@@ -2077,28 +2066,39 @@ func collectMonitoringMachine(
 	notifyConditionFulfilled func(subscribeData *types.Subscription, machineData *types.MachineMetricSystemUser) bool,
 	epoch uint64,
 ) error {
-	var allSubscribed []*types.Subscription
 	// event_filter == machine name
+
+	dbResult, err := GetSubsForEventFilter(
+		eventName,
+		"us.created_epoch <= ? AND (us.last_sent_epoch < (? - ?) OR us.last_sent_epoch IS NULL)",
+		[]interface{}{epoch, epoch, epochWaitInBetween},
+		nil,
+	)
+
 	// TODO: clarify why we need grouping here?!
-	err := db.FrontendWriterDB.Select(&allSubscribed,
-		`SELECT
-			us.user_id,
-			max(us.id) AS id,
-			ENCODE((array_agg(us.unsubscribe_hash))[1], 'hex') AS unsubscribe_hash,
-			event_filter,
-			COALESCE(event_threshold, 0) AS event_threshold
-		FROM users_subscriptions us
-		WHERE us.event_name = $1 AND us.created_epoch <= $2
-		AND (us.last_sent_epoch < ($2 - $3) OR us.last_sent_epoch IS NULL)
-		group by us.user_id, event_filter, event_threshold`,
-		eventName, epoch, epochWaitInBetween)
+	// err := db.FrontendWriterDB.Select(&allSubscribed,
+	// 	`SELECT
+	// 		us.user_id,
+	// 		max(us.id) AS id,
+	// 		ENCODE((array_agg(us.unsubscribe_hash))[1], 'hex') AS unsubscribe_hash,
+	// 		event_filter,
+	// 		COALESCE(event_threshold, 0) AS event_threshold
+	// 	FROM users_subscriptions us
+	// 	WHERE us.event_name = $1 AND us.created_epoch <= $2
+	// 	AND (us.last_sent_epoch < ($2 - $3) OR us.last_sent_epoch IS NULL)
+	// 	group by us.user_id, event_filter, event_threshold`,
+	// 	eventName, epoch, epochWaitInBetween)
 	if err != nil {
 		return err
 	}
 
 	rowKeys := gcp_bigtable.RowList{}
-	for _, data := range allSubscribed {
-		rowKeys = append(rowKeys, db.BigtableClient.GetMachineRowKey(*data.UserID, "system", data.EventFilter))
+	totalSubscribed := 0
+	for _, data := range dbResult {
+		for _, sub := range data {
+			rowKeys = append(rowKeys, db.BigtableClient.GetMachineRowKey(*sub.UserID, "system", sub.EventFilter))
+			totalSubscribed++
+		}
 	}
 
 	machineDataOfSubscribed, err := db.BigtableClient.GetMachineMetricsForNotifications(rowKeys)
@@ -2107,20 +2107,22 @@ func collectMonitoringMachine(
 	}
 
 	var result []*types.Subscription
-	for _, data := range allSubscribed {
-		localData := data // Create a local copy of the data variable
-		machineMap, found := machineDataOfSubscribed[*localData.UserID]
-		if !found {
-			continue
-		}
-		currentMachineData, found := machineMap[localData.EventFilter]
-		if !found {
-			continue
-		}
+	for _, data := range dbResult {
+		for _, sub := range data {
+			localData := sub // Create a local copy of the data variable
+			machineMap, found := machineDataOfSubscribed[*localData.UserID]
+			if !found {
+				continue
+			}
+			currentMachineData, found := machineMap[localData.EventFilter]
+			if !found {
+				continue
+			}
 
-		//logrus.Infof("currentMachineData %v | %v | %v | %v", currentMachine.CurrentDataInsertTs, currentMachine.CompareDataInsertTs, currentMachine.UserID, currentMachine.Machine)
-		if notifyConditionFulfilled(localData, currentMachineData) {
-			result = append(result, localData)
+			//logrus.Infof("currentMachineData %v | %v | %v | %v", currentMachine.CurrentDataInsertTs, currentMachine.CompareDataInsertTs, currentMachine.UserID, currentMachine.Machine)
+			if notifyConditionFulfilled(&localData, currentMachineData) {
+				result = append(result, &localData)
+			}
 		}
 	}
 
@@ -2158,7 +2160,7 @@ func collectMonitoringMachine(
 			subRatioThreshold = subFirstRatioThreshold
 			isFirstNotificationCheck = false
 		}
-		if float64(len(result))/float64(len(allSubscribed)) >= subRatioThreshold {
+		if float64(len(result))/float64(totalSubscribed) >= subRatioThreshold {
 			log.Error(nil, fmt.Errorf("error too many users would be notified concerning: %v", eventName), 0)
 			return nil
 		}
