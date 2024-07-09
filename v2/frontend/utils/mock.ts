@@ -371,7 +371,8 @@ export function mockManageNotificationsGeneral (): NotificationsManagementDashbo
       enabled_notifications: {
         general_do_not_disturb_expire_ts: 9000,
         general_email: false,
-        general_push: true
+        general_push: true,
+        paired_devices_count: 2
       }
     }
   }
