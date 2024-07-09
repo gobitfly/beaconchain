@@ -64,7 +64,6 @@ const continueDisabled = computed(() => {
         v-model="selection"
         class="single-bar"
         :buttons="buttonList"
-        :initial="String(currentNetwork)"
         :are-buttons-networks="true"
       />
       <div class="row-container">
