@@ -90,25 +90,22 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
 		if currentCursor.IsValid() {
-			condition := ""
 			if currentCursor.IsReverse() {
 				if currentCursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups excluding the cursor epoch
-					condition = fmt.Sprintf("e.epoch %s ?", sortSearchDirection)
+					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
 				} else {
 					// The cursor is on a specific group, get the data for the whole epoch since we could need it for the total rewards
-					condition = fmt.Sprintf("e.epoch %s= ?", sortSearchDirection)
+					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
 				}
-				ds = ds.Where(goqu.L(condition, currentCursor.Epoch))
 			} else {
 				if currentCursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups including the cursor epoch
-					condition = fmt.Sprintf("e.epoch %s= ?", sortSearchDirection)
-					ds = ds.Where(goqu.L(condition, currentCursor.Epoch))
+					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
 				} else {
 					// The cursor is on a specific group so get the data for groups before/after it
-					condition = fmt.Sprintf("e.epoch %[1]s ? OR (e.epoch = ? AND v.group_id %[1]s ?)", sortSearchDirection)
-					ds = ds.Where(goqu.L(condition, currentCursor.Epoch, currentCursor.Epoch, currentCursor.GroupId))
+					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %[1]s ? OR (e.epoch = ? AND v.group_id %[1]s ?)", sortSearchDirection),
+						currentCursor.Epoch, currentCursor.Epoch, currentCursor.GroupId))
 				}
 			}
 		}
@@ -211,8 +208,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			GroupBy(goqu.L("e.epoch"))
 
 		if currentCursor.IsValid() {
-			condition := fmt.Sprintf("e.epoch %s ?", sortSearchDirection)
-			ds = ds.Where(goqu.L(condition, currentCursor.Epoch))
+			ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
 		}
 		if search != "" {
 			if epochSearch == -1 && indexSearch == -1 {
@@ -918,8 +914,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	if colSort.Column == enums.VDBDutiesColumns.Validator {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			condition := fmt.Sprintf("e.validator_index %s ?", sortSearchDirection)
-			subDs = subDs.Where(goqu.L(condition, currentCursor.Index))
+			subDs = subDs.Where(goqu.L(fmt.Sprintf("e.validator_index %s ?", sortSearchDirection), currentCursor.Index))
 		}
 	}
 
@@ -1011,8 +1006,8 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	} else if colSort.Column == enums.VDBDutiesColumns.Reward {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			condition := fmt.Sprintf("(total_reward %[1]s ? OR (total_reward = ? AND validator_index %[1]s ?))", sortSearchDirection)
-			ds = ds.Where(goqu.L(condition, currentCursor.Reward, currentCursor.Reward, currentCursor.Index))
+			ds = ds.Where(goqu.L(fmt.Sprintf("(total_reward %[1]s ? OR (total_reward = ? AND validator_index %[1]s ?))", sortSearchDirection),
+				currentCursor.Reward, currentCursor.Reward, currentCursor.Index))
 		}
 
 		if isReverseDirection {
