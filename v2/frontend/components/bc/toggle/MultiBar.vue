@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type MultiBarItem } from '~/types/multiBar'
 
 interface Props {
-  displayMode?: boolean,
+  readonlyMode?: boolean,
   buttons: MultiBarItem[]
 }
 
@@ -35,11 +35,11 @@ function sendToVModel (data: ButtonStates) : string[] {
 // this line is independent of the bridge above (that addresses the on/off states), this line updates the component if the list of buttons comes late
 watch(() => props.buttons, () => { buttonStates.value = receiveFromVModel(selection.value) })
 
-const displayModeClass = computed(() => props.displayMode ? 'read-only' : '')
+const readonlyClass = computed(() => props.readonlyMode ? 'read-only' : '')
 </script>
 
 <template>
-  <div class="bc-togglebar" :class="displayModeClass">
+  <div class="bc-togglebar" :class="readonlyClass">
     <BcToggleMultiBarButton
       v-for="button in props.buttons"
       :key="button.value"
@@ -48,7 +48,7 @@ const displayModeClass = computed(() => props.displayMode ? 'read-only' : '')
       :icon="button.icon"
       :tooltip="button.tooltip"
       :disabled="button.disabled"
-      :display-mode-class="displayModeClass"
+      :readonly-class="readonlyClass"
     >
       <template #icon>
         <slot :name="button.value">

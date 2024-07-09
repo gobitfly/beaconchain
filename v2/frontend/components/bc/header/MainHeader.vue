@@ -127,7 +127,7 @@ const userMenu = computed(() => {
           <span class="name">beaconcha.in</span>
         </BcLink>
         <span class="variant">
-          v2 beta | {{ networkInfo.name.join(' ') }}
+          v2 beta | {{ networkInfo.name }}
         </span>
       </div>
 

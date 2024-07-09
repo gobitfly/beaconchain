@@ -75,7 +75,7 @@ function updateLocalState () {
   listInDropdown.value.length = 0
   listInDropdown.value.push({ chainId: ChainIDs.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
   for (const filter of liveState.value) {
-    listInDropdown.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].name.join(' '), selected: filter[1] })
+    listInDropdown.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].name, selected: filter[1] })
   }
 }
 

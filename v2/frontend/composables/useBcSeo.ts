@@ -24,7 +24,7 @@ export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> 
     } else if (pageTitle?.value) {
       parts.splice(0, 0, `${pageTitle.value}`)
     }
-    return networkInfo.value.description + ' ' + networkInfo.value.name.join(' ') + ' ' + parts.join(' - ')
+    return networkInfo.value.description + ' ' + networkInfo.value.name + ' ' + parts.join(' - ')
   }
 
   useSeoMeta({

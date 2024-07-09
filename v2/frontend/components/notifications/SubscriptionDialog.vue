@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { type ValidatorSubscriptionState, type AccountSubscriptionState, SubscriptionJSONfields, type CheckboxAndNumber } from '~/types/subscriptionModal'
+import { type ValidatorSubscriptionState, type AccountSubscriptionState, SubscriptionJSONfields, type CheckboxAndNumber } from '~/types/notifications/subscriptionModal'
 import type { ChainIDs } from '~/types/network'
 import type { ApiErrorResponse } from '~/types/api/common'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   validatorSub?: ValidatorSubscriptionState,
-  accountSub?: AccountSubscriptionState,
-  premiumUser: boolean
+  accountSub?: AccountSubscriptionState
 }
 
 const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
@@ -31,6 +30,7 @@ const { t } = useI18n()
 const { fetch, setTimeout } = useCustomFetch()
 const toast = useBcToast()
 const { networkInfo } = useNetworkStore()
+const { user } = useUserStore()
 
 const tPath = ref('')
 let originalSettings = {} as AllPossibleOptions
@@ -40,7 +40,7 @@ const allCheckbox = ref({ check: false } as CheckboxAndNumber)
 const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
 watch(debouncer.value, sendUserPreferencesToAPI)
 
-let dataNonce = 0 // is used by the watcher of `modifiableOptions` to know when it is unnecessary to send apparent changes to the API (it doesn't send if the nonce is 0)
+let dataNonce = 0 // used by the watcher of `modifiableOptions` to know when it is unnecessary to send apparent changes to the API (it doesn't send if the nonce is 0)
 
 watch(props, (props) => {
   if (!props || (!props.validatorSub && !props.accountSub)) {
@@ -93,8 +93,6 @@ watch(modifiableOptions, (options) => {
   dataNonce++
 }, { immediate: true, deep: true })
 
-let lastSaveFailed = false
-
 async function sendUserPreferencesToAPI () {
   // first we convert our internal structures to the format of the API
   const output = {} as Record<string, any>
@@ -126,20 +124,13 @@ async function sendUserPreferencesToAPI () {
   }
   if (!response || response.error) {
     toast.showError({ summary: t('notifications.subscriptions.error_title'), group: t('notifications.subscriptions.error_group'), detail: t('notifications.subscriptions.error_message') })
-    lastSaveFailed = true // we will try again when the dialog closes
-  } else {
-    lastSaveFailed = false
   }
 }
 
-const isOptionAvailable = (key: string) => props.value?.premiumUser || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
+const isOptionAvailable = (key: string) => user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
 
 function closeDialog () : void {
-  if (lastSaveFailed) {
-    // second chance: we try not to lose what the user has set
-    sendUserPreferencesToAPI()
-  }
-  dialogRef?.value.close(true)
+  dialogRef?.value.close()
 }
 </script>
 
@@ -176,7 +167,7 @@ function closeDialog () : void {
       <NotificationsSubscriptionRow v-model="modifiableOptions.withdrawn" :t-path="tPath+'withdrawn'" :lacks-premium-subscription="!isOptionAvailable('withdrawn')" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.slashed" :t-path="tPath+'slashed'" :lacks-premium-subscription="!isOptionAvailable('slashed')" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.realTime" :t-path="tPath+'real_time'" :lacks-premium-subscription="!isOptionAvailable('realTime')" class="row" />
-      <hr>
+      <div class="separation" />
       <NotificationsSubscriptionRow v-model="allCheckbox" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" />
     </div>
 
@@ -186,7 +177,7 @@ function closeDialog () : void {
       <NotificationsSubscriptionRow v-model="modifiableOptions.erc20" :t-path="tPath+'erc20'" :lacks-premium-subscription="!isOptionAvailable('erc20')" input-type="amount" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.erc721" :t-path="tPath+'erc721'" :lacks-premium-subscription="!isOptionAvailable('erc721')" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.erc1155" :t-path="tPath+'erc1155'" :lacks-premium-subscription="!isOptionAvailable('erc1155')" class="row" />
-      <hr>
+      <div class="separation" />
       <NotificationsSubscriptionRow v-model="allCheckbox" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.networks" :t-path="tPath+'networks'" :lacks-premium-subscription="!isOptionAvailable('networks')" input-type="networks" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.ignoreSpam" :t-path="tPath+'ignore_spam'" :lacks-premium-subscription="!isOptionAvailable('ignoreSpam')" class="row" />
@@ -214,12 +205,17 @@ function closeDialog () : void {
   .explanation {
     margin-bottom: var(--padding);
     @include fonts.small_text;
-    opacity: 0.6;
+    color: var(--text-color-discreet)
   }
 
   .row {
     margin-top: 14px;
     margin-bottom: 14px;
+  }
+
+  .separation {
+    height: 1px;
+    background-color: var(--container-border-color);
   }
 
   .footer {
