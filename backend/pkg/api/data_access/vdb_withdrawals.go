@@ -23,7 +23,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, poolMode bool) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	result := make([]t.VDBWithdrawalsTableRow, 0)
 	var paging t.Paging
 
@@ -408,7 +408,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	return nextData, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, poolMode bool) (*t.VDBTotalWithdrawalsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes []enums.ProtocolMode) (*t.VDBTotalWithdrawalsData, error) {
 	result := &t.VDBTotalWithdrawalsData{
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}

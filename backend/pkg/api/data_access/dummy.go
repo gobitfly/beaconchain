@@ -179,7 +179,7 @@ func (d *DummyService) CreateValidatorDashboard(ctx context.Context, userId uint
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, poolMode bool) (*t.VDBOverviewData, error) {
+func (d *DummyService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes []enums.ProtocolMode) (*t.VDBOverviewData, error) {
 	r := t.VDBOverviewData{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -287,14 +287,14 @@ func (d *DummyService) GetValidatorDashboardSlotViz(ctx context.Context, dashboa
 	return r.Epochs, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, poolMode bool) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	r := []t.VDBSummaryTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, &p, err
 }
-func (d *DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, poolMode bool) (*t.VDBGroupSummaryData, error) {
+func (d *DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes []enums.ProtocolMode) (*t.VDBGroupSummaryData, error) {
 	r := t.VDBGroupSummaryData{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -327,7 +327,7 @@ func (d *DummyService) GetValidatorDashboardProposalSummaryValidators(ctx contex
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, poolMode bool) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	r := []t.VDBRewardsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
@@ -335,19 +335,19 @@ func (d *DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboa
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, poolMode bool) (*t.VDBGroupRewardsData, error) {
+func (d *DummyService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes []enums.ProtocolMode) (*t.VDBGroupRewardsData, error) {
 	r := t.VDBGroupRewardsData{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, poolMode bool) (*t.ChartData[int, decimal.Decimal], error) {
+func (d *DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes []enums.ProtocolMode) (*t.ChartData[int, decimal.Decimal], error) {
 	r := t.ChartData[int, decimal.Decimal]{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, poolMode bool) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	r := []t.VDBEpochDutiesTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
@@ -355,7 +355,7 @@ func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboar
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, poolMode bool) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	r := []t.VDBBlocksTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
@@ -363,25 +363,25 @@ func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboar
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId, poolMode bool) (*t.VDBHeatmap, error) {
+func (d *DummyService) GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes []enums.ProtocolMode) (*t.VDBHeatmap, error) {
 	r := t.VDBHeatmap{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, poolMode bool) (*t.VDBHeatmap, error) {
+func (d *DummyService) GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, protocolModes []enums.ProtocolMode) (*t.VDBHeatmap, error) {
 	r := t.VDBHeatmap{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64, poolMode bool) (*t.VDBHeatmapTooltipData, error) {
+func (d *DummyService) GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64, protocolModes []enums.ProtocolMode) (*t.VDBHeatmapTooltipData, error) {
 	r := t.VDBHeatmapTooltipData{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, day time.Time, poolMode bool) (*t.VDBHeatmapTooltipData, error) {
+func (d *DummyService) GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, day time.Time, protocolModes []enums.ProtocolMode) (*t.VDBHeatmapTooltipData, error) {
 	r := t.VDBHeatmapTooltipData{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -415,7 +415,7 @@ func (d *DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context,
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, poolMode bool) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	r := []t.VDBWithdrawalsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
@@ -423,7 +423,7 @@ func (d *DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, das
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, poolMode bool) (*t.VDBTotalWithdrawalsData, error) {
+func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes []enums.ProtocolMode) (*t.VDBTotalWithdrawalsData, error) {
 	r := t.VDBTotalWithdrawalsData{}
 	err := commonFakeData(&r)
 	return &r, err

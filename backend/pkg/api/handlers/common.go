@@ -236,18 +236,6 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 	return num
 }
 
-//nolint:unparam
-func (v *validationError) checkBool(param, paramName string) bool {
-	if param == "" {
-		return false
-	}
-	b, err := strconv.ParseBool(param)
-	if err != nil {
-		v.add(paramName, fmt.Sprintf("given value %s is not a boolean", param))
-	}
-	return b
-}
-
 type validatorSet struct {
 	Indexes    []types.VDBValidator
 	PublicKeys []string
@@ -430,8 +418,6 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
 // precondition: the enum is the same type as the allowed enums.
-//
-//nolint:unparam
 func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
@@ -475,6 +461,24 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
 	order := v.parseSortOrder(sortSplit[1])
 	return &types.Sort[T]{Column: sortCol, Desc: order}
+}
+
+func checkEnumListAllowed[T enums.EnumFactory[T]](v *validationError, enumsString string, paramName string, allowedEnums []enums.Enum) []T {
+	if enumsString == "" {
+		return []T{}
+	}
+	enumsSlice := strings.Split(enumsString, ",")
+	var enums []T
+	for _, enumString := range enumsSlice {
+		enum := checkEnum[T](v, enumString, paramName)
+		v.checkEnumIsAllowed(enum, allowedEnums, paramName)
+		enums = append(enums, enum)
+	}
+	return enums
+}
+
+func (v *validationError) checkProtocolModes(protocolModes string) []enums.ProtocolMode {
+	return checkEnumListAllowed[enums.ProtocolMode](v, protocolModes, "mode", []enums.Enum{enums.ProtocolModes.RocketPool})
 }
 
 func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]types.VDBValidator, []string) {
