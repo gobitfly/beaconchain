@@ -2,11 +2,10 @@
 // TODO: Use translations everywhere
 // TODO: Add provider on modal to collect/handle all data coming from /api/i/users/me/notifications/settings/general
 // TODO: Re-style toggles (deactivated does not look deactivated right now)
-// TODO: Hide Push Notifications slider if user das not has the app linked
-// TODO: Implement Do not disturb feature
+// TODO: Implement Do not disturb feature (mind new design)
 // TOOD: Implement "Paired devices" modal
-
 import {
+  faArrowUpRightFromSquare,
   faPaperPlane
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -33,6 +32,12 @@ const sendTestNotification = async (type: 'email' | 'push') => {
     testButtonsDisabled.value = false
   }, 5000)
 }
+
+const pairedDevices = computed(() => generalSettings?.value?.data.enabled_notifications.paired_devices_count || 0)
+
+const openPairdeDevicesModal = () => {
+  alert('TODO: Implement')
+}
 </script>
 
 <template>
@@ -52,9 +57,20 @@ const sendTestNotification = async (type: 'email' | 'push') => {
     </div>
     <div class="row divider">
       <div>
-        Push Notifications
+        <span>Push Notifications</span>
+        <span v-if="pairedDevices > 0">
+          ({{ pairedDevices }})
+          <FontAwesomeIcon
+            class="link popout"
+            :icon="faArrowUpRightFromSquare"
+            @click="openPairdeDevicesModal"
+          />
+        </span>
       </div>
-      <BcToggle v-model="pushToggle" />
+      <BcToggle v-if="pairedDevices > 0" v-model="pushToggle" />
+      <div v-else>
+        Download the [mobile app] to activate
+      </div>
     </div>
     <div class="row">
       <div>
@@ -96,6 +112,10 @@ const sendTestNotification = async (type: 'email' | 'push') => {
     .explanation{
       @include fonts.tiny_text;
       color: var(--text-color-discreet);
+      margin-left: var(--padding-small);
+    }
+
+    .popout {
       margin-left: var(--padding-small);
     }
 
