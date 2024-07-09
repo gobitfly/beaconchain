@@ -440,7 +440,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		})
 		// if we are exporting the head epoch, update the validator db table
 		if isHeadEpoch {
-
 			// this function sets exports the validator status into the db
 			// and also updates the status field in the validators array
 			err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)
