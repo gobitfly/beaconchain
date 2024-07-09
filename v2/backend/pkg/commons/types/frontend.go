@@ -33,9 +33,10 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 	if n.GetEventName() == "" {
 		log.Fatal(fmt.Errorf("Notification event name is empty"), fmt.Sprintf("Notification: %v", n), 0)
 	}
-	if n.GetEventFilter() == "" {
-		log.Fatal(fmt.Errorf("Notification event filter is empty"), fmt.Sprintf("Notification: %v", n), 0)
-	}
+	// next check is disabled as there are events that do not require a filter (rocketpool, network events)
+	// if n.GetEventFilter() == "" {
+	// 	log.Fatal(fmt.Errorf("Notification event filter is empty"), fmt.Sprintf("Notification: %v", n), 0)
+	// }
 
 	if _, ok := npui[n.GetUserId()]; !ok {
 		npui[n.GetUserId()] = make(map[EventName]map[EventFilter]Notification)
