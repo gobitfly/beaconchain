@@ -608,3 +608,32 @@ var ChartAggregations = struct {
 	IntervalDaily,
 	IntervalWeekly,
 }
+
+// Protocol Modes
+
+type ProtocolMode int
+
+var _ EnumFactory[ProtocolMode] = ProtocolMode(0)
+
+const (
+	ProtocolModeRocketPool ProtocolMode = iota
+)
+
+func (c ProtocolMode) Int() int {
+	return int(c)
+}
+
+func (ProtocolMode) NewFromString(s string) ProtocolMode {
+	switch s {
+	case "rocket_pool":
+		return ProtocolModeRocketPool
+	default:
+		return ProtocolMode(-1)
+	}
+}
+
+var ProtocolModes = struct {
+	RocketPool ProtocolMode
+}{
+	ProtocolModeRocketPool,
+}

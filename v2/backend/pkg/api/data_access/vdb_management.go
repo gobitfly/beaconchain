@@ -194,7 +194,7 @@ func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, da
 	return result, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, poolMode bool) (*t.VDBOverviewData, error) {
+func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes []enums.ProtocolMode) (*t.VDBOverviewData, error) {
 	// @DATA-ACCESS incorporate poolmode
 	data := t.VDBOverviewData{}
 	wg := errgroup.Group{}

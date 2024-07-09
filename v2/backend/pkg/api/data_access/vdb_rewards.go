@@ -19,8 +19,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, poolMode bool) ([]t.VDBRewardsTableRow, *t.Paging, error) {
-	// @DATA-ACCESS incorporate poolMode
+func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBRewardsTableRow, 0)
 	var paging t.Paging
 
@@ -434,8 +434,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	return result, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, poolMode bool) (*t.VDBGroupRewardsData, error) {
-	// @DATA-ACCESS incorporate poolMode
+func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes []enums.ProtocolMode) (*t.VDBGroupRewardsData, error) {
+	// @DATA-ACCESS incorporate protocolModes
 	ret := &t.VDBGroupRewardsData{}
 
 	if dashboardId.AggregateGroups {
@@ -576,8 +576,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	return ret, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, poolMode bool) (*t.ChartData[int, decimal.Decimal], error) {
-	// @DATA-ACCESS incorporate poolMode
+func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes []enums.ProtocolMode) (*t.ChartData[int, decimal.Decimal], error) {
+	// @DATA-ACCESS incorporate protocolModes
 	// bar chart for the CL and EL rewards for each group for each epoch.
 	// NO series for all groups combined except if AggregateGroups is true.
 	// series id is group id, series property is 'cl' or 'el'
@@ -706,7 +706,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	return &result, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, poolMode bool) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	result := make([]t.VDBEpochDutiesTableRow, 0)
 	var paging t.Paging
 
