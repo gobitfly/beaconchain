@@ -878,84 +878,9 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		}
 	}
 
-	// Use a subquery to allow access to total_reward in the where clause
-	// rewardsQuery := fmt.Sprintf(`
-	// 	SELECT *
-	// 		FROM (
-	// 		WITH rewards AS(
-	// 			SELECT
-	// 				e.validator_index,
-	// 				(CAST((
-	// 					COALESCE(e.attestations_reward, 0) +
-	// 					COALESCE(e.blocks_cl_reward, 0) +
-	// 					COALESCE(e.sync_rewards, 0) +
-	// 					COALESCE(e.slasher_reward, 0)
-	// 				) AS numeric) * 10^9) AS blocks_cl_reward,
-	// 				COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
-	// 				COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
-	// 				COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
-	// 				COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
-	// 				COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
-	// 				COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
-	// 				COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
-	// 				COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
-	// 				COALESCE(e.sync_executed, 0) AS sync_executed,
-	// 				COALESCE(e.sync_rewards, 0) AS sync_rewards,
-	// 				e.slashed_by IS NOT NULL AS slashed_in_epoch,
-	// 				COALESCE(s.slashed_amount, 0) AS slashed_amount,
-	// 				COALESCE(e.slasher_reward, 0) AS slasher_reward,
-	// 				COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
-	// 				COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
-	// 				COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward,
-	// 				COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
-	// 				COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
-	// 			FROM validator_dashboard_data_epoch e
-	// 			%[1]s
-	// 			%[2]s
-	// 		),
-	// 		el_rewards AS (
-	// 			SELECT
-	// 			    e.validator_index,
-	// 			    SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS blocks_el_reward
-	// 			FROM validator_dashboard_data_epoch e
-	// 			%[1]s
-	// 			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-	// 			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-	// 			LEFT JOIN relays_blocks rb ON rb.exec_block_hash = b.exec_block_hash
-	// 			%[2]s
-	// 			GROUP BY e.validator_index
-	// 		)
-	// 		SELECT
-	// 			r.validator_index,
-	// 			(r.blocks_cl_reward + elr.blocks_el_reward) AS total_reward,
-	// 			r.attestations_scheduled,
-	// 			r.attestation_source_executed,
-	// 			r.attestation_source_reward,
-	// 			r.attestation_target_executed,
-	// 			r.attestations_target_reward,
-	// 			r.attestation_head_executed,
-	// 			r.attestations_head_reward,
-	// 			r.sync_scheduled,
-	// 			r.sync_executed,
-	// 			r.sync_rewards,
-	// 			r.slashed_in_epoch,
-	// 			r.slashed_amount,
-	// 			r.slasher_reward,
-	// 			r.blocks_scheduled,
-	// 			r.blocks_proposed,
-	// 			elr.blocks_el_reward,
-	// 			r.blocks_cl_attestations_reward,
-	// 			r.blocks_cl_sync_aggregate_reward
-	// 		FROM rewards r
-	// 		LEFT JOIN el_rewards elr ON r.validator_index = elr.validator_index
-	// 	) AS subquery
-	//  	%[3]s
-	// 	%[4]s
-	// 	%[5]s`, joinSubquery, whereSubquery, whereQuery, orderQuery, limitQuery)
-
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the subquery that serves as base for both the main and EL rewards subqueries
-	subDs := goqu.
+	subDs := goqu.Dialect("postgres").
 		Select(
 			goqu.L("e.validator_index")).
 		From(goqu.L("validator_dashboard_data_epoch e")).
@@ -1023,18 +948,15 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			goqu.L("COALESCE(e.slasher_reward, 0) AS slasher_reward"),
 			goqu.L("COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled"),
 			goqu.L("COALESCE(e.blocks_proposed, 0) AS blocks_proposed"),
-			goqu.L("COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward"),
 			goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
 			goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward")).
-		Where(goqu.L(`(
-			COALESCE(e.attestations_scheduled, 0) +
+		Where(goqu.L(`
+			(COALESCE(e.attestations_scheduled, 0) +
 			COALESCE(e.sync_scheduled,0) +
 			COALESCE(e.blocks_scheduled,0) +
 			CASE WHEN e.slashed_by IS NOT NULL THEN 1 ELSE 0 END +
-			COALESCE(s.slashed_amount, 0)
-		) > 0)`)).
-		LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by"))).
-		As("rewards")
+			COALESCE(s.slashed_amount, 0)) > 0`)).
+		LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by")))
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the EL rewards subquery
@@ -1043,18 +965,17 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
-		GroupBy(goqu.L("e.validator_index")).
-		As("el_rewards")
+		GroupBy(goqu.L("e.validator_index"))
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the full subquery based on the two
-	fullSubDs := goqu.
+	fullSubDs := goqu.Dialect("postgres").
 		Select(
 			goqu.L("r.validator_index"),
 			goqu.L("(r.blocks_cl_reward + elr.blocks_el_reward) AS total_reward"),
 			goqu.L("r.attestations_scheduled"),
 			goqu.L("r.attestation_source_executed"),
-			goqu.L("r.attestation_source_reward"),
+			goqu.L("r.attestations_source_reward"),
 			goqu.L("r.attestation_target_executed"),
 			goqu.L("r.attestations_target_reward"),
 			goqu.L("r.attestation_head_executed"),
@@ -1070,20 +991,22 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			goqu.L("elr.blocks_el_reward"),
 			goqu.L("r.blocks_cl_attestations_reward"),
 			goqu.L("r.blocks_cl_sync_aggregate_reward")).
-		From(rewardsSubDs.As("r")).
-		LeftJoin(elRewardsSubDs.As("elr"), goqu.On(goqu.L("r.validator_index = elr.validator_index")))
+		From(goqu.L("rewards AS r")).
+		LeftJoin(goqu.L("el_rewards AS elr"), goqu.On(goqu.L("r.validator_index = elr.validator_index"))).
+		With("rewards", rewardsSubDs).
+		With("el_rewards", elRewardsSubDs)
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the full query
 	ds := goqu.Dialect("postgres").
-		From(fullSubDs).
+		From(fullSubDs.As("subquery")).
 		Limit(uint(limit + 1))
 
 	if colSort.Column == enums.VDBDutiesColumns.Validator {
 		if isReverseDirection {
-			ds = ds.Order(goqu.L("r.validator_index").Desc())
+			ds = ds.Order(goqu.L("validator_index").Desc())
 		} else {
-			ds = ds.Order(goqu.L("r.validator_index").Asc())
+			ds = ds.Order(goqu.L("validator_index").Asc())
 		}
 	} else if colSort.Column == enums.VDBDutiesColumns.Reward {
 		if currentCursor.IsValid() {
@@ -1093,9 +1016,9 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		}
 
 		if isReverseDirection {
-			ds = ds.Order(goqu.L("total_reward").Desc(), goqu.L("r.validator_index").Desc())
+			ds = ds.Order(goqu.L("total_reward").Desc(), goqu.L("validator_index").Desc())
 		} else {
-			ds = ds.Order(goqu.L("total_reward").Asc(), goqu.L("r.validator_index").Asc())
+			ds = ds.Order(goqu.L("total_reward").Asc(), goqu.L("validator_index").Asc())
 		}
 	}
 
