@@ -53,7 +53,7 @@ export type InternalGetNotificationDashboards = ApiPagingResponse<NotificationsD
 export interface NotificationsMachinesTableRow {
   machine_name: string;
   threshold: number /* float64 */;
-  event_name: string;
+  event_type: string;
   timestamp: number /* uint64 */;
 }
 export type InternalGetNotificationMachines = ApiPagingResponse<NotificationsMachinesTableRow>;

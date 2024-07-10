@@ -47,7 +47,7 @@ type InternalGetNotificationDashboards ApiPagingResponse[NotificationsDashboards
 type NotificationsMachinesTableRow struct {
 	MachineName string  `json:"machine_name"`
 	Threshold   float64 `json:"threshold"`
-	EventName   string  `json:"event_name"`
+	EventType   string  `json:"event_type"`
 	Timestamp   uint64  `json:"timestamp"`
 }
 
