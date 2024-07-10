@@ -64,7 +64,7 @@ export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelR
   createdRef.deactivateBridge = deactivateBridge
   createdRef.reactivateBridge = reactivateBridge
   startBridge(true)
-  return createdRef as BridgedRef<Tcreated[]>
+  return createdRef
 }
 
 /** This composable creates a two-way pipe between reactive objects of 2 different structures. The values circulate back
@@ -125,7 +125,7 @@ export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRe
   createdRef.deactivateBridge = deactivateBridge
   createdRef.reactivateBridge = reactivateBridge
   startBridge(true)
-  return createdRef as BridgedRef<Tcreated>
+  return createdRef
 }
 
 /** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back
