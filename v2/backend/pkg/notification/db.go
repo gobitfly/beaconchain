@@ -39,7 +39,6 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		goqu.C("last_sent_epoch"),
 		goqu.C("created_epoch"),
 		goqu.C("event_threshold"),
-		goqu.C("internal_state"),
 	).Where(goqu.C("event_name").Eq(utils.GetNetwork() + ":" + string(eventName)))
 
 	if lastSentFilter != "" {

@@ -492,6 +492,8 @@ func queueNotifications(notificationsByUserID types.NotificationsPerUserId, useD
 			}
 		}
 	}
+
+	// obsolete as notifications are anyway sent on a per-epoch basis
 	for epoch, subIDs := range subByEpoch {
 		// update that we've queued the subscription (last sent rather means last queued)
 		err := db.UpdateSubscriptionsLastSent(subIDs, time.Now(), epoch, useDB)
@@ -520,6 +522,7 @@ func queueNotifications(notificationsByUserID types.NotificationsPerUserId, useD
 		}
 	}
 
+	// no need to batch here as the internal state will become obsolete
 	for state, subs := range stateToSub {
 		subArray := make([]int64, 0)
 		for subID := range subs {
@@ -1549,21 +1552,21 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 		t := hex.EncodeToString(validator.Pubkey)
 		subs := subMap[t]
 		for _, sub := range subs {
-			if sub.State.String == "" || sub.State.String == "-" { // discard online notifications that do not have a corresponding offline notification
-				continue
-			}
+			// if sub.State.String == "" || sub.State.String == "-" { // discard online notifications that do not have a corresponding offline notification
+			// 	continue
+			// }
 
-			originalLastSeenEpoch, err := strconv.ParseUint(sub.State.String, 10, 64)
-			if err != nil {
-				// I have no idea what just happened.
-				return fmt.Errorf("this should never happen. couldn't parse state as uint64: %v", err)
-			}
+			// originalLastSeenEpoch, err := strconv.ParseUint(sub.State.String, 10, 64)
+			// if err != nil {
+			// 	// I have no idea what just happened.
+			// 	return fmt.Errorf("this should never happen. couldn't parse state as uint64: %v", err)
+			// }
 
-			epochsSinceOffline := epoch - originalLastSeenEpoch
+			// epochsSinceOffline := epoch - originalLastSeenEpoch
 
-			if epochsSinceOffline > epoch { // fix overflow
-				epochsSinceOffline = 4
-			}
+			// if epochsSinceOffline > epoch { // fix overflow
+			// 	epochsSinceOffline = 4
+			// }
 
 			if sub.UserID == nil || sub.ID == nil {
 				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
@@ -1582,7 +1585,6 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 				},
 				ValidatorIndex: validator.Index,
 				IsOffline:      false,
-				EpochsOffline:  epochsSinceOffline,
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -1597,7 +1599,6 @@ type validatorIsOfflineNotification struct {
 	types.NotificationBaseImpl
 
 	ValidatorIndex uint64
-	EpochsOffline  uint64
 	IsOffline      bool
 }
 
@@ -1611,9 +1612,9 @@ func (n *validatorIsOfflineNotification) GetInfo(includeUrl bool) string {
 		}
 	} else {
 		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is back online since epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a> (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
+			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is back online since epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a>.`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
 		} else {
-			return fmt.Sprintf(`Validator %v is back online since epoch %v (was offline for %v epoch(s)).`, n.ValidatorIndex, n.Epoch, n.EpochsOffline)
+			return fmt.Sprintf(`Validator %v is back online since epoch %v.`, n.ValidatorIndex, n.Epoch)
 		}
 	}
 }
@@ -1630,7 +1631,7 @@ func (n *validatorIsOfflineNotification) GetInfoMarkdown() string {
 	if n.IsOffline {
 		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is offline since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
 	} else {
-		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is back online since epoch [%[2]v](https://%[3]v/epoch/%[2]v) (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
+		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is back online since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
 	}
 }
 
