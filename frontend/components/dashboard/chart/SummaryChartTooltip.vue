@@ -1,9 +1,12 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
+import { type AggregationTimeframe, type EfficiencyType } from '~/types/dashboard/summary'
 
 interface Props {
   t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context
-  startEpoch: number,
+  ts: number,
+  aggregation: AggregationTimeframe,
+  efficiencyType: EfficiencyType,
   groupInfos: {
     name: string,
     efficiency: number,
@@ -17,7 +20,7 @@ defineProps<Props>()
 
 <template>
   <div class="tooltip-container">
-    <DashboardChartTooltipHeader :t="t" :start-epoch="startEpoch" />
+    <DashboardChartTooltipHeader :t="t" :ts="ts" :aggregation="aggregation" :efficiency-type="efficiencyType" />
     <div v-for="(entry, index) in groupInfos" :key="index" class="line-container">
       <div class="circle" :style="{ 'background-color': entry.color }" />
       <div>
