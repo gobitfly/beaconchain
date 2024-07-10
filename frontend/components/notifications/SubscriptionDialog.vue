@@ -61,7 +61,7 @@ watch(props, (props) => {
     } else {
       switch (typeof entry[1]) {
         case 'boolean' : modifiableOptions.value[key] = { check: entry[1], num: 0 }; break
-        case 'number' : modifiableOptions.value[key] = { check: entry[1] >= 0, num: Math.abs(entry[1]) }; break
+        default : modifiableOptions.value[key] = { check: entry[1] != null && entry[1] >= 0, num: (entry[1] === null) ? null : Math.abs(entry[1]) }; break
       }
     }
   }
@@ -104,7 +104,7 @@ async function sendUserPreferencesToAPI () {
     } else {
       switch (typeof originalSettings[key]) {
         case 'boolean' : output[apiKey] = entry[1].check; break
-        case 'number' : output[apiKey] = entry[1].num * (entry[1].check ? 1 : -1); break
+        default : output[apiKey] = entry[1].num; if (!entry[1].check && entry[1].num !== null) { output[apiKey] *= -1 } ; break
       }
     }
   }
@@ -127,11 +127,11 @@ async function sendUserPreferencesToAPI () {
   }
 }
 
-const isOptionAvailable = (key: string) => user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
-
 function closeDialog () : void {
   dialogRef?.value.close()
 }
+
+const isOptionAvailable = (key: string) => !user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
 </script>
 
 <template>

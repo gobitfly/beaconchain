@@ -366,14 +366,14 @@
           "option":"Outgoing transactions"
         },
         "erc20": {
-          "option":"Track ERC20 token transfers",
+          "option":"ERC20 token transfers",
           "placeholder": "value > $0"
         },
         "erc721": {
-          "option":"Track ERC721 token transfers"
+          "option":"ERC721 token transfers"
         },
         "erc1155": {
-          "option":"Track ERC1155 token transfers"
+          "option":"ERC1155 token transfers"
         },
         "all": {
           "option":"All events"

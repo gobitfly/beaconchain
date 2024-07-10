@@ -1,6 +1,10 @@
-import { type ModelRef } from 'vue'
+import { type ModelRef, type WatchStopHandle } from 'vue'
 
 interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
+interface BridgedRef<T> extends Ref<T> {
+   deactivateBridge: () => void,
+   reactivateBridge: (updateFromOriginalRef: boolean) => void
+}
 
 /** This composable creates a two-way pipe between reactive arrays of 2 different types. The values circulate back
  *  and forth transparently from A to B and B to A, the reactivity is preserved on both ends, the types are converted
@@ -16,31 +20,51 @@ interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
  * @param origToCreated (optional) Callback/Arrow function that converts an element in the original array into the type of the elements in the created array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
  * @param createdToOrig (optional) Callback/Arrow function that converts an element in the created array into the type of the elements in the original array. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
  * */
-export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelRef<Torig[]>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated[]> {
-  const createdRef = ref<Tcreated[]>()
+export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelRef<Torig[]>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : BridgedRef<Tcreated[]> {
+  const createdRef = ref<Tcreated[]>() as BridgedRef<Tcreated[]>
   let pauseBack = false
   let pauseForth = false
-  const stopperForth = watch(origRef, () => {
-    if (pauseForth) { return }
-    const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : stringNumberConversion<Tcreated>(el)) : undefined
-    createdRef.value = OasC
-    pauseBack = true
-    nextTick(() => { pauseBack = false })
-  }, { immediate: true, deep: true })
-  const stopperBack = watch(createdRef, () => {
-    if (pauseBack) { return }
-    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : stringNumberConversion<Torig>(el)) : undefined as unknown as Torig[]
-    origRef.value = CasO
-    pauseForth = true
-    nextTick(() => { pauseForth = false })
-  }, { deep: true })
+  let stopperBack: WatchStopHandle
+  let stopperForth: WatchStopHandle
 
-  onUnmounted(() => {
+  function startBridge (updateFromOriginalRef: boolean) {
+    pauseBack = pauseForth = false
+    stopperForth = watch(origRef, () => {
+      if (pauseForth) { return }
+      const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : stringNumberConversion<Tcreated>(el)) : undefined as unknown as Tcreated[]
+      createdRef.value = OasC
+      pauseBack = true
+      nextTick(() => { pauseBack = false })
+    }, { immediate: updateFromOriginalRef, deep: true })
+    stopperBack = watch(createdRef, () => {
+      if (pauseBack) { return }
+      const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : stringNumberConversion<Torig>(el)) : undefined as unknown as Torig[]
+      origRef.value = CasO
+      pauseForth = true
+      nextTick(() => { pauseForth = false })
+    }, { deep: true })
+  }
+
+  function reactivateBridge (updateFromOriginalRef: boolean) {
+    nextTick(() => startBridge(updateFromOriginalRef))
+  }
+
+  function deactivateBridge () {
+    pauseBack = true
+    pauseForth = true
     stopperBack()
     stopperForth()
+  }
+
+  onUnmounted(() => {
+    stopperBack?.()
+    stopperForth?.()
   })
 
-  return createdRef as Ref<Tcreated[]>
+  createdRef.deactivateBridge = deactivateBridge
+  createdRef.reactivateBridge = reactivateBridge
+  startBridge(true)
+  return createdRef as BridgedRef<Tcreated[]>
 }
 
 /** This composable creates a two-way pipe between reactive objects of 2 different structures. The values circulate back
@@ -57,31 +81,51 @@ export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelR
  * @param origToCreated Callback/Arrow function that converts the object in the original ref into the structure of the object in the created ref.
  * @param createdToOrig Callback/Arrow function that converts the object in the created ref into the structure of the object in the original ref.
  * */
-export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated: ConverterCallback<Torig, Tcreated>, createdToOrig: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated> {
-  const createdRef = ref<Tcreated>()
+export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated: ConverterCallback<Torig, Tcreated>, createdToOrig: ConverterCallback<Tcreated, Torig>) : BridgedRef<Tcreated> {
+  const createdRef = ref<Tcreated>() as BridgedRef<Tcreated>
   let pauseBack = false
   let pauseForth = false
-  const stopperForth = watch(origRef, () => {
-    if (pauseForth) { return }
-    const OasC = (origRef.value !== undefined) ? origToCreated(origRef.value) : undefined
-    createdRef.value = OasC
-    pauseBack = true
-    nextTick(() => { pauseBack = false })
-  }, { immediate: true, deep: true })
-  const stopperBack = watch(createdRef, () => {
-    if (pauseBack) { return }
-    const CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined as unknown as Torig
-    origRef.value = CasO
-    pauseForth = true
-    nextTick(() => { pauseForth = false })
-  }, { deep: true })
+  let stopperBack: WatchStopHandle
+  let stopperForth: WatchStopHandle
 
-  onUnmounted(() => {
+  function startBridge (updateFromOriginalRef: boolean) {
+    pauseBack = pauseForth = false
+    stopperForth = watch(origRef, () => {
+      if (pauseForth) { return }
+      const OasC = (origRef.value !== undefined) ? origToCreated(origRef.value) : undefined as unknown as Tcreated
+      createdRef.value = OasC
+      pauseBack = true
+      nextTick(() => { pauseBack = false })
+    }, { immediate: updateFromOriginalRef, deep: true })
+    stopperBack = watch(createdRef, () => {
+      if (pauseBack) { return }
+      const CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined as unknown as Torig
+      origRef.value = CasO
+      pauseForth = true
+      nextTick(() => { pauseForth = false })
+    }, { deep: true })
+  }
+
+  function reactivateBridge (updateFromOriginalRef: boolean) {
+    nextTick(() => startBridge(updateFromOriginalRef))
+  }
+
+  function deactivateBridge () {
+    pauseBack = true
+    pauseForth = true
     stopperBack()
     stopperForth()
+  }
+
+  onUnmounted(() => {
+    stopperBack?.()
+    stopperForth?.()
   })
 
-  return createdRef as Ref<Tcreated>
+  createdRef.deactivateBridge = deactivateBridge
+  createdRef.reactivateBridge = reactivateBridge
+  startBridge(true)
+  return createdRef as BridgedRef<Tcreated>
 }
 
 /** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back
@@ -98,7 +142,7 @@ export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRe
  * @param origToCreated (optional) Callback/Arrow function that converts the value in the original ref into the type of the value in the created ref. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
  * @param createdToOrig (optional) Callback/Arrow function that converts the value in the created ref into the type of the value in the original ref. If not provided, a basic conversion is performed, which is safe only between strings and numbers.
  * */
-export function usePrimitiveRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : Ref<Tcreated> {
+export function usePrimitiveRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRef<Torig>, origToCreated?: ConverterCallback<Torig, Tcreated>, createdToOrig?: ConverterCallback<Tcreated, Torig>) : BridgedRef<Tcreated> {
   return useObjectRefBridge<Torig, Tcreated>(origRef, origToCreated ?? stringNumberConversion, createdToOrig ?? stringNumberConversion)
 }
 

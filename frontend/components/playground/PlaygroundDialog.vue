@@ -25,7 +25,7 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
 
 const validatorSub: ValidatorSubscriptionState = {
   offlineValidator: true,
-  offlineGroup: -40, // means "40% and deselected/unchecked"
+  offlineGroup: -20, // means "20% and deselected/unchecked"
   missedAttestations: true,
   proposedBlock: true,
   upcomingProposal: false,
@@ -38,7 +38,7 @@ const validatorSub: ValidatorSubscriptionState = {
 const accountSub: AccountSubscriptionState = {
   incoming: true,
   outgoing: true,
-  erc20: NaN, // means "not in the database yet" (will leave the input field empty with a placeholder)
+  erc20: null, // means "not in the database yet" (will leave the input field empty with a placeholder)
   erc721: true,
   erc1155: false,
   networks: [17000],
@@ -55,10 +55,10 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
-    <Button @click="openSubscriptions({validatorSub, premiumUser: false})">
+    <Button @click="openSubscriptions({validatorSub})">
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({accountSub, premiumUser: true})">
+    <Button @click="openSubscriptions({accountSub})">
       Subscribe to notifications for your accounts
     </Button>
     <br>
