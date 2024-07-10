@@ -17,60 +17,13 @@ const type = computed(() => props.inputType ?? 'binary')
 
 const { t } = useI18n()
 
-interface CheckboxAndText {
-  check: boolean,
-  text: string
-}
-
 const state = defineModel<CheckboxAndNumber|ChainIDs[]>({ required: true })
 let networkSelectorState: ModelRef<ChainIDs[]>
-let checkboxAndText: Ref<CheckboxAndText> | undefined
-
+let checkBoxAndInput: Ref<CheckboxAndNumber>
 if (type.value === 'networks') {
   networkSelectorState = state as ModelRef<ChainIDs[]>
 } else {
-  checkboxAndText = useObjectRefBridge<CheckboxAndNumber, CheckboxAndText>(state as Ref<CheckboxAndNumber>, receiveFromVModel, sendToVModel)
-}
-
-function receiveFromVModel (state: CheckboxAndNumber) : CheckboxAndText {
-  const output = {} as CheckboxAndText
-  output.check = state.check
-  if (type.value === 'amount' || type.value === 'percent') {
-    output.text = isNaN(state.num) ? '' : String(state.num)
-  }
-  return output
-}
-
-function sendToVModel (state: CheckboxAndText) : CheckboxAndNumber {
-  const output = {} as CheckboxAndNumber
-  output.check = state.check
-  if (type.value === 'amount' || type.value === 'percent') {
-    const corrected = correctUserInput(state.text)
-    output.num = (corrected === '') ? NaN : Number(corrected)
-  }
-  return output
-}
-
-function correctUserInput (input: string) : string {
-  switch (type.value) {
-    case 'amount' : return isThisAvalidInput(input) ? String(calculateCorrectNumber(input)) : ''
-    case 'percent' : return String(calculateCorrectNumber(input))
-  }
-  return ''
-}
-
-function calculateCorrectNumber (input: string) : number {
-  let num = !isThisAvalidInput(input) ? Math.abs(props.default ?? 0) : Number(input)
-  if (type.value === 'percent') {
-    if (num < 1) { num = 1 }
-    if (num > 100) { num = 100 }
-    num = Math.round(10 * num) / 10
-  }
-  return num
-}
-
-function isThisAvalidInput (input: string) : boolean {
-  return !!input && !isNaN(Number(input)) && Number(input) >= 0
+  checkBoxAndInput = state as ModelRef<CheckboxAndNumber>
 }
 
 const tooltipLines = computed(() => {
@@ -83,7 +36,7 @@ const tooltipLines = computed(() => {
     } else {
       let plural: number
       if (type.value === 'amount' || type.value === 'percent') {
-        plural = calculateCorrectNumber(checkboxAndText!.value.text)
+        plural = checkBoxAndInput!.value.num ?? Math.abs(props.default ?? 0)
       } else {
         plural = state.value ? 2 : 1
       }
@@ -91,10 +44,6 @@ const tooltipLines = computed(() => {
     }
   return tAll(t, props.tPath + '.hint', options)
 })
-
-function acknowledgeInputtedText () {
-  checkboxAndText!.value.text = correctUserInput(checkboxAndText!.value.text)
-}
 
 const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
 </script>
@@ -104,7 +53,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <span class="caption" :class="deactivationClass">
       {{ t(tPath+'.option') }}
     </span>
-    <InputNumber />
+    {{ checkBoxAndInput?.num }}
     <BcTooltip v-if="tooltipLines[0]" :fit-content="true">
       <FontAwesomeIcon :icon="faInfoCircle" class="info" />
       <template #tooltip>
@@ -114,20 +63,20 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
     <div v-if="type != 'networks'" class="right">
       <div v-if="type == 'amount' || type == 'percent'" class="input">
-        <InputText
-          v-if="checkboxAndText"
-          v-model="checkboxAndText.text"
-          type="text"
+        <BcInputNumber
+          v-if="checkBoxAndInput"
+          v-model="checkBoxAndInput.num"
+          :min="(type === 'amount') ? 0 : 1"
+          :max="(type === 'amount') ? 2**32 : 100"
+          :max-fraction-digits="(type === 'amount') ? 2 : 1"
           :placeholder="t(tPath + '.placeholder')"
           :class="[deactivationClass,type]"
-          @blur="acknowledgeInputtedText"
-          @keypress.enter="acknowledgeInputtedText"
         />
         &nbsp;
       </div>
       <span v-if="type == 'percent'" :class="deactivationClass">%</span>
       <Checkbox
-        v-model="checkboxAndText!.check"
+        v-model="checkBoxAndInput!.check"
         :binary="true"
         class="checkbox"
         :class="deactivationClass"

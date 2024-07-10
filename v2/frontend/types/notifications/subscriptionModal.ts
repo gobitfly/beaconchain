@@ -46,7 +46,7 @@ export enum SubscriptionJSONfields {
 /** for an option of type `number`: to mean that no value exists in the DB yet, set it to NaN; to mean that it is has a value but it is deactivated, set it to a negative value (for example 10% becomes -10) */
 export type ValidatorSubscriptionState = { // TODO: update the types once they are defined by the API
   offlineValidator: boolean,
-  offlineGroup?: number,
+  offlineGroup?: number|null,
   missedAttestations: boolean,
   proposedBlock: boolean,
   upcomingProposal: boolean,
@@ -60,7 +60,7 @@ export type ValidatorSubscriptionState = { // TODO: update the types once they a
 export type AccountSubscriptionState = { // TODO: update the types once they are defined by the API
   incoming: boolean,
   outgoing: boolean,
-  erc20: number,
+  erc20: number|null,
   erc721: boolean,
   erc1155: boolean,
   networks: ChainIDs[],
@@ -70,5 +70,5 @@ export type AccountSubscriptionState = { // TODO: update the types once they are
 /** for internal use */
 export interface CheckboxAndNumber {
   check: boolean,
-  num: number
+  num: number|null
 }
