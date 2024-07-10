@@ -31,9 +31,8 @@ type UserRepository interface {
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
-	// TODO @DATA-ACCESS i quickly hacked this together, maybe improve
 	result := uint64(0)
-	err := d.userReader.GetContext(ctx, &result, `SELECT id FROM users WHERE email = $1 LIMIT 1`, email)
+	err := d.userReader.GetContext(ctx, &result, `SELECT id FROM users WHERE email = $1`, email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("%w: user not found", ErrNotFound)
 	}
@@ -41,14 +40,30 @@ func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (u
 }
 
 func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
-	// TODO @DATA-ACCESS
 	// (password is already hashed)
-	return d.dummy.CreateUser(ctx, email, password)
+	var result uint64
+
+	apiKey, err := utils.GenerateRandomAPIKey()
+	if err != nil {
+		return 0, err
+	}
+
+	err = d.userWriter.GetContext(ctx, &result, `
+    	INSERT INTO users (password, email, register_ts, api_key)
+      		VALUES ($1, $2, NOW(), $3)
+		RETURNING id`,
+		password, email, apiKey,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return result, err
 }
 
 func (d *DataAccessService) RemoveUser(ctx context.Context, userId uint64) error {
-	// TODO @DATA-ACCESS
-	return d.dummy.RemoveUser(ctx, userId)
+	_, err := d.userWriter.Exec("DELETE FROM users WHERE id = $1", userId)
+	return err
 }
 
 func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) error {
