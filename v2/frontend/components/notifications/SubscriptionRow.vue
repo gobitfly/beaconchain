@@ -13,17 +13,17 @@ const props = defineProps<{
   valueInText?: number
 }>()
 
-const type = computed(() => props.inputType ?? 'binary')
+const rowType = computed(() => props.inputType ?? 'binary')
 
 const { t } = useI18n()
 
-const state = defineModel<CheckboxAndNumber|ChainIDs[]>({ required: true })
+const parentVmodel = defineModel<CheckboxAndNumber|ChainIDs[]>({ required: true })
 let networkSelectorState: ModelRef<ChainIDs[]>
 let checkBoxAndInput: Ref<CheckboxAndNumber>
-if (type.value === 'networks') {
-  networkSelectorState = state as ModelRef<ChainIDs[]>
+if (rowType.value === 'networks') {
+  networkSelectorState = parentVmodel as ModelRef<ChainIDs[]>
 } else {
-  checkBoxAndInput = state as ModelRef<CheckboxAndNumber>
+  checkBoxAndInput = parentVmodel as ModelRef<CheckboxAndNumber>
 }
 
 const tooltipLines = computed(() => {
@@ -31,14 +31,14 @@ const tooltipLines = computed(() => {
   if (props.valueInText !== undefined) {
     options = { plural: props.valueInText }
   } else
-    if (Array.isArray(state.value)) {
-      options = { plural: state.value.length, list: state.value.join(', ') }
+    if (Array.isArray(parentVmodel.value)) {
+      options = { plural: parentVmodel.value.length, list: parentVmodel.value.join(', ') }
     } else {
       let plural: number
-      if (type.value === 'amount' || type.value === 'percent') {
+      if (rowType.value === 'amount' || rowType.value === 'percent') {
         plural = checkBoxAndInput!.value.num ?? Math.abs(props.default ?? 0)
       } else {
-        plural = state.value ? 2 : 1
+        plural = parentVmodel.value ? 2 : 1
       }
       options = { plural }
     }
@@ -61,20 +61,20 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       </template>
     </BcTooltip>
     <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
-    <div v-if="type != 'networks'" class="right">
-      <div v-if="type == 'amount' || type == 'percent'" class="input">
+    <div v-if="rowType != 'networks'" class="right">
+      <div v-if="rowType == 'amount' || rowType == 'percent'" class="input">
         <BcInputNumber
           v-if="checkBoxAndInput"
           v-model="checkBoxAndInput.num"
-          :min="(type === 'amount') ? 0 : 1"
-          :max="(type === 'amount') ? 2**32 : 100"
-          :max-fraction-digits="(type === 'amount') ? 2 : 1"
+          :min="(rowType === 'amount') ? 0 : 1"
+          :max="(rowType === 'amount') ? 2**32 : 100"
+          :max-fraction-digits="(rowType === 'amount') ? 2 : 1"
           :placeholder="t(tPath + '.placeholder')"
-          :class="[deactivationClass,type]"
+          :class="[deactivationClass,rowType]"
         />
         &nbsp;
       </div>
-      <span v-if="type == 'percent'" :class="deactivationClass">%</span>
+      <span v-if="rowType == 'percent'" :class="deactivationClass">%</span>
       <Checkbox
         v-model="checkBoxAndInput!.check"
         :binary="true"
