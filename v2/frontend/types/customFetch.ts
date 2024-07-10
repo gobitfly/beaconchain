@@ -40,6 +40,7 @@ export enum API_PATH {
   NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
   NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   LATEST_STATE = '/latestState',
+  NOTIFICATIONS_DASHBOARDS='/notifications/dashboards',
   REGISTER = '/register',
   LOGIN = '/login',
   LOGOUT = '/logout',
@@ -260,6 +261,10 @@ export const mapping: Record<string, MappingData> = {
     path: '/validator-dashboards/{dashboard_id}/summary/validators',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false
+  },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
+    path: '/notifications/dashboards',
+    mock: true
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',
