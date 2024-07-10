@@ -11,23 +11,18 @@ const props = defineProps<{
 const parentVmodel = defineModel<number|null>({ required: true })
 const bridgedVmodel = usePrimitiveRefBridge<number|null, Nullable<number>>(parentVmodel, n => n, n => n ?? null)
 
-function sendValueIfValid (input: Nullable<number>) : void {
-  if (input !== undefined && input !== null) {
-    if (isNaN(input)) {
+function sendValue (input: Nullable<number>) : void {
+  if (input === undefined || input === null || isNaN(input) || input < props.min || input > props.max) {
+    input = null
+  } else {
+    const stringifyied = String(input)
+    const comma = stringifyied.indexOf('.')
+    if (comma >= 0 && stringifyied.length - comma - 1 > props.maxFractionDigits) {
       input = null
-    } else {
-      if (input < props.min || input > props.max) {
-        return
-      }
-      const stringifyied = String(input)
-      const comma = stringifyied.indexOf('.')
-      if (comma >= 0 && stringifyied.length - comma - 1 > props.maxFractionDigits) {
-        return
-      }
     }
   }
-  bridgedVmodel.pauseBridge() // this allows us to output to the parent v-model the value without causing an injection of the value into the InputNumber v-model (that would trigger the autocorrect of InputNumber at each key stroke)
-  parentVmodel.value = input ?? null
+  bridgedVmodel.pauseBridge() // this allows us to output the value to the parent v-model without causing an injection of the value back into the InputNumber v-model (that would trigger the autocorrect of InputNumber at each key stroke)
+  parentVmodel.value = input
   bridgedVmodel.wakeupBridge()
 }
 </script>
@@ -38,8 +33,9 @@ function sendValueIfValid (input: Nullable<number>) : void {
     :min="min"
     :max="max"
     :max-fraction-digits="maxFractionDigits"
+    locale="en-US"
     class="why-the-hell-dont-they-fix-this-bug"
-    @input="input => { if (typeof input.value !== 'string') sendValueIfValid(input.value) }"
+    @input="input => { if (typeof input.value !== 'string') sendValue(input.value) }"
   />
 </template>
 
