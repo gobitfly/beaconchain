@@ -448,10 +448,13 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			}
 
 			// also update the queue deposit table once every epoch
-			err = db.UpdateQueueDeposits(tx)
-			if err != nil {
-				return fmt.Errorf("error updating queue deposits cache: %w", err)
-			}
+			g.Go(func() error {
+				err = db.UpdateQueueDeposits(tx)
+				if err != nil {
+					return fmt.Errorf("error updating queue deposits cache: %w", err)
+				}
+				return nil
+			})
 
 			// store validator mapping in redis
 			g.Go(func() error {
