@@ -351,6 +351,18 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) PublicGetNetworkValidators(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }

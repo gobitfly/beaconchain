@@ -270,6 +270,64 @@ type VDBTotalWithdrawalsData struct {
 type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithdrawalsData]
 
 // ------------------------------------------------------------
+// Rocket Pool Tab
+
+type ClaimedUnclaimedValue[T any] struct {
+	Claimed   T `json:"claimed"`
+	Unclaimed T `json:"unclaimed"`
+}
+
+type VDBRocketPoolTableRow struct {
+	Node      Address         `json:"node"`
+	StakedEth decimal.Decimal `json:"staked_eth"`
+	Minipools struct {
+		Total uint64 `json:"total"`
+		Leb16 uint64 `json:"leb_16"`
+		Leb8  uint64 `json:"leb_8"`
+	} `json:"minipools"`
+	Collateral    PercentageDetails[decimal.Decimal] `json:"collateral"`
+	AvgCommission float64                            `json:"avg_commission"`
+	Rpl           struct {
+		Claimed   decimal.Decimal `json:"claimed"`
+		Unclaimed decimal.Decimal `json:"unclaimed"`
+	} `json:"rpl"`
+	EffectiveRpl  decimal.Decimal `json:"effective_rpl"`
+	RplApr        float64         `json:"rpl_apr"`
+	SmoothingPool struct {
+		OptIn     bool            `json:"opt_in"`
+		Claimed   decimal.Decimal `json:"claimed"`
+		Unclaimed decimal.Decimal `json:"unclaimed"`
+	} `json:"smoothing_pool"`
+}
+type InternalGetValidatorDashboardRocketPoolResponse ApiPagingResponse[VDBRocketPoolTableRow]
+
+type VDBTotalRocketPoolData struct {
+	StakedEth     decimal.Decimal                        `json:"staked_eth"`
+	Minipools     uint64                                 `json:"minipools"`
+	Collateral    float64                                `json:"collateral"`
+	AvgCommission float64                                `json:"avg_commission"`
+	Rpl           ClaimedUnclaimedValue[decimal.Decimal] `json:"rpl"`
+	EffectiveRpl  decimal.Decimal                        `json:"effective_rpl"`
+	RplApr        float64                                `json:"rpl_apr"`
+	SmoothingPool ClaimedUnclaimedValue[decimal.Decimal] `json:"smoothing_pool"`
+}
+
+type InternalGetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBTotalRocketPoolData]
+
+type VDBNodeRocketPoolData struct {
+	Timezone      string          `json:"timezone"`
+	RefundBalance decimal.Decimal `json:"refund_balance"`
+	DepositCredit decimal.Decimal `json:"deposit_credit"`
+	Penalties     decimal.Decimal `json:"penalties"`
+	RplStake      struct {
+		Min decimal.Decimal `json:"min"`
+		Max decimal.Decimal `json:"max"`
+	} `json:"rpl_stake"`
+}
+
+type InternalGetValidatorDashboardNodeRocketPoolResponse ApiDataResponse[VDBNodeRocketPoolData]
+
+// ------------------------------------------------------------
 // Manage Modal
 type VDBManageValidatorsTableRow struct {
 	Index                uint64          `json:"index"`

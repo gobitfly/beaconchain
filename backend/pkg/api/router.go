@@ -261,6 +261,9 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/total-consensus-layer-deposits", nil, hs.InternalGetValidatorDashboardTotalConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/withdrawals", hs.PublicGetValidatorDashboardWithdrawals, hs.InternalGetValidatorDashboardWithdrawals},
 		{http.MethodGet, "/{dashboard_id}/total-withdrawals", nil, hs.InternalGetValidatorDashboardTotalWithdrawals},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool", hs.PublicGetValidatorDashboardRocketPool, hs.InternalGetValidatorDashboardRocketPool},
+		{http.MethodGet, "/{dashboard_id}/total-rocket-pool", hs.PublicGetValidatorDashboardTotalRocketPool, hs.InternalGetValidatorDashboardTotalRocketPool},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}", hs.PublicGetValidatorDashboardNodeRocketPool, hs.InternalGetValidatorDashboardNodeRocketPool},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
 }
