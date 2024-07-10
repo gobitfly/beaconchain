@@ -8,13 +8,15 @@ type NotificationsOverviewData struct {
 	EmailNotificationsEnabled bool `json:"email_notifications_enabled"`
 	PushNotificationsEnabled  bool `json:"push_notifications_enabled"`
 
-	VDBMostNotified []string `json:"vdb_most_notified"`
-	ADBMostNotified []string `json:"adb_most_notified"`
+	// these will list 3 group names
+	VDBMostNotifiedGroups []string `json:"vdb_most_notified_groups"`
+	ADBMostNotifiedGroups []string `json:"adb_most_notified_groups"`
 
-	Last24hEmails  uint64 `json:"last_24h_emails"`
-	Last24hPush    uint64 `json:"last_24h_push"`
-	Last24hWebhook uint64 `json:"last_24h_webhook"`
+	Last24hEmailsCount  uint64 `json:"last_24h_emails_count"` // daily limit should be available in user info
+	Last24hPushCount    uint64 `json:"last_24h_push_count"`
+	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
 
+	// counts are shown in their respective tables
 	VDBSubscriptionsCount       uint64 `json:"vdb_subscriptions_count"`
 	ADBSubscriptionsCount       uint64 `json:"adb_subscriptions_count"`
 	MachinesSubscriptionCount   uint64 `json:"machines_subscription_count"`

@@ -12,11 +12,17 @@ import type { ApiDataResponse, ApiPagingResponse, Hash } from './common'
 export interface NotificationsOverviewData {
   email_notifications_enabled: boolean;
   push_notifications_enabled: boolean;
-  vdb_most_notified: string[];
-  adb_most_notified: string[];
-  last_24h_emails: number /* uint64 */;
-  last_24h_push: number /* uint64 */;
-  last_24h_webhook: number /* uint64 */;
+  /**
+   * these will list 3 group names
+   */
+  vdb_most_notified_groups: string[];
+  adb_most_notified_groups: string[];
+  last_24h_emails_count: number /* uint64 */; // daily limit should be available in user info
+  last_24h_push_count: number /* uint64 */;
+  last_24h_webhook_count: number /* uint64 */;
+  /**
+   * counts are shown in their respective tables
+   */
   vdb_subscriptions_count: number /* uint64 */;
   adb_subscriptions_count: number /* uint64 */;
   machines_subscription_count: number /* uint64 */;
