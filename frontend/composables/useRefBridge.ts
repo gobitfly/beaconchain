@@ -1,9 +1,9 @@
-import { type ModelRef, type WatchStopHandle } from 'vue'
+import { type ModelRef } from 'vue'
 
 interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
 interface BridgedRef<T> extends Ref<T> {
    deactivateBridge: () => void,
-   reactivateBridge: (updateFromOriginalRef: boolean) => void
+   reactivateBridge: () => void
 }
 
 /** This composable creates a two-way pipe between reactive arrays of 2 different types. The values circulate back
@@ -24,46 +24,35 @@ export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelR
   const createdRef = ref<Tcreated[]>() as BridgedRef<Tcreated[]>
   let pauseBack = false
   let pauseForth = false
-  let stopperBack: WatchStopHandle
-  let stopperForth: WatchStopHandle
 
-  function startBridge (updateFromOriginalRef: boolean) {
-    pauseBack = pauseForth = false
-    stopperForth = watch(origRef, () => {
-      if (pauseForth) { return }
-      const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : stringNumberConversion<Tcreated>(el)) : undefined as unknown as Tcreated[]
-      createdRef.value = OasC
-      pauseBack = true
-      nextTick(() => { pauseBack = false })
-    }, { immediate: updateFromOriginalRef, deep: true })
-    stopperBack = watch(createdRef, () => {
-      if (pauseBack) { return }
-      const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : stringNumberConversion<Torig>(el)) : undefined as unknown as Torig[]
-      origRef.value = CasO
-      pauseForth = true
-      nextTick(() => { pauseForth = false })
-    }, { deep: true })
+  createdRef.reactivateBridge = () => {
+    nextTick(() => {
+      pauseBack = false
+      pauseForth = false
+    })
   }
 
-  function reactivateBridge (updateFromOriginalRef: boolean) {
-    nextTick(() => startBridge(updateFromOriginalRef))
-  }
-
-  function deactivateBridge () {
+  createdRef.deactivateBridge = () => {
     pauseBack = true
     pauseForth = true
-    stopperBack()
-    stopperForth()
   }
 
-  onUnmounted(() => {
-    stopperBack?.()
-    stopperForth?.()
-  })
+  watch(origRef, () => {
+    if (pauseForth) { return }
+    const OasC = origRef.value ? origRef.value.map(el => origToCreated ? origToCreated(el) : stringNumberConversion<Tcreated>(el)) : undefined as unknown as Tcreated[]
+    createdRef.value = OasC
+    pauseBack = true
+    nextTick(() => { pauseBack = false })
+  }, { immediate: true, deep: true })
 
-  createdRef.deactivateBridge = deactivateBridge
-  createdRef.reactivateBridge = reactivateBridge
-  startBridge(true)
+  watch(createdRef, () => {
+    if (pauseBack) { return }
+    const CasO = createdRef.value ? createdRef.value.map(el => createdToOrig ? createdToOrig(el) : stringNumberConversion<Torig>(el)) : undefined as unknown as Torig[]
+    origRef.value = CasO
+    pauseForth = true
+    nextTick(() => { pauseForth = false })
+  }, { deep: true })
+
   return createdRef
 }
 
@@ -85,46 +74,35 @@ export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRe
   const createdRef = ref<Tcreated>() as BridgedRef<Tcreated>
   let pauseBack = false
   let pauseForth = false
-  let stopperBack: WatchStopHandle
-  let stopperForth: WatchStopHandle
 
-  function startBridge (updateFromOriginalRef: boolean) {
-    pauseBack = pauseForth = false
-    stopperForth = watch(origRef, () => {
-      if (pauseForth) { return }
-      const OasC = (origRef.value !== undefined) ? origToCreated(origRef.value) : undefined as unknown as Tcreated
-      createdRef.value = OasC
-      pauseBack = true
-      nextTick(() => { pauseBack = false })
-    }, { immediate: updateFromOriginalRef, deep: true })
-    stopperBack = watch(createdRef, () => {
-      if (pauseBack) { return }
-      const CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined as unknown as Torig
-      origRef.value = CasO
-      pauseForth = true
-      nextTick(() => { pauseForth = false })
-    }, { deep: true })
+  createdRef.reactivateBridge = () => {
+    nextTick(() => {
+      pauseBack = false
+      pauseForth = false
+    })
   }
 
-  function reactivateBridge (updateFromOriginalRef: boolean) {
-    nextTick(() => startBridge(updateFromOriginalRef))
-  }
-
-  function deactivateBridge () {
+  createdRef.deactivateBridge = () => {
     pauseBack = true
     pauseForth = true
-    stopperBack()
-    stopperForth()
   }
 
-  onUnmounted(() => {
-    stopperBack?.()
-    stopperForth?.()
-  })
+  watch(origRef, () => {
+    if (pauseForth) { return }
+    const OasC = (origRef.value !== undefined) ? origToCreated(origRef.value) : undefined as unknown as Tcreated
+    createdRef.value = OasC
+    pauseBack = true
+    nextTick(() => { pauseBack = false })
+  }, { immediate: true, deep: true })
 
-  createdRef.deactivateBridge = deactivateBridge
-  createdRef.reactivateBridge = reactivateBridge
-  startBridge(true)
+  watch(createdRef, () => {
+    if (pauseBack) { return }
+    const CasO = (createdRef.value !== undefined) ? createdToOrig(createdRef.value) : undefined as unknown as Torig
+    origRef.value = CasO
+    pauseForth = true
+    nextTick(() => { pauseForth = false })
+  }, { deep: true })
+
   return createdRef
 }
 

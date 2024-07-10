@@ -29,7 +29,7 @@ function sendValueIfValid (input: Nullable<number>) : void {
   }
   bridgedVmodel.deactivateBridge() // this allows us to output to the parent v-model the value without causing an injection of the value into the InputNumber v-model (that would trigger the autocorrect of InputNumber at each key stroke)
   parentVmodel.value = input ?? null
-  bridgedVmodel.reactivateBridge(false)
+  bridgedVmodel.reactivateBridge()
 }
 </script>
 
@@ -39,9 +39,13 @@ function sendValueIfValid (input: Nullable<number>) : void {
     :min="min"
     :max="max"
     :max-fraction-digits="maxFractionDigits"
+    class="why-the-hell-dont-they-fix-this-bug"
     @input="input => { if (typeof input.value !== 'string') sendValueIfValid(input.value) }"
   />
 </template>
 
 <style scoped lang="scss">
+.why-the-hell-dont-they-fix-this-bug {
+  :deep(input) { width: 100%; }
+}
 </style>
