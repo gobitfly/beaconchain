@@ -28,6 +28,30 @@ export interface EmailUpdate {
   pending_email: string;
 }
 export type InternalPutUserEmailResponse = ApiDataResponse<EmailUpdate>;
+export interface DeviceSettings {
+  device_id: number /* uint64 */;
+  device_name: string;
+  app_name: string;
+  created_at: number /* int64 */;
+}
+export interface UserSettings {
+  id: number /* uint64 */;
+  device_settings: DeviceSettings[];
+  share_stats: boolean;
+}
+export type InternalGetUserSettingsResponse = ApiDataResponse<UserSettings>;
+export interface DeviceSettingsUpdate {
+  id: number /* uint64 */;
+  device_id: number /* uint64 */;
+  notify_enabled: boolean;
+  active: boolean;
+}
+export type InternalPutDeviceSettingsResponse = ApiDataResponse<DeviceSettingsUpdate>;
+export interface FlagSettingsUpdate {
+  id: number /* uint64 */;
+  share_stats: boolean;
+}
+export type InternalPutFlagSettingsResponse = ApiDataResponse<FlagSettingsUpdate>;
 export type ProductCategory = string;
 export const ProductCategoryApi: ProductCategory = "api";
 export const ProductCategoryPremium: ProductCategory = "premium";

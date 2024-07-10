@@ -16,6 +16,10 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (uint64, error)
 	CreateUser(ctx context.Context, email, password string) (uint64, error)
 	RemoveUser(ctx context.Context, userId uint64) error
+	GetUserSettings(ctx context.Context, userId uint64) (*t.UserSettings, error)
+	UpdateDeviceSettings(ctx context.Context, userId, deviceId uint64, notifyEnabled, active bool) error
+	RemoveDeviceSettings(ctx context.Context, userId, deviceId uint64) error
+	UpdateFlagSettings(ctx context.Context, userId uint64, shareStats bool) error
 	UpdateUserEmail(ctx context.Context, userId uint64) error
 	UpdateUserPassword(ctx context.Context, userId uint64, password string) error
 	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
@@ -49,6 +53,26 @@ func (d *DataAccessService) CreateUser(ctx context.Context, email, password stri
 func (d *DataAccessService) RemoveUser(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
 	return d.dummy.RemoveUser(ctx, userId)
+}
+
+func (d *DataAccessService) GetUserSettings(ctx context.Context, userId uint64) (*t.UserSettings, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserSettings(ctx, userId)
+}
+
+func (d *DataAccessService) UpdateDeviceSettings(ctx context.Context, userId, deviceId uint64, notifyEnabled, active bool) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateDeviceSettings(ctx, userId, deviceId, notifyEnabled, active)
+}
+
+func (d *DataAccessService) RemoveDeviceSettings(ctx context.Context, userId, deviceId uint64) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.RemoveDeviceSettings(ctx, userId, deviceId)
+}
+
+func (d *DataAccessService) UpdateFlagSettings(ctx context.Context, userId uint64, shareStats bool) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateFlagSettings(ctx, userId, shareStats)
 }
 
 func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) error {

@@ -79,6 +79,24 @@ func (d *DummyService) RemoveUser(ctx context.Context, userId uint64) error {
 	return nil
 }
 
+func (d *DummyService) GetUserSettings(ctx context.Context, userId uint64) (*t.UserSettings, error) {
+	r := t.UserSettings{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) UpdateDeviceSettings(ctx context.Context, userId, deviceId uint64, notifyEnabled, active bool) error {
+	return nil
+}
+
+func (d *DummyService) RemoveDeviceSettings(ctx context.Context, userId, deviceId uint64) error {
+	return nil
+}
+
+func (d *DummyService) UpdateFlagSettings(ctx context.Context, userId uint64, shareStats bool) error {
+	return nil
+}
+
 func (d *DummyService) UpdateUserEmail(ctx context.Context, userId uint64) error {
 	return nil
 }

@@ -315,6 +315,118 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 	returnNoContent(w)
 }
 
+func (h *HandlerService) InternalGetUserSettings(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetUserSettings(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetUserSettingsResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalPutDeviceSettings(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate request
+	var v validationError
+	req := struct {
+		DeviceId      uint64 `json:"device_id"`
+		NotifyEnabled bool   `json:"notify_enabled"`
+		Active        bool   `json:"active"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	err = h.dai.UpdateDeviceSettings(r.Context(), user.Id, req.DeviceId, req.NotifyEnabled, req.Active)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalPutDeviceSettingsResponse{
+		Data: types.DeviceSettingsUpdate{
+			Id:            user.Id,
+			DeviceId:      req.DeviceId,
+			NotifyEnabled: req.NotifyEnabled,
+			Active:        req.Active,
+		},
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalDeleteDeviceSettings(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate request
+	var v validationError
+	req := struct {
+		DeviceId uint64 `json:"device_id"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	err = h.dai.RemoveDeviceSettings(r.Context(), user.Id, req.DeviceId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	returnNoContent(w)
+}
+
+func (h *HandlerService) InternalPutFlagSettings(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate request
+	var v validationError
+	req := struct {
+		ShareStats bool `json:"share_stats"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	err = h.dai.UpdateFlagSettings(r.Context(), user.Id, req.ShareStats)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalPutFlagSettingsResponse{
+		Data: types.FlagSettingsUpdate{
+			Id:         user.Id,
+			ShareStats: req.ShareStats,
+		},
+	}
+	returnOk(w, response)
+}
+
 func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Request) {
 	// validate user
 	user, err := h.getUserBySession(r)

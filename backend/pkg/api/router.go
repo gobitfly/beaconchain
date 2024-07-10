@@ -97,6 +97,10 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodPost, "/users/email-confirmations/{token}", nil, hs.InternalPostUserConfirm},
 		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
 		{http.MethodDelete, "/users/me", nil, hs.InternalDeleteUser},
+		{http.MethodGet, "/users/me/settings", nil, hs.InternalGetUserSettings},
+		{http.MethodPut, "/users/me/settings/devices", nil, hs.InternalPutDeviceSettings},
+		{http.MethodDelete, "/users/me/settings/devices", nil, hs.InternalDeleteDeviceSettings},
+		{http.MethodPut, "/users/me/settings/flags", nil, hs.InternalPutFlagSettings},
 		{http.MethodPut, "/users/me/email", nil, hs.InternalPutUserEmail},
 		{http.MethodPut, "/users/me/password", nil, hs.InternalPutUserPassword},
 		// TODO reset password

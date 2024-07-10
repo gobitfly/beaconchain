@@ -28,6 +28,37 @@ type EmailUpdate struct {
 
 type InternalPutUserEmailResponse ApiDataResponse[EmailUpdate]
 
+type DeviceSettings struct {
+	DeviceId   uint64 `json:"device_id"`
+	DeviceName string `json:"device_name"`
+	AppName    string `json:"app_name"`
+	CreatedAt  int64  `json:"created_at" faker:"unix_time"`
+}
+
+type UserSettings struct {
+	Id             uint64           `json:"id"`
+	DeviceSettings []DeviceSettings `json:"device_settings"`
+	ShareStats     bool             `json:"share_stats"`
+}
+
+type InternalGetUserSettingsResponse ApiDataResponse[UserSettings]
+
+type DeviceSettingsUpdate struct {
+	Id            uint64 `json:"id"`
+	DeviceId      uint64 `json:"device_id"`
+	NotifyEnabled bool   `json:"notify_enabled"`
+	Active        bool   `json:"active"`
+}
+
+type InternalPutDeviceSettingsResponse ApiDataResponse[DeviceSettingsUpdate]
+
+type FlagSettingsUpdate struct {
+	Id         uint64 `json:"id"`
+	ShareStats bool   `json:"share_stats"`
+}
+
+type InternalPutFlagSettingsResponse ApiDataResponse[FlagSettingsUpdate]
+
 type ProductCategory string
 
 const ProductCategoryApi ProductCategory = "api"
