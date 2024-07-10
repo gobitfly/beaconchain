@@ -35,7 +35,7 @@ const { user } = useUserStore()
 const tPath = ref('')
 let originalSettings = {} as AllPossibleOptions
 const modifiableOptions = ref({} as ModifiableOptions)
-const allCheckbox = ref({ check: false } as CheckboxAndNumber)
+const checkboxAll = ref({ check: false } as CheckboxAndNumber)
 
 const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
 watch(debouncer.value, sendUserPreferencesToAPI)
@@ -68,22 +68,22 @@ watch(props, (props) => {
   dataNonce = 0
 }, { immediate: true })
 
-watch(allCheckbox, (option) => {
+function checkboxAllhasBeenClicked (checked: boolean) : void {
   for (const k of Object.keys(modifiableOptions.value)) {
     const key = k as keyof ModifiableOptions
     if (isOptionAvailable(key) && !OptionsOutsideTheScopeOfCheckboxall.includes(key)) {
-      (modifiableOptions.value[key] as CheckboxAndNumber).check = option.check
+      (modifiableOptions.value[key] as CheckboxAndNumber).check = checked
     }
   }
   // no need to call the API, the modifications that we did in `modifiableOptions.value` will trigger its watcher (that calls the API)
-})
+}
 
 watch(modifiableOptions, (options) => {
-  allCheckbox.value.check = true
+  checkboxAll.value.check = true
   for (const k of Object.keys(options)) {
     const key = k as keyof ModifiableOptions
     if (isOptionAvailable(key) && !OptionsOutsideTheScopeOfCheckboxall.includes(key)) {
-      allCheckbox.value.check &&= (options[key] as CheckboxAndNumber).check
+      checkboxAll.value.check &&= (options[key] as CheckboxAndNumber).check
     }
   }
   if (dataNonce > 0) {
@@ -168,7 +168,7 @@ const isOptionAvailable = (key: string) => !user.value?.premium_perks.ad_free ||
       <NotificationsSubscriptionRow v-model="modifiableOptions.slashed" :t-path="tPath+'slashed'" :lacks-premium-subscription="!isOptionAvailable('slashed')" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.realTime" :t-path="tPath+'real_time'" :lacks-premium-subscription="!isOptionAvailable('realTime')" class="row" />
       <div class="separation" />
-      <NotificationsSubscriptionRow v-model="allCheckbox" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="checkboxAll" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" @checkbox-click="checkboxAllhasBeenClicked" />
     </div>
 
     <div v-else-if="props.accountSub">
@@ -178,7 +178,7 @@ const isOptionAvailable = (key: string) => !user.value?.premium_perks.ad_free ||
       <NotificationsSubscriptionRow v-model="modifiableOptions.erc721" :t-path="tPath+'erc721'" :lacks-premium-subscription="!isOptionAvailable('erc721')" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.erc1155" :t-path="tPath+'erc1155'" :lacks-premium-subscription="!isOptionAvailable('erc1155')" class="row" />
       <div class="separation" />
-      <NotificationsSubscriptionRow v-model="allCheckbox" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" />
+      <NotificationsSubscriptionRow v-model="checkboxAll" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" @checkbox-click="checkboxAllhasBeenClicked" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.networks" :t-path="tPath+'networks'" :lacks-premium-subscription="!isOptionAvailable('networks')" input-type="networks" class="row" />
       <NotificationsSubscriptionRow v-model="modifiableOptions.ignoreSpam" :t-path="tPath+'ignore_spam'" :lacks-premium-subscription="!isOptionAvailable('ignoreSpam')" class="row" />
     </div>
