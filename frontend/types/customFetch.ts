@@ -1,4 +1,4 @@
-import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList } from '~/utils/mock'
+import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList, mockManageNotificationsGeneral } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
