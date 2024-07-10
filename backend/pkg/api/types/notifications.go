@@ -173,4 +173,4 @@ type NotificationSettingsDashboardsTableRow struct {
 	ChainIds         []uint64    `json:"chain_ids"`
 }
 
-type InternalGetNotificationSettingsDashboardsResponse ApiDataResponse[NotificationSettingsDashboardsTableRow]
+type InternalGetNotificationSettingsDashboardsResponse ApiPagingResponse[NotificationSettingsDashboardsTableRow]

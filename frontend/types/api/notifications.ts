@@ -173,4 +173,4 @@ export interface NotificationSettingsDashboardsTableRow {
   subscribed_events: NotificationEventsValidatorDashboard | NotificationEventsAccountDashboard;
   chain_ids: number /* uint64 */[];
 }
-export type InternalGetNotificationSettingsDashboardsResponse = ApiDataResponse<NotificationSettingsDashboardsTableRow>;
+export type InternalGetNotificationSettingsDashboardsResponse = ApiPagingResponse<NotificationSettingsDashboardsTableRow>;
