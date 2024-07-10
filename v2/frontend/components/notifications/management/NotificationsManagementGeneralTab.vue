@@ -3,7 +3,6 @@
 // TODO: Add provider on modal to collect/handle all data coming from /api/i/users/me/notifications/settings/general
 // TODO: Re-style toggles (deactivated does not look deactivated right now)
 // TODO: Implement Do not disturb feature (mind new design)
-// TOOD: Implement "Paired devices" modal
 import {
   faArrowUpRightFromSquare,
   faPaperPlane
@@ -14,8 +13,8 @@ import { API_PATH } from '~/types/customFetch'
 const { fetch } = useCustomFetch()
 
 const { generalSettings } = useNotificationsManagementGeneral()
-console.log('generalSettings', generalSettings?.value) // TODO: Testcode, remove
 
+const pairedDevicesModalVisible = ref(false)
 const doNotDisturbToggle = ref(false)
 const emailToggle = ref(false)
 const pushToggle = ref(false)
@@ -36,11 +35,12 @@ const sendTestNotification = async (type: 'email' | 'push') => {
 const pairedDevices = computed(() => generalSettings?.value?.data.enabled_notifications.paired_devices_count || 0)
 
 const openPairdeDevicesModal = () => {
-  alert('TODO: Implement')
+  pairedDevicesModalVisible.value = true
 }
 </script>
 
 <template>
+  <NotificationsManagementPairedDevicesModal v-model="pairedDevicesModalVisible" />
   <div class="container">
     <div class="row divider">
       <div>
