@@ -247,6 +247,66 @@ var VDBWithdrawalsColumns = struct {
 }
 
 // ----------------
+// Validator Dashboard Rocket Pool Table
+
+type VDBRocketPoolColumn int
+
+var _ EnumFactory[VDBRocketPoolColumn] = VDBRocketPoolColumn(0)
+
+const (
+	VDBRocketPoolNode VDBRocketPoolColumn = iota
+	VDBRocketPoolMinipools
+	VDBRocketPoolCollateral
+	VDBRocketPoolRpl
+	VDBRocketPoolEffectiveRpl
+	VDBRocketPoolRplApr
+	VDBRocketPoolSmoothingPool
+)
+
+func (c VDBRocketPoolColumn) Int() int {
+	return int(c)
+}
+
+func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
+	switch s {
+	case "node":
+		return VDBRocketPoolNode
+	case "minipools":
+		return VDBRocketPoolMinipools
+	case "collateral":
+		return VDBRocketPoolCollateral
+	case "rpl":
+		return VDBRocketPoolRpl
+	case "effective_rpl":
+		return VDBRocketPoolEffectiveRpl
+	case "rpl_apr":
+		return VDBRocketPoolRplApr
+	case "smoothing_pool":
+		return VDBRocketPoolSmoothingPool
+	default:
+		return VDBRocketPoolColumn(-1)
+	}
+}
+
+var VDBWRocketPoolColumns = struct {
+	Node          VDBRocketPoolColumn
+	Minipools     VDBRocketPoolColumn
+	Collateral    VDBRocketPoolColumn
+	Rpl           VDBRocketPoolColumn
+	EffectiveRpl  VDBRocketPoolColumn
+	RplApr        VDBRocketPoolColumn
+	SmoothingPool VDBRocketPoolColumn
+}{
+	VDBRocketPoolNode,
+	VDBRocketPoolMinipools,
+	VDBRocketPoolCollateral,
+	VDBRocketPoolRpl,
+	VDBRocketPoolEffectiveRpl,
+	VDBRocketPoolRplApr,
+	VDBRocketPoolSmoothingPool,
+}
+
+// ----------------
 // Validator Dashboard Manage Validators Table
 
 type VDBManageValidatorsColumn int
