@@ -27,9 +27,9 @@ function sendValueIfValid (input: Nullable<number>) : void {
       }
     }
   }
-  bridgedVmodel.deactivateBridge() // this allows us to output to the parent v-model the value without causing an injection of the value into the InputNumber v-model (that would trigger the autocorrect of InputNumber at each key stroke)
+  bridgedVmodel.pauseBridge() // this allows us to output to the parent v-model the value without causing an injection of the value into the InputNumber v-model (that would trigger the autocorrect of InputNumber at each key stroke)
   parentVmodel.value = input ?? null
-  bridgedVmodel.reactivateBridge()
+  bridgedVmodel.wakeupBridge()
 }
 </script>
 

@@ -2,8 +2,8 @@ import { type ModelRef } from 'vue'
 
 interface ConverterCallback<Tx, Ty> { (x: Tx) : Ty}
 interface BridgedRef<T> extends Ref<T> {
-   deactivateBridge: () => void,
-   reactivateBridge: () => void
+   pauseBridge: () => void,
+   wakeupBridge: () => void
 }
 
 /** This composable creates a two-way pipe between reactive arrays of 2 different types. The values circulate back
@@ -25,14 +25,14 @@ export function useArrayRefBridge<Torig, Tcreated> (origRef: Ref<Torig[]>|ModelR
   let pauseBack = false
   let pauseForth = false
 
-  createdRef.reactivateBridge = () => {
+  createdRef.wakeupBridge = () => {
     nextTick(() => {
       pauseBack = false
       pauseForth = false
     })
   }
 
-  createdRef.deactivateBridge = () => {
+  createdRef.pauseBridge = () => {
     pauseBack = true
     pauseForth = true
   }
@@ -75,14 +75,14 @@ export function useObjectRefBridge<Torig, Tcreated> (origRef: Ref<Torig>|ModelRe
   let pauseBack = false
   let pauseForth = false
 
-  createdRef.reactivateBridge = () => {
+  createdRef.wakeupBridge = () => {
     nextTick(() => {
       pauseBack = false
       pauseForth = false
     })
   }
 
-  createdRef.deactivateBridge = () => {
+  createdRef.pauseBridge = () => {
     pauseBack = true
     pauseForth = true
   }
