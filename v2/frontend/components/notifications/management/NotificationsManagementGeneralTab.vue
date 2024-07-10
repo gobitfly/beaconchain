@@ -9,34 +9,50 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { API_PATH } from '~/types/customFetch'
+import { useNotificationsManagementSettings } from '~/composables/notifications/useNotificationsManagementSettings'
 
 const { fetch } = useCustomFetch()
 
-const { generalSettings } = useNotificationsManagementGeneral()
+const { generalSettings, updateGeneralSettings } = useNotificationsManagementSettings()
 
 const pairedDevicesModalVisible = ref(false)
 const doNotDisturbToggle = ref(false)
 const emailToggle = ref(false)
 const pushToggle = ref(false)
-const testButtonsDisabled = ref(false)
+const { value: testButtonsDisabled, bounce: bounceTestButton, instant: setTestButton } = useDebounceValue<boolean>(false, 5000)
 
 const sendTestNotification = async (type: 'email' | 'push') => {
-  testButtonsDisabled.value = true
+  setTestButton(true)
   if (type === 'email') {
     await fetch(API_PATH.NOTIFICATIONS_TEST_EMAIL)
   } else {
     await fetch(API_PATH.NOTIFICATIONS_TEST_PUSH)
   }
-  setTimeout(() => {
-    testButtonsDisabled.value = false
-  }, 5000)
+  bounceTestButton(false)
 }
 
-const pairedDevices = computed(() => generalSettings?.value?.data.enabled_notifications.paired_devices_count || 0)
+const pairedDevices = computed(() => generalSettings?.value?.paired_devices?.length || 0)
 
 const openPairdeDevicesModal = () => {
   pairedDevicesModalVisible.value = true
 }
+
+watch(generalSettings, (g) => {
+  if (g) {
+    emailToggle.value = g.enable_email
+    pushToggle.value = g.enable_push
+  }
+}, { immediate: true })
+
+watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
+  if (!generalSettings.value) {
+    return
+  }
+  if (generalSettings.value?.enable_email !== enableEmail || generalSettings.value?.enable_push !== enablePush) {
+    updateGeneralSettings({ ...generalSettings.value, enable_email: enableEmail, enable_push: enablePush })
+  }
+})
+
 </script>
 
 <template>

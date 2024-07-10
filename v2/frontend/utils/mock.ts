@@ -1,7 +1,7 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import type { ApiDataResponse } from '~/types/api/common'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
-import { type NotificationsManagementDashboardResponse } from '~/types/notifications/general'
+import { type NotificationsManagementDashboardResponse } from '~/types/notifications/settings'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -368,12 +368,26 @@ export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChai
 export function mockManageNotificationsGeneral (): NotificationsManagementDashboardResponse {
   return {
     data: {
-      enabled_notifications: {
-        general_do_not_disturb_expire_ts: 9000,
-        general_email: false,
-        general_push: true,
-        paired_devices_count: 2
-      }
+      clients: [],
+      clients_mev_boost: true,
+      clients_rocket_pool_smart_node: false,
+      machines_cpu_usage: 40,
+      machines_memory_usage: 50,
+      machines_offline: true,
+      machines_storage_usage: 80,
+      rocket_pool_max_collateral: 29823,
+      rocket_pool_min_collateral: 123,
+      rocket_pool_new_reward_round: true,
+      do_not_disturb_timestamp: 9000,
+      enable_email: false,
+      enable_push: true,
+      paired_devices: [
+        {
+          id: 'ABC-test',
+          enable_notifications: true,
+          name: 'My device'
+        }
+      ]
     }
   }
 }
