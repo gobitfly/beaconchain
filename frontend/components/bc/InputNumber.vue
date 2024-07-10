@@ -9,7 +9,6 @@ const props = defineProps<{
 }>()
 
 const parentVmodel = defineModel<number|null>({ required: true })
-
 const bridgedVmodel = usePrimitiveRefBridge<number|null, Nullable<number>>(parentVmodel, n => n, n => n ?? null)
 
 function sendValueIfValid (input: Nullable<number>) : void {

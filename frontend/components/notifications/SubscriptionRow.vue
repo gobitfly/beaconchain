@@ -13,6 +13,8 @@ const props = defineProps<{
   valueInText?: number
 }>()
 
+const emitEvent = defineEmits<{(e: 'checkboxClick', checked: boolean) : void}>()
+
 const rowType = computed(() => props.inputType ?? 'binary')
 
 const { t } = useI18n()
@@ -53,7 +55,6 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <span class="caption" :class="deactivationClass">
       {{ t(tPath+'.option') }}
     </span>
-    {{ checkBoxAndInput?.num }}
     <BcTooltip v-if="tooltipLines[0]" :fit-content="true">
       <FontAwesomeIcon :icon="faInfoCircle" class="info" />
       <template #tooltip>
@@ -80,6 +81,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
         :binary="true"
         class="checkbox"
         :class="deactivationClass"
+        @click="emitEvent('checkboxClick', !checkBoxAndInput!.check)"
       />
     </div>
     <div v-else class="right">
