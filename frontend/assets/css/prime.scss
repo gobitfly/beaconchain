@@ -194,6 +194,10 @@
     transition: background-color 0.2s, color 0.2s, border-color 0.2s,
       box-shadow 0.2s;
     border-radius: 30px;
+
+    &:not(.p-inputswitch-checked) {
+      background: var(--toggle-button-deactivated-color);
+    }
   }
 
   .p-inputswitch-slider:before {
@@ -210,8 +214,12 @@
     transform: translateX(20.6px);
   }
 
-  &:not(.p-disabled):hover .p-inputswitch-slider {
+  &:not(.p-disabled):hover.p-inputswitch-checked .p-inputswitch-slider {
     background: var(--button-color-hover);
+  }
+
+  &:not(.p-disabled):hover:not(.p-inputswitch-checked) .p-inputswitch-slider {
+    background: var(--toggle-button-deactivated-hover-color);
   }
 
   &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {

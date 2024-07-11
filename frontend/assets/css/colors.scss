@@ -13,6 +13,7 @@
   --light-grey-5: #eaeaea;
   --dark-grey: #5c4e4e;
   --very-dark-grey: #362f32;
+  --very-dark-grey-2: #444142;
   --asphalt: #484f56;
   --graphite: #343a40;
   --almost-black: #232024;
@@ -123,6 +124,8 @@
   --list-hover-descrete-color: var(--light-grey-5);
 
   --toggle-button-slider-color: var(--light-grey);
+  --toggle-button-deactivated-color: var(--dark-grey);
+  --toggle-button-deactivated-hover-color: var(--very-dark-grey-2);
 
   &.dark-mode {
     --primary-color: var(--primary-orange);
