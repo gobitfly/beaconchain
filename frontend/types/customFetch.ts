@@ -35,7 +35,9 @@ export enum API_PATH {
   DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD = '/notifications/managementDashboard',
   LATEST_STATE = '/latestState',
+  NOTIFICATIONS_DASHBOARDS='/notifications/dashboards',
   REGISTER = '/register',
   LOGIN = '/login',
   LOGOUT = '/logout',
@@ -229,6 +231,10 @@ export const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false
   },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD]: {
+    path: '/notifications/management/dashboard',
+    mock: true
+  },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
@@ -238,6 +244,10 @@ export const mapping: Record<string, MappingData> = {
     path: '/validator-dashboards/{dashboard_id}/summary/validators',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false
+  },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
+    path: '/notifications/dashboards',
+    mock: true
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',

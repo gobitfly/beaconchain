@@ -162,7 +162,7 @@ function closeDialog () : void {
   dialogRef?.value.close()
 }
 
-const isOptionAvailable = (key: keyof AllOptions) => !user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
+const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
 
 function getRowType (key: keyof AllOptions) : InputRow {
   if (RowsThatExpectAnAmount.includes(key)) { return 'amount' }

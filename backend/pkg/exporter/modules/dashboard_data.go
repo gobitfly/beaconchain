@@ -65,6 +65,8 @@ const epochWriteParallelism = 4
 // How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
 const databaseAggregationParallelism = 4
 
+const nonRollingdatabaseAggregationParallelism = 1 // 1 for now to see if this fixes the "deadlocks"
+
 // How many epochFetchParallelism iterations will be written before a new aggregation will be triggered during backfill. This can speed up backfill as writing epochs to db is fast and we can delay
 // aggregation for a couple iterations. Don't set too high or else epoch table will grow to large and will be a bottleneck.
 // Set to 0 to disable and write after every iteration. Recommended value for this is 1 or maybe 2.
@@ -823,7 +825,7 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 
 	// important to do this before hour aggregate as hour aggregate deletes old epochs
 	errGroup := &errgroup.Group{}
-	errGroup.SetLimit(databaseAggregationParallelism)
+	errGroup.SetLimit(nonRollingdatabaseAggregationParallelism)
 	errGroup.Go(func() error {
 		err := d.epochToTotal.aggregateTotal(currentExportedEpoch)
 		if err != nil {

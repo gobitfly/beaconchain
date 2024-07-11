@@ -353,13 +353,25 @@ func (v *validationError) checkExistingGroupId(param string) uint64 {
 	return v.checkUint(param, "group_id")
 }
 
-func (v *validationError) checkGroupIdList(groupIds string) []uint64 {
-	groupIdsSlice := strings.Split(groupIds, ",")
-	var ids []uint64
+func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
+	// This splits the string by commas and removes empty strings
+	f := func(c rune) bool {
+		return c == ','
+	}
+	groupIdsSlice := strings.FieldsFunc(groupIds, f)
+	var ids []T
 	for _, id := range groupIdsSlice {
-		ids = append(ids, v.checkUint(id, "group_ids"))
+		ids = append(ids, convert(id, "group_ids"))
 	}
 	return ids
+}
+
+func (v *validationError) checkExistingGroupIdList(groupIds string) []uint64 {
+	return parseGroupIdList(groupIds, v.checkUint)
+}
+
+func (v *validationError) checkGroupIdList(groupIds string) []int64 {
+	return parseGroupIdList(groupIds, v.checkInt)
 }
 
 func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
@@ -529,37 +541,20 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
-func (v *validationError) checkTimestamps(beforeParam string, afterParam string, maxAge uint64) (before uint64, after uint64) {
-	beforeTs := v.checkUint(beforeParam, "before_ts")
-	afterTs := v.checkUint(afterParam, "after_ts")
-	if beforeTs < afterTs {
-		v.add("before_ts", "must not be smaller than after_ts")
+func (v *validationError) checkTimestamps(afterParam string, beforeParam string, minAllowedTs uint64) (after uint64, before uint64) {
+	// TODO add functionality for max interval between timestamps
+	afterTs := minAllowedTs
+	if afterParam != "" {
+		afterTs = v.checkUint(afterParam, "after_ts")
 	}
-	// set default values if values were omitted
-	// since maxAge can be very large, we need to avoid overflows here
-	if beforeTs == 0 && afterTs == 0 {
-		beforeTs = uint64(time.Now().Unix())
-		afterTs = beforeTs - minUint64(maxAge, beforeTs)
-	} else if beforeTs == 0 {
-		beforeTs = maxUint64(afterTs+maxAge, maxAge)
-	} else if afterTs == 0 {
-		afterTs = beforeTs - minUint64(maxAge, beforeTs)
+	beforeTs := uint64(time.Now().Unix())
+	if beforeParam != "" {
+		beforeTs = v.checkUint(beforeParam, "before_ts")
 	}
-	return beforeTs, afterTs
-}
-
-func maxUint64(a, b uint64) uint64 {
-	if a > b {
-		return a
+	if afterTs > beforeTs {
+		v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
 	}
-	return b
-}
-
-func minUint64(a, b uint64) uint64 {
-	if a < b {
-		return a
-	}
-	return b
+	return afterTs, beforeTs
 }
 
 // getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks

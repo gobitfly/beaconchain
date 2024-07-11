@@ -1,3 +1,5 @@
+import { type ChartHistorySeconds } from '~/types/api/common'
+
 export const SummaryDetailsEfficiencyProps = ['attestations_head', 'attestations_source', 'attestations_target', 'slashings', 'sync'] as const
 export type SummaryDetailsEfficiencyProp = typeof SummaryDetailsEfficiencyProps[number]
 
@@ -28,4 +30,20 @@ export type SummaryTableVisibility = {
   reward: boolean,
   efficiency: boolean,
   validatorsSortable: boolean
+}
+
+export const SUMMARY_CHART_GROUP_TOTAL = -1
+export const SUMMARY_CHART_GROUP_NETWORK_AVERAGE = -2
+
+export type AggregationTimeframe = keyof ChartHistorySeconds
+export const AggregationTimeframes: AggregationTimeframe[] = ['epoch', 'hourly', 'daily', 'weekly']
+
+export const EfficiencyTypes = ['all', 'attestation', 'sync', 'proposal']
+export type EfficiencyType = typeof EfficiencyTypes[number]
+
+export type SummaryChartFilter = {
+  groupIds: number[],
+  aggregation: AggregationTimeframe,
+  efficiency: EfficiencyType,
+  initialised?: boolean,
 }
