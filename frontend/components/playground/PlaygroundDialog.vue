@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BcDialogConfirm, NotificationsSubscriptionDialog } from '#components'
-import type { ValidatorSubscriptionState, AccountSubscriptionState } from '~/types/notifications/subscriptionModal'
+import type { NotificationEventsValidatorDashboard, NotificationEventsAccountDashboard } from '~/types/notifications/subscriptionModal'
 
 const dialog = useDialog()
 
@@ -23,26 +23,26 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
   })
 }
 
-const validatorSub: ValidatorSubscriptionState = {
-  offlineValidator: true,
-  offlineGroup: -20, // means "20% and deselected/unchecked"
-  missedAttestations: true,
-  proposedBlock: true,
-  upcomingProposal: false,
-  syncCommittee: true,
-  withdrawn: true,
+const validatorSub: NotificationEventsValidatorDashboard = {
+  validator_offline: true,
+  group_offline: -20, // means "20% and deselected/unchecked"
+  attestations_missed: true,
+  block_proposal: true,
+  upcoming_block_proposal: false,
+  sync: true,
+  withdrawal_processed: true,
   slashed: false,
-  realTime: false
+  realtime_mode: false
 }
 
-const accountSub: AccountSubscriptionState = {
-  incoming: true,
-  outgoing: true,
-  erc20: null, // means "not in the database yet" (will leave the input field empty with a placeholder)
-  erc721: true,
-  erc1155: false,
+const accountSub: NotificationEventsAccountDashboard = {
+  incoming_transactions: true,
+  outgoing_transactions: true,
+  track_erc20_token_transfers: null, // means "not in the database yet" (will leave the input field empty with a placeholder)
+  track_erc721_token_transfers: true,
+  track_erc1155_token_transfers: false,
   networks: [17000],
-  ignoreSpam: true
+  ignore_spam_transactions: true
 }
 
 function openSubscriptions (props: any) {

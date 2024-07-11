@@ -1,29 +1,43 @@
 <script setup lang="ts">
-import { type ValidatorSubscriptionState, type AccountSubscriptionState, SubscriptionJSONfields, type CheckboxAndNumber } from '~/types/notifications/subscriptionModal'
+import type { NotificationEventsValidatorDashboard, NotificationEventsAccountDashboard, CheckboxAndNumber, InputRow } from '~/types/notifications/subscriptionModal'
 import type { ChainIDs } from '~/types/network'
 import type { ApiErrorResponse } from '~/types/api/common'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  validatorSub?: ValidatorSubscriptionState,
-  accountSub?: AccountSubscriptionState
+  validatorSub?: NotificationEventsValidatorDashboard,
+  accountSub?: NotificationEventsAccountDashboard
 }
+
+// #### DIALOG SETTINGS ####
 
 const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
 const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
 const DefaultValueOfValidatorOptionsNeedingPremium = {
-  offlineGroup: -10, // means "10% and unchecked"
-  realTime: false
+  group_offline: -10, // means "10% and unchecked"
+  realtime_mode: false
   // ... add lines here to make options available to premium accounts only
 }
 const DefaultValueOfAccountOptionsNeedingPremium = {
   // add lines here to make options available to premium accounts only
 }
-const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(ValidatorSubscriptionState & AccountSubscriptionState)> =
-      ['networks', 'ignoreSpam'] // options that are not in the group of the all-checkbox
+const orderOfTheRowsInValidatorModal: Array<keyof NotificationEventsValidatorDashboard | 'ALL'> =
+  ['validator_offline', 'group_offline', 'attestations_missed', 'block_proposal', 'upcoming_block_proposal', 'sync', 'withdrawal_processed', 'slashed', 'realtime_mode', 'ALL']
+const orderOfTheRowsInAccountModal: Array<keyof NotificationEventsAccountDashboard | 'ALL'> =
+  ['incoming_transactions', 'outgoing_transactions', 'track_erc20_token_transfers', 'track_erc721_token_transfers', 'track_erc1155_token_transfers', 'ALL', 'networks', 'ignore_spam_transactions']
+const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
+  ['networks', 'ignore_spam_transactions'] // options that are not in the group of the all-checkbox
+const RowsThatExpectAnAmount: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
+  ['track_erc20_token_transfers']
+const RowsThatExpectAPercentage: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
+  ['group_offline']
+const RowsThatExpectANetwork: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
+  ['networks']
 
-type AllPossibleOptions = ValidatorSubscriptionState & AccountSubscriptionState & typeof DefaultValueOfValidatorOptionsNeedingPremium & typeof DefaultValueOfAccountOptionsNeedingPremium
-type ModifiableOptions = Record<keyof AllPossibleOptions, CheckboxAndNumber|ChainIDs[]>
+// #### END OF DIALOG SETTINGS ####
+
+type AllOptions = NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard & typeof DefaultValueOfValidatorOptionsNeedingPremium & typeof DefaultValueOfAccountOptionsNeedingPremium
+type ModifiableOptions = Record<keyof AllOptions, CheckboxAndNumber|ChainIDs[]>
 
 const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
 const { t } = useI18n()
@@ -33,7 +47,8 @@ const { networkInfo } = useNetworkStore()
 const { user } = useUserStore()
 
 const tPath = ref('')
-let originalSettings = {} as AllPossibleOptions
+let orderOfTheRows: typeof orderOfTheRowsInValidatorModal | typeof orderOfTheRowsInAccountModal = []
+let originalSettings = {} as AllOptions
 const modifiableOptions = ref({} as ModifiableOptions)
 const checkboxAll = ref({ check: false } as CheckboxAndNumber)
 
@@ -48,10 +63,12 @@ watch(props, (props) => {
   }
   if (props.validatorSub) {
     tPath.value = 'notifications.subscriptions.validators.'
-    originalSettings = { ...DefaultValueOfValidatorOptionsNeedingPremium, ...structuredClone(toRaw(props.validatorSub)) } as AllPossibleOptions
+    originalSettings = { ...DefaultValueOfValidatorOptionsNeedingPremium, ...structuredClone(toRaw(props.validatorSub)) } as AllOptions
+    orderOfTheRows = orderOfTheRowsInValidatorModal
   } else {
     tPath.value = 'notifications.subscriptions.accounts.'
-    originalSettings = { ...DefaultValueOfAccountOptionsNeedingPremium, ...structuredClone(toRaw(props.accountSub)) } as AllPossibleOptions
+    originalSettings = { ...DefaultValueOfAccountOptionsNeedingPremium, ...structuredClone(toRaw(props.accountSub)) } as AllOptions
+    orderOfTheRows = orderOfTheRowsInAccountModal
   }
   modifiableOptions.value = {} as ModifiableOptions
   for (const entry of Object.entries(originalSettings)) {
@@ -60,8 +77,18 @@ watch(props, (props) => {
       modifiableOptions.value[key] = entry[1]
     } else {
       switch (typeof entry[1]) {
-        case 'boolean' : modifiableOptions.value[key] = { check: entry[1], num: 0 }; break
-        default : modifiableOptions.value[key] = { check: entry[1] != null && entry[1] >= 0, num: (entry[1] === null) ? null : Math.abs(entry[1]) }; break
+        case 'boolean' :
+          modifiableOptions.value[key] = {
+            check: entry[1],
+            num: 0
+          }
+          break
+        default :
+          modifiableOptions.value[key] = {
+            check: (entry[1] != null && entry[1] >= 0),
+            num: (entry[1] === null) ? null : Math.abs(entry[1])
+          }
+          break
       }
     }
   }
@@ -98,13 +125,17 @@ async function sendUserPreferencesToAPI () {
   const output = {} as Record<string, any>
   for (const entry of Object.entries(modifiableOptions.value)) {
     const key = entry[0] as keyof ModifiableOptions
-    const apiKey = SubscriptionJSONfields[key]
     if (Array.isArray(entry[1])) {
-      output[apiKey] = entry[1]
+      output[key] = entry[1]
     } else {
       switch (typeof originalSettings[key]) {
-        case 'boolean' : output[apiKey] = entry[1].check; break
-        default : output[apiKey] = entry[1].num; if (!entry[1].check && entry[1].num !== null) { output[apiKey] *= -1 } ; break
+        case 'boolean' :
+          output[key] = entry[1].check
+          break
+        default :
+          output[key] = entry[1].num
+          if (!entry[1].check && entry[1].num !== null) { output[key] *= -1 }
+          break
       }
     }
   }
@@ -131,7 +162,14 @@ function closeDialog () : void {
   dialogRef?.value.close()
 }
 
-const isOptionAvailable = (key: string) => !user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
+const isOptionAvailable = (key: keyof AllOptions) => !user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
+
+function getRowType (key: keyof AllOptions) : InputRow {
+  if (RowsThatExpectAnAmount.includes(key)) { return 'amount' }
+  if (RowsThatExpectAPercentage.includes(key)) { return 'percent' }
+  if (RowsThatExpectANetwork.includes(key)) { return 'networks' }
+  return 'binary'
+}
 </script>
 
 <template>
@@ -144,43 +182,26 @@ const isOptionAvailable = (key: string) => !user.value?.premium_perks.ad_free ||
       {{ t(tPath+'explanation') }}
     </div>
 
-    <div v-if="props.validatorSub">
-      <NotificationsSubscriptionRow v-model="modifiableOptions.offlineValidator" :t-path="tPath+'offline_validator'" :lacks-premium-subscription="!isOptionAvailable('offlineValidator')" class="row" />
+    <div v-for="row of orderOfTheRows" :key="row" class="row-container">
       <NotificationsSubscriptionRow
-        v-model="modifiableOptions.offlineGroup"
-        :t-path="tPath+'offline_group'"
-        :lacks-premium-subscription="!isOptionAvailable('offlineGroup')"
-        input-type="percent"
-        :default="DefaultValueOfValidatorOptionsNeedingPremium.offlineGroup"
+        v-if="row != 'ALL'"
+        v-model="modifiableOptions[row]"
+        :t-path="tPath+row"
+        :lacks-premium-subscription="!isOptionAvailable(row)"
+        :input-type="getRowType(row)"
+        :value-in-text="(row == 'attestations_missed') ? Math.round(networkInfo.secondsPerSlot*networkInfo.slotsPerEpoch/6)/10 : undefined"
         class="row"
       />
+      <div v-if="row == 'ALL'" class="separation" />
       <NotificationsSubscriptionRow
-        v-model="modifiableOptions.missedAttestations"
-        :t-path="tPath+'missed_attestations'"
-        :lacks-premium-subscription="!isOptionAvailable('missedAttestations')"
+        v-if="row == 'ALL'"
+        v-model="checkboxAll"
+        :t-path="tPath+'all'"
+        :lacks-premium-subscription="false"
+        input-type="binary"
         class="row"
-        :value-in-text="Math.round(networkInfo.secondsPerSlot*networkInfo.slotsPerEpoch/6)/10"
+        @checkbox-click="checkboxAllhasBeenClicked"
       />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.proposedBlock" :t-path="tPath+'proposed_block'" :lacks-premium-subscription="!isOptionAvailable('proposedBlock')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.upcomingProposal" :t-path="tPath+'upcoming_proposal'" :lacks-premium-subscription="!isOptionAvailable('upcomingProposal')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.syncCommittee" :t-path="tPath+'sync_committee'" :lacks-premium-subscription="!isOptionAvailable('syncCommittee')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.withdrawn" :t-path="tPath+'withdrawn'" :lacks-premium-subscription="!isOptionAvailable('withdrawn')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.slashed" :t-path="tPath+'slashed'" :lacks-premium-subscription="!isOptionAvailable('slashed')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.realTime" :t-path="tPath+'real_time'" :lacks-premium-subscription="!isOptionAvailable('realTime')" class="row" />
-      <div class="separation" />
-      <NotificationsSubscriptionRow v-model="checkboxAll" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" @checkbox-click="checkboxAllhasBeenClicked" />
-    </div>
-
-    <div v-else-if="props.accountSub">
-      <NotificationsSubscriptionRow v-model="modifiableOptions.incoming" :t-path="tPath+'incoming'" :lacks-premium-subscription="!isOptionAvailable('incoming')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.outgoing" :t-path="tPath+'outgoing'" :lacks-premium-subscription="!isOptionAvailable('outgoing')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.erc20" :t-path="tPath+'erc20'" :lacks-premium-subscription="!isOptionAvailable('erc20')" input-type="amount" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.erc721" :t-path="tPath+'erc721'" :lacks-premium-subscription="!isOptionAvailable('erc721')" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.erc1155" :t-path="tPath+'erc1155'" :lacks-premium-subscription="!isOptionAvailable('erc1155')" class="row" />
-      <div class="separation" />
-      <NotificationsSubscriptionRow v-model="checkboxAll" :t-path="tPath+'all'" :lacks-premium-subscription="false" class="row" @checkbox-click="checkboxAllhasBeenClicked" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.networks" :t-path="tPath+'networks'" :lacks-premium-subscription="!isOptionAvailable('networks')" input-type="networks" class="row" />
-      <NotificationsSubscriptionRow v-model="modifiableOptions.ignoreSpam" :t-path="tPath+'ignore_spam'" :lacks-premium-subscription="!isOptionAvailable('ignoreSpam')" class="row" />
     </div>
 
     <div class="footer">
@@ -208,14 +229,15 @@ const isOptionAvailable = (key: string) => !user.value?.premium_perks.ad_free ||
     color: var(--text-color-discreet)
   }
 
-  .row {
-    margin-top: 14px;
-    margin-bottom: 14px;
-  }
-
-  .separation {
-    height: 1px;
-    background-color: var(--container-border-color);
+  .row-container {
+    position: relative;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    .separation {
+      height: 1px;
+      background-color: var(--container-border-color);
+      margin-bottom: 16px;
+    }
   }
 
   .footer {

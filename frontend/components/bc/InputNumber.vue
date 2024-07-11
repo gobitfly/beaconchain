@@ -21,9 +21,9 @@ function sendValue (input: Nullable<number>) : void {
       input = null
     }
   }
-  bridgedVmodel.pauseBridge() // this allows us to output the value to the parent v-model without causing an injection of the value back into the InputNumber v-model (that would trigger the autocorrect of InputNumber at each key stroke)
+  bridgedVmodel.pauseBridgeFromNowOn() // this allows us to output the value to the parent v-model without causing an injection of the value back into the InputNumber v-model (that would empty InputNumber at each key stroke if the input is invalid)
   parentVmodel.value = input
-  bridgedVmodel.wakeupBridge()
+  bridgedVmodel.wakeupBridgeAtNextTick()
 }
 </script>
 

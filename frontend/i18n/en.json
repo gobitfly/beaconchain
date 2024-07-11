@@ -308,7 +308,7 @@
       "dialog_title": "Edit Subscriptions",
       "validators" : {
         "explanation": "All notifications are sent after network finality (~20mins).",
-        "offline_validator": {
+        "validator_offline": {
           "option": "Validator is offline",
           "hint": [
             "We will trigger a notification:",
@@ -317,39 +317,39 @@
             "- Once you are back online again."
           ]
         },
-        "offline_group": {
+        "group_offline": {
           "option":"Group is offline",
           "hint": [
             "We will trigger a notification:",
-            "- Once {count}% of your group is offline.",
+            "- Once validators in your group are offline. | - Once {count}% of your group is offline. | - Once {count}% of your group is offline.",
             "- Once you have been offline for 3 epochs.",
             "- Every 32 Epochs (~3 hours) during your downtime.",
             "- Once you are back online.",
-            "*Note:* Notification resets if you do not meet the threshold of {count}%."
+            "*Note:* Notification resets if you do not meet the threshold given in the input field. | *Note:* Notification resets if you do not meet the threshold of {count}%. | *Note:* Notification resets if you do not meet the threshold of {count}%."
           ],
           "placeholder": ""
         },
-        "missed_attestations": {
+        "attestations_missed": {
           "option":"Attestations missed",
           "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime."
         },
-        "proposed_block": {
+        "block_proposal": {
           "option":"Block proposal (missed & success)"
         },
-        "upcoming_proposal": {
+        "upcoming_block_proposal": {
           "option":"Upcoming block proposal",
           "hint": "May trigger false positive notifications during reorgs."
         },
-        "sync_committee": {
+        "sync": {
           "option":"Sync committee"
         },
-        "withdrawn": {
+        "withdrawal_processed": {
           "option":"Withdrawal processed"
         },
         "slashed": {
           "option":"Validator got slashed"
         },
-        "real_time": {
+        "realtime_mode": {
           "option":"Realtime mode",
           "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
         },
@@ -359,20 +359,20 @@
       },
       "accounts": {
         "explanation": "",
-        "incoming": {
+        "incoming_transactions": {
           "option":"Incoming transactions"
         },
-        "outgoing": {
+        "outgoing_transactions": {
           "option":"Outgoing transactions"
         },
-        "erc20": {
+        "track_erc20_token_transfers": {
           "option":"ERC20 token transfers",
           "placeholder": "value > $0"
         },
-        "erc721": {
+        "track_erc721_token_transfers": {
           "option":"ERC721 token transfers"
         },
-        "erc1155": {
+        "track_erc1155_token_transfers": {
           "option":"ERC1155 token transfers"
         },
         "all": {
@@ -381,7 +381,7 @@
         "networks": {
           "option":"Networks"
         },
-        "ignore_spam": {
+        "ignore_spam_transactions": {
           "option":"Ignore spam transactions",
           "hint": ["Ignores *zero value transfer tx's* and token tx's that have the *\"hidden\" token label*."]
         }

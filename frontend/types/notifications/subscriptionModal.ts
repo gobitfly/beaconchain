@@ -1,70 +1,25 @@
-import { ChainIDs } from '../network'
-
-/** translates the names of the members of our objects to/from the names used by the API  // TODO: write here the identifiers actually used by the API */
-export enum SubscriptionJSONfields {
-  offlineValidator = 'offline_validator',
-  offline_validator = 'offlineValidator',
-
-  offlineGroup = 'offline_group',
-  offline_group = 'offlineGroup',
-
-  missedAttestations = 'missed_attestations',
-  missed_attestations = 'missedAttestations',
-
-  proposedBlock = 'proposed_block',
-  proposed_block = 'proposedBlock',
-
-  upcomingProposal = 'upcoming_proposal',
-  upcoming_proposal = 'upcomingProposal',
-
-  syncCommittee = 'sync_committee',
-  sync_committee = 'syncCommittee',
-
-  withdrawn = 'withdrawn',
-
-  slashed = 'slashed',
-
-  realTime = 'real_time',
-  real_time = 'realTime',
-
-  incoming = 'incoming',
-
-  outgoing = 'outgoing',
-
-  erc20 = 'erc20',
-
-  erc721 = 'erc721',
-
-  erc1155 = 'erc1155',
-
-  networks = 'networks',
-
-  ignoreSpam = 'ignore_spam',
-  ignore_spam = 'ignoreSpam'
+// TODO: import from '~/types/api/notifications.ts' once the corresponding PR is corrected and merged https://github.com/gobitfly/beaconchain/pull/573
+export interface NotificationEventsValidatorDashboard {
+  validator_offline: boolean;
+  group_offline: number|null /* float64 */;
+  attestations_missed: boolean;
+  block_proposal: boolean;
+  upcoming_block_proposal: boolean;
+  sync: boolean;
+  withdrawal_processed: boolean;
+  slashed: boolean;
+  realtime_mode: boolean;
 }
 
-/** for an option of type `number`: to mean that no value exists in the DB yet, set it to NaN; to mean that it is has a value but it is deactivated, set it to a negative value (for example 10% becomes -10) */
-export type ValidatorSubscriptionState = { // TODO: update the types once they are defined by the API
-  offlineValidator: boolean,
-  offlineGroup?: number|null,
-  missedAttestations: boolean,
-  proposedBlock: boolean,
-  upcomingProposal: boolean,
-  syncCommittee: boolean,
-  withdrawn: boolean,
-  slashed: boolean,
-  realTime?: boolean
-}
-
-/** for an option of type `number`: to mean that no value exists in the DB yet, set it to NaN; to mean that it is has a value but it is deactivated, set it to a negative value (for example $50 becomes -50) */
-export type AccountSubscriptionState = { // TODO: update the types once they are defined by the API
-  incoming: boolean,
-  outgoing: boolean,
-  erc20: number|null,
-  erc721: boolean,
-  erc1155: boolean,
-  networks: ChainIDs[],
-  ignoreSpam: boolean
+// TODO: import from '~/types/api/notifications.ts' once the corresponding PR is corrected and merged https://github.com/gobitfly/beaconchain/pull/573
+export interface NotificationEventsAccountDashboard {
+  incoming_transactions: boolean;
+  outgoing_transactions: boolean;
+  track_erc20_token_transfers: number|null /* float64 */;
+  track_erc721_token_transfers: boolean;
+  track_erc1155_token_transfers: boolean;
+  networks: number /* uint64 */[];
+  ignore_spam_transactions: boolean;
 }
 
 /** for internal use */
@@ -72,3 +27,5 @@ export interface CheckboxAndNumber {
   check: boolean,
   num: number|null
 }
+
+export type InputRow = 'binary' | 'amount' | 'percent' | 'networks'
