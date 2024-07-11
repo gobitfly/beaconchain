@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 // TODO: Use translations everywhere
-// TODO: Add provider on modal to collect/handle all data coming from /api/i/users/me/notifications/settings/general
-// TODO: Re-style toggles (deactivated does not look deactivated right now)
 // TODO: Implement Do not disturb feature (mind new design)
 import {
   faArrowUpRightFromSquare,
