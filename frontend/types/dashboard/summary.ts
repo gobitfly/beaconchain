@@ -42,7 +42,8 @@ export const EfficiencyTypes = ['all', 'attestation', 'sync', 'proposal']
 export type EfficiencyType = typeof EfficiencyTypes[number]
 
 export type SummaryChartFilter = {
-  groupIds: number[]
-  aggregation: AggregationTimeframe
-  efficiency: EfficiencyType
+  groupIds: number[],
+  aggregation: AggregationTimeframe,
+  efficiency: EfficiencyType,
+  initialised?: boolean,
 }

@@ -30,8 +30,8 @@ const efficiencyList = EfficiencyTypes.map(e => ({
 watch(efficiency, (e) => { chartFilter.value.efficiency = e })
 
 /** groups */
-const total = ref(chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_TOTAL))
-const average = ref(chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_NETWORK_AVERAGE))
+const total = ref(!chartFilter.value.initialised || chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_TOTAL))
+const average = ref(!chartFilter.value.initialised || chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_NETWORK_AVERAGE))
 const groups = computed(() => {
   if (!overview.value?.groups) {
     return []
@@ -42,12 +42,6 @@ const selectedGroups = ref<number[]>([])
 watch(groups, (list) => {
   // when groups change we reset the selected groups
   selectedGroups.value = list.map(g => g.id)
-  if (total.value) {
-    selectedGroups.value.push(SUMMARY_CHART_GROUP_TOTAL)
-  }
-  if (average.value) {
-    selectedGroups.value.push(SUMMARY_CHART_GROUP_NETWORK_AVERAGE)
-  }
 }, { immediate: true })
 
 watch([selectedGroups, total, average], ([list, t, a]) => {
@@ -59,7 +53,8 @@ watch([selectedGroups, total, average], ([list, t, a]) => {
     groupIds.push(SUMMARY_CHART_GROUP_NETWORK_AVERAGE)
   }
   chartFilter.value.groupIds = groupIds
-})
+  chartFilter.value.initialised = true
+}, { immediate: true })
 
 const selectAllGroups = () => {
   selectedGroups.value = groups.value.map(g => g.id)

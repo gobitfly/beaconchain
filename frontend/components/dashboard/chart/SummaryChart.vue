@@ -39,6 +39,7 @@ const { tsToEpoch } = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
 
 const data = ref<ChartData<number, number> | undefined >()
+const { value: filter, bounce: bounceFilter } = useDebounceValue(props.filter, 1000)
 const aggregation = ref<AggregationTimeframe>('hourly')
 const isLoading = ref(false)
 const loadData = async () => {
@@ -55,8 +56,15 @@ const loadData = async () => {
   data.value = res.data
 }
 
-watch([dashboardKey, () => props.filter], () => {
+watch([dashboardKey, filter], () => {
   loadData()
+}, { immediate: true })
+
+watch(() => props.filter, (filter) => {
+  if (!filter) {
+    return
+  }
+  bounceFilter({ ...filter, groupIds: [...filter.groupIds] }, true, true)
 }, { immediate: true, deep: true })
 
 const { groups } = useValidatorDashboardGroups()
