@@ -315,6 +315,7 @@
     },
     "general": {
       "do_not_disturb": "Do not disturb",
+      "mutes_all": "Mutes all notifications",
       "email_notifications": "Email Notifications",
       "push_notifications": "Push Notifications",
       "send_test_email": "Send Test E-Mail",
