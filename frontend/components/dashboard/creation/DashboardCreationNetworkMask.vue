@@ -4,7 +4,6 @@ import { ChainInfo, ChainIDs } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { t: $t } = useI18n()
-
 const { currentNetwork, isMainNet } = useNetworkStore()
 
 const network = defineModel<ChainIDs>('network')
@@ -32,7 +31,7 @@ const showNameOrDescription = (chainId: ChainIDs): string => {
 
 const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
   // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
-  const isDisabled = !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value
+  const isDisabled = chainId !== currentNetwork.value
   return {
     value: String(chainId),
     text: ChainInfo[chainId].family as string,
