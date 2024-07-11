@@ -181,6 +181,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       height: 30px;
       padding: 0 22px;
       border-radius: 0;
+      white-space: nowrap;
 
       &:has(svg) {
         padding: 0 15px;
