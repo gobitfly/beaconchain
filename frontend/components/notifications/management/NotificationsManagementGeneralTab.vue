@@ -60,7 +60,7 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
     <div class="row divider">
       <div>
         <span>{{ $t('notifications.general.do_not_disturb') }}</span>
-        <span class="explanation">Mutes all notifications</span>
+        <span class="explanation">{{ $t('notifications.general.mutes_all') }}</span>
       </div>
       <BcToggle v-model="doNotDisturbToggle" />
     </div>
