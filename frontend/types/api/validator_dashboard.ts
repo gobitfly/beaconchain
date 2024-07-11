@@ -241,10 +241,10 @@ export interface VDBTotalWithdrawalsData {
   total_amount: string /* decimal.Decimal */;
 }
 export type InternalGetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBTotalWithdrawalsData>;
-export interface ClaimedUnclaimedValue<T extends any> {
-  claimed: T;
-  unclaimed: T;
-}
+/**
+ * ------------------------------------------------------------
+ * Rocket Pool Tab
+ */
 export interface VDBRocketPoolTableRow {
   node: Address;
   staked_eth: string /* decimal.Decimal */;
@@ -268,17 +268,7 @@ export interface VDBRocketPoolTableRow {
   };
 }
 export type InternalGetValidatorDashboardRocketPoolResponse = ApiPagingResponse<VDBRocketPoolTableRow>;
-export interface VDBTotalRocketPoolData {
-  staked_eth: string /* decimal.Decimal */;
-  minipools: number /* uint64 */;
-  collateral: number /* float64 */;
-  avg_commission: number /* float64 */;
-  rpl: ClaimedUnclaimedValue<string /* decimal.Decimal */>;
-  effective_rpl: string /* decimal.Decimal */;
-  rpl_apr: number /* float64 */;
-  smoothing_pool: ClaimedUnclaimedValue<string /* decimal.Decimal */>;
-}
-export type InternalGetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBTotalRocketPoolData>;
+export type InternalGetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBRocketPoolTableRow>;
 export interface VDBNodeRocketPoolData {
   timezone: string;
   refund_balance: string /* decimal.Decimal */;

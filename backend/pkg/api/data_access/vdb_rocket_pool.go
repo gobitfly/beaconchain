@@ -12,7 +12,7 @@ func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context,
 	return d.dummy.GetValidatorDashboardRocketPool(ctx, dashboardId, cursor, colSort, search, limit)
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalRocketPoolData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
 	// TODO @DATA-ACCESS
 	return d.dummy.GetValidatorDashboardTotalRocketPool(ctx, dashboardId, search)
 }
