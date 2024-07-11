@@ -182,7 +182,7 @@ const option = computed(() => {
       padding: 0,
       borderColor: colors.value.background,
       formatter (params : any) : HTMLElement {
-        const ts = params[0].axisValue as number
+        const ts = parseInt(params[0].axisValue)
         const groupInfos = params.map((param: any) => {
           return {
             name: param.seriesName,

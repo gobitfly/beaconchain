@@ -46,11 +46,11 @@ const dateText = computed(() => {
   if (!startTs.value) {
     return
   }
-  const date = formatGoTimestamp(startTs.value, undefined, 'absolute', 'narrow', props.t('locales.date'), false)
+  const date = formatGoTimestamp(startTs.value, undefined, 'absolute', 'narrow', props.t('locales.date'), true)
   if (!endTs.value) {
     return date
   }
-  const endDate = formatGoTimestamp(endTs.value, undefined, 'absolute', 'narrow', props.t('locales.date'), false)
+  const endDate = formatGoTimestamp(endTs.value, undefined, 'absolute', 'narrow', props.t('locales.date'), true)
 
   return `${date} - ${endDate}`
 })
