@@ -5,7 +5,6 @@ import { ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { dashboards } = useUserDashboardStore()
 const { user, isLoggedIn } = useUserStore()
 
@@ -20,7 +19,7 @@ const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
 const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
-const network = ref<ChainIDs>()
+const network = ref<ChainIDs>(0)
 const { dashboardKey, publicEntities } = useDashboardKey()
 const { fetch } = useCustomFetch()
 const route = useRoute()
@@ -30,7 +29,10 @@ const maxDashboards = computed(() => {
   return user.value?.premium_perks.validator_dashboards ?? 1
 })
 const accountsDisabled = computed(() => {
-  return !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards.value
+  // TODO: Once account dashboards are being tackled, use something like
+  // return !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards.value
+
+  return true
 })
 const validatorsDisabled = computed(() => {
   return (dashboards.value?.validator_dashboards?.length ?? 0) >= maxDashboards.value
@@ -47,7 +49,7 @@ function show () {
     type.value = 'account'
   }
   name.value = isLoggedIn.value ? '' : 'cookie'
-  network.value = undefined
+  network.value = 0
 }
 
 defineExpose({

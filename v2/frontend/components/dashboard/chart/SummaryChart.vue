@@ -12,12 +12,12 @@ import {
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
-import { useFormat } from '~/composables/useFormat'
 import { getSummaryChartGroupColors, getChartTextColor, getChartTooltipBackgroundColor } from '~/utils/colors'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { API_PATH } from '~/types/customFetch'
+import { SUMMARY_CHART_GROUP_NETWORK_AVERAGE, SUMMARY_CHART_GROUP_TOTAL, type AggregationTimeframe, type SummaryChartFilter } from '~/types/dashboard/summary'
 
 use([
   CanvasRenderer,
@@ -28,23 +28,44 @@ use([
   GridComponent
 ])
 
+interface Props {
+  filter?: SummaryChartFilter
+}
+
+const props = defineProps<Props>()
+
 const { fetch } = useCustomFetch()
-const { formatEpochToDate } = useFormat()
+const { tsToEpoch } = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
 
 const data = ref<ChartData<number, number> | undefined >()
+const { value: filter, bounce: bounceFilter } = useDebounceValue(props.filter, 1000)
+const aggregation = ref<AggregationTimeframe>('hourly')
 const isLoading = ref(false)
-await useAsyncData('validator_dashboard_summary_chart', async () => {
+const loadData = async () => {
   if (!dashboardKey.value) {
     data.value = undefined
     return
   }
   isLoading.value = true
-  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, undefined, { dashboardKey: dashboardKey.value })
+  const requestAggregation = props.filter?.aggregation || 'hourly'
+  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, { query: { group_ids: props.filter?.groupIds.join(','), efficiency_type: props.filter?.efficiency, aggregation: requestAggregation } }, { dashboardKey: dashboardKey.value })
+  aggregation.value = requestAggregation
 
   isLoading.value = false
   data.value = res.data
-}, { watch: [dashboardKey], server: false })
+}
+
+watch([dashboardKey, filter], () => {
+  loadData()
+}, { immediate: true })
+
+watch(() => props.filter, (filter) => {
+  if (!filter) {
+    return
+  }
+  bounceFilter({ ...filter, groupIds: [...filter.groupIds] }, true, true)
+}, { immediate: true, deep: true })
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -82,7 +103,14 @@ const option = computed(() => {
   if (data.value?.series) {
     const allGroups = $t('dashboard.validator.summary.chart.all_groups')
     data.value.series.forEach((element) => {
-      const name = getGroupLabel($t, element.id, groups.value, allGroups)
+      let name: string
+      if (element.id === SUMMARY_CHART_GROUP_TOTAL) {
+        name = $t('dashboard.validator.summary.chart.total')
+      } else if (element.id === SUMMARY_CHART_GROUP_NETWORK_AVERAGE) {
+        name = $t('dashboard.validator.summary.chart.average')
+      } else {
+        name = getGroupLabel($t, element.id, groups.value, allGroups)
+      }
       const newObj: SeriesObject = {
         data: element.data,
         type: 'line',
@@ -109,17 +137,16 @@ const option = computed(() => {
         fontSize: textSize,
         lineHeight: 20,
         formatter: (value: number) => {
-          const date = formatEpochToDate(value, $t('locales.date'))
-          if (date === undefined) {
-            return ''
+          const date = formatGoTimestamp(value, undefined, 'absolute', 'narrow', $t('locales.date'), false)
+          if (aggregation.value === 'epoch') {
+            return `${date}\n${$t('common.epoch')} ${tsToEpoch(value)}`
           }
-
-          return `${date}\n${$t('common.epoch')} ${value}`
+          return date
         }
       }
     },
     yAxis: {
-      name: $t('dashboard.validator.summary.chart.efficiency'),
+      name: $t(`dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`),
       nameLocation: 'center',
       nameTextStyle: {
         padding: [0, 0, 30, 0]
@@ -162,11 +189,8 @@ const option = computed(() => {
       trigger: 'axis',
       padding: 0,
       borderColor: colors.value.background,
-      valueFormatter: (value: number) => {
-        return `${value}% ${$t('dashboard.validator.summary.chart.efficiency')}`
-      },
       formatter (params : any) : HTMLElement {
-        const startEpoch = parseInt(params[0].axisValue)
+        const ts = parseInt(params[0].axisValue)
         const groupInfos = params.map((param: any) => {
           return {
             name: param.seriesName,
@@ -176,7 +200,7 @@ const option = computed(() => {
         })
 
         const d = document.createElement('div')
-        render(h(SummaryChartTooltip, { t: $t, startEpoch, groupInfos }), d)
+        render(h(SummaryChartTooltip, { t: $t, ts, efficiencyType: props.filter?.efficiency || 'all', aggregation: aggregation.value, groupInfos }), d)
         return d
       }
     },

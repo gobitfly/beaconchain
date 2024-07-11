@@ -4,11 +4,12 @@ import { ChainInfo, ChainIDs, isL1 } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
+const { t: $t } = useI18n()
 
-const network = defineModel<ChainIDs>('network')
-const selection = ref<string>('')
+const network = defineModel<ChainIDs>('network', { required: true })
+const selection = ref<`${ChainIDs}` | ''>('')
 
-watch(selection, (value) => { network.value = Number(value) as ChainIDs })
+watch(selection, (value) => { network.value = Number(value) as ChainIDs }, { immediate: true })
 
 const buttonList = computed(() => {
   const list = [] as any[]
@@ -17,7 +18,7 @@ const buttonList = computed(() => {
       list.push({
         value: String(chainId),
         text: ChainInfo[chainId].nameParts[0],
-        subText: ChainInfo[chainId].nameParts[1],
+        subText: isNetworkDisabled(chainId) ? $t('common.coming_soon') : ChainInfo[chainId].nameParts[1],
         disabled: isNetworkDisabled(chainId),
         component: IconNetwork,
         componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
@@ -25,10 +26,9 @@ const buttonList = computed(() => {
       })
     }
   })
+  selection.value = `${currentNetwork.value}`
   return list
 })
-
-const { t: $t } = useI18n()
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
@@ -50,7 +50,6 @@ const continueDisabled = computed(() => {
         v-model="selection"
         class="single-bar"
         :buttons="buttonList"
-        :initial="String(currentNetwork)"
         :are-buttons-networks="true"
         layout="gaudy"
       />

@@ -120,6 +120,7 @@
   "validator_state": {
     "active": "active",
     "withdrawn": "withdrawn",
+    "deposited": "deposited",
     "online": "active",
     "offline": "offline",
     "pending": "pending",
@@ -298,6 +299,7 @@
     "login_question": "Do you want to login to set notifications?",
     "manage": "Manage Notifications",
     "tabs":{
+      "general": "General",
       "dashboards": "Dashboards",
       "machines": "Machines",
       "clients": "Clients",
@@ -390,6 +392,46 @@
       "error_title": "Error",
       "error_group": "Notification subscriptions",
       "error_message": "We could not save your preferences."
+    },
+    "management": {
+      "title": "Manage Notifications"
+    },
+    "col": {
+      "dashboard": "Dashboard",
+      "group": "Group",
+      "subscriptions": "Subscriptions",
+      "webhook": "Webhook",
+      "networks": "Networks"
+    },
+    "dashboards": {
+      "title": "Dashboards",
+      "search_placeholder": "Dashboard, Group",
+      "col": {
+        "entity": "Entity",
+        "notification": "Notification"
+      },
+      "entity": {
+        "validators": "validator | validators",
+        "accounts": "account | accounts"
+      },
+      "expansion": {
+        "label-dashboard": "Dashboard:",
+        "label-group": "Group:",
+        "label-notification": "Notification:"
+      },
+      "empty": {
+        "login": "Login to set notifications",
+        "no_dashboards": "Create a dashboard to set notifications",
+        "with_dashboards": "Click here to set notifications"
+      },
+      "footer": {
+        "subscriptions": {
+          "validators": "Validators ({count} Subscription) |Validators ({count} Subscriptions)",
+          "validators_shortened": "Validators ({count} Sub) |Validators ({count} Subs)",
+          "accounts": "Accounts ({count} Subscription) |Accounts ({count} Subscriptions)",
+          "accounts_shortened": "Accounts ({count} Sub) |Accounts ({count} Subs)"
+        }
+      }
     }
   },
   "dashboard": {
@@ -629,7 +671,14 @@
         },
         "chart": {
           "all_groups": "All Groups",
-          "efficiency": "Efficiency"
+          "average": "Network Average",
+          "total": "Total",
+          "efficiency": {
+            "all": "Efficiency",
+            "attestation": "Attestation Eff.",
+            "sync": "Sync Eff.",
+            "proposal": "Proposal Eff."
+          }
         },
         "tooltip":{
           "lower": "{name}'s efficiency is below the network average of {average}",
@@ -669,20 +718,6 @@
           "result": "Result",
           "rewards": "Rewards",
           "validator": "Validator"
-        }
-      }
-    },
-    "notifications": {
-      "title": "Notifications",
-      "management": {
-        "title": "Manage Notifications",
-        "tabs": {
-          "general": "General",
-          "dashboards": "Dashboards",
-          "machines": "Machines",
-          "clients": "Clients",
-          "rocketpool": "Rocket Pool",
-          "network": "Network"
         }
       }
     }

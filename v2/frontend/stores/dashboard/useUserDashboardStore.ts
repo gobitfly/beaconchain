@@ -151,5 +151,13 @@ export function useUserDashboardStore () {
     return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')
   }
 
-  return { dashboards, cookieDashboards, refreshDashboards, createValidatorDashboard, createAccountDashboard, updateHash, getDashboardLabel }
+  return {
+    createAccountDashboard,
+    createValidatorDashboard,
+    cookieDashboards,
+    dashboards,
+    getDashboardLabel,
+    refreshDashboards,
+    updateHash
+  }
 }

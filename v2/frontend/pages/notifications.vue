@@ -7,7 +7,6 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
-import NotificationsManagementModal from '~/components/dashboard/notifications/NotificationsManagementModal.vue'
 
 useDashboardKeyProvider('notifications')
 const { refreshDashboards } = useUserDashboardStore()
@@ -87,7 +86,7 @@ const openManageNotifications = () => {
           <template #header>
             <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faGaugeSimpleMax" />
           </template>
-          <div>TODO: Dashboards Table</div>
+          <NotificationsDashboardsTable @open-dialog="openManageNotifications" />
         </TabPanel>
         <TabPanel :disabled="tabs.machines.disabled">
           <template #header>
