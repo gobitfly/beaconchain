@@ -32,17 +32,17 @@ const onInput = (value: string) => {
     <div class="bc-table-header">
       <div class="side left">
         <BcIconToggle v-if="$slots.chart" v-model="tableIsShown" :true-icon="faTable" :false-icon="faChartColumn" :disabled="chartDisabled" />
-        <BcIconToggle v-if="useAbsoluteValues !== null" v-model="useAbsoluteValues" :true-icon="faHashtag" :false-icon="faPercent" />
+        <BcIconToggle v-if="useAbsoluteValues !== null && tableIsShown" v-model="useAbsoluteValues" :true-icon="faHashtag" :false-icon="faPercent" />
         <slot name="header-left" />
       </div>
 
-      <slot name="header-center">
+      <slot name="header-center" :table-is-shown="tableIsShown">
         <div v-if="props.title" class="h1">
           {{ props.title }}
         </div>
       </slot>
       <div class="side right">
-        <slot name="header-right" />
+        <slot name="header-right" :table-is-shown="tableIsShown" />
         <BcContentFilter
           v-if="props.searchPlaceholder && tableIsShown"
           :search-placeholder="props.searchPlaceholder"
