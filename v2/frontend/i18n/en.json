@@ -313,6 +313,14 @@
       "webhook": "Webhook",
       "networks": "Networks"
     },
+    "general": {
+      "do_not_disturb": "Do not disturb",
+      "email_notifications": "Email Notifications",
+      "push_notifications": "Push Notifications",
+      "send_test_email": "Send Test E-Mail",
+      "send_test_push": "Send Test Push Notification",
+      "download_app": ["Download the", "mobile app", "to activate"]
+    },
     "dashboards": {
       "title": "Dashboards",
       "search_placeholder": "Dashboard, Group",

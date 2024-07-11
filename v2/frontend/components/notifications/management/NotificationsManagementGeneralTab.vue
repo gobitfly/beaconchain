@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-// TODO: Use translations everywhere
 // TODO: Implement Do not disturb feature (mind new design)
 import {
   faArrowUpRightFromSquare,
@@ -8,7 +7,9 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { API_PATH } from '~/types/customFetch'
 import { useNotificationsManagementSettings } from '~/composables/notifications/useNotificationsManagementSettings'
+import { Target } from '~/types/links'
 
+const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
 const { generalSettings, updateGeneralSettings } = useNotificationsManagementSettings()
@@ -58,20 +59,20 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
   <div class="container">
     <div class="row divider">
       <div>
-        <span>Do not disturb</span>
+        <span>{{ $t('notifications.general.do_not_disturb') }}</span>
         <span class="explanation">Mutes all notifications</span>
       </div>
       <BcToggle v-model="doNotDisturbToggle" />
     </div>
     <div class="row">
       <div>
-        E-Mail Notifications
+        {{ $t('notifications.general.email_notifications') }}
       </div>
       <BcToggle v-model="emailToggle" />
     </div>
     <div class="row divider">
       <div>
-        <span>Push Notifications</span>
+        {{ $t('notifications.general.push_notifications') }}
         <span v-if="pairedDevices > 0">
           ({{ pairedDevices }})
           <FontAwesomeIcon
@@ -83,12 +84,16 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
       </div>
       <BcToggle v-if="pairedDevices > 0" v-model="pushToggle" />
       <div v-else>
-        Download the [mobile app] to activate
+        {{ tOf($t, 'notifications.general.download_app', 0) }}
+        <BcLink to="/mobile  " :target="Target.External" class="link">
+          {{ tOf($t, 'notifications.general.download_app', 1) }}
+        </BcLink>
+        {{ tOf($t, 'notifications.general.download_app', 2) }}
       </div>
     </div>
     <div class="row">
       <div>
-        Send Test E-Mail
+        {{ $t('notifications.general.send_test_email') }}
       </div>
       <Button class="p-button-icon-only" :disabled="testButtonsDisabled" @click="sendTestNotification('email')">
         <FontAwesomeIcon :icon="faPaperPlane" />
@@ -96,7 +101,7 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
     </div>
     <div class="row">
       <div>
-        Send Test Push Notification
+        {{ $t('notifications.general.send_test_push') }}
       </div>
       <Button class="p-button-icon-only" :disabled="testButtonsDisabled" @click="sendTestNotification('push')">
         <FontAwesomeIcon :icon="faPaperPlane" />
