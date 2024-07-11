@@ -582,7 +582,14 @@
         },
         "chart": {
           "all_groups": "All Groups",
-          "efficiency": "Efficiency"
+          "average": "Network Average",
+          "total": "Total",
+          "efficiency": {
+            "all": "Efficiency",
+            "attestation": "Attestation Eff.",
+            "sync": "Sync Eff.",
+            "proposal": "Proposal Eff."
+          }
         },
         "tooltip":{
           "lower": "{name}'s efficiency is below the network average of {average}",
