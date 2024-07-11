@@ -79,6 +79,10 @@ export interface VDBGroupSummaryData {
   missed_rewards: VDBGroupSummaryMissedRewards;
   apr: ClElValue<number /* float64 */>;
   luck: Luck;
+  rocket_pool?: {
+    minipools: number /* uint64 */;
+    collateral: number /* float64 */;
+  };
 }
 export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
@@ -279,13 +283,24 @@ export interface VDBNodeRocketPoolData {
   timezone: string;
   refund_balance: string /* decimal.Decimal */;
   deposit_credit: string /* decimal.Decimal */;
-  penalties: string /* decimal.Decimal */;
+  penalties: number /* uint64 */;
   rpl_stake: {
     min: string /* decimal.Decimal */;
     max: string /* decimal.Decimal */;
   };
 }
 export type InternalGetValidatorDashboardNodeRocketPoolResponse = ApiDataResponse<VDBNodeRocketPoolData>;
+export interface VDBRocketPoolMinipoolsTableRow {
+  node: Address;
+  validator_index: number /* uint64 */;
+  minipool_status: 'initialized' | 'prelaunch' | 'staking' | 'withdrawable' | 'dissolved';
+  validator_status: 'active' | 'withdrawn' | 'withdrawal_requested' | 'withdrawal_processing' | 'withdrawal_processed' | 'withdrawal_failed';
+  group_id: number /* uint64 */;
+  deposit: string /* decimal.Decimal */;
+  commission: number /* float64 */;
+  created: number /* int64 */;
+}
+export type InternalGetValidatorDashboardRocketPoolMinipoolsResponse = ApiPagingResponse<VDBRocketPoolMinipoolsTableRow>;
 /**
  * ------------------------------------------------------------
  * Manage Modal

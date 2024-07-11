@@ -477,6 +477,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	// TODO: implement data retrieval for the following new field
 	// Fetch validator list for user dashboard from the dashboard table when querying the past sync committees as the rolling table might miss exited validators
 	// TotalMissedRewards
+	// TODO @DATA-ACCESS implement data retrieval for Rocket Pool stats (if present)
 
 	var err error
 	ret := &t.VDBGroupSummaryData{}
