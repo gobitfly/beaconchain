@@ -4,8 +4,7 @@ import { ChainInfo, ChainIDs } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { t: $t } = useI18n()
-
-const { isMainNet } = useNetworkStore()
+const { currentNetwork, isMainNet } = useNetworkStore()
 
 const network = defineModel<ChainIDs>('network')
 const selection = ref<`${ChainIDs}` | ''>('')
@@ -32,7 +31,7 @@ const showNameOrDescription = (chainId: ChainIDs): string => {
 
 const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
   // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
-  const isDisabled = chainId !== ChainIDs.Ethereum
+  const isDisabled = chainId !== currentNetwork.value
   return {
     value: String(chainId),
     text: ChainInfo[chainId].family as string,
