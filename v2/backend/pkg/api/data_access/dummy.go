@@ -437,8 +437,8 @@ func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dash
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalRocketPoolData, error) {
-	r := t.VDBTotalRocketPoolData{}
+func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
+	r := t.VDBRocketPoolTableRow{}
 	err := commonFakeData(&r)
 	return &r, err
 }

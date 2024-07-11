@@ -276,12 +276,6 @@ type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTo
 
 // ------------------------------------------------------------
 // Rocket Pool Tab
-
-type ClaimedUnclaimedValue[T any] struct {
-	Claimed   T `json:"claimed"`
-	Unclaimed T `json:"unclaimed"`
-}
-
 type VDBRocketPoolTableRow struct {
 	Node      Address         `json:"node"`
 	StakedEth decimal.Decimal `json:"staked_eth"`
@@ -306,18 +300,7 @@ type VDBRocketPoolTableRow struct {
 }
 type InternalGetValidatorDashboardRocketPoolResponse ApiPagingResponse[VDBRocketPoolTableRow]
 
-type VDBTotalRocketPoolData struct {
-	StakedEth     decimal.Decimal                        `json:"staked_eth"`
-	Minipools     uint64                                 `json:"minipools"`
-	Collateral    float64                                `json:"collateral"`
-	AvgCommission float64                                `json:"avg_commission"`
-	Rpl           ClaimedUnclaimedValue[decimal.Decimal] `json:"rpl"`
-	EffectiveRpl  decimal.Decimal                        `json:"effective_rpl"`
-	RplApr        float64                                `json:"rpl_apr"`
-	SmoothingPool ClaimedUnclaimedValue[decimal.Decimal] `json:"smoothing_pool"`
-}
-
-type InternalGetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBTotalRocketPoolData]
+type InternalGetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBRocketPoolTableRow]
 
 type VDBNodeRocketPoolData struct {
 	Timezone      string          `json:"timezone"`
