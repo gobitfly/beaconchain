@@ -1323,7 +1323,7 @@ func (h *HandlerService) InternalGetValidatorDashboardNodeRocketPool(w http.Resp
 		handleErr(w, err)
 		return
 	}
-	// TODO support ENS names ?
+	// support ENS names ?
 	nodeAddress := v.checkAddress(vars["node_address"])
 	if v.hasErrors() {
 		handleErr(w, v)
@@ -1337,6 +1337,36 @@ func (h *HandlerService) InternalGetValidatorDashboardNodeRocketPool(w http.Resp
 	}
 	response := types.InternalGetValidatorDashboardNodeRocketPoolResponse{
 		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	q := r.URL.Query()
+	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	// support ENS names ?
+	nodeAddress := v.checkAddress(vars["node_address"])
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBRocketPoolMinipoolsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, paging, err := h.dai.GetValidatorDashboardRocketPoolMinipools(r.Context(), *dashboardId, nodeAddress, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardRocketPoolMinipoolsResponse{
+		Data:   data,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }

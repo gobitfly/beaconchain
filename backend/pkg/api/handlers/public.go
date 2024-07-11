@@ -363,6 +363,10 @@ func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.Respon
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) PublicGetNetworkValidators(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }

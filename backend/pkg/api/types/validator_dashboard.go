@@ -90,6 +90,11 @@ type VDBGroupSummaryData struct {
 	Apr ClElValue[float64] `json:"apr"`
 
 	Luck Luck `json:"luck"`
+
+	RocketPool struct {
+		Minipools  uint64  `json:"minipools"`
+		Collateral float64 `json:"collateral"`
+	} `json:"rocket_pool,omitempty"`
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
@@ -318,7 +323,7 @@ type VDBNodeRocketPoolData struct {
 	Timezone      string          `json:"timezone"`
 	RefundBalance decimal.Decimal `json:"refund_balance"`
 	DepositCredit decimal.Decimal `json:"deposit_credit"`
-	Penalties     decimal.Decimal `json:"penalties"`
+	Penalties     uint64          `json:"penalties"`
 	RplStake      struct {
 		Min decimal.Decimal `json:"min"`
 		Max decimal.Decimal `json:"max"`
@@ -326,6 +331,18 @@ type VDBNodeRocketPoolData struct {
 }
 
 type InternalGetValidatorDashboardNodeRocketPoolResponse ApiDataResponse[VDBNodeRocketPoolData]
+
+type VDBRocketPoolMinipoolsTableRow struct {
+	Node            Address         `json:"node"`
+	ValidatorIndex  uint64          `json:"validator_index"`
+	MinipoolStatus  string          `json:"minipool_status" tstype:"'initialized' | 'prelaunch' | 'staking' | 'withdrawable' | 'dissolved'" faker:"oneof: initialized, prelaunch, staking, withdrawable, dissolved"`
+	ValidatorStatus string          `json:"validator_status" tstype:"'active' | 'withdrawn' | 'withdrawal_requested' | 'withdrawal_processing' | 'withdrawal_processed' | 'withdrawal_failed'" faker:"oneof: active, withdrawn, withdrawal_requested, withdrawal_processing, withdrawal_processed, withdrawal_failed"`
+	GroupId         uint64          `json:"group_id"`
+	Deposit         decimal.Decimal `json:"deposit"`
+	Commission      float64         `json:"commission"`
+	Created         int64           `json:"created"`
+}
+type InternalGetValidatorDashboardRocketPoolMinipoolsResponse ApiPagingResponse[VDBRocketPoolMinipoolsTableRow]
 
 // ------------------------------------------------------------
 // Manage Modal

@@ -288,7 +288,7 @@ func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
 	}
 }
 
-var VDBWRocketPoolColumns = struct {
+var VDBRocketPoolColumns = struct {
 	Node          VDBRocketPoolColumn
 	Minipools     VDBRocketPoolColumn
 	Collateral    VDBRocketPoolColumn
@@ -304,6 +304,36 @@ var VDBWRocketPoolColumns = struct {
 	VDBRocketPoolEffectiveRpl,
 	VDBRocketPoolRplApr,
 	VDBRocketPoolSmoothingPool,
+}
+
+// ----------------
+// Validator Dashboard Rocket Pool Minipools modal
+
+type VDBRocketPoolMinipoolsColumn int
+
+var _ EnumFactory[VDBRocketPoolMinipoolsColumn] = VDBRocketPoolMinipoolsColumn(0)
+
+const (
+	VDBRocketPoolMinipoolsGroup VDBRocketPoolMinipoolsColumn = iota
+)
+
+func (c VDBRocketPoolMinipoolsColumn) Int() int {
+	return int(c)
+}
+
+func (VDBRocketPoolMinipoolsColumn) NewFromString(s string) VDBRocketPoolMinipoolsColumn {
+	switch s {
+	case "group":
+		return VDBRocketPoolMinipoolsGroup
+	default:
+		return VDBRocketPoolMinipoolsColumn(-1)
+	}
+}
+
+var VDBWRocketPoolColumns = struct {
+	Group VDBRocketPoolMinipoolsColumn
+}{
+	VDBRocketPoolMinipoolsGroup,
 }
 
 // ----------------
