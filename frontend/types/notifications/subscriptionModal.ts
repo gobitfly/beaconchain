@@ -1,3 +1,5 @@
+import { ChainIDs } from '../network'
+
 // TODO: import from '~/types/api/notifications.ts' once the corresponding PR is corrected and merged https://github.com/gobitfly/beaconchain/pull/573
 export interface NotificationEventsValidatorDashboard {
   validator_offline: boolean;
@@ -22,10 +24,11 @@ export interface NotificationEventsAccountDashboard {
   ignore_spam_transactions: boolean;
 }
 
-/** for internal use */
-export interface CheckboxAndNumber {
-  check: boolean,
-  num: number|null
+export interface InternalEntry {
+  type: 'binary' | 'amount' | 'percent' | 'networks'
+  networks?: ChainIDs[]
+  check?: boolean,
+  num?: number|null
 }
 
-export type InputRow = 'binary' | 'amount' | 'percent' | 'networks'
+export type APIentry = boolean | number | null | undefined | ChainIDs[]

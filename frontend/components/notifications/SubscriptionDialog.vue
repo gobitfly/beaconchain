@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { NotificationEventsValidatorDashboard, NotificationEventsAccountDashboard, CheckboxAndNumber, InputRow } from '~/types/notifications/subscriptionModal'
-import type { ChainIDs } from '~/types/network'
+import { warn } from 'vue'
+import type { NotificationEventsValidatorDashboard, NotificationEventsAccountDashboard, InternalEntry, APIentry } from '~/types/notifications/subscriptionModal'
+import { ChainFamily } from '~/types/network'
 import type { ApiErrorResponse } from '~/types/api/common'
 import { API_PATH } from '~/types/customFetch'
 
@@ -13,31 +14,27 @@ interface Props {
 
 const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
 const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
-const DefaultValueOfValidatorOptionsNeedingPremium = {
+const DefaultValues = {
   group_offline: -10, // means "10% and unchecked"
-  realtime_mode: false
-  // ... add lines here to make options available to premium accounts only
+  realtime_mode: false,
+  track_erc20_token_transfers: null, // means "empty"
+  networks: []
 }
-const DefaultValueOfAccountOptionsNeedingPremium = {
-  // add lines here to make options available to premium accounts only
-}
+type AllOptions = NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard & typeof DefaultValues
 const orderOfTheRowsInValidatorModal: Array<keyof NotificationEventsValidatorDashboard | 'ALL'> =
   ['validator_offline', 'group_offline', 'attestations_missed', 'block_proposal', 'upcoming_block_proposal', 'sync', 'withdrawal_processed', 'slashed', 'realtime_mode', 'ALL']
 const orderOfTheRowsInAccountModal: Array<keyof NotificationEventsAccountDashboard | 'ALL'> =
   ['incoming_transactions', 'outgoing_transactions', 'track_erc20_token_transfers', 'track_erc721_token_transfers', 'track_erc1155_token_transfers', 'ALL', 'networks', 'ignore_spam_transactions']
-const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
+const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(AllOptions)> =
   ['networks', 'ignore_spam_transactions'] // options that are not in the group of the all-checkbox
-const RowsThatExpectAnAmount: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
-  ['track_erc20_token_transfers']
-const RowsThatExpectAPercentage: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
+const OptionsNeedingPremium: Array<keyof AllOptions> =
+  ['group_offline', 'realtime_mode']
+const RowsThatExpectAPercentage: Array<keyof AllOptions> =
   ['group_offline']
-const RowsThatExpectANetwork: Array<keyof(NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard)> =
-  ['networks']
 
 // #### END OF DIALOG SETTINGS ####
 
-type AllOptions = NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard & typeof DefaultValueOfValidatorOptionsNeedingPremium & typeof DefaultValueOfAccountOptionsNeedingPremium
-type ModifiableOptions = Record<keyof AllOptions, CheckboxAndNumber|ChainIDs[]>
+type ModifiableOptions = Record<keyof AllOptions, InternalEntry>
 
 const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
 const { t } = useI18n()
@@ -48,58 +45,73 @@ const { user } = useUserStore()
 
 const tPath = ref('')
 let orderOfTheRows: typeof orderOfTheRowsInValidatorModal | typeof orderOfTheRowsInAccountModal = []
-let originalSettings = {} as AllOptions
 const modifiableOptions = ref({} as ModifiableOptions)
-const checkboxAll = ref({ check: false } as CheckboxAndNumber)
+const checkboxAll = ref<InternalEntry>({ type: 'binary', check: false })
 
 const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
 watch(debouncer.value, sendUserPreferencesToAPI)
 
-let dataNonce = 0 // used by the watcher of `modifiableOptions` to know when it is unnecessary to send apparent changes to the API (it doesn't send if the nonce is 0)
+let dataNonce = 0 // used by the watcher of `modifiableOptions` to know when it is unnecessary to send changes to the API (it doesn't send if the nonce is 0)
 
 watch(props, (props) => {
   if (!props || (!props.validatorSub && !props.accountSub)) {
     return
   }
+  let originalSettings = {} as AllOptions
   if (props.validatorSub) {
     tPath.value = 'notifications.subscriptions.validators.'
-    originalSettings = { ...DefaultValueOfValidatorOptionsNeedingPremium, ...structuredClone(toRaw(props.validatorSub)) } as AllOptions
+    originalSettings = toRaw(props.validatorSub) as AllOptions
     orderOfTheRows = orderOfTheRowsInValidatorModal
   } else {
     tPath.value = 'notifications.subscriptions.accounts.'
-    originalSettings = { ...DefaultValueOfAccountOptionsNeedingPremium, ...structuredClone(toRaw(props.accountSub)) } as AllOptions
+    originalSettings = toRaw(props.accountSub!) as AllOptions
     orderOfTheRows = orderOfTheRowsInAccountModal
   }
   modifiableOptions.value = {} as ModifiableOptions
-  for (const entry of Object.entries(originalSettings)) {
-    const key = entry[0] as keyof typeof originalSettings
-    if (Array.isArray(entry[1])) {
-      modifiableOptions.value[key] = entry[1]
+  dataNonce = 0
+  for (const key of orderOfTheRows) {
+    if (key === 'ALL') { continue }
+    modifiableOptions.value[key] = convertAPIentryIntoInternalEntry(originalSettings, key)
+  }
+}, { immediate: true })
+
+function convertAPIentryIntoInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
+  let srcValue = apiData[apiKey]
+  if (srcValue === undefined || srcValue === null || (Array.isArray(srcValue) && !srcValue.length)) {
+    if (apiKey in DefaultValues) {
+      srcValue = DefaultValues[apiKey as keyof typeof DefaultValues]
     } else {
-      switch (typeof entry[1]) {
-        case 'boolean' :
-          modifiableOptions.value[key] = {
-            check: entry[1],
-            num: 0
-          }
-          break
-        default :
-          modifiableOptions.value[key] = {
-            check: (entry[1] != null && entry[1] >= 0),
-            num: (entry[1] === null) ? null : Math.abs(entry[1])
-          }
-          break
-      }
+      warn('Entry `', apiKey, '`is missing in the API data and we do not have a default value for it.')
+      return {} as InternalEntry
+    }
+    dataNonce++ // this will trigger a call to the API to save the settings
+  }
+  if (Array.isArray(srcValue)) {
+    return {
+      type: 'networks',
+      networks: [...srcValue]
     }
   }
-  dataNonce = 0
-}, { immediate: true })
+  switch (typeof srcValue) {
+    case 'boolean' :
+      return {
+        type: 'binary',
+        check: srcValue
+      }
+    default :
+      return {
+        type: (apiKey in RowsThatExpectAPercentage) ? 'percent' : 'amount',
+        check: srcValue !== null && srcValue >= 0,
+        num: srcValue === null ? null : Math.abs(srcValue)
+      }
+  }
+}
 
 function checkboxAllhasBeenClicked (checked: boolean) : void {
   for (const k of Object.keys(modifiableOptions.value)) {
     const key = k as keyof ModifiableOptions
     if (isOptionAvailable(key) && !OptionsOutsideTheScopeOfCheckboxall.includes(key)) {
-      (modifiableOptions.value[key] as CheckboxAndNumber).check = checked
+      modifiableOptions.value[key].check = checked
     }
   }
   // no need to call the API, the modifications that we did in `modifiableOptions.value` will trigger its watcher (that calls the API)
@@ -107,10 +119,10 @@ function checkboxAllhasBeenClicked (checked: boolean) : void {
 
 watch(modifiableOptions, (options) => {
   checkboxAll.value.check = true
-  for (const k of Object.keys(options)) {
+  for (const k in options) {
     const key = k as keyof ModifiableOptions
     if (isOptionAvailable(key) && !OptionsOutsideTheScopeOfCheckboxall.includes(key)) {
-      checkboxAll.value.check &&= (options[key] as CheckboxAndNumber).check
+      checkboxAll.value.check &&= options[key].check
     }
   }
   if (dataNonce > 0) {
@@ -122,21 +134,21 @@ watch(modifiableOptions, (options) => {
 
 async function sendUserPreferencesToAPI () {
   // first we convert our internal structures to the format of the API
-  const output = {} as Record<string, any>
-  for (const entry of Object.entries(modifiableOptions.value)) {
-    const key = entry[0] as keyof ModifiableOptions
-    if (Array.isArray(entry[1])) {
-      output[key] = entry[1]
-    } else {
-      switch (typeof originalSettings[key]) {
-        case 'boolean' :
-          output[key] = entry[1].check
-          break
-        default :
-          output[key] = entry[1].num
-          if (!entry[1].check && entry[1].num !== null) { output[key] *= -1 }
-          break
-      }
+  const output = {} as Record<string, APIentry>
+  for (const k in modifiableOptions.value) {
+    const key = k as keyof ModifiableOptions
+    const value = toRaw(modifiableOptions.value[key])
+    switch (value.type) {
+      case 'binary' :
+        output[key] = value.check
+        break
+      case 'amount' :
+      case 'percent' :
+        output[key] = (value.check || value.num === null) ? value.num : -value.num!
+        break
+      case 'networks' :
+        output[key] = value.networks
+        break
     }
   }
   // now we send the data
@@ -162,14 +174,7 @@ function closeDialog () : void {
   dialogRef?.value.close()
 }
 
-const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !(key in DefaultValueOfValidatorOptionsNeedingPremium || key in DefaultValueOfAccountOptionsNeedingPremium)
-
-function getRowType (key: keyof AllOptions) : InputRow {
-  if (RowsThatExpectAnAmount.includes(key)) { return 'amount' }
-  if (RowsThatExpectAPercentage.includes(key)) { return 'percent' }
-  if (RowsThatExpectANetwork.includes(key)) { return 'networks' }
-  return 'binary'
-}
+const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !OptionsNeedingPremium.includes(key)
 </script>
 
 <template>
@@ -179,7 +184,7 @@ function getRowType (key: keyof AllOptions) : InputRow {
     </div>
 
     <div v-if="t(tPath+'explanation')" class="explanation">
-      {{ t(tPath+'explanation') }}
+      {{ t(tPath+'explanation', (networkInfo.family === ChainFamily.Gnosis) ? 5 : 20) }}
     </div>
 
     <div v-for="row of orderOfTheRows" :key="row" class="row-container">
@@ -188,7 +193,6 @@ function getRowType (key: keyof AllOptions) : InputRow {
         v-model="modifiableOptions[row]"
         :t-path="tPath+row"
         :lacks-premium-subscription="!isOptionAvailable(row)"
-        :input-type="getRowType(row)"
         :value-in-text="(row == 'attestations_missed') ? Math.round(networkInfo.secondsPerSlot*networkInfo.slotsPerEpoch/6)/10 : undefined"
         class="row"
       />
@@ -198,7 +202,6 @@ function getRowType (key: keyof AllOptions) : InputRow {
         v-model="checkboxAll"
         :t-path="tPath+'all'"
         :lacks-premium-subscription="false"
-        input-type="binary"
         class="row"
         @checkbox-click="checkboxAllhasBeenClicked"
       />
