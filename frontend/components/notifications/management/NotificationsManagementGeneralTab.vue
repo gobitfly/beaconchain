@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-// TODO: Implement Do not disturb feature (mind new design)
 import {
   faArrowUpRightFromSquare,
   faPaperPlane
