@@ -27,8 +27,8 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 	result := &t.DashboardInfo{}
 
 	err := d.alloyReader.Get(result, `
-		SELECT 
-			id, 
+		SELECT
+			id,
 			user_id
 		FROM users_val_dashboards
 		WHERE id = $1
@@ -43,7 +43,7 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Cont
 	result := &t.DashboardInfo{}
 
 	err := d.alloyReader.Get(result, `
-		SELECT 
+		SELECT
 			uvd.id,
 			uvd.user_id
 		FROM users_val_dashboards_sharing uvds
@@ -216,7 +216,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				groups.dashboard_id = $1
 			GROUP BY
 				groups.id, groups.name`
-			if err := d.alloyReader.Select(&queryResult, query, dashboardId.Id); err != nil {
+			if err := d.alloyReader.SelectContext(ctx, &queryResult, query, dashboardId.Id); err != nil {
 				return err
 			}
 			for _, res := range queryResult {
@@ -252,7 +252,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			GROUP BY status`
 			params = append(params, validators)
 		}
-		err := d.alloyReader.Select(&queryResult, query, params...)
+		err := d.alloyReader.SelectContext(ctx, &queryResult, query, params...)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators data: %v", err)
 		}
@@ -459,7 +459,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 		}{}
 
 		validatorsQuery := `
-		SELECT 
+		SELECT
 			v.validator_index,
 			v.group_id,
 			g.name AS group_name
@@ -473,7 +473,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 			validatorsQuery += " AND group_id = $2"
 			validatorsParams = append(validatorsParams, groupId)
 		}
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, validatorsParams...)
+		err := d.alloyReader.SelectContext(ctx, &queryResult, validatorsQuery, validatorsParams...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -690,7 +690,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	// Query to add the validators to the dashboard and group
 	addValidatorsQuery := `
 		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
-			VALUES 
+			VALUES
 	`
 
 	for idx := range validators {
@@ -701,7 +701,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	// If a validator is already in the dashboard, update the group
 	// If the validator is already in that group nothing changes but we will include it in the result anyway
 	addValidatorsQuery += `
-		ON CONFLICT (dashboard_id, validator_index) DO UPDATE SET 
+		ON CONFLICT (dashboard_id, validator_index) DO UPDATE SET
 			dashboard_id = EXCLUDED.dashboard_id,
 			group_id = EXCLUDED.group_id,
 			validator_index = EXCLUDED.validator_index
@@ -709,7 +709,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	`
 
 	// Find all the pubkeys
-	err := d.alloyReader.Select(&pubkeys, pubkeysQuery, pq.Array(validators))
+	err := d.alloyReader.SelectContext(ctx, &pubkeys, pubkeysQuery, pq.Array(validators))
 	if err != nil {
 		return nil, err
 	}
@@ -719,7 +719,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	for _, validatorIndex := range validators {
 		addValidatorsArgsIntf = append(addValidatorsArgsIntf, validatorIndex)
 	}
-	err = d.alloyWriter.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
+	err = d.alloyWriter.SelectContext(ctx, &addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
 	if err != nil {
 		return nil, err
 	}
@@ -758,14 +758,14 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(ctx 
 		return nil, fmt.Errorf("invalid deposit address: %s", address)
 	}
 	var validatorIndicesToAdd []uint64
-	err = d.readerDb.Select(&validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	err = d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// retrieve the existing validators
 	var existingValidators []uint64
-	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
 	if err != nil {
 		return nil, err
 	}
@@ -817,14 +817,14 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(c
 		return nil, err
 	}
 	var validatorIndicesToAdd []uint64
-	err = d.readerDb.Select(&validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	err = d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// retrieve the existing validators
 	var existingValidators []uint64
-	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
 	if err != nil {
 		return nil, err
 	}
@@ -872,14 +872,14 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx contex
 	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
 	// then add no more than `limit` validators associated with the deposit address to the dashboard
 	var validatorIndicesToAdd []uint64
-	err := d.readerDb.Select(&validatorIndicesToAdd, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
+	err := d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// retrieve the existing validators
 	var existingValidators []uint64
-	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
 	if err != nil {
 		return nil, err
 	}

@@ -739,7 +739,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 
 	query := `select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`
 
-	err = db.AlloyReader.Get(&reward, fmt.Sprintf(query, table), validators)
+	err = db.AlloyReader.GetContext(ctx, &reward, fmt.Sprintf(query, table), validators)
 	if err != nil || !reward.Valid {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
@@ -753,7 +753,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 		clAPR = 0
 	}
 	if days == -1 {
-		err = db.AlloyReader.Get(&reward, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators)
+		err = db.AlloyReader.GetContext(ctx, &reward, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators)
 		if err != nil || !reward.Valid {
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
@@ -761,13 +761,13 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 	clIncome = decimal.NewFromInt(reward.Int64).Mul(decimal.NewFromInt(1e9))
 
 	query = `
-	SELECT 
+	SELECT
 		COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0)
-	FROM blocks 
+	FROM blocks
 	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
 	LEFT JOIN relays_blocks rb ON blocks.exec_block_hash = rb.exec_block_hash
 	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`
-	err = db.AlloyReader.Get(&elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	err = db.AlloyReader.GetContext(ctx, &elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
@@ -775,7 +775,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(len(validators)))) * 365.0 * 100.0
 
 	if days == -1 {
-		err = db.AlloyReader.Get(&elIncome, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		err = db.AlloyReader.GetContext(ctx, &elIncome, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		if err != nil {
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
@@ -813,7 +813,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			WHERE day > $1 AND validator_index = ANY($2)
 			group by 1
 		) as a ORDER BY epoch_start;`
-		err := d.alloyReader.Select(&queryResults, query, cutOffDate, dashboardId.Validators)
+		err := d.alloyReader.SelectContext(ctx, &queryResults, query, cutOffDate, dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -831,7 +831,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 		query := fmt.Sprintf(`SELECT epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 			SELECT
-				d.epoch_start, 
+				d.epoch_start,
 				%s
 				COALESCE(SUM(d.attestations_reward), 0)::decimal / NULLIF(SUM(d.attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
 				COALESCE(SUM(d.blocks_proposed), 0)::decimal / NULLIF(SUM(d.blocks_scheduled)::decimal, 0) AS proposer_efficiency,
@@ -841,7 +841,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			WHERE day > $1 AND dashboard_id = $2
 			%s
 		) as a %s;`, groupIdQuery, groupByQuery, orderQuery)
-		err := d.alloyReader.Select(&queryResults, query, queryParams...)
+		err := d.alloyReader.SelectContext(ctx, &queryResults, query, queryParams...)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -1099,7 +1099,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 		}
 
 		var epochStart uint64
-		err = d.alloyReader.Get(&epochStart, query, args...)
+		err = d.alloyReader.GetContext(ctx, &epochStart, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
 		}
