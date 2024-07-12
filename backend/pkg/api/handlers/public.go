@@ -111,10 +111,6 @@ func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r
 	returnNoContent(w)
 }
 
-func (h *HandlerService) PublicGetValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
-	returnNoContent(w)
-}
-
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
