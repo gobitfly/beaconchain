@@ -160,7 +160,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
 
-	err = d.userReader.Select(&userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
+	err = d.userReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
 	}
@@ -172,10 +172,10 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		End       time.Time `db:"end"`
 	}{}
 	err = d.userReader.Get(&premiumProduct, `
-		SELECT 
-			COALESCE(uas.product_id, '') AS product_id, 
+		SELECT
+			COALESCE(uas.product_id, '') AS product_id,
 			COALESCE(uas.store, '') AS store,
-			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start, 
+			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start,
 			COALESCE(to_timestamp((uss.payload->>'current_period_end')::bigint),uas.expires_at) AS end
 		FROM users_app_subscriptions uas
 		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
@@ -255,13 +255,13 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		End      time.Time `db:"end"`
 		Quantity int       `db:"quantity"`
 	}{}
-	err = d.userReader.Select(&premiumAddons, `
-		SELECT 
+	err = d.userReader.SelectContext(ctx, &premiumAddons, `
+		SELECT
 			price_id,
-			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start,
 			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end,
 			COALESCE((uss.payload->>'quantity')::int,1) AS quantity
-		FROM users_stripe_subscriptions uss		
+		FROM users_stripe_subscriptions uss
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
@@ -550,8 +550,8 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}{}
 
 	// Get the validator dashboards including the public ones
-	err := d.alloyReader.Select(&dbReturn, `
-		SELECT 
+	err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
 			uvd.id,
 			uvd.name,
 			uvds.public_id,
@@ -589,8 +589,8 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}
 
 	// Get the account dashboards
-	err = d.alloyReader.Select(&result.AccountDashboards, `
-		SELECT 
+	err = d.alloyReader.SelectContext(ctx, &result.AccountDashboards, `
+		SELECT
 			id,
 			name
 		FROM users_acc_dashboards
