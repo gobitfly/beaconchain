@@ -127,14 +127,13 @@ class Eye {
 
   // constants of our perception model, all obtained empirically
   protected static readonly sensicol = [15, 20, 6] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
-  protected static readonly intercol = [10, 20, 5] // relative strengh of the primaries when they are mixed by pairs to obtain a pure intermediate color
+  protected static readonly rPowers = [1.1, 1.4, 0.9] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
   protected static readonly overwhite = [7, 10, 2] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
   protected static readonly phi = 1.7 // power law on the purity to make it feel linear to the human eye
   protected static readonly iotaD = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
   protected static readonly iotaM = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
   // the following constants will be filled by the constructor
   protected static readonly sensicolNorm = [0, 0, 0]
-  protected static readonly rPowers = [0, 0, 0] // accessed by the index of the dimmest primary
   protected static readonly rPowersInv = [0, 0, 0]
   protected static readonly overwhiteNorm = [0, 0, 0]
   protected static readonly phiInv = 1 / Eye.phi
@@ -150,8 +149,6 @@ class Eye {
       for (let k = R; k <= B; k++) {
         Eye.sensicolNorm[k] = Eye.sensicol[k] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])
         Eye.overwhiteNorm[k] = Eye.overwhite[k] / (Eye.overwhite[R] + Eye.overwhite[G] + Eye.overwhite[B])
-        const [h1, h2] = Eye.lowestChanToAnchors(k)
-        Eye.rPowers[k] = 1 / Math.log2(Eye.intercol[h1] / Eye.intercol[h2] + 1)
         Eye.rPowersInv[k] = 1 / Eye.rPowers[k]
       }
     }
@@ -180,13 +177,19 @@ class Eye {
       const rgb = (from as RGB).chan
       const l = Eye.RGBtoLowestChannel(rgb)
       const [h1, h2] = Eye.lowestChanToAnchors(l)
-      const anchor2Contribution = (rgb[h2] - rgb[l]) * Eye.intercol[h2]
-      const anchors12Contributions = (rgb[h1] - rgb[l]) * Eye.intercol[h1] + anchor2Contribution
+      const anchor2Contribution = (rgb[h2] - rgb[l])
+      const anchors12Contributions = (rgb[h1] - rgb[l]) + anchor2Contribution
       if (anchors12Contributions < 0.001) { // the 3 channels are equal, so we have black, grey or white
         this.r = 0.5
         this.p = 0
       } else {
-        this.r = (h1 + (anchor2Contribution / anchors12Contributions) ** Eye.rPowers[l]) / 3
+        let d = anchor2Contribution / anchors12Contributions
+        if (d < 1 / 2) {
+          d = (2 * d) ** Eye.rPowers[h1] / 2
+        } else {
+          d = (2 * d - 1) ** Eye.rPowersInv[h2] / 2 + 1 / 2
+        }
+        this.r = (h1 + d) / 3
         this.p = ((rgb[h1] - rgb[l]) * Eye.overwhiteNorm[h1] + (rgb[h2] - rgb[l]) * Eye.overwhiteNorm[h2]) / (rgb[l] * Eye.overwhiteNorm[l] + rgb[h1] * Eye.overwhiteNorm[h1] + rgb[h2] * Eye.overwhiteNorm[h2])
         this.p **= Eye.phiInv
       }
@@ -234,7 +237,12 @@ class Eye {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
     const ratio = [0, 0, 0]
-    const D = (3 * this.r - h1) ** Eye.rPowersInv[l]
+    let D = 3 * this.r - h1
+    if (D < 1 / 2) {
+      D = (2 * D) ** Eye.rPowersInv[h1] / 2
+    } else {
+      D = (2 * D - 1) ** Eye.rPowers[h2] / 2 + 1 / 2
+    }
     const p = this.p ** Eye.phi
     if (D < 0.001 && p > 0.999) {
       to.chan[l] = 0
@@ -245,7 +253,7 @@ class Eye {
         ratio[l] = (1 - p) / (1 + p * (Eye.overwhiteNorm[l] + Eye.overwhiteNorm[h1]) / Eye.overwhiteNorm[h2])
         ratio[h1] = ratio[l]
       } else {
-        const A = D * Eye.intercol[h1] / ((1 - D) * Eye.intercol[h2])
+        const A = D / (1 - D)
         const B = (1 - p) / p * (Eye.overwhiteNorm[h1] + A * Eye.overwhiteNorm[h2])
         const Q = 1 / (A + B)
         ratio[l] = B * Q
@@ -345,25 +353,28 @@ class Eye {
 //
 
 const cons = console
+
+const colorI = new Eye(CS.EyePercI)
+const colorJ = new Eye(CS.EyeNormJ)
+
 const colors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
 const numR = 3
 const numP = 45
 const numI = 40
-const color = new Eye(CS.EyePercI)
 let maxIntensityMinIndex = 1000
 for (let r = 0; r <= numR; r++) {
   colors.push([])
   for (let p = 0; p <= numP; p++) {
     colors[r].push([])
     for (let i = 0; i <= numI; i++) {
-      if (i > 0 && (i / numI) > color.iMax) {
+      if (i > 0 && (i / numI) > colorI.iMax) {
         if (i - 1 < maxIntensityMinIndex) { maxIntensityMinIndex = i - 1 }
         break
       }
-      color.r = r / numR
-      color.p = p / numP
-      color.i = i / numI
-      colors[r][p].push({ rgb: color.export(CS.RGBgamma) as RGB, eye: color.export(CS.EyePercI) as Eye })
+      colorI.r = r / numR
+      colorI.p = p / numP
+      colorI.i = i / numI
+      colors[r][p].push({ rgb: colorI.export(CS.RGBgamma) as RGB, eye: colorI.export(CS.EyePercI) as Eye })
       const rgb = (colors[r][p][i].eye.export(CS.EyeNormJ).export(CS.RGBgamma) as RGB).chan
       if (colors[r][p][i].rgb.chan[0] !== rgb[0] || colors[r][p][i].rgb.chan[1] !== rgb[1] || colors[r][p][i].rgb.chan[2] !== rgb[2]) {
         cons.log(colors[r][p][i].rgb.chan, rgb)
@@ -380,35 +391,43 @@ for (let r = 0; r <= numR; r++) {
 
 const rainbowSameI: Array<RGB> = []
 const rainbowSameJ: Array<RGB> = []
-for (let r = 0; r <= 200; r++) {
-  color.r = r / 200
-  color.p = 1
-  color.i = color.lowestImax
-  rainbowSameI.push(color.export(CS.RGBgamma) as RGB)
-  color.i = color.iMax
-  rainbowSameJ.push(color.export(CS.RGBgamma) as RGB)
-  if (rainbowSameJ[r].chan[R] > 255 || rainbowSameJ[r].chan[G] > 255 || rainbowSameJ[r].chan[B] > 255) { cons.log('ERROR', rainbowSameJ[r].chan, color) }
+for (let r = 0; r <= 180; r++) {
+  colorI.r = r / 180
+  colorI.p = 1
+  colorI.i = colorI.lowestImax
+  rainbowSameI.push(colorI.export(CS.RGBgamma) as RGB)
+  colorI.i = colorI.iMax
+  rainbowSameJ.push(colorI.export(CS.RGBgamma) as RGB)
+  if (rainbowSameJ[r].chan[R] > 255 || rainbowSameJ[r].chan[G] > 255 || rainbowSameJ[r].chan[B] > 255) { cons.log('ERROR', rainbowSameJ[r].chan, colorJ) }
 }
 
-const linearCount80: number[] = []
-for (let k = 0; k < 80; k++) {
-  linearCount80.push(k)
+const granularRainbow48: Array<RGB> = []
+colorJ.p = 1
+colorJ.j = 1
+for (let r = 0; r <= 48; r++) {
+  colorJ.r = r / 48
+  granularRainbow48.push(colorJ.export(CS.RGBgamma) as RGB)
 }
 
-const linearCount14: number[] = []
-for (let k = 0; k <= 14; k++) {
-  linearCount14.push(k)
+const puresI: Array<RGB> = []
+const puresJ: Array<RGB> = []
+colorJ.p = colorI.p = 1
+colorJ.j = 1
+colorI.i = colorI.lowestImax
+for (let r = 0; r <= 6; r++) {
+  colorI.r = colorJ.r = r / 6
+  puresI.push(colorI.export(CS.RGBgamma) as RGB)
+  puresJ.push(colorJ.export(CS.RGBgamma) as RGB)
 }
 
 const iotaIadjuster: Array<RGB> = []
-color.p = 0
+colorI.p = 0
 for (let k = 0; k <= 16; k++) {
-  color.i = color.iMax * k / 16
-  iotaIadjuster.push(color.export(CS.RGBgamma) as RGB)
+  colorI.i = colorI.iMax * k / 16
+  iotaIadjuster.push(colorI.export(CS.RGBgamma) as RGB)
 }
 
 const iotaJadjuster: Array<RGB> = []
-const colorJ = new Eye(CS.EyeNormJ)
 for (let k = 0; k <= 16; k++) {
   colorJ.p = 0
   colorJ.j = k / 16
@@ -419,22 +438,22 @@ for (let k = 0; k <= 16; k++) {
 <template>
   <div style="background-color: rgb(128,128,128)">
     <br>
-    <h1>Adjustement of sensicol</h1>
+    <h1>Adjustement of sensicol and iotaM</h1>
+    <h2>sensicol</h2>
     These pure colors must all have the same perceived intensity: <br><br>
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[0].chan[R] + ',' + rainbowSameI[0].chan[G] + ',' + rainbowSameI[0].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresI[0].chan[R] + ',' + puresI[0].chan[G] + ',' + puresI[0].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresI[2].chan[R] + ',' + puresI[2].chan[G] + ',' + puresI[2].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresI[4].chan[R] + ',' + puresI[4].chan[G] + ',' + puresI[4].chan[B] + ')'" />
     <br><br>
 
-    <h1>Adjustement of iotaM</h1>
+    <h2>iotaM</h2>
     The secondaries colors must all have the same perceived intensity as their surrounding primaries: <br><br>
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[0].chan[R] + ',' + rainbowSameI[0].chan[G] + ',' + rainbowSameI[0].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*1/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*1/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*1/6)].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*2/6)].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*3/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*3/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*3/6)].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*4/6)].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[Math.round(rainbowSameI.length*5/6)].chan[R] + ',' + rainbowSameI[Math.round(rainbowSameI.length*5/6)].chan[G] + ',' + rainbowSameI[Math.round(rainbowSameI.length*5/6)].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameI[rainbowSameI.length-1].chan[R] + ',' + rainbowSameI[rainbowSameI.length-1].chan[G] + ',' + rainbowSameI[rainbowSameI.length-1].chan[B] + ')'" />
+    <span v-for="(pure,k) of puresI" :key="k" style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pure.chan[R] + ',' + pure.chan[G] + ',' + pure.chan[B] + ')'" />
+    <br><br>
+
+    <h2>both</h2>
+    Starting from the settings found above, fine-tune sensicol and iotaM to give all a colors the same intensity in this rainbow: <br><br>
+    <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
 
     <h1>Adjustement of iotaD </h1>
@@ -472,22 +491,57 @@ for (let k = 0; k <= 16; k++) {
     <br>
 
     <h1>Adjustement of intercol</h1>
+    Adjust intercol to give a feeling of linearity to these 6 progressions. The right part helps with this task: try to make the middle square as different from its left square as from its right square.
+    <br><br>
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'" />
+    <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[0].chan[R] + ',' + rainbowSameJ[0].chan[G] + ',' + rainbowSameJ[0].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[15].chan[R] + ',' + rainbowSameJ[15].chan[G] + ',' + rainbowSameJ[15].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[30].chan[R] + ',' + rainbowSameJ[30].chan[G] + ',' + rainbowSameJ[30].chan[B] + ')'" />
+    <br><br>
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[30+i].chan[R] + ',' + rainbowSameJ[30+i].chan[G] + ',' + rainbowSameJ[30+i].chan[B] + ')'" />
+    <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[30].chan[R] + ',' + rainbowSameJ[30].chan[G] + ',' + rainbowSameJ[30].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[45].chan[R] + ',' + rainbowSameJ[45].chan[G] + ',' + rainbowSameJ[45].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[60].chan[R] + ',' + rainbowSameJ[60].chan[G] + ',' + rainbowSameJ[60].chan[B] + ')'" />
+    <br><br>
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[60+i].chan[R] + ',' + rainbowSameJ[60+i].chan[G] + ',' + rainbowSameJ[60+i].chan[B] + ')'" />
+    <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[60].chan[R] + ',' + rainbowSameJ[60].chan[G] + ',' + rainbowSameJ[60].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[75].chan[R] + ',' + rainbowSameJ[75].chan[G] + ',' + rainbowSameJ[75].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[90].chan[R] + ',' + rainbowSameJ[90].chan[G] + ',' + rainbowSameJ[90].chan[B] + ')'" />
+    <br><br>
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[90+i].chan[R] + ',' + rainbowSameJ[90+i].chan[G] + ',' + rainbowSameJ[90+i].chan[B] + ')'" />
+    <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[90].chan[R] + ',' + rainbowSameJ[90].chan[G] + ',' + rainbowSameJ[90].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[105].chan[R] + ',' + rainbowSameJ[105].chan[G] + ',' + rainbowSameJ[105].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[120].chan[R] + ',' + rainbowSameJ[120].chan[G] + ',' + rainbowSameJ[120].chan[B] + ')'" />
+    <br><br>
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[120+i].chan[R] + ',' + rainbowSameJ[120+i].chan[G] + ',' + rainbowSameJ[120+i].chan[B] + ')'" />
+    <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[120].chan[R] + ',' + rainbowSameJ[120].chan[G] + ',' + rainbowSameJ[120].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[135].chan[R] + ',' + rainbowSameJ[135].chan[G] + ',' + rainbowSameJ[135].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[150].chan[R] + ',' + rainbowSameJ[150].chan[G] + ',' + rainbowSameJ[150].chan[B] + ')'" />
+    <br><br>
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[150+i].chan[R] + ',' + rainbowSameJ[150+i].chan[G] + ',' + rainbowSameJ[150+i].chan[B] + ')'" />
+    <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[150].chan[R] + ',' + rainbowSameJ[150].chan[G] + ',' + rainbowSameJ[150].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[165].chan[R] + ',' + rainbowSameJ[165].chan[G] + ',' + rainbowSameJ[165].chan[B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[180].chan[R] + ',' + rainbowSameJ[180].chan[G] + ',' + rainbowSameJ[180].chan[B] + ')'" />
+    <br><br>
 
-    TODO: test pour ajuster la linearité de r: couper le rainbow en 6
-    The better this criterion is approched, the more linear in `r` the perceived hue is.
-    <br><br>
-    <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
-    <br><br>
-    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
-    <br><br>
+    <h1>Screen quality check: wavelenghts of the primaries</h1>
+    This test tells you whether the primaries of your screen are far enough from each other or if some of them activate two receptors on your retina instead of one. There is nothing that you can improve with the settings of your screen.
+    Watch this band with a (serious) spectroscope.
+    montrer une bande blanche.
+    Rouge doit etre entre x et x nm. Idem vert idem bleu.
 
     <h1>Screen calibration: color balance</h1>
-    TODO: test de balance des primaires (les secondaires doivent etre au milieu) : dessiner trois colonnes sur le rainbow
+    The secondaries must stand between the black lines.
+    <br><br>
+    <span v-for="(c,i) of granularRainbow48" :key="i" style="display: inline-block; width: 24px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'">
+      <span v-if="(i/8-1)%2 == 0" style="display: inline-block; height: 40px; width: 24px; border: 1px solid black; border-bottom: 0; border-top: 0;" />
+    </span>
+    <br><br>
 
     <h1>Screen calibration: linearity of extremes greys</h1>
     The perceived linearity of your screen in extreme greys (near black and white) is good if each middle square feels as different from its left square as from its right square.
     <br><br>
-    <div v-for="k of linearCount14" :key="k" style="text-align: center; background-color: #7030f0">
+    <div v-for="(i,k) of 15" :key="k" style="text-align: center; background-color: #7030f0">
       <span v-if="k == 0 || k==1 || k==2 || k==12 || k==13 || k==14">
         <br>
         <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[0+k].chan[R] + ',' + iotaIadjuster[0+k].chan[G] + ',' + iotaIadjuster[0+k].chan[B] + ')'">
@@ -518,70 +572,46 @@ for (let k = 0; k <= 16; k++) {
     For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
     <br><br>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,135,135)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + (k%2)*186 + ',' + (k%2)*186 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*186 + ',' + ((k+1)%2)*186 + ',' + ((k+1)%2)*186 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + (k%2)*186 + ',' + (k%2)*186 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + (k%2)*186 + ',' + (k%2)*186 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(186,186,186)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + (k%2)*255 + ',' + (k%2)*255 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*255 + ',' + ((k+1)%2)*255 + ',' + ((k+1)%2)*255 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + (k%2)*255 + ',' + (k%2)*255 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + (k%2)*255 + ',' + (k%2)*255 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(223,223,223)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-((k+1)%2)*69) + ',' + (255-((k+1)%2)*69) + ',' + (255-((k+1)%2)*69) + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ')'" /><br>
     </div>
     <br><br>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,0,0)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + 0 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*186 + ',' + 0 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + 0 + ',' + 0 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + 0 + ',' + 0 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(186,0,0)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + 0 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + ((k+1)%2)*255 + ',' + 0 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + 0 + ',' + 0 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + 0 + ',' + 0 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(223,0,0)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + 0 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-((k+1)%2)*69) + ',' + 0 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + 0 + ',' + 0 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + 0 + ',' + 0 + ')'" /><br>
     </div>
     <br><br>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,135,0)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*186 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + ((k+1)%2)*186 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*186 + ',' + 0 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*186 + ',' + 0 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,186,0)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*255 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + ((k+1)%2)*255 + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*255 + ',' + 0 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*255 + ',' + 0 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,223,0)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (255-(k%2)*69) + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (255-((k+1)%2)*69) + ',' + 0 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + (255-(k%2)*69) + ',' + 0 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + (255-(k%2)*69) + ',' + 0 + ')'" /><br>
     </div>
     <br><br>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,135)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*186 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + ((k+1)%2)*186 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*186 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*186 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,186)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*255 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + ((k+1)%2)*255 + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*255 + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*255 + ')'" /><br>
     </div>
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,223)">
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-((k+1)%2)*69) + ')'" /><br>
-      <div v-for="k of linearCount80" :key="k" style="display: inline-block; width: 1px; height: 20px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" />
+      <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" /><br>
     </div>
     <br><br>
-    <h1>All wavelenghts, purities and perceived intensities :</h1>
+    <h1>For each primary, all purities and perceived intensities :</h1>
     <br>
     <div v-for="(rRow,r) of colors" :key="r">
       <div v-for="(pRow,p) of rRow" :key="p">
