@@ -71,11 +71,11 @@ watch(props, (props) => {
   dataNonce = 0
   for (const key of orderOfTheRows) {
     if (key === 'ALL') { continue }
-    modifiableOptions.value[key] = convertAPIentryIntoInternalEntry(originalSettings, key)
+    modifiableOptions.value[key] = convertAPIentryToInternalEntry(originalSettings, key)
   }
 }, { immediate: true })
 
-function convertAPIentryIntoInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
+function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
   let srcValue = apiData[apiKey]
   if (srcValue === undefined || srcValue === null || (Array.isArray(srcValue) && !srcValue.length)) {
     if (apiKey in DefaultValues) {
@@ -107,7 +107,7 @@ function convertAPIentryIntoInternalEntry (apiData: AllOptions, apiKey: keyof Al
   }
 }
 
-function checkboxAllhasBeenClicked (checked: boolean) : void {
+function checkboxAllHasBeenClicked (checked: boolean) : void {
   for (const k of Object.keys(modifiableOptions.value)) {
     const key = k as keyof ModifiableOptions
     if (isOptionAvailable(key) && !OptionsOutsideTheScopeOfCheckboxall.includes(key)) {
@@ -203,7 +203,7 @@ const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.a
         :t-path="tPath+'all'"
         :lacks-premium-subscription="false"
         class="row"
-        @checkbox-click="checkboxAllhasBeenClicked"
+        @checkbox-click="checkboxAllHasBeenClicked"
       />
     </div>
 
