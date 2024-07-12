@@ -309,7 +309,7 @@
     "subscriptions": {
       "dialog_title": "Edit Subscriptions",
       "validators" : {
-        "explanation": "All notifications are sent after network finality (~20mins).",
+        "explanation": "All notifications are sent after network finality (~{count} min).",
         "validator_offline": {
           "option": "Validator is offline",
           "hint": [
@@ -369,7 +369,7 @@
         },
         "track_erc20_token_transfers": {
           "option":"ERC20 token transfers",
-          "placeholder": "value > $0"
+          "placeholder": "value ≥ $0"
         },
         "track_erc721_token_transfers": {
           "option":"ERC721 token transfers"

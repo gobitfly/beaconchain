@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import type { ModelRef } from 'vue'
-import type { ChainIDs } from '~/types/network'
-import type { CheckboxAndNumber, InputRow } from '~/types/notifications/subscriptionModal'
+import type { InternalEntry } from '~/types/notifications/subscriptionModal'
 
 const props = defineProps<{
   tPath: string,
-  lacksPremiumSubscription: boolean,
-  inputType: InputRow,
+  lacksPremiumSubscription: boolean
   valueInText?: number
 }>()
 
@@ -16,14 +13,7 @@ const emitEvent = defineEmits<{(e: 'checkboxClick', checked: boolean) : void}>()
 
 const { t } = useI18n()
 
-const parentVmodel = defineModel<CheckboxAndNumber|ChainIDs[]>({ required: true })
-let networkSelectorState: ModelRef<ChainIDs[]>
-let checkBoxAndInput: Ref<CheckboxAndNumber>
-if (props.inputType === 'networks') {
-  networkSelectorState = parentVmodel as ModelRef<ChainIDs[]>
-} else {
-  checkBoxAndInput = parentVmodel as ModelRef<CheckboxAndNumber>
-}
+const parentVmodel = defineModel<InternalEntry>({ required: true })
 
 const tooltipLines = computed(() => {
   let options
@@ -34,8 +24,8 @@ const tooltipLines = computed(() => {
       options = { plural: parentVmodel.value.length, list: parentVmodel.value.join(', ') }
     } else {
       let plural: number
-      if (props.inputType === 'amount' || props.inputType === 'percent') {
-        plural = checkBoxAndInput!.value.num ?? 0
+      if (parentVmodel.value.type === 'amount' || parentVmodel.value.type === 'percent') {
+        plural = parentVmodel.value.num ?? 0
       } else {
         plural = parentVmodel.value ? 2 : 1
       }
@@ -59,30 +49,31 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       </template>
     </BcTooltip>
     <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
-    <div v-if="inputType != 'networks'" class="right">
-      <div v-if="inputType == 'amount' || inputType == 'percent'" class="input">
+    <div v-if="parentVmodel.type != 'networks'" class="right">
+      <div v-if="parentVmodel.type == 'amount' || parentVmodel.type == 'percent'" class="input">
         <BcInputNumber
-          v-if="checkBoxAndInput"
-          v-model="checkBoxAndInput.num"
-          :min="(inputType === 'amount') ? 0 : 1"
-          :max="(inputType === 'amount') ? 2**32 : 100"
-          :max-fraction-digits="(inputType === 'amount') ? 2 : 1"
+          v-if="parentVmodel.num !== undefined"
+          v-model="parentVmodel.num"
+          :min="(parentVmodel.type === 'amount') ? 0 : 1"
+          :max="(parentVmodel.type === 'amount') ? 2**32 : 100"
+          :max-fraction-digits="(parentVmodel.type === 'amount') ? 2 : 1"
           :placeholder="t(tPath + '.placeholder')"
-          :class="[deactivationClass,inputType]"
+          :class="[deactivationClass,parentVmodel.type]"
         />
         &nbsp;
       </div>
-      <span v-if="inputType == 'percent'" :class="deactivationClass">%</span>
+      <span v-if="parentVmodel.type == 'percent'" :class="deactivationClass">%</span>
       <Checkbox
-        v-model="checkBoxAndInput!.check"
+        v-if="parentVmodel.check !== undefined"
+        v-model="parentVmodel.check"
         :binary="true"
         class="checkbox"
         :class="deactivationClass"
-        @click="emitEvent('checkboxClick', !checkBoxAndInput!.check)"
+        @click="emitEvent('checkboxClick', !parentVmodel.check)"
       />
     </div>
     <div v-else class="right">
-      <BcNetworkSelector v-model="networkSelectorState" :class="deactivationClass" />
+      <BcNetworkSelector v-if="parentVmodel.networks !== undefined" v-model="parentVmodel.networks" :class="deactivationClass" />
     </div>
   </div>
 </template>
