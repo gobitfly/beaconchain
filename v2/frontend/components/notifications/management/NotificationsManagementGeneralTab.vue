@@ -15,10 +15,25 @@ const { fetch } = useCustomFetch()
 const { generalSettings, updateGeneralSettings } = useNotificationsManagementSettings()
 
 const pairedDevicesModalVisible = ref(false)
-const doNotDisturbToggle = ref(false)
 const emailToggle = ref(false)
 const pushToggle = ref(false)
 const { value: testButtonsDisabled, bounce: bounceTestButton, instant: setTestButton } = useDebounceValue<boolean>(false, 5000)
+
+const muteDropdownSelection = ref<string | undefined>()
+const muteDropdownList = [
+  { value: 1 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 1 }) },
+  { value: 2 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 2 }) },
+  { value: 4 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 4 }) },
+  { value: 8 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 8 }) },
+  { value: -1, label: $t('notifications.general.mute.until_turned_on') }]
+
+const unmuteNotifications = () => {
+  alert('TODO: Unmute notifications')
+}
+
+const setMuteNotifications = (value: number) => {
+  alert('TODO: Mute notifications for ' + value + ' seconds')
+}
 
 const sendTestNotification = async (type: 'email' | 'push') => {
   setTestButton(true)
@@ -60,9 +75,30 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
     <div class="row divider">
       <div>
         <span>{{ $t('notifications.general.do_not_disturb') }}</span>
-        <span class="explanation">{{ $t('notifications.general.mutes_all') }}</span>
+        <span class="explanation">{{ $t('notifications.general.mute.mutes_all') }}</span>
       </div>
-      <BcToggle v-model="doNotDisturbToggle" />
+      <div v-if="generalSettings?.do_not_disturb_timestamp" class="unmute-container">
+        <Button :label="$t('notifications.general.mute.unmute')" @click="unmuteNotifications()" />
+        <div class="muted-until">
+          {{ $t('notifications.general.mute.muted_until', {date: formatTsToAbsolute(generalSettings.do_not_disturb_timestamp, $t('locales.date'), true)}) }}
+        </div>
+      </div>
+      <BcDropdown
+        v-else
+        v-model="muteDropdownSelection"
+        :options="muteDropdownList"
+        option-value="value"
+        option-label="label"
+        panel-class="mute-notifications-dropdown-panel"
+        @update:model-value="(value: number)=>setMuteNotifications(value)"
+      >
+        <template #value>
+          {{ $t('notifications.general.mute.select_duration') }}
+        </template>
+        <template #option="slotProps">
+          {{ slotProps.label }}
+        </template>
+      </BcDropdown>
     </div>
     <div class="row">
       <div>
@@ -113,7 +149,7 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
 <style lang="scss" scoped>
 @use "~/assets/css/fonts.scss";
 
-.container{
+.container {
   border: unset;
   margin-top: var(--padding-xl);
   display: flex;
@@ -127,11 +163,24 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
     padding: var(--padding);
     display: flex;
     justify-content: space-between;
+    align-items: center;
 
-    .explanation{
+    .explanation {
       @include fonts.tiny_text;
       color: var(--text-color-discreet);
       margin-left: var(--padding-small);
+    }
+
+    .unmute-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--padding-small);
+
+      .muted-until {
+        @include fonts.tiny_text;
+        color: var(--text-color-discreet);
+      }
     }
 
     .popout {
@@ -143,6 +192,16 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
       margin-bottom: var(--padding-small);
       border-bottom: 1px solid var(--container-border-color);
     }
+  }
+}
+
+:deep(span.p-dropdown-label.p-inputtext) {
+  @include fonts.small_text_bold;
+}
+
+:global(.mute-notifications-dropdown-panel) {
+  li.p-dropdown-item {
+    @include fonts.small_text;
   }
 }
 </style>

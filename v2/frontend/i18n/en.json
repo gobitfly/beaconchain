@@ -315,7 +315,14 @@
     },
     "general": {
       "do_not_disturb": "Do not disturb",
-      "mutes_all": "Mutes all notifications",
+      "mute": {
+        "mutes_all": "Mutes all notifications",
+        "unmute": "Unmute",
+        "muted_until": "Muted until {date}",
+        "select_duration": "Select mute duration",
+        "count_hours": "{count} hour|{count} hours",
+        "until_turned_on": "Until I turn it back on"
+      },
       "email_notifications": "Email Notifications",
       "push_notifications": "Push Notifications",
       "send_test_email": "Send Test E-Mail",
