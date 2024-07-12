@@ -113,12 +113,6 @@ func (d *DummyService) RemoveValidatorDashboard(dashboardId t.VDBIdPrimary) erro
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardArchiving(dashboardId t.VDBIdPrimary) (*t.VDBArchivedData, error) {
-	r := t.VDBArchivedData{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
 func (d *DummyService) UpdateValidatorDashboardArchiving(dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
 	r := t.VDBPostArchivingReturnData{}
 	err := commonFakeData(&r)

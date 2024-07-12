@@ -36,14 +36,6 @@ type VDBPostArchivingReturnData struct {
 	Archived bool   `json:"archived"`
 }
 
-type VDBArchivedData struct {
-	Reason         string `json:"reason"` // dashboard_limit, validator_limit, group_limit, none
-	ValidatorCount uint64 `json:"validator_count"`
-	GroupCount     uint64 `json:"group_count"`
-}
-
-type InternalGetValidatorDashboardArchivingResponse ApiDataResponse[VDBArchivedData]
-
 // ------------------------------------------------------------
 // Summary Tab
 

@@ -12,8 +12,11 @@ export interface AccountDashboard {
 export interface ValidatorDashboard {
   id: number /* uint64 */;
   name: string;
-  archived: boolean;
   public_ids?: VDBPublicId[];
+  archived: boolean;
+  archived_reason?: string; // dashboard_limit, validator_limit, group_limit, none
+  validator_count: number /* uint64 */;
+  group_count: number /* uint64 */;
 }
 export interface UserDashboardsData {
   validator_dashboards: ValidatorDashboard[];
