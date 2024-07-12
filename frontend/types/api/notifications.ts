@@ -94,9 +94,9 @@ export type InternalGetNotificationNetworks = ApiPagingResponse<NotificationNetw
  * Notification Settings
  */
 export interface NotificationSettingsNetwork {
-  gas_above_threshold: string /* decimal.Decimal */;
-  gas_below_threshold: string /* decimal.Decimal */;
-  participation_rate_threshold: number /* float64 */;
+  gas_above_threshold: string /* decimal.Decimal */; // 0 is disabled
+  gas_below_threshold: string /* decimal.Decimal */; // 0 is disabled
+  participation_rate_threshold: number /* float64 */; // 0 is disabled
 }
 export interface NotificationsNetwork {
   chain_id: number /* uint64 */;
@@ -114,13 +114,13 @@ export interface NotificationSettingsGeneral {
   is_email_notifications_enabled: boolean;
   is_push_notifications_enabled: boolean;
   is_machine_offline_subscribed: boolean;
-  machine_storage_usage_threshold: number /* float64 */;
-  machine_cpu_usage_threshold: number /* float64 */;
-  machine_memory_usage_threshold: number /* float64 */;
+  machine_storage_usage_threshold: number /* float64 */; // 0 is disabled
+  machine_cpu_usage_threshold: number /* float64 */; // 0 is disabled
+  machine_memory_usage_threshold: number /* float64 */; // 0 is disabled
   subscribed_clients: string[];
   is_rocket_pool_new_reward_round_subscribed: boolean;
-  rocket_pool_max_collateral_threshold: number /* float64 */;
-  rocket_pool_min_collateral_threshold: number /* float64 */;
+  rocket_pool_max_collateral_threshold: number /* float64 */; // 0 is disabled
+  rocket_pool_min_collateral_threshold: number /* float64 */; // 0 is disabled
 }
 export interface NotificationSettings {
   general_settings: NotificationSettingsGeneral;
@@ -133,7 +133,7 @@ export interface NotificationSettingsValidatorDashboard {
   is_webhook_discord_enabled: boolean;
   is_real_time_mode_enabled: boolean;
   is_validator_offline_subscribed: boolean;
-  group_offline_threshold: number /* float64 */;
+  group_offline_threshold: number /* float64 */; // 0 is disabled
   is_attestations_missed_subscribed: boolean;
   is_block_proposal_subscribed: boolean;
   is_upcoming_block_proposal_subscribed: boolean;
@@ -149,6 +149,7 @@ export interface NotificationSettingsAccountDashboard {
   subscribed_chain_ids: number /* uint64 */[];
   is_incoming_transactions_subscribed: boolean;
   is_outgoing_transactions_subscribed: boolean;
+  is_erc20_token_transfers_subscribed: number /* float64 */;
   erc20_token_transfers_threshold: number /* float64 */;
   is_erc721_token_transfers_subscribed: boolean;
   is_erc1155_token_transfers_subscribed: boolean;
