@@ -10,8 +10,8 @@ import type { ApiDataResponse, ApiPagingResponse, Hash } from './common'
  * Overview
  */
 export interface NotificationsOverviewData {
-  email_notifications_enabled: boolean;
-  push_notifications_enabled: boolean;
+  is_email_notifications_enabled: boolean;
+  is_push_notifications_enabled: boolean;
   /**
    * these will list 3 group names
    */
@@ -93,74 +93,65 @@ export type InternalGetNotificationNetworks = ApiPagingResponse<NotificationNetw
  * ------------------------------------------------------------
  * Notification Settings
  */
-export interface NotificationEventsNetwork {
-  gas_above: string /* decimal.Decimal */;
-  gas_below: string /* decimal.Decimal */;
-  participation_rate: number /* float64 */;
-}
 export interface NotificationSettingsNetwork {
+  gas_above_threshold: string /* decimal.Decimal */;
+  gas_below_threshold: string /* decimal.Decimal */;
+  participation_rate_threshold: number /* float64 */;
+}
+export interface NotificationsNetwork {
   chain_id: number /* uint64 */;
-  subscribed_events: NotificationEventsNetwork;
+  settings: NotificationSettingsNetwork;
 }
-export type InternalPutNotificationSettingsNetworksResponse = ApiDataResponse<NotificationSettingsNetwork>;
-export interface NotificationSettingsPairedDevice {
+export type InternalPutNotificationSettingsNetworksResponse = ApiDataResponse<NotificationsNetwork>;
+export interface NotificationsPairedDevice {
   id: string;
+  paired_timestamp: number /* uint64 */;
   name?: string;
-  enable_notifications: boolean;
+  is_notifications_enabled: boolean;
 }
-export type InternalPutNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationSettingsNetwork>;
-export interface NotificationEventsGeneral {
-  machines_offline: boolean;
-  machines_storage_usage: number /* float64 */;
-  machines_cpu_usage: number /* float64 */;
-  machines_memory_usage: number /* float64 */;
-  clients: string[];
-  clients_rocket_pool_smart_node: boolean;
-  clients_mev_boost: boolean;
-  rocket_pool_new_reward_round: boolean;
-  rocket_pool_max_collateral: number /* float64 */;
-  rocket_pool_min_collateral: number /* float64 */;
+export type InternalPutNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationsNetwork>;
+export interface NotificationSettingsGeneral {
+  is_email_notifications_enabled: boolean;
+  is_push_notifications_enabled: boolean;
+  is_machine_offline_subscribed: boolean;
+  machine_storage_usage_threshold: number /* float64 */;
+  machine_cpu_usage_threshold: number /* float64 */;
+  machine_memory_usage_threshold: number /* float64 */;
+  subscribed_clients: string[];
+  is_rocket_pool_new_reward_round_subscribed: boolean;
+  rocket_pool_max_collateral_threshold: number /* float64 */;
+  rocket_pool_min_collateral_threshold: number /* float64 */;
 }
 export interface NotificationSettings {
-  do_not_disturb_timestamp: number /* uint64 */;
-  enable_email: boolean;
-  enable_push: boolean;
-  subscribed_events: NotificationEventsGeneral;
-  networks: NotificationSettingsNetwork[];
-  paired_devices: NotificationSettingsPairedDevice[];
+  general_settings: NotificationSettingsGeneral;
+  networks: NotificationsNetwork[];
+  paired_devices: NotificationsPairedDevice[];
 }
 export type InternalGetNotificationSettingsResponse = ApiDataResponse<NotificationSettings>;
-export interface NotificationEventsValidatorDashboard {
-  validator_offline: boolean;
-  group_offline: number /* float64 */;
-  attestations_missed: boolean;
-  block_proposal: boolean;
-  upcoming_block_proposal: boolean;
-  sync: boolean;
-  withdrawal_processed: boolean;
-  slashed: boolean;
-  realtime_mode: boolean;
-}
 export interface NotificationSettingsValidatorDashboard {
   webhook_url: string;
-  webhook_discord: boolean;
-  real_time_mode: boolean;
-  subscribed_events: NotificationEventsValidatorDashboard;
+  is_webhook_discord_enabled: boolean;
+  is_real_time_mode_enabled: boolean;
+  is_validator_offline_subscribed: boolean;
+  group_offline_threshold: number /* float64 */;
+  is_attestations_missed_subscribed: boolean;
+  is_block_proposal_subscribed: boolean;
+  is_upcoming_block_proposal_subscribed: boolean;
+  is_sync_subscribed: boolean;
+  is_withdrawal_processed_subscribed: boolean;
+  is_slashed_subscribed: boolean;
 }
 export type InternalPutNotificationSettingsValidatorDashboardResponse = ApiDataResponse<NotificationSettingsValidatorDashboard>;
-export interface NotificationEventsAccountDashboard {
-  incoming_transactions: boolean;
-  outgoing_transactions: boolean;
-  track_erc20_token_transfers: boolean;
-  track_erc721_token_transfers: boolean;
-  track_erc1155_token_transfers: boolean;
-}
 export interface NotificationSettingsAccountDashboard {
   webhook_url: string;
-  webhook_discord: boolean;
-  networks: number /* uint64 */[];
-  ignore_spam_transactions: boolean;
-  subscribed_events: NotificationEventsAccountDashboard;
+  is_webhook_discord_enabled: boolean;
+  is_ignore_spam_transactions_enabled: boolean;
+  subscribed_chain_ids: number /* uint64 */[];
+  is_incoming_transactions_subscribed: boolean;
+  is_outgoing_transactions_subscribed: boolean;
+  erc20_token_transfers_threshold: number /* float64 */;
+  is_erc721_token_transfers_subscribed: boolean;
+  is_erc1155_token_transfers_subscribed: boolean;
 }
 export type InternalPutNotificationSettingsAccountDashboardResponse = ApiDataResponse<NotificationSettingsAccountDashboard>;
 export interface NotificationSettingsDashboardsTableRow {
@@ -168,9 +159,9 @@ export interface NotificationSettingsDashboardsTableRow {
   dashboard_id: number /* uint64 */;
   group_name: string;
   /**
-   * if it's a validator dashboard, SubscribedEvents is NotificationEventsValidatorDashboard, otherwise NotificationEventsAccountDashboard
+   * if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
    */
-  subscribed_events: NotificationEventsValidatorDashboard | NotificationEventsAccountDashboard;
+  settings: NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard;
   chain_ids: number /* uint64 */[];
 }
 export type InternalGetNotificationSettingsDashboardsResponse = ApiPagingResponse<NotificationSettingsDashboardsTableRow>;
