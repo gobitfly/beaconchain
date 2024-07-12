@@ -75,6 +75,10 @@ export function useNetworkStore () {
     return networkTs.slotToEpoch(currentNetwork.value, slot)
   }
 
+  function tsToEpoch (ts: number): number {
+    return slotToEpoch(tsToSlot(ts))
+  }
+
   return {
     loadAvailableNetworks,
     availableNetworks,
@@ -87,6 +91,7 @@ export function useNetworkStore () {
     epochToTs,
     slotToTs,
     tsToSlot,
+    tsToEpoch,
     slotToEpoch
   }
 }

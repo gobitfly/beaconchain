@@ -16,12 +16,12 @@ type CompareValue = {
   class?: string
 }
 
-type RowType = 'header' | 'group' | 'perc'
+type RowType = 'header' | 'group' | 'perc' | 'label'
 
 type CompareRow = {
   type: RowType,
   label?: string,
-  comingSoon?: boolean,
+  subText?: string,
   values?: CompareValue[],
   className?: string
 }
@@ -36,10 +36,15 @@ const rows = computed(() => {
       return { value: perks.ad_free }
     }
     let value = get(perks, property)
-    if (value === 0) {
+
+    if (!value) {
       value = false
     } else if (property.includes('_seconds')) {
-      value = formatTimeDuration(value as number, $t)
+      if (value === Number.MAX_SAFE_INTEGER) {
+        value = $t('pricing.full_history')
+      } else {
+        value = $t('common.last_x', { duration: formatTimeDuration(value as number, $t) })
+      }
     }
 
     let tooltip: string | undefined
@@ -52,8 +57,8 @@ const rows = computed(() => {
       tooltip
     }
   }
-  const addRow = (type: RowType, property?: string, className?: string, comingSoon = false, hidePositiveValues = false) => {
-    const row: CompareRow = { type, comingSoon, className }
+  const addRow = (type: RowType, property?: string, className?: string, subText?: string, hidePositiveValues = false, translationKey?: string) => {
+    const row: CompareRow = { type, subText, className }
     switch (type) {
       case 'header':
         row.values = sorted.map(p => ({ value: p.product_name }))
@@ -62,8 +67,12 @@ const rows = computed(() => {
         row.label = $t(`pricing.groups.${property}`)
         row.values = sorted.map(_p => ({}))
         break
+      case 'label':
+        row.label = $t(translationKey || `pricing.percs.${property}`)
+        row.values = sorted.map(_p => ({}))
+        break
       case 'perc':
-        row.label = $t(`pricing.percs.${property}`)
+        row.label = $t(translationKey || `pricing.percs.${property}`)
         row.values = sorted.map((p) => {
           if (!property) {
             return {}
@@ -71,7 +80,7 @@ const rows = computed(() => {
           const mv = mapValue(property, p.premium_perks)
           if (hidePositiveValues && mv.value) {
             mv.value = $t('common.soon')
-            mv.class = 'coming-soon'
+            mv.class = 'soon'
           }
           return mv
         })
@@ -79,6 +88,9 @@ const rows = computed(() => {
     }
     rows.push(row)
   }
+
+  const comingSoon = $t('pricing.premium_product.coming_soon')
+
   addRow('header')
 
   addRow('group', 'general')
@@ -90,22 +102,29 @@ const rows = computed(() => {
   addRow('perc', 'validators_per_dashboard')
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
-  addRow('perc', 'manage_dashboard_via_api', undefined, true)
-  addRow('perc', 'heatmap_history_seconds', undefined, false, !showInDevelopment)
-  addRow('perc', 'summary_chart_history_seconds', 'last-in-group', false, !showInDevelopment)
+  addRow('perc', 'manage_dashboard_via_api', undefined, comingSoon)
+  addRow('perc', 'bulk_adding', 'last-in-group', $t('pricing.percs.bulk_adding_subtext'))
+  addRow('group', 'dashboard_charts')
+  addRow('label', 'summary_chart_history', 'first-in-group')
+  const chartProps = ['epoch', 'hourly', 'daily', 'weekly']
+  chartProps.forEach(p => addRow('perc', `chart_history_seconds.${p}`, undefined, undefined, undefined, `time_frames.${p}`))
 
-  addRow('group', 'notification', undefined, !showInDevelopment)
-  addRow('perc', 'email_notifications_per_day', 'first-in-group', false, !showInDevelopment)
+  addRow('label', 'heatmap_history', 'last-in-group', comingSoon)
+
+  addRow('group', 'notification', undefined, showInDevelopment ? undefined : comingSoon)
+  addRow('perc', 'email_notifications_per_day', 'first-in-group', undefined, !showInDevelopment)
   addRow('perc', 'configure_notifications_via_api')
-  addRow('perc', 'validator_group_notifications', undefined, false, !showInDevelopment)
-  addRow('perc', 'webhook_endpoints', 'last-in-group', false, !showInDevelopment)
+
+  addRow('perc', 'validator_group_notifications', undefined, undefined, !showInDevelopment)
+  addRow('perc', 'webhook_endpoints', 'last-in-group', undefined, !showInDevelopment)
 
   addRow('group', 'mobille_app')
   addRow('perc', 'mobile_app_custom_themes', 'first-in-group')
   addRow('perc', 'mobile_app_widget')
   addRow('perc', 'monitor_machines')
   addRow('perc', 'machine_monitoring_history_seconds')
-  addRow('perc', 'custom_machine_alerts', 'last last-in-group')
+  addRow('perc', 'custom_machine_alerts', 'last last-in-group', $t('pricing.percs.custom_machine_alerts_subtext'))
+
   return rows
 })
 
@@ -118,7 +137,7 @@ const rows = computed(() => {
       <div v-for="(row, index) in rows" :key="index" :class="[row.type, row.className]" class="row">
         <div class="label">
           <span>{{ row.label }}</span>
-          <span v-if="row.comingSoon" class="coming-soon"> {{ $t('pricing.premium_product.coming_soon') }}</span>
+          <span v-if="row.subText" class="sub-text"> {{ row.subText }}</span>
         </div>
         <div v-for="(value, vIndex) in row.values" :key="vIndex" class="value" :class="value.class">
           <span v-if="typeof value.value === 'boolean'">
@@ -202,6 +221,7 @@ const rows = computed(() => {
       min-width: fit-content;
       border-left: 1px solid transparent;
 
+      &.label,
       &.header,
       &.group {
         font-size: 18px;
@@ -216,6 +236,7 @@ const rows = computed(() => {
         }
       }
 
+      &.label,
       &.perc {
         min-height: 36px;
       }
@@ -240,13 +261,13 @@ const rows = computed(() => {
         text-align: right;
         min-width: 121px;
 
-        .coming-soon {
+        .sub-text {
           font-size: 11px;
           margin-bottom: -1px;
 
           @media (max-width: 1360px) {
             font-size: 12px;
-            margin-bottom: unset;
+            margin-bottom: 4px;
           }
         }
 
@@ -256,6 +277,7 @@ const rows = computed(() => {
           align-content: baseline;
           align-self: center;
           padding-left: 21px;
+          gap: 0;
         }
       }
 
@@ -267,7 +289,7 @@ const rows = computed(() => {
         border-bottom-left-radius: var(--border-radius);
 
         .label {
-          .coming-soon {
+          .sub-text {
             font-size: 13px;
             margin-bottom: -2px;
 
@@ -308,7 +330,7 @@ const rows = computed(() => {
           }
         }
 
-        &.coming-soon {
+        &.soon {
           font-style: italic;
         }
       }

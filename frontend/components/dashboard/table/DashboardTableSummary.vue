@@ -9,7 +9,7 @@ import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { SummaryTimeFrames, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
+import { SummaryTimeFrames, type SummaryChartFilter, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
 import type { DashboardTableSummaryValidators } from '#build/components'
 
 const { dashboardKey, isPublic } = useDashboardKey()
@@ -18,6 +18,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const chartFilter = ref<SummaryChartFilter>({ aggregation: 'hourly', efficiency: 'all', groupIds: [] })
 
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
@@ -42,7 +43,7 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
 })
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
-    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'group_id:desc' }
+    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'efficiency:desc' }
   }
   setQuery(q, true, true)
 }
@@ -102,11 +103,12 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
-      <template #header-center>
+      <template #header-center="{tableIsShown}">
         <h1 class="summary_title">
           {{ $t('dashboard.validator.summary.title') }}
         </h1>
         <BcDropdown
+          v-if="tableIsShown"
           v-model="selectedTimeFrame"
           :options="timeFrames"
           option-value="id"
@@ -114,6 +116,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
           class="small"
           :placeholder="$t('dashboard.group.selection.placeholder')"
         />
+        <DashboardChartSummaryChartFilter v-else v-model="chartFilter" />
       </template>
       <template #table>
         <ClientOnly fallback-tag="span">
@@ -134,7 +137,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
           >
             <Column
               field="group_id"
-              :sortable="showInDevelopment"
+              :sortable="true"
               body-class="group-id-column bold"
               header-class="group-id-column"
               :header="$t('dashboard.validator.col.group')"
@@ -145,7 +148,6 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             </Column>
             <Column
               field="status"
-              :sortable="showInDevelopment"
               header-class="status-column"
               body-class="status-column"
               :header="$t('dashboard.validator.col.status')"
@@ -158,7 +160,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               field="validators"
               body-class="validator-column"
               header-class="validator-column"
-              :sortable="showInDevelopment && colsVisible.validatorsSortable"
+              :sortable="colsVisible.validatorsSortable"
             >
               <template #header>
                 <div class="validators-header">
@@ -190,7 +192,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             <Column
               v-if="colsVisible.efficiency"
               field="efficiency"
-              :sortable="showInDevelopment"
+              :sortable="true"
               body-class="efficiency-column"
               :header="$t('dashboard.validator.col.efficiency')"
             >
@@ -205,8 +207,8 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             </Column>
             <Column
               v-if="colsVisible.attestations"
-              field="attestions"
-              :sortable="showInDevelopment"
+              field="attestations"
+              :sortable="true"
               :header="$t('dashboard.validator.summary.row.attestations')"
             >
               <template #body="slotProps">
@@ -222,7 +224,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             <Column
               v-if="colsVisible.proposals"
               field="proposals"
-              :sortable="showInDevelopment"
+              :sortable="true"
               :header="$t('dashboard.validator.summary.row.proposals')"
             >
               <template #body="slotProps">
@@ -239,7 +241,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             <Column
               v-if="colsVisible.reward"
               field="reward"
-              :sortable="showInDevelopment"
+              :sortable="true"
               :header="$t('dashboard.validator.col.rewards')"
             >
               <template #body="slotProps">
@@ -269,7 +271,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartSummaryChart v-if="showInDevelopment" />
+          <DashboardChartSummaryChart v-if="showInDevelopment" :filter="chartFilter" />
         </div>
       </template>
     </BcTableControl>
