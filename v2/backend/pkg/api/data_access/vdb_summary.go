@@ -162,7 +162,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -210,7 +210,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -228,7 +228,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	upcomingSyncCommitteeValidators := make(map[uint64]bool)
 	wg.Go(func() error {
 		var err error
-		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err = d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
+		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err = d.getCurrentAndUpcomingSyncCommittees(ctx, latestEpoch)
 		return err
 	})
 
@@ -488,7 +488,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 	// Get the current and next sync committee validators
 	latestEpoch := cache.LatestEpoch.Get()
-	currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
+	currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(ctx, latestEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -582,9 +582,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	var rows []*queryResult
 
 	if len(validators) > 0 {
-		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
+		err = d.alloyReader.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
 	} else {
-		err = d.alloyReader.Select(&rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId.Id, groupId)
+		err = d.alloyReader.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId.Id, groupId)
 	}
 
 	if err != nil {
@@ -672,7 +672,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(rows[0].EpochStart)
 	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-	err = d.readerDb.Get(&ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validatorArr)
+	err = d.readerDb.GetContext(ctx, &ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validatorArr)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving past sync committee count: %v", err)
 	}
@@ -1065,7 +1065,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	// Get the current and next sync committee validators
 	latestEpoch := cache.LatestEpoch.Get()
 	wg.Go(func() error {
-		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(latestEpoch)
+		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(ctx, latestEpoch)
 		if err != nil {
 			return err
 		}
@@ -1120,7 +1120,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 		}
 
 		var validatorIndices []uint64
-		err = d.alloyReader.Select(&validatorIndices, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &validatorIndices, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data for past sync committees: %w", err)
 		}
@@ -1212,7 +1212,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		return nil, err
 	}
 
-	err = d.alloyReader.Select(&queryResult, query, args...)
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		log.Error(err, "error while getting validator dashboard slashed validators list", 0)
 		return nil, err
@@ -1267,7 +1267,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -1303,7 +1303,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -1404,7 +1404,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		return nil, fmt.Errorf("error preparing query: %v", err)
 	}
 
-	err = d.alloyReader.Select(&queryResult, query, args...)
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving data from table %s: %v", table, err)
 	}
@@ -1454,7 +1454,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	return result, nil
 }
 
-func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(latestEpoch uint64) (map[uint64]bool, map[uint64]bool, error) {
+func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Context, latestEpoch uint64) (map[uint64]bool, map[uint64]bool, error) {
 	currentSyncCommitteeValidators := make(map[uint64]bool)
 	upcomingSyncCommitteeValidators := make(map[uint64]bool)
 
@@ -1476,7 +1476,7 @@ func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(latestEpoch uint
 		return nil, nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
-	err = d.readerDb.Select(&queryResult, query, args...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving sync committee current and next period data: %w", err)
 	}

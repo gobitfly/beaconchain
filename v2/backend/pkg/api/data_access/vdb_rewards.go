@@ -121,7 +121,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				if indexSearch != -1 {
 					// Find whether the index is in the dashboard
 					// If it is then show all the data
-					err = d.alloyReader.Get(&found, `
+					err = d.alloyReader.GetContext(ctx, &found, `
 						SELECT EXISTS(
 							SELECT 1
 							FROM users_val_dashboards_validators
@@ -591,7 +591,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Get(&elRewards, query, args...)
+		err = d.alloyReader.GetContext(ctx, &elRewards, query, args...)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("error retrieving el rewards data for group rewards: %v", err)
 		}
