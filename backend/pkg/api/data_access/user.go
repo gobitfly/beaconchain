@@ -120,7 +120,7 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId ui
 
 func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
 	var userId uint64
-	err := d.userReader.Get(&userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
+	err := d.userReader.GetContext(ctx, &userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
 	}
@@ -155,7 +155,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
 
-	err = d.userReader.Get(&userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
+	err = d.userReader.GetContext(ctx, &userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
@@ -171,7 +171,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		Start     time.Time `db:"start"`
 		End       time.Time `db:"end"`
 	}{}
-	err = d.userReader.Get(&premiumProduct, `
+	err = d.userReader.GetContext(ctx, &premiumProduct, `
 		SELECT
 			COALESCE(uas.product_id, '') AS product_id,
 			COALESCE(uas.store, '') AS store,
@@ -605,7 +605,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 
 func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
 		WHERE user_id = $1
 	`, userId)

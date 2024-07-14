@@ -497,7 +497,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 	}
 
 	var latestWithdrawalsAmount int64
-	err = d.readerDb.Get(&latestWithdrawalsAmount, `
+	err = d.readerDb.GetContext(ctx, &latestWithdrawalsAmount, `
 		SELECT
 			COALESCE(SUM(w.amount), 0)
 		FROM
