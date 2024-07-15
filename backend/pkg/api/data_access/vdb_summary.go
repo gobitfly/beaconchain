@@ -943,28 +943,14 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 		return nil, err
 	}
 
-	// Get the validator duties to check the last fulfilled attestation
-	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseValDutiesLock()
-	if err != nil {
-		return nil, err
-	}
-
-	// Set the threshold for "online" => "offline" to 2 epochs without attestation
-	attestationThresholdSlot := uint64(0)
-	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	if dutiesInfo.LatestSlot >= twoEpochs {
-		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
-	}
-
 	// Fill the data
 	for _, validatorIndex := range validatorIndices {
 		metadata := validatorMapping.ValidatorMetadata[validatorIndex]
 
-		switch constypes.ValidatorStatus(metadata.Status) {
-		case constypes.PendingInitialized:
+		switch constypes.ValidatorDbStatus(metadata.Status) {
+		case constypes.DbDeposited:
 			result.Deposited = append(result.Deposited, validatorIndex)
-		case constypes.PendingQueued:
+		case constypes.DbPending:
 			validatorInfo := t.IndexTimestamp{
 				Index: validatorIndex,
 			}
@@ -980,52 +966,54 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 				validatorInfo.Timestamp = uint64(utils.EpochToTime(estimatedActivationEpoch).Unix())
 			}
 			result.Pending = append(result.Pending, validatorInfo)
-		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
-			var lastAttestionSlot uint32
-			for slot, attested := range dutiesInfo.EpochAttestationDuties[validatorIndex] {
-				if attested && slot > lastAttestionSlot {
-					lastAttestionSlot = slot
-				}
-			}
-			if lastAttestionSlot < uint32(attestationThresholdSlot) {
+		case constypes.DbActiveOnline:
+			result.Online = append(result.Online, validatorIndex)
+		case constypes.DbActiveOffline:
+			result.Offline = append(result.Offline, validatorIndex)
+		case constypes.DbSlashingOnline, constypes.DbSlashingOffline:
+			result.Slashing = append(result.Slashing, validatorIndex)
+			if constypes.ValidatorDbStatus(metadata.Status) == constypes.DbSlashingOffline {
 				result.Offline = append(result.Offline, validatorIndex)
 			} else {
 				result.Online = append(result.Online, validatorIndex)
 			}
-
-			if constypes.ValidatorStatus(metadata.Status) == constypes.ActiveExiting {
-				result.Exiting = append(result.Exiting, t.IndexTimestamp{
-					Index:     validatorIndex,
-					Timestamp: uint64(utils.EpochToTime(uint64(metadata.ExitEpoch.Int64)).Unix()),
-				})
-			} else if constypes.ValidatorStatus(metadata.Status) == constypes.ActiveSlashed {
-				result.Slashing = append(result.Slashing, validatorIndex)
+		case constypes.DbExitingOnline, constypes.DbExitingOffline:
+			result.Exiting = append(result.Exiting, t.IndexTimestamp{
+				Index:     validatorIndex,
+				Timestamp: uint64(utils.EpochToTime(uint64(metadata.ExitEpoch.Int64)).Unix()),
+			})
+			if constypes.ValidatorDbStatus(metadata.Status) == constypes.DbExitingOffline {
+				result.Offline = append(result.Offline, validatorIndex)
+			} else {
+				result.Online = append(result.Online, validatorIndex)
 			}
-		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
-			if metadata.Slashed {
+		case constypes.DbExited, constypes.DbSlashed:
+			if constypes.ValidatorDbStatus(metadata.Status) == constypes.DbSlashed {
 				result.Slashed = append(result.Slashed, validatorIndex)
 			} else {
 				result.Exited = append(result.Exited, validatorIndex)
 			}
 
-			if constypes.ValidatorStatus(metadata.Status) == constypes.WithdrawalPossible {
-				validatorInfo := t.IndexTimestamp{
-					Index: validatorIndex,
-				}
-
-				if utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
-					distance, err := d.getWithdrawableCountFromCursor(validatorIndex, *stats.LatestValidatorWithdrawalIndex)
-					if err != nil {
-						return nil, err
+			if metadata.WithdrawableEpoch.Valid && metadata.WithdrawableEpoch.Int64 <= int64(latestEpoch) {
+				if metadata.Balance != 0 {
+					validatorInfo := t.IndexTimestamp{
+						Index: validatorIndex,
 					}
 
-					timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
-					validatorInfo.Timestamp = uint64(timeToWithdrawal.Unix())
-				}
+					if utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
+						distance, err := d.getWithdrawableCountFromCursor(validatorIndex, *stats.LatestValidatorWithdrawalIndex)
+						if err != nil {
+							return nil, err
+						}
 
-				result.Withdrawing = append(result.Withdrawing, validatorInfo)
-			} else if constypes.ValidatorStatus(metadata.Status) == constypes.WithdrawalDone {
-				result.Withdrawn = append(result.Withdrawn, validatorIndex)
+						timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
+						validatorInfo.Timestamp = uint64(timeToWithdrawal.Unix())
+					}
+
+					result.Withdrawing = append(result.Withdrawing, validatorInfo)
+				} else {
+					result.Withdrawn = append(result.Withdrawn, validatorIndex)
+				}
 			}
 		}
 	}
