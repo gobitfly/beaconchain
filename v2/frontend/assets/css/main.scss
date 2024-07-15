@@ -41,20 +41,12 @@ a {
 @mixin container() {
   color: var(--container-color);
   background-color: var(--container-background);
-  border: 1px solid var(--container-border-color);
+  border: var(--container-border);
   border-radius: var(--border-radius);
 }
 
 .container {
   @include container;
-}
-
-.text-positive {
-  color: var(--positive-color);
-}
-
-.text-negative {
-  color: var(--negative-color);
 }
 
 /***

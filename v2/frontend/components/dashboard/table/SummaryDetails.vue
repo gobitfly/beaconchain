@@ -1,62 +1,61 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow } from '~/types/dashboard/summary'
-import { TimeFrames, type TimeFrame } from '~/types/value'
+import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
 
 interface Props {
   row: VDBSummaryTableRow
+  timeFrame: SummaryTimeFrame
+  absolute: boolean,
+  tableVisibility: SummaryTableVisibility
 }
 const props = defineProps<Props>()
 
 const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useI18n()
-const { width } = useWindowSize()
-const { details: summary } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
+const { details: summary, getDetails } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
 
-const isWideEnough = computed(() => width.value >= 1400)
+watch(() => props.timeFrame, () => {
+  getDetails(props.timeFrame)
+}, { deep: true, immediate: true })
 
 const data = computed<SummaryRow[][]>(() => {
-  const tableCount = isWideEnough.value ? 1 : 4
-  const list: SummaryRow[][] = [...Array.from({ length: tableCount }).map(() => [])]
+  const list: SummaryRow[][] = [[], [], []]
 
-  const addToList = (detail: TimeFrame, tableIndex: number, prop: SummaryDetailsEfficiencyCombinedProp) => {
-    let row: SummaryRow | undefined
-    if (tableIndex && isWideEnough.value) {
-      row = list[0].find(row => row.prop === prop)
-    }
-    if (!row) {
-      let title = $t(`dashboard.validator.summary.row.${prop}`)
-      if (prop === 'efficiency_all_time') {
-        title = `${title} (${$t(`statistics.${detail}`)})`
-      }
-      row = { title, prop, details: [] }
-      list[tableIndex].push(row)
-    }
-    row?.details.push(detail)
+  const addToList = (index: number, prop?: SummaryDetailsEfficiencyCombinedProp, titleKey?: string) => {
+    const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
+    const row = { title, prop }
+    list[index].push(row)
   }
 
-  const props: SummaryDetailsEfficiencyCombinedProp[] = ['efficiency_all_time', 'attestation_total', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist', 'sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashed', 'validators_slashings', 'apr', 'luck']
-  TimeFrames.forEach((detail, index) => {
-    props.forEach((prop, propIndex) => {
-      if (!isWideEnough.value || propIndex) {
-        addToList(detail, index, prop)
-      }
-    })
-  })
+  const addPropsTolist = (index: number, props: SummaryDetailsEfficiencyCombinedProp[]) => {
+    props.forEach(p => addToList(index, p))
+  }
+
+  const rewardCols: SummaryDetailsEfficiencyCombinedProp[] = ['reward', 'missed_rewards']
+  let addCols: SummaryDetailsEfficiencyCombinedProp[] = props.tableVisibility.attestations ? [] : rewardCols
+  addPropsTolist(0, ['efficiency', ...addCols, 'attestations', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist'])
+
+  addPropsTolist(1, ['sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings'])
+
+  addCols = !props.tableVisibility.attestations ? [] : rewardCols
+  addPropsTolist(2, ['apr', 'luck', ...addCols])
 
   return list
 })
 
-const rowClass = (data:SummaryRow) => {
+const rowClass = (data: SummaryRow) => {
+  if (!data.prop) {
+    return 'bold' // headline without prop
+  }
   const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
-    efficiency_all_time: 'bold',
-    attestation_total: 'bold',
-    sync: 'bold spacing-top',
+    efficiency: 'bold',
+    attestations: 'bold',
+    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
     proposals: 'bold spacing-top',
-    slashed: 'bold spacing-top',
-    apr: 'bold',
-    luck: 'bold spacing-top',
+    slashings: 'bold spacing-top',
+    apr: props.tableVisibility.attestations ? '' : 'spacing-top',
+    luck: 'spacing-top',
     attestations_head: 'spacing-top'
   }
   return classNames[data.prop]
@@ -64,42 +63,24 @@ const rowClass = (data:SummaryRow) => {
 
 </script>
 <template>
-  <div v-if="summary" class="table-container">
-    <BcTable
-      v-for="(table, index) in data"
-      :key="index"
-      :row-class="rowClass"
-      class="no-header bc-compact-table summary-details-table"
-      :class="{ small: !isWideEnough }"
-      :value="table"
-      :add-spacer="true"
-    >
-      <Column field="expansion-spacer" class="expansion-spacer">
-        <template #body>
-          <span />
-        </template>
-      </Column>
-      <Column field="title">
-        <template #body="slotProps">
-          <span :class="slotProps.data.className">
-            {{ slotProps.data.title }}
-          </span>
-        </template>
-      </Column>
-      <template v-for="(num, i) in 4" :key="i">
-        <Column v-if="!i || isWideEnough" :field="`col_${num}`">
-          <template #body="slotProps">
-            <DashboardTableSummaryValue
-              :class="slotProps.data.className"
-              :data="summary"
-              :detail="slotProps.data.details[i]"
-              :property="slotProps.data.prop"
-              :row="props.row"
-            />
-          </template>
-        </Column>
-      </template>
-    </BcTable>
+  <div v-if="summary" class="details-container">
+    <div v-for="(list, index) in data" :key="index" class="group">
+      <div v-for="(prop, pIndex) in list" :key="pIndex" :class="rowClass(prop)" class="row">
+        <div class="label">
+          {{ prop.title }}
+        </div>
+        <DashboardTableSummaryValue
+          v-if="prop.prop"
+          class="value"
+          :data="summary"
+          :absolute="absolute"
+          :property="prop.prop"
+          :time-frame="timeFrame"
+          :row="props.row"
+          :in-detail-view="true"
+        />
+      </div>
+    </div>
   </div>
   <div v-else>
     <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
@@ -107,54 +88,84 @@ const rowClass = (data:SummaryRow) => {
 </template>
 
 <style lang="scss" scoped>
-.table-container {
+@use '~/assets/css/utils.scss';
+
+.details-container {
   display: flex;
   flex-wrap: wrap;
+  padding: 6px 0 0 var(--padding);
+  color: var(--container-color);
+  background-color: var(--container-background);
 
-  @media (max-width: 1180px) {
+  font-size: var(--small_text_font_size);
+
+  .bold {
+    font-weight: var(--standard_text_bold_font_weight);
+  }
+
+  .group {
+    display: flex;
     flex-direction: column;
+    gap: 9px;
+    padding: 6px var(--padding-large);
+    margin: var(--padding) 0;
+    width: 33%;
+
+    &:not(:first-child) {
+      border-left: var(--container-border);
+    }
+
+    .spacing-top{
+      margin-top: var(--padding-small);
+    }
+
+    @media (max-width: 1014px) {
+      width: 50%;
+
+      &:last-child {
+        border-top: var(--container-border);
+        border-left: unset;
+        margin-top: 0;
+
+        @media (max-width: 729px) {
+          border-top: unset;
+        }
+      }
+    }
+
+    @media (max-width: 729px) {
+      width: 100%;
+
+      &:not(:first-child) {
+        border-left: unset;
+        margin-top: 0;
+      }
+    }
+
+    .row {
+      display: flex;
+      gap: var(--padding);
+
+      .label {
+        flex-shrink: 0;
+        width: 170px;
+        @include utils.truncate-text;
+
+        @media (max-width: 729px) {
+          width: 151px;
+        }
+
+      }
+
+      .value {
+        flex-grow: 1;
+        overflow: hidden;
+      }
+    }
   }
 }
 
-.spinner{
+.spinner {
   padding: var(--padding-large);
-}
-
-:deep(.summary-details-table) {
-  width: 100%;
-
-  &.small {
-    width: 50%;
-
-    @media (min-width: 1181px) {
-      &:nth-child(even) {
-        .p-datatable-tbody {
-          >tr {
-            >td:first-child {
-              border-width: 0 0 0 1px;
-            }
-          }
-        }
-      }
-    }
-
-    @media (max-width: 1180px) {
-      width: unset;
-
-      .p-datatable-tbody {
-        >tr {
-          &:first-child {
-            >td {
-              border-width: 1px 0 0 0;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  .p-datatable-wrapper>.p-datatable-table>.p-datatable-tbody>tr>td {
-    font-size: var(--small_text_font_size);
-  }
 }
 </style>

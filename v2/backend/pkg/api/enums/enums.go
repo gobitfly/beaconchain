@@ -351,17 +351,17 @@ func (t TimePeriod) Int() int {
 
 func (TimePeriod) NewFromString(s string) TimePeriod {
 	switch s {
-	case "", "all_time":
+	case "all_time":
 		return AllTime
-	case "1h":
+	case "last_1h":
 		return Last1h
-	case "24h":
+	case "last_24h":
 		return Last24h
-	case "7d":
+	case "last_7d":
 		return Last7d
-	case "30d":
+	case "last_30d":
 		return Last30d
-	case "365d":
+	case "last_365d":
 		return Last365d
 	default:
 		return TimePeriod(-1)
@@ -407,6 +407,8 @@ func (t TimePeriod) Duration() time.Duration {
 
 type ValidatorDuty int
 
+var _ EnumFactory[ValidatorDuty] = ValidatorDuty(0)
+
 const (
 	DutyNone ValidatorDuty = iota
 	DutySync
@@ -443,4 +445,166 @@ var ValidatorDuties = struct {
 	DutySync,
 	DutyProposal,
 	DutySlashed,
+}
+
+// ----------------
+// Validator Dashboard Summary Table
+
+type ValidatorStatus int
+
+var _ EnumFactory[ValidatorStatus] = ValidatorStatus(0)
+
+const (
+	ValidatorStatusDeposited ValidatorStatus = iota
+	ValidatorStatusPending
+	ValidatorStatusOffline
+	ValidatorStatusOnline
+	ValidatorStatusSlashed
+	ValidatorStatusExited
+)
+
+func (vs ValidatorStatus) Int() int {
+	return int(vs)
+}
+
+func (ValidatorStatus) NewFromString(s string) ValidatorStatus {
+	switch s {
+	case "deposited":
+		return ValidatorStatusDeposited
+	case "pending":
+		return ValidatorStatusPending
+	case "offline":
+		return ValidatorStatusOffline
+	case "online":
+		return ValidatorStatusOnline
+	case "slashed":
+		return ValidatorStatusSlashed
+	case "exited":
+		return ValidatorStatusExited
+	default:
+		return ValidatorStatus(-1)
+	}
+}
+
+func (vs ValidatorStatus) ToString() string {
+	switch vs {
+	case ValidatorStatusDeposited:
+		return "deposited"
+	case ValidatorStatusPending:
+		return "pending"
+	case ValidatorStatusOffline:
+		return "offline"
+	case ValidatorStatusOnline:
+		return "online"
+	case ValidatorStatusSlashed:
+		return "slashed"
+	case ValidatorStatusExited:
+		return "exited"
+	default:
+		return ""
+	}
+}
+
+var ValidatorStatuses = struct {
+	Deposited ValidatorStatus
+	Pending   ValidatorStatus
+	Offline   ValidatorStatus
+	Online    ValidatorStatus
+	Slashed   ValidatorStatus
+	Exited    ValidatorStatus
+}{
+	ValidatorStatusDeposited,
+	ValidatorStatusPending,
+	ValidatorStatusOffline,
+	ValidatorStatusOnline,
+	ValidatorStatusSlashed,
+	ValidatorStatusExited,
+}
+
+// Validator Reward Chart Efficiency Filter
+
+type VDBSummaryChartEfficiencyType int
+
+var _ EnumFactory[VDBSummaryChartEfficiencyType] = VDBSummaryChartEfficiencyType(0)
+
+const (
+	VDBSummaryChartAll VDBSummaryChartEfficiencyType = iota
+	VDBSummaryChartAttestation
+	VDBSummaryChartSync
+	VDBSummaryChartProposal
+)
+
+func (c VDBSummaryChartEfficiencyType) Int() int {
+	return int(c)
+}
+
+func (VDBSummaryChartEfficiencyType) NewFromString(s string) VDBSummaryChartEfficiencyType {
+	switch s {
+	case "", "all":
+		return VDBSummaryChartAll
+	case "attestation":
+		return VDBSummaryChartAttestation
+	case "sync":
+		return VDBSummaryChartSync
+	case "proposal":
+		return VDBSummaryChartProposal
+	default:
+		return VDBSummaryChartEfficiencyType(-1)
+	}
+}
+
+var VDBSummaryChartEfficiencyFilters = struct {
+	All         VDBSummaryChartEfficiencyType
+	Attestation VDBSummaryChartEfficiencyType
+	Sync        VDBSummaryChartEfficiencyType
+	Proposal    VDBSummaryChartEfficiencyType
+}{
+	VDBSummaryChartAll,
+	VDBSummaryChartAttestation,
+	VDBSummaryChartSync,
+	VDBSummaryChartProposal,
+}
+
+// Chart Aggregation Interval
+
+type ChartAggregation int
+
+var _ EnumFactory[ChartAggregation] = ChartAggregation(0)
+
+const (
+	IntervalEpoch ChartAggregation = iota
+	IntervalHourly
+	IntervalDaily
+	IntervalWeekly
+)
+
+func (c ChartAggregation) Int() int {
+	return int(c)
+}
+
+func (ChartAggregation) NewFromString(s string) ChartAggregation {
+	switch s {
+	case "epoch":
+		return IntervalEpoch
+	case "", "hourly":
+		return IntervalHourly
+	case "daily":
+		return IntervalDaily
+	case "weekly":
+		return IntervalWeekly
+	default:
+		return ChartAggregation(-1)
+	}
+}
+
+var ChartAggregations = struct {
+	Epoch  ChartAggregation
+	Hourly ChartAggregation
+	Daily  ChartAggregation
+	Weekly ChartAggregation
+}{
+	IntervalEpoch,
+	IntervalHourly,
+	IntervalDaily,
+	IntervalWeekly,
 }

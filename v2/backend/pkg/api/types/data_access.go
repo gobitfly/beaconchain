@@ -11,6 +11,7 @@ import (
 
 const DefaultGroupId = 0
 const AllGroups = -1
+const NetworkAverage = -2
 const DefaultGroupName = "default"
 
 type Sort[T enums.Enum] struct {
@@ -102,10 +103,12 @@ type WithdrawalsCursor struct {
 }
 
 type UserCredentialInfo struct {
-	Id        uint64 `db:"id"`
-	Password  string `db:"password"`
-	ProductId string `db:"product_id"`
-	UserGroup string `db:"user_group"`
+	Id             uint64 `db:"id"`
+	Email          string `db:"email"`
+	EmailConfirmed bool   `db:"email_confirmed"`
+	Password       string `db:"password"`
+	ProductId      string `db:"product_id"`
+	UserGroup      string `db:"user_group"`
 }
 
 type BlocksCursor struct {
@@ -122,4 +125,64 @@ type BlocksCursor struct {
 type NetworkInfo struct {
 	ChainId uint64
 	Name    string
+}
+
+// -------------------------
+// validator indices structs, only used between data access and api layer
+
+type VDBGeneralSummaryValidators struct {
+	// fill slices with indices of validators
+	Deposited   []uint64
+	Pending     []IndexTimestamp
+	Online      []uint64
+	Offline     []uint64
+	Slashing    []uint64
+	Exiting     []IndexTimestamp
+	Slashed     []uint64
+	Exited      []uint64
+	Withdrawing []IndexTimestamp
+	Withdrawn   []uint64
+}
+
+type IndexTimestamp struct {
+	Index     uint64
+	Timestamp uint64
+}
+
+type VDBSyncSummaryValidators struct {
+	// fill slices with indices of validators
+	Upcoming []uint64
+	Current  []uint64
+	Past     []struct {
+		Index uint64
+		Count uint64
+	}
+}
+
+type VDBSlashingsSummaryValidators struct {
+	// fill with the validator index that got slashed and the index of the validator that slashed it
+	GotSlashed []struct {
+		Index     uint64
+		SlashedBy uint64
+	}
+	// fill with the validator index that slashed and the index of the validators that got slashed
+	HasSlashed []struct {
+		Index          uint64
+		SlashedIndices []uint64
+	}
+}
+
+type VDBProposalSummaryValidators struct {
+	Proposed []struct {
+		Index          uint64
+		ProposedBlocks []uint64
+	}
+	Missed []struct {
+		Index        uint64
+		MissedBlocks []uint64
+	}
+}
+
+type VDBProtocolModes struct {
+	RocketPool bool
 }

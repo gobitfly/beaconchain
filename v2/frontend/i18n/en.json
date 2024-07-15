@@ -13,7 +13,8 @@
     "expected": "Expected",
     "in_day": "In one day | In {count} days",
     "every_day": "Every day | Every {count} days",
-    "every_x":"Every {duration}",
+    "every_x": "Every {duration}",
+    "last_x": "Last {duration}",
     "id": "ID",
     "average": "Average",
     "index": "Index",
@@ -44,14 +45,19 @@
     "false": "False",
     "coming_soon": "Coming soon",
     "soon": "Soon",
-    "and_more": "and {count} more"
+    "and_more": "and {count} more",
+    "live": "Live",
+    "current": "Current",
+    "upcoming": "Upcoming", 
+    "past": "Past",
+    "total": "Total"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
     "description": "beaconcha.in makes Ethereum accessible to non-technical end users",
     "keywords": "open source ethereum block explorer, ethereum block explorer, beacon chain explorer, ethereum blockchain explorer",
     "image_alt": "The beaconcha.in logo is a satellite dish expanding its signal."
-  }, 
+  },
   "clipboard": {
     "copy": "Copy to clipboard",
     "copied": "Copied!"
@@ -76,7 +82,9 @@
     "save": "Save",
     "publish": "Publish",
     "unpublish": "Unpublish",
-    "update": "Update"
+    "update": "Update",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "error": {
     "multiple_times": "The error {error} happened {count} times",
@@ -109,6 +117,7 @@
   "validator_state": {
     "active": "active",
     "withdrawn": "withdrawn",
+    "deposited": "deposited",
     "online": "active",
     "offline": "offline",
     "pending": "pending",
@@ -121,6 +130,17 @@
     "missed": "Missed",
     "proposed": "Proposed",
     "scheduled": "Scheduled"
+  },
+  "time_frames": {
+    "last_1h": "Last 1h",
+    "last_24h": "Last 24h",
+    "last_7d": "Last 7d",
+    "last_30d": "Last 30d",
+    "all_time": "All time",
+    "epoch": "Epoch",
+    "hourly": "Hourly",
+    "daily": "Daily",
+    "weekly": "Weekly"
   },
   "statistics": {
     "last_24h": "24h",
@@ -227,15 +247,21 @@
     "playground": {
       "0": {
         "question": "What is your first question",
-        "answer": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit", "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."],
-        "link" : {
+        "answer": [
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+          "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+        ],
+        "link": {
           "path": "https://beaconcha.in/",
           "label": "...more infos"
         }
       },
       "1": {
         "question": "This is a second question",
-        "answer": ["Lorem ipsum dolor sit amet, consectetur adipiscing elit", "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."]
+        "answer": [
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+          "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+        ]
       }
     }
   },
@@ -265,13 +291,66 @@
       "proposer_slashing": "Proposer Slashing Reward"
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "login_question": "Do you want to login to set notifications?",
+    "manage": "Manage Notifications",
+    "tabs":{
+      "general": "General",
+      "dashboards": "Dashboards",
+      "machines": "Machines",
+      "clients": "Clients",
+      "rocketpool": "Rocket Pool",
+      "network": "Network"
+    },
+    "management": {
+      "title": "Manage Notifications"
+    },
+    "col": {
+      "dashboard": "Dashboard",
+      "group": "Group",
+      "subscriptions": "Subscriptions",
+      "webhook": "Webhook",
+      "networks": "Networks"
+    },
+    "dashboards": {
+      "title": "Dashboards",
+      "search_placeholder": "Dashboard, Group",
+      "col": {
+        "entity": "Entity",
+        "notification": "Notification"
+      },
+      "entity": {
+        "validators": "validator | validators",
+        "accounts": "account | accounts"
+      },
+      "expansion": {
+        "label-dashboard": "Dashboard:",
+        "label-group": "Group:",
+        "label-notification": "Notification:"
+      },
+      "empty": {
+        "login": "Login to set notifications",
+        "no_dashboards": "Create a dashboard to set notifications",
+        "with_dashboards": "Click here to set notifications"
+      },
+      "footer": {
+        "subscriptions": {
+          "validators": "Validators ({count} Subscription) |Validators ({count} Subscriptions)",
+          "validators_shortened": "Validators ({count} Sub) |Validators ({count} Subs)",
+          "accounts": "Accounts ({count} Subscription) |Accounts ({count} Subscriptions)",
+          "accounts_shortened": "Accounts ({count} Sub) |Accounts ({count} Subs)"
+        }
+      }
+        
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
     "account_dashboard": "Account Dashboard",
     "public_validator_dashboard": "Dashboard",
     "public_account_dashboard": "Dashboard",
-    "notifications": "Notifications",
     "share": "Share",
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
@@ -333,9 +412,16 @@
       }
     },
     "deletion": {
-      "title": "Delete Dashboard",
-      "delete_text": "Do you want to delete dashboard {dashboard}?",
-      "clear_text": "Do you want to clear this {dashboard}?"
+      "delete": {
+        "title": "Delete Dashboard",
+        "text": "This will delete dashboard {dashboard} from the archive and is irreversible.",
+        "no_label": "Cancel",
+        "yes_label": "Delete Dashboard"
+      },
+      "clear": {
+        "title": "Clear Dashboard",
+        "text": "Do you want to clear this {dashboard}?"
+      }
     },
     "validator": {
       "manage_validators": "Manage Validators",
@@ -351,6 +437,29 @@
       },
       "el_deposits": {
         "title": "Execution Layer"
+      },
+      "subset_dialog": {
+        "slashed": "Slashed",
+        "got_slashed": "Slashed by",
+        "category": {
+          "all": "All",
+          "online": "Online",
+          "offline": "Offline",
+          "pending": "Pending",
+          "deposited": "Deposited",
+          "depositing": "Depositing",
+          "sync_current": "Current Sync Committee",
+          "sync_upcoming": "Upcoming Sync Committee",
+          "sync_past": "Past Sync Committee",
+          "has_slashed": "Slashed",
+          "got_slashed": "Got slashed",
+          "proposal_proposed": "Proposed",
+          "proposal_missed": "Missed",
+          "exiting": "Exiting",
+          "exited":"Exited",
+          "withdrawing":"Withdrawing",
+          "withdrawn":"Withdrawn"
+        }
       },
       "blocks": {
         "title": "Blocks",
@@ -422,7 +531,6 @@
       },
       "col": {
         "duty": "Duty",
-        "total_rewards": "Total Rewards",
         "el_rewards": "El Rewards",
         "cl_rewards": "Cl Rewards",
         "index": "Index",
@@ -431,10 +539,7 @@
         "withdrawal_credential": "Withdrawal Credential",
         "group": "Group",
         "status": "Status",
-        "efficiency_last_24h": "Efficiency (24h)",
-        "efficiency_last_7d": "Efficiency (7d)",
-        "efficiency_last_30d": "Efficiency (30d)",
-        "efficiency_all_time": "Efficiency (All Time)",
+        "efficiency": "Efficiency",
         "validators": "Validators",
         "rewards": "Rewards",
         "reward_recipient": "Rewards Recipient",
@@ -451,26 +556,49 @@
         "search_placeholder_public": "Index, Public Key",
         "add_validator": "Click here to add a validator",
         "row": {
-          "efficiency_all_time": "Efficiency",
+          "efficiency": "Efficiency",
           "attestations": "Attestations",
-          "attestation_total": "Total Attestations",
           "attestations_head": "Head",
           "attestations_source": "Source",
           "attestations_target": "Target",
           "attestation_efficiency": "Att. Efficiency",
           "attestation_avg_incl_dist": "Avg. Incl. Distance",
-          "sync": "Sync Committee",
+          "sync": "Sync Committee Efficiency ",
+          "sync_committee": "Sync Committee",
           "validators_sync": "Validators",
           "proposals": "Proposals",
           "validators_proposal": "Validators",
-          "slashed": "Slashings",
-          "validators_slashings": "Slashed Validators",
+          "slashings": "Slashings",
+          "validators_slashings": "Validators",
           "apr": "APR",
-          "luck": "Luck"
+          "luck": "Luck",
+          "reward": "Reward",
+          "missed_rewards": "Missed rewards"
+        },
+        "status": {
+          "current_sync": "No active sync participation | One validator is in the current sync committee | {count} validators are in the current sync committee",
+          "scheduled_sync": "No scheduled sync participation | One validator is scheduled to be part of a sync committee | {count} validators are scheduled to be part of a sync committee",
+          "slashing": "No slashed validators | One slashed validator | {count} slashed validators"
         },
         "chart": {
           "all_groups": "All Groups",
-          "efficiency": "Efficiency"
+          "average": "Network Average",
+          "total": "Total",
+          "efficiency": {
+            "all": "Efficiency",
+            "attestation": "Attestation Eff.",
+            "sync": "Sync Eff.",
+            "proposal": "Proposal Eff."
+          }
+        },
+        "tooltip":{
+          "lower": "{name}'s efficiency is below the network average of {average}",
+          "higher": "{name}'s efficiency is above the network average of {average}",
+          "equal":"{name}'s OVH’s efficiency is at the network average of {average}",
+          "amount_of_validators": "(amount of validators)",
+          "amount_of_rounds": "(amount of rounds)",
+          "estimated_loss": "Estimated loss based on avg. network performance.",
+          "live": "Validators missing three consecutive attestations are considered offline."
         }
       },
       "tabs": {
@@ -505,26 +633,34 @@
       }
     }
   },
-  "login": {
-    "password": "Password",
-    "submit": "Login",
-    "title": "Login",
+  "login_and_register": {
+    "title_login": "Log in",
+    "title_register": "Sign up",
+    "text1_register": "Sign up to beaconcha.in",
+    "text2_register": "to manage and monitor your validators.",
+    "submit_login": "Log in",
+    "submit_register": "Sign up",
     "email": "Email address",
+    "password": "Password",
+    "choose_password": "Choose a password",
+    "confirm_password": "Confirm your password",
+    "please_agree": ["I agree to the", "Terms and Conditions", "and", "Privacy Policy"],
+    "error_title": "Error",
+    "error_login_group": "Cannot log in",
+    "error_login_message": "your email or your password is unknown.",
+    "error_register_group": "Cannot sign up",
+    "error_register_message": "An error of communication with the served happened.",
     "dont_have_account": "You do not have an account?",
     "signup_here": "Click here to sign up.",
-    "invalid_email": "Please enter a valid email address.",
-    "invalid_password": "Your password must contain at least 5 characters.",
-    "no_email": "Please enter your email address.",
-    "no_password": "Please enter your password.",
-    "error_toast_title": "Error",
-    "error_toast_group": "Cannot log in",
-    "error_toast_message": "your email or your password is unknown."
+    "already_have_account": "You already have an account?",
+    "login_here": "Click here to log in."
   },
   "header": {
     "current_slot": "Current Slot",
     "current_epoch": "Current Epoch",
     "login": "Log in",
     "logout": "Log out",
+    "settings": "Account Settings",
     "register": "Sign up",
     "megamenu": {
       "select_currency": "Select currency",
@@ -627,7 +763,7 @@
     "all_networks": "All"
   },
   "pricing": {
-    "seo_title": "Premium Pricing", 
+    "seo_title": "Premium Pricing",
     "compare": "Compare Plans",
     "show_feature": "Show Features",
     "hide_feature": "Hide Features",
@@ -645,6 +781,7 @@
     "per_validator": "{amount} per validator",
     "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
     "get_started": "Get started now",
+    "full_history": "Full history",
     "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
     "premium_product": {
       "popular": "Popular!",
@@ -666,12 +803,13 @@
         "downgrade": "Downgrade",
         "upgrade": "Upgrade"
       }
-    }, 
+    },
     "groups": {
       "general": "General",
       "dashboard": "Dashboard",
       "notification": "v2 Notification",
-      "mobille_app": "Mobile App"
+      "mobille_app": "Mobile App",
+      "dashboard_charts": "Validator Dashboard Charts"
     },
     "percs": {
       "ad_free": "Ad free",
@@ -682,8 +820,9 @@
       "share_custom_dashboards": "Share custom dashboards",
       "manage_dashboard_via_api": "Manage dashboard via API",
       "bulk_adding": "Bulk adding",
-      "heatmap_history_seconds": "Heatmap history",
-      "summary_chart_history_seconds": "Summary chart history",
+      "bulk_adding_subtext": "(deposit address, withdrawal credentials, graffiti)",
+      "heatmap_history": "Heatmap history",
+      "summary_chart_history": "Summary chart history",
       "email_notifications_per_day": "Email notifications per day",
       "configure_notifications_via_api": "Configure notifications via API",
       "validator_group_notifications": "Validator group notifications",
@@ -692,7 +831,8 @@
       "mobile_app_widget": "App widget",
       "monitor_machines": "Monitor machines",
       "machine_monitoring_history_seconds": "Machine monitoring history",
-      "custom_machine_alerts": "Custom machine alerts (CPU, RAM,...)"
+      "custom_machine_alerts": "Custom machine alerts",
+      "custom_machine_alerts_subtext": "(CPU, RAM,...)"
     },
     "view_addons": "View Add-Ons",
     "addons": {
@@ -708,11 +848,76 @@
       }
     }
   },
+  "user_settings": {
+    "title": "User Settings",
+    "subscriptions": {
+      "title": "Subscriptions",
+      "explanation": "Premium features for web and beaconcha.in mobile app experience."
+    },
+    "email": {
+      "password": "Password",
+      "title": "Email",
+      "new": "New Email Address",
+      "confirm": "Confirm Email Address",
+      "success": {
+        "toast_title": "Success",
+        "toast_group": "Email success",
+        "toast_message": "Your email address has been updated."
+      },
+      "error": {
+        "toast_title": "Error",
+        "toast_group": "Could not update your email address",
+        "toast_message": "Please try again."
+      }
+    },
+    "password": {
+      "title": "Password",
+      "old": "Old password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "success": {
+        "toast_title": "Success",
+        "toast_group": "Password success",
+        "toast_message": "Your password has been updated."
+      },
+      "error": {
+        "toast_title": "Error",
+        "toast_group": "Could not update your password",
+        "toast_message": "Please try again."
+      }
+    },
+    "delete_account": {
+      "title": "Delete Account",
+      "warning": "Warning! You will not be able to recover your account!",
+      "button": "Delete My Account",
+      "dialog": {
+        "title": "Delete Account",
+        "warning": "This will delete your account from the archive and is irreversible.",
+        "no_label": "Cancel",
+        "yes_label": "Delete Account"
+      }
+    }
+  },
   "time_duration": {
     "seconds": "{amount} second | {amount} seconds",
     "minutes": "{amount} minute | {amount} minutes",
     "hours": "{amount} hour | {amount} hours",
     "days": "{amount} day | {amount} days",
     "years": "{amount} year | {amount} years"
+  },
+  "validation": {
+    "email" : {
+      "empty": "Please enter your email address.",
+      "invalid": "Please enter a valid email address.",
+      "no_match": "The email addresses don't match."
+    },
+    "password": {
+      "empty": "Please enter your password.",
+      "min": "Your password must contain at least {amount} characters.",
+      "max": "Your password must contain at most {amount} characters.",
+      "no_match": "The passwords don't match.",
+      "not_new": "The new password must differ from the old one."
+    },
+    "tos_not_agreed": "Please accept the ToS & Privacy Policy."
   }
 }

@@ -11,7 +11,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
-import { isPublicKey } from '~/utils/dashboard/key'
+import { isPublicDashboardKey } from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
 
 const { isLoggedIn } = useUserStore()
@@ -80,7 +80,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
   if (!newLoggedIn || !newKey) {
     // Some checks if we need to update the dashboard key or the public dashboard
     let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
-    const isPublic = isPublicKey(newKey)
+    const isPublic = isPublicDashboardKey(newKey)
     if (newLoggedIn) {
       // if we are logged in and have no dashboard key we only want to switch to the first dashboard if it is a private one
       if (cd && !cd.hash) {

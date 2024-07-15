@@ -288,7 +288,7 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.notifications'),
                   icon: faBell,
-                  url: '/user/notifications'
+                  url: '/notifications'
                 },
                 {
                   label: $t('header.megamenu.graffiti_wall'),
@@ -521,7 +521,7 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.notifications'),
                   icon: faBell,
-                  url: '/user/notifications'
+                  url: '/notifications'
                 },
                 {
                   label: $t('header.megamenu.knowledge_base'),
@@ -917,7 +917,7 @@ const items = computed(() => {
       },
       {
         label: $t('header.megamenu.notifications'),
-        url: '/user/notifications'
+        url: '/notifications'
       }
     ]
   } else {
@@ -933,6 +933,13 @@ const items = computed(() => {
     ]
   }
   if (isMobile.value) {
+    if (isLoggedIn.value) {
+      list.push({
+        label: $t('header.settings'),
+        command: async () => { await navigateTo('../user/settings') }
+      })
+    }
+
     list.push({
       label: currency.value,
       currency: currency.value,
@@ -943,11 +950,10 @@ const items = computed(() => {
     })
   }
   if (isSmallScreen.value && isLoggedIn.value) {
-    list.push(
-      {
-        label: $t('header.logout'),
-        command: () => doLogout()
-      })
+    list.push({
+      label: $t('header.logout'),
+      command: () => doLogout()
+    })
   }
   return list
 })

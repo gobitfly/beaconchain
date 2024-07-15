@@ -92,8 +92,14 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/latest-state", nil, hs.InternalGetLatestState},
 
 		{http.MethodGet, "/product-summary", nil, hs.InternalGetProductSummary},
-		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
 
+		{http.MethodPost, "/users", nil, hs.InternalPostUsers},
+		{http.MethodPost, "/users/email-confirmations/{token}", nil, hs.InternalPostUserConfirm},
+		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
+		{http.MethodDelete, "/users/me", nil, hs.InternalDeleteUser},
+		{http.MethodPut, "/users/me/email", nil, hs.InternalPutUserEmail},
+		{http.MethodPut, "/users/me/password", nil, hs.InternalPutUserPassword},
+		// TODO reset password
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 
 		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
@@ -238,7 +244,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodDelete, "/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteValidatorDashboardPublicId, hs.InternalDeleteValidatorDashboardPublicId},
 		{http.MethodGet, "/{dashboard_id}/slot-viz", hs.PublicGetValidatorDashboardSlotViz, hs.InternalGetValidatorDashboardSlotViz},
 		{http.MethodGet, "/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
-		{http.MethodGet, "/{dashboard_id}/validator-indices", nil, hs.InternalGetValidatorDashboardValidatorIndices},
+		{http.MethodGet, "/{dashboard_id}/summary/validators", nil, hs.InternalGetValidatorDashboardSummaryValidators},
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/summary", hs.PublicGetValidatorDashboardGroupSummary, hs.InternalGetValidatorDashboardGroupSummary},
 		{http.MethodGet, "/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
 		{http.MethodGet, "/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},

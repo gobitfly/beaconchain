@@ -186,13 +186,33 @@ func (d *epochToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, ti
 }
 
 func (d *epochToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) error {
+	partitionName := fmt.Sprintf("%s_%s_%s", edb.DayWriterTableName, dayToYYMMDDLabel(dayFrom), dayToYYMMDDLabel(dayTo))
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %[5]s_%[1]s_%[2]s
-		PARTITION OF %[5]s
-			FOR VALUES FROM ('%[3]s') TO ('%[4]s')
+		CREATE TABLE IF NOT EXISTS %s(
+			LIKE %s INCLUDING DEFAULTS INCLUDING CONSTRAINTS
+		)
 		`,
-		dayToYYMMDDLabel(dayFrom), dayToYYMMDDLabel(dayTo), dayToDDMMYY(dayFrom), dayToDDMMYY(dayTo), edb.DayWriterTableName,
+		partitionName, edb.DayWriterTableName,
 	))
+
+	if err != nil {
+		return errors.Wrap(err, "failed to create epoch partition (1)")
+	}
+
+	isAttached, err := isPartitionAttached(edb.DayWriterTableName, partitionName)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if partition is attached")
+	}
+
+	if !isAttached {
+		_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
+		ALTER TABLE %s ATTACH PARTITION %s
+		FOR VALUES FROM ('%s') TO ('%s')
+		`,
+			edb.DayWriterTableName, partitionName, dayToDDMMYY(dayFrom), dayToDDMMYY(dayTo),
+		))
+	}
+
 	return err
 }
 
@@ -469,12 +489,22 @@ func (d *epochToDayAggregator) getDayRetentionDurationDays() uint64 {
 }
 
 func (d *epochToDayAggregator) deleteDayPartition(epochStartFrom, epochStartTo string) error {
+	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		ALTER TABLE %[1]s DETACH PARTITION %[1]s_%[2]s_%[3]s;
+		`,
+		edb.DayWriterTableName, epochStartFrom, epochStartTo,
+	))
+
+	if err != nil {
+		return err
+	}
+
 	query := fmt.Sprintf(`
 		DROP TABLE IF EXISTS %s_%s_%s
 		`,
 		edb.DayWriterTableName, epochStartFrom, epochStartTo,
 	)
 
-	_, err := db.AlloyWriter.Exec(query)
+	_, err = db.AlloyWriter.Exec(query)
 	return err
 }
