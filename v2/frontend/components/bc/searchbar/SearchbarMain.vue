@@ -952,11 +952,11 @@ function informationIfHiddenResults () : string {
               margin-right: 8px;
               height: 1px;
               display: none;
+              background-color: var(--input-border-color);
               &.small {
                 &.narrow-dropdown {
                   display: block;
                 }
-                background-color: var(--input-border-color);
               }
             }
           }
@@ -972,6 +972,8 @@ function informationIfHiddenResults () : string {
         justify-content: center;
         text-align: center;
         align-items: center;
+        padding-left: 6px;
+        padding-right: 6px;
         &.bottom {
           padding-top: 6px;
           margin-top: auto;
@@ -981,8 +983,6 @@ function informationIfHiddenResults () : string {
           margin-top: auto;
           height: 60px;
         }
-        padding-left: 6px;
-        padding-right: 6px;
       }
     }
   }

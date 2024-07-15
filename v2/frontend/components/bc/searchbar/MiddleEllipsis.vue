@@ -12,7 +12,7 @@ const props = defineProps<{
   widthMediaqueryThreshold?: number, // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
   // !! The props below are for internal use only !!
   meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
-  class?: string // to make the list of classes reactive
+  class?: string | string[] // to make the list of classes reactive
 }>()
 
 interface ExposedMembers {
@@ -57,7 +57,7 @@ enum SignalDirection {
 
 type TextProperties = { text: string, width: number }
 
-const SSR = !process.client
+const SSR = !import.meta.client
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
 const slot = computed(() => _s.default ? _s.default() : []) // `slot`s is always an array, empty if there is no slot
 
