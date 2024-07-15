@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes []enums.ProtocolMode) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBSummaryTableRow, 0)
 	var paging t.Paging
@@ -474,7 +474,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	return result, &paging, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes []enums.ProtocolMode) (*t.VDBGroupSummaryData, error) {
+func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBGroupSummaryData, error) {
 	// TODO: implement data retrieval for the following new field
 	// Fetch validator list for user dashboard from the dashboard table when querying the past sync committees as the rolling table might miss exited validators
 	// TotalMissedRewards

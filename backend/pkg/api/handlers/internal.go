@@ -237,7 +237,7 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 	}
 
 	q := r.URL.Query()
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -753,7 +753,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWri
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBSummaryColumn](&v, q.Get("sort"))
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
@@ -781,7 +781,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	q := r.URL.Query()
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -916,7 +916,7 @@ func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWri
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBRewardsColumn](&v, q.Get("sort"))
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -945,7 +945,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respon
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	epoch := v.checkUint(vars["epoch"], "epoch")
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -971,7 +971,7 @@ func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respon
 		handleErr(w, err)
 		return
 	}
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1001,7 +1001,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 	epoch := v.checkUint(vars["epoch"], "epoch")
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBDutiesColumn](&v, q.Get("sort"))
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1029,7 +1029,7 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBBlocksColumn](&v, q.Get("sort"))
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1055,7 +1055,7 @@ func (h *HandlerService) InternalGetValidatorDashboardEpochHeatmap(w http.Respon
 		return
 	}
 	q := r.URL.Query()
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1085,7 +1085,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDailyHeatmap(w http.Respon
 	// allowed periods are: last_7d, last_30d, last_365d
 	allowedPeriods := []enums.Enum{enums.TimePeriods.Last7d, enums.TimePeriods.Last30d, enums.TimePeriods.Last365d}
 	v.checkEnumIsAllowed(period, allowedPeriods, "period")
-	protocolModes := v.checkProtocolModes(r.URL.Query().Get("mode"))
+	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1111,7 +1111,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupEpochHeatmap(w http.R
 	}
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
-	protocolModes := v.checkProtocolModes(r.URL.Query().Get("mode"))
+	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1138,7 +1138,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupDailyHeatmap(w http.R
 	}
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	date := v.checkDate(vars["date"])
-	protocolModes := v.checkProtocolModes(r.URL.Query().Get("mode"))
+	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1254,7 +1254,7 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 	}
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBWithdrawalsColumn](&v, q.Get("sort"))
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -1281,7 +1281,7 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.Re
 		return
 	}
 	pagingParams := v.checkPagingParams(q)
-	protocolModes := v.checkProtocolModes(q.Get("mode"))
+	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
