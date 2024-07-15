@@ -17,7 +17,7 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
     }
     const newRoute = router.resolve({ name: route.name!, params: { id: key }, hash: document?.location?.hash })
     dashboardKey.value = key
-    if (process.client) {
+    if (isClient) {
       // we only want to change the url in the browser and don't want to trigger a page refresh
       history.replaceState({}, '', newRoute.fullPath)
     }
