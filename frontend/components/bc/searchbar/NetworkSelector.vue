@@ -169,11 +169,11 @@ function oneOptionChanged (index : number) {
     border-radius: var(--padding);
     left: 0px;
     top: 24px;
+    padding: var(--padding);
+    @include fonts.small_text_bold;
     @media (pointer: coarse) {
       top: 32px;
     }
-    padding: var(--padding);
-    @include fonts.small_text_bold;
 
     &.default {
       background-color: var(--list-background);

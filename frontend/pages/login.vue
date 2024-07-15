@@ -101,13 +101,13 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
     position: relative;
     margin: auto;
     margin-top: 100px;
-    @media (max-width: 600px) { // mobile
-      margin-top: 0px;
-    }
     margin-bottom: 30px;
     padding: var(--padding-large);
     box-sizing: border-box;
     width: min(530px, 100%);
+    @media (max-width: 600px) { // mobile
+      margin-top: 0px;
+    }
 
     .title {
       @include fonts.dialog_header;
@@ -143,8 +143,8 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
         display: flex;
         margin-top: auto;
         .account-invitation {
-          position: relative;
           @include fonts.small_text;
+          position: relative;
           margin: auto;
           margin-left: 0;
         }
@@ -154,8 +154,8 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
       }
 
       .p-error {
-        margin-top: var(--padding-small);
         @include fonts.small_text;
+        margin-top: var(--padding-small);
         font-weight: var(--roboto-regular);
       }
     }
