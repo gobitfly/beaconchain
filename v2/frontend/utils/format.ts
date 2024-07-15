@@ -2,7 +2,7 @@ import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
 import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
-import { ChainIDs, epochToTs, slotToTs } from '~/types/network'
+import { type ChainIDs, epochToTs, slotToTs } from '~/types/network'
 
 export const ONE_MINUTE = 60
 export const ONE_HOUR = ONE_MINUTE * 60
