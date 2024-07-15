@@ -31,21 +31,21 @@ export function useHashTabs (tabs: HashTabs) {
   })
 
   const updateHash = (index: number) => {
-    if (process.server) {
+    if (isServer) {
       return
     }
     window.location.hash = findHashForIndex(index)
   }
 
   watch(activeIndex, (index) => {
-    if (process.server && index < 0) {
+    if (isServer && index < 0) {
       return
     }
     updateHash(index)
   }, { immediate: true })
 
   const setActiveIndex = (index: number) => {
-    if (process.server) {
+    if (isServer) {
       return
     }
     activeIndex.value = index

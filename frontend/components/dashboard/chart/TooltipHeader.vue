@@ -71,6 +71,7 @@ const title = computed(() => {
   if (props.efficiencyType) {
     return props.t(`dashboard.validator.summary.chart.efficiency.${props.efficiencyType}`)
   }
+  return undefined
 })
 </script>
 
