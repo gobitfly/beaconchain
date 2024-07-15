@@ -15,6 +15,7 @@ const G: Channel = 1
 const B: Channel = 2
 const gamma = 2.2
 const gammaInv = 1 / gamma
+const SmallestValue = 0.95 * (1 / 255) ** gamma
 
 /** Classical color space in two variants (depending on the parameter given to the constructor) :
  *  - either the values are between 0-1 and linear with respect to light intensity,
@@ -71,12 +72,12 @@ class RGB {
    * The color space of the current instance is automatically converted into the color space of the target instance if needed.
    * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
    * @returns target instance (same as `to` if `to` was an instance) */
-  export (to: RGB | Eye | CS) : RGB | Eye {
+  export (to: RGB | Eye | CS) : RGB & Eye {
     if (typeof to !== 'object') {
       to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
     }
     to.import(this)
-    return to
+    return to as RGB & Eye
   }
 
   /** corrects channel values that are not within the limits of the format (0-1 or 0-255) */
@@ -113,23 +114,20 @@ class Eye {
       if (this.space !== CS.EyePercI) {
         return 1
       }
-      this.convertToRGB(Eye.rgbLinear, this.lowestImax, this.j) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
+      this.convertToRGB(Eye.rgbLinear, Eye.lowestImax) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
       const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
-      this.Imax.value = (Eye.sensicolNorm[B] / Eye.rgbLinear.chan[h]) ** gammaInv
+      this.Imax.value = Eye.lowestImax / (Eye.rgbLinear.chan[h] ** gammaInv)
       this.Imax.rOfValue = this.r
       this.Imax.pOfValue = this.p
     }
     return this.Imax.value
   }
 
-  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
-  readonly lowestImax: number
-
   // constants of our perception model, all obtained empirically
   protected static readonly sensicol = [15, 20, 6] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
-  protected static readonly rPowers = [1.1, 1.4, 0.9] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
-  protected static readonly overwhite = [7, 10, 2] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
-  protected static readonly phi = 1.7 // power law on the purity to make it feel linear to the human eye
+  protected static readonly rPowers = [1, 1, 1] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
+  protected static readonly overwhite = [1, 1, 1] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
+  protected static readonly phi = 1 // power on the purity to make it feel linear to the human eye
   protected static readonly iotaD = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
   protected static readonly iotaM = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
   // the following constants will be filled by the constructor
@@ -137,6 +135,9 @@ class Eye {
   protected static readonly rPowersInv = [0, 0, 0]
   protected static readonly overwhiteNorm = [0, 0, 0]
   protected static readonly phiInv = 1 / Eye.phi
+
+  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
+  static readonly lowestImax = (Eye.sensicol[B] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])) ** gammaInv
 
   /**
    * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
@@ -148,11 +149,10 @@ class Eye {
     if (!Eye.sensicolNorm[0]) {
       for (let k = R; k <= B; k++) {
         Eye.sensicolNorm[k] = Eye.sensicol[k] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])
-        Eye.overwhiteNorm[k] = Eye.overwhite[k] / (Eye.overwhite[R] + Eye.overwhite[G] + Eye.overwhite[B])
+        Eye.overwhiteNorm[k] = Eye.overwhite[k] / (Eye.overwhite[R] + Eye.overwhite[G] + Eye.overwhite[B]) / 3 // the division by 3 ensures that rgb[l] in the formula of p is counted 3 times while rgb[m] and rgb[h] are counted once each
         Eye.rPowersInv[k] = 1 / Eye.rPowers[k]
       }
     }
-    this.lowestImax = Eye.sensicolNorm[B] ** gammaInv
     this.space = space
     this.r = this.p = this.i = this.j = 0
   }
@@ -164,11 +164,16 @@ class Eye {
   }
 
   protected static rgbLinear = new RGB(CS.RGBlinear)
+  protected static rgbGamma = new RGB(CS.RGBgamma)
 
-  /** Copies a RGB or Eye instance into the current Eye instance.
+  /** Copies a RGB or Eye object or an array of values into the current Eye instance.
    * Color spaces are automatically converted into the color space of the current Eye instance if they differ.
+   * If an array of values is given, it is assumed to contain gamma-shaped RGB.
    * @returns the instance that you import into (so not the parameter) */
-  import (from: RGB | Eye) : Eye {
+  import (from: RGB | Eye | number[]) : Eye {
+    if (Array.isArray(from)) {
+      from = Eye.rgbGamma.import(from)
+    }
     if (from.space === CS.RGBgamma) {
       from = Eye.rgbLinear.import(from)
     }
@@ -179,7 +184,7 @@ class Eye {
       const [h1, h2] = Eye.lowestChanToAnchors(l)
       const anchor2Contribution = (rgb[h2] - rgb[l])
       const anchors12Contributions = (rgb[h1] - rgb[l]) + anchor2Contribution
-      if (anchors12Contributions < 0.001) { // the 3 channels are equal, so we have black, grey or white
+      if (anchors12Contributions < SmallestValue) { // the 3 channels are equal, so we have black, grey or white
         this.r = 0.5
         this.p = 0
       } else {
@@ -190,7 +195,8 @@ class Eye {
           d = (2 * d - 1) ** Eye.rPowersInv[h2] / 2 + 1 / 2
         }
         this.r = (h1 + d) / 3
-        this.p = ((rgb[h1] - rgb[l]) * Eye.overwhiteNorm[h1] + (rgb[h2] - rgb[l]) * Eye.overwhiteNorm[h2]) / (rgb[l] * Eye.overwhiteNorm[l] + rgb[h1] * Eye.overwhiteNorm[h1] + rgb[h2] * Eye.overwhiteNorm[h2])
+        const w = (rgb[h1] - rgb[l]) * Eye.overwhiteNorm[h1] + (rgb[h2] - rgb[l]) * Eye.overwhiteNorm[h2]
+        this.p = w / (rgb[l] + w)
         this.p **= Eye.phiInv
       }
       this.fillIntensityFromRGB(rgb)
@@ -214,63 +220,67 @@ class Eye {
     return this
   }
 
-  /** Copies this Eye instance into another RGB or Eye instance.
+  /** Copies this Eye instance into another RGB or Eye instance, or in a gamma-shaped RGB array.
    * The color space of the current instance is automatically converted into the color space of the target instance if needed.
-   * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
-   * @returns target instance (same as `to` if `to` was an instance) */
-  export (to: RGB | Eye | CS) : RGB | Eye {
-    if (typeof to !== 'object') {
-      to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
-    }
-    if (to.space === CS.EyePercI || to.space === CS.EyeNormJ) {
-      to.import(this)
-    } else
-      if (to.space === CS.RGBgamma) {
-        this.export(Eye.rgbLinear).export(to)
-      } else {
-        this.convertToRGB(to as RGB, this.i, this.j)
+   * @param to existing instance or array to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
+   * @returns target instance or array (same as `to` if `to` was an instance or an array) */
+  export (to: RGB | Eye | CS | number[]) : RGB & Eye & number[] {
+    if (Array.isArray(to)) {
+      this.convertToRGB(Eye.rgbLinear, this.i)
+      Eye.rgbGamma.import(Eye.rgbLinear)
+      for (let k = R; k <= B; k++) {
+        to[k] = Eye.rgbGamma.chan[k]
       }
-    return to
+    } else {
+      if (typeof to !== 'object') {
+        to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
+      }
+      if (to.space === CS.EyePercI || to.space === CS.EyeNormJ) {
+        to.import(this)
+      } else
+        if (to.space === CS.RGBgamma) {
+          this.convertToRGB(Eye.rgbLinear, this.i)
+          to.import(Eye.rgbLinear)
+        } else {
+          this.convertToRGB(to as RGB, this.i)
+        }
+    }
+    return to as RGB & Eye & number[]
   }
 
-  protected convertToRGB (to: RGB, i: number, j: number) {
+  protected convertToRGB (to: RGB, i: number) : void {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
     const ratio = [0, 0, 0]
-    let D = 3 * this.r - h1
-    if (D < 1 / 2) {
-      D = (2 * D) ** Eye.rPowersInv[h1] / 2
-    } else {
-      D = (2 * D - 1) ** Eye.rPowers[h2] / 2 + 1 / 2
-    }
     const p = this.p ** Eye.phi
-    if (D < 0.001 && p > 0.999) {
+    let d = 3 * this.r - h1
+    if (d < 1 / 2) {
+      d = (2 * d) ** Eye.rPowersInv[h1] / 2
+    } else {
+      d = (2 * d - 1) ** Eye.rPowers[h2] / 2 + 1 / 2
+    }
+    if ((d < SmallestValue && p > (1 - SmallestValue)) || (this.space === CS.EyePercI && i < SmallestValue) || (this.space === CS.EyeNormJ && this.j < SmallestValue)) {
       to.chan[l] = 0
-      to.chan[h1] = (this.space === CS.EyePercI) ? i ** gamma / Eye.sensicolNorm[h1] : j ** gamma
+      to.chan[h1] = (this.space === CS.EyePercI) ? i ** gamma / Eye.sensicolNorm[h1] : this.j ** gamma
       to.chan[h2] = 0
     } else {
-      if (D > 0.999 || p < 0.001) {
-        ratio[l] = (1 - p) / (1 + p * (Eye.overwhiteNorm[l] + Eye.overwhiteNorm[h1]) / Eye.overwhiteNorm[h2])
-        ratio[h1] = ratio[l]
-      } else {
-        const A = D / (1 - D)
-        const B = (1 - p) / p * (Eye.overwhiteNorm[h1] + A * Eye.overwhiteNorm[h2])
-        const Q = 1 / (A + B)
-        ratio[l] = B * Q
-        ratio[h1] = Q + ratio[l]
-      }
+      const S = (1 - p) * (d * Eye.overwhiteNorm[h2] + (1 - d) * Eye.overwhiteNorm[h1])
+      const T = p * d
+      const U = S + T
+      ratio[l] = S / U
+      ratio[h1] = (p - T) / U + ratio[l]
       ratio[h2] = 1
       if (this.space === CS.EyePercI) {
         const Ir = [Eye.sensicolNorm[R] * ratio[R], Eye.sensicolNorm[G] * ratio[G], Eye.sensicolNorm[B] * ratio[B]]
         const [x, y, z] = Eye.RGBtoOrder(Ir)
         to.chan[h2] = i ** gamma / (Ir[x] * Eye.iotaD + Ir[y] * Eye.iotaM + Ir[z])
         to.chan[h1] = to.chan[h2] * ratio[h1]
-      } else { // (this.space === CS.EyeNormJ)
-        to.chan[h] = j ** gamma
+      } else {
+        to.chan[h] = this.j ** gamma
         if (h === h2) {
           to.chan[h1] = to.chan[h2] * ratio[h1]
         } else {
-          to.chan[h2] = to.chan[h1] / ratio[h1]
+          to.chan[h2] = to.chan[h1] / ratio[h1] // if h ≠ h2 then h1 is the highest channel so ratio[h1] > 0
         }
       }
       to.chan[l] = to.chan[h2] * ratio[l]
@@ -358,7 +368,7 @@ const colorI = new Eye(CS.EyePercI)
 const colorJ = new Eye(CS.EyeNormJ)
 
 const colors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
-const numR = 3
+const numR = 6
 const numP = 45
 const numI = 40
 let maxIntensityMinIndex = 1000
@@ -374,16 +384,46 @@ for (let r = 0; r <= numR; r++) {
       colorI.r = r / numR
       colorI.p = p / numP
       colorI.i = i / numI
-      colors[r][p].push({ rgb: colorI.export(CS.RGBgamma) as RGB, eye: colorI.export(CS.EyePercI) as Eye })
-      const rgb = (colors[r][p][i].eye.export(CS.EyeNormJ).export(CS.RGBgamma) as RGB).chan
-      if (colors[r][p][i].rgb.chan[0] !== rgb[0] || colors[r][p][i].rgb.chan[1] !== rgb[1] || colors[r][p][i].rgb.chan[2] !== rgb[2]) {
-        cons.log(colors[r][p][i].rgb.chan, rgb)
-        cons.log(colors[r][p][i].eye, colors[r][p][i].eye.export(CS.EyeNormJ))
+      colors[r][p].push({ rgb: colorI.export(CS.RGBgamma), eye: colorI.export(CS.EyePercI) })
+      if (colors[r][p][i].rgb.chan[R] > 255 || colors[r][p][i].rgb.chan[G] > 255 || colors[r][p][i].rgb.chan[B] > 255 || colors[r][p][i].rgb.chan[R] < 0 || colors[r][p][i].rgb.chan[G] < 0 || colors[r][p][i].rgb.chan[B] < 0) {
+        cons.log('#### PercI -> RGB  out of bounds')
+        cons.log(colors[r][p][i].rgb)
       }
-      const rgb2 = ((new Eye(CS.EyePercI)).import(colors[r][p][i].rgb)).export(CS.RGBgamma) as RGB
-      if (colors[r][p][i].rgb.chan[0] !== rgb2.chan[0] || colors[r][p][i].rgb.chan[1] !== rgb2.chan[1] || colors[r][p][i].rgb.chan[2] !== rgb2.chan[2]) {
-        cons.log(colors[r][p][i].rgb, rgb)
-        cons.log(colors[r][p][i].eye, colors[r][p][i].eye.export(CS.EyeNormJ))
+      let rgb2 = ((new Eye(CS.EyePercI)).import(colors[r][p][i].rgb)).export(CS.RGBgamma).chan
+      if (rgb2[R] > 255 || rgb2[G] > 255 || rgb2[B] > 255 || rgb2[R] < 0 || rgb2[G] < 0 || rgb2[B] < 0) {
+        cons.log('#### PercI -> RGB -> PercI -> RGB  out of bounds')
+        cons.log(rgb2)
+      }
+      if (colors[r][p][i].rgb.chan[0] !== rgb2[0] || colors[r][p][i].rgb.chan[1] !== rgb2[1] || colors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+        cons.log('#### PercI -> RGB  different from  PercI -> RGB -> PercI -> RGB.')
+        cons.log('PercI:', colors[r][p][i].eye)
+        cons.log('PercI -> RGB -> PercI :', (new Eye(CS.EyePercI)).import(colors[r][p][i].rgb))
+        cons.log('PercI -> RGB :', colors[r][p][i].rgb.chan)
+        cons.log('PercI -> RGB -> PercI -> RGB :', rgb2)
+      }
+      rgb2 = colors[r][p][i].eye.export(CS.RGBlinear).export(CS.EyeNormJ).export(CS.RGBgamma).chan
+      if (rgb2[R] > 255 || rgb2[G] > 255 || rgb2[B] > 255 || rgb2[R] < 0 || rgb2[G] < 0 || rgb2[B] < 0) {
+        cons.log('#### PercI -> RGB -> PercJ -> RGB  out of bounds')
+        cons.log(rgb2)
+      }
+      if (colors[r][p][i].rgb.chan[0] !== rgb2[0] || colors[r][p][i].rgb.chan[1] !== rgb2[1] || colors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+        cons.log('#### PercI -> RGB  different from  PercI -> RGB -> PercJ -> RGB.')
+        cons.log('PercI -> RGB :', colors[r][p][i].rgb.chan)
+        cons.log('PercI -> RGB -> PercJ -> RGB :', rgb2)
+        cons.log('PercI:', colors[r][p][i].eye)
+        cons.log('PercI -> RGB -> PercJ :', colors[r][p][i].eye.export(CS.RGBlinear).export(CS.EyeNormJ))
+      }
+      rgb2 = colors[r][p][i].eye.export(CS.EyeNormJ).export(CS.RGBgamma).chan
+      if (rgb2[R] > 255 || rgb2[G] > 255 || rgb2[B] > 255 || rgb2[R] < 0 || rgb2[G] < 0 || rgb2[B] < 0) {
+        cons.log('#### PercI -> NormJ -> RGB  out of bounds')
+        cons.log(rgb2)
+      }
+      if (colors[r][p][i].rgb.chan[0] !== rgb2[0] || colors[r][p][i].rgb.chan[1] !== rgb2[1] || colors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+        cons.log('#### PercI -> RGB  different from  PercI -> NormJ -> RGB.')
+        cons.log('PercI -> RGB :', colors[r][p][i].rgb.chan)
+        cons.log('PercI -> NormJ -> RGB :', rgb2)
+        cons.log('PercI:', colors[r][p][i].eye)
+        cons.log('PercI -> NormJ :', colors[r][p][i].eye.export(CS.EyeNormJ))
       }
     }
   }
@@ -394,11 +434,10 @@ const rainbowSameJ: Array<RGB> = []
 for (let r = 0; r <= 180; r++) {
   colorI.r = r / 180
   colorI.p = 1
-  colorI.i = colorI.lowestImax
-  rainbowSameI.push(colorI.export(CS.RGBgamma) as RGB)
+  colorI.i = Eye.lowestImax
+  rainbowSameI.push(colorI.export(CS.RGBgamma))
   colorI.i = colorI.iMax
-  rainbowSameJ.push(colorI.export(CS.RGBgamma) as RGB)
-  if (rainbowSameJ[r].chan[R] > 255 || rainbowSameJ[r].chan[G] > 255 || rainbowSameJ[r].chan[B] > 255) { cons.log('ERROR', rainbowSameJ[r].chan, colorJ) }
+  rainbowSameJ.push(colorI.export(CS.RGBgamma))
 }
 
 const granularRainbow48: Array<RGB> = []
@@ -406,64 +445,66 @@ colorJ.p = 1
 colorJ.j = 1
 for (let r = 0; r <= 48; r++) {
   colorJ.r = r / 48
-  granularRainbow48.push(colorJ.export(CS.RGBgamma) as RGB)
+  granularRainbow48.push(colorJ.export(CS.RGBgamma))
 }
 
-const puresI: Array<RGB> = []
-const puresJ: Array<RGB> = []
-colorJ.p = colorI.p = 1
-colorJ.j = 1
-colorI.i = colorI.lowestImax
+const pures: Array<number[]> = []
+colorI.p = 1
+colorI.i = Eye.lowestImax
 for (let r = 0; r <= 6; r++) {
-  colorI.r = colorJ.r = r / 6
-  puresI.push(colorI.export(CS.RGBgamma) as RGB)
-  puresJ.push(colorJ.export(CS.RGBgamma) as RGB)
+  colorI.r = r / 6
+  pures.push(colorI.export(CS.RGBgamma).chan)
 }
 
 const iotaIadjuster: Array<RGB> = []
 colorI.p = 0
 for (let k = 0; k <= 16; k++) {
   colorI.i = colorI.iMax * k / 16
-  iotaIadjuster.push(colorI.export(CS.RGBgamma) as RGB)
+  iotaIadjuster.push(colorI.export(CS.RGBgamma))
 }
 
 const iotaJadjuster: Array<RGB> = []
+colorJ.p = 0
 for (let k = 0; k <= 16; k++) {
-  colorJ.p = 0
   colorJ.j = k / 16
-  iotaJadjuster.push(colorJ.export(CS.RGBgamma) as RGB)
+  iotaJadjuster.push(colorJ.export(CS.RGBgamma))
 }
 </script>
 
 <template>
   <div style="background-color: rgb(128,128,128)">
     <br>
-    <h1>Adjustement of sensicol and iotaM</h1>
+    <h1>Adjustement of sensicol, iotaM and iotaD</h1>
     <h2>sensicol</h2>
-    These pure colors must all have the same perceived intensity: <br><br>
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresI[0].chan[R] + ',' + puresI[0].chan[G] + ',' + puresI[0].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresI[2].chan[R] + ',' + puresI[2].chan[G] + ',' + puresI[2].chan[B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresI[4].chan[R] + ',' + puresI[4].chan[G] + ',' + puresI[4].chan[B] + ')'" />
+    The primaries must all have the same perceived intensity: <br><br>
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[0][R] + ',' + pures[0][G] + ',' + pures[0][B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[2][R] + ',' + pures[2][G] + ',' + pures[2][B] + ')'" />
+    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[4][R] + ',' + pures[4][G] + ',' + pures[4][B] + ')'" />
     <br><br>
 
     <h2>iotaM</h2>
     The secondaries colors must all have the same perceived intensity as their surrounding primaries: <br><br>
-    <span v-for="(pure,k) of puresI" :key="k" style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pure.chan[R] + ',' + pure.chan[G] + ',' + pure.chan[B] + ')'" />
+    <span v-for="(pure,k) of pures" :key="k" style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pure[R] + ',' + pure[G] + ',' + pure[B] + ')'" />
     <br><br>
 
     <h2>both</h2>
-    Starting from the settings found above, fine-tune sensicol and iotaM to give all a colors the same intensity in this rainbow: <br><br>
+    Fine-tune sensicol and iotaM so that each big square seems to have the same intensity as the small square inside. The colors look different, this is normal.
+    <br><br>
+
+    <br><br>
+
+    <h2>control</h2>
+    All colors must have the same perceived intensity in this rainbow: <br><br>
     <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
 
-    <h1>Adjustement of iotaD </h1>
+    <h2>iotaD</h2>
     <div style="background-color: rgb(160,160,160)">
-      iotaD adjust the perceived intensity of the grey, that should feel as bright as the primaries
+      Adjust the perceived intensity of the grey, that should feel as bright as the primaries. You might need to go back to sensicol and iotaM to improve the result here.
       <div v-for="(rRow,r) of colors" :key="r" style="text-align: center;">
         <br>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <br>
+        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
       </div>
     </div>
 
@@ -471,9 +512,11 @@ for (let k = 0; k <= 16; k++) {
     overwhite adjusts the width of the the grey part in each row. <br>
     phi adjusts the linearity of the transition from grey to pure. <br> <br>
     <div v-for="(rRow,r) of colors" :key="r" style="border: 0px;">
-      <span v-for="(pRow,p) of rRow" :key="p">
-        <div style="display: inline-block; width: 10px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
-      </span>
+      <div v-if="r%2==0">
+        <span v-for="(pRow,p) of rRow" :key="p">
+          <div style="display: inline-block; width: 10px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        </span>
+      </div>
     </div>
     <br>
 
@@ -482,10 +525,9 @@ for (let k = 0; k <= 16; k++) {
       The better this criterion is approched, the more linear in `p` the perceived purity is.
       <div v-for="(rRow,r) of colors" :key="r" style="text-align: center;">
         <br>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <br>
+        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
       </div>
     </div>
     <br>
@@ -533,10 +575,12 @@ for (let k = 0; k <= 16; k++) {
     <h1>Screen calibration: color balance</h1>
     The secondaries must stand between the black lines.
     <br><br>
-    <span v-for="(c,i) of granularRainbow48" :key="i" style="display: inline-block; width: 24px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'">
-      <span v-if="(i/8-1)%2 == 0" style="display: inline-block; height: 40px; width: 24px; border: 1px solid black; border-bottom: 0; border-top: 0;" />
-    </span>
-    <br><br>
+    <div v-for="(m,n) of 3" :key="m">
+      <span v-for="(c,i) of 17" :key="i" style="display: inline-block; width: 24px; height: 40px;" :style="'background-color: rgb(' + granularRainbow48[16*n+i].chan[R] + ',' + granularRainbow48[16*n+i].chan[G] + ',' + granularRainbow48[16*n+i].chan[B] + ')'">
+        <span v-if="(i/8-1)%2 == 0" style="display: inline-block; height: 100%; width: 100%; border: 1px solid black; border-bottom: 0; border-top: 0;" />
+      </span>
+      <br><br>
+    </div>
 
     <h1>Screen calibration: linearity of extremes greys</h1>
     The perceived linearity of your screen in extreme greys (near black and white) is good if each middle square feels as different from its left square as from its right square.
@@ -610,16 +654,14 @@ for (let k = 0; k <= 16; k++) {
     <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,223)">
       <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" /><br>
     </div>
+
     <br><br>
-    <h1>For each primary, all purities and perceived intensities :</h1>
+    <h1>For each primary and each secondary, all purities and perceived intensities :</h1>
     <br>
     <div v-for="(rRow,r) of colors" :key="r">
       <div v-for="(pRow,p) of rRow" :key="p">
         <div v-if="!(p%3)">
-          <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'">
-            {{ (c.rgb.chan[R] > 255 || c.rgb.chan[G] > 255 || c.rgb.chan[B] > 255) ? 'E+' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
-            {{ (c.rgb.chan[R] < 0 || c.rgb.chan[G] < 0 || c.rgb.chan[B] < 0) ? 'E-' + (cons.log(c.rgb.chan, c.eye)! || '') : '' }}
-          </div>
+          <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'" />
         </div>
       </div>
       <br>
