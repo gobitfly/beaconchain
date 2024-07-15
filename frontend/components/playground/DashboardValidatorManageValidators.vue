@@ -49,16 +49,16 @@ const openEpochDuties = () => {
   </div>
   <div class="status-holder">
     <div class="status">
-      <ValidatorTableStatus status="online" />
+      <ValidatorTableStatus status="active_online" />
     </div>
     <div class="status">
-      <ValidatorTableStatus status="exiting" />
+      <ValidatorTableStatus status="exiting_offline" />
     </div>
     <div class="status">
-      <ValidatorTableStatus status="withdrawn" />
+      <ValidatorTableStatus status="exited" />
     </div>
     <div class="status">
-      <ValidatorTableStatus status="offline" />
+      <ValidatorTableStatus status="active_offline" />
     </div>
     <div class="status">
       <ValidatorTableStatus status="pending" :position="12345" />
