@@ -7,6 +7,7 @@ import (
 
 type ValidatorIndex = uint64
 type ValidatorStatus string
+type ValidatorDbStatus string
 
 func (s ValidatorStatus) IsActive() bool {
 	return s == ActiveOngoing || s == ActiveExiting || s == ActiveSlashed || s == Active

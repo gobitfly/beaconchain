@@ -168,7 +168,7 @@ const editDashboard = () => {
         </template>
       </Menubar>
       <Button v-if="!isShared" class="p-button-icon-only" @click="emit('showCreation')">
-        <IconPlus alt="Plus icon" width="100%" height="100%" />
+        <IconPlus title="Add new dashboard" width="100%" height="100%" />
       </Button>
     </div>
   </div>
