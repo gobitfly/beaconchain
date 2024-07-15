@@ -47,7 +47,7 @@ export default defineNuxtConfig({
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,
       legacyApiServer: process.env.PRIVATE_LEGACY_API_SERVER,
-      ssrSecret: ''
+      ssrSecret: process.env.PRIVATE_SSR_SECRET || ''
     }
   },
   css: ['~/assets/css/main.scss', '~/assets/css/prime.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
