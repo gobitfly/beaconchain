@@ -103,7 +103,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	params = append(params, limit+1)
 	filterFragment += fmt.Sprintf(" LIMIT $%d", len(params))
 
-	err = db.AlloyReader.Select(&data, query+filterFragment, params...)
+	err = db.AlloyReader.SelectContext(ctx, &data, query+filterFragment, params...)
 
 	if err != nil {
 		return nil, nil, err
@@ -255,7 +255,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	params = append(params, limit+1)
 	filterFragment += fmt.Sprintf(" LIMIT $%d", len(params))
 
-	err = db.AlloyReader.Select(&data, query+filterFragment, params...)
+	err = db.AlloyReader.SelectContext(ctx, &data, query+filterFragment, params...)
 
 	if err != nil {
 		return nil, nil, err
@@ -354,7 +354,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Con
 	}
 
 	var data int64
-	err = db.AlloyReader.Get(&data, query, filter)
+	err = db.AlloyReader.GetContext(ctx, &data, query, filter)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -400,7 +400,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 	}
 
 	var data int64
-	err = db.AlloyReader.Get(&data, query, filter)
+	err = db.AlloyReader.GetContext(ctx, &data, query, filter)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}

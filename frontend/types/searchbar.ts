@@ -2,6 +2,9 @@ import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
 import { ChainIDs } from '~/types/network'
 import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
+export const MinimumTimeBetweenAPIcalls = 400 // ms
+export const LayoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
+
 export enum SearchbarShape { // do not change the litterals, they are used as class names
   Small = 'small',
   Medium = 'medium',

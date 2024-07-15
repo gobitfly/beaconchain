@@ -366,7 +366,7 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
   @include common-to-all-rowstyles;
 
   &.large-dropdown {
-    grid-template-columns: 40px 126px 1fr min-content min-content;
+    grid-template-columns: 40px minmax(126px, min-content) 1fr min-content min-content;
   }
   &.narrow-dropdown {
     grid-template-columns: 40px 1fr min-content min-content;
