@@ -465,6 +465,23 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	return &types.Sort[T]{Column: sortCol, Desc: order}
 }
 
+func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {
+	var modes types.VDBProtocolModes
+	if protocolModes == "" {
+		return modes
+	}
+	protocolsSlice := strings.Split(protocolModes, ",")
+	for _, protocolMode := range protocolsSlice {
+		switch protocolMode {
+		case "rocket_pool":
+			modes.RocketPool = true
+		default:
+			v.add("modes", fmt.Sprintf("given value '%s' is not a valid protocol mode", protocolMode))
+		}
+	}
+	return modes
+}
+
 func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]types.VDBValidator, []string) {
 	if validators == "" && !allowEmpty {
 		v.add("validators", "list of validators is must not be empty")
