@@ -1,38 +1,24 @@
 <script setup lang="ts">
-import { useField, useForm } from 'vee-validate'
+import { object as yupObject } from 'yup'
+import { useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
-import { REGEXP_VALID_EMAIL } from '~/utils/regexp'
 import { Target } from '~/types/links'
 
 const { t: $t } = useI18n()
 const { doLogin } = useUserStore()
 const toast = useBcToast()
 
-useBcSeo('login.title')
+useBcSeo('login_and_register.title_login')
 
-const { handleSubmit, errors } = useForm()
-const { value: email } = useField<string>('email', validateAddress)
-const { value: password } = useField<string>('password', validatePassword)
+const { handleSubmit, errors, defineField } = useForm({
+  validationSchema: yupObject({
+    email: emailValidation($t),
+    password: passwordValidation($t)
+  })
+})
 
-function validateAddress (value: string) : true|string {
-  if (!value) {
-    return $t('login.no_email')
-  }
-  if (!REGEXP_VALID_EMAIL.test(value)) {
-    return $t('login.invalid_email')
-  }
-  return true
-}
-
-function validatePassword (value: string) : true|string {
-  if (!value) {
-    return $t('login.no_password')
-  }
-  if (value.length < 5) {
-    return $t('login.invalid_password')
-  }
-  return true
-}
+const [email, emailAttrs] = defineField('email')
+const [password, passwordAttrs] = defineField('password')
 
 const onSubmit = handleSubmit(async (values) => {
   try {
@@ -40,13 +26,11 @@ const onSubmit = handleSubmit(async (values) => {
     await navigateTo('/')
   } catch (error) {
     password.value = ''
-    toast.showError({ summary: $t('login.error_toast_title'), group: $t('login.error_toast_group'), detail: $t('login.error_toast_message') })
+    toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_login_group'), detail: $t('login_and_register.error_login_message') })
   }
 })
 
 const canSubmit = computed(() => email.value && password.value && !Object.keys(errors.value).length)
-const addressError = ref<string|undefined>(undefined)
-const passwordError = ref<string|undefined>(undefined)
 </script>
 
 <template>
@@ -54,43 +38,41 @@ const passwordError = ref<string|undefined>(undefined)
     <div class="container">
       <form @submit="onSubmit">
         <div class="input-row">
-          <label for="email" class="label">{{ $t('login.email') }}</label>
+          <label for="email" class="label">{{ $t('login_and_register.email') }}</label>
           <InputText
             id="email"
             v-model="email"
+            v-bind="emailAttrs"
             type="text"
             :class="{ 'p-invalid': errors?.email }"
             aria-describedby="text-error"
-            @focus="addressError = undefined"
-            @blur="addressError = errors?.email"
           />
           <div class="p-error">
-            {{ addressError || '&nbsp;' }}
+            {{ errors?.email }}
           </div>
         </div>
         <div class="input-row">
-          <label for="password" class="label">{{ $t('login.password') }}</label>
+          <label for="password" class="label">{{ $t('login_and_register.password') }}</label>
           <InputText
             id="password"
             v-model="password"
+            v-bind="passwordAttrs"
             type="password"
             :class="{ 'p-invalid': errors?.password }"
             aria-describedby="text-error"
-            @focus="passwordError = undefined"
-            @blur="passwordError = errors?.password"
           />
           <div class="p-error">
-            {{ passwordError || '&nbsp;' }}
+            {{ errors?.password }}
           </div>
         </div>
         <div class="last-row">
           <div class="account-invitation">
-            {{ $t('login.dont_have_account') }}<br>
+            {{ $t('login_and_register.dont_have_account') }}<br>
             <BcLink to="/register" :target="Target.Internal" class="link">
-              {{ $t('login.signup_here') }}
+              {{ $t('login_and_register.signup_here') }}
             </BcLink>
           </div>
-          <Button type="submit" :label="$t('login.submit')" :disabled="!canSubmit" />
+          <Button class="button" type="submit" :label="$t('login_and_register.submit_login')" :disabled="!canSubmit" />
         </div>
       </form>
     </div>
@@ -103,9 +85,9 @@ const passwordError = ref<string|undefined>(undefined)
 .container {
   position: relative;
   width: 300px;
-  height: 230px;
+  height: 240px;
   margin: auto;
-  margin-top: 60px;
+  margin-top: 100px;
   margin-bottom: 50px;
   padding: var(--padding);
 
@@ -125,10 +107,10 @@ const passwordError = ref<string|undefined>(undefined)
       width: 80%;
 
       &:first-child {
-        padding-top: var(--padding-small)
+        padding-top: 5px;
       }
       .label {
-        margin-bottom: var(--padding-small);
+        margin-bottom: 8px;
       }
     }
 
@@ -142,9 +124,13 @@ const passwordError = ref<string|undefined>(undefined)
         @include fonts.small_text;
         margin-right: auto;
       }
+      .button {
+        margin-top: auto;
+      }
     }
 
     .p-error {
+      min-height: 17px;
       @include fonts.small_text;
     }
   }

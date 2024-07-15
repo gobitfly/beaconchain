@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"regexp"
@@ -18,7 +19,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+	// @DATA-ACCESS incorporate protocolModes
 	var err error
 	var currentCursor t.BlocksCursor
 
@@ -49,7 +51,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		// (query validators twice: once without search applied (fast) to pre-filter scheduled proposals (which are sent to db, want to minimize),
 		// again for blocks query with search applied to not having to send potentially huge validator-list)
 		startTime := time.Now()
-		valis, err := d.getDashboardValidators(dashboardId)
+		valis, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		log.Debugf("=== getting validators took %s", time.Since(startTime))
 		if err != nil {
 			return nil, nil, err

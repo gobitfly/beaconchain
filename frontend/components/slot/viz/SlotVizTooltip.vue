@@ -300,6 +300,16 @@ const data = computed(() => {
         align-items: flex-start;
         word-wrap: nowrap;
         white-space: nowrap;
+        .validators {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: var(--padding-tiny);
+          // otherwise the text: `...and XX more` will mess up the first column
+          > span:not(:has(> a)) {
+              grid-column: span 2;
+              text-align: left
+          }
+        }
       }
     }
   }

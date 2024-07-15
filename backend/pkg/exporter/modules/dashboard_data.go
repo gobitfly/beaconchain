@@ -65,6 +65,8 @@ const epochWriteParallelism = 4
 // How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
 const databaseAggregationParallelism = 4
 
+const nonRollingdatabaseAggregationParallelism = 1 // 1 for now to see if this fixes the "deadlocks"
+
 // How many epochFetchParallelism iterations will be written before a new aggregation will be triggered during backfill. This can speed up backfill as writing epochs to db is fast and we can delay
 // aggregation for a couple iterations. Don't set too high or else epoch table will grow to large and will be a bottleneck.
 // Set to 0 to disable and write after every iteration. Recommended value for this is 1 or maybe 2.
@@ -403,7 +405,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 					d.log.Infof("epoch data fetcher, processing data for epoch %d", datas[i].epoch)
 					start := time.Now()
 
-					result, err := d.ProcessEpochData(datas[i], d.signingDomain)
+					result, err := d.ProcessEpochData(datas[i])
 					if err != nil {
 						d.log.Error(err, "failed to process epoch data", 0, map[string]interface{}{"epoch": datas[i].epoch})
 						time.Sleep(time.Second * 10)
@@ -823,7 +825,7 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 
 	// important to do this before hour aggregate as hour aggregate deletes old epochs
 	errGroup := &errgroup.Group{}
-	errGroup.SetLimit(databaseAggregationParallelism)
+	errGroup.SetLimit(nonRollingdatabaseAggregationParallelism)
 	errGroup.Go(func() error {
 		err := d.epochToTotal.aggregateTotal(currentExportedEpoch)
 		if err != nil {
@@ -1009,16 +1011,39 @@ func (d *dashboardData) GetEpochDataRaw(epoch uint64, skipSerialCalls bool) (*Da
 	return data, nil
 }
 
-func (d *dashboardData) ProcessEpochData(data *Data, domain []byte) ([]*validatorDashboardDataRow, error) {
+func (d *dashboardData) ProcessEpochData(data *Data) ([]*validatorDashboardDataRow, error) {
 	if d.signingDomain == nil {
 		domain, err := utils.GetSigningDomain()
 		if err != nil {
 			return nil, err
 		}
+		d.log.Infof("initialized signing domain to %x", domain)
 		d.signingDomain = domain
 	}
 
-	return d.process(data, domain)
+	return d.process(data, d.signingDomain)
+}
+
+func isPartitionAttached(pTable string, partition string) (bool, error) {
+	var attached bool
+	err := db.AlloyWriter.QueryRow(fmt.Sprintf(`
+	SELECT EXISTS (
+		SELECT 1
+		FROM pg_partitioned_table pgt
+		JOIN pg_inherits pi ON pgt.partrelid = pi.inhparent
+		JOIN pg_class pc ON pc.oid = pi.inhrelid
+		WHERE pgt.partrelid = '%s'::regclass
+		AND pc.relname = '%s'
+	)
+	`,
+		pTable, partition,
+	)).Scan(&attached)
+
+	if err != nil {
+		return false, errors.Wrap(err, "failed to check if partition is already attached")
+	}
+
+	return attached, nil
 }
 
 // Returns the epoch where the sync committee election for the given epoch took place
@@ -1440,7 +1465,8 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 			}, domain)
 
 			if err != nil {
-				d.log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (signature: %s)", depositIndex, block.Data.Message.Slot, err, depositData.Data.Signature), "", 0)
+				d.log.Error(fmt.Errorf("deposit at index %d in slot %v is invalid: %v (domain: %x, PublicKey: %s, WithdrawalCredentials: %s, Amount: %d, Signature: %s)",
+					depositIndex, block.Data.Message.Slot, err, domain, depositData.Data.Pubkey, depositData.Data.WithdrawalCredentials, depositData.Data.Amount, depositData.Data.Signature), "", 0)
 
 				// if the validator hat a valid deposit prior to the current one, count the invalid towards the balance
 				if validatorsData[pubkeyToIndexMapNewlyActivatedValidators[string(depositData.Data.Pubkey)]].DepositsCount.Int16 > 0 {
