@@ -163,7 +163,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -211,7 +211,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -584,9 +584,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	var rows []*queryResult
 
 	if len(validators) > 0 {
-		err = d.alloyReader.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
+		err = d.readerDb.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
 	} else {
-		err = d.alloyReader.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId.Id, groupId)
+		err = d.readerDb.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId.Id, groupId)
 	}
 
 	if err != nil {
@@ -741,7 +741,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 
 	query := `select (SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) reward FROM %s WHERE validator_index = ANY($1)`
 
-	err = db.AlloyReader.GetContext(ctx, &reward, fmt.Sprintf(query, table), validators)
+	err = db.ReaderDb.GetContext(ctx, &reward, fmt.Sprintf(query, table), validators)
 	if err != nil || !reward.Valid {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
@@ -755,7 +755,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 		clAPR = 0
 	}
 	if days == -1 {
-		err = db.AlloyReader.GetContext(ctx, &reward, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators)
+		err = db.ReaderDb.GetContext(ctx, &reward, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators)
 		if err != nil || !reward.Valid {
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
@@ -769,7 +769,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
 	LEFT JOIN relays_blocks rb ON blocks.exec_block_hash = rb.exec_block_hash
 	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`
-	err = db.AlloyReader.GetContext(ctx, &elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	err = db.ReaderDb.GetContext(ctx, &elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
@@ -777,7 +777,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(len(validators)))) * 365.0 * 100.0
 
 	if days == -1 {
-		err = db.AlloyReader.GetContext(ctx, &elIncome, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		err = db.ReaderDb.GetContext(ctx, &elIncome, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		if err != nil {
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
@@ -815,7 +815,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			WHERE day > $1 AND validator_index = ANY($2)
 			group by 1
 		) as a ORDER BY epoch_start;`
-		err := d.alloyReader.SelectContext(ctx, &queryResults, query, cutOffDate, dashboardId.Validators)
+		err := d.readerDb.SelectContext(ctx, &queryResults, query, cutOffDate, dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -843,7 +843,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			WHERE day > $1 AND dashboard_id = $2
 			%s
 		) as a %s;`, groupIdQuery, groupByQuery, orderQuery)
-		err := d.alloyReader.SelectContext(ctx, &queryResults, query, queryParams...)
+		err := d.readerDb.SelectContext(ctx, &queryResults, query, queryParams...)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -1089,7 +1089,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 		}
 
 		var epochStart uint64
-		err = d.alloyReader.GetContext(ctx, &epochStart, query, args...)
+		err = d.readerDb.GetContext(ctx, &epochStart, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
 		}
@@ -1110,7 +1110,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 		}
 
 		var validatorIndices []uint64
-		err = d.alloyReader.SelectContext(ctx, &validatorIndices, query, args...)
+		err = d.readerDb.SelectContext(ctx, &validatorIndices, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data for past sync committees: %w", err)
 		}
@@ -1202,7 +1202,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		return nil, err
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		log.Error(err, "error while getting validator dashboard slashed validators list", 0)
 		return nil, err
@@ -1257,7 +1257,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -1293,7 +1293,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
 		}
@@ -1394,7 +1394,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		return nil, fmt.Errorf("error preparing query: %v", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving data from table %s: %v", table, err)
 	}

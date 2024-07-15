@@ -120,7 +120,7 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 
 func (d *dashboardData) Init() error {
 	go func() {
-		_, err := db.AlloyWriter.Exec("SET work_mem TO '128MB';")
+		_, err := db.WriterDb.Exec("SET work_mem TO '128MB';")
 		if err != nil {
 			d.log.Fatal(err, "failed to set work_mem", 0)
 		}
@@ -1026,7 +1026,7 @@ func (d *dashboardData) ProcessEpochData(data *Data) ([]*validatorDashboardDataR
 
 func isPartitionAttached(pTable string, partition string) (bool, error) {
 	var attached bool
-	err := db.AlloyWriter.QueryRow(fmt.Sprintf(`
+	err := db.WriterDb.QueryRow(fmt.Sprintf(`
 	SELECT EXISTS (
 		SELECT 1
 		FROM pg_partitioned_table pgt
@@ -1604,7 +1604,7 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 }
 
 func storeClBlockRewards(data map[uint64]*constypes.StandardBlockRewardsResponse) error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "failed to start cl blocks transaction")
 	}
@@ -1748,7 +1748,7 @@ func (r *ResponseCache) GetSyncCommitteeCacheKey(period uint64) string {
 }
 
 func refreshMaterializedSlashedByCounts() error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
@@ -1813,7 +1813,7 @@ func refreshMaterializedSlashedByCounts() error {
 
 // 	blocksChan := make(chan map[uint64]*constypes.StandardBlockRewardsResponse, 1)
 
-// 	err := db.AlloyWriter.Get(&startFrom, "SELECT last_slot FROM meta_slot_export")
+// 	err := db.WriterDb.Get(&startFrom, "SELECT last_slot FROM meta_slot_export")
 // 	if err != nil {
 // 		d.log.Error(err, "failed to get last slot from meta_slot_export", 0)
 // 		return
@@ -1883,7 +1883,7 @@ func refreshMaterializedSlashedByCounts() error {
 // 			}
 
 // 			if highestSlot%10000 < uint64(batchSize) {
-// 				_, err := db.AlloyWriter.Exec("UPDATE meta_slot_export SET last_slot = $1", highestSlot)
+// 				_, err := db.WriterDb.Exec("UPDATE meta_slot_export SET last_slot = $1", highestSlot)
 // 				if err != nil {
 // 					d.log.Error(err, "failed to update last slot in meta_slot_export", 0)
 // 				}

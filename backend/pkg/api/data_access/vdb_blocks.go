@@ -326,7 +326,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	`
 
 	startTime := time.Now()
-	err = d.alloyReader.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
+	err = d.readerDb.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err

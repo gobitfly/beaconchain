@@ -858,19 +858,19 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 
 func GetLatestDashboardEpoch() (uint64, error) {
 	var lastEpoch uint64
-	err := db.AlloyWriter.Get(&lastEpoch, fmt.Sprintf("SELECT COALESCE(max(epoch), 0) FROM %s", EpochWriterTableName))
+	err := db.WriterDb.Get(&lastEpoch, fmt.Sprintf("SELECT COALESCE(max(epoch), 0) FROM %s", EpochWriterTableName))
 	return lastEpoch, err
 }
 
 func GetOldestDashboardEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(min(epoch), 0) FROM %s", EpochWriterTableName))
+	err := db.WriterDb.Get(&epoch, fmt.Sprintf("SELECT COALESCE(min(epoch), 0) FROM %s", EpochWriterTableName))
 	return epoch, err
 }
 
 func GetMinOldHourlyEpoch() (uint64, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT min(epoch_start) as epoch_start FROM %s", HourWriterTableName))
+	err := db.WriterDb.Get(&epoch, fmt.Sprintf("SELECT min(epoch_start) as epoch_start FROM %s", HourWriterTableName))
 	return epoch, err
 }
 
@@ -887,25 +887,25 @@ type DayBounds struct {
 
 func GetLastExportedTotalEpoch() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", RollingTotalWriterTableName))
+	err := db.WriterDb.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", RollingTotalWriterTableName))
 	return &epoch, err
 }
 
 func GetLastExportedHour() (*EpochBounds, error) {
 	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", HourWriterTableName))
+	err := db.WriterDb.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", HourWriterTableName))
 	return &epoch, err
 }
 
 func GetLastExportedDay() (*DayBounds, error) {
 	var epoch DayBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %[1]s WHERE day = (select max(day) from %[1]s) limit 1;", DayWriterTableName))
+	err := db.WriterDb.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %[1]s WHERE day = (select max(day) from %[1]s) limit 1;", DayWriterTableName))
 	return &epoch, err
 }
 
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterTableName), targetEpoch)
+	err := db.WriterDb.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterTableName), targetEpoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -928,7 +928,7 @@ func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
 		// for large ranges we use a different approach to avoid making tons of selects
 		// this performs better for large ranges but is slow for short ranges
 		var epochs []uint64
-		err := db.AlloyWriter.Select(&epochs, fmt.Sprintf(`
+		err := db.WriterDb.Select(&epochs, fmt.Sprintf(`
 			WITH
 			epoch_range AS (
 				SELECT generate_series($1::bigint, $2::bigint) AS epoch
@@ -960,7 +960,7 @@ func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
 
 	var jsonArray sql.NullString
 
-	err := db.AlloyReader.Get(&jsonArray, query)
+	err := db.ReaderDb.Get(&jsonArray, query)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query")
 	}
@@ -985,7 +985,7 @@ func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
 
 func GetPartitionNamesOfTable(tableName string) ([]string, error) {
 	var partitions []string
-	err := db.AlloyWriter.Select(&partitions, fmt.Sprintf(`
+	err := db.WriterDb.Select(&partitions, fmt.Sprintf(`
 		SELECT inhrelid::regclass AS partition_name
 		FROM pg_inherits
 		WHERE inhparent = 'public.%s'::regclass order by 1;`, tableName),
@@ -994,7 +994,7 @@ func GetPartitionNamesOfTable(tableName string) ([]string, error) {
 }
 
 func AddToColumnEngine(table, columns string) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.WriterDb.Exec(fmt.Sprintf(`
 		SELECT google_columnar_engine_add(
 			relation => '%s',
 			columns => '%s'
@@ -1004,7 +1004,7 @@ func AddToColumnEngine(table, columns string) error {
 }
 
 func AddToColumnEngineAllColumns(table string) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.WriterDb.Exec(fmt.Sprintf(`
 		SELECT google_columnar_engine_add(
 			relation => '%s'
 		);

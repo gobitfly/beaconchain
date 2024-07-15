@@ -30,26 +30,6 @@ type Config struct {
 		MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"WRITER_DB_MAX_IDLE_CONNS"`
 		SSL          bool   `yaml:"ssl" envconfig:"WRITER_DB_SSL"`
 	} `yaml:"writerDatabase"`
-	AlloyReader struct {
-		Username     string `yaml:"user" envconfig:"ALLOY_READER_DB_USERNAME"`
-		Password     string `yaml:"password" envconfig:"ALLOY_READER_DB_PASSWORD"`
-		Name         string `yaml:"name" envconfig:"ALLOY_READER_DB_NAME"`
-		Host         string `yaml:"host" envconfig:"ALLOY_READER_DB_HOST"`
-		Port         string `yaml:"port" envconfig:"ALLOY_READER_DB_PORT"`
-		MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"ALLOY_READER_DB_MAX_OPEN_CONNS"`
-		MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"ALLOY_READER_DB_MAX_IDLE_CONNS"`
-		SSL          bool   `yaml:"ssl" envconfig:"ALLOY_READER_DB_SSL"`
-	} `yaml:"alloyReader"`
-	AlloyWriter struct {
-		Username     string `yaml:"user" envconfig:"ALLOY_WRITER_DB_USERNAME"`
-		Password     string `yaml:"password" envconfig:"ALLOY_WRITER_DB_PASSWORD"`
-		Name         string `yaml:"name" envconfig:"ALLOY_WRITER_DB_NAME"`
-		Host         string `yaml:"host" envconfig:"ALLOY_WRITER_DB_HOST"`
-		Port         string `yaml:"port" envconfig:"ALLOY_WRITER_DB_PORT"`
-		MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"ALLOY_WRITER_DB_MAX_OPEN_CONNS"`
-		MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"ALLOY_WRITER_DB_MAX_IDLE_CONNS"`
-		SSL          bool   `yaml:"ssl" envconfig:"ALLOY_WRITER_DB_SSL"`
-	} `yaml:"alloyWriter"`
 	Bigtable struct {
 		Project             string `yaml:"project" envconfig:"BIGTABLE_PROJECT"`
 		Instance            string `yaml:"instance" envconfig:"BIGTABLE_INSTANCE"`

@@ -64,7 +64,7 @@ func (d *epochToTotalAggregator) aggregateTotal(currentExportedEpoch uint64) err
 
 // epochStart incl, epochEnd excl
 func (d *epochToTotalAggregator) aggregateAndAddToTotal(epochStart, epochEnd uint64) error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}

@@ -78,7 +78,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			validatorsQuery += fmt.Sprintf(" AND validator_index = ANY ($%d)", len(queryParams))
 		}
 
-		err := d.alloyReader.SelectContext(ctx, &queryResult, validatorsQuery, queryParams...)
+		err := d.readerDb.SelectContext(ctx, &queryResult, validatorsQuery, queryParams...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -473,7 +473,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, validatorsQuery)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}

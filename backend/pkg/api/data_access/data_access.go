@@ -40,8 +40,8 @@ type DataAccessService struct {
 
 	readerDb                *sqlx.DB
 	writerDb                *sqlx.DB
-	alloyReader             *sqlx.DB
-	alloyWriter             *sqlx.DB
+	dbReader                *sqlx.DB
+	dbWriter                *sqlx.DB
 	clickhouseReader        *sqlx.DB
 	userReader              *sqlx.DB
 	userWriter              *sqlx.DB
@@ -63,14 +63,12 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// This should be removed and the db functions should become methods of a struct that contains the db pointers.
 	db.ReaderDb = das.readerDb
 	db.WriterDb = das.writerDb
-	db.AlloyReader = das.alloyReader
-	db.AlloyWriter = das.alloyWriter
 	db.ClickHouseReader = das.clickhouseReader
 	db.BigtableClient = das.bigtable
 	db.PersistentRedisDbClient = das.persistentRedisDbClient
 
 	// Create the services
-	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.clickhouseReader, das.bigtable, das.persistentRedisDbClient)
+	das.services = services.NewServices(das.readerDb, das.writerDb, das.clickhouseReader, das.bigtable, das.persistentRedisDbClient)
 
 	// Initialize the services
 	das.services.InitServices()
@@ -107,33 +105,6 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
 				SSL:          cfg.ReaderDatabase.SSL,
-			}, "pgx", "postgres",
-		)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		dataAccessService.alloyWriter, dataAccessService.alloyReader = db.MustInitDB(
-			&types.DatabaseConfig{
-				Username:     cfg.AlloyWriter.Username,
-				Password:     cfg.AlloyWriter.Password,
-				Name:         cfg.AlloyWriter.Name,
-				Host:         cfg.AlloyWriter.Host,
-				Port:         cfg.AlloyWriter.Port,
-				MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
-				MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
-				SSL:          cfg.AlloyWriter.SSL,
-			},
-			&types.DatabaseConfig{
-				Username:     cfg.AlloyReader.Username,
-				Password:     cfg.AlloyReader.Password,
-				Name:         cfg.AlloyReader.Name,
-				Host:         cfg.AlloyReader.Host,
-				Port:         cfg.AlloyReader.Port,
-				MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
-				MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
-				SSL:          cfg.AlloyReader.SSL,
 			}, "pgx", "postgres",
 		)
 	}()
@@ -244,12 +215,6 @@ func (d *DataAccessService) Close() {
 	}
 	if d.writerDb != nil {
 		d.writerDb.Close()
-	}
-	if d.alloyReader != nil {
-		d.alloyReader.Close()
-	}
-	if d.alloyWriter != nil {
-		d.alloyWriter.Close()
 	}
 	if d.clickhouseReader != nil {
 		d.clickhouseReader.Close()

@@ -550,7 +550,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}{}
 
 	// Get the validator dashboards including the public ones
-	err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+	err := d.readerDb.SelectContext(ctx, &dbReturn, `
 		SELECT
 			uvd.id,
 			uvd.name,
@@ -589,7 +589,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}
 
 	// Get the account dashboards
-	err = d.alloyReader.SelectContext(ctx, &result.AccountDashboards, `
+	err = d.readerDb.SelectContext(ctx, &result.AccountDashboards, `
 		SELECT
 			id,
 			name
@@ -605,7 +605,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 
 func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.GetContext(ctx, &count, `
+	err := d.readerDb.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
 		WHERE user_id = $1
 	`, userId)

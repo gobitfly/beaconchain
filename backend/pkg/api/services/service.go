@@ -12,19 +12,15 @@ import (
 type Services struct {
 	readerDb                *sqlx.DB
 	writerDb                *sqlx.DB
-	alloyReader             *sqlx.DB
-	alloyWriter             *sqlx.DB
 	clickhouseReader        *sqlx.DB
 	bigtable                *db.Bigtable
 	persistentRedisDbClient *redis.Client
 }
 
-func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader *sqlx.DB, bigtable *db.Bigtable, persistentRedisDbClient *redis.Client) *Services {
+func NewServices(readerDb, writerDb, clickhouseReader *sqlx.DB, bigtable *db.Bigtable, persistentRedisDbClient *redis.Client) *Services {
 	return &Services{
 		readerDb:                readerDb,
 		writerDb:                writerDb,
-		alloyReader:             alloyReader,
-		alloyWriter:             alloyWriter,
 		clickhouseReader:        clickhouseReader,
 		bigtable:                bigtable,
 		persistentRedisDbClient: persistentRedisDbClient,
