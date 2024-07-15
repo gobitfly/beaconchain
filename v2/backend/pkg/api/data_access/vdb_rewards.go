@@ -122,9 +122,9 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				if indexSearch != -1 {
 					// Find whether the index is in the dashboard
 					// If it is then show all the data
-					err = d.alloyReader.Get(&found, `
+					err = d.alloyReader.GetContext(ctx, &found, `
 						SELECT EXISTS(
-							SELECT 1 
+							SELECT 1
 							FROM users_val_dashboards_validators
 							WHERE dashboard_id = $1 AND validator_index = $2)
 						`, dashboardId.Id, indexSearch)
@@ -158,7 +158,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				}
 
 				var groupIdSearch []uint64
-				err = d.alloyReader.Select(&groupIdSearch, groupIdQuery, groupIdArgs...)
+				err = d.alloyReader.SelectContext(ctx, &groupIdSearch, groupIdQuery, groupIdArgs...)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -271,7 +271,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rewards data: %v", err)
 		}
@@ -300,7 +300,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&elQueryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving el rewards data for rewards: %v", err)
 		}
@@ -570,7 +570,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving group rewards data: %v", err)
 		}
@@ -593,7 +593,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Get(&elRewards, query, args...)
+		err = d.alloyReader.GetContext(ctx, &elRewards, query, args...)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("error retrieving el rewards data for group rewards: %v", err)
 		}
@@ -716,7 +716,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rewards chart data: %v", err)
 		}
@@ -745,7 +745,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.Select(&elQueryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving el rewards data for rewards chart: %v", err)
 		}
@@ -1050,7 +1050,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		return nil, nil, fmt.Errorf("error preparing query: %v", err)
 	}
 
-	err = d.alloyReader.Select(&queryResult, query, args...)
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving validator rewards data: %v", err)
 	}

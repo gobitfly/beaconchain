@@ -101,7 +101,7 @@ func (d DataAccessService) getDashboardValidators(ctx context.Context, dashboard
 		}
 
 		var validatorsArray []t.VDBValidator
-		err = d.alloyReader.Select(&validatorsArray, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &validatorsArray, query, args...)
 		return validatorsArray, err
 	}
 	return dashboardId.Validators, nil
