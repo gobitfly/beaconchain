@@ -38,6 +38,7 @@ export function useCustomFetch () {
     const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = runtimeConfig
     const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
+    const ssrSecret = pConfig?.ssrSecret
 
     if (process.server) {
       baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
@@ -47,6 +48,11 @@ export function useCustomFetch () {
     if (apiKey) {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
+
+    if (process.server && ssrSecret) {
+      options.headers.append('x-ssr-secret', ssrSecret)
+    }
+
     options.query = { ...options.query, ...query }
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
