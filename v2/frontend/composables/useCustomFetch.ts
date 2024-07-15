@@ -35,9 +35,10 @@ export function useCustomFetch () {
     const url = useRequestURL()
     const runtimeConfig = useRuntimeConfig()
     const showInDevelopment = Boolean(runtimeConfig.showInDevelopment)
-    const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, ssrSecret } = runtimeConfig
+    const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = runtimeConfig
     const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
+    const ssrSecret = pConfig?.ssrSecret
 
     if (process.server) {
       baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
