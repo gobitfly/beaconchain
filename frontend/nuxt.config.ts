@@ -22,6 +22,7 @@ try {
 
 export default defineNuxtConfig({
   ssr: process.env.ENABLE_SSR !== 'FALSE',
+  compatibilityDate: '2024-07-15',
   devtools: { enabled: true },
   devServer: {
     https: {
@@ -53,14 +54,14 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.scss', '~/assets/css/prime.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
   modules: [
     '@nuxtjs/i18n',
-    '@nuxtjs/eslint-module',
     '@nuxtjs/color-mode',
     ['@pinia/nuxt', {
       storesDirs: ['./stores/**']
     }],
     ['nuxt-primevue', {
       /* unstyled: true */
-    }]
+    }],
+    '@nuxt/eslint',
   ],
   typescript: {
     typeCheck: true
