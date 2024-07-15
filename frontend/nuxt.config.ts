@@ -17,7 +17,7 @@ try {
     gitVersion = info.hash
   }
 } catch (err) {
-  warn('The GitHub tag and hash of the explorer cannot be read with git-describe.')
+  warn('The GitHub tag and hash of the explorer cannot be read with git-describe. ')
 }
 
 export default defineNuxtConfig({
