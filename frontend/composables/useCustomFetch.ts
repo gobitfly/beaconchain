@@ -38,7 +38,7 @@ export function useCustomFetch () {
     const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = runtimeConfig
     const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
-    const ssrSecret = process.env.NUXT_PRIVATE_SSR_SECRET
+    const ssrSecret = runtimeConfig.private.ssrSecret
 
     if (process.server) {
       baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
