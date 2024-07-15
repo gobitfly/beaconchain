@@ -15,6 +15,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
@@ -257,26 +258,26 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			return fmt.Errorf("error retrieving validators data: %v", err)
 		}
 		for _, state := range queryResult {
-			switch state.Name {
-			case "exiting_online":
+			switch constypes.ValidatorDbStatus(state.Name) {
+			case constypes.DbExitingOnline:
 				fallthrough
-			case "slashing_online":
+			case constypes.DbSlashingOnline:
 				fallthrough
-			case "active_online":
+			case constypes.DbActiveOnline:
 				data.Validators.Online += state.Count
-			case "exiting_offline":
+			case constypes.DbExitingOffline:
 				fallthrough
-			case "slashing_offline":
+			case constypes.DbSlashingOffline:
 				fallthrough
-			case "active_offline":
+			case constypes.DbActiveOffline:
 				data.Validators.Offline += state.Count
-			case "deposited":
+			case constypes.DbDeposited:
 				fallthrough
-			case "pending":
+			case constypes.DbPending:
 				data.Validators.Pending += state.Count
-			case "slashed":
+			case constypes.DbSlashed:
 				data.Validators.Slashed += state.Count
-			case "exited":
+			case constypes.DbExited:
 				data.Validators.Exited += state.Count
 			}
 		}

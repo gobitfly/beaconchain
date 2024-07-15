@@ -144,47 +144,23 @@ func (d DataAccessService) getValidatorStatuses(validators []uint64) (map[uint64
 		return nil, err
 	}
 
-	// Get the validator duties to check the last fulfilled attestation
-	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseValDutiesLock()
-	if err != nil {
-		return nil, err
-	}
-
-	// Set the threshold for "online" => "offline" to 2 epochs without attestation
-	attestationThresholdSlot := uint64(0)
-	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	if dutiesInfo.LatestSlot >= twoEpochs {
-		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
-	}
-
 	// Fill the data
 	for _, validator := range validators {
 		metadata := validatorMapping.ValidatorMetadata[validator]
 
-		switch constypes.ValidatorStatus(metadata.Status) {
-		case constypes.PendingInitialized:
+		switch constypes.ValidatorDbStatus(metadata.Status) {
+		case constypes.DbDeposited:
 			validatorStatuses[validator] = enums.ValidatorStatuses.Deposited
-		case constypes.PendingQueued:
+		case constypes.DbPending:
 			validatorStatuses[validator] = enums.ValidatorStatuses.Pending
-		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
-			var lastAttestionSlot uint32
-			for slot, attested := range dutiesInfo.EpochAttestationDuties[validator] {
-				if attested && slot > lastAttestionSlot {
-					lastAttestionSlot = slot
-				}
-			}
-			if lastAttestionSlot < uint32(attestationThresholdSlot) {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Offline
-			} else {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Online
-			}
-		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
-			if metadata.Slashed {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
-			} else {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Exited
-			}
+		case constypes.DbActiveOnline, constypes.DbExitingOnline, constypes.DbSlashingOnline:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Online
+		case constypes.DbActiveOffline, constypes.DbExitingOffline, constypes.DbSlashingOffline:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Offline
+		case constypes.DbSlashed:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
+		case constypes.DbExited:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Exited
 		}
 	}
 

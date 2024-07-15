@@ -16,12 +16,10 @@ defineProps<Props>()
 <template>
   <div class="wrapper">
     <span v-if="!hideLabel" class="status">
-      <!--TODO: remove .replaceAll once backend data is fixed-->
-      {{ $t(`validator_state.${status.replaceAll('\'', '')}`) }}
+      {{ $t(`validator_state.${status}`) }}
       <span v-if="position"> #<BcFormatNumber :value="position" /></span>
     </span>
-    <!--TODO: remove .replaceAll once backend data is fixed-->
-    <FontAwesomeIcon :icon="faPowerOff" :class="status.replaceAll('\'', '')" />
+    <FontAwesomeIcon :icon="faPowerOff" :class="status" />
   </div>
 </template>
 <style lang="scss" scoped>
@@ -38,6 +36,7 @@ defineProps<Props>()
   .online{
     color: var(--positive-color);
   }
+  .deposited,
   .pending {
     color: var(--orange-color);
   }
