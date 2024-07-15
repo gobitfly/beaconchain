@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {
+import type {
   SearchbarShape,
-  type SearchbarColors,
-  type SearchbarDropdownLayout
-} from '~/types/searchbar'
+  SearchbarColors,
+  SearchbarDropdownLayout
+} from '~/types/searchbar';
 
 defineProps<{
   barShape: SearchbarShape,

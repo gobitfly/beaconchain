@@ -6,10 +6,10 @@
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
 import {
-  MinimumTimeBetweenAPIcalls,
   LayoutThreshold,
-  Category,
-  ResultType,
+  MinimumTimeBetweenAPIcalls,
+  type Category,
+  type ResultType,
   type HowToFillresultSuggestionOutput,
   type ResultSuggestionOutput,
   TypeInfo,
@@ -23,10 +23,10 @@ import {
   type ResultSuggestion,
   type ResultSuggestionInternal,
   type OrganizedResults,
-  SearchbarShape,
+  type SearchbarShape,
   type SearchbarColors,
   type SearchbarDropdownLayout,
-  SearchbarPurpose,
+  type SearchbarPurpose,
   SearchbarPurposeInfo,
   type Matching,
   type PickingCallBackFunction,
@@ -68,7 +68,7 @@ enum States {
 
 interface GlobalState {
   state: States,
-  functionToCallAfterResultsGetOrganized: Function | null
+  functionToCallAfterResultsGetOrganized: (() => void) | null
   showDropdown: boolean
 }
 

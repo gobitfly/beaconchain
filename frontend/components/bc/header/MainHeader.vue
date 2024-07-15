@@ -40,6 +40,7 @@ const rate = computed(() => {
   if (fiat && rates.value?.[fiat]) {
     return rates.value[fiat]
   }
+  return undefined
 })
 
 const currentEpoch = computed(() => latestState.value?.current_slot !== undefined ? slotToEpoch(latestState.value.current_slot) : undefined)
