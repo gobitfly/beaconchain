@@ -1,5 +1,6 @@
-import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
-import { ref as yupRef, string as yupString, boolean as yupBool, StringSchema, BooleanSchema } from 'yup'
+import type { ComposerTranslation } from 'vue-i18n'
+import type { StringSchema, BooleanSchema } from 'yup';
+import { ref as yupRef, string as yupString, boolean as yupBool } from 'yup'
 
 export function passwordValidation (t: ComposerTranslation) : StringSchema {
   return yupString().required(t('validation.password.empty')).min(5, t('validation.password.min', { amount: 5 })).max(64, t('validation.password.max', { amount: 64 }))
