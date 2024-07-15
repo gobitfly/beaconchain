@@ -104,10 +104,10 @@ function mapDutyLinks (dutyObjects?: number[]) {
 
 <template>
   <div class="validator-list">
-    <div class="copy_button" @click="copyValidatorsToClipboard">
-      <FontAwesomeIcon :icon="faCopy" />
-    </div>
     <div class="list">
+      <div class="copy_button" @click="copyValidatorsToClipboard">
+        <FontAwesomeIcon :icon="faCopy" />
+      </div>
       <template v-for="v in currentPage" :key="v.index">
         <BcLink :to="`/validator/${v.index}`" target="_blank" class="link">
           {{ v.index }}
@@ -129,6 +129,7 @@ function mapDutyLinks (dutyObjects?: number[]) {
     </div>
     <div v-if="paging" class="page-row">
       <BcTablePager
+        class="pager"
         :cursor="cursor"
         :page-size="VALIDATORS_PER_PAGE"
         :paging="paging"
@@ -143,7 +144,6 @@ function mapDutyLinks (dutyObjects?: number[]) {
 @use '~/assets/css/main.scss';
 
 .validator-list {
-  position: relative;
   flex-grow: 1;
   background-color: var(--subcontainer-background);
   padding: var(--padding) var(--padding) 7px var(--padding);
@@ -153,6 +153,11 @@ function mapDutyLinks (dutyObjects?: number[]) {
 
   .list {
     min-height: 30px;
+    position: relative;
+  }
+
+  .pager {
+    margin: 0;
   }
 
   .round-brackets>span:last-child:not(.label),
@@ -189,8 +194,8 @@ function mapDutyLinks (dutyObjects?: number[]) {
     display: flex;
     justify-content: center;
     align-items: center;
-    bottom: var(--padding);
-    right: var(--padding);
+    bottom: var(--padding-small);
+    right: var(--padding-small);
 
     cursor: pointer;
 
