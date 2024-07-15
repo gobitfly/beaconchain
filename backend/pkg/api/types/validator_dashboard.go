@@ -293,7 +293,7 @@ type VDBRocketPoolTableRow struct {
 	EffectiveRpl  decimal.Decimal `json:"effective_rpl"`
 	RplApr        float64         `json:"rpl_apr"`
 	SmoothingPool struct {
-		OptIn     bool            `json:"opt_in"`
+		IsOptIn   bool            `json:"is_opt_in"`
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
 	} `json:"smoothing_pool"`
@@ -316,14 +316,14 @@ type VDBNodeRocketPoolData struct {
 type InternalGetValidatorDashboardNodeRocketPoolResponse ApiDataResponse[VDBNodeRocketPoolData]
 
 type VDBRocketPoolMinipoolsTableRow struct {
-	Node            Address         `json:"node"`
-	ValidatorIndex  uint64          `json:"validator_index"`
-	MinipoolStatus  string          `json:"minipool_status" tstype:"'initialized' | 'prelaunch' | 'staking' | 'withdrawable' | 'dissolved'" faker:"oneof: initialized, prelaunch, staking, withdrawable, dissolved"`
-	ValidatorStatus string          `json:"validator_status" tstype:"'active' | 'withdrawn' | 'withdrawal_requested' | 'withdrawal_processing' | 'withdrawal_processed' | 'withdrawal_failed'" faker:"oneof: active, withdrawn, withdrawal_requested, withdrawal_processing, withdrawal_processed, withdrawal_failed"`
-	GroupId         uint64          `json:"group_id"`
-	Deposit         decimal.Decimal `json:"deposit"`
-	Commission      float64         `json:"commission"`
-	Created         int64           `json:"created"`
+	Node             Address         `json:"node"`
+	ValidatorIndex   uint64          `json:"validator_index"`
+	MinipoolStatus   string          `json:"minipool_status" tstype:"'initialized' | 'prelaunch' | 'staking' | 'withdrawable' | 'dissolved'" faker:"oneof: initialized, prelaunch, staking, withdrawable, dissolved"`
+	ValidatorStatus  string          `json:"validator_status" tstype:"'slashed' | 'exited' | 'deposited' | 'pending' | 'slashing_offline' | 'slashing_online' | 'exiting_offline' | 'exiting_online' | 'active_offline' | 'active_online'" faker:"oneof: slashed, exited, deposited, pending, slashing_offline, slashing_online, exiting_offline, exiting_online, active_offline, active_online"`
+	GroupId          uint64          `json:"group_id"`
+	Deposit          decimal.Decimal `json:"deposit"`
+	Commission       float64         `json:"commission"`
+	CreatedTimestamp int64           `json:"created_timestamp"`
 }
 type InternalGetValidatorDashboardRocketPoolMinipoolsResponse ApiPagingResponse[VDBRocketPoolMinipoolsTableRow]
 

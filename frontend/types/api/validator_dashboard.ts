@@ -262,7 +262,7 @@ export interface VDBRocketPoolTableRow {
   effective_rpl: string /* decimal.Decimal */;
   rpl_apr: number /* float64 */;
   smoothing_pool: {
-    opt_in: boolean;
+    is_opt_in: boolean;
     claimed: string /* decimal.Decimal */;
     unclaimed: string /* decimal.Decimal */;
   };
@@ -284,11 +284,11 @@ export interface VDBRocketPoolMinipoolsTableRow {
   node: Address;
   validator_index: number /* uint64 */;
   minipool_status: 'initialized' | 'prelaunch' | 'staking' | 'withdrawable' | 'dissolved';
-  validator_status: 'active' | 'withdrawn' | 'withdrawal_requested' | 'withdrawal_processing' | 'withdrawal_processed' | 'withdrawal_failed';
+  validator_status: 'slashed' | 'exited' | 'deposited' | 'pending' | 'slashing_offline' | 'slashing_online' | 'exiting_offline' | 'exiting_online' | 'active_offline' | 'active_online';
   group_id: number /* uint64 */;
   deposit: string /* decimal.Decimal */;
   commission: number /* float64 */;
-  created: number /* int64 */;
+  created_timestamp: number /* int64 */;
 }
 export type InternalGetValidatorDashboardRocketPoolMinipoolsResponse = ApiPagingResponse<VDBRocketPoolMinipoolsTableRow>;
 /**
