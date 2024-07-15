@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
-import { SearchbarShape, type SearchbarColors, type SearchbarDropdownLayout, type NetworkFilter } from '~/types/searchbar'
+import type { SearchbarShape, SearchbarColors, SearchbarDropdownLayout, NetworkFilter } from '~/types/searchbar';
 import { ChainInfo, ChainIDs } from '~/types/network'
 
 const emit = defineEmits<{(e: 'change') : void}>()

@@ -2,9 +2,9 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faMagnifyingGlass, faPlus } from '@fortawesome/pro-solid-svg-icons'
 import {
-  SearchbarShape,
+  type SearchbarShape,
   type SearchbarColors,
-  SearchbarPurpose,
+  type SearchbarPurpose,
   SearchbarPurposeInfo
 } from '~/types/searchbar'
 

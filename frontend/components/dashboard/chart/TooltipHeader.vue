@@ -23,6 +23,7 @@ const startTs = computed(() => {
   if (props.startEpoch) {
     return epochToTs(props.startEpoch)
   }
+  return undefined
 })
 
 const endTs = computed(() => {

@@ -110,7 +110,7 @@ const showAllCSSclipped = ref<boolean>(false)
   <div style="position: relative;">
     <p>
       <b>{{ randomTexts.length }} MiddleEllipses to see the lower smoothness of the UI when you resize your window:<br>
-        (for performance, make sure to deactivate the debug mode in the source of the component!)</br>
+        (for performance, make sure to deactivate the debug mode in the source of the component!)<br>
         <br>
         <Button @click="showAllCSSclipped=false; showAllME=!showAllME">
           show/hide

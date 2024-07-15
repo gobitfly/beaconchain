@@ -1,4 +1,4 @@
-import { ChainIDs } from '../network'
+import type { ChainIDs } from '../network'
 
 export interface InternalEntry {
   type: 'binary' | 'amount' | 'percent' | 'networks'

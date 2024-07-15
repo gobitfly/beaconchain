@@ -18,6 +18,7 @@ export function useCustomFetch () {
   const { $bcLogger } = useNuxtApp()
   const uuid = inject<{value: string}>('app-uuid')
 
+  // eslint-disable-next-line @typescript-eslint/ban-types
   async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
     if (!map) {
