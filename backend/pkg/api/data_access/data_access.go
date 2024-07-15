@@ -40,8 +40,6 @@ type DataAccessService struct {
 
 	readerDb                *sqlx.DB
 	writerDb                *sqlx.DB
-	dbReader                *sqlx.DB
-	dbWriter                *sqlx.DB
 	clickhouseReader        *sqlx.DB
 	userReader              *sqlx.DB
 	userWriter              *sqlx.DB
