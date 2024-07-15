@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainIDs } from '~/types/network'
+import { ChainInfo, type ChainIDs } from '~/types/network'
 
 const props = defineProps<{
   readonlyNetworks?: ChainIDs[]

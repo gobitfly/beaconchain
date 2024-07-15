@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import {
-  Category,
+  type Category,
+  type SearchbarShape,
   CategoryInfo,
-  SearchbarShape,
   type SearchbarColors,
   type SearchbarDropdownLayout,
   type CategoryFilter
-} from '~/types/searchbar'
+} from '~/types/searchbar';
 
 const emit = defineEmits<{(e: 'change') : void}>()
 defineProps<{
