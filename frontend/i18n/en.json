@@ -318,7 +318,8 @@
       "mute": {
         "mutes_all": "Mutes all notifications",
         "unmute": "Unmute",
-        "muted_until": "Muted until {date}",
+        "muted_until_date": "Muted until {date}",
+        "muted_until_turned_on": "Muted until turned back on",
         "select_duration": "Select mute duration",
         "count_hours": "{count} hour|{count} hours",
         "until_turned_on": "Until I turn it back on"
