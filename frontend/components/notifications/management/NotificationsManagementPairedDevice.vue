@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-// TODO: Get linked app "Beaconchain Dashboard" from NotificationSettingsPairedDevice
 import { faTrash } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type NotificationSettingsPairedDevice } from '~/types/notifications/settings'
@@ -20,14 +19,14 @@ const accountAccessToggle = ref(false)
   <div class="row-container">
     <div class="device-row ">
       <div class="device">
-        {{ $t('notifications.general.paired_devices.device') }}: {{ props.device.name || 'Unknown' }}
+        {{ $t('notifications.general.paired_devices.device') }}: {{ props.device.name || $t('notifications.general.paired_devices.unknown') }}
       </div>
       <Button secondary class="p-button-icon-only">
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
     <div class="linked-app-row">
-      {{ $t('notifications.general.paired_devices.linked_app') }}: Beaconchain Dashboard
+      {{ $t('notifications.general.paired_devices.linked_app') }}: {{ props.device.linked_app || $t('notifications.general.paired_devices.unknown') }}
     </div>
     <div class="toggle-row">
       <BcToggle v-model="notificationsToggle" />

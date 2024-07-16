@@ -334,7 +334,8 @@
         "linked_app": "Linked App",
         "mobile_notifications": "Mobile notifications",
         "grant_account_access": "Grant account access (required)",
-        "paired_date": "Paired: {date}"
+        "paired_date": "Paired: {date}",
+        "unknown": "Unknown"
       }
     },
     "dashboards": {
