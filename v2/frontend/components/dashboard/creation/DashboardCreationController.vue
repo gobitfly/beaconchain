@@ -43,15 +43,17 @@ const validatorsDisabled = computed(() => {
 
 function show (forcedType : DashboardType|'' = '', forcedNetwork: ChainIDs = 0) {
   visible.value = true
-  forcedDashboardType.value = forcedType
   forcedNetworkIfValidatorDashboard = forcedNetwork
+  type.value = forcedDashboardType.value = forcedType
+  if (!type.value) {
+    if (!validatorsDisabled.value) {
+      type.value = 'validator'
+    } else if (!accountsDisabled.value) {
+      type.value = 'account'
+    }
+  }
   network.value = forcedNetwork
   state.value = 'type'
-  if (!validatorsDisabled.value) {
-    type.value = 'validator'
-  } else if (!accountsDisabled.value) {
-    type.value = 'account'
-  }
   name.value = isLoggedIn.value ? '' : 'cookie'
 }
 
