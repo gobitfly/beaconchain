@@ -68,7 +68,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnUnauthorized(w, errors.New("user is not an admin"))
+		returnForbidden(w, errors.New("user is not an admin"))
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		v.add("refresh_interval", "must be greater than 0")
 	}
 	if (req.BannerId == 0) == (req.HtmlContent == "") {
-		returnConflict(w, errors.New("provide either banner_id or html_content"))
+		returnBadRequest(w, errors.New("provide either banner_id or html_content"))
 		return
 	}
 	if v.hasErrors() {
@@ -114,7 +114,7 @@ func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *h
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnUnauthorized(w, errors.New("user is not an admin"))
+		returnForbidden(w, errors.New("user is not an admin"))
 		return
 	}
 
@@ -144,7 +144,7 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnUnauthorized(w, errors.New("user is not an admin"))
+		returnForbidden(w, errors.New("user is not an admin"))
 		return
 	}
 
@@ -190,7 +190,7 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnUnauthorized(w, errors.New("user is not an admin"))
+		returnForbidden(w, errors.New("user is not an admin"))
 		return
 	}
 

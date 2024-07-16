@@ -249,13 +249,9 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 	if keysString == "" {
 		return []string{}
 	}
-	keysSlice := strings.Split(keysString, ",")
 	var keys []string
-	for _, key := range keysSlice {
-		if !reName.MatchString(key) {
-			v.add("keys", fmt.Sprintf("given value '%s' is not a valid key", key))
-		}
-		keys = append(keys, key)
+	for _, key := range splitParameters(keysString, ',') {
+		keys = append(keys, v.checkRegex(reName, key, "keys"))
 	}
 	return keys
 }
@@ -377,14 +373,18 @@ func (v *validationError) checkExistingGroupId(param string) uint64 {
 	return v.checkUint(param, "group_id")
 }
 
-func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
-	// This splits the string by commas and removes empty strings
+//nolint:unparam
+func splitParameters(params string, delim rune) []string {
+	// This splits the string by delim and removes empty strings
 	f := func(c rune) bool {
-		return c == ','
+		return c == delim
 	}
-	groupIdsSlice := strings.FieldsFunc(groupIds, f)
+	return strings.FieldsFunc(params, f)
+}
+
+func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
 	var ids []T
-	for _, id := range groupIdsSlice {
+	for _, id := range splitParameters(groupIds, ',') {
 		ids = append(ids, convert(id, "group_ids"))
 	}
 	return ids
@@ -494,7 +494,7 @@ func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProt
 	if protocolModes == "" {
 		return modes
 	}
-	protocolsSlice := strings.Split(protocolModes, ",")
+	protocolsSlice := splitParameters(protocolModes, ',')
 	for _, protocolMode := range protocolsSlice {
 		switch protocolMode {
 		case "rocket_pool":
@@ -511,7 +511,7 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	validatorsSlice := strings.Split(validators, ",")
+	validatorsSlice := splitParameters(validators, ',')
 	var indexes []types.VDBValidator
 	var publicKeys []string
 	for _, validator := range validatorsSlice {
