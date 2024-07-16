@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-// TODO: Translations
 // TODO: Get linked app "Beaconchain Dashboard" from NotificationSettingsPairedDevice
 // TODO: Get paired time stamp from NotificationSettingsPairedDevice
 import { faTrash } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type NotificationSettingsPairedDevice } from '~/types/notifications/settings'
+
+const { t: $t } = useI18n()
 
 interface Props {
   device: NotificationSettingsPairedDevice
@@ -20,25 +21,25 @@ const accountAccessToggle = ref(false)
   <div class="row-container">
     <div class="device-row ">
       <div class="device">
-        Device: {{ props.device.name || 'Unknown' }}
+        {{ $t('notifications.general.paired_devices.device') }}: {{ props.device.name || 'Unknown' }}
       </div>
       <Button secondary class="p-button-icon-only">
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
     <div class="linked-app-row">
-      Linked App: Beaconchain Dashboard
+      {{ $t('notifications.general.paired_devices.linked_app') }}: Beaconchain Dashboard
     </div>
     <div class="toggle-row">
       <BcToggle v-model="notificationsToggle" />
-      Mobile Notifications
+      {{ $t('notifications.general.paired_devices.mobile_notifications') }}
     </div>
     <div class="toggle-row">
       <BcToggle v-model="accountAccessToggle" />
-      Grant account access (required)
+      {{ $t('notifications.general.paired_devices.grant_account_access') }}
     </div>
     <div class="paired-row">
-      Paired: 27 minutes ago
+      {{ $t('notifications.general.paired_devices.paired_date', {date: formatGoTimestamp(device.pairedTs)}) }}
     </div>
   </div>
 </template>

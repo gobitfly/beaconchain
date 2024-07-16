@@ -385,7 +385,8 @@ export function mockManageNotificationsGeneral (): NotificationsManagementDashbo
         {
           id: 'ABC-test',
           enable_notifications: true,
-          name: 'My device'
+          name: 'My device',
+          pairedTs: 1620000000
         }
       ]
     }
