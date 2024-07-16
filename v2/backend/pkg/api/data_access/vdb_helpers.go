@@ -79,6 +79,9 @@ type ValidatorDashboardRepository interface {
 
 	GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error)
 	GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error)
+
+	GetByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error)
+	MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID string) error
 }
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)

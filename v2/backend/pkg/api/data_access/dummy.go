@@ -500,3 +500,15 @@ func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, d
 	err := commonFakeData(&r)
 	return r, err
 }
+
+func (d *DummyService) GetByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID string) error {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return err
+}
