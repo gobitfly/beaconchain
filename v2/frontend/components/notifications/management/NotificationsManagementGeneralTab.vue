@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+
+// TODO: Mute logic: ts < now = unmuted; MAX_INT: muted until turned on
+
 import {
   faArrowUpRightFromSquare,
   faPaperPlane
@@ -18,20 +21,24 @@ const emailToggle = ref(false)
 const pushToggle = ref(false)
 const { value: testButtonsDisabled, bounce: bounceTestButton, instant: setTestButton } = useDebounceValue<boolean>(false, 5000)
 
-const muteDropdownSelection = ref<string | undefined>()
+const muteTimestamp = ref<number | undefined>()
 const muteDropdownList = [
   { value: 1 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 1 }) },
   { value: 2 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 2 }) },
   { value: 4 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 4 }) },
   { value: 8 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 8 }) },
-  { value: -1, label: $t('notifications.general.mute.until_turned_on') }]
+  { value: Number.MAX_SAFE_INTEGER, label: $t('notifications.general.mute.until_turned_on') }]
 
 const unmuteNotifications = () => {
-  alert('TODO: Unmute notifications')
+  muteTimestamp.value = 0
 }
 
 const setMuteNotifications = (value: number) => {
-  alert('TODO: Mute notifications for ' + value + ' seconds')
+  if (value === Number.MAX_SAFE_INTEGER) {
+    muteTimestamp.value = Number.MAX_SAFE_INTEGER
+    return
+  }
+  muteTimestamp.value = (Date.now() / 1000) + value
 }
 
 const sendTestNotification = async (type: 'email' | 'push') => {
@@ -54,15 +61,25 @@ watch(generalSettings, (g) => {
   if (g) {
     emailToggle.value = g.enable_email
     pushToggle.value = g.enable_push
+    muteTimestamp.value = g.do_not_disturb_timestamp > (Date.now() / 1000) ? g.do_not_disturb_timestamp : undefined
   }
 }, { immediate: true })
 
-watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
+watch([emailToggle, pushToggle, muteTimestamp], ([enableEmail, enablePush, muteTs]) => {
   if (!generalSettings.value) {
     return
   }
-  if (generalSettings.value?.enable_email !== enableEmail || generalSettings.value?.enable_push !== enablePush) {
-    updateGeneralSettings({ ...generalSettings.value, enable_email: enableEmail, enable_push: enablePush })
+  if (generalSettings.value?.enable_email !== enableEmail || generalSettings.value?.enable_push !== enablePush || generalSettings.value?.do_not_disturb_timestamp !== muteTs) {
+    updateGeneralSettings({ ...generalSettings.value, enable_email: enableEmail, enable_push: enablePush, do_not_disturb_timestamp: muteTs! })
+  }
+})
+
+const mutedUntilText = computed(() => {
+  if (muteTimestamp.value) {
+    if (muteTimestamp.value === Number.MAX_SAFE_INTEGER) {
+      return $t('notifications.general.mute.muted_until_turned_on')
+    }
+    return $t('notifications.general.mute.muted_until_date', { date: formatTsToAbsolute(muteTimestamp.value, $t('locales.date'), true) })
   }
 })
 
@@ -79,12 +96,11 @@ watch([emailToggle, pushToggle], ([enableEmail, enablePush]) => {
       <div v-if="generalSettings?.do_not_disturb_timestamp" class="unmute-container">
         <Button :label="$t('notifications.general.mute.unmute')" @click="unmuteNotifications()" />
         <div class="muted-until">
-          {{ $t('notifications.general.mute.muted_until', {date: formatTsToAbsolute(generalSettings.do_not_disturb_timestamp, $t('locales.date'), true)}) }}
+          {{ mutedUntilText }}
         </div>
       </div>
       <BcDropdown
         v-else
-        v-model="muteDropdownSelection"
         :options="muteDropdownList"
         option-value="value"
         option-label="label"
