@@ -489,7 +489,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 						r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
 					}
 					RedisCachedValidatorsMapping.Mapping[v.Index] = &r
-					if v.Status == "pending_queued" {
+					if v.Status == "pending" {
 						a := int(v.ActivationEligibilityEpoch)
 						activationMapping[a] = append(activationMapping[a], v.Index)
 					}
