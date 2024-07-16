@@ -46,7 +46,7 @@ export enum API_PATH {
   PRODUCT_SUMMARY = '/productSummary',
   STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
   STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
-  NOTIFICATION_SUBSCRIPTIONS = '/notifications/subscriptions'
+  SETTINGS_DASHBOARDS = '/settings-dashboards'
 }
 
 export type PathValues = Record<string, string | number>
@@ -295,8 +295,9 @@ export const mapping: Record<string, MappingData> = {
     method: 'POST',
     mock: false
   },
-  [API_PATH.NOTIFICATION_SUBSCRIPTIONS]: {
-    path: '/notifications/subscriptions',
+  [API_PATH.SETTINGS_DASHBOARDS]: {
+    path: '/settings/dashboards/{for}/{dashboard_key}',
+    getPath: values => `/settings/dashboards/${values?.for}/${values?.dashboardKey}`,
     method: 'POST',
     mock: true
   }
