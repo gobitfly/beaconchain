@@ -138,19 +138,28 @@ func (v *validationError) checkRegex(regex *regexp.Regexp, param, paramName stri
 	return param
 }
 
-func (v *validationError) checkName(name string, minLength int) string {
+func (v *validationError) checkLength(name, paramName string, minLength int) string {
 	if len(name) < minLength {
-		v.add("name", fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
-		return name
-	} else if len(name) > maxNameLength {
-		v.add("name", fmt.Sprintf(`given value '%s' is too long, maximum length is %d`, name, maxNameLength))
-		return name
+		v.add(paramName, fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
 	}
+	if len(name) > maxNameLength {
+		v.add(paramName, fmt.Sprintf(`given value '%s' is too long, maximum length is %d`, name, maxNameLength))
+	}
+	return name
+}
+
+func (v *validationError) checkName(name string, minLength int) string {
+	name = v.checkLength(name, "name", minLength)
 	return v.checkRegex(reName, name, "name")
 }
 
 func (v *validationError) checkNameNotEmpty(name string) string {
 	return v.checkName(name, 1)
+}
+
+func (v *validationError) checkKeyNotEmpty(key string) string {
+	key = v.checkLength(key, "key", 1)
+	return v.checkRegex(reName, key, "key")
 }
 
 func (v *validationError) checkEmail(email string) string {
@@ -234,6 +243,21 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 		v.add(paramName, fmt.Sprintf("given value %s is not a positive integer", param))
 	}
 	return num
+}
+
+func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
+	if keysString == "" {
+		return []string{}
+	}
+	keysSlice := strings.Split(keysString, ",")
+	var keys []string
+	for _, key := range keysSlice {
+		if !reName.MatchString(key) {
+			v.add("keys", fmt.Sprintf("given value '%s' is not a valid key", key))
+		}
+		keys = append(keys, key)
+	}
+	return keys
 }
 
 type validatorSet struct {
