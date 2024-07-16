@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
@@ -28,6 +29,11 @@ type UserRepository interface {
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
+
+	CreateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error
+	GetAdConfigurations(ctx context.Context, keys []string) ([]t.AdConfigurationData, error)
+	UpdateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error
+	RemoveAdConfiguration(ctx context.Context, key string) error
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -610,4 +616,24 @@ func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, 
 		WHERE user_id = $1
 	`, userId)
 	return count, err
+}
+
+func (d *DataAccessService) CreateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.CreateAdConfiguration(ctx, key, jquerySelector, insertMode, refreshInterval, forAllUsers, bannerId, htmlContent, enabled)
+}
+
+func (d *DataAccessService) GetAdConfigurations(ctx context.Context, keys []string) ([]t.AdConfigurationData, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetAdConfigurations(ctx, keys)
+}
+
+func (d *DataAccessService) UpdateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateAdConfiguration(ctx, key, jquerySelector, insertMode, refreshInterval, forAllUsers, bannerId, htmlContent, enabled)
+}
+
+func (d *DataAccessService) RemoveAdConfiguration(ctx context.Context, key string) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.RemoveAdConfiguration(ctx, key)
 }
