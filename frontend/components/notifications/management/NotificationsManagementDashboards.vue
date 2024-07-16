@@ -150,7 +150,7 @@ function getTypeIcon (type: DashboardType) {
 <template>
   <div>
     <Teleport to="#notifications-management-search-placholder">
-      <BcContentFilter :search-placeholder="$t('placeholder')" class="search" @filter-changed="setSearch" />
+      <BcContentFilter :search-placeholder="$t('notifications.dashboards.search_placeholder')" class="search" @filter-changed="setSearch" />
     </Teleport>
 
     <ClientOnly fallback-tag="span">
