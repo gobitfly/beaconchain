@@ -10,7 +10,7 @@ import (
 )
 
 // TODO move to internal.go
-// TODO make sure middleware sets the user id in the context
+// TODO make sure some middleware sets the user id in the context
 
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)

@@ -32,7 +32,7 @@ type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewDa
 type NotificationDashboardsTableRow struct {
 	IsAccountDashboard bool     `json:"is_account_dashboard"` // if false it's a validator dashboard
 	ChainId            uint64   `json:"chain_id"`
-	Timestamp          uint64   `json:"timestamp"`
+	Timestamp          int64    `json:"timestamp"`
 	DashboardId        uint64   `json:"dashboard_id"`
 	GroupName          string   `json:"group_name"`
 	NotificationId     uint64   `json:"notification_id"` // may be string? db schema is not defined afaik
@@ -48,7 +48,7 @@ type NotificationMachinesTableRow struct {
 	MachineName string  `json:"machine_name"`
 	Threshold   float64 `json:"threshold"`
 	EventType   string  `json:"event_type"`
-	Timestamp   uint64  `json:"timestamp"`
+	Timestamp   int64   `json:"timestamp"`
 }
 
 type InternalGetUserNotificationMachines ApiPagingResponse[NotificationMachinesTableRow]
@@ -58,7 +58,7 @@ type InternalGetUserNotificationMachines ApiPagingResponse[NotificationMachinesT
 type NotificationClientsTableRow struct {
 	ClientName string `json:"client_name"`
 	Version    string `json:"version"`
-	Timestamp  uint64 `json:"timestamp"`
+	Timestamp  int64  `json:"timestamp"`
 }
 
 type InternalGetUserNotificationClients ApiPagingResponse[NotificationClientsTableRow]
@@ -66,7 +66,7 @@ type InternalGetUserNotificationClients ApiPagingResponse[NotificationClientsTab
 // ------------------------------------------------------------
 // Rocket Pool Table
 type NotificationRocketPoolTableRow struct {
-	Timestamp   uint64  `json:"timestamp"`
+	Timestamp   int64   `json:"timestamp"`
 	EventType   string  `json:"event_type"`
 	AlertValue  float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
 	NodeAddress Hash    `json:"node_address"`
@@ -78,7 +78,7 @@ type InternalGetUserNotificationRocketPool ApiPagingResponse[NotificationRocketP
 // Networks Table
 type NotificationNetworksTableRow struct {
 	ChainId    uint64          `json:"chain_id"`
-	Timestamp  uint64          `json:"timestamp"`
+	Timestamp  int64           `json:"timestamp"`
 	EventType  string          `json:"event_type"`
 	AlertValue decimal.Decimal `json:"alert_value"` // wei string for gas alerts, otherwise percentage (0-1) for participation rate
 }
@@ -100,25 +100,26 @@ type InternalPutUserNotificationSettingsNetworksResponse ApiDataResponse[Notific
 
 type NotificationPairedDevice struct {
 	Id                     string `json:"id"`
-	PairedTimestamp        uint64 `json:"paired_timestamp"`
+	PairedTimestamp        int64  `json:"paired_timestamp"`
 	Name                   string `json:"name,omitempty"`
 	IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
 }
 type InternalPutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[NotificationPairedDevice]
 
 type NotificationSettingsGeneral struct {
-	IsEmailNotificationsEnabled bool `json:"is_email_notifications_enabled"`
-	IsPushNotificationsEnabled  bool `json:"is_push_notifications_enabled"`
+	DoNotDisturbTimestamp       int64 `json:"do_not_disturb_timestamp"` // notifications are disabled until this timestamp
+	IsEmailNotificationsEnabled bool  `json:"is_email_notifications_enabled"`
+	IsPushNotificationsEnabled  bool  `json:"is_push_notifications_enabled"`
 
 	IsMachineOfflineSubscribed   bool    `json:"is_machine_offline_subscribed"`
-	MachineStorageUsageThreshold float64 `json:"machine_storage_usage_threshold"` // 0 is disabled
-	MachineCpuUsageThreshold     float64 `json:"machine_cpu_usage_threshold"`     // 0 is disabled
-	MachineMemoryUsageThreshold  float64 `json:"machine_memory_usage_threshold"`  // 0 is disabled
+	MachineStorageUsageThreshold float64 `json:"machine_storage_usage_threshold"` // 0 means disabled
+	MachineCpuUsageThreshold     float64 `json:"machine_cpu_usage_threshold"`     // 0 means disabled
+	MachineMemoryUsageThreshold  float64 `json:"machine_memory_usage_threshold"`  // 0 means disabled
 
 	SubscribedClients                    []string `json:"subscribed_clients"`
 	IsRocketPoolNewRewardRoundSubscribed bool     `json:"is_rocket_pool_new_reward_round_subscribed"`
-	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold"` // 0 is disabled
-	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold"` // 0 is disabled
+	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold"` // 0 means disabled
+	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold"` // 0 means disabled
 }
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
@@ -154,7 +155,7 @@ type NotificationSettingsAccountDashboard struct {
 	IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 	IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
 	IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
-	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable
+	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
 	IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
 	IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
 }

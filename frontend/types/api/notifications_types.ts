@@ -38,7 +38,7 @@ export type InternalGetUserNotificationsResponse = ApiDataResponse<NotificationO
 export interface NotificationDashboardsTableRow {
   is_account_dashboard: boolean; // if false it's a validator dashboard
   chain_id: number /* uint64 */;
-  timestamp: number /* uint64 */;
+  timestamp: number /* int64 */;
   dashboard_id: number /* uint64 */;
   group_name: string;
   notification_id: number /* uint64 */; // may be string? db schema is not defined afaik
@@ -54,7 +54,7 @@ export interface NotificationMachinesTableRow {
   machine_name: string;
   threshold: number /* float64 */;
   event_type: string;
-  timestamp: number /* uint64 */;
+  timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationMachines = ApiPagingResponse<NotificationMachinesTableRow>;
 /**
@@ -64,7 +64,7 @@ export type InternalGetUserNotificationMachines = ApiPagingResponse<Notification
 export interface NotificationClientsTableRow {
   client_name: string;
   version: string;
-  timestamp: number /* uint64 */;
+  timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationClients = ApiPagingResponse<NotificationClientsTableRow>;
 /**
@@ -72,7 +72,7 @@ export type InternalGetUserNotificationClients = ApiPagingResponse<NotificationC
  * Rocket Pool Table
  */
 export interface NotificationRocketPoolTableRow {
-  timestamp: number /* uint64 */;
+  timestamp: number /* int64 */;
   event_type: string;
   alert_value?: number /* float64 */; // only for some notification types, e.g. max collateral
   node_address: Hash;
@@ -84,7 +84,7 @@ export type InternalGetUserNotificationRocketPool = ApiPagingResponse<Notificati
  */
 export interface NotificationNetworksTableRow {
   chain_id: number /* uint64 */;
-  timestamp: number /* uint64 */;
+  timestamp: number /* int64 */;
   event_type: string;
   alert_value: string /* decimal.Decimal */; // wei string for gas alerts, otherwise percentage (0-1) for participation rate
 }
@@ -105,22 +105,23 @@ export interface NotificationNetwork {
 export type InternalPutUserNotificationSettingsNetworksResponse = ApiDataResponse<NotificationNetwork>;
 export interface NotificationPairedDevice {
   id: string;
-  paired_timestamp: number /* uint64 */;
+  paired_timestamp: number /* int64 */;
   name?: string;
   is_notifications_enabled: boolean;
 }
 export type InternalPutUserNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationPairedDevice>;
 export interface NotificationSettingsGeneral {
+  do_not_disturb_timestamp: number /* int64 */; // notifications are disabled until this timestamp
   is_email_notifications_enabled: boolean;
   is_push_notifications_enabled: boolean;
   is_machine_offline_subscribed: boolean;
-  machine_storage_usage_threshold: number /* float64 */; // 0 is disabled
-  machine_cpu_usage_threshold: number /* float64 */; // 0 is disabled
-  machine_memory_usage_threshold: number /* float64 */; // 0 is disabled
+  machine_storage_usage_threshold: number /* float64 */; // 0 means disabled
+  machine_cpu_usage_threshold: number /* float64 */; // 0 means disabled
+  machine_memory_usage_threshold: number /* float64 */; // 0 means disabled
   subscribed_clients: string[];
   is_rocket_pool_new_reward_round_subscribed: boolean;
-  rocket_pool_max_collateral_threshold: number /* float64 */; // 0 is disabled
-  rocket_pool_min_collateral_threshold: number /* float64 */; // 0 is disabled
+  rocket_pool_max_collateral_threshold: number /* float64 */; // 0 means disabled
+  rocket_pool_min_collateral_threshold: number /* float64 */; // 0 means disabled
 }
 export type InternalPutUserNotificationSettingsGeneralResponse = ApiDataResponse<NotificationSettingsGeneral>;
 export interface NotificationSettings {
@@ -151,7 +152,7 @@ export interface NotificationSettingsAccountDashboard {
   is_incoming_transactions_subscribed: boolean;
   is_outgoing_transactions_subscribed: boolean;
   is_erc20_token_transfers_subscribed: boolean;
-  erc20_token_transfers_value_threshold: number /* float64 */; // 0 does not disable
+  erc20_token_transfers_value_threshold: number /* float64 */; // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
   is_erc721_token_transfers_subscribed: boolean;
   is_erc1155_token_transfers_subscribed: boolean;
 }
