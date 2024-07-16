@@ -3,7 +3,7 @@ export type DashboardKey = string
 
 export type DashboardType = 'validator' | 'account' | 'notifications'
 
-export enum COOKIE_DASHBOARD_ID{
+export enum COOKIE_DASHBOARD_ID {
   VALIDATOR = -2,
   ACCOUNT = -3,
 }
