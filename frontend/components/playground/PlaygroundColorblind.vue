@@ -124,16 +124,15 @@ class Eye {
   }
 
   // constants of our perception model, all obtained empirically
-  protected static readonly sensicol = [15, 20, 6] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
-  protected static readonly rPowers = [1, 1, 1] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
-  protected static readonly overwhite = [1, 1, 1] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
+  protected static readonly sensicol = [15, 20, 5] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
+  protected static readonly rPowers = [1.2, 1.5, 0.8] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
+  protected static readonly overwhite = [0.5, 1, 0.2] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
   protected static readonly phi = 1 // power on the purity to make it feel linear to the human eye
-  protected static readonly iotaD = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
-  protected static readonly iotaM = 0.2 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
+  protected static readonly iotaM = 0.15 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
+  protected static readonly iotaD = 0.15 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
   // the following constants will be filled by the constructor
   protected static readonly sensicolNorm = [0, 0, 0]
   protected static readonly rPowersInv = [0, 0, 0]
-  protected static readonly overwhiteNorm = [0, 0, 0]
   protected static readonly phiInv = 1 / Eye.phi
 
   /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
@@ -149,7 +148,6 @@ class Eye {
     if (!Eye.sensicolNorm[0]) {
       for (let k = R; k <= B; k++) {
         Eye.sensicolNorm[k] = Eye.sensicol[k] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])
-        Eye.overwhiteNorm[k] = Eye.overwhite[k] / (Eye.overwhite[R] + Eye.overwhite[G] + Eye.overwhite[B]) / 3 // the division by 3 ensures that rgb[l] in the formula of p is counted 3 times while rgb[m] and rgb[h] are counted once each
         Eye.rPowersInv[k] = 1 / Eye.rPowers[k]
       }
     }
@@ -195,7 +193,7 @@ class Eye {
           d = (2 * d - 1) ** Eye.rPowersInv[h2] / 2 + 1 / 2
         }
         this.r = (h1 + d) / 3
-        const w = (rgb[h1] - rgb[l]) * Eye.overwhiteNorm[h1] + (rgb[h2] - rgb[l]) * Eye.overwhiteNorm[h2]
+        const w = (rgb[h1] - rgb[l]) * Eye.overwhite[h1] + (rgb[h2] - rgb[l]) * Eye.overwhite[h2]
         this.p = w / (rgb[l] + w)
         this.p **= Eye.phiInv
       }
@@ -264,7 +262,7 @@ class Eye {
       to.chan[h1] = (this.space === CS.EyePercI) ? i ** gamma / Eye.sensicolNorm[h1] : this.j ** gamma
       to.chan[h2] = 0
     } else {
-      const S = (1 - p) * (d * Eye.overwhiteNorm[h2] + (1 - d) * Eye.overwhiteNorm[h1])
+      const S = (1 - p) * (d * Eye.overwhite[h2] + (1 - d) * Eye.overwhite[h1])
       const T = p * d
       const U = S + T
       ratio[l] = S / U
@@ -449,91 +447,125 @@ for (let r = 0; r <= 48; r++) {
 }
 
 const pures: Array<number[]> = []
+const puresDimmed: Array<number[]> = []
 colorI.p = 1
-colorI.i = Eye.lowestImax
 for (let r = 0; r <= 6; r++) {
   colorI.r = r / 6
+  colorI.i = Eye.lowestImax
   pures.push(colorI.export(CS.RGBgamma).chan)
+  colorI.i = 0.8 * Eye.lowestImax
+  puresDimmed.push(colorI.export(CS.RGBgamma).chan)
 }
+const primaryPermutInPures = [[2, 0, 4], [0, 2, 4], [0, 4, 2]]
+const secondaryPermutInPures = [[0, 1, 2], [2, 3, 4], [4, 5, 6]]
+colorI.p = 0
+colorI.i = Eye.lowestImax
+const grey = colorI.export(CS.RGBgamma).chan
+colorI.i = 0.8 * Eye.lowestImax
+const greyDimmed = colorI.export(CS.RGBgamma).chan
+const primariesInPures = [0, 2, 4]
 
-const iotaIadjuster: Array<RGB> = []
+const extremeGeysI: Array<RGB> = []
 colorI.p = 0
 for (let k = 0; k <= 16; k++) {
   colorI.i = colorI.iMax * k / 16
-  iotaIadjuster.push(colorI.export(CS.RGBgamma))
+  extremeGeysI.push(colorI.export(CS.RGBgamma))
 }
-
-const iotaJadjuster: Array<RGB> = []
+const extremeGeysJ: Array<RGB> = []
 colorJ.p = 0
 for (let k = 0; k <= 16; k++) {
   colorJ.j = k / 16
-  iotaJadjuster.push(colorJ.export(CS.RGBgamma))
+  extremeGeysJ.push(colorJ.export(CS.RGBgamma))
 }
 </script>
 
 <template>
-  <div style="background-color: rgb(128,128,128)">
-    <br>
-    <h1>Adjustement of sensicol, iotaM and iotaD</h1>
+  <div style="background-color: rgb(128,128,128); padding: 20px">
+    <h1>Adjustement of sensicol and iotaM</h1>
     <h2>sensicol</h2>
-    The primaries must all have the same perceived intensity: <br><br>
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[0][R] + ',' + pures[0][G] + ',' + pures[0][B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[2][R] + ',' + pures[2][G] + ',' + pures[2][B] + ')'" />
-    <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[4][R] + ',' + pures[4][G] + ',' + pures[4][B] + ')'" />
-    <br><br>
+    In the first column, the framed primary must feel dimmer than its neighbors. <br>
+    In the middle column, the framed primary must feel as bright as its neighbors. <br>
+    In the last column, the framed primary must feel brighter than its neighbors. <br><br>
+    <div v-for="(perm,k) of primaryPermutInPures" :key="k">
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[1]][R] + ',' + puresDimmed[perm[1]][G] + ',' + puresDimmed[perm[1]][B] + '); border: 1px solid black'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+      <span style="margin-left: 60px;">&nbsp;</span>
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+      <span style="margin-left: 60px;">&nbsp;</span>
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[0]][R] + ',' + puresDimmed[perm[0]][G] + ',' + puresDimmed[perm[0]][B] + ')'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[2]][R] + ',' + puresDimmed[perm[2]][G] + ',' + puresDimmed[perm[2]][B] + ')'" />
+      <span style="margin-left: 60px;">&nbsp;</span>sensicol[{{ k }}]
+      <br><br>
+    </div>
 
     <h2>iotaM</h2>
-    The secondaries colors must all have the same perceived intensity as their surrounding primaries: <br><br>
-    <span v-for="(pure,k) of pures" :key="k" style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pure[R] + ',' + pure[G] + ',' + pure[B] + ')'" />
-    <br><br>
-
-    <h2>both</h2>
-    Fine-tune sensicol and iotaM so that each big square seems to have the same intensity as the small square inside. The colors look different, this is normal.
-    <br><br>
-
-    <br><br>
+    In the first column, the framed secondary must feel dimmer than its neighbors. <br>
+    In the middle column, the framed secondary must feel as bright as its neighbors. <br>
+    In the last column, the framed secondary must feel brighter than its neighbors. <br><br>
+    <div v-for="(perm,k) of secondaryPermutInPures" :key="k">
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[1]][R] + ',' + puresDimmed[perm[1]][G] + ',' + puresDimmed[perm[1]][B] + '); border: 1px solid black'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+      <span style="margin-left: 60px;">&nbsp;</span>
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+      <span style="margin-left: 60px;">&nbsp;</span>
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[0]][R] + ',' + puresDimmed[perm[0]][G] + ',' + puresDimmed[perm[0]][B] + ')'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
+      <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[2]][R] + ',' + puresDimmed[perm[2]][G] + ',' + puresDimmed[perm[2]][B] + ')'" />
+      <br><br>
+    </div>
 
     <h2>control</h2>
-    All colors must have the same perceived intensity in this rainbow: <br><br>
+    All colors in this rainbow must have the same perceived brightness: <br><br>
     <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
 
-    <h2>iotaD</h2>
-    <div style="background-color: rgb(160,160,160)">
-      Adjust the perceived intensity of the grey, that should feel as bright as the primaries. You might need to go back to sensicol and iotaM to improve the result here.
-      <div v-for="(rRow,r) of colors" :key="r" style="text-align: center;">
-        <br>
-        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+    <div style="background-color: rgb(160,160,160); padding: 10px">
+      <h1>Adjustement of iotaD, overwhite and phi</h1>
+
+      Adjust iotaD so that: <br>
+      1. in the first column, the framed grey must feel dimmer than its neighbors; in the middle column, the framed grey must feel as bright as its neighbors; in the last column, the framed grey must feel brighter than its neighbors; <br><br>
+      <div v-for="(prim,k) of primariesInPures" :key="k">
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + greyDimmed[R] + ',' + greyDimmed[G] + ',' + greyDimmed[B] + '); border: 1px solid black'" />
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
+        <span style="margin-left: 60px;">&nbsp;</span>
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + grey[R] + ',' + grey[G] + ',' + grey[B] + '); border: 1px solid black'" />
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
+        <span style="margin-left: 60px;">&nbsp;</span>
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[prim][R] + ',' + puresDimmed[prim][G] + ',' + puresDimmed[prim][B] + ')'" />
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + grey[R] + ',' + grey[G] + ',' + grey[B] + '); border: 1px solid black'" />
+        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[prim][R] + ',' + puresDimmed[prim][G] + ',' + puresDimmed[prim][B] + ')'" />
+        <br><br>
       </div>
+      2. and all parts of the rows below seem to have the same brightness: <br><br>
+
+      Adjust overwhite values so that the three rows seem to transition from grey to pure at the same speed.<br>
+      Adjust phi to make the transition look linear. <br>
+      The right part helps with these tasks: try to make the middle square as different from its left square as from its right square. <br><br>
+      <div v-for="(rRow,r) of colors" :key="r" style="border: 0px;">
+        <div v-if="r%2==0">
+          <span v-for="(pRow,p) of rRow" :key="p">
+            <div style="display: inline-block; width: 10px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
+          </span>
+          <span style="margin-left: 60px;">&nbsp;</span>
+          <div v-if="r%2==0" style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+          <div v-if="r%2==0" style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+          <div v-if="r%2==0" style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
+        </div>
+      </div>
+      <br>
     </div>
 
-    <h1>Adjustement of overwhite and phi </h1>
-    overwhite adjusts the width of the the grey part in each row. <br>
-    phi adjusts the linearity of the transition from grey to pure. <br> <br>
-    <div v-for="(rRow,r) of colors" :key="r" style="border: 0px;">
-      <div v-if="r%2==0">
-        <span v-for="(pRow,p) of rRow" :key="p">
-          <div style="display: inline-block; width: 10px; height: 40px;" :style="'background-color: rgb(' + pRow[maxIntensityMinIndex].rgb.chan[R] + ',' + pRow[maxIntensityMinIndex].rgb.chan[G] + ',' + pRow[maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        </span>
-      </div>
-    </div>
-    <br>
-
-    <div style="background-color: rgb(160,160,160)">
-      Each middle square must feel as different from its left square as from its right square.
-      The better this criterion is approched, the more linear in `p` the perceived purity is.
-      <div v-for="(rRow,r) of colors" :key="r" style="text-align: center;">
-        <br>
-        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[0][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[0][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length/2][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-        <div v-if="r%2==0" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[R] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[G] + ',' + rRow[rRow.length-1][maxIntensityMinIndex].rgb.chan[B] + ')'" />
-      </div>
-    </div>
-    <br>
-
-    <h1>Adjustement of intercol</h1>
-    Adjust intercol to give a feeling of linearity to these 6 progressions. The right part helps with this task: try to make the middle square as different from its left square as from its right square.
+    <h1>Adjustement of rPowers</h1>
+    Adjust rPowers to give a feeling of linearity to these 6 progressions. The right part helps with this task: try to make the middle square as different from its left square as from its right square.
     <br><br>
     <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'" />
     <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[0].chan[R] + ',' + rainbowSameJ[0].chan[G] + ',' + rainbowSameJ[0].chan[B] + ')'" />
@@ -565,12 +597,23 @@ for (let k = 0; k <= 16; k++) {
     <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[165].chan[R] + ',' + rainbowSameJ[165].chan[G] + ',' + rainbowSameJ[165].chan[B] + ')'" />
     <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[180].chan[R] + ',' + rainbowSameJ[180].chan[G] + ',' + rainbowSameJ[180].chan[B] + ')'" />
     <br><br>
+    Control: in the rainbow, the widths of the primary and secondary smudges must all look equal.<br><br>
+    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 4px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'" />
+    <br><br>
 
-    <h1>Screen quality check: wavelenghts of the primaries</h1>
-    This test tells you whether the primaries of your screen are far enough from each other or if some of them activate two receptors on your retina instead of one. There is nothing that you can improve with the settings of your screen.
-    Watch this band with a (serious) spectroscope.
-    montrer une bande blanche.
-    Rouge doit etre entre x et x nm. Idem vert idem bleu.
+    <div style="background-color: black; height: 1000px; display: flex; flex-direction: column; padding: 5px">
+      <h1>Screen quality check: wavelenghts of the primaries</h1>
+      This test tells you whether the primaries of your screen are far enough from each other or if a primary activates too much two receptors of your retina. This cannot be improved with the settings of your screen.<br>
+      Watch this square with a spectrometer. <br>
+      The center of the blue band must be below 467 nm¹² and the bright part of the band should remain below 470 nm³.<br>
+      The center of the green band must be between 532 nm² and 549 nm¹ and the bright part of the band should stay above 510 nm³ and below 560 nm³.<br>
+      The center of the red band must above 612 nm¹ (ideally at least 630 nm²) and the bright part of the band should remain above 600 nm³.<br>
+      <span style="width: 40px; height: 40px; background-color: #FFFFFF; margin: auto;" />
+      1. according to the recommendation Rec.709 of the ITU-R.<br>
+      2. according to the recommendation BT.2020 of the ITU-R.<br>
+      3. according to the best commercial screen found on https://clarkvision.com/articles/color-spaces.
+    </div>
 
     <h1>Screen calibration: color balance</h1>
     The secondaries must stand between the black lines.
@@ -582,36 +625,36 @@ for (let k = 0; k <= 16; k++) {
       <br><br>
     </div>
 
-    <h1>Screen calibration: linearity of extremes greys</h1>
+    <h1>Screen calibration: perceived linearity of extremes greys</h1>
     The perceived linearity of your screen in extreme greys (near black and white) is good if each middle square feels as different from its left square as from its right square.
     <br><br>
     <div v-for="(i,k) of 15" :key="k" style="text-align: center; background-color: #7030f0">
       <span v-if="k == 0 || k==1 || k==2 || k==12 || k==13 || k==14">
         <br>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[0+k].chan[R] + ',' + iotaIadjuster[0+k].chan[G] + ',' + iotaIadjuster[0+k].chan[B] + ')'">
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysI[0+k].chan[R] + ',' + extremeGeysI[0+k].chan[G] + ',' + extremeGeysI[0+k].chan[B] + ')'">
           I
         </div>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[1+k].chan[R] + ',' + iotaIadjuster[1+k].chan[G] + ',' + iotaIadjuster[1+k].chan[B] + ')'">
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysI[1+k].chan[R] + ',' + extremeGeysI[1+k].chan[G] + ',' + extremeGeysI[1+k].chan[B] + ')'">
           I
         </div>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaIadjuster[2+k].chan[R] + ',' + iotaIadjuster[2+k].chan[G] + ',' + iotaIadjuster[2+k].chan[B] + ')'">
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysI[2+k].chan[R] + ',' + extremeGeysI[2+k].chan[G] + ',' + extremeGeysI[2+k].chan[B] + ')'">
           I
         </div>
         <br>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[0+k].chan[R] + ',' + iotaJadjuster[0+k].chan[G] + ',' + iotaJadjuster[0+k].chan[B] + ')'">
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysJ[0+k].chan[R] + ',' + extremeGeysJ[0+k].chan[G] + ',' + extremeGeysJ[0+k].chan[B] + ')'">
           J
         </div>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[1+k].chan[R] + ',' + iotaJadjuster[1+k].chan[G] + ',' + iotaJadjuster[1+k].chan[B] + ')'">
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysJ[1+k].chan[R] + ',' + extremeGeysJ[1+k].chan[G] + ',' + extremeGeysJ[1+k].chan[B] + ')'">
           J
         </div>
-        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + iotaJadjuster[2+k].chan[R] + ',' + iotaJadjuster[2+k].chan[G] + ',' + iotaJadjuster[2+k].chan[B] + ')'">
+        <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysJ[2+k].chan[R] + ',' + extremeGeysJ[2+k].chan[G] + ',' + extremeGeysJ[2+k].chan[B] + ')'">
           J
         </div>
         <br>
       </span>
     </div>
 
-    <h1>Screen calibration: gamma in medium intensities.</h1>
+    <h1>Screen calibration: gamma in medium brightness.</h1>
     Your screen gamma is 2.2 on the three channels if the following squares look plain (the center parts must not look brighter or dimmer).<br>
     For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
     <br><br>
@@ -656,7 +699,7 @@ for (let k = 0; k <= 16; k++) {
     </div>
 
     <br><br>
-    <h1>For each primary and each secondary, all purities and perceived intensities :</h1>
+    <h1>For each primary and each secondary, all purities and perceived brightness :</h1>
     <br>
     <div v-for="(rRow,r) of colors" :key="r">
       <div v-for="(pRow,p) of rRow" :key="p">
