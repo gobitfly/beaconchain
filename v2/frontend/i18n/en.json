@@ -327,7 +327,10 @@
       "push_notifications": "Push Notifications",
       "send_test_email": "Send Test E-Mail",
       "send_test_push": "Send Test Push Notification",
-      "download_app": ["Download the", "mobile app", "to activate"]
+      "download_app": ["Download the", "mobile app", "to activate"],
+      "paired_devices": {
+        "title": "Paired Devices"
+      }
     },
     "dashboards": {
       "title": "Dashboards",
