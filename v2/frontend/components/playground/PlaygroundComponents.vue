@@ -1,5 +1,8 @@
 <template>
   <TabView lazy>
+    <TabPanel header="Dialog">
+      <PlaygroundDialog />
+    </TabPanel>
     <TabPanel header="Accordeon">
       <PlaygroundAccordeon />
     </TabPanel>
@@ -20,9 +23,6 @@
     </TabPanel>
     <TabPanel header="Input">
       <PlaygroundInput />
-    </TabPanel>
-    <TabPanel header="Dialog">
-      <PlaygroundDialog />
     </TabPanel>
   </TabView>
 </template>

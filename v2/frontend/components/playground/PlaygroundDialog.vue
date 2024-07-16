@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { BcDialogConfirm } from '#components'
+import { BcDialogConfirm, DashboardCreationController } from '#components'
 
 const dialog = useDialog()
+const { currentNetwork } = useNetworkStore()
 
 function onClose (answer: boolean) {
   setTimeout(() => {
@@ -21,10 +22,22 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
     }
   })
 }
+
+const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
 </script>
 
 <template>
   <div class="container">
+    <Button @click="dashboardCreationControllerModal?.show()">
+      Create dashboard with free will!
+    </Button>
+    <Button @click="dashboardCreationControllerModal?.show('validator', currentNetwork)">
+      Create validator dashboard with currentNetwork.value forced
+    </Button>
+    <Button @click="dashboardCreationControllerModal?.show('account')">
+      Create account dashboard with account mode forced
+    </Button>
+
     <Button @click="openQuestion()">
       Open Question
     </Button>
@@ -34,6 +47,12 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
     <Button @click="openQuestion(undefined, 'cancel')">
       Open Question cancel?
     </Button>
+
+    <DashboardCreationController
+      ref="dashboardCreationControllerModal"
+      class="modal-controller"
+      :display-mode="'modal'"
+    />
   </div>
 </template>
 
