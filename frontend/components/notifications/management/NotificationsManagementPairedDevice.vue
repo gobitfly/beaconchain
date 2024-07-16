@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 // TODO: Get linked app "Beaconchain Dashboard" from NotificationSettingsPairedDevice
-// TODO: Get paired time stamp from NotificationSettingsPairedDevice
 import { faTrash } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type NotificationSettingsPairedDevice } from '~/types/notifications/settings'
