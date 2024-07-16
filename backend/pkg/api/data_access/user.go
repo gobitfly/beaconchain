@@ -611,3 +611,38 @@ func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, 
 	`, userId)
 	return count, err
 }
+
+// GetByRefreshToken basically used to confirm the claimed user id with the refresh token. Returns the userId if successful
+func (d *DataAccessService) GetByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+	if hashedRefreshToken == "" { // sanity
+		return 0, errors.New("empty refresh token")
+	}
+	var userID uint64
+	err := d.userWriter.Get(&userID,
+		`SELECT user_id FROM users_devices WHERE user_id = $1 AND 
+			refresh_token = $2 AND app_id = $3 AND id = $4 AND active = true`, claimUserID, hashedRefreshToken, claimAppID, claimDeviceID)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return userID, nil
+}
+
+func (d *DataAccessService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID string) error {
+	result, err := d.userWriter.Exec("UPDATE users_devices SET refresh_token = $2, device_identifier = $3 WHERE refresh_token = $1", oldHashedRefreshToken, newHashedRefreshToken, deviceID)
+	if err != nil {
+		return errors.Wrap(err, "Error updating refresh token")
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "Error getting rows affected")
+	}
+
+	if rowsAffected != 1 {
+		return errors.New(fmt.Sprintf("illegal number of rows affected, expected 1 got %d", rowsAffected))
+	}
+
+	return err
+}
