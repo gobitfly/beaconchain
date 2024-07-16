@@ -13,12 +13,21 @@
 .p-button {
   @include fonts.button_text;
 
-  color: var(--primary-contrast-color);
-  background: var(--button-color-active);
   height: var(--default-button-height);
   padding: 8px 24px;
   border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
+
+  &:not([secondary]) {
+    color: var(--primary-contrast-color);
+    background: var(--button-color-active);
+  }
+
+  &[secondary]{
+    color: var(--secondary-button-color);
+    background: var(--secondary-button-background-color);
+    border-color: var(--secondary-button-border-color);
+  }
 
   display: inline-flex;
   flex-grow: 0;
@@ -32,9 +41,12 @@
     background: var(--button-color-disabled);
     border-color: var(--button-color-disabled);
   }
-  &:not(:disabled):hover {
+  &:not(:disabled):not([secondary]):hover {
     background: var(--button-color-hover);
     border-color: var(--button-color-hover);
+  }
+  &:not(:disabled)[secondary]:hover {
+    background: var(--secondary-button-hover-color);
   }
   &:not(:disabled):active {
     background: var(--button-color-pressed);
