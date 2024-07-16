@@ -547,6 +547,18 @@ func (v *validationError) checkNetwork(network intOrString) uint64 {
 	return chainId
 }
 
+func (v *validationError) checkNetworkParameter(param string) uint64 {
+	if reInteger.MatchString(param) {
+		chainId, err := strconv.ParseUint(param, 10, 64)
+		if err != nil {
+			v.add("network", fmt.Sprintf("given value '%s' is not a valid network", param))
+			return 0
+		}
+		return v.checkNetwork(intOrString{intValue: &chainId})
+	}
+	return v.checkNetwork(intOrString{strValue: &param})
+}
+
 // isValidNetwork checks if the given network is a valid network.
 // It returns the chain id of the network and true if it is valid, otherwise 0 and false.
 func isValidNetwork(network intOrString) (uint64, bool) {

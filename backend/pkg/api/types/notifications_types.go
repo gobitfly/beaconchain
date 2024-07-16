@@ -4,7 +4,7 @@ import decimal "github.com/jackc/pgx-shopspring-decimal"
 
 // ------------------------------------------------------------
 // Overview
-type NotificationsOverviewData struct {
+type NotificationOverviewData struct {
 	IsEmailNotificationsEnabled bool `json:"is_email_notifications_enabled"`
 	IsPushNotificationsEnabled  bool `json:"is_push_notifications_enabled"`
 
@@ -25,11 +25,11 @@ type NotificationsOverviewData struct {
 	NetworksSubscriptionCount   uint64 `json:"networks_subscription_count"`
 }
 
-type InternalGetNotificationsResponse ApiDataResponse[NotificationsOverviewData]
+type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewData]
 
 // ------------------------------------------------------------
 // Dashboards Table
-type NotificationsDashboardsTableRow struct {
+type NotificationDashboardsTableRow struct {
 	IsAccountDashboard bool     `json:"is_account_dashboard"` // if false it's a validator dashboard
 	ChainId            uint64   `json:"chain_id"`
 	Timestamp          uint64   `json:"timestamp"`
@@ -40,28 +40,28 @@ type NotificationsDashboardsTableRow struct {
 	EventTypes         []string `json:"event_types"`
 }
 
-type InternalGetNotificationDashboards ApiPagingResponse[NotificationsDashboardsTableRow]
+type InternalGetUserNotificationDashboards ApiPagingResponse[NotificationDashboardsTableRow]
 
 // ------------------------------------------------------------
 // Machines Table
-type NotificationsMachinesTableRow struct {
+type NotificationMachinesTableRow struct {
 	MachineName string  `json:"machine_name"`
 	Threshold   float64 `json:"threshold"`
 	EventType   string  `json:"event_type"`
 	Timestamp   uint64  `json:"timestamp"`
 }
 
-type InternalGetNotificationMachines ApiPagingResponse[NotificationsMachinesTableRow]
+type InternalGetUserNotificationMachines ApiPagingResponse[NotificationMachinesTableRow]
 
 // ------------------------------------------------------------
 // Clients Table
-type NotificationsClientsTableRow struct {
+type NotificationClientsTableRow struct {
 	ClientName string `json:"client_name"`
 	Version    string `json:"version"`
 	Timestamp  uint64 `json:"timestamp"`
 }
 
-type InternalGetNotificationClients ApiPagingResponse[NotificationsClientsTableRow]
+type InternalGetUserNotificationClients ApiPagingResponse[NotificationClientsTableRow]
 
 // ------------------------------------------------------------
 // Rocket Pool Table
@@ -72,7 +72,7 @@ type NotificationRocketPoolTableRow struct {
 	NodeAddress Hash    `json:"node_address"`
 }
 
-type InternalGetNotificationRocketPool ApiPagingResponse[NotificationRocketPoolTableRow]
+type InternalGetUserNotificationRocketPool ApiPagingResponse[NotificationRocketPoolTableRow]
 
 // ------------------------------------------------------------
 // Networks Table
@@ -83,7 +83,7 @@ type NotificationNetworksTableRow struct {
 	AlertValue decimal.Decimal `json:"alert_value"` // wei string for gas alerts, otherwise percentage (0-1) for participation rate
 }
 
-type InternalGetNotificationNetworks ApiPagingResponse[NotificationNetworksTableRow]
+type InternalGetUserNotificationNetworks ApiPagingResponse[NotificationNetworksTableRow]
 
 // ------------------------------------------------------------
 // Notification Settings
@@ -92,19 +92,19 @@ type NotificationSettingsNetwork struct {
 	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold"`          // 0 is disabled
 	ParticipationRateThreshold float64         `json:"participation_rate_threshold"` // 0 is disabled
 }
-type NotificationsNetwork struct {
+type NotificationNetwork struct {
 	ChainId  uint64                      `json:"chain_id"`
 	Settings NotificationSettingsNetwork `json:"settings"`
 }
-type InternalPutNotificationSettingsNetworksResponse ApiDataResponse[NotificationsNetwork]
+type InternalPutUserNotificationSettingsNetworksResponse ApiDataResponse[NotificationNetwork]
 
-type NotificationsPairedDevice struct {
+type NotificationPairedDevice struct {
 	Id                     string `json:"id"`
 	PairedTimestamp        uint64 `json:"paired_timestamp"`
 	Name                   string `json:"name,omitempty"`
 	IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
 }
-type InternalPutNotificationSettingsPairedDevicesResponse ApiDataResponse[NotificationsNetwork]
+type InternalPutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[NotificationPairedDevice]
 
 type NotificationSettingsGeneral struct {
 	IsEmailNotificationsEnabled bool `json:"is_email_notifications_enabled"`
@@ -120,12 +120,13 @@ type NotificationSettingsGeneral struct {
 	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold"` // 0 is disabled
 	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold"` // 0 is disabled
 }
+type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
 	GeneralSettings NotificationSettingsGeneral `json:"general_settings"`
-	Networks        []NotificationsNetwork      `json:"networks"`
-	PairedDevices   []NotificationsPairedDevice `json:"paired_devices"`
+	Networks        []NotificationNetwork       `json:"networks"`
+	PairedDevices   []NotificationPairedDevice  `json:"paired_devices"`
 }
-type InternalGetNotificationSettingsResponse ApiDataResponse[NotificationSettings]
+type InternalGetUserNotificationSettingsResponse ApiDataResponse[NotificationSettings]
 
 type NotificationSettingsValidatorDashboard struct {
 	WebhookUrl              string `json:"webhook_url"`
@@ -142,7 +143,7 @@ type NotificationSettingsValidatorDashboard struct {
 	IsSlashedSubscribed               bool    `json:"is_slashed_subscribed"`
 }
 
-type InternalPutNotificationSettingsValidatorDashboardResponse ApiDataResponse[NotificationSettingsValidatorDashboard]
+type InternalPutUserNotificationSettingsValidatorDashboardResponse ApiDataResponse[NotificationSettingsValidatorDashboard]
 
 type NotificationSettingsAccountDashboard struct {
 	WebhookUrl                      string   `json:"webhook_url"`
@@ -157,7 +158,7 @@ type NotificationSettingsAccountDashboard struct {
 	IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
 	IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
 }
-type InternalPutNotificationSettingsAccountDashboardResponse ApiDataResponse[NotificationSettingsAccountDashboard]
+type InternalPutUserNotificationSettingsAccountDashboardResponse ApiDataResponse[NotificationSettingsAccountDashboard]
 
 type NotificationSettingsDashboardsTableRow struct {
 	IsAccountDashboard bool   `json:"is_account_dashboard"` // if false it's a validator dashboard
@@ -168,4 +169,4 @@ type NotificationSettingsDashboardsTableRow struct {
 	ChainIds []uint64    `json:"chain_ids"`
 }
 
-type InternalGetNotificationSettingsDashboardsResponse ApiPagingResponse[NotificationSettingsDashboardsTableRow]
+type InternalGetUserNotificationSettingsDashboardsResponse ApiPagingResponse[NotificationSettingsDashboardsTableRow]
