@@ -384,14 +384,16 @@ export function mockManageNotificationsGeneral (): NotificationsManagementDashbo
       paired_devices: [
         {
           id: 'ABC-test',
-          enable_notifications: true,
           name: 'My device',
+          linked_app: 'Beaconchain Dashboard',
+          enable_notifications: true,
           pairedTs: 1620000000
         },
         {
           id: 'DEF-test',
-          enable_notifications: false,
           name: 'My other device',
+          linked_app: 'Something else',
+          enable_notifications: false,
           pairedTs: 1700000000
         }
       ]

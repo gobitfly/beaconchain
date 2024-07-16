@@ -4,6 +4,7 @@ import type { ApiDataResponse } from '~/types/api/common'
 export interface NotificationSettingsPairedDevice {
   id: string;
   name?: string;
+  linked_app: string;
   enable_notifications: boolean;
   pairedTs: number;
 }
