@@ -387,6 +387,12 @@ export function mockManageNotificationsGeneral (): NotificationsManagementDashbo
           enable_notifications: true,
           name: 'My device',
           pairedTs: 1620000000
+        },
+        {
+          id: 'DEF-test',
+          enable_notifications: false,
+          name: 'My other device',
+          pairedTs: 1700000000
         }
       ]
     }

@@ -15,7 +15,9 @@ const { generalSettings } = useNotificationsManagementSettings()
   >
     <div class="container">
       <h1>{{ $t('notifications.general.paired_devices.title') }}</h1>
-      <NotificationsManagementPairedDevice v-for="device in generalSettings?.paired_devices" :key="device.id" :device="device" />
+      <div class="paired-devices">
+        <NotificationsManagementPairedDevice v-for="device in generalSettings?.paired_devices" :key="device.id" :device="device" />
+      </div>
     </div>
     <div class="button-row">
       <Button :label="$t('navigation.done')" @click="visible = false" />
@@ -33,6 +35,17 @@ const { generalSettings } = useNotificationsManagementSettings()
 
   h1 {
     margin-top: 0;
+  }
+
+  .paired-devices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding-large);
+
+    >:not(:last-child) {
+      padding-bottom: var(--padding-large);
+      border-bottom: 1px solid var(--container-border-color);
+    }
   }
 }
 
