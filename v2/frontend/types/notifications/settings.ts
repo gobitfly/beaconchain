@@ -1,11 +1,13 @@
 import type { ApiDataResponse } from '~/types/api/common'
+///
+// TODO: replace with real api types, once ready
 export interface NotificationSettingsPairedDevice {
   id: string;
   name?: string;
   enable_notifications: boolean;
+  pairedTs: number;
 }
-///
-// TODO: replace with real api types, once ready
+
 export interface NotificationsManagementSettings {
   machines_offline: boolean;
   machines_storage_usage: number /* float64 */;
