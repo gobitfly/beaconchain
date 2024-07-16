@@ -310,7 +310,7 @@
       "dialog_title": "Edit Subscriptions",
       "validators" : {
         "explanation": "All notifications are sent after network finality (~{count} min).",
-        "validator_offline": {
+        "is_validator_offline_subscribed": {
           "option": "Validator is offline",
           "hint": [
             "We will trigger a notification:",
@@ -319,7 +319,7 @@
             "- Once you are back online again."
           ]
         },
-        "group_offline": {
+        "group_offline_threshold": {
           "option":"Group is offline",
           "hint": [
             "We will trigger a notification:",
@@ -331,27 +331,27 @@
           ],
           "placeholder": ""
         },
-        "attestations_missed": {
+        "is_attestations_missed_subscribed": {
           "option":"Attestations missed",
           "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime."
         },
-        "block_proposal": {
+        "is_block_proposal_subscribed": {
           "option":"Block proposal (missed & success)"
         },
-        "upcoming_block_proposal": {
+        "is_upcoming_block_proposal_subscribed": {
           "option":"Upcoming block proposal",
           "hint": "May trigger false positive notifications during reorgs."
         },
-        "sync": {
+        "is_sync_subscribed": {
           "option":"Sync committee"
         },
-        "withdrawal_processed": {
+        "is_withdrawal_processed_subscribed": {
           "option":"Withdrawal processed"
         },
-        "slashed": {
+        "is_slashed_subscribed": {
           "option":"Validator got slashed"
         },
-        "realtime_mode": {
+        "is_real_time_mode_enabled": {
           "option":"Realtime mode",
           "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
         },
@@ -361,29 +361,29 @@
       },
       "accounts": {
         "explanation": "",
-        "incoming_transactions": {
+        "is_incoming_transactions_subscribed": {
           "option":"Incoming transactions"
         },
-        "outgoing_transactions": {
+        "is_outgoing_transactions_subscribed": {
           "option":"Outgoing transactions"
         },
-        "track_erc20_token_transfers": {
+        "erc20_token_transfers_threshold": {
           "option":"ERC20 token transfers",
           "placeholder": "value ≥ $0"
         },
-        "track_erc721_token_transfers": {
+        "is_erc721_token_transfers_subscribed": {
           "option":"ERC721 token transfers"
         },
-        "track_erc1155_token_transfers": {
+        "is_erc1155_token_transfers_subscribed": {
           "option":"ERC1155 token transfers"
         },
         "all": {
           "option":"All events"
         },
-        "networks": {
+        "subscribed_chain_ids": {
           "option":"Networks"
         },
-        "ignore_spam_transactions": {
+        "is_ignore_spam_transactions_enabled": {
           "option":"Ignore spam transactions",
           "hint": ["Ignores *zero value transfer tx's* and token tx's that have the *\"hidden\" token label*."]
         }

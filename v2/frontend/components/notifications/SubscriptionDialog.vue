@@ -1,36 +1,47 @@
 <script setup lang="ts">
 import { warn } from 'vue'
-import type { NotificationEventsValidatorDashboard, NotificationEventsAccountDashboard, InternalEntry, APIentry } from '~/types/notifications/subscriptionModal'
+import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard, InternalEntry, APIentry } from '~/types/notifications/subscriptionModal'
 import { ChainFamily } from '~/types/network'
 import type { ApiErrorResponse } from '~/types/api/common'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  validatorSub?: NotificationEventsValidatorDashboard,
-  accountSub?: NotificationEventsAccountDashboard
+  dashboardId: number,
+  validatorSub?: NotificationSettingsValidatorDashboard,
+  accountSub?: NotificationSettingsAccountDashboard
 }
+
+type DefinedAPIentry = Exclude<APIentry, null|undefined>
+type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
 
 // #### DIALOG SETTINGS ####
 
 const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
 const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
-const DefaultValues = {
-  group_offline: -10, // means "10% and unchecked"
-  realtime_mode: false,
-  track_erc20_token_transfers: null, // means "empty"
-  networks: []
-}
-type AllOptions = NotificationEventsValidatorDashboard & NotificationEventsAccountDashboard & typeof DefaultValues
-const orderOfTheRowsInValidatorModal: Array<keyof NotificationEventsValidatorDashboard | 'ALL'> =
-  ['validator_offline', 'group_offline', 'attestations_missed', 'block_proposal', 'upcoming_block_proposal', 'sync', 'withdrawal_processed', 'slashed', 'realtime_mode', 'ALL']
-const orderOfTheRowsInAccountModal: Array<keyof NotificationEventsAccountDashboard | 'ALL'> =
-  ['incoming_transactions', 'outgoing_transactions', 'track_erc20_token_transfers', 'track_erc721_token_transfers', 'track_erc1155_token_transfers', 'ALL', 'networks', 'ignore_spam_transactions']
+const DefaultValues = new Map<keyof AllOptions, DefinedAPIentry>([
+  ['group_offline_threshold', -10], // means "10% and unchecked"
+  ['is_real_time_mode_enabled', false],
+  ['is_erc20_token_transfers_subscribed', false],
+  ['erc20_token_transfers_threshold', NaN], // means "empty"
+  ['subscribed_chain_ids', []]
+])
+const orderOfTheRowsInValidatorModal: Array<keyof NotificationSettingsValidatorDashboard | 'ALL'> = [
+  'is_validator_offline_subscribed', 'group_offline_threshold', 'is_attestations_missed_subscribed', 'is_block_proposal_subscribed', 'is_upcoming_block_proposal_subscribed',
+  'is_sync_subscribed', 'is_withdrawal_processed_subscribed', 'is_slashed_subscribed', 'is_real_time_mode_enabled', 'ALL'
+]
+const orderOfTheRowsInAccountModal: Array<keyof NotificationSettingsAccountDashboard | 'ALL'> = [
+  'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'erc20_token_transfers_threshold', 'is_erc721_token_transfers_subscribed',
+  'is_erc1155_token_transfers_subscribed', 'ALL', 'subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'
+]
 const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(AllOptions)> =
-  ['networks', 'ignore_spam_transactions'] // options that are not in the group of the all-checkbox
+  ['subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'] // options that are not in the group of the all-checkbox
 const OptionsNeedingPremium: Array<keyof AllOptions> =
-  ['group_offline', 'realtime_mode']
+  ['group_offline_threshold', 'is_real_time_mode_enabled']
 const RowsThatExpectAPercentage: Array<keyof AllOptions> =
-  ['group_offline']
+  ['group_offline_threshold']
+const RowsWhoseCheckBoxIsInASeparateField = new Map<keyof AllOptions, keyof AllOptions>([
+  ['erc20_token_transfers_threshold', 'is_erc20_token_transfers_subscribed']
+])
 
 // #### END OF DIALOG SETTINGS ####
 
@@ -77,9 +88,9 @@ watch(props, (props) => {
 
 function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
   let srcValue = apiData[apiKey]
-  if (srcValue === undefined || srcValue === null || (Array.isArray(srcValue) && !srcValue.length)) {
-    if (apiKey in DefaultValues) {
-      srcValue = DefaultValues[apiKey as keyof typeof DefaultValues]
+  if (srcValue === undefined || srcValue === null || (typeof srcValue === 'number' && isNaN(srcValue)) || (Array.isArray(srcValue) && !srcValue.length)) {
+    if (DefaultValues.has(apiKey)) {
+      srcValue = DefaultValues.get(apiKey)!
     } else {
       warn('Entry `', apiKey, '`is missing in the API data and we do not have a default value for it.')
       return {} as InternalEntry
@@ -98,12 +109,19 @@ function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllO
         type: 'binary',
         check: srcValue
       }
-    default :
+    case 'number' : {
+      let check: boolean
+      if (RowsWhoseCheckBoxIsInASeparateField.has(apiKey)) {
+        check = convertAPIentryToInternalEntry(apiData, RowsWhoseCheckBoxIsInASeparateField.get(apiKey)!).check!
+      } else {
+        check = srcValue > 0
+      }
       return {
         type: (apiKey in RowsThatExpectAPercentage) ? 'percent' : 'amount',
-        check: srcValue !== null && srcValue >= 0,
-        num: srcValue === null ? null : Math.abs(srcValue)
+        check,
+        num: Math.abs(srcValue)
       }
+    }
   }
 }
 
@@ -144,7 +162,10 @@ async function sendUserPreferencesToAPI () {
         break
       case 'amount' :
       case 'percent' :
-        output[key] = (value.check || value.num === null) ? value.num : -value.num!
+        output[key] = isNaN(value.num!) ? null : (value.check ? value.num : -value.num!)
+        if (RowsWhoseCheckBoxIsInASeparateField.has(key)) {
+          output[RowsWhoseCheckBoxIsInASeparateField.get(key)!] = !isNaN(value.num!) && value.check
+        }
         break
       case 'networks' :
         output[key] = value.networks
@@ -155,12 +176,12 @@ async function sendUserPreferencesToAPI () {
   let response: ApiErrorResponse | undefined
   try {
     setTimeout(TimeoutForSavingFailures)
-    response = await fetch<ApiErrorResponse>(API_PATH.NOTIFICATION_SUBSCRIPTIONS, {
+    response = await fetch<ApiErrorResponse>(API_PATH.SETTINGS_DASHBOARDS, {
       method: 'POST',
-      body: {
-        category: props.value!.accountSub ? 'accounts' : 'validators',
-        subscriptions: output
-      }
+      body: output
+    }, {
+      for: props.value!.accountSub ? 'accounts' : 'validators',
+      dashboardKey: String(props.value?.dashboardId)
     })
   } catch {
     response = undefined
@@ -193,7 +214,7 @@ const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.a
         v-model="modifiableOptions[row]"
         :t-path="tPath+row"
         :lacks-premium-subscription="!isOptionAvailable(row)"
-        :value-in-text="(row == 'attestations_missed') ? Math.round(networkInfo.secondsPerSlot*networkInfo.slotsPerEpoch/6)/10 : undefined"
+        :value-in-text="(row == 'is_attestations_missed_subscribed') ? Math.round(networkInfo.secondsPerSlot*networkInfo.slotsPerEpoch/6)/10 : undefined"
         class="row"
       />
       <div v-if="row == 'ALL'" class="separation" />

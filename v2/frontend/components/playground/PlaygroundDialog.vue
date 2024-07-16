@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BcDialogConfirm, NotificationsSubscriptionDialog } from '#components'
-import type { NotificationEventsValidatorDashboard, NotificationEventsAccountDashboard } from '~/types/notifications/subscriptionModal'
+import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/notifications/subscriptionModal'
 
 const dialog = useDialog()
 
@@ -23,26 +23,27 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
   })
 }
 
-const validatorSub: NotificationEventsValidatorDashboard = {
-  validator_offline: true,
-  group_offline: -20, // means "20% and deselected/unchecked"
-  attestations_missed: true,
-  block_proposal: true,
-  upcoming_block_proposal: false,
-  sync: true,
-  withdrawal_processed: true,
-  slashed: false,
-  realtime_mode: false
+const validatorSub: NotificationSettingsValidatorDashboard = {
+  is_validator_offline_subscribed: true,
+  group_offline_threshold: -20, // means "20% and deselected/unchecked"
+  is_attestations_missed_subscribed: true,
+  is_block_proposal_subscribed: true,
+  is_upcoming_block_proposal_subscribed: false,
+  is_sync_subscribed: true,
+  is_withdrawal_processed_subscribed: true,
+  is_slashed_subscribed: false,
+  is_real_time_mode_enabled: false
 }
 
-const accountSub: NotificationEventsAccountDashboard = {
-  incoming_transactions: true,
-  outgoing_transactions: true,
-  track_erc20_token_transfers: null, // means "not in the database yet" (will leave the input field empty with a placeholder)
-  track_erc721_token_transfers: true,
-  track_erc1155_token_transfers: false,
-  networks: [17000],
-  ignore_spam_transactions: true
+const accountSub: NotificationSettingsAccountDashboard = {
+  is_incoming_transactions_subscribed: true,
+  is_outgoing_transactions_subscribed: true,
+  is_erc20_token_transfers_subscribed: false,
+  erc20_token_transfers_threshold: NaN, // means "not in the database yet" (will leave the input field empty with a placeholder)
+  is_erc721_token_transfers_subscribed: true,
+  is_erc1155_token_transfers_subscribed: false,
+  subscribed_chain_ids: [17000],
+  is_ignore_spam_transactions_enabled: true
 }
 
 function openSubscriptions (props: any) {
@@ -55,10 +56,10 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
-    <Button @click="openSubscriptions({validatorSub})">
+    <Button @click="openSubscriptions({dashboardId:1, validatorSub})">
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({accountSub})">
+    <Button @click="openSubscriptions({dashboardId:1, accountSub})">
       Subscribe to notifications for your accounts
     </Button>
     <br>

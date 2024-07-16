@@ -8,17 +8,17 @@ const props = defineProps<{
   maxFractionDigits: number
 }>()
 
-const parentVmodel = defineModel<number|null>({ required: true })
-const bridgedVmodel = usePrimitiveRefBridge<number|null, Nullable<number>>(parentVmodel, n => n, n => n ?? null)
+const parentVmodel = defineModel<number>({ required: true })
+const bridgedVmodel = usePrimitiveRefBridge<number, Nullable<number>>(parentVmodel, n => (isNaN(n) ? null : n), n => (n ?? NaN))
 
 function sendValue (input: Nullable<number>) : void {
   if (input === undefined || input === null || isNaN(input) || input < props.min || input > props.max) {
-    input = null
+    input = NaN
   } else {
     const stringifyied = String(input)
     const comma = stringifyied.indexOf('.')
     if (comma >= 0 && stringifyied.length - comma - 1 > props.maxFractionDigits) {
-      input = null
+      input = NaN
     }
   }
   bridgedVmodel.pauseBridgeFromNowOn() // this allows us to output the value to the parent v-model without causing an injection of the value back into the InputNumber v-model (that would empty InputNumber at each key stroke if the input is invalid)

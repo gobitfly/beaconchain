@@ -25,7 +25,7 @@ const tooltipLines = computed(() => {
     } else {
       let plural: number
       if (parentVmodel.value.type === 'amount' || parentVmodel.value.type === 'percent') {
-        plural = parentVmodel.value.num ?? 0
+        plural = isNaN(parentVmodel.value.num!) ? 0 : parentVmodel.value.num!
       } else {
         plural = parentVmodel.value ? 2 : 1
       }
