@@ -476,20 +476,20 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 						EffectiveBalance:      v.EffectiveBalance,
 						Slashed:               v.Slashed,
 					}
-					if v.ActivationEpoch != db.FarFutureEpoch {
+					if v.ActivationEpoch != db.MaxSqlNumber {
 						r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
 					}
-					if v.ActivationEligibilityEpoch != db.FarFutureEpoch {
+					if v.ActivationEligibilityEpoch != db.MaxSqlNumber {
 						r.ActivationEligibilityEpoch = sql.NullInt64{Int64: int64(v.ActivationEligibilityEpoch), Valid: true}
 					}
-					if v.ExitEpoch != db.FarFutureEpoch {
+					if v.ExitEpoch != db.MaxSqlNumber {
 						r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}
 					}
-					if v.WithdrawableEpoch != db.FarFutureEpoch {
+					if v.WithdrawableEpoch != db.MaxSqlNumber {
 						r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
 					}
 					RedisCachedValidatorsMapping.Mapping[v.Index] = &r
-					if v.Status == "pending_queued" {
+					if v.Status == "pending" {
 						a := int(v.ActivationEligibilityEpoch)
 						activationMapping[a] = append(activationMapping[a], v.Index)
 					}
