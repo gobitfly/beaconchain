@@ -153,7 +153,7 @@ type NotificationSettingsAccountDashboard struct {
 
 	IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 	IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
-	IsERC20TokenTransfersSubscribed   float64 `json:"is_erc20_token_transfers_subscribed"`
+	IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
 	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable
 	IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
 	IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
