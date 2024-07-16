@@ -28,6 +28,9 @@ type UserRepository interface {
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
+
+	GetByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error)
+	MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID string) error
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
