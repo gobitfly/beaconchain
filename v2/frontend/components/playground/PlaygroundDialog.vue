@@ -25,7 +25,7 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
 
 const validatorSub: NotificationSettingsValidatorDashboard = {
   is_validator_offline_subscribed: true,
-  group_offline_threshold: -20, // means "20% and deselected/unchecked"
+  group_offline_threshold: 0, // means "deactivated/unchecked"
   is_attestations_missed_subscribed: true,
   is_block_proposal_subscribed: true,
   is_upcoming_block_proposal_subscribed: false,
@@ -39,7 +39,7 @@ const accountSub: NotificationSettingsAccountDashboard = {
   is_incoming_transactions_subscribed: true,
   is_outgoing_transactions_subscribed: true,
   is_erc20_token_transfers_subscribed: false,
-  erc20_token_transfers_threshold: NaN, // means "not in the database yet" (will leave the input field empty with a placeholder)
+  erc20_token_transfers_threshold: 90,
   is_erc721_token_transfers_subscribed: true,
   is_erc1155_token_transfers_subscribed: false,
   subscribed_chain_ids: [17000],
