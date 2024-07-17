@@ -10,7 +10,6 @@ import (
 )
 
 // TODO move to internal.go
-// TODO make sure some middleware sets the user id in the context
 
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
@@ -44,14 +43,50 @@ func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWr
 		handleErr(w, v)
 		return
 	}
-	data, paging, err := h.dai.GetNotificationDashboards(r.Context(), userId, chainId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	response := types.InternalGetUserNotificationDashboards{
+	response := types.InternalGetUserNotificationDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	notificationId := v.checkNameNotEmpty(mux.Vars(r)["notification_id"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), notificationId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsValidatorDashboardResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	notificationId := v.checkNameNotEmpty(mux.Vars(r)["notification_id"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), notificationId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsAccountDashboardResponse{
+		Data: *data,
 	}
 	returnOk(w, response)
 }
@@ -70,12 +105,12 @@ func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWrit
 		handleErr(w, v)
 		return
 	}
-	data, paging, err := h.dai.GetNotificationMachines(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetMachineNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	response := types.InternalGetUserNotificationMachines{
+	response := types.InternalGetUserNotificationMachinesResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -96,12 +131,12 @@ func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWrite
 		handleErr(w, v)
 		return
 	}
-	data, paging, err := h.dai.GetNotificationClients(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetClientNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	response := types.InternalGetUserNotificationClients{
+	response := types.InternalGetUserNotificationClientsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -122,12 +157,12 @@ func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWr
 		handleErr(w, v)
 		return
 	}
-	data, paging, err := h.dai.GetNotificationRocketPool(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	response := types.InternalGetUserNotificationRocketPool{
+	response := types.InternalGetUserNotificationRocketPoolResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -148,12 +183,12 @@ func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWrit
 		handleErr(w, v)
 		return
 	}
-	data, paging, err := h.dai.GetNotificationNetworks(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	response := types.InternalGetUserNotificationNetworks{
+	response := types.InternalGetUserNotificationNetworksResponse{
 		Data:   data,
 		Paging: *paging,
 	}

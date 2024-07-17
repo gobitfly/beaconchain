@@ -807,12 +807,12 @@ func mapVDBSummarySlashings(v *types.VDBSlashingsSummaryValidators) []types.VDBS
 func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSummaryValidatorsData {
 	proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
 	for i, proposed := range v.Proposed {
-		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.ProposedBlocks}
+		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.Blocks}
 	}
 
 	missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
 	for i, missed := range v.Missed {
-		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.MissedBlocks}
+		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.Blocks}
 	}
 
 	return []types.VDBSummaryValidatorsData{

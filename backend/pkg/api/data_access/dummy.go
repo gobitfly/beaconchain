@@ -506,35 +506,48 @@ func (d *DummyService) GetNotificationOverview(ctx context.Context, userId uint6
 	err := commonFakeData(&r)
 	return &r, err
 }
-func (d *DummyService) GetNotificationDashboards(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	r := []t.NotificationDashboardsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, &p, err
 }
-func (d *DummyService) GetNotificationMachines(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
+
+func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationValidatorDashboardDetail, error) {
+	r := t.NotificationValidatorDashboardDetail{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationAccountDashboardDetail, error) {
+	r := t.NotificationAccountDashboardDetail{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
 	r := []t.NotificationMachinesTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, &p, err
 }
-func (d *DummyService) GetNotificationClients(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
+func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
 	r := []t.NotificationClientsTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, &p, err
 }
-func (d *DummyService) GetNotificationRocketPool(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
+func (d *DummyService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
 	r := []t.NotificationRocketPoolTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
 	return r, &p, err
 }
-func (d *DummyService) GetNotificationNetworks(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	r := []t.NotificationNetworksTableRow{}
 	p := t.Paging{}
 	_ = commonFakeData(&r)

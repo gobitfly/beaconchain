@@ -173,14 +173,8 @@ type VDBSlashingsSummaryValidators struct {
 }
 
 type VDBProposalSummaryValidators struct {
-	Proposed []struct {
-		Index          uint64
-		ProposedBlocks []uint64
-	}
-	Missed []struct {
-		Index        uint64
-		MissedBlocks []uint64
-	}
+	Proposed []IndexBlocks
+	Missed   []IndexBlocks
 }
 
 type VDBProtocolModes struct {

@@ -9,11 +9,16 @@ import (
 
 type NotificationsRepository interface {
 	GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error)
-	GetNotificationDashboards(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error)
-	GetNotificationMachines(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error)
-	GetNotificationClients(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error)
-	GetNotificationRocketPool(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error)
-	GetNotificationNetworks(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
+
+	GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error)
+	// depending on how notifications are implemented, we may need to use something other than `notificationId` for identifying the notification
+	GetValidatorDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationValidatorDashboardDetail, error)
+	GetAccountDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationAccountDashboardDetail, error)
+
+	GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error)
+	GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error)
+	GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error)
+	GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
 
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
@@ -28,20 +33,29 @@ type NotificationsRepository interface {
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return d.dummy.GetNotificationOverview(ctx, userId)
 }
-func (d *DataAccessService) GetNotificationDashboards(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
-	return d.dummy.GetNotificationDashboards(ctx, userId, chainId, cursor, colSort, search, limit)
+func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+	return d.dummy.GetDashboardNotifications(ctx, userId, chainId, cursor, colSort, search, limit)
 }
-func (d *DataAccessService) GetNotificationMachines(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
-	return d.dummy.GetNotificationMachines(ctx, userId, cursor, colSort, search, limit)
+
+func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationValidatorDashboardDetail, error) {
+	return d.dummy.GetValidatorDashboardNotificationDetails(ctx, notificationId)
 }
-func (d *DataAccessService) GetNotificationClients(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
-	return d.dummy.GetNotificationClients(ctx, userId, cursor, colSort, search, limit)
+
+func (d *DataAccessService) GetAccountDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationAccountDashboardDetail, error) {
+	return d.dummy.GetAccountDashboardNotificationDetails(ctx, notificationId)
 }
-func (d *DataAccessService) GetNotificationRocketPool(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
-	return d.dummy.GetNotificationRocketPool(ctx, userId, cursor, colSort, search, limit)
+
+func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
+	return d.dummy.GetMachineNotifications(ctx, userId, cursor, colSort, search, limit)
 }
-func (d *DataAccessService) GetNotificationNetworks(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
-	return d.dummy.GetNotificationNetworks(ctx, userId, cursor, colSort, search, limit)
+func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
+	return d.dummy.GetClientNotifications(ctx, userId, cursor, colSort, search, limit)
+}
+func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
+	return d.dummy.GetRocketPoolNotifications(ctx, userId, cursor, colSort, search, limit)
+}
+func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+	return d.dummy.GetNetworkNotifications(ctx, userId, cursor, colSort, search, limit)
 }
 func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
 	return d.dummy.GetNotificationSettings(ctx, userId)

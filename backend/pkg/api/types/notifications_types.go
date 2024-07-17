@@ -40,7 +40,60 @@ type NotificationDashboardsTableRow struct {
 	EventTypes         []string `json:"event_types"`
 }
 
-type InternalGetUserNotificationDashboards ApiPagingResponse[NotificationDashboardsTableRow]
+type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
+
+// ------------------------------------------------------------
+// Validator Dashboard Notification Detail
+
+type NotificationEventGroup struct {
+	GroupName   string `json:"group_name"`
+	DashboardID uint64 `json:"dashboard_id"`
+}
+type NotificationEventGroupBackOnline struct {
+	GroupName   string `json:"group_name"`
+	DashboardID uint64 `json:"dashboard_id"`
+	EpochCount  uint64 `json:"epoch_count"`
+}
+
+type NotificationEventValidatorBackOnline struct {
+	Index      uint64 `json:"index"`
+	EpochCount uint64 `json:"epoch_count"`
+}
+
+type NotificationValidatorDashboardDetail struct {
+	ValidatorOffline         []uint64                               `json:"validator_offline"` // validator indices
+	GroupOffline             []NotificationEventGroup               `json:"group_offline"`
+	ProposalMissed           []IndexBlocks                          `json:"proposal_missed"`
+	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
+	UpcomingProposals        []uint64                               `json:"upcoming_proposals"` // slot numbers
+	Slashed                  []uint64                               `json:"slashed"`            // validator indices
+	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
+	AttestationMissed        []IndexBlocks                          `json:"attestation_missed"`
+	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
+	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices
+	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`
+	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"back_online"`
+	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`
+}
+
+type InternalGetUserNotificationsValidatorDashboardResponse ApiDataResponse[NotificationValidatorDashboardDetail]
+
+type NotificationEventExecution struct {
+	Address         Address         `json:"address"`
+	Amount          decimal.Decimal `json:"amount"`
+	TransactionHash Hash            `json:"transaction_hash"`
+	TokenName       string          `json:"token_name"` // this field will prob change depending on how execution stuff is implemented
+}
+
+type NotificationAccountDashboardDetail struct {
+	IncomingTransactions  []NotificationEventExecution `json:"incoming_transactions"`
+	OutgoingTransactions  []NotificationEventExecution `json:"outgoing_transactions"`
+	ERC20TokenTransfers   []NotificationEventExecution `json:"erc20_token_transfers"`
+	ERC721TokenTransfers  []NotificationEventExecution `json:"erc721_token_transfers"`
+	ERC1155TokenTransfers []NotificationEventExecution `json:"erc1155_token_transfers"`
+}
+
+type InternalGetUserNotificationsAccountDashboardResponse ApiDataResponse[NotificationAccountDashboardDetail]
 
 // ------------------------------------------------------------
 // Machines Table
@@ -51,7 +104,7 @@ type NotificationMachinesTableRow struct {
 	Timestamp   int64   `json:"timestamp"`
 }
 
-type InternalGetUserNotificationMachines ApiPagingResponse[NotificationMachinesTableRow]
+type InternalGetUserNotificationMachinesResponse ApiPagingResponse[NotificationMachinesTableRow]
 
 // ------------------------------------------------------------
 // Clients Table
@@ -61,7 +114,7 @@ type NotificationClientsTableRow struct {
 	Timestamp  int64  `json:"timestamp"`
 }
 
-type InternalGetUserNotificationClients ApiPagingResponse[NotificationClientsTableRow]
+type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationClientsTableRow]
 
 // ------------------------------------------------------------
 // Rocket Pool Table
@@ -72,7 +125,7 @@ type NotificationRocketPoolTableRow struct {
 	NodeAddress Hash    `json:"node_address"`
 }
 
-type InternalGetUserNotificationRocketPool ApiPagingResponse[NotificationRocketPoolTableRow]
+type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
 
 // ------------------------------------------------------------
 // Networks Table
@@ -83,7 +136,7 @@ type NotificationNetworksTableRow struct {
 	AlertValue decimal.Decimal `json:"alert_value"` // wei string for gas alerts, otherwise percentage (0-1) for participation rate
 }
 
-type InternalGetUserNotificationNetworks ApiPagingResponse[NotificationNetworksTableRow]
+type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationNetworksTableRow]
 
 // ------------------------------------------------------------
 // Notification Settings
