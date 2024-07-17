@@ -728,8 +728,8 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	// Helper function to create a VDBValidatorIndices and append to data
 	appendData := func(category string, validators []uint64) {
 		validatorsData := make([]types.VDBSummaryValidator, len(validators))
-		for i, index := range validators {
-			validatorsData[i] = types.VDBSummaryValidator{Index: index}
+		for i, validatorIndex := range validators {
+			validatorsData[i] = types.VDBSummaryValidator{Index: validatorIndex}
 		}
 		data = append(data, types.VDBSummaryValidatorsData{
 			Category:   category,
@@ -743,8 +743,8 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 		appendData("offline", v.Offline)
 		appendData("deposited", v.Deposited)
 		pendingValidators := make([]types.VDBSummaryValidator, len(v.Pending))
-		for i, pending := range v.Pending {
-			pendingValidators[i] = types.VDBSummaryValidator{Index: pending.Index, DutyObjects: []uint64{pending.Timestamp}}
+		for i, validator := range v.Pending {
+			pendingValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Timestamp}}
 		}
 		data = append(data, types.VDBSummaryValidatorsData{
 			Category:   "pending",
@@ -755,7 +755,14 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		appendData("sync_current", v.Current)
 		appendData("sync_upcoming", v.Upcoming)
-		// appendData("sync_past", v.Past)
+		pastValidators := make([]types.VDBSummaryValidator, len(v.Past))
+		for i, validator := range v.Past {
+			pastValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Count}}
+		}
+		data = append(data, types.VDBSummaryValidatorsData{
+			Category:   "pending",
+			Validators: pastValidators,
+		})
 		return data, nil
 
 	case *types.VDBSlashingsSummaryValidators:
