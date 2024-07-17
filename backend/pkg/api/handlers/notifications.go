@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"math"
 	"net/http"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -9,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// TODO move to internal.go
+// TODO move to internal.go before merging
 
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
@@ -57,7 +58,7 @@ func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWr
 
 func (h *HandlerService) InternalGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	notificationId := v.checkNameNotEmpty(mux.Vars(r)["notification_id"])
+	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -75,7 +76,7 @@ func (h *HandlerService) InternalGetUserNotificationsValidatorDashboard(w http.R
 
 func (h *HandlerService) InternalGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	notificationId := v.checkNameNotEmpty(mux.Vars(r)["notification_id"])
+	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
@@ -224,7 +225,12 @@ func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.Respo
 		handleErr(w, err)
 		return
 	}
-	// TODO validate the request
+	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
+	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
+	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
+	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
+	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
+	// TODO: check validity of clients
 	err := h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, err)
@@ -248,12 +254,13 @@ func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.Resp
 		handleErr(w, err)
 		return
 	}
+	checkMinMax(&v, req.ParticipationRateThreshold, 0, 1, "participation_rate_threshold")
+
 	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
-	// TODO validate the request
 	err := h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
 	if err != nil {
 		handleErr(w, err)
@@ -279,8 +286,8 @@ func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http
 		return
 	}
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkNameNotEmpty(mux.Vars(r)["paired_device_id"])
-	// TODO validate the request
+	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	v.checkNameNotEmpty(req.Name)
 	err := h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, req.Name, req.IsNotificationsEnabled)
 	if err != nil {
 		handleErr(w, err)
@@ -301,7 +308,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http
 func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkNameNotEmpty(mux.Vars(r)["paired_device_id"])
+	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
 	err := h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
 	if err != nil {
 		handleErr(w, err)
@@ -343,7 +350,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsValidatorDashboard(w
 		handleErr(w, err)
 		return
 	}
-	// TODO validate the request
+	checkMinMax(&v, req.GroupOfflineThreshold, 0, 1, "group_offline_threshold")
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
@@ -351,7 +358,6 @@ func (h *HandlerService) InternalPutUserNotificationSettingsValidatorDashboard(w
 		handleErr(w, v)
 		return
 	}
-	// TODO check if the dashboard belongs to the user
 	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
 	if err != nil {
 		handleErr(w, err)
@@ -365,12 +371,32 @@ func (h *HandlerService) InternalPutUserNotificationSettingsValidatorDashboard(w
 
 func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	var req types.NotificationSettingsAccountDashboard
+	req := struct {
+		WebhookUrl                      string        `json:"webhook_url"`
+		IsWebhookDiscordEnabled         bool          `json:"is_webhook_discord_enabled"`
+		IsIgnoreSpamTransactionsEnabled bool          `json:"is_ignore_spam_transactions_enabled"`
+		SubscribedChainIds              []intOrString `json:"subscribed_networks"`
+
+		IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
+		IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
+		IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
+		ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
+		IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
+		IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
+	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
 		return
 	}
-	// TODO validate the request
+	chainIdMap := v.checkNetworkSlice(req.SubscribedChainIds)
+	// convert to uint64[] slice
+	chainIds := make([]uint64, len(chainIdMap))
+	i := 0
+	for k := range chainIdMap {
+		chainIds[i] = k
+		i++
+	}
+	checkMinMax(&v, req.ERC20TokenTransfersValueThreshold, 0, math.MaxFloat64, "group_offline_threshold")
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
@@ -378,14 +404,26 @@ func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w h
 		handleErr(w, v)
 		return
 	}
-	// TODO check if the dashboard belongs to the user
-	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, req)
+	settings := types.NotificationSettingsAccountDashboard{
+		WebhookUrl:                      req.WebhookUrl,
+		IsWebhookDiscordEnabled:         req.IsWebhookDiscordEnabled,
+		IsIgnoreSpamTransactionsEnabled: req.IsIgnoreSpamTransactionsEnabled,
+		SubscribedChainIds:              chainIds,
+
+		IsIncomingTransactionsSubscribed:  req.IsIncomingTransactionsSubscribed,
+		IsOutgoingTransactionsSubscribed:  req.IsOutgoingTransactionsSubscribed,
+		IsERC20TokenTransfersSubscribed:   req.IsERC20TokenTransfersSubscribed,
+		ERC20TokenTransfersValueThreshold: req.ERC20TokenTransfersValueThreshold,
+		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
+		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
+	}
+	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 	response := types.InternalPutUserNotificationSettingsAccountDashboardResponse{
-		Data: req,
+		Data: settings,
 	}
 	returnOk(w, response)
 }

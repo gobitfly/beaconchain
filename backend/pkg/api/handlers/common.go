@@ -378,6 +378,20 @@ func (v *validationError) checkValidatorDashboardPublicId(publicId string) types
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
+type number interface {
+	uint64 | int64 | float64
+}
+
+func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+	if param < min {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
+	}
+	if param > max {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too large, maximum value is %v", param, max))
+	}
+	return param
+}
+
 func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -391,10 +405,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
 			return paging
 		}
-		if limit > maxQueryLimit {
-			v.add("limit", fmt.Sprintf("given value '%d' is too large, maximum limit is %d", limit, maxQueryLimit))
-			return paging
-		}
+		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
 		paging.limit = limit
 	}
 

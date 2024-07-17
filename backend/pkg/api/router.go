@@ -304,7 +304,6 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		{http.MethodPut, "/settings/dashboards/accounts/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsAccountDashboard},
 	}
 	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
-
 }
 
 func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {

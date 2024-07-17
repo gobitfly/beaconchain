@@ -1,6 +1,6 @@
 package types
 
-import decimal "github.com/jackc/pgx-shopspring-decimal"
+import "github.com/shopspring/decimal"
 
 // ------------------------------------------------------------
 // Overview
