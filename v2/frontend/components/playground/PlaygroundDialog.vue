@@ -56,10 +56,10 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
-    <Button @click="openSubscriptions({dashboardId:1, validatorSub})">
+    <Button @click="openSubscriptions({dashboardId:1, groupId:1, validatorSub})">
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({dashboardId:1, accountSub})">
+    <Button @click="openSubscriptions({dashboardId:1, groupId:1, accountSub})">
       Subscribe to notifications for your accounts
     </Button>
     <br>
