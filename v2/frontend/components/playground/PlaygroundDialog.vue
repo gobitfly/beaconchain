@@ -39,7 +39,7 @@ const accountSub: NotificationSettingsAccountDashboard = {
   is_incoming_transactions_subscribed: true,
   is_outgoing_transactions_subscribed: true,
   is_erc20_token_transfers_subscribed: false,
-  erc20_token_transfers_threshold: 90,
+  erc20_token_transfers_threshold: 0,
   is_erc721_token_transfers_subscribed: true,
   is_erc1155_token_transfers_subscribed: false,
   subscribed_chain_ids: [17000],
