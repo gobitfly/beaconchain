@@ -296,8 +296,8 @@ export const mapping: Record<string, MappingData> = {
     mock: false
   },
   [API_PATH.SETTINGS_DASHBOARDS]: {
-    path: '/settings/dashboards/{for}/{dashboard_key}',
-    getPath: values => `/settings/dashboards/${values?.for}/${values?.dashboardKey}`,
+    path: '/settings/dashboards/{for}/{dashboard_key}/groups/{group_id}',
+    getPath: values => `/settings/dashboards/${values?.for}/${values?.dashboardKey}/groups/${values?.groupId}`,
     method: 'POST',
     mock: true
   }

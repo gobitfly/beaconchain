@@ -7,6 +7,7 @@ import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   dashboardId: number,
+  groupId: number,
   validatorSub?: NotificationSettingsValidatorDashboard,
   accountSub?: NotificationSettingsAccountDashboard
 }
@@ -18,12 +19,11 @@ type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsA
 
 const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
 const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
-const DefaultValues = new Map<keyof AllOptions, DefinedAPIentry>([
-  ['group_offline_threshold', -10], // means "10% and unchecked"
-  ['is_real_time_mode_enabled', false],
-  ['is_erc20_token_transfers_subscribed', false],
-  ['erc20_token_transfers_threshold', NaN], // means "empty"
-  ['subscribed_chain_ids', []]
+const DefaultValues = new Map<keyof AllOptions, InternalEntry>([
+  ['group_offline_threshold', { type: 'percent', check: false, num: 10 }],
+  ['is_real_time_mode_enabled', { type: 'binary', check: false }],
+  ['erc20_token_transfers_threshold', { type: 'amount', check: false, num: NaN }], // NaN will leave the input field empty (the user sees the placeholder)
+  ['subscribed_chain_ids', { type: 'networks', networks: [] }]
 ])
 const orderOfTheRowsInValidatorModal: Array<keyof NotificationSettingsValidatorDashboard | 'ALL'> = [
   'is_validator_offline_subscribed', 'group_offline_threshold', 'is_attestations_missed_subscribed', 'is_block_proposal_subscribed', 'is_upcoming_block_proposal_subscribed',
@@ -33,15 +33,15 @@ const orderOfTheRowsInAccountModal: Array<keyof NotificationSettingsAccountDashb
   'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'erc20_token_transfers_threshold', 'is_erc721_token_transfers_subscribed',
   'is_erc1155_token_transfers_subscribed', 'ALL', 'subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'
 ]
+const RowsWhoseCheckBoxIsInASeparateField = new Map<keyof AllOptions, keyof AllOptions>([
+  ['erc20_token_transfers_threshold', 'is_erc20_token_transfers_subscribed']
+])
 const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(AllOptions)> =
   ['subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'] // options that are not in the group of the all-checkbox
 const OptionsNeedingPremium: Array<keyof AllOptions> =
   ['group_offline_threshold', 'is_real_time_mode_enabled']
 const RowsThatExpectAPercentage: Array<keyof AllOptions> =
   ['group_offline_threshold']
-const RowsWhoseCheckBoxIsInASeparateField = new Map<keyof AllOptions, keyof AllOptions>([
-  ['erc20_token_transfers_threshold', 'is_erc20_token_transfers_subscribed']
-])
 
 // #### END OF DIALOG SETTINGS ####
 
@@ -86,45 +86,6 @@ watch(props, (props) => {
   }
 }, { immediate: true })
 
-function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
-  let srcValue = apiData[apiKey]
-  if (srcValue === undefined || srcValue === null || (typeof srcValue === 'number' && isNaN(srcValue)) || (Array.isArray(srcValue) && !srcValue.length)) {
-    if (DefaultValues.has(apiKey)) {
-      srcValue = DefaultValues.get(apiKey)!
-    } else {
-      warn('Entry `', apiKey, '`is missing in the API data and we do not have a default value for it.')
-      return {} as InternalEntry
-    }
-    dataNonce++ // this will trigger a call to the API to save the settings
-  }
-  if (Array.isArray(srcValue)) {
-    return {
-      type: 'networks',
-      networks: [...srcValue]
-    }
-  }
-  switch (typeof srcValue) {
-    case 'boolean' :
-      return {
-        type: 'binary',
-        check: srcValue
-      }
-    case 'number' : {
-      let check: boolean
-      if (RowsWhoseCheckBoxIsInASeparateField.has(apiKey)) {
-        check = convertAPIentryToInternalEntry(apiData, RowsWhoseCheckBoxIsInASeparateField.get(apiKey)!).check!
-      } else {
-        check = srcValue > 0
-      }
-      return {
-        type: (apiKey in RowsThatExpectAPercentage) ? 'percent' : 'amount',
-        check,
-        num: Math.abs(srcValue)
-      }
-    }
-  }
-}
-
 function checkboxAllHasBeenClicked (checked: boolean) : void {
   for (const k of Object.keys(modifiableOptions.value)) {
     const key = k as keyof ModifiableOptions
@@ -132,7 +93,6 @@ function checkboxAllHasBeenClicked (checked: boolean) : void {
       modifiableOptions.value[key].check = checked
     }
   }
-  // no need to call the API, the modifications that we did in `modifiableOptions.value` will trigger its watcher (that calls the API)
 }
 
 watch(modifiableOptions, (options) => {
@@ -150,29 +110,71 @@ watch(modifiableOptions, (options) => {
   dataNonce++
 }, { immediate: true, deep: true })
 
+/** reads data that our parent received from the API and converts it to our internal format */
+function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
+  const srcValue = apiData[apiKey]
+  const type = getOptionType(apiData, apiKey)
+  if (!isOptionValueKnownInDB(srcValue) || (!isOptionActivatedInDB(apiData, apiKey) && type !== 'binary')) {
+    if (DefaultValues.has(apiKey)) {
+      return { ...DefaultValues.get(apiKey)! }
+    } else {
+      warn('A value for entry `' + apiKey + '` is not in the the database and the front-end does not have a default value for it.')
+      return {} as InternalEntry
+    }
+  }
+  switch (type) {
+    case 'networks' :
+      return {
+        type,
+        networks: [...srcValue as number[]]
+      }
+    case 'binary' :
+      return {
+        type,
+        check: srcValue as boolean
+      }
+    case 'percent' :
+      return {
+        type,
+        check: true, // the `false` case has been tackled at the beginning of the function, we returned a default value
+        num: srcValue as number * 100
+      }
+    case 'amount' :
+      return {
+        type,
+        check: true, // the `false` case has been tackled at the beginning of the function, we returned a default value
+        num: srcValue as number
+      }
+  }
+}
+
+/** converts our internal data to the format understood by the API and sends it */
 async function sendUserPreferencesToAPI () {
-  // first we convert our internal structures to the format of the API
-  const output = {} as Record<string, APIentry>
+  // conversion
+  const output = {} as Record<string, DefinedAPIentry>
   for (const k in modifiableOptions.value) {
     const key = k as keyof ModifiableOptions
     const value = toRaw(modifiableOptions.value[key])
     switch (value.type) {
       case 'binary' :
-        output[key] = value.check
+        output[key] = value.check!
         break
-      case 'amount' :
       case 'percent' :
-        output[key] = isNaN(value.num!) ? null : (value.check ? value.num : -value.num!)
+      case 'amount' : {
+        const num = (value.type === 'percent') ? value.num! / 100 : value.num!
+        const activate = !isNaN(num) && value.check!
+        output[key] = activate ? num : 0
         if (RowsWhoseCheckBoxIsInASeparateField.has(key)) {
-          output[RowsWhoseCheckBoxIsInASeparateField.get(key)!] = !isNaN(value.num!) && value.check
+          output[RowsWhoseCheckBoxIsInASeparateField.get(key)!] = activate
         }
         break
+      }
       case 'networks' :
-        output[key] = value.networks
+        output[key] = value.networks!
         break
     }
   }
-  // now we send the data
+  // sending
   let response: ApiErrorResponse | undefined
   try {
     setTimeout(TimeoutForSavingFailures)
@@ -181,7 +183,8 @@ async function sendUserPreferencesToAPI () {
       body: output
     }, {
       for: props.value!.accountSub ? 'accounts' : 'validators',
-      dashboardKey: String(props.value?.dashboardId)
+      dashboardKey: String(props.value?.dashboardId),
+      groupId: String(props.value?.groupId)
     })
   } catch {
     response = undefined
@@ -194,6 +197,10 @@ async function sendUserPreferencesToAPI () {
 function closeDialog () : void {
   dialogRef?.value.close()
 }
+
+const isOptionValueKnownInDB = (value: APIentry) => value !== undefined && value !== null && (typeof value !== 'number' || !isNaN(value)) && (!Array.isArray(value) || !!value.length)
+const isOptionActivatedInDB = (apiData: AllOptions, key: keyof AllOptions) => RowsWhoseCheckBoxIsInASeparateField.has(key) ? !!apiData[RowsWhoseCheckBoxIsInASeparateField.get(key)!] : !!apiData[key]
+const getOptionType = (apiData: AllOptions, key: keyof AllOptions) => Array.isArray(apiData[key]) ? 'networks' : (typeof apiData[key] === 'boolean' ? 'binary' : (RowsThatExpectAPercentage.includes(key) ? 'percent' : 'amount'))
 
 const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !OptionsNeedingPremium.includes(key)
 </script>
