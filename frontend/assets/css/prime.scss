@@ -248,14 +248,16 @@
   .p-toast-message
   .p-toast-message-content
   .p-toast-message-icon.p-icon {
-  width: 2rem;
-  height: 2rem;
+  width: 1rem;
+  height: 1rem;
 }
 .p-toast .p-toast-message .p-toast-message-content .p-toast-summary {
-  font-weight: 700;
+  @include toast_text;
 }
 .p-toast .p-toast-message .p-toast-message-content .p-toast-detail {
+  color: var(--light-black);
   margin: 0.5rem 0 0 0;
+  @include small_toast_text;
 }
 .p-toast .p-toast-message .p-toast-icon-close {
   width: 2rem;
@@ -273,23 +275,26 @@
   box-shadow: 0 0 0 0.2rem #a7f3d0;
 }
 .p-toast .p-toast-message.p-toast-message-info {
-  background: var(--primary-orange-pressed);
-  color: var(--very-dark-grey);
+  border: solid var(--toast-border-info-color) 1px;
+  background: var(--toast-background-info-color);
+  color: var(--toast-message-info-color);
 }
 .p-toast .p-toast-message.p-toast-message-info .p-toast-message-icon,
 .p-toast .p-toast-message.p-toast-message-info .p-toast-icon-close {
-  color: var(--very-dark-grey);
+  color: var(--toast-message-info-color);
 }
 .p-toast .p-toast-message.p-toast-message-success {
-  background: var(--primary-orange);
-  color: var(--very-dark-grey);
+  border: solid var(--toast-border-sucess-color) 1px;
+  background: var(--toast-background-success-color);
+  color: var(--toast-message-success-color);
 }
 .p-toast .p-toast-message.p-toast-message-success .p-toast-message-icon,
 .p-toast .p-toast-message.p-toast-message-success .p-toast-icon-close {
-  color: var(--very-dark-grey);
+  color: var(--toast-message-success-color);
 }
 .p-toast .p-toast-message.p-toast-message-warn {
-  background: var(--very-dark-grey);
+  border: solid var(--toast-border-error-color) 1px;
+  background: var(--toast-background-error-color);
   color: var(--primary-color);
 }
 .p-toast .p-toast-message.p-toast-message-warn .p-toast-message-icon,
@@ -297,12 +302,13 @@
   color: var(--primary-color);
 }
 .p-toast .p-toast-message.p-toast-message-error {
-  background: var(--very-dark-grey);
-  color: var(--primary-color);
+  border: solid var(--toast-border-error-color) 1px;
+  background: var(--toast-background-error-color);
+  color: var(--toast-message-error-color);
 }
 .p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon,
 .p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
-  color: var(--primary-color);
+  color: var(--toast-message-error-color);
 }
 
 // Multiselect drop-down

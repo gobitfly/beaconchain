@@ -69,6 +69,18 @@
   src: url("/fonts/Inter-VariableFont_slnt,wght.ttf") format("truetype");
 }
 
+@font-face {
+  font-family: "Mukta";
+  font-weight: 600;
+  src: url("/fonts/Mukta-SemiBold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Mukta";
+  font-weight: 300;
+  src: url("/fonts/Mukta-Light.ttf") format("truetype");
+}
+
 :root {
   --montserrat-family: "Montserrat";
   --montserrat-light: 400;
@@ -86,6 +98,10 @@
   --inter-light: 300;
   --inter-regular: 400;
   --inter-medium: 500;
+
+  --mukta-family: "Mukta";
+  --mukta-light: 300;
+  --mukta-semi-bold: 600;
 
   --header1_font_family: var(--montserrat-family);
   --header1_font_size: 24px;
@@ -277,6 +293,27 @@ h1 {
   font-weight: var(--button_font_weight);
 }
 
+
 .button_text{
   @include button_text
+}
+
+@mixin toast_text(){
+  font-family:var(--mukta-family);
+  font-size:var(--standard_text_font_size);
+  font-weight: var(--mukta-semi-bold);
+}
+
+.toast_text{
+  @include toast_text
+}
+
+@mixin small_toast_text(){
+  font-family:var(--mukta-family);
+  font-size: var(--small_text_font_size);
+  font-weight: var(--mukta-light);
+}
+
+.small_toast_text{
+  @include small_toast_text
 }
