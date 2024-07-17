@@ -114,7 +114,7 @@ watch(modifiableOptions, (options) => {
 function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
   const srcValue = apiData[apiKey]
   const type = getOptionType(apiData, apiKey)
-  if (!isOptionValueKnownInDB(srcValue) || (!isOptionActivatedInDB(apiData, apiKey) && type !== 'binary')) {
+  if (!isOptionValueKnownInDB(apiData, apiKey)) {
     if (DefaultValues.has(apiKey)) {
       return { ...DefaultValues.get(apiKey)! }
     } else {
@@ -136,13 +136,13 @@ function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllO
     case 'percent' :
       return {
         type,
-        check: true, // the `false` case has been tackled at the beginning of the function, we returned a default value
+        check: isOptionActivatedInDB(apiData, apiKey),
         num: srcValue as number * 100
       }
     case 'amount' :
       return {
         type,
-        check: true, // the `false` case has been tackled at the beginning of the function, we returned a default value
+        check: isOptionActivatedInDB(apiData, apiKey),
         num: srcValue as number
       }
   }
@@ -163,9 +163,11 @@ async function sendUserPreferencesToAPI () {
       case 'amount' : {
         const num = (value.type === 'percent') ? value.num! / 100 : value.num!
         const activate = !isNaN(num) && value.check!
-        output[key] = activate ? num : 0
         if (RowsWhoseCheckBoxIsInASeparateField.has(key)) {
+          output[key] = !isNaN(num) ? num : 0
           output[RowsWhoseCheckBoxIsInASeparateField.get(key)!] = activate
+        } else {
+          output[key] = activate ? num : 0
         }
         break
       }
@@ -198,10 +200,12 @@ function closeDialog () : void {
   dialogRef?.value.close()
 }
 
-const isOptionValueKnownInDB = (value: APIentry) => value !== undefined && value !== null && (typeof value !== 'number' || !isNaN(value)) && (!Array.isArray(value) || !!value.length)
+const isOptionValueKnownInDB = (apiData: AllOptions, key: keyof AllOptions) =>
+  apiData[key] !== undefined && apiData[key] !== null &&
+  (typeof apiData[key] !== 'number' || apiData[key] as number > 0 || isOptionActivatedInDB(apiData, key)) &&
+  (!Array.isArray(apiData[key]) || !!(apiData[key] as Array<any>).length)
 const isOptionActivatedInDB = (apiData: AllOptions, key: keyof AllOptions) => RowsWhoseCheckBoxIsInASeparateField.has(key) ? !!apiData[RowsWhoseCheckBoxIsInASeparateField.get(key)!] : !!apiData[key]
 const getOptionType = (apiData: AllOptions, key: keyof AllOptions) => Array.isArray(apiData[key]) ? 'networks' : (typeof apiData[key] === 'boolean' ? 'binary' : (RowsThatExpectAPercentage.includes(key) ? 'percent' : 'amount'))
-
 const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !OptionsNeedingPremium.includes(key)
 </script>
 
