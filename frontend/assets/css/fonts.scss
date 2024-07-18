@@ -298,14 +298,14 @@ h1 {
   @include button_text
 }
 
-@mixin toast_text(){
+@mixin text-toast(){
   font-family:var(--mukta-family);
   font-size:var(--standard_text_font_size);
   font-weight: var(--mukta-semi-bold);
 }
 
-.toast_text{
-  @include toast_text
+.text-toast{
+  @include text-toast
 }
 
 @mixin small_toast_text(){

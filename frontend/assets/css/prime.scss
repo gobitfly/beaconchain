@@ -252,7 +252,7 @@
   height: 1rem;
 }
 .p-toast .p-toast-message .p-toast-message-content .p-toast-summary {
-  @include toast_text;
+  @include text-toast;
 }
 .p-toast .p-toast-message .p-toast-message-content .p-toast-detail {
   color: var(--light-black);
