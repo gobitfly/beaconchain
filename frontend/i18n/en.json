@@ -115,15 +115,16 @@
     "unlock": "Unlock Full Features"
   },
   "validator_state": {
-    "active": "active",
-    "withdrawn": "withdrawn",
-    "deposited": "deposited",
-    "online": "active",
-    "offline": "offline",
-    "pending": "pending",
+    "slashed": "slashed",
     "exited": "exited",
-    "exiting": "exiting",
-    "slashed": "slashed"
+    "deposited": "deposited",
+    "pending": "pending",
+    "slashing_offline": "slashing",
+    "slashing_online": "slashing",
+    "exiting_offline": "exiting",
+    "exiting_online": "exiting",
+    "active_offline": "active",
+    "active_online": "active"
   },
   "slot_state": {
     "orphaned": "Orphaned",
