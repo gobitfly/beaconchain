@@ -257,7 +257,7 @@
 .p-toast .p-toast-message .p-toast-message-content .p-toast-detail {
   color: var(--light-black);
   margin: 0.5rem 0 0 0;
-  @include small_toast_text;
+  @include text-tost--sm;
 }
 .p-toast .p-toast-message .p-toast-icon-close {
   width: 2rem;
