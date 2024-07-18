@@ -23,7 +23,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	result := make([]t.VDBWithdrawalsTableRow, 0)
 	var paging t.Paging
 
@@ -66,7 +66,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 
 		queryParams := []interface{}{dashboardId.Id}
 		validatorsQuery := fmt.Sprintf(`
-			SELECT 
+			SELECT
 				validator_index,
 				group_id
 			FROM users_val_dashboards_validators
@@ -78,7 +78,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			validatorsQuery += fmt.Sprintf(" AND validator_index = ANY ($%d)", len(queryParams))
 		}
 
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryParams...)
+		err := d.alloyReader.SelectContext(ctx, &queryResult, validatorsQuery, queryParams...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -186,7 +186,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 
 	withdrawalsQuery += whereQuery + orderQuery + limitQuery
 
-	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
 	}
@@ -408,7 +408,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	return nextData, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error) {
 	result := &t.VDBTotalWithdrawalsData{
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}
@@ -431,7 +431,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 
 	queryParams := []interface{}{}
 	withdrawalsQuery := `
-		SELECT 
+		SELECT
 			t.validator_index,
 			MAX(t.epoch_end) AS epoch_end,
 			SUM(COALESCE(t.withdrawals_amount, 0)) AS acc_withdrawals_amount
@@ -473,7 +473,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, validatorsQuery)
 	}
 
-	err = d.alloyReader.Select(&queryResult, withdrawalsQuery, queryParams...)
+	err = d.alloyReader.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}
@@ -497,7 +497,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 	}
 
 	var latestWithdrawalsAmount int64
-	err = d.readerDb.Get(&latestWithdrawalsAmount, `
+	err = d.readerDb.GetContext(ctx, &latestWithdrawalsAmount, `
 		SELECT
 			COALESCE(SUM(w.amount), 0)
 		FROM
