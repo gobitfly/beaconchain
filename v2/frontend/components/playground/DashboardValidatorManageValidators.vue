@@ -49,25 +49,34 @@ const openEpochDuties = () => {
   </div>
   <div class="status-holder">
     <div class="status">
-      <ValidatorTableStatus status="online" />
-    </div>
-    <div class="status">
-      <ValidatorTableStatus status="exiting" />
-    </div>
-    <div class="status">
-      <ValidatorTableStatus status="withdrawn" />
-    </div>
-    <div class="status">
-      <ValidatorTableStatus status="offline" />
-    </div>
-    <div class="status">
-      <ValidatorTableStatus status="pending" :position="12345" />
+      <ValidatorTableStatus status="slashed" />
     </div>
     <div class="status">
       <ValidatorTableStatus status="exited" />
     </div>
     <div class="status">
-      <ValidatorTableStatus status="slashed" />
+      <ValidatorTableStatus status="deposited" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="pending" :position="12345" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="slashing_offline" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="slashing_online" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="exiting_offline" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="exiting_online" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="active_offline" />
+    </div>
+    <div class="status">
+      <ValidatorTableStatus status="active_online" />
     </div>
   </div>
   <div class="icon_holder">
