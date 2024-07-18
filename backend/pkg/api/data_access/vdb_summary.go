@@ -793,57 +793,61 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	ret := &t.ChartData[int, float64]{}
 
 	type queryResult struct {
-		StartEpoch            uint64          `db:"epoch_start"`
-		GroupId               uint64          `db:"group_id"`
-		AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
-		ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
-		SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+		StartEpoch            uint64   `db:"epoch_start"`
+		GroupId               uint64   `db:"group_id"`
+		AttestationEfficiency *float64 `db:"attestation_efficiency"`
+		ProposerEfficiency    *float64 `db:"proposer_efficiency"`
+		SyncEfficiency        *float64 `db:"sync_efficiency"`
 	}
 
 	var queryResults []queryResult
 
-	cutOffDate := time.Date(2023, 9, 27, 23, 59, 59, 0, time.UTC).Add(time.Hour*24*30).AddDate(0, 0, -30)
-
+	log.Info(time.Unix(int64(afterTs), 0).UTC(), time.Unix(int64(beforeTs), 0).UTC())
 	if dashboardId.Validators != nil {
 		query := `select epoch_start, 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 			select
 				epoch_start,
-				COALESCE(SUM(attestations_reward), 0)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-				COALESCE(SUM(blocks_proposed), 0)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-				COALESCE(SUM(sync_executed), 0)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-			from  validator_dashboard_data_daily
-			WHERE day > $1 AND validator_index = ANY($2)
+				COALESCE(SUM(attestations_reward), 0) / NULLIF(SUM(attestations_ideal_reward), 0) AS attestation_efficiency,
+				COALESCE(SUM(blocks_proposed), 0) / NULLIF(SUM(blocks_scheduled), 0) AS proposer_efficiency,
+				COALESCE(SUM(sync_executed), 0) / NULLIF(SUM(sync_scheduled), 0) AS sync_efficiency
+			from  holesky_v2.v3_validator_dashboard_data_daily
+			WHERE day >= $1 AND day <= $2 AND validator_index IN ($3)
 			group by 1
 		) as a ORDER BY epoch_start;`
-		err := d.alloyReader.SelectContext(ctx, &queryResults, query, cutOffDate, dashboardId.Validators)
+		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
 	} else {
-		queryParams := []interface{}{cutOffDate, dashboardId.Id}
+		queryParams := []interface{}{afterTs, beforeTs, dashboardId.Id}
 
 		groupIdQuery := "v.group_id,"
 		groupByQuery := "GROUP BY 1, 2"
 		orderQuery := "ORDER BY epoch_start, group_id"
 		if dashboardId.AggregateGroups {
 			queryParams = append(queryParams, t.DefaultGroupId)
-			groupIdQuery = "$3::smallint AS group_id,"
+			groupIdQuery = "$4::smallint AS group_id,"
 			groupByQuery = "GROUP BY 1"
 			orderQuery = "ORDER BY epoch_start"
 		}
-		query := fmt.Sprintf(`SELECT epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
+		query := fmt.Sprintf(`
+		WITH validators as (
+			select validator_index::Int64 as validator_index, group_id from holesky.alloy_users_val_dashboards_validators where dashboard_id = $3
+		)
+		SELECT epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
 			SELECT
 				d.epoch_start,
 				%s
-				COALESCE(SUM(d.attestations_reward), 0)::decimal / NULLIF(SUM(d.attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-				COALESCE(SUM(d.blocks_proposed), 0)::decimal / NULLIF(SUM(d.blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-				COALESCE(SUM(d.sync_executed), 0)::decimal / NULLIF(SUM(d.sync_scheduled)::decimal, 0) AS sync_efficiency
-			FROM users_val_dashboards_validators v
-			INNER JOIN validator_dashboard_data_daily d ON d.validator_index = v.validator_index
-			WHERE day > $1 AND dashboard_id = $2
+				COALESCE(SUM(d.attestations_reward), 0) / NULLIF(SUM(d.attestations_ideal_reward), 0) AS attestation_efficiency,
+				COALESCE(SUM(d.blocks_proposed), 0) / NULLIF(SUM(d.blocks_scheduled), 0) AS proposer_efficiency,
+				COALESCE(SUM(d.sync_executed), 0) / NULLIF(SUM(d.sync_scheduled), 0) AS sync_efficiency
+			FROM holesky_v2.v3_validator_dashboard_data_daily d
+			INNER JOIN validators v ON d.validator_index::Int64 = v.validator_index::Int64
+			WHERE day >= fromUnixTimestamp($1) AND day <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
 			%s
 		) as a %s;`, groupIdQuery, groupByQuery, orderQuery)
-		err := d.alloyReader.SelectContext(ctx, &queryResults, query, queryParams...)
+
+		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, queryParams...)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -860,7 +864,21 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		if data[row.StartEpoch] == nil {
 			data[row.StartEpoch] = make(map[uint64]float64)
 		}
-		data[row.StartEpoch][row.GroupId] = d.calculateTotalEfficiency(row.AttestationEfficiency, row.ProposerEfficiency, row.SyncEfficiency)
+
+		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
+		if row.AttestationEfficiency != nil {
+			attestationEfficiency.Float64 = *row.AttestationEfficiency
+			attestationEfficiency.Valid = true
+		}
+		if row.ProposerEfficiency != nil {
+			proposerEfficiency.Float64 = *row.ProposerEfficiency
+			proposerEfficiency.Valid = true
+		}
+		if row.SyncEfficiency != nil {
+			syncEfficiency.Float64 = *row.SyncEfficiency
+			syncEfficiency.Valid = true
+		}
+		data[row.StartEpoch][row.GroupId] = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 	}
 
 	epochsArray := make([]uint64, 0, len(epochsMap))
@@ -879,7 +897,10 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return groupsArray[i] < groupsArray[j]
 	})
 
-	ret.Categories = epochsArray
+	ret.Categories = make([]uint64, 0, len(epochsArray))
+	for _, epoch := range epochsArray {
+		ret.Categories = append(ret.Categories, uint64(utils.EpochToTime(epoch).Unix()))
+	}
 	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
 
 	seriesMap := make(map[uint64]*t.ChartSeries[int, float64])
