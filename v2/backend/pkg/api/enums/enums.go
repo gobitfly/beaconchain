@@ -17,6 +17,51 @@ func IsInvalidEnum(e Enum) bool {
 }
 
 // ----------------
+// Validator Dashboard Rewards Table
+
+type AdInsertMode int
+
+var _ EnumFactory[AdInsertMode] = AdInsertMode(0)
+
+const (
+	AdInsertBefore  AdInsertMode = iota
+	AdInsertAfter   AdInsertMode = iota
+	AdInsertReplace AdInsertMode = iota
+	AdInsertInsert  AdInsertMode = iota
+)
+
+func (c AdInsertMode) Int() int {
+	return int(c)
+}
+
+func (AdInsertMode) NewFromString(s string) AdInsertMode {
+	switch s {
+	case "before":
+		return AdInsertBefore
+	case "after":
+		return AdInsertAfter
+	case "replace":
+		return AdInsertReplace
+	case "insert":
+		return AdInsertInsert
+	default:
+		return AdInsertMode(-1)
+	}
+}
+
+var AdInsertModes = struct {
+	Before  AdInsertMode
+	After   AdInsertMode
+	Replace AdInsertMode
+	Insert  AdInsertMode
+}{
+	AdInsertBefore,
+	AdInsertAfter,
+	AdInsertReplace,
+	AdInsertInsert,
+}
+
+// ----------------
 // Validator Dashboard Summary Table
 
 type VDBSummaryColumn int

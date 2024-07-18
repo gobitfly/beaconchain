@@ -182,3 +182,7 @@ type VDBProposalSummaryValidators struct {
 		MissedBlocks []uint64
 	}
 }
+
+type VDBProtocolModes struct {
+	RocketPool bool
+}
