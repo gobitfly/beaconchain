@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 
-// TODO: Mute logic: ts < now = unmuted; MAX_INT: muted until turned on
-
 import {
   faArrowUpRightFromSquare,
   faPaperPlane
