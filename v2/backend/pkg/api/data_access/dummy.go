@@ -507,8 +507,16 @@ func (d *DummyService) GetByRefreshToken(claimUserID, claimAppID, claimDeviceID 
 	return r, err
 }
 
-func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID string) error {
-	r := uint64(0)
+func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
+	r := t.OAuthAppData{}
 	err := commonFakeData(&r)
-	return err
+	return &r, err
+}
+
+func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+	return nil
 }

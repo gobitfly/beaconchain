@@ -30,7 +30,9 @@ type UserRepository interface {
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
 
 	GetByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error)
-	MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID string) error
+	MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error
+	AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error
+	GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error)
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -624,16 +626,11 @@ func (d *DataAccessService) GetByRefreshToken(claimUserID, claimAppID, claimDevi
 	err := d.userWriter.Get(&userID,
 		`SELECT user_id FROM users_devices WHERE user_id = $1 AND 
 			refresh_token = $2 AND app_id = $3 AND id = $4 AND active = true`, claimUserID, hashedRefreshToken, claimAppID, claimDeviceID)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return userID, nil
+	return userID, err
 }
 
-func (d *DataAccessService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID string) error {
-	result, err := d.userWriter.Exec("UPDATE users_devices SET refresh_token = $2, device_identifier = $3 WHERE refresh_token = $1", oldHashedRefreshToken, newHashedRefreshToken, deviceID)
+func (d *DataAccessService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+	result, err := d.userWriter.Exec("UPDATE users_devices SET refresh_token = $2, device_identifier = $3, device_name = $4 WHERE refresh_token = $1", oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName)
 	if err != nil {
 		return errors.Wrap(err, "Error updating refresh token")
 	}
@@ -647,5 +644,18 @@ func (d *DataAccessService) MigrateMobileSession(oldHashedRefreshToken, newHashe
 		return errors.New(fmt.Sprintf("illegal number of rows affected, expected 1 got %d", rowsAffected))
 	}
 
+	return err
+}
+
+func (d *DataAccessService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
+	data := t.OAuthAppData{}
+	err := d.userWriter.Get(&data, "SELECT id, app_name, redirect_uri, active, owner_id FROM oauth_apps WHERE active = true AND redirect_uri = $1", callback)
+	return &data, err
+}
+
+func (d *DataAccessService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+	_, err := d.userWriter.Exec("INSERT INTO users_devices (user_id, refresh_token, device_identifier, device_name, app_id, created_ts) VALUES($1, $2, $3, $4, $5, 'NOW()') ON CONFLICT DO NOTHING",
+		userID, hashedRefreshToken, deviceID, deviceName, appID,
+	)
 	return err
 }

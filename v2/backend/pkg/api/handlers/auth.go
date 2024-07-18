@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"html"
 	"net/http"
 	"strconv"
 	"strings"
@@ -232,98 +233,6 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 }
 
 func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Request) {
-	h.internalPostLoginBase(w, r)
-
-	returnOk(w, nil)
-}
-
-func (h *HandlerService) InternalPostLoginMobile(w http.ResponseWriter, r *http.Request) {
-	h.internalPostLoginBase(w, r)
-
-	// mark session as a mobile flag to differentiate them from regular created sessions
-	h.scs.Put(r.Context(), mobileAuthKey, true)
-
-	returnOk(w, struct {
-		Session string `json:"session"`
-	}{
-		Session: h.scs.Token(r.Context()),
-	})
-}
-
-// Abstract: One time Transitions old v1 app sessions to new v2 sessions so users stay signed in
-// Can be used to exchange a legacy mobile auth access_token & refresh_token pair for a session
-// Refresh token is consumed and can no longer be used after this
-func (h *HandlerService) InternalExchangeLegacyMobileAuth(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	req := struct {
-		RefreshToken string `json:"refresh_token"`
-		DeviceID     string `json:"device_id"`
-	}{}
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
-		return
-	}
-
-	// get user id by refresh token
-	userID, refreshTokenHashed, err := h.getTokenByRefresh(r, req.RefreshToken)
-	if err != nil {
-		switch {
-		case errors.Is(err, errInvalidTokenClaims):
-			handleErr(w, newUnauthorizedErr("invalid token"))
-		case errors.Is(err, sql.ErrNoRows):
-			handleErr(w, dataaccess.ErrNotFound)
-		default:
-			handleErr(w, err)
-		}
-		return
-	}
-
-	// Get user info
-	badCredentialsErr := newUnauthorizedErr("invalid email or password") // same error as to not leak information
-	user, err := h.dai.GetUserCredentialInfo(r.Context(), userID)
-	if err != nil {
-		if errors.Is(err, dataaccess.ErrNotFound) {
-			err = badCredentialsErr
-		}
-		handleErr(w, err)
-		return
-	}
-	if !user.EmailConfirmed {
-		handleErr(w, newUnauthorizedErr("email not confirmed"))
-		return
-	}
-
-	// create new session
-	err = h.scs.RenewToken(r.Context())
-	if err != nil {
-		handleErr(w, errors.New("error creating session"))
-		return
-	}
-
-	session := h.scs.Token(r.Context())
-
-	// invalidate old refresh token and replace with hashed session id
-	err = h.dai.MigrateMobileSession(refreshTokenHashed, utils.HashAndEncode(session+session), req.DeviceID) // salted with session
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-
-	// set fields of session after invalidating refresh token
-	h.scs.Put(r.Context(), authenticatedKey, true)
-	h.scs.Put(r.Context(), userIdKey, userID)
-	h.scs.Put(r.Context(), subscriptionKey, user.ProductId)
-	h.scs.Put(r.Context(), userGroupKey, user.UserGroup)
-	h.scs.Put(r.Context(), mobileAuthKey, true)
-
-	returnOk(w, struct {
-		Session string `json:"session"`
-	}{
-		Session: session,
-	})
-}
-
-func (h *HandlerService) internalPostLoginBase(w http.ResponseWriter, r *http.Request) {
 	// validate request
 	var v validationError
 	req := struct {
@@ -379,6 +288,141 @@ func (h *HandlerService) internalPostLoginBase(w http.ResponseWriter, r *http.Re
 	h.scs.Put(r.Context(), userIdKey, user.Id)
 	h.scs.Put(r.Context(), subscriptionKey, user.ProductId)
 	h.scs.Put(r.Context(), userGroupKey, user.UserGroup)
+
+	returnOk(w, nil)
+}
+
+// Can be used to login on mobile, requires an authenticated session
+// Response must conform to OAuth spec
+func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		DeviceName  string `json:"device_name"`
+		DeviceID    string `json:"device_id"`
+		RedirectURI string `json:"redirect_uri"`
+		State       string `json:"state"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	state := ""
+	if req.State != "" {
+		state = "&state=" + req.State
+	}
+
+	// check if user has a session
+	userInfo, err := h.getUserBySession(r)
+	if err != nil {
+		callback := req.RedirectURI + "?error=invalid_request&error_description=unauthorized_client" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+
+	// check if oauth app exists to validate whether redirect uri is valid
+	appInfo, err := h.dai.GetAppDataFromRedirectUri(req.RedirectURI)
+	if err != nil {
+		callback := req.RedirectURI + "?error=invalid_request&error_description=missing_redirect_uri" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+
+	// renew session and pass to callback
+	err = h.scs.RenewToken(r.Context())
+	if err != nil {
+		callback := req.RedirectURI + "?error=invalid_request&error_description=server_error" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+	session := h.scs.Token(r.Context())
+
+	sanitizedDeviceName := html.EscapeString(req.DeviceName)
+	err = h.dai.AddUserDevice(userInfo.Id, utils.HashAndEncode(session+session), req.DeviceID, sanitizedDeviceName, appInfo.ID)
+	if err != nil {
+		log.Warnf("Error adding user device: %v", err)
+		callback := req.RedirectURI + "?error=invalid_request&error_description=server_error" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+
+	// pass via redirect to app oauth callback handler
+	callback := req.RedirectURI + "?code=session_" + session + state // prefixed session
+	http.Redirect(w, r, callback, http.StatusFound)
+}
+
+// Abstract: One time Transitions old v1 app sessions to new v2 sessions so users stay signed in
+// Can be used to exchange a legacy mobile auth access_token & refresh_token pair for a session
+// Refresh token is consumed and can no longer be used after this
+func (h *HandlerService) InternalExchangeLegacyMobileAuth(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		DeviceName   string `json:"device_name"`
+		RefreshToken string `json:"refresh_token"`
+		DeviceID     string `json:"device_id"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// get user id by refresh token
+	userID, refreshTokenHashed, err := h.getTokenByRefresh(r, req.RefreshToken)
+	if err != nil {
+		switch {
+		case errors.Is(err, errInvalidTokenClaims):
+			handleErr(w, newUnauthorizedErr("invalid token"))
+		case errors.Is(err, sql.ErrNoRows):
+			handleErr(w, dataaccess.ErrNotFound)
+		default:
+			handleErr(w, err)
+		}
+		return
+	}
+
+	// Get user info
+	badCredentialsErr := newUnauthorizedErr("invalid email or password") // same error as to not leak information
+	user, err := h.dai.GetUserCredentialInfo(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, dataaccess.ErrNotFound) {
+			err = badCredentialsErr
+		}
+		handleErr(w, err)
+		return
+	}
+	if !user.EmailConfirmed {
+		handleErr(w, newUnauthorizedErr("email not confirmed"))
+		return
+	}
+
+	// create new session
+	err = h.scs.RenewToken(r.Context())
+	if err != nil {
+		handleErr(w, errors.New("error creating session"))
+		return
+	}
+	session := h.scs.Token(r.Context())
+
+	// invalidate old refresh token and replace with hashed session id
+	sanitizedDeviceName := html.EscapeString(req.DeviceName)
+	err = h.dai.MigrateMobileSession(refreshTokenHashed, utils.HashAndEncode(session+session), req.DeviceID, sanitizedDeviceName) // salted with session
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// set fields of session after invalidating refresh token
+	h.scs.Put(r.Context(), authenticatedKey, true)
+	h.scs.Put(r.Context(), userIdKey, userID)
+	h.scs.Put(r.Context(), subscriptionKey, user.ProductId)
+	h.scs.Put(r.Context(), userGroupKey, user.UserGroup)
+	h.scs.Put(r.Context(), mobileAuthKey, true)
+
+	returnOk(w, struct {
+		Session string
+	}{
+		Session: session,
+	})
 }
 
 func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Request) {
