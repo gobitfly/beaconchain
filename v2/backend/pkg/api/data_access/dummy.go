@@ -500,3 +500,21 @@ func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, d
 	err := commonFakeData(&r)
 	return r, err
 }
+
+func (d *DummyService) CreateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
+	return nil
+}
+
+func (d *DummyService) GetAdConfigurations(ctx context.Context, keys []string) ([]t.AdConfigurationData, error) {
+	r := []t.AdConfigurationData{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) UpdateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
+	return nil
+}
+
+func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) error {
+	return nil
+}
