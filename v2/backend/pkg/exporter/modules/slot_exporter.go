@@ -440,13 +440,15 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		})
 		// if we are exporting the head epoch, update the validator db table
 		if isHeadEpoch {
-			g.Go(func() error {
-				err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)
-				if err != nil {
-					return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
-				}
+			// this function sets exports the validator status into the db
+			// and also updates the status field in the validators array
+			err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)
+			if err != nil {
+				return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
+			}
 
-				// also update the queue deposit table once every epoch
+			// also update the queue deposit table once every epoch
+			g.Go(func() error {
 				err = db.UpdateQueueDeposits(tx)
 				if err != nil {
 					return fmt.Errorf("error updating queue deposits cache: %w", err)
@@ -474,20 +476,20 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 						EffectiveBalance:      v.EffectiveBalance,
 						Slashed:               v.Slashed,
 					}
-					if v.ActivationEpoch != db.FarFutureEpoch {
+					if v.ActivationEpoch != db.MaxSqlNumber {
 						r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
 					}
-					if v.ActivationEligibilityEpoch != db.FarFutureEpoch {
+					if v.ActivationEligibilityEpoch != db.MaxSqlNumber {
 						r.ActivationEligibilityEpoch = sql.NullInt64{Int64: int64(v.ActivationEligibilityEpoch), Valid: true}
 					}
-					if v.ExitEpoch != db.FarFutureEpoch {
+					if v.ExitEpoch != db.MaxSqlNumber {
 						r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}
 					}
-					if v.WithdrawableEpoch != db.FarFutureEpoch {
+					if v.WithdrawableEpoch != db.MaxSqlNumber {
 						r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
 					}
 					RedisCachedValidatorsMapping.Mapping[v.Index] = &r
-					if v.Status == "pending_queued" {
+					if v.Status == "pending" {
 						a := int(v.ActivationEligibilityEpoch)
 						activationMapping[a] = append(activationMapping[a], v.Index)
 					}
@@ -550,7 +552,10 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				log.Infof("writing validator mapping to redis done, took %s", time.Since(start))
 				return nil
 			})
+
 			// update cached view of consensus desposits
+			// possible bug: at this point the export tx is not yet committed, so the query will read
+			// stale data
 			g.Go(func() error {
 				start := time.Now()
 				err := db.CacheQuery(`
