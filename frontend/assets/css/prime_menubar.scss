@@ -15,17 +15,25 @@
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
       height: 30px;
-      cursor: pointer;
       &:has(.router-link-active),
       &:has(.p-active) {
         color: var(--primary-color);
         border-color: var(--primary-color);
-      }
-
+      }     
       > .p-menuitem-content {
         padding: var(--padding-small) var(--padding-large);
         border-radius: var(--border-radius);
         height: 28px;
+
+        .text {
+          // this hack is necessary to make the clickable area as big as the parent
+          &::before{
+            cursor: pointer;
+            content: "";
+            position: absolute;
+            inset: 0;
+          }
+        }
         .button-content {
           margin-top: 1px;
           justify-content: center;
@@ -53,7 +61,16 @@
       white-space: nowrap;
       text-overflow: ellipsis;
       max-width: 200px;
-      cursor: pointer;
+      
+      .text {
+        // this hack is necessary to make the clickable area as big as the parent
+        &::before{
+          cursor: pointer;
+          content: "";
+          position: absolute;
+          inset: 0;
+        }
+      }
 
       &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);

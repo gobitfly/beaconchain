@@ -96,6 +96,11 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodGet, "/product-summary", nil, hs.InternalGetProductSummary},
 
+		{http.MethodPost, "/ad-configurations", nil, hs.InternalPostAdConfigurations},
+		{http.MethodGet, "/ad-configurations", nil, hs.InternalGetAdConfigurations},
+		{http.MethodPut, "/ad-configurations/{key}", nil, hs.InternalPutAdConfiguration},
+		{http.MethodDelete, "/ad-configurations/{key}", nil, hs.InternalDeleteAdConfiguration},
+
 		{http.MethodPost, "/users", nil, hs.InternalPostUsers},
 		{http.MethodPost, "/users/email-confirmations/{token}", nil, hs.InternalPostUserConfirm},
 		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},

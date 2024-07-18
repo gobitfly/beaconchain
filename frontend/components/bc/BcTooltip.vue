@@ -57,6 +57,7 @@ const setPosition = () => {
     // we need to wait for the tt to be added to the dome to get it's measure, but we set the pos at an estimated value until then
     tooltipAddedTimeout.value = setTimeout(setPosition, 10)
   }
+
   const ttWidth = tt?.width ?? 100
   const ttHeight = tt?.height ?? 60
   const padding = 4
@@ -78,6 +79,37 @@ const setPosition = () => {
   left = Math.max(0, Math.min(left, (width.value - ttWidth)))
   top = Math.max(0, Math.min(top, (height.value - ttHeight)))
   pos.value = { top: `${top}px`, left: `${left}px` }
+  if (bcTooltip.value) {
+    let centerX = -5 + Math.abs(left - rect.left) + rect.width / 2
+    if (rect.width > ttWidth) {
+      centerX = -5 + ttWidth / 2
+    }
+    let centerY = -5 + Math.abs(top - rect.top) + rect.height / 2
+    if (rect.height > ttHeight) {
+      centerY = -5 + ttHeight / 2
+    }
+    centerX = Math.max(5, Math.min(centerX, ttWidth - 5))
+    centerY = Math.max(5, Math.min(centerY, ttHeight - 5))
+    let afterLeft = centerX
+    let afterTop = -10
+    switch (props.position) {
+      case 'bottom':
+        break
+      case 'left':
+        afterLeft = ttWidth
+        afterTop = centerY
+        break
+      case 'top':
+        afterTop = ttHeight
+        break
+      case 'right':
+        afterLeft = -10
+        afterTop = centerY
+        break
+    }
+    bcTooltip.value.style.setProperty('--tt-after-left', `${afterLeft}px`)
+    bcTooltip.value.style.setProperty('--tt-after-top', `${afterTop}px`)
+  }
 }
 
 const handleClick = () => {
@@ -257,6 +289,8 @@ onUnmounted(() => {
 .bc-tooltip {
   --tt-bg-color: var(--tooltip-background);
   --tt-color: var(--tooltip-text-color);
+  --tt-after-left: unset;
+  --tt-after-top: unset;
   position: relative;
   display: inline-flex;
   flex-wrap: wrap;
@@ -288,8 +322,8 @@ onUnmounted(() => {
     z-index: 1;
     pointer-events: none;
 
-    top: -10px;
-    left: calc(50% - 5px);
+    top: var(--tt-after-top);
+    left: var(--tt-after-left);
     border-color: transparent transparent var(--tt-bg-color) transparent;
   }
 
@@ -305,8 +339,6 @@ onUnmounted(() => {
 
   &.top {
     &::after {
-      top: 100%;
-      left: calc(50% - 5px);
       border-color: var(--tt-bg-color) transparent transparent transparent;
     }
 
@@ -314,16 +346,12 @@ onUnmounted(() => {
 
   &.right {
     &::after {
-      top: calc(50% - 5px);
-      left: -10px;
       border-color: transparent var(--tt-bg-color) transparent transparent;
     }
   }
 
   &.left {
     &::after {
-      top: calc(50% - 5px);
-      left: 100%;
       border-color: transparent transparent transparent var(--tt-bg-color);
     }
   }

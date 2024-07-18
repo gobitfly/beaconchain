@@ -187,8 +187,3 @@ linters-settings:
             desc: "DB must not import"
 issues:
   max-same-issues: 0
-  # TODO remove after data access methods for BIDS-3178 are implemented
-  exclude-rules:
-    - linters:
-        - unparam
-      text: "`ctx` is unused"
