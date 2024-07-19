@@ -792,62 +792,79 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
 	ret := &t.ChartData[int, float64]{}
 
-	type queryResult struct {
-		StartEpoch            uint64   `db:"epoch_start"`
-		GroupId               uint64   `db:"group_id"`
-		AttestationEfficiency *float64 `db:"attestation_efficiency"`
-		ProposerEfficiency    *float64 `db:"proposer_efficiency"`
-		SyncEfficiency        *float64 `db:"sync_efficiency"`
+	if len(groupIds) == 0 { // short circuit if no groups are selected
+		return ret, nil
 	}
 
-	var queryResults []queryResult
+	// log.Infof("retrieving data between %v and %v for aggregation %v", time.Unix(int64(afterTs), 0), time.Unix(int64(beforeTs), 0), aggregation)
+	dataTable := ""
+	dateColumn := ""
+	switch aggregation {
+	case enums.IntervalEpoch:
+		return nil, fmt.Errorf("unimplemented aggregation type: %v", aggregation)
+	case enums.IntervalHourly:
+		dataTable = "v3_validator_dashboard_data_hourly"
+		dateColumn = "hour"
+	case enums.IntervalDaily:
+		dataTable = "v3_validator_dashboard_data_daily"
+		dateColumn = "day"
+	case enums.IntervalWeekly:
+		dataTable = "v3_validator_dashboard_data_weekly"
+		dateColumn = "week"
+	default:
+		return nil, fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	}
 
-	log.Info(time.Unix(int64(afterTs), 0).UTC(), time.Unix(int64(beforeTs), 0).UTC())
+	var queryResults []*t.VDBValidatorSummaryChartRow
+
+	containsGroups := false
+	requestedGroupsMap := make(map[int64]bool)
+	for _, groupId := range groupIds {
+		requestedGroupsMap[groupId] = true
+		if !containsGroups && groupId >= 0 {
+			containsGroups = true
+		}
+	}
+
+	totalLineRequested := requestedGroupsMap[t.AllGroups]
+	averageNetworkLineRequested := requestedGroupsMap[t.NetworkAverage]
+
 	if dashboardId.Validators != nil {
-		query := `select epoch_start, 0 AS group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
-			select
+		query := fmt.Sprintf(`
+			SELECT
 				epoch_start,
+				0 AS group_id, 
 				COALESCE(SUM(attestations_reward), 0) / NULLIF(SUM(attestations_ideal_reward), 0) AS attestation_efficiency,
 				COALESCE(SUM(blocks_proposed), 0) / NULLIF(SUM(blocks_scheduled), 0) AS proposer_efficiency,
 				COALESCE(SUM(sync_executed), 0) / NULLIF(SUM(sync_scheduled), 0) AS sync_efficiency
-			from  holesky_v2.v3_validator_dashboard_data_daily
-			WHERE day >= $1 AND day <= $2 AND validator_index IN ($3)
-			group by 1
-		) as a ORDER BY epoch_start;`
+			FROM  holesky_v2.%[1]s
+			WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
+			GROUP BY epoch_start;
+		`, dataTable, dateColumn)
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
 	} else {
-		queryParams := []interface{}{afterTs, beforeTs, dashboardId.Id}
-
-		groupIdQuery := "v.group_id,"
-		groupByQuery := "GROUP BY 1, 2"
-		orderQuery := "ORDER BY epoch_start, group_id"
-		if dashboardId.AggregateGroups {
-			queryParams = append(queryParams, t.DefaultGroupId)
-			groupIdQuery = "$4::smallint AS group_id,"
-			groupByQuery = "GROUP BY 1"
-			orderQuery = "ORDER BY epoch_start"
-		}
 		query := fmt.Sprintf(`
-		WITH validators as (
-			select validator_index::Int64 as validator_index, group_id from holesky.alloy_users_val_dashboards_validators where dashboard_id = $3
-		)
-		SELECT epoch_start, group_id, attestation_efficiency, proposer_efficiency, sync_efficiency FROM (
-			SELECT
-				d.epoch_start,
-				%s
-				COALESCE(SUM(d.attestations_reward), 0) / NULLIF(SUM(d.attestations_ideal_reward), 0) AS attestation_efficiency,
-				COALESCE(SUM(d.blocks_proposed), 0) / NULLIF(SUM(d.blocks_scheduled), 0) AS proposer_efficiency,
-				COALESCE(SUM(d.sync_executed), 0) / NULLIF(SUM(d.sync_scheduled), 0) AS sync_efficiency
-			FROM holesky_v2.v3_validator_dashboard_data_daily d
-			INNER JOIN validators v ON d.validator_index::Int64 = v.validator_index::Int64
-			WHERE day >= fromUnixTimestamp($1) AND day <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
-			%s
-		) as a %s;`, groupIdQuery, groupByQuery, orderQuery)
+		WITH validators AS (
+			SELECT validator_index::Int64 as validator_index, group_id FROM holesky.alloy_users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
+		)		
+		SELECT
+			d.epoch_start,
+			v.group_id,
+			COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
+			COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
+			COALESCE(SUM(d.blocks_proposed), 0) AS blocks_proposed,
+			COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
+			COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
+			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
+		FROM holesky_v2.%[1]s d
+		INNER JOIN validators v ON d.validator_index::Int64 = v.validator_index::Int64
+		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
+		GROUP BY 1, 2;`, dataTable, dateColumn)
 
-		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, queryParams...)
+		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
 		}
@@ -855,30 +872,65 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 
 	// convert the returned data to the expected return type (not pretty)
 	epochsMap := make(map[uint64]bool)
-	groups := make(map[uint64]bool)
-	data := make(map[uint64]map[uint64]float64)
+	data := make(map[uint64]map[int64]float64)
+
+	totalEfficiencyMap := make(map[uint64]*t.VDBValidatorSummaryChartRow)
 	for _, row := range queryResults {
 		epochsMap[row.StartEpoch] = true
-		groups[row.GroupId] = true
 
 		if data[row.StartEpoch] == nil {
-			data[row.StartEpoch] = make(map[uint64]float64)
+			data[row.StartEpoch] = make(map[int64]float64)
 		}
 
-		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-		if row.AttestationEfficiency != nil {
-			attestationEfficiency.Float64 = *row.AttestationEfficiency
-			attestationEfficiency.Valid = true
+		if requestedGroupsMap[row.GroupId] {
+			groupEfficiency, err := d.calculateChartEfficiency(efficiency, row)
+			if err != nil {
+				return nil, err
+			}
+
+			data[row.StartEpoch][row.GroupId] = groupEfficiency
 		}
-		if row.ProposerEfficiency != nil {
-			proposerEfficiency.Float64 = *row.ProposerEfficiency
-			proposerEfficiency.Valid = true
+
+		if totalLineRequested {
+			if totalEfficiencyMap[row.StartEpoch] == nil {
+				totalEfficiencyMap[row.StartEpoch] = &t.VDBValidatorSummaryChartRow{
+					StartEpoch: row.StartEpoch,
+				}
+			}
+			totalEfficiencyMap[row.StartEpoch].AttestationReward += row.AttestationReward
+			totalEfficiencyMap[row.StartEpoch].AttestationIdealReward += row.AttestationIdealReward
+			totalEfficiencyMap[row.StartEpoch].BlocksProposed += row.BlocksProposed
+			totalEfficiencyMap[row.StartEpoch].BlocksScheduled += row.BlocksScheduled
+			totalEfficiencyMap[row.StartEpoch].SyncExecuted += row.SyncExecuted
+			totalEfficiencyMap[row.StartEpoch].SyncScheduled += row.SyncScheduled
 		}
-		if row.SyncEfficiency != nil {
-			syncEfficiency.Float64 = *row.SyncEfficiency
-			syncEfficiency.Valid = true
+	}
+
+	if averageNetworkLineRequested {
+		// Get the average network efficiency
+		efficiency, releaseEfficiencyLock, err := d.services.GetCurrentEfficiencyInfo()
+		if err != nil {
+			releaseEfficiencyLock()
+			return nil, err
 		}
-		data[row.StartEpoch][row.GroupId] = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+		averageNetworkEfficiency := d.calculateTotalEfficiency(
+			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
+		releaseEfficiencyLock()
+
+		for epoch := range epochsMap {
+			data[epoch][int64(t.NetworkAverage)] = averageNetworkEfficiency
+		}
+	}
+
+	if totalLineRequested {
+		for _, row := range totalEfficiencyMap {
+			totalEfficiency, err := d.calculateChartEfficiency(efficiency, row)
+			if err != nil {
+				return nil, err
+			}
+
+			data[row.StartEpoch][t.AllGroups] = totalEfficiency
+		}
 	}
 
 	epochsArray := make([]uint64, 0, len(epochsMap))
@@ -889,8 +941,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return epochsArray[i] < epochsArray[j]
 	})
 
-	groupsArray := make([]uint64, 0, len(groups))
-	for group := range groups {
+	groupsArray := make([]int64, 0, len(requestedGroupsMap))
+	for group := range requestedGroupsMap {
 		groupsArray = append(groupsArray, group)
 	}
 	sort.Slice(groupsArray, func(i, j int) bool {
@@ -903,8 +955,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	}
 	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
 
-	seriesMap := make(map[uint64]*t.ChartSeries[int, float64])
-	for group := range groups {
+	seriesMap := make(map[int64]*t.ChartSeries[int, float64])
+	for group := range requestedGroupsMap {
 		series := t.ChartSeries[int, float64]{
 			Id:   int(group),
 			Data: make([]float64, 0, len(epochsMap)),
