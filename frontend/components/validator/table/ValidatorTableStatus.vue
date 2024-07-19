@@ -10,16 +10,22 @@ interface Props {
   position?: number,
   hideLabel?: boolean
 }
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const iconColor = computed(() => {
+  if (props.status.includes('online')) { return 'green' }
+  if (props.status.includes('offline')) { return 'red' }
+  return 'orange'
+})
 
 </script>
 <template>
   <div class="wrapper">
+    <FontAwesomeIcon :icon="faPowerOff" :class="iconColor" />
     <span v-if="!hideLabel" class="status">
       {{ $t(`validator_state.${status}`) }}
       <span v-if="position"> #<BcFormatNumber :value="position" /></span>
     </span>
-    <FontAwesomeIcon :icon="faPowerOff" :class="status" />
   </div>
 </template>
 <style lang="scss" scoped>
@@ -33,19 +39,14 @@ defineProps<Props>()
     text-wrap: nowrap;
   }
 
-  .online{
+  .green{
     color: var(--positive-color);
   }
-  .deposited,
-  .pending {
-    color: var(--orange-color);
-  }
-  .exiting,
-  .withdrawn,
-  .offline,
-  .exited,
-  .slashed{
+  .red{
     color: var(--negative-color);
+  }
+  .orange{
+    color: var(--orange-color);
   }
 }
 </style>

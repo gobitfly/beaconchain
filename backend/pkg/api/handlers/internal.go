@@ -61,18 +61,151 @@ func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.R
 // Ad Configurations
 
 func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *http.Request) {
-	returnCreated(w, nil)
+	var v validationError
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if user.UserGroup != "ADMIN" {
+		returnForbidden(w, errors.New("user is not an admin"))
+		return
+	}
+
+	var req types.AdConfigurationData
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	key := v.checkKeyNotEmpty(req.Key)
+	if len(req.JQuerySelector) == 0 {
+		v.add("jquery_selector", "must not be empty")
+	}
+	insertMode := checkEnum[enums.AdInsertMode](&v, req.InsertMode, "insert_mode")
+	if req.RefreshInterval == 0 {
+		v.add("refresh_interval", "must be greater than 0")
+	}
+	if (req.BannerId == 0) == (req.HtmlContent == "") {
+		returnBadRequest(w, errors.New("provide either banner_id or html_content"))
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	err = h.dai.CreateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.ApiDataResponse[types.AdConfigurationData]{
+		Data: req,
+	}
+	returnCreated(w, response)
 }
 
 func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var v validationError
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if user.UserGroup != "ADMIN" {
+		returnForbidden(w, errors.New("user is not an admin"))
+		return
+	}
+
+	keys := v.checkAdConfigurationKeys(r.URL.Query().Get("keys"))
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, err := h.dai.GetAdConfigurations(r.Context(), keys)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.ApiDataResponse[[]types.AdConfigurationData]{
+		Data: data,
+	}
+	returnOk(w, response)
 }
 
 func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	var v validationError
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if user.UserGroup != "ADMIN" {
+		returnForbidden(w, errors.New("user is not an admin"))
+		return
+	}
+
+	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
+	var req types.AdConfigurationUpdateData
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if len(req.JQuerySelector) == 0 {
+		v.add("jquery_selector", "must not be empty")
+	}
+	insertMode := checkEnum[enums.AdInsertMode](&v, req.InsertMode, "insert_mode")
+	if req.RefreshInterval == 0 {
+		v.add("refresh_interval", "must be greater than 0")
+	}
+	if (req.BannerId == 0) == (req.HtmlContent == "") {
+		returnConflict(w, errors.New("provide either banner_id or html_content"))
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	err = h.dai.UpdateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.ApiDataResponse[types.AdConfigurationData]{
+		Data: types.AdConfigurationData{Key: key, AdConfigurationUpdateData: &req},
+	}
+	returnOk(w, response)
 }
 
 func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if user.UserGroup != "ADMIN" {
+		returnForbidden(w, errors.New("user is not an admin"))
+		return
+	}
+
+	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	err = h.dai.RemoveAdConfiguration(r.Context(), key)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
 	returnNoContent(w)
 }
 
