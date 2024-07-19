@@ -9,8 +9,8 @@ type NotificationOverviewData struct {
 	IsPushNotificationsEnabled  bool `json:"is_push_notifications_enabled"`
 
 	// these will list 3 group names
-	VDBMostNotifiedGroups []string `json:"vdb_most_notified_groups"`
-	ADBMostNotifiedGroups []string `json:"adb_most_notified_groups"`
+	VDBMostNotifiedGroups [3]string `json:"vdb_most_notified_groups"`
+	ADBMostNotifiedGroups [3]string `json:"adb_most_notified_groups"`
 
 	Last24hEmailsCount  uint64 `json:"last_24h_emails_count"` // daily limit should be available in user info
 	Last24hPushCount    uint64 `json:"last_24h_push_count"`
@@ -72,7 +72,7 @@ type NotificationValidatorDashboardDetail struct {
 	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
 	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices
 	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`
-	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"back_online"`
+	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
 	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`
 }
 

@@ -71,7 +71,7 @@ export interface NotificationValidatorDashboardDetail {
   withdrawal: IndexBlocks[];
   validator_offline_reminder: number /* uint64 */[]; // validator indices
   group_offline_reminder: NotificationEventGroup[];
-  back_online: NotificationEventValidatorBackOnline[];
+  validator_back_online: NotificationEventValidatorBackOnline[];
   group_back_online: NotificationEventGroupBackOnline[];
 }
 export type InternalGetUserNotificationsValidatorDashboardResponse = ApiDataResponse<NotificationValidatorDashboardDetail>;

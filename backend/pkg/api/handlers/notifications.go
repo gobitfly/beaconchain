@@ -231,6 +231,10 @@ func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.Respo
 	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
 	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
 	// TODO: check validity of clients
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 	err := h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, err)
@@ -287,8 +291,12 @@ func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http
 	}
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
-	v.checkNameNotEmpty(req.Name)
-	err := h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, req.Name, req.IsNotificationsEnabled)
+	name := v.checkNameNotEmpty(req.Name)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	err := h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, name, req.IsNotificationsEnabled)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -309,6 +317,10 @@ func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w h
 	var v validationError
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 	err := h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
 	if err != nil {
 		handleErr(w, err)
