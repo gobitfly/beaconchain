@@ -32,7 +32,7 @@ linters:
     - dupword
     - gocognit
     - dupl
-    - mnd
+    # - mnd
 
     # Disabled for now:
     - asasalint
