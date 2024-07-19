@@ -122,18 +122,17 @@ class Eye {
 
   // constants of our perception model, all obtained empirically
   protected static readonly sensicol = [15, 20, 5] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
-  protected static readonly rPowers = [1.2, 1.5, 0.8] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
-  protected static readonly overwhite = [0.5, 1, 0.2] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
-  protected static readonly phi = 1 // power on the purity to make it feel linear to the human eye
+  protected static readonly rPowers = [1.2, 1.6, 0.9] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
+  protected static readonly overwhite = [0.6, 1, 0.6] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
   protected static readonly iotaM = 0.15 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
   protected static readonly iotaD = 0.15 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
   // the following constants will be filled by the constructor
   protected static readonly sensicolNorm = [0, 0, 0]
   protected static readonly rPowersInv = [0, 0, 0]
-  protected static readonly phiInv = 1 / Eye.phi
+  protected static readonly Idivider = Eye.sensicol[R] * Eye.iotaM + Eye.sensicol[G] + Eye.sensicol[B] * Eye.iotaD
 
   /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
-  static readonly lowestImax = (Eye.sensicol[B] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])) ** gammaInv
+  static readonly lowestImax = (Eye.sensicol[B] / Eye.Idivider) ** gammaInv
 
   /**
    * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
@@ -144,7 +143,7 @@ class Eye {
     }
     if (!Eye.sensicolNorm[0]) {
       for (const k of [R, G, B]) {
-        Eye.sensicolNorm[k] = Eye.sensicol[k] / (Eye.sensicol[R] + Eye.sensicol[G] + Eye.sensicol[B])
+        Eye.sensicolNorm[k] = Eye.sensicol[k] / Eye.Idivider
         Eye.rPowersInv[k] = 1 / Eye.rPowers[k]
       }
     }
@@ -192,7 +191,6 @@ class Eye {
         this.r = (h1 + d) / 3
         const w = (rgb[h1] - rgb[l]) * Eye.overwhite[h1] + (rgb[h2] - rgb[l]) * Eye.overwhite[h2]
         this.p = w / (rgb[l] + w)
-        this.p **= Eye.phiInv
       }
       this.fillIntensityFromRGB(rgb)
     } else {
@@ -247,7 +245,7 @@ class Eye {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
     const ratio = [0, 0, 0]
-    const p = this.p ** Eye.phi
+    const p = this.p
     let d = 3 * this.r - h1
     if (d < 1 / 2) {
       d = (2 * d) ** Eye.rPowersInv[h1] / 2
@@ -381,7 +379,7 @@ const colorJ = new Eye(CS.EyeNormJ)
 
 const colors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
 const numR = 6
-const numP = 45
+const numP = 21
 const numI = 40
 let maxIntensityMinIndex = 1000
 for (let r = 0; r <= numR; r++) {
@@ -469,12 +467,12 @@ for (let r = 0; r <= 48; r++) {
 }
 
 const purityGradientJ : Array<Array<number[]>> = []
-colorJ.j = 0.8
+colorJ.j = 0.7
 for (let r = 0; r < 1; r += 1 / 3) {
   const rowJ: Array<number[]> = []
-  for (let p = 0; p <= numP; p++) {
+  for (let p = 0; p <= 81; p++) {
     colorJ.r = r
-    colorJ.p = p / numP
+    colorJ.p = p / 81
     rowJ.push(colorJ.export(CS.RGBgamma).chan)
   }
   purityGradientJ.push(rowJ)
@@ -571,18 +569,17 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
     <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 4px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
     <br><br>
 
-    <h1>Adjustement of overwhite and phi</h1>
-    Adjust overwhite values so that the three rows seem to transition from grey to pure at the same speed.<br>
-    Adjust phi to make the transition look linear. <br>
-    The right part helps with these tasks: try to make the middle square as different from its left square as from its right square. <br><br>
+    <h1>Adjustement of overwhite</h1>
+    The three rows must transition from grey to pure at the same speed.<br>
+    On the right, the middle square must feel as different from its left square as from its right square. <br><br>
     <div v-for="(row,k) of purityGradientJ" :key="k" style="border: 0px;">
       <span v-for="(col,m) of row" :key="m">
-        <div style="display: inline-block; width: 4px; height: 40px;" :style="'background-color: rgb(' + col[R] + ',' + col[G] + ',' + col[B] + ')'" />
+        <div style="display: inline-block; width: 2px; height: 40px;" :style="'background-color: rgb(' + col[R] + ',' + col[G] + ',' + col[B] + ')'" />
       </span>
       <span style="margin-left: 60px;">&nbsp;</span>
-      <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[0][R] + ',' + row[0][G] + ',' + row[0][B] + ')'" />
+      <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[10][R] + ',' + row[10][G] + ',' + row[10][B] + ')'" />
       <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[row.length/2][R] + ',' + row[row.length/2][G] + ',' + row[row.length/2][B] + ')'" />
-      <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[row.length-1][R] + ',' + row[row.length-1][G] + ',' + row[row.length-1][B] + ')'" />
+      <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[row.length-11][R] + ',' + row[row.length-11][G] + ',' + row[row.length-11][B] + ')'" />
       <span style="margin-left: 60px;">&nbsp;</span>overwhite[{{ k }}]
       <br>
     </div>
@@ -608,7 +605,7 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
       </div>
       <br>
       All of the previous parameters have an influence here and are supposed to have been properly adjusted. Therefore, this step acts indirectly as a control of the previous steps. <br>
-      If a row here shows a discrepancy, that might indicate that a previous parameter is imperfectly set. Try to readjust the sensicol value or the overwhite value corresponding to the test that fails here.
+      If a row here shows a discrepancy, that might indicate that a previous parameter was imperfectly set. Try to readjust the sensicol value or the overwhite value corresponding to the test that fails here.
       <br>
     </div>
 
@@ -652,8 +649,8 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
     <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[150].chan[R] + ',' + rainbowSameJ[150].chan[G] + ',' + rainbowSameJ[150].chan[B] + ')'" />
     <br><br>
     Control: in the rainbow, the widths of the primary and secondary smudges must all look equal.<br><br>
-    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 4px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
-    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 4px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'" />
+    <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 3px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+    <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 3px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'" />
     <br><br>
 
     <div style="background-color: black; height: 1000px; display: flex; flex-direction: column; padding: 5px">
@@ -779,13 +776,11 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
 .all-colors {
   position: relative;
   overflow: visible;
-  height: 100%;
-  widows: 100vw;
   .meter {
-    background-color: blue;
-    padding: 20px;
+    background-color: rgb(150, 109, 247);
+    padding: 10px;
     position: fixed;
-    bottom: 200px;
+    bottom: 0px;
     right: 0px;
     display: inline-block;
   }
