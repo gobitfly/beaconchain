@@ -834,10 +834,13 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			SELECT
 				epoch_start,
 				0 AS group_id, 
-				COALESCE(SUM(attestations_reward), 0) / NULLIF(SUM(attestations_ideal_reward), 0) AS attestation_efficiency,
-				COALESCE(SUM(blocks_proposed), 0) / NULLIF(SUM(blocks_scheduled), 0) AS proposer_efficiency,
-				COALESCE(SUM(sync_executed), 0) / NULLIF(SUM(sync_scheduled), 0) AS sync_efficiency
-			FROM  holesky_v2.%[1]s
+				COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
+				COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
+				COALESCE(SUM(d.blocks_proposed), 0) AS blocks_proposed,
+				COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
+				COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
+				COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
+			FROM holesky_v2.%[1]s d
 			WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
 			GROUP BY epoch_start;
 		`, dataTable, dateColumn)
