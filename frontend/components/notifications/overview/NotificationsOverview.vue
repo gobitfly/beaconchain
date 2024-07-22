@@ -12,30 +12,14 @@ const {t: $t} = useI18n()
 <template>
   <div class="container">
     <div>
-      <div v-if="props.store">
-        <div>{{ props.store }}</div>
-        <div v-if="props.store">
-          Active
-        </div>
-        <data v-else>Inactive</data>
-        <p> {{ props.store }}</p>
-        <p><span class="big_text">Email Notifications:</span> <span class="big_text_label">{{ props.store.EmailNotifications }}</span></p>
-        <p>Push Notifications: {{ props.store.pushNotifications }}</p>
-        <p>Most Notifications in 30 Days: {{ props.store.mostNotifications30d }}</p>
-        <p>Most Notifications in 24 Hours: {{ props.store.mostNotifications24h }}</p>
+      <div v-if="props.store" class="box">
+        <div><span class="big_text">Email Notifications:</span> <span class="big_text_label">{{ props.store.EmailNotifications }}</span></div>
+        <div>Push Notifications: {{ props.store.pushNotifications }}</div>
+        <div>Most Notifications in 30 Days: {{ props.store.mostNotifications30d }}</div>
+        <div>Most Notifications in 24 Hours: {{ props.store.mostNotifications24h }}</div>
       </div>
       <div v-else>
         No data available from the component.
-      </div>
-    </div>
-    <div class="box">
-      <div class="main">
-        <div class="big_text_label">
-          text
-        </div>
-        <div class="big_text">
-          ohter text
-        </div>
       </div>
     </div>
   </div>
@@ -53,5 +37,11 @@ const {t: $t} = useI18n()
   height: 101px;
   padding-left: var(--padding-xl);
   padding-right: var(--padding-xl);
+}
+
+.box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 </style>
