@@ -1815,7 +1815,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w h
 		WebhookUrl                      string        `json:"webhook_url"`
 		IsWebhookDiscordEnabled         bool          `json:"is_webhook_discord_enabled"`
 		IsIgnoreSpamTransactionsEnabled bool          `json:"is_ignore_spam_transactions_enabled"`
-		SubscribedChainIds              []intOrString `json:"subscribed_networks"`
+		SubscribedChainIds              []intOrString `json:"subscribed_chain_ids"`
 
 		IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 		IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
