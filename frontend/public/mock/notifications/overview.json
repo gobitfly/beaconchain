@@ -1,0 +1,7 @@
+{
+    "id": 1,
+    "EmailNotifications": true,
+    "pushNotifications": true,
+    "mostNotifications30d": 5,
+    "mostNotifications24h" : 2   
+}

@@ -45,7 +45,8 @@ export enum API_PATH {
   AVAILABLE_NETWORKS = '/availableNetworks',
   PRODUCT_SUMMARY = '/productSummary',
   STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
-  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session'
+  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
+  NOTIFICATIONS_OVERVIEW = '/notifications/overview'
 }
 
 export type PathValues = Record<string, string | number>
@@ -293,5 +294,10 @@ export const mapping: Record<string, MappingData> = {
     path: '/user/stripe/create-checkout-session',
     method: 'POST',
     mock: false
+  },
+  [API_PATH.NOTIFICATIONS_OVERVIEW]: {
+    path: '/notifications/overview',
+    method: 'GET',
+    mock: true
   }
 }
