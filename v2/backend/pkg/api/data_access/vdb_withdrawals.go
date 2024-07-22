@@ -141,7 +141,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	sortColName := ""
 	sortColCursor := interface{}(nil)
 	switch colSort.Column {
-	case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot, enums.VDBWithdrawalsColumns.Age:
+	case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot:
 	case enums.VDBWithdrawalsColumns.Index:
 		sortColName = "w.validatorindex"
 		sortColCursor = currentCursor.Index
@@ -154,8 +154,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	if colSort.Column == enums.VDBWithdrawalsColumns.Epoch ||
-		colSort.Column == enums.VDBWithdrawalsColumns.Slot ||
-		colSort.Column == enums.VDBWithdrawalsColumns.Age {
+		colSort.Column == enums.VDBWithdrawalsColumns.Slot {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
 			queryParams = append(queryParams, currentCursor.Slot, currentCursor.WithdrawalIndex)

@@ -241,7 +241,7 @@ export type InternalGetValidatorDashboardTotalWithdrawalsResponse = ApiDataRespo
  * ------------------------------------------------------------
  * Manage Modal
  */
-export interface  VDBManageValidatorsTableRow {
+export interface VDBManageValidatorsTableRow {
   index: number /* uint64 */;
   public_key: PubKey;
   group_id: number /* uint64 */;

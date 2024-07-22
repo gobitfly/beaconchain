@@ -1419,25 +1419,16 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		}
 	}
 
-	type Proposed struct {
-		Index          uint64
-		ProposedBlocks []uint64
-	}
-	type Missed struct {
-		Index        uint64
-		MissedBlocks []uint64
-	}
-
 	for validatorIndex, blockNumbers := range proposedValidatorMap {
-		result.Proposed = append(result.Proposed, Proposed{
-			Index:          validatorIndex,
-			ProposedBlocks: blockNumbers,
+		result.Proposed = append(result.Proposed, t.IndexBlocks{
+			Index:  validatorIndex,
+			Blocks: blockNumbers,
 		})
 	}
 	for validatorIndex, slotNumbers := range missedValidatorMap {
-		result.Missed = append(result.Missed, Missed{
-			Index:        validatorIndex,
-			MissedBlocks: slotNumbers,
+		result.Missed = append(result.Missed, t.IndexBlocks{
+			Index:  validatorIndex,
+			Blocks: slotNumbers,
 		})
 	}
 
