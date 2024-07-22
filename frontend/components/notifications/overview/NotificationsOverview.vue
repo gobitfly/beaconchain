@@ -1,0 +1,57 @@
+<script setup lang="ts">
+import { defineProps } from 'vue'
+import type { NotificationsOverview } from '~/types/notifications/overview'
+
+const props = defineProps<{ store: NotificationsOverview | null }>()
+console.log(props + 'this is props.store')
+
+const {t: $t} = useI18n()
+
+</script>
+
+<template>
+  <div class="container">
+    <div>
+      <div v-if="props.store">
+        <div>{{ props.store }}</div>
+        <div v-if="props.store">
+          Active
+        </div>
+        <data v-else>Inactive</data>
+        <p> {{ props.store }}</p>
+        <p><span class="big_text">Email Notifications:</span> <span class="big_text_label">{{ props.store.EmailNotifications }}</span></p>
+        <p>Push Notifications: {{ props.store.pushNotifications }}</p>
+        <p>Most Notifications in 30 Days: {{ props.store.mostNotifications30d }}</p>
+        <p>Most Notifications in 24 Hours: {{ props.store.mostNotifications24h }}</p>
+      </div>
+      <div v-else>
+        No data available from the component.
+      </div>
+    </div>
+    <div class="box">
+      <div class="main">
+        <div class="big_text_label">
+          text
+        </div>
+        <div class="big_text">
+          ohter text
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+@use '~/assets/css/main.scss';
+.container {
+  @include main.container;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow-x: auto;
+  gap: 50px;
+  height: 101px;
+  padding-left: var(--padding-xl);
+  padding-right: var(--padding-xl);
+}
+</style>
