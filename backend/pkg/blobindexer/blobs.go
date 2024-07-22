@@ -163,7 +163,6 @@ func (bi *BlobIndexer) Index() error {
 		g, gCtx = errgroup.WithContext(context.Background())
 		g.SetLimit(4)
 		for slot := batchStart; slot <= batchEnd; slot++ {
-			slot := slot
 			g.Go(func() error {
 				select {
 				case <-gCtx.Done():
@@ -218,7 +217,6 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(4)
 	for _, d := range blobSidecar.Data {
-		d := d
 		g.Go(func() error {
 			select {
 			case <-gCtx.Done():

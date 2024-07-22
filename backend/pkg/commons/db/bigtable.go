@@ -1650,7 +1650,6 @@ func (bigtable *Bigtable) getValidatorSyncDutiesHistoryV2(validators []uint64, s
 	g.SetLimit(concurrency)
 
 	for i := 0; i < len(validators); i += batchSize {
-		i := i
 		upperBound := i + batchSize
 		if len(validators) < upperBound {
 			upperBound = len(validators)

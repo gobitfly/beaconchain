@@ -272,7 +272,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		for _, p := range productSummary.ExtraDashboardValidatorsPremiumAddon {
 			if p.StripePriceIdMonthly == addon.PriceId || p.StripePriceIdYearly == addon.PriceId {
 				foundAddon = true
-				for i := 0; i < addon.Quantity; i++ {
+				for range addon.Quantity {
 					userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
 					userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
 						ProductId:       utils.PriceIdToProductId(addon.PriceId),

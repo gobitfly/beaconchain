@@ -13,7 +13,7 @@ func GenerateRandomAPIKey() (string, error) {
 
 	max := big.NewInt(int64(len(letters)))
 	key := make([]byte, apiLength)
-	for i := 0; i < apiLength; i++ {
+	for i := range apiLength {
 		num, err := securerand.Int(securerand.Reader, max)
 		if err != nil {
 			return "", err

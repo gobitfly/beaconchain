@@ -956,7 +956,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 			return nil, fmt.Errorf("error receiving epoch assignment for epoch %v: %w", a.Data.Slot/utils.Config.Chain.ClConfig.SlotsPerEpoch, err)
 		}
 
-		for i := uint64(0); i < aggregationBits.Len(); i++ {
+		for i := range aggregationBits.Len() {
 			if aggregationBits.BitAt(i) {
 				validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, uint64(a.Data.CommitteeIndex), i)]
 				if !found { // This should never happen!
@@ -1012,7 +1012,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 
 func syncCommitteeParticipation(bits []byte) float64 {
 	participating := 0
-	for i := 0; i < int(utils.Config.Chain.ClConfig.SyncCommitteeSize); i++ {
+	for i := range int(utils.Config.Chain.ClConfig.SyncCommitteeSize) {
 		if utils.BitAtVector(bits, i) {
 			participating++
 		}

@@ -461,7 +461,7 @@ func (rp *RocketpoolExporter) UpdateDAOProposals() error {
 	if err != nil {
 		return err
 	}
-	for i := uint64(0); i < pc; i++ {
+	for i := range pc {
 		p, err := NewRocketpoolDAOProposal(rp.API, i+1)
 		if err != nil {
 			return err
@@ -677,7 +677,7 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 		valueStrings := make([]string, 0, batchSize)
 		valueArgs := make([]interface{}, 0, batchSize*nArgs)
 		for i, d := range data[start:end] {
-			for j := 0; j < nArgs; j++ {
+			for j := range nArgs {
 				valueStringsArgs[j] = i*nArgs + j + 1
 			}
 			valueStrings = append(valueStrings, fmt.Sprintf(valueStringsTpl, valueStringsArgs...))
@@ -768,7 +768,7 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 		valueStrings := make([]string, 0, batchSize)
 		valueArgs := make([]interface{}, 0, batchSize*nArgs)
 		for i, d := range data[start:end] {
-			for j := 0; j < nArgs; j++ {
+			for j := range nArgs {
 				valueStringsArgs[j] = i*nArgs + j + 1
 			}
 			valueStrings = append(valueStrings, fmt.Sprintf(valueStringsTpl, valueStringsArgs...))
@@ -910,7 +910,7 @@ func (rp *RocketpoolExporter) SaveDAOProposals() error {
 		valueStrings := make([]string, 0, batchSize)
 		valueArgs := make([]interface{}, 0, batchSize*nArgs)
 		for i, d := range data[start:end] {
-			for j := 0; j < nArgs; j++ {
+			for j := range nArgs {
 				valueStringsArgs[j] = i*nArgs + j + 1
 			}
 			valueStrings = append(valueStrings, fmt.Sprintf(valueStringsTpl, valueStringsArgs...))
@@ -983,7 +983,7 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 		valueStrings := make([]string, 0, batchSize)
 		valueArgs := make([]interface{}, 0, batchSize*nArgs)
 		for i, d := range data[start:end] {
-			for j := 0; j < nArgs; j++ {
+			for j := range nArgs {
 				valueStringsArgs[j] = i*nArgs + j + 1
 			}
 			valueStrings = append(valueStrings, fmt.Sprintf(valueStringsTpl, valueStringsArgs...))
@@ -1052,7 +1052,7 @@ func (rp *RocketpoolExporter) SaveDAOMembers() error {
 		valueArgs := make([]interface{}, 0, batchSize*nArgs)
 		addresses := make([][]byte, 0, batchSize)
 		for i, d := range data[start:end] {
-			for j := 0; j < nArgs; j++ {
+			for j := range nArgs {
 				valueStringsArgs[j] = i*nArgs + j + 1
 			}
 			valueStrings = append(valueStrings, fmt.Sprintf(valueStringsTpl, valueStringsArgs...))

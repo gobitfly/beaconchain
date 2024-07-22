@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -329,7 +330,6 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 
 		// Step 1: fetch epoch data raw
 		for _, gap := range gapGroup.Epochs {
-			gap := gap
 			syncCommitteePeriods[utils.SyncPeriodOfEpoch(gap)] = true
 
 			errGroup.Go(func() error {
@@ -398,8 +398,7 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 		// Step 2: process data
 		errGroup = &errgroup.Group{}
 		errGroup.SetLimit(int(math.Max(epochWriteParallelism/2, 2.0))) // mitigate short ram spike
-		for i := 0; i < len(datas); i++ {
-			i := i
+		for i := range len(datas) {
 			errGroup.Go(func() error {
 				for {
 					d.log.Infof("epoch data fetcher, processing data for epoch %d", datas[i].epoch)
@@ -454,7 +453,6 @@ func (d *dashboardData) epochDataFetcher(epochs []uint64, epochFetchParallelism 
 // Fetches sync committee assignments of provided periods
 func (d *dashboardData) getSyncCommitteesData(errGroup *errgroup.Group, syncCommitteePeriods map[uint64]bool) {
 	for syncPeriod := range syncCommitteePeriods {
-		syncPeriod := syncPeriod
 		// -- Get current sync committee members and cache it
 		{
 			if found := d.responseCache.GetSyncCommittee(syncPeriod); found == nil {
@@ -767,7 +765,7 @@ func (d *dashboardData) backfillHeadEpochData(upToEpoch *uint64) (backfillResult
 }
 
 func containsEpoch(d []DataEpochProcessed, epoch uint64) bool {
-	for i := 0; i < len(d); i++ {
+	for i := range len(d) {
 		if d[i].Epoch == epoch {
 			return true
 		}
@@ -785,7 +783,7 @@ func (d *dashboardData) writeEpochDatas(datas []DataEpochProcessed) {
 
 	errGroup := &errgroup.Group{}
 	errGroup.SetLimit(epochWriteParallelism)
-	for i := 0; i < len(datas); i++ {
+	for i := range len(datas) {
 		data := datas[i]
 		errGroup.Go(func() error {
 			for {
@@ -1127,7 +1125,6 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 	aaMutex := &sync.Mutex{}
 	// executes twice, one with lastSlotOf this epoch and then lastSlotOf last epoch
 	for slot := lastSlotOfEpoch; slot >= min; slot -= utils.Config.Chain.ClConfig.SlotsPerEpoch {
-		slot := slot
 		errGroup.Go(func() error {
 			data, err := cl.GetCommittees(slot, nil, nil, nil)
 			if err != nil {
@@ -1214,7 +1211,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 					_, err := cl.GetBlockHeader(slot)
 					if err != nil {
 						httpErr := network.SpecificError(err)
-						if httpErr != nil && httpErr.StatusCode == 404 {
+						if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 							result.missedslots[slot] = true
 							continue // missed
 						}
@@ -1230,13 +1227,12 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 
 	mutex := &sync.Mutex{}
 	for slot := firstSlotOfEpoch; slot <= lastSlotOfEpoch; slot++ {
-		slot := slot
 		errGroup.Go(func() error {
 			// retrieve the data for all blocks that were proposed in this epoch
 			block, err := cl.GetSlot(slot)
 			if err != nil {
 				httpErr := network.SpecificError(err)
-				if httpErr != nil && httpErr.StatusCode == 404 {
+				if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 					mutex.Lock()
 					result.missedslots[slot] = true
 					mutex.Unlock()

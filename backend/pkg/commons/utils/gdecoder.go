@@ -93,7 +93,7 @@ func gatherInfo(prefix string, cfg interface{}) ([]varInfo, error) {
 
 	// over allocate an info array, we will extend if needed later
 	infos := make([]varInfo, 0, s.NumField())
-	for i := 0; i < s.NumField(); i++ {
+	for i := range s.NumField() {
 		f := s.Field(i)
 		ftype := typeOfSpec.Field(i)
 		if !f.CanSet() || isTrue(ftype.Tag.Get("ignored")) {

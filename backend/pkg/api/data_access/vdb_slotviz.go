@@ -56,7 +56,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, da
 
 		// Set the slots
 		slotVizEpochs[epochIdx].Slots = make([]t.VDBSlotVizSlot, slotsPerEpoch)
-		for slotIdx := uint64(0); slotIdx < slotsPerEpoch; slotIdx++ {
+		for slotIdx := range slotsPerEpoch {
 			// Set the slot number
 			slot := epoch*slotsPerEpoch + slotIdx
 			slotVizEpochs[epochIdx].Slots[slotIdx].Slot = slot

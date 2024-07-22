@@ -37,7 +37,7 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 
 	iterations := numKeys / length
 
-	for offset := 0; offset < iterations; offset++ {
+	for offset := range iterations {
 		start := offset * length
 		end := offset*length + length
 

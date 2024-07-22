@@ -112,7 +112,7 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 	}
 
 	errMarkSign := "~"
-	for idx := 0; idx < (len(errColl) - 1); idx++ {
+	for idx := range len(errColl) - 1 {
 		errInfoText := fmt.Sprintf("%serrInfo_%v%s", errMarkSign, idx, errMarkSign)
 		nextErrInfoText := fmt.Sprintf("%serrInfo_%v%s", errMarkSign, idx+1, errMarkSign)
 		if idx == (len(errColl) - 2) {

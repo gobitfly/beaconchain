@@ -121,7 +121,7 @@ func (ese *EthStoreExporter) prepareExportDayTx(tx *sqlx.Tx, day string, concurr
 	valueStringArr := make([]string, numArgs)
 	batchIdx, allIdx := 0, 0
 	for index, day := range validators {
-		for u := 0; u < numArgs; u++ {
+		for u := range numArgs {
 			valueStringArr[u] = fmt.Sprintf("$%d", batchIdx*numArgs+1+u)
 		}
 		valueStrings = append(valueStrings, "("+strings.Join(valueStringArr, ",")+")")
