@@ -857,7 +857,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	} else {
 		query := fmt.Sprintf(`
 		WITH validators AS (
-			SELECT validator_index::Int64 as validator_index, group_id FROM alloy_users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
+			SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
 		)		
 		SELECT
 			d.%[1]s AS epoch_start,
@@ -869,7 +869,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
 		FROM holesky.%[2]s d
-		INNER JOIN validators v ON d.validator_index::Int64 = v.validator_index::Int64
+		INNER JOIN validators v ON d.validator_index = v.validator_index
 		WHERE %[3]s >= fromUnixTimestamp($1) AND %[3]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
 		GROUP BY 1, 2;`, epochColumnName, dataTable, dateColumn)
 
