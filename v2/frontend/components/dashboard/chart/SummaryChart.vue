@@ -136,10 +136,11 @@ const option = computed(() => {
       axisLabel: {
         fontSize: textSize,
         lineHeight: 20,
-        formatter: (value: number) => {
-          const date = formatGoTimestamp(value, undefined, 'absolute', 'narrow', $t('locales.date'), false)
+        formatter: (value: string) => {
+          const timestamp = Number(value)
+          const date = formatGoTimestamp(timestamp, undefined, 'absolute', 'narrow', $t('locales.date'), false)
           if (aggregation.value === 'epoch') {
-            return `${date}\n${$t('common.epoch')} ${tsToEpoch(value)}`
+            return `${date}\n${$t('common.epoch')} ${tsToEpoch(timestamp)}`
           }
           return date
         }
