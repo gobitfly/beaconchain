@@ -80,6 +80,7 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 
 func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
 	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, cfg)
+	addNotificationRoutes(hs, publicRouter, internalRouter, cfg.Frontend.Debug)
 	endpoints := []endpoint{
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
@@ -229,7 +230,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.VDBPublicApiCheckMiddleware)
+		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
 		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession), GetAuthMiddleware(cfg.ApiKeySecret))
 	}
 
@@ -268,6 +269,46 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/total-withdrawals", nil, hs.InternalGetValidatorDashboardTotalWithdrawals},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
+}
+
+func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
+	path := "/users/me/notifications"
+	publicNotificationRouter := publicRouter.PathPrefix(path).Subrouter()
+	internalNotificationRouter := internalRouter.PathPrefix(path).Subrouter()
+
+	if !debug {
+		publicNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
+		internalNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdBySession))
+	}
+	endpoints := []endpoint{
+		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
+		{http.MethodGet, "/dashboards", nil, hs.InternalGetUserNotificationDashboards},
+		{http.MethodGet, "/validator-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsValidatorDashboard},
+		{http.MethodGet, "/account-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsAccountDashboard},
+		{http.MethodGet, "/machines", nil, hs.InternalGetUserNotificationMachines},
+		{http.MethodGet, "/clients", nil, hs.InternalGetUserNotificationClients},
+		{http.MethodGet, "/rocket-pool", nil, hs.InternalGetUserNotificationRocketPool},
+		{http.MethodGet, "/networks", nil, hs.InternalGetUserNotificationNetworks},
+		{http.MethodGet, "/settings", nil, hs.InternalGetUserNotificationSettings},
+		{http.MethodPut, "/settings/general", nil, hs.InternalPutUserNotificationSettingsGeneral},
+		{http.MethodPut, "/settings/networks", nil, hs.InternalPutUserNotificationSettingsNetworks},
+		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalPutUserNotificationSettingsPairedDevices},
+		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalDeleteUserNotificationSettingsPairedDevices},
+		{http.MethodGet, "/settings/dashboards", nil, hs.InternalGetUserNotificationSettingsDashboards},
+	}
+	addEndpointsToRouters(endpoints, publicNotificationRouter, internalNotificationRouter)
+
+	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
+	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
+	if !debug {
+		publicDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
+		internalDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
+	}
+	dashboardSettingsEndpoints := []endpoint{
+		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
+		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsAccountDashboard},
+	}
+	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
 }
 
 func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {
