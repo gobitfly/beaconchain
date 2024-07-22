@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -25,7 +26,7 @@ type ValidatorDashboardRepository interface {
 
 	UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error)
 
-	GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId) (*t.VDBOverviewData, error)
+	GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error)
 
 	CreateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error)
 	UpdateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error)
@@ -51,34 +52,34 @@ type ValidatorDashboardRepository interface {
 
 	GetValidatorDashboardSlotViz(ctx context.Context, dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error)
 
-	GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64) ([]t.VDBSummaryTableRow, *t.Paging, error)
-	GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBGroupSummaryData, error)
+	GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error)
+	GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBGroupSummaryData, error)
 	GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiencyType enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error)
 	GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error)
 	GetValidatorDashboardSyncSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error)
 	GetValidatorDashboardSlashingsSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error)
 	GetValidatorDashboardProposalSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error)
 
-	GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error)
-	GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error)
-	GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error)
+	GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error)
+	GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBGroupRewardsData, error)
+	GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.ChartData[int, decimal.Decimal], error)
 
-	GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error)
+	GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error)
 
-	GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error)
+	GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error)
 
-	GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId) (*t.VDBHeatmap, error)
-	GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod) (*t.VDBHeatmap, error)
-	GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64) (*t.VDBHeatmapTooltipData, error)
-	GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, date time.Time) (*t.VDBHeatmapTooltipData, error)
+	GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error)
+	GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error)
+	GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error)
+	GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, date time.Time, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error)
 
 	GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error)
 	GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error)
 	GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error)
 	GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error)
 
-	GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64) ([]t.VDBWithdrawalsTableRow, *t.Paging, error)
-	GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalWithdrawalsData, error)
+	GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error)
+	GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error)
 }
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
@@ -101,7 +102,7 @@ func (d DataAccessService) getDashboardValidators(ctx context.Context, dashboard
 		}
 
 		var validatorsArray []t.VDBValidator
-		err = d.alloyReader.Select(&validatorsArray, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &validatorsArray, query, args...)
 		return validatorsArray, err
 	}
 	return dashboardId.Validators, nil
@@ -129,6 +130,49 @@ func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff,
 	return efficiency
 }
 
+func (d DataAccessService) calculateChartEfficiency(efficiencyType enums.VDBSummaryChartEfficiencyType, row *t.VDBValidatorSummaryChartRow) (float64, error) {
+	efficiency := float64(0)
+	switch efficiencyType {
+	case enums.VDBSummaryChartAll:
+		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
+		if row.AttestationIdealReward > 0 {
+			attestationEfficiency.Float64 = row.AttestationReward / row.AttestationIdealReward
+			attestationEfficiency.Valid = true
+		}
+		if row.BlocksScheduled > 0 {
+			proposerEfficiency.Float64 = row.BlocksProposed / row.BlocksScheduled
+			proposerEfficiency.Valid = true
+		}
+		if row.SyncScheduled > 0 {
+			syncEfficiency.Float64 = row.SyncExecuted / row.SyncScheduled
+			syncEfficiency.Valid = true
+		}
+
+		efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+	case enums.VDBSummaryChartAttestation:
+		if row.AttestationIdealReward > 0 {
+			efficiency = (row.AttestationReward / row.AttestationIdealReward) * 100
+		} else {
+			efficiency = 100
+		}
+	case enums.VDBSummaryChartProposal:
+		if row.BlocksScheduled > 0 {
+			efficiency = (row.BlocksProposed / row.BlocksScheduled) * 100
+		} else {
+			efficiency = 100
+		}
+	case enums.VDBSummaryChartSync:
+		if row.SyncScheduled > 0 {
+			efficiency = (row.SyncExecuted / row.SyncScheduled) * 100
+		} else {
+			efficiency = 100
+		}
+	default:
+		return 0, fmt.Errorf("unexpected efficiency type: %v", efficiency)
+	}
+	return efficiency, nil
+}
+
 func (d DataAccessService) getValidatorStatuses(validators []uint64) (map[uint64]enums.ValidatorStatus, error) {
 	validatorStatuses := make(map[uint64]enums.ValidatorStatus, len(validators))
 
@@ -139,47 +183,23 @@ func (d DataAccessService) getValidatorStatuses(validators []uint64) (map[uint64
 		return nil, err
 	}
 
-	// Get the validator duties to check the last fulfilled attestation
-	dutiesInfo, releaseValDutiesLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseValDutiesLock()
-	if err != nil {
-		return nil, err
-	}
-
-	// Set the threshold for "online" => "offline" to 2 epochs without attestation
-	attestationThresholdSlot := uint64(0)
-	twoEpochs := 2 * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	if dutiesInfo.LatestSlot >= twoEpochs {
-		attestationThresholdSlot = dutiesInfo.LatestSlot - twoEpochs
-	}
-
 	// Fill the data
 	for _, validator := range validators {
 		metadata := validatorMapping.ValidatorMetadata[validator]
 
-		switch constypes.ValidatorStatus(metadata.Status) {
-		case constypes.PendingInitialized:
+		switch constypes.ValidatorDbStatus(metadata.Status) {
+		case constypes.DbDeposited:
 			validatorStatuses[validator] = enums.ValidatorStatuses.Deposited
-		case constypes.PendingQueued:
+		case constypes.DbPending:
 			validatorStatuses[validator] = enums.ValidatorStatuses.Pending
-		case constypes.ActiveOngoing, constypes.ActiveExiting, constypes.ActiveSlashed:
-			var lastAttestionSlot uint32
-			for slot, attested := range dutiesInfo.EpochAttestationDuties[validator] {
-				if attested && slot > lastAttestionSlot {
-					lastAttestionSlot = slot
-				}
-			}
-			if lastAttestionSlot < uint32(attestationThresholdSlot) {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Offline
-			} else {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Online
-			}
-		case constypes.ExitedUnslashed, constypes.ExitedSlashed, constypes.WithdrawalPossible, constypes.WithdrawalDone:
-			if metadata.Slashed {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
-			} else {
-				validatorStatuses[validator] = enums.ValidatorStatuses.Exited
-			}
+		case constypes.DbActiveOnline, constypes.DbExitingOnline, constypes.DbSlashingOnline:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Online
+		case constypes.DbActiveOffline, constypes.DbExitingOffline, constypes.DbSlashingOffline:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Offline
+		case constypes.DbSlashed:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
+		case constypes.DbExited:
+			validatorStatuses[validator] = enums.ValidatorStatuses.Exited
 		}
 	}
 
