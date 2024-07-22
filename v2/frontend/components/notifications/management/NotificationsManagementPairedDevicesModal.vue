@@ -4,7 +4,7 @@ import { useNotificationsManagementSettings } from '~/composables/notifications/
 const { t: $t } = useI18n()
 
 const visible = defineModel<boolean>()
-const { generalSettings } = useNotificationsManagementSettings()
+const { pairedDevices } = useNotificationsManagementSettings()
 
 </script>
 
@@ -16,7 +16,7 @@ const { generalSettings } = useNotificationsManagementSettings()
     <div class="container">
       <h1>{{ $t('notifications.general.paired_devices.title') }}</h1>
       <div class="paired-devices">
-        <NotificationsManagementPairedDevice v-for="device in generalSettings?.paired_devices" :key="device.id" :device="device" />
+        <NotificationsManagementPairedDevice v-for="device in pairedDevices" :key="device.id" :device="device" />
       </div>
     </div>
     <div class="button-row">

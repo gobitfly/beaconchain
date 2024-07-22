@@ -1,7 +1,7 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import type { ApiDataResponse } from '~/types/api/common'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
-import { type NotificationsManagementDashboardResponse } from '~/types/notifications/settings'
+import { type InternalGetUserNotificationSettingsResponse } from '~/types/api/notifications'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -365,36 +365,35 @@ export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChai
   return result
 }
 
-export function mockManageNotificationsGeneral (): NotificationsManagementDashboardResponse {
+export function mockManageNotificationsGeneral (): InternalGetUserNotificationSettingsResponse {
   return {
     data: {
-      clients: [],
-      clients_mev_boost: true,
-      clients_rocket_pool_smart_node: false,
-      machines_cpu_usage: 40,
-      machines_memory_usage: 50,
-      machines_offline: true,
-      machines_storage_usage: 80,
-      rocket_pool_max_collateral: 29823,
-      rocket_pool_min_collateral: 123,
-      rocket_pool_new_reward_round: true,
-      do_not_disturb_timestamp: 9000,
-      enable_email: false,
-      enable_push: true,
+      general_settings: {
+        do_not_disturb_timestamp: 9000,
+        is_email_notifications_enabled: false,
+        is_push_notifications_enabled: true,
+        is_machine_offline_subscribed: true,
+        machine_storage_usage_threshold: 80,
+        machine_cpu_usage_threshold: 40,
+        machine_memory_usage_threshold: 50,
+        subscribed_clients: [],
+        is_rocket_pool_new_reward_round_subscribed: true,
+        rocket_pool_max_collateral_threshold: 29823,
+        rocket_pool_min_collateral_threshold: 123
+      },
+      networks: [],
       paired_devices: [
         {
           id: 'ABC-test',
           name: 'My device',
-          linked_app: 'Beaconchain Dashboard',
-          enable_notifications: true,
-          pairedTs: 1620000000
+          is_notifications_enabled: true,
+          paired_timestamp: 1620000000
         },
         {
           id: 'DEF-test',
           name: 'My other device',
-          linked_app: 'Something else',
-          enable_notifications: false,
-          pairedTs: 1700000000
+          is_notifications_enabled: false,
+          paired_timestamp: 1700000000
         }
       ]
     }

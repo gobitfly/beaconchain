@@ -12,7 +12,7 @@ import { Target } from '~/types/links'
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
 
-const { generalSettings, updateGeneralSettings } = useNotificationsManagementSettings()
+const { generalSettings, updateGeneralSettings, pairedDevices } = useNotificationsManagementSettings()
 
 const pairedDevicesModalVisible = ref(false)
 const emailToggle = ref(false)
@@ -49,7 +49,7 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   bounceTestButton(false)
 }
 
-const pairedDevices = computed(() => generalSettings?.value?.paired_devices?.length || 0)
+const pairedDevicesCount = computed(() => pairedDevices.value?.length || 0)
 
 const openPairdeDevicesModal = () => {
   pairedDevicesModalVisible.value = true
@@ -57,8 +57,8 @@ const openPairdeDevicesModal = () => {
 
 watch(generalSettings, (g) => {
   if (g) {
-    emailToggle.value = g.enable_email
-    pushToggle.value = g.enable_push
+    emailToggle.value = g.is_email_notifications_enabled
+    pushToggle.value = g.is_push_notifications_enabled
     muteTimestamp.value = g.do_not_disturb_timestamp > (Date.now() / 1000) ? g.do_not_disturb_timestamp : undefined
   }
 }, { immediate: true })
@@ -67,8 +67,8 @@ watch([emailToggle, pushToggle, muteTimestamp], ([enableEmail, enablePush, muteT
   if (!generalSettings.value) {
     return
   }
-  if (generalSettings.value?.enable_email !== enableEmail || generalSettings.value?.enable_push !== enablePush || generalSettings.value?.do_not_disturb_timestamp !== muteTs) {
-    updateGeneralSettings({ ...generalSettings.value, enable_email: enableEmail, enable_push: enablePush, do_not_disturb_timestamp: muteTs! })
+  if (generalSettings.value?.is_email_notifications_enabled !== enableEmail || generalSettings.value?.is_push_notifications_enabled !== enablePush || generalSettings.value?.do_not_disturb_timestamp !== muteTs) {
+    updateGeneralSettings({ ...generalSettings.value, is_email_notifications_enabled: enableEmail, is_push_notifications_enabled: enablePush, do_not_disturb_timestamp: muteTs! })
   }
 })
 
@@ -122,8 +122,8 @@ const mutedUntilText = computed(() => {
     <div class="row divider">
       <div>
         {{ $t('notifications.general.push_notifications') }}
-        <span v-if="pairedDevices > 0">
-          ({{ pairedDevices }})
+        <span v-if="pairedDevicesCount > 0">
+          ({{ pairedDevicesCount }})
           <FontAwesomeIcon
             class="link popout"
             :icon="faArrowUpRightFromSquare"
@@ -131,7 +131,7 @@ const mutedUntilText = computed(() => {
           />
         </span>
       </div>
-      <BcToggle v-if="pairedDevices > 0" v-model="pushToggle" />
+      <BcToggle v-if="pairedDevicesCount > 0" v-model="pushToggle" />
       <div v-else>
         {{ tOf($t, 'notifications.general.download_app', 0) }}
         <BcLink to="/mobile  " :target="Target.External" class="link">

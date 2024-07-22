@@ -1,14 +1,14 @@
 <script lang="ts" setup>
 import { faTrash } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { type NotificationSettingsPairedDevice } from '~/types/notifications/settings'
+import { type NotificationPairedDevice } from '~/types/api/notifications'
 
 // TODO: Implement handling of user input
 
 const { t: $t } = useI18n()
 
 interface Props {
-  device: NotificationSettingsPairedDevice
+  device: NotificationPairedDevice
 }
 const props = defineProps<Props>()
 
@@ -27,9 +27,6 @@ const accountAccessToggle = ref(false)
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
-    <div class="linked-app-row">
-      {{ $t('notifications.general.paired_devices.linked_app') }}: {{ props.device.linked_app || $t('notifications.general.paired_devices.unknown') }}
-    </div>
     <div class="toggle-row">
       <BcToggle v-model="notificationsToggle" />
       {{ $t('notifications.general.paired_devices.mobile_notifications') }}
@@ -39,7 +36,7 @@ const accountAccessToggle = ref(false)
       {{ $t('notifications.general.paired_devices.grant_account_access') }}
     </div>
     <div class="paired-row">
-      {{ $t('notifications.general.paired_devices.paired_date', {date: formatGoTimestamp(device.pairedTs)}) }}
+      {{ $t('notifications.general.paired_devices.paired_date', {date: formatGoTimestamp(device.paired_timestamp)}) }}
     </div>
   </div>
 </template>
@@ -58,11 +55,6 @@ const accountAccessToggle = ref(false)
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-
-  .linked-app-row {
-    @include fonts.small_text;
-    margin-bottom: var(--padding);
   }
 
   .toggle-row {
