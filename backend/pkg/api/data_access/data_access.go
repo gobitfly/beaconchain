@@ -23,6 +23,8 @@ type DataAccessor interface {
 	SearchRepository
 	NetworkRepository
 	UserRepository
+	NotificationsRepository
+	AdminRepository
 
 	Close()
 

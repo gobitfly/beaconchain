@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -580,25 +581,25 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			db.BigtableClient.LastAttestationCacheMux.Unlock()
 
 			if v.ExitEpoch <= latestEpoch && v.Slashed {
-				v.Status = "slashed"
+				v.Status = string(constypes.DbSlashed)
 			} else if v.ExitEpoch <= latestEpoch {
-				v.Status = "exited"
-			} else if v.ActivationEligibilityEpoch == 9223372036854775807 {
-				v.Status = "deposited"
+				v.Status = string(constypes.DbExited)
+			} else if v.ActivationEligibilityEpoch == db.MaxSqlNumber {
+				v.Status = string(constypes.DbDeposited)
 			} else if v.ActivationEpoch > latestEpoch {
-				v.Status = "pending"
+				v.Status = string(constypes.DbPending)
 			} else if v.Slashed && v.ActivationEpoch < latestEpoch && offline {
-				v.Status = "slashing_offline"
+				v.Status = string(constypes.DbSlashingOffline)
 			} else if v.Slashed {
-				v.Status = "slashing_online"
-			} else if v.ExitEpoch < 9223372036854775807 && offline {
-				v.Status = "exiting_offline"
-			} else if v.ExitEpoch < 9223372036854775807 {
-				v.Status = "exiting_online"
+				v.Status = string(constypes.DbSlashingOnline)
+			} else if v.ExitEpoch < db.MaxSqlNumber && offline {
+				v.Status = string(constypes.DbExitingOffline)
+			} else if v.ExitEpoch < db.MaxSqlNumber {
+				v.Status = string(constypes.DbExitingOnline)
 			} else if v.ActivationEpoch < latestEpoch && offline {
-				v.Status = "active_offline"
+				v.Status = string(constypes.DbActiveOffline)
 			} else {
-				v.Status = "active_online"
+				v.Status = string(constypes.DbActiveOnline)
 			}
 
 			if c.Status != v.Status {

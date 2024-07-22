@@ -6,6 +6,8 @@
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
 import {
+  MinimumTimeBetweenAPIcalls,
+  LayoutThreshold,
   Category,
   ResultType,
   type HowToFillresultSuggestionOutput,
@@ -35,9 +37,6 @@ import {
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
-
-const MinimumTimeBetweenAPIcalls = 400 // ms
-const layoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
@@ -216,7 +215,7 @@ watch(availableNetworks, reconfigureSearchbar)
 let resizingObserver: ResizeObserver
 if (process.client) {
   resizingObserver = new ResizeObserver((entries) => {
-    const newLayout : SearchbarDropdownLayout = (entries[0].borderBoxSize[0].inlineSize < layoutThreshold) ? 'narrow-dropdown' : 'large-dropdown'
+    const newLayout : SearchbarDropdownLayout = (entries[0].borderBoxSize[0].inlineSize < LayoutThreshold) ? 'narrow-dropdown' : 'large-dropdown'
     if (newLayout !== dropdownLayout.value) { // reassigning 'narrow-dropdown' to 'narrow-dropdown' (for ex) is not guaranteed to preserve the pointer, so this trick makes sure that we do not trigger Vue watchers for nothing (draining the battery and slowing down the UI)
       dropdownLayout.value = newLayout
     }
