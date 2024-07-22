@@ -278,7 +278,7 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 
 	if !debug {
 		publicNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
-		internalNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey))
+		internalNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdBySession))
 	}
 	endpoints := []endpoint{
 		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
@@ -298,15 +298,15 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	}
 	addEndpointsToRouters(endpoints, publicNotificationRouter, internalNotificationRouter)
 
-	publicDashboardNotificationSettingsRouter := publicRouter.NewRoute().Subrouter()
-	internalDashboardNotificationSettingsRouter := internalRouter.NewRoute().Subrouter()
-	if !debug {
+	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
+	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
+	if debug {
 		publicDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
 		internalDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
 	}
 	dashboardSettingsEndpoints := []endpoint{
-		{http.MethodPut, "/settings/dashboards/validators/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
-		{http.MethodPut, "/settings/dashboards/accounts/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsAccountDashboard},
+		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
+		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsAccountDashboard},
 	}
 	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
 }
