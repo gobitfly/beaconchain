@@ -307,6 +307,12 @@
     "management": {
       "title": "Manage Notifications"
     },
+    "notifications_overview": {
+        "email_notifications": "Email Notifications",
+        "push_notifications": "Push Notifications",
+        "most_notifications_30d":"Most Notifications last 30d",
+        "most_notificatoins_24h": "Most Notifications last 24h"
+      },
     "col": {
       "dashboard": "Dashboard",
       "group": "Group",
