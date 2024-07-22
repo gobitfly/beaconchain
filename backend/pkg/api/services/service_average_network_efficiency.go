@@ -57,7 +57,7 @@ func (s *Services) updateEfficiencyData() error {
 			return err
 		}
 
-		err = s.alloyReader.Get(&queryResult, query, args...)
+		err = s.readerDb.Get(&queryResult, query, args...)
 		if err != nil {
 			return err
 		}

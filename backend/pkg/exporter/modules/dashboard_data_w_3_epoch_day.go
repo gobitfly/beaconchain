@@ -147,7 +147,7 @@ func (d *epochToDayAggregator) aggregateUtcDayWithBounds(firstEpochOfDay, lastEp
 
 	boundsStart, _ := getDayAggregateBounds(firstEpochOfDay)
 
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
@@ -187,7 +187,7 @@ func (d *epochToDayAggregator) GetDayPartitionRange(epoch uint64) (time.Time, ti
 
 func (d *epochToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) error {
 	partitionName := fmt.Sprintf("%s_%s_%s", edb.DayWriterTableName, dayToYYMMDDLabel(dayFrom), dayToYYMMDDLabel(dayTo))
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.WriterDb.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s(
 			LIKE %s INCLUDING DEFAULTS INCLUDING CONSTRAINTS
 		)
@@ -205,7 +205,7 @@ func (d *epochToDayAggregator) createDayPartition(dayFrom, dayTo time.Time) erro
 	}
 
 	if !isAttached {
-		_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
+		_, err = db.WriterDb.Exec(fmt.Sprintf(`
 		ALTER TABLE %s ATTACH PARTITION %s
 		FOR VALUES FROM ('%s') TO ('%s')
 		`,
@@ -264,7 +264,7 @@ func (d *DayRollingAggregatorImpl) bootstrap(tx *sqlx.Tx, days int, tableName st
 	dayOldBoundsStart, latestHourlyEpoch := d.getBootstrapBounds(latestHourlyEpochBounds.EpochEnd, 1)
 
 	var found bool
-	err = db.AlloyWriter.Get(&found, fmt.Sprintf(`
+	err = db.WriterDb.Get(&found, fmt.Sprintf(`
 		SELECT true FROM %s WHERE epoch_start = $1 LIMIT 1 
 	`, edb.HourWriterTableName), dayOldBoundsStart)
 	if err != nil || !found {
@@ -489,7 +489,7 @@ func (d *epochToDayAggregator) getDayRetentionDurationDays() uint64 {
 }
 
 func (d *epochToDayAggregator) deleteDayPartition(epochStartFrom, epochStartTo string) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.WriterDb.Exec(fmt.Sprintf(`
 		ALTER TABLE %[1]s DETACH PARTITION %[1]s_%[2]s_%[3]s;
 		`,
 		edb.DayWriterTableName, epochStartFrom, epochStartTo,
@@ -505,6 +505,6 @@ func (d *epochToDayAggregator) deleteDayPartition(epochStartFrom, epochStartTo s
 		edb.DayWriterTableName, epochStartFrom, epochStartTo,
 	)
 
-	_, err = db.AlloyWriter.Exec(query)
+	_, err = db.WriterDb.Exec(query)
 	return err
 }

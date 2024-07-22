@@ -7,8 +7,6 @@ shared_utils = import_module("github.com/kurtosis-tech/ethereum-package/src/shar
 
 POSTGRES_PORT_ID = "postgres"
 POSTGRES_DB = "db"
-ALLOY_PORT_ID = "alloy"
-ALLOY_DB = "alloy"
 POSTGRES_USER = "postgres"
 POSTGRES_PASSWORD = "pass"
 
@@ -36,18 +34,6 @@ def run(plan, args):
 					"POSTGRES_PASSWORD": POSTGRES_PASSWORD,
 				},
 			),
-			# Add second Postgres server to simulate alloy
-			"alloy": ServiceConfig(
-				image = "postgres:15.2-alpine",
-				ports = {
-					ALLOY_PORT_ID: PortSpec(5432, application_protocol = "postgresql"),
-				},
-				env_vars = {
-					"POSTGRES_DB": ALLOY_DB,
-					"POSTGRES_USER": POSTGRES_USER,
-					"POSTGRES_PASSWORD": POSTGRES_PASSWORD,
-				},
-			),
 			# Add a Redis server
 			"redis": ServiceConfig(
 				image = "redis:7",
@@ -69,7 +55,7 @@ def run(plan, args):
 	eth_network_module.run(plan, args)
 
 
-def new_config_template_data(cl_node_info, el_uri, lbt_host, lbt_port, db_host, db_port, alloy_port, redis_uri):
+def new_config_template_data(cl_node_info, el_uri, lbt_host, lbt_port, db_host, db_port, redis_uri):
 	return {
 		"CLNodeHost": cl_node_info.ip_addr,
 		"CLNodePort": cl_node_info.http_port_num,
@@ -78,6 +64,5 @@ def new_config_template_data(cl_node_info, el_uri, lbt_host, lbt_port, db_host, 
 		"LBTPort": lbt_port,
 		"DBHost": db_host,
 		"DBPort": db_port,
-		"AlloyPort": alloy_port,
 		"RedisEndpoint": redis_uri,
 	}

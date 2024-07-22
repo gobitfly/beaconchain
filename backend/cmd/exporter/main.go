@@ -72,30 +72,6 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.AlloyWriter.Username,
-			Password:     cfg.AlloyWriter.Password,
-			Name:         cfg.AlloyWriter.Name,
-			Host:         cfg.AlloyWriter.Host,
-			Port:         cfg.AlloyWriter.Port,
-			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
-			SSL:          cfg.AlloyWriter.SSL,
-		}, &types.DatabaseConfig{
-			Username:     cfg.AlloyReader.Username,
-			Password:     cfg.AlloyReader.Password,
-			Name:         cfg.AlloyReader.Name,
-			Host:         cfg.AlloyReader.Host,
-			Port:         cfg.AlloyReader.Port,
-			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
-			SSL:          cfg.AlloyReader.SSL,
-		}, "pgx", "postgres")
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 
@@ -168,8 +144,6 @@ func main() {
 		defer db.ReaderDb.Close()
 		defer db.WriterDb.Close()
 	}
-	defer db.AlloyReader.Close()
-	defer db.AlloyWriter.Close()
 	defer db.BigtableClient.Close()
 
 	context, err := modules.GetModuleContext()

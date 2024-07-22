@@ -11,9 +11,6 @@ echo "Redis port is $REDIS_PORT"
 POSTGRES_PORT=$(kurtosis port print my-testnet postgres postgres --format number)
 echo "Postgres port is $POSTGRES_PORT"
 
-ALLOY_PORT=$(kurtosis port print my-testnet alloy alloy --format number)
-echo "Alloy port is $ALLOY_PORT"
-
 LBT_PORT=$(kurtosis port print my-testnet littlebigtable littlebigtable --format number)
 echo "Little bigtable port is $LBT_PORT"
 
@@ -22,7 +19,6 @@ CL_PORT=$CL_PORT
 EL_PORT=$EL_PORT
 REDIS_PORT=$REDIS_PORT
 POSTGRES_PORT=$POSTGRES_PORT
-ALLOY_PORT=$ALLOY_PORT
 LBT_PORT=$LBT_PORT
 EOF
 
@@ -51,18 +47,6 @@ writerDatabase:
   name: db
   host: 127.0.0.1
   port: "$POSTGRES_PORT"
-  user: postgres
-  password: "pass"
-alloyReader:
-  name: alloy
-  host: 127.0.0.1
-  port: "$ALLOY_PORT"
-  user: postgres
-  password: "pass"
-alloyWriter:
-  name: alloy
-  host: 127.0.0.1
-  port: "$ALLOY_PORT"
   user: postgres
   password: "pass"
 bigtable:
@@ -137,14 +121,6 @@ echo "bigtable schema initialization completed"
 echo "provisioning postgres db schema"
 go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema
 echo "postgres db schema initialization completed"
-
-echo "provisioning alloy db schema"
-cd ../perfTesting
-go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable --seeder.validators 128
-cd ../backend/db_migrations
-goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" reset
-goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" up
-echo "alloy db schema initialization completed"
 
 echo "adding test user"
 HASHED_PW=$(htpasswd -nbBC 10 user password | cut -d ":" -sf 2)

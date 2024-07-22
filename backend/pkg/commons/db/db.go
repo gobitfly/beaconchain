@@ -41,9 +41,6 @@ var DBPGX *pgxpool.Conn
 var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
 
-var AlloyReader *sqlx.DB
-var AlloyWriter *sqlx.DB
-
 var ClickHouseReader *sqlx.DB
 var ClickHouseWriter *sqlx.DB
 
@@ -169,12 +166,6 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 		}
 		targetDB = WriterDb
 		migrationPath = "migrations/postgres"
-	case "alloy":
-		if err := goose.SetDialect("postgres"); err != nil {
-			return err
-		}
-		targetDB = AlloyWriter
-		migrationPath = "migrations/alloy"
 	case "clickhouse":
 		if err := goose.SetDialect("clickhouse"); err != nil {
 			return err
@@ -2378,7 +2369,7 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	tmpViewName := "_tmp_" + viewName
 	trashViewName := "_trash_" + viewName
-	tx, err := AlloyWriter.Beginx()
+	tx, err := WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}

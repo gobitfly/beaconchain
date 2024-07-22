@@ -92,7 +92,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 		return errors.Wrap(err, "failed to create epoch partition")
 	}
 
-	conn, err := db.AlloyWriter.Conn(context.Background())
+	conn, err := db.WriterDb.Conn(context.Background())
 	if err != nil {
 		return fmt.Errorf("error retrieving raw sql connection: %w", err)
 	}
@@ -227,7 +227,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 
 func (d *epochWriter) createEpochPartition(epochFrom, epochTo uint64) error {
 	partitionName := fmt.Sprintf("%s_%d_%d", edb.EpochWriterTableName, epochFrom, epochTo)
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.WriterDb.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s(
 			LIKE %s INCLUDING DEFAULTS INCLUDING CONSTRAINTS
 		)
@@ -244,7 +244,7 @@ func (d *epochWriter) createEpochPartition(epochFrom, epochTo uint64) error {
 	}
 
 	if !isAttached {
-		_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
+		_, err = db.WriterDb.Exec(fmt.Sprintf(`
 		ALTER TABLE %s ATTACH PARTITION %s
 		FOR VALUES FROM (%d) TO (%d)
 		`,
@@ -256,7 +256,7 @@ func (d *epochWriter) createEpochPartition(epochFrom, epochTo uint64) error {
 }
 
 func (d *epochWriter) deleteEpochPartition(epochFrom, epochTo uint64) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err := db.WriterDb.Exec(fmt.Sprintf(`
 		ALTER TABLE %[1]s DETACH PARTITION %[1]s_%[2]d_%[3]d;
 		`,
 		edb.EpochWriterTableName, epochFrom, epochTo,
@@ -266,7 +266,7 @@ func (d *epochWriter) deleteEpochPartition(epochFrom, epochTo uint64) error {
 		return err
 	}
 
-	_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
+	_, err = db.WriterDb.Exec(fmt.Sprintf(`
 		DROP TABLE IF EXISTS %s_%d_%d
 		`,
 		edb.EpochWriterTableName, epochFrom, epochTo,

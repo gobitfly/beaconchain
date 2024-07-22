@@ -51,7 +51,7 @@ func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName strin
 	var bounds edb.EpochBounds
 	var err error
 	if tx == nil {
-		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
+		err = db.WriterDb.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	} else {
 		err = tx.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	}
@@ -77,7 +77,7 @@ func (d *RollingAggregator) Aggregate(days int, tableName string, currentEpochHe
 
 // Note that currentEpochHead is the current exported epoch in the db
 func (d *RollingAggregator) aggregateInternal(days int, tableName string, currentEpochHead uint64, forceBootstrap bool) error {
-	tx, err := db.AlloyWriter.Beginx()
+	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
@@ -613,7 +613,7 @@ func AddToRollingCustom(tx *sqlx.Tx, custom CustomRolling) error {
 		cancel()
 		metrics.Errors.WithLabelValues("exporter_v2dash_bandaid").Inc()
 		if debugDeadlockBandaid {
-			_, err := db.AlloyWriter.Exec(`SELECT pg_cancel_backend(pid)
+			_, err := db.WriterDb.Exec(`SELECT pg_cancel_backend(pid)
 			FROM pg_stat_activity
 			WHERE pid = ANY(pg_blocking_pids(pg_backend_pid()))
 			AND state = 'active'
