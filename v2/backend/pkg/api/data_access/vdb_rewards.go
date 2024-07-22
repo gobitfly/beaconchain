@@ -79,33 +79,46 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query that serves as base for both the main and EL rewards queries
-	ds := goqu.Dialect("postgres").
+	dsClickhouse := goqu.Dialect("postgres").
+		From(goqu.L("validator_dashboard_data_epoch e")).
+		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("e.epoch")).
-		From(goqu.L("validator_dashboard_data_epoch e")).
-		Where(goqu.L("e.epoch > ?", latestFinalizedEpoch-epochLookBack))
+		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(latestFinalizedEpoch-epochLookBack).Unix()))
+
+	dsPostgres := goqu.Dialect("postgres").
+		Select(
+			goqu.L("b.epoch")).
+		From(goqu.L("users_val_dashboards_validators v")).
+		Where(goqu.L("b.epoch > ?", latestFinalizedEpoch-epochLookBack))
 
 	if dashboardId.Validators == nil {
-		ds = ds.
-			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+		dsClickhouse = dsClickhouse.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
+		dsPostgres = dsPostgres.
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
-
 		if currentCursor.IsValid() {
 			if currentCursor.IsReverse() {
 				if currentCursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups excluding the cursor epoch
-					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
+					dsClickhouse = dsClickhouse.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+					dsPostgres = dsPostgres.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
 				} else {
 					// The cursor is on a specific group, get the data for the whole epoch since we could need it for the total rewards
-					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
+					dsClickhouse = dsClickhouse.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+					dsPostgres = dsPostgres.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
 				}
 			} else {
 				if currentCursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups including the cursor epoch
-					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
+					dsClickhouse = dsClickhouse.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+					dsPostgres = dsPostgres.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
 				} else {
 					// The cursor is on a specific group so get the data for groups before/after it
-					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %[1]s ? OR (e.epoch = ? AND v.group_id %[1]s ?)", sortSearchDirection),
+					dsClickhouse = dsClickhouse.Where(goqu.L(fmt.Sprintf("(e.epoch_timestamp %[1]s fromUnixTimestamp(?) OR (e.epoch_timestamp = fromUnixTimestamp(?) AND v.group_id %[1]s ?))", sortSearchDirection),
+						utils.EpochToTime(currentCursor.Epoch).Unix(), utils.EpochToTime(currentCursor.Epoch).Unix(), currentCursor.GroupId))
+					dsPostgres = dsPostgres.Where(goqu.L(fmt.Sprintf("(b.epoch %[1]s ? OR (b.epoch = ? AND v.group_id %[1]s ?))", sortSearchDirection),
 						currentCursor.Epoch, currentCursor.Epoch, currentCursor.GroupId))
 				}
 			}
@@ -122,7 +135,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				if indexSearch != -1 {
 					// Find whether the index is in the dashboard
 					// If it is then show all the data
-					err = d.alloyReader.GetContext(ctx, &found, `
+					err = d.readerDb.GetContext(ctx, &found, `
 						SELECT EXISTS(
 							SELECT 1
 							FROM users_val_dashboards_validators
@@ -133,7 +146,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 					}
 				}
 				if !found && epochSearch != -1 {
-					ds = ds.Where(goqu.L("e.epoch = ?", epochSearch))
+					dsClickhouse = dsClickhouse.Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(uint64(epochSearch)).Unix()))
+					dsPostgres = dsPostgres.Where(goqu.L("b.epoch = ?", epochSearch))
 				}
 			} else {
 				// Create a secondary query to get the group ids that match the search term
@@ -158,7 +172,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				}
 
 				var groupIdSearch []uint64
-				err = d.alloyReader.SelectContext(ctx, &groupIdSearch, groupIdQuery, groupIdArgs...)
+				err = d.readerDb.SelectContext(ctx, &groupIdSearch, groupIdQuery, groupIdArgs...)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -171,7 +185,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				if len(groupIdSearchMap) == 0 {
 					if epochSearch != -1 {
 						// If we have an epoch search but no group search then we can restrict the query to the epoch
-						ds = ds.Where(goqu.L("e.epoch = ?", epochSearch))
+						dsClickhouse = dsClickhouse.Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(uint64(epochSearch)).Unix()))
+						dsPostgres = dsPostgres.Where(goqu.L("b.epoch = ?", epochSearch))
 					} else {
 						// No search for goup or epoch possible, return empty results
 						return result, &paging, nil
@@ -181,35 +196,51 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		}
 
 		if dashboardId.AggregateGroups {
-			ds = ds.
+			dsClickhouse = dsClickhouse.
 				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
 				GroupBy(goqu.L("e.epoch"))
 
-			if isReverseDirection {
-				ds = ds.Order(goqu.L("e.epoch").Desc())
-			} else {
-				ds = ds.Order(goqu.L("e.epoch").Asc())
-			}
-		} else {
-			ds = ds.
-				SelectAppend(goqu.L("v.group_id AS result_group_id")).
-				GroupBy(goqu.L("e.epoch"), goqu.L("result_group_id"))
+			dsPostgres = dsPostgres.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+				GroupBy(goqu.L("b.epoch"))
 
 			if isReverseDirection {
-				ds = ds.Order(goqu.L("e.epoch").Desc(), goqu.L("result_group_id").Desc())
+				dsClickhouse = dsClickhouse.Order(goqu.L("e.epoch").Desc())
+				dsPostgres = dsPostgres.Order(goqu.L("b.epoch").Desc())
 			} else {
-				ds = ds.Order(goqu.L("e.epoch").Asc(), goqu.L("result_group_id").Asc())
+				dsClickhouse = dsClickhouse.Order(goqu.L("e.epoch").Asc())
+				dsPostgres = dsPostgres.Order(goqu.L("b.epoch").Asc())
+			}
+		} else {
+			dsClickhouse = dsClickhouse.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupBy(goqu.L("e.epoch"), goqu.L("result_group_id"))
+			dsPostgres = dsPostgres.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupBy(goqu.L("b.epoch"), goqu.L("result_group_id"))
+
+			if isReverseDirection {
+				dsClickhouse = dsClickhouse.Order(goqu.L("e.epoch").Desc(), goqu.L("result_group_id").Desc())
+				dsPostgres = dsPostgres.Order(goqu.L("b.epoch").Desc(), goqu.L("result_group_id").Desc())
+			} else {
+				dsClickhouse = dsClickhouse.Order(goqu.L("e.epoch").Asc(), goqu.L("result_group_id").Asc())
+				dsPostgres = dsPostgres.Order(goqu.L("b.epoch").Asc(), goqu.L("result_group_id").Asc())
 			}
 		}
 	} else {
 		// In case a list of validators is provided set the group to the default id
-		ds = ds.
+		dsClickhouse = dsClickhouse.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("e.validator_index = ANY(?)", pq.Array(dashboardId.Validators))).
+			Where(goqu.L("e.validator_index IN (?)", dashboardId.Validators)).
 			GroupBy(goqu.L("e.epoch"))
+		dsPostgres = dsPostgres.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
+			GroupBy(goqu.L("b.epoch"))
 
 		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
+			dsClickhouse = dsClickhouse.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+			dsPostgres = dsPostgres.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
 		}
 		if search != "" {
 			if epochSearch == -1 && indexSearch == -1 {
@@ -224,14 +255,17 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				found = utils.ElementExists(dashboardId.Validators, t.VDBValidator(indexSearch))
 			}
 			if !found && epochSearch != -1 {
-				ds = ds.Where(goqu.L("e.epoch = ?", epochSearch))
+				dsClickhouse = dsClickhouse.Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(uint64(epochSearch)).Unix()))
+				dsPostgres = dsPostgres.Where(goqu.L("b.epoch = ?", epochSearch))
 			}
 		}
 
 		if isReverseDirection {
-			ds = ds.Order(goqu.L("e.epoch").Desc())
+			dsClickhouse = dsClickhouse.Order(goqu.L("e.epoch").Desc())
+			dsPostgres = dsPostgres.Order(goqu.L("b.epoch").Desc())
 		} else {
-			ds = ds.Order(goqu.L("e.epoch").Asc())
+			dsClickhouse = dsClickhouse.Order(goqu.L("e.epoch").Asc())
+			dsPostgres = dsPostgres.Order(goqu.L("b.epoch").Asc())
 		}
 	}
 
@@ -252,26 +286,28 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	}{}
 
 	wg.Go(func() error {
-		rewardsDs := ds.
+		rewardsDs := dsClickhouse.
 			SelectAppend(
 				goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) +
-				COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards`),
+				COALESCE(e.sync_rewards, 0)) AS cl_rewards`),
 				goqu.L("SUM(COALESCE(e.attestations_scheduled, 0)) AS attestations_scheduled"),
 				goqu.L("SUM(COALESCE(e.attestations_executed, 0)) AS attestations_executed"),
 				goqu.L("SUM(COALESCE(e.blocks_scheduled, 0)) AS blocks_scheduled"),
 				goqu.L("SUM(COALESCE(e.blocks_proposed, 0)) AS blocks_proposed"),
 				goqu.L("SUM(COALESCE(e.sync_scheduled, 0)) AS sync_scheduled"),
 				goqu.L("SUM(COALESCE(e.sync_executed, 0)) AS sync_executed"),
-				goqu.L("SUM(CASE WHEN e.slashed_by IS NOT NULL THEN 1 ELSE 0 END) AS slashed_in_epoch"),
-				goqu.L("SUM(COALESCE(s.slashed_amount, 0)) AS slashed_amount")).
-			LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by")))
+				goqu.L("SUM(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed_in_epoch"),
+				// WIP: clarify how to get data in clickhouse for the slashed_amount field
+			//goqu.L("SUM(COALESCE(s.slashed_amount, 0)) AS slashed_amount"),
+			) //.
+			//LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by")))
 
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rewards data: %v", err)
 		}
@@ -282,10 +318,10 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	// Get the EL rewards
 	elRewards := make(map[uint64]map[int64]decimal.Decimal)
 	wg.Go(func() error {
-		elDs := ds.
+		elDs := dsPostgres.
 			SelectAppend(
 				goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
-			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 			LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 			LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")))
 
@@ -300,7 +336,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &elQueryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving el rewards data for rewards: %v", err)
 		}
@@ -492,21 +528,34 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query that serves as base for both the main and EL rewards queries
-	ds := goqu.Dialect("postgres").
+	dsClickhouse := goqu.Dialect("postgres").
 		From(goqu.L("validator_dashboard_data_epoch e")).
-		Where(goqu.L("e.epoch = ?", epoch))
+		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+		Select(
+			goqu.L("e.epoch")).
+		Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(epoch).Unix()))
+
+	dsPostgres := goqu.Dialect("postgres").
+		Select(
+			goqu.L("b.epoch")).
+		From(goqu.L("users_val_dashboards_validators v")).
+		Where(goqu.L("b.epoch = ?", epoch))
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
-		ds = ds.
-			Where(goqu.L("e.validator_index = ANY(?)", pq.Array(dashboardId.Validators)))
+		dsClickhouse = dsClickhouse.
+			Where(goqu.L("e.validator_index IN (?)", dashboardId.Validators))
+		dsPostgres = dsPostgres.
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
 	} else { // handle the case when we have a dashboard id and an optional group id
-		ds = ds.
-			InnerJoin(goqu.L("users_val_dashboards_validators AS v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+		dsClickhouse = dsClickhouse.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
+		dsPostgres = dsPostgres.
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
-
 		if groupId != t.AllGroups {
-			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
+			dsClickhouse = dsClickhouse.Where(goqu.L("v.group_id = ?", groupId))
+			dsPostgres = dsPostgres.Where(goqu.L("v.group_id = ?", groupId))
 		}
 	}
 
@@ -541,7 +590,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	}{}
 
 	wg.Go(func() error {
-		rewardsDs := ds.
+		rewardsDs := dsClickhouse.
 			Select(
 				goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
 				goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
@@ -558,19 +607,20 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 				goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
 				goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
 				goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
-				goqu.L("e.slashed_by IS NOT NULL AS slashed_in_epoch"),
-				goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount"),
-				goqu.L("COALESCE(e.slasher_reward, 0) AS slasher_reward"),
+				goqu.L("(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed_in_epoch"),
+				// WIP: clarify how to get data in clickhouse for the slashed_amount and slasher_reward field
+				// goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount"),
+				// goqu.L("COALESCE(e.slasher_reward, 0) AS slasher_reward"),
 				goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
-				goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward")).
-			LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by")))
+				goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward"))
+			// LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by")))
 
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving group rewards data: %v", err)
 		}
@@ -581,10 +631,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	// Get the EL rewards
 	var elRewards decimal.Decimal
 	wg.Go(func() error {
-		elDs := ds.
+		elDs := dsPostgres.
 			Select(
-				goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS blocks_el_reward")).
-			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
+				goqu.L("COALESCE(SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)), 0) AS blocks_el_reward")).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 			LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 			LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")))
 
@@ -593,7 +643,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.GetContext(ctx, &elRewards, query, args...)
+		err = d.readerDb.GetContext(ctx, &elRewards, query, args...)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("error retrieving el rewards data for group rewards: %v", err)
 		}
@@ -663,39 +713,61 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	wg := errgroup.Group{}
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
-	const epochLookBack = 10
+	const epochLookBack = 225
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query that serves as base for both the main and EL rewards queries
-	ds := goqu.Dialect("postgres").
+	dsClickhouse := goqu.Dialect("postgres").
+		From(goqu.L("validator_dashboard_data_epoch e")).
+		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("e.epoch")).
-		From(goqu.L("validator_dashboard_data_epoch e")).
-		Where(goqu.L("e.epoch > ?", latestFinalizedEpoch-epochLookBack))
+		Where(goqu.L("e.epoch_timestamp > fromUnixTimestamp(?)", utils.EpochToTime(latestFinalizedEpoch-epochLookBack).Unix()))
+
+	dsPostgres := goqu.Dialect("postgres").
+		Select(
+			goqu.L("b.epoch")).
+		From(goqu.L("users_val_dashboards_validators v")).
+		Where(goqu.L("b.epoch > ?", latestFinalizedEpoch-epochLookBack))
 
 	if dashboardId.Validators == nil {
-		ds = ds.
-			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+		dsClickhouse = dsClickhouse.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
+		dsPostgres = dsPostgres.
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
 		if dashboardId.AggregateGroups {
-			ds = ds.
+			dsClickhouse = dsClickhouse.
 				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
 				GroupBy(goqu.L("e.epoch")).
 				Order(goqu.L("e.epoch").Asc())
+			dsPostgres = dsPostgres.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+				GroupBy(goqu.L("b.epoch")).
+				Order(goqu.L("b.epoch").Asc())
 		} else {
-			ds = ds.
+			dsClickhouse = dsClickhouse.
 				SelectAppend(goqu.L("v.group_id AS result_group_id")).
 				GroupBy(goqu.L("e.epoch"), goqu.L("result_group_id")).
 				Order(goqu.L("e.epoch").Asc(), goqu.L("result_group_id").Asc())
+			dsPostgres = dsPostgres.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupBy(goqu.L("b.epoch"), goqu.L("result_group_id")).
+				Order(goqu.L("b.epoch").Asc(), goqu.L("result_group_id").Asc())
 		}
 	} else {
 		// In case a list of validators is provided set the group to the default id
-		ds = ds.
+		dsClickhouse = dsClickhouse.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("e.validator_index = ANY(?)", pq.Array(dashboardId.Validators))).
+			Where(goqu.L("e.validator_index IN (?)", dashboardId.Validators)).
 			GroupBy(goqu.L("e.epoch")).
 			Order(goqu.L("e.epoch").Asc())
+		dsPostgres = dsPostgres.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
+			GroupBy(goqu.L("b.epoch")).
+			Order(goqu.L("b.epoch").Asc())
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -707,16 +779,16 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	}{}
 
 	wg.Go(func() error {
-		rewardsDs := ds.
+		rewardsDs := dsClickhouse.
 			SelectAppend(
 				goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) +
-				COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards`))
+				COALESCE(e.sync_rewards, 0)) AS cl_rewards`)) //  + COALESCE(e.slasher_reward, 0)
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rewards chart data: %v", err)
 		}
@@ -727,10 +799,10 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	// Get the EL rewards
 	elRewards := make(map[uint64]map[uint64]decimal.Decimal)
 	wg.Go(func() error {
-		elDs := ds.
+		elDs := dsPostgres.
 			SelectAppend(
 				goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
-			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
+			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 			LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 			LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")))
 
@@ -745,7 +817,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &elQueryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving el rewards data for rewards chart: %v", err)
 		}
@@ -838,7 +910,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	if cursor != "" {
 		currentCursor, err = utils.StringToCursor[t.ValidatorDutiesCursor](cursor)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as ValidatorDutiesCursor: %w", err)
 		}
 	}
 
@@ -879,23 +951,23 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the subquery that serves as base for both the main and EL rewards subqueries
-	subDs := goqu.Dialect("postgres").
+	subDsPostgres := goqu.Dialect("postgres").
 		Select(
 			goqu.L("e.validator_index")).
 		From(goqu.L("validator_dashboard_data_epoch e")).
 		Where(goqu.L("e.epoch = ?", epoch))
 
 	if dashboardId.Validators == nil {
-		subDs = subDs.
+		subDsPostgres = subDsPostgres.
 			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
 		if groupId != t.AllGroups {
-			subDs = subDs.Where(goqu.L("v.group_id = ?", groupId))
+			subDsPostgres = subDsPostgres.Where(goqu.L("v.group_id = ?", groupId))
 		}
 
 		if indexSearch != -1 {
-			subDs = subDs.Where(goqu.L("e.validator_index = ?", indexSearch))
+			subDsPostgres = subDsPostgres.Where(goqu.L("e.validator_index = ?", indexSearch))
 		}
 	} else {
 		// In case a list of validators is provided set the group to the default id
@@ -910,20 +982,20 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			return result, &paging, nil
 		}
 
-		subDs = subDs.
+		subDsPostgres = subDsPostgres.
 			Where(goqu.L("e.validator_index = ANY(?)", pq.Array(validators)))
 	}
 
 	if colSort.Column == enums.VDBDutiesColumns.Validator {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			subDs = subDs.Where(goqu.L(fmt.Sprintf("e.validator_index %s ?", sortSearchDirection), currentCursor.Index))
+			subDsPostgres = subDsPostgres.Where(goqu.L(fmt.Sprintf("e.validator_index %s ?", sortSearchDirection), currentCursor.Index))
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the rewards subquery
-	rewardsSubDs := subDs.
+	rewardsSubDs := subDsPostgres.
 		SelectAppend(
 			goqu.L(`(CAST((
 						COALESCE(e.attestations_reward, 0) +
@@ -958,7 +1030,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the EL rewards subquery
-	elRewardsSubDs := subDs.
+	elRewardsSubDs := subDsPostgres.
 		SelectAppend(goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS blocks_el_reward")).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
@@ -1050,7 +1122,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		return nil, nil, fmt.Errorf("error preparing query: %v", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving validator rewards data: %v", err)
 	}
