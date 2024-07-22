@@ -295,17 +295,18 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 // Can be used to login on mobile, requires an authenticated session
 // Response must conform to OAuth spec
 func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Request) {
-	var v validationError
 	req := struct {
 		DeviceName  string `json:"device_name"`
 		DeviceID    string `json:"device_id"`
 		RedirectURI string `json:"redirect_uri"`
 		State       string `json:"state"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
-		return
-	}
+
+	// Retrieve parameters from GET request
+	req.DeviceName = r.URL.Query().Get("device_name")
+	req.DeviceID = r.URL.Query().Get("device_id")
+	req.RedirectURI = r.URL.Query().Get("redirect_uri")
+	req.State = r.URL.Query().Get("state")
 
 	state := ""
 	if req.State != "" {
