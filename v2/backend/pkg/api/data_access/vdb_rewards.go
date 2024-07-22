@@ -297,11 +297,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				goqu.L("SUM(COALESCE(e.sync_scheduled, 0)) AS sync_scheduled"),
 				goqu.L("SUM(COALESCE(e.sync_executed, 0)) AS sync_executed"),
 				goqu.L("SUM(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed_in_epoch"),
-				// WIP: clarify how to get data in clickhouse for the slashed_amount field
-			//goqu.L("SUM(COALESCE(s.slashed_amount, 0)) AS slashed_amount"),
-			) //.
-			//LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by")))
-
+				goqu.L("SUM(COALESCE(e.blocks_slashing_count, 0)) AS slashed_amount"),
+			)
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
 			return fmt.Errorf("error preparing query: %v", err)
@@ -608,12 +605,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 				goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
 				goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
 				goqu.L("(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed_in_epoch"),
-				// WIP: clarify how to get data in clickhouse for the slashed_amount and slasher_reward field
-				// goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount"),
-				// goqu.L("COALESCE(e.slasher_reward, 0) AS slasher_reward"),
+				goqu.L("COALESCE(e.blocks_slashing_count, 0) AS slashed_amount"),
+				goqu.L("COALESCE(e.blocks_cl_slasher_reward, 0) AS slasher_reward"),
 				goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
 				goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward"))
-			// LeftJoin(goqu.L("validator_dashboard_data_epoch_slashedby_count AS s"), goqu.On(goqu.L("e.epoch = s.epoch AND e.validator_index = s.slashed_by")))
 
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
