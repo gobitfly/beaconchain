@@ -231,7 +231,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
 		publicDashboardRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
-		internalDashboardRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.VDBAuthMiddleware, GetAuthMiddleware(cfg.ApiKeySecret))
+		internalDashboardRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdBySession), hs.VDBAuthMiddleware, GetAuthMiddleware(cfg.ApiKeySecret))
 	}
 
 	endpoints := []endpoint{
