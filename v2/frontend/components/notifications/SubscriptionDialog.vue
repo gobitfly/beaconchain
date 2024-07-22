@@ -180,11 +180,11 @@ async function sendUserPreferencesToAPI () {
   let response: ApiErrorResponse | undefined
   try {
     setTimeout(TimeoutForSavingFailures)
-    response = await fetch<ApiErrorResponse>(API_PATH.SETTINGS_DASHBOARDS, {
+    response = await fetch<ApiErrorResponse>(API_PATH.SAVE_DASHBOARDS_SETTINGS, {
       method: 'POST',
       body: output
     }, {
-      for: props.value!.accountSub ? 'accounts' : 'validators',
+      for: props.value!.accountSub ? 'account' : 'validator',
       dashboardKey: String(props.value?.dashboardId),
       groupId: String(props.value?.groupId)
     })
