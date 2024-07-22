@@ -38,7 +38,7 @@ const { fetch } = useCustomFetch()
 const { tsToEpoch } = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
 
-const data = ref<ChartData<number, number> | undefined >()
+const data = ref<ChartData<number, number> | undefined>()
 const { value: filter, bounce: bounceFilter } = useDebounceValue(props.filter, 1000)
 const aggregation = ref<AggregationTimeframe>('hourly')
 const isLoading = ref(false)
@@ -48,17 +48,17 @@ const loadData = async () => {
     return
   }
   isLoading.value = true
-  const requestAggregation = props.filter?.aggregation || 'hourly'
-  const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, { query: { group_ids: props.filter?.groupIds.join(','), efficiency_type: props.filter?.efficiency, aggregation: requestAggregation } }, { dashboardKey: dashboardKey.value })
-  aggregation.value = requestAggregation
-
+  try {
+    const requestAggregation = props.filter?.aggregation || 'hourly'
+    const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, { query: { group_ids: props.filter?.groupIds.join(','), efficiency_type: props.filter?.efficiency, aggregation: requestAggregation } }, { dashboardKey: dashboardKey.value })
+    aggregation.value = requestAggregation
+    data.value = res.data
+  } catch (e) {
+    data.value = undefined
+    // TODO: Maybe we want to show an error here (either a toast or inline centred in the chart space)
+  }
   isLoading.value = false
-  data.value = res.data
 }
-
-watch([dashboardKey, filter], () => {
-  loadData()
-}, { immediate: true })
 
 watch(() => props.filter, (filter) => {
   if (!filter) {
@@ -66,6 +66,10 @@ watch(() => props.filter, (filter) => {
   }
   bounceFilter({ ...filter, groupIds: [...filter.groupIds] }, true, true)
 }, { immediate: true, deep: true })
+
+watch([dashboardKey, filter], () => {
+  loadData()
+}, { immediate: true })
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -85,6 +89,27 @@ const fontFamily = styles.getPropertyValue('--roboto-family')
 const textSize = parseInt(styles.getPropertyValue('--standard_text_font_size'))
 const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
+
+const formatTSToDate = (value: string) => {
+  return formatGoTimestamp(Number(value), undefined, 'absolute', 'narrow', $t('locales.date'), false)
+}
+const formatTSToEpoch = (value: string) => {
+  return `${$t('common.epoch')} ${tsToEpoch(Number(value))}`
+}
+const formatToDateOrEpoch = (value: string) => {
+  if (aggregation.value === 'epoch') {
+    return formatTSToEpoch(value)
+  }
+  return formatTSToDate(value)
+}
+
+const formatTimestamp = (value: string) => {
+  const date = formatTSToDate(value)
+  if (aggregation.value === 'epoch') {
+    return `${date}\n${formatTSToEpoch(value)}`
+  }
+  return date
+}
 
 const option = computed(() => {
   if (data === undefined) {
@@ -114,7 +139,7 @@ const option = computed(() => {
       const newObj: SeriesObject = {
         data: element.data,
         type: 'line',
-        smooth: true,
+        smooth: false,
         symbol: 'none',
         name
       }
@@ -136,14 +161,7 @@ const option = computed(() => {
       axisLabel: {
         fontSize: textSize,
         lineHeight: 20,
-        formatter: (value: string) => {
-          const timestamp = Number(value)
-          const date = formatGoTimestamp(timestamp, undefined, 'absolute', 'narrow', $t('locales.date'), false)
-          if (aggregation.value === 'epoch') {
-            return `${date}\n${$t('common.epoch')} ${tsToEpoch(timestamp)}`
-          }
-          return date
-        }
+        formatter: formatTimestamp
       }
     },
     yAxis: {
@@ -190,7 +208,7 @@ const option = computed(() => {
       trigger: 'axis',
       padding: 0,
       borderColor: colors.value.background,
-      formatter (params : any) : HTMLElement {
+      formatter (params: any): HTMLElement {
         const ts = parseInt(params[0].axisValue)
         const groupInfos = params.map((param: any) => {
           return {
@@ -209,6 +227,9 @@ const option = computed(() => {
       type: 'slider',
       start: 80,
       end: 100,
+      labelFormatter: (_value: number, valueStr: string) => {
+        return formatToDateOrEpoch(valueStr)
+      },
       dataBackground: {
         lineStyle: {
           color: colors.value.label
@@ -224,11 +245,23 @@ const option = computed(() => {
 </script>
 
 <template>
-  <ClientOnly>
-    <BcLoadingSpinner v-if="isLoading" :loading="true" alignment="center" />
-    <VChart v-else class="chart" :option="option" autoresize />
-  </ClientOnly>
+  <div class="summary-chart-container">
+    <ClientOnly>
+      <VChart class="chart" :option="option" autoresize />
+      <BcLoadingSpinner v-if="isLoading" class="loading-spinner" :loading="true" alignment="center" />
+    </ClientOnly>
+  </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
+.summary-chart-container {
+  position: relative;
+  height: 100%;
+
+  .loading-spinner {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}
 </style>
