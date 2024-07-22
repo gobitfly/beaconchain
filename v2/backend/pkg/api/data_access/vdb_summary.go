@@ -799,18 +799,24 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	// log.Infof("retrieving data between %v and %v for aggregation %v", time.Unix(int64(afterTs), 0), time.Unix(int64(beforeTs), 0), aggregation)
 	dataTable := ""
 	dateColumn := ""
+	epochColumnName := ""
 	switch aggregation {
 	case enums.IntervalEpoch:
-		return nil, fmt.Errorf("unimplemented aggregation type: %v", aggregation)
+		dataTable = "validator_dashboard_data_epoch"
+		dateColumn = "epoch_timestamp"
+		epochColumnName = "epoch"
 	case enums.IntervalHourly:
-		dataTable = "v3_validator_dashboard_data_hourly"
+		dataTable = "validator_dashboard_data_hourly"
 		dateColumn = "hour"
+		epochColumnName = "epoch_start"
 	case enums.IntervalDaily:
-		dataTable = "v3_validator_dashboard_data_daily"
+		dataTable = "validator_dashboard_data_daily"
 		dateColumn = "day"
+		epochColumnName = "epoch_start"
 	case enums.IntervalWeekly:
-		dataTable = "v3_validator_dashboard_data_weekly"
+		dataTable = "validator_dashboard_data_weekly"
 		dateColumn = "week"
+		epochColumnName = "epoch_start"
 	default:
 		return nil, fmt.Errorf("unexpected aggregation type: %v", aggregation)
 	}
@@ -832,7 +838,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	if dashboardId.Validators != nil {
 		query := fmt.Sprintf(`
 			SELECT
-				epoch_start,
+				%[1]s AS epoch_start,
 				0 AS group_id, 
 				COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
 				COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
@@ -840,21 +846,21 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 				COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
 				COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 				COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-			FROM holesky_v2.%[1]s d
-			WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
+			FROM holesky.%[2]s d
+			WHERE %[3]s >= fromUnixTimestamp($1) AND %[3]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
 			GROUP BY epoch_start;
-		`, dataTable, dateColumn)
+		`, epochColumnName, dataTable, dateColumn)
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Validators)
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
+			return nil, fmt.Errorf("error retrieving data from table %s: %v", dataTable, err)
 		}
 	} else {
 		query := fmt.Sprintf(`
 		WITH validators AS (
-			SELECT validator_index::Int64 as validator_index, group_id FROM holesky.alloy_users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
+			SELECT validator_index::Int64 as validator_index, group_id FROM alloy_users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
 		)		
 		SELECT
-			d.epoch_start,
+			d.%[1]s AS epoch_start,
 			v.group_id,
 			COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
 			COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
@@ -862,14 +868,14 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
 			COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-		FROM holesky_v2.%[1]s d
+		FROM holesky.%[2]s d
 		INNER JOIN validators v ON d.validator_index::Int64 = v.validator_index::Int64
-		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
-		GROUP BY 1, 2;`, dataTable, dateColumn)
+		WHERE %[3]s >= fromUnixTimestamp($1) AND %[3]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
+		GROUP BY 1, 2;`, epochColumnName, dataTable, dateColumn)
 
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %v", err)
+			return nil, fmt.Errorf("error retrieving data from table %s: %v", dataTable, err)
 		}
 	}
 
