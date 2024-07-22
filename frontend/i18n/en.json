@@ -333,7 +333,6 @@
       "paired_devices": {
         "title": "Paired Devices",
         "device": "Device",
-        "linked_app": "Linked App",
         "mobile_notifications": "Mobile notifications",
         "grant_account_access": "Grant account access (required)",
         "paired_date": "Paired: {date}",
