@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
+import NotificationsOverview from '~/components/notifications/overview/NotificationsOverview.vue'
 
 useDashboardKeyProvider('notifications')
 const { refreshDashboards } = useUserDashboardStore()
@@ -66,6 +67,15 @@ const openManageNotifications = () => {
   }
 }
 
+const store = useNotificationsStore()
+
+onMounted(async () => {
+  await store.fetchNotificationsOverview()
+})
+
+const { isLoading } = store
+console.log(store + 'this store is from notifications')
+
 </script>
 
 <template>
@@ -74,7 +84,7 @@ const openManageNotifications = () => {
       <template #top>
         <DashboardHeader :dashboard-title="$t('notifications.title')" />
         <div class="overview">
-          TODO: Overview
+          <NotificationsOverview :store="store.data" />
         </div>
       </template>
       <NotificationsManagementModal v-model="manageNotificationsModalVisisble" />
