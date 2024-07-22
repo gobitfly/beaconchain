@@ -206,7 +206,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			ElRewards decimal.Decimal `db:"el_rewards"`
 		}
 
-		query, args, err := ds.Prepared(false).ToSQL()
+		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
 			return fmt.Errorf("error preparing query: %v", err)
 		}
