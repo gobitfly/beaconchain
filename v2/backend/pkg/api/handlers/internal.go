@@ -967,7 +967,11 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 	aggregation := checkEnum[enums.ChartAggregation](&v, q.Get("aggregation"), "aggregation")
 	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds)
-	minAllowedTs := uint64(time.Now().Unix()) - maxAge
+	now := uint64(time.Now().Unix())
+	if now < maxAge {
+		maxAge = now
+	}
+	minAllowedTs := now - maxAge
 	afterTs, beforeTs := v.checkTimestamps(q.Get("after_ts"), q.Get("before_ts"), minAllowedTs)
 	if v.hasErrors() {
 		handleErr(w, v)
