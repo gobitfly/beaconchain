@@ -954,22 +954,8 @@ func GetTotalEligibleEther() (uint64, error) {
 }
 
 // GetValidatorsGotSlashed returns the validators that got slashed after `epoch` either by an attestation violation or a proposer violation
-func GetValidatorsGotSlashed(epoch uint64) ([]struct {
-	Epoch                  uint64 `db:"epoch"`
-	SlasherIndex           uint64 `db:"slasher"`
-	SlasherPubkey          string `db:"slasher_pubkey"`
-	SlashedValidatorIndex  uint64 `db:"slashedvalidator"`
-	SlashedValidatorPubkey []byte `db:"slashedvalidator_pubkey"`
-	Reason                 string `db:"reason"`
-}, error) {
-	var dbResult []struct {
-		Epoch                  uint64 `db:"epoch"`
-		SlasherIndex           uint64 `db:"slasher"`
-		SlasherPubkey          string `db:"slasher_pubkey"`
-		SlashedValidatorIndex  uint64 `db:"slashedvalidator"`
-		SlashedValidatorPubkey []byte `db:"slashedvalidator_pubkey"`
-		Reason                 string `db:"reason"`
-	}
+func GetValidatorsGotSlashed(epoch uint64) ([]*types.SlashingInfo, error) {
+	var dbResult []*types.SlashingInfo
 	err := ReaderDb.Select(&dbResult, `
 		WITH
 			slashings AS (

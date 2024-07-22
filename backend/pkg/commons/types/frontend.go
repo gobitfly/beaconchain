@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"math/big"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"firebase.google.com/go/messaging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
@@ -19,6 +22,30 @@ import (
 )
 
 type EventName string
+type EventFilter string
+
+type NotificationsPerUserId map[UserId]map[EventName]map[EventFilter]Notification
+
+func (npui NotificationsPerUserId) AddNotification(n Notification) {
+	if n.GetUserId() == 0 {
+		log.Fatal(fmt.Errorf("Notification user id is 0"), fmt.Sprintf("Notification: %v", n), 0)
+	}
+	if n.GetEventName() == "" {
+		log.Fatal(fmt.Errorf("Notification event name is empty"), fmt.Sprintf("Notification: %v", n), 0)
+	}
+	// next check is disabled as there are events that do not require a filter (rocketpool, network events)
+	// if n.GetEventFilter() == "" {
+	// 	log.Fatal(fmt.Errorf("Notification event filter is empty"), fmt.Sprintf("Notification: %v", n), 0)
+	// }
+
+	if _, ok := npui[n.GetUserId()]; !ok {
+		npui[n.GetUserId()] = make(map[EventName]map[EventFilter]Notification)
+	}
+	if _, ok := npui[n.GetUserId()][n.GetEventName()]; !ok {
+		npui[n.GetUserId()][n.GetEventName()] = make(map[EventFilter]Notification)
+	}
+	npui[n.GetUserId()][n.GetEventName()][EventFilter(n.GetEventFilter())] = n
+}
 
 const (
 	ValidatorBalanceDecreasedEventName               EventName = "validator_balance_decreased"
@@ -164,7 +191,7 @@ type EventNameDesc struct {
 }
 
 type MachineMetricSystemUser struct {
-	UserID                    uint64
+	UserID                    UserId
 	Machine                   string
 	CurrentData               *MachineMetricSystem
 	CurrentDataInsertTs       int64
@@ -247,25 +274,96 @@ type Notification interface {
 	GetTitle() string
 	GetEventFilter() string
 	GetEmailAttachment() *EmailAttachment
-	GetUnsubscribeHash() string
 	GetInfoMarkdown() string
+	GetUserId() UserId
+}
+
+type NotificationBaseImpl struct {
+	LatestState     string
+	SubscriptionID  uint64
+	EventName       EventName
+	Epoch           uint64
+	Info            string
+	Title           string
+	EventFilter     string
+	EmailAttachment *EmailAttachment
+	InfoMarkdown    string
+	UserID          UserId
+}
+
+func (n NotificationBaseImpl) GetLatestState() string {
+	return n.LatestState
+}
+
+func (n NotificationBaseImpl) GetSubscriptionID() uint64 {
+	return n.SubscriptionID
+}
+
+func (n NotificationBaseImpl) GetEventName() EventName {
+	return n.EventName
+}
+
+func (n NotificationBaseImpl) GetEpoch() uint64 {
+	return n.Epoch
+}
+
+func (n NotificationBaseImpl) GetInfo(includeUrl bool) string {
+	return n.Info
+}
+
+func (n NotificationBaseImpl) GetTitle() string {
+	return n.Title
+}
+
+func (n NotificationBaseImpl) GetEventFilter() string {
+	return n.EventFilter
+}
+
+func (n NotificationBaseImpl) GetEmailAttachment() *EmailAttachment {
+	return n.EmailAttachment
+}
+
+func (n NotificationBaseImpl) GetInfoMarkdown() string {
+	return n.InfoMarkdown
+}
+
+func (n NotificationBaseImpl) GetUserId() UserId {
+	return n.UserID
 }
 
 // func UnMarschal
 
 type Subscription struct {
 	ID          *uint64    `db:"id,omitempty"`
-	UserID      *uint64    `db:"user_id,omitempty"`
-	EventName   string     `db:"event_name"`
+	UserID      *UserId    `db:"user_id,omitempty"`
+	EventName   EventName  `db:"event_name"`
 	EventFilter string     `db:"event_filter"`
 	LastSent    *time.Time `db:"last_sent_ts"`
 	LastEpoch   *uint64    `db:"last_sent_epoch"`
 	// Channels        pq.StringArray `db:"channels"`
-	CreatedTime     time.Time      `db:"created_ts"`
-	CreatedEpoch    uint64         `db:"created_epoch"`
-	EventThreshold  float64        `db:"event_threshold"`
-	UnsubscribeHash sql.NullString `db:"unsubscribe_hash" swaggertype:"string"`
-	State           sql.NullString `db:"internal_state" swaggertype:"string"`
+	CreatedTime    time.Time `db:"created_ts"`
+	CreatedEpoch   uint64    `db:"created_epoch"`
+	EventThreshold float64   `db:"event_threshold"`
+	// State          sql.NullString `db:"internal_state" swaggertype:"string"`
+	GroupId     *int64
+	DashboardId *int64
+}
+
+type UserId uint64
+type DashboardId uint64
+type DashboardGroupId uint64
+type ValidatorDashboardConfig struct {
+	DashboardsByUserId map[UserId]map[DashboardId]*ValidatorDashboard
+}
+
+type ValidatorDashboard struct {
+	Name   string `db:"name"`
+	Groups map[DashboardGroupId]*ValidatorDashboardGroup
+}
+
+type ValidatorDashboardGroup struct {
+	Name       string `db:"name"`
+	Validators []types.ValidatorIndex
 }
 
 type TaggedValidators struct {
@@ -455,7 +553,6 @@ type Email struct {
 	Title                 string
 	Body                  template.HTML
 	SubscriptionManageURL template.HTML
-	UnsubURL              template.HTML
 }
 
 type UserWebhook struct {
