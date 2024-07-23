@@ -24,8 +24,14 @@ export function useBcToastProvider () {
   watch(value, (toasts) => {
     if (toasts.length) {
       if (toasts.length === 1) {
-        toast.add({ summary: toasts[0].summary, detail: `${toasts[0].group}: ${toasts[0].detail}`, severity: 'error', life: TOAST_TIME })
-      } else {
+        const hasGroup = toasts[0].group
+        toast.add({ 
+          summary: toasts[0].summary,
+          detail: hasGroup ? `${toasts[0].group}: ${toasts[0].detail}` : toasts[0].detail,
+          severity: 'error',
+          life: TOAST_TIME 
+        })
+      } else{
         const groups: Record<string, ToastData[]> = {}
         const mapped = toasts.reduce((m, t) => {
           const group = t.group ?? ''
@@ -43,7 +49,6 @@ export function useBcToastProvider () {
           toast.add({ summary, detail, severity: 'error', life: TOAST_TIME })
         }
       }
-
       instant([])
     }
   })
