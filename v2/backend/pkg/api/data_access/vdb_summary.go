@@ -538,12 +538,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(blocks_proposed, 0) as blocks_proposed,
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
-			COALESCE(CASE WHEN slashed THEN 1 ELSE 0 END, 0) AS slashed_in_period,
+			slashed AS slashed_in_period,
 			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
-		from %[1]s
+		from %[1]s FINAL
 		inner join validators v on %[1]s.validator_index = v.validator_index
 		where validator_index IN (select validator_index FROM validators)
 		`
@@ -562,12 +562,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(blocks_proposed, 0) as blocks_proposed,
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
-			COALESCE(CASE WHEN slashed THEN 1 ELSE 0 END, 0) AS slashed_in_period,
+			slashed AS slashed_in_period,
 			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
-		from %[1]s
+		from %[1]s FINAL
 		where %[1]s.validator_index IN($1)
 	`
 	}
