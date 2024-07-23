@@ -134,7 +134,7 @@ const rowClass = (data: SummaryRow) => {
     }
 
     @media (max-width: 729px) {
-      width: 100%;
+      width: 340px;
 
       &:not(:first-child) {
         border-left: unset;

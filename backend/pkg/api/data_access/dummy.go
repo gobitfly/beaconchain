@@ -3,7 +3,7 @@ package dataaccess
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"reflect"
 	"time"
 
@@ -31,13 +31,19 @@ func NewDummyService() *DummyService {
 			El: randomEthDecimal(),
 		}, nil
 	})
+	_ = faker.AddProvider("chain_ids", func(v reflect.Value) (interface{}, error) {
+		possibleChainIds := []uint64{1, 100, 17000, 10200}
+		rand.Shuffle(len(possibleChainIds), func(i, j int) {
+			possibleChainIds[i], possibleChainIds[j] = possibleChainIds[j], possibleChainIds[i]
+		})
+		return possibleChainIds[:rand.IntN(len(possibleChainIds))], nil
+	})
 	return &DummyService{}
 }
 
 // generate random decimal.Decimal, should result in somewhere around 0.001 ETH (+/- a few decimal places) in Wei
 func randomEthDecimal() decimal.Decimal {
-	//nolint:gosec
-	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int63n(10000000)))
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int64N(10000000)))
 	return decimal
 }
 
@@ -577,6 +583,16 @@ func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, us
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
+	for i, n := range r {
+		var settings interface{}
+		if n.IsAccountDashboard {
+			settings = t.NotificationSettingsAccountDashboard{}
+		} else {
+			settings = t.NotificationSettingsValidatorDashboard{}
+		}
+		_ = commonFakeData(&settings)
+		r[i].Settings = settings
+	}
 	return r, &p, err
 }
 func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {

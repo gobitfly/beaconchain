@@ -542,7 +542,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteValidatorDashboardGroup(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -1870,4 +1870,31 @@ func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w h
 		Data: settings,
 	}
 	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		Url string `json:"url"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	// TODO
+	returnOk(w, nil)
 }
