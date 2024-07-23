@@ -293,19 +293,29 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Status.UpcomingSyncCount += resultEntry.Status.UpcomingSyncCount
 
 		// Validator statuses
-		validatorStatuses, err := d.getValidatorStatuses(uiValidatorIndices)
+		validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
+		defer releaseValMapLock()
 		if err != nil {
 			return nil, nil, err
 		}
-		for _, status := range validatorStatuses {
-			if status == enums.ValidatorStatuses.Online {
+
+		for _, validator := range validators {
+			metadata := validatorMapping.ValidatorMetadata[validator]
+
+			// As deposited and pending validators are neither online nor offline they are counted as the third state (exited)
+			switch constypes.ValidatorDbStatus(metadata.Status) {
+			case constypes.DbDeposited:
+				resultEntry.Validators.Exited++
+			case constypes.DbPending:
+				resultEntry.Validators.Exited++
+			case constypes.DbActiveOnline, constypes.DbExitingOnline, constypes.DbSlashingOnline:
 				resultEntry.Validators.Online++
-			} else if status == enums.ValidatorStatuses.Offline {
+			case constypes.DbActiveOffline, constypes.DbExitingOffline, constypes.DbSlashingOffline:
 				resultEntry.Validators.Offline++
-			} else {
-				if status == enums.ValidatorStatuses.Slashed {
-					resultEntry.Status.SlashedCount++
-				}
+			case constypes.DbSlashed:
+				resultEntry.Validators.Exited++
+				resultEntry.Status.SlashedCount++
+			case constypes.DbExited:
 				resultEntry.Validators.Exited++
 			}
 		}
@@ -857,7 +867,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	} else {
 		query := fmt.Sprintf(`
 		WITH validators AS (
-			SELECT validator_index::Int64 as validator_index, group_id FROM alloy_users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
+			SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
 		)		
 		SELECT
 			d.%[1]s AS epoch_start,
@@ -869,7 +879,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
 		FROM holesky.%[2]s d
-		INNER JOIN validators v ON d.validator_index::Int64 = v.validator_index::Int64
+		INNER JOIN validators v ON d.validator_index = v.validator_index
 		WHERE %[3]s >= fromUnixTimestamp($1) AND %[3]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
 		GROUP BY 1, 2;`, epochColumnName, dataTable, dateColumn)
 

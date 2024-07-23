@@ -99,7 +99,7 @@ type InternalGetUserNotificationsAccountDashboardResponse ApiDataResponse[Notifi
 // Machines Table
 type NotificationMachinesTableRow struct {
 	MachineName string  `json:"machine_name"`
-	Threshold   float64 `json:"threshold"`
+	Threshold   float64 `json:"threshold" faker:"boundary_start=0, boundary_end=1"`
 	EventType   string  `json:"event_type"`
 	Timestamp   int64   `json:"timestamp"`
 }
@@ -141,9 +141,9 @@ type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationN
 // ------------------------------------------------------------
 // Notification Settings
 type NotificationSettingsNetwork struct {
-	GasAboveThreshold          decimal.Decimal `json:"gas_above_threshold"`          // 0 is disabled
-	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold"`          // 0 is disabled
-	ParticipationRateThreshold float64         `json:"participation_rate_threshold"` // 0 is disabled
+	GasAboveThreshold          decimal.Decimal `json:"gas_above_threshold" faker:"boundary_start=0, boundary_end=1"`          // 0 is disabled
+	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold" faker:"boundary_start=0, boundary_end=1"`          // 0 is disabled
+	ParticipationRateThreshold float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 is disabled
 }
 type NotificationNetwork struct {
 	ChainId  uint64                      `json:"chain_id"`
@@ -165,14 +165,14 @@ type NotificationSettingsGeneral struct {
 	IsPushNotificationsEnabled  bool  `json:"is_push_notifications_enabled"`
 
 	IsMachineOfflineSubscribed   bool    `json:"is_machine_offline_subscribed"`
-	MachineStorageUsageThreshold float64 `json:"machine_storage_usage_threshold"` // 0 means disabled
-	MachineCpuUsageThreshold     float64 `json:"machine_cpu_usage_threshold"`     // 0 means disabled
-	MachineMemoryUsageThreshold  float64 `json:"machine_memory_usage_threshold"`  // 0 means disabled
+	MachineStorageUsageThreshold float64 `json:"machine_storage_usage_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
+	MachineCpuUsageThreshold     float64 `json:"machine_cpu_usage_threshold" faker:"boundary_start=0, boundary_end=1"`     // 0 means disabled
+	MachineMemoryUsageThreshold  float64 `json:"machine_memory_usage_threshold" faker:"boundary_start=0, boundary_end=1"`  // 0 means disabled
 
 	SubscribedClients                    []string `json:"subscribed_clients"`
 	IsRocketPoolNewRewardRoundSubscribed bool     `json:"is_rocket_pool_new_reward_round_subscribed"`
-	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold"` // 0 means disabled
-	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold"` // 0 means disabled
+	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
+	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
 }
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
@@ -183,12 +183,12 @@ type NotificationSettings struct {
 type InternalGetUserNotificationSettingsResponse ApiDataResponse[NotificationSettings]
 
 type NotificationSettingsValidatorDashboard struct {
-	WebhookUrl              string `json:"webhook_url"`
+	WebhookUrl              string `json:"webhook_url" faker:"url"`
 	IsWebhookDiscordEnabled bool   `json:"is_webhook_discord_enabled"`
 	IsRealTimeModeEnabled   bool   `json:"is_real_time_mode_enabled"`
 
 	IsValidatorOfflineSubscribed      bool    `json:"is_validator_offline_subscribed"`
-	GroupOfflineThreshold             float64 `json:"group_offline_threshold"` // 0 is disabled
+	GroupOfflineThreshold             float64 `json:"group_offline_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 is disabled
 	IsAttestationsMissedSubscribed    bool    `json:"is_attestations_missed_subscribed"`
 	IsBlockProposalSubscribed         bool    `json:"is_block_proposal_subscribed"`
 	IsUpcomingBlockProposalSubscribed bool    `json:"is_upcoming_block_proposal_subscribed"`
@@ -200,7 +200,7 @@ type NotificationSettingsValidatorDashboard struct {
 type InternalPutUserNotificationSettingsValidatorDashboardResponse ApiDataResponse[NotificationSettingsValidatorDashboard]
 
 type NotificationSettingsAccountDashboard struct {
-	WebhookUrl                      string   `json:"webhook_url"`
+	WebhookUrl                      string   `json:"webhook_url" faker:"url"`
 	IsWebhookDiscordEnabled         bool     `json:"is_webhook_discord_enabled"`
 	IsIgnoreSpamTransactionsEnabled bool     `json:"is_ignore_spam_transactions_enabled"`
 	SubscribedChainIds              []uint64 `json:"subscribed_chain_ids"`
@@ -208,7 +208,7 @@ type NotificationSettingsAccountDashboard struct {
 	IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 	IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
 	IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
-	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
+	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold" faker:"boundary_start=0, boundary_end=1000000"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
 	IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
 	IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
 }
@@ -217,9 +217,10 @@ type InternalPutUserNotificationSettingsAccountDashboardResponse ApiDataResponse
 type NotificationSettingsDashboardsTableRow struct {
 	IsAccountDashboard bool   `json:"is_account_dashboard"` // if false it's a validator dashboard
 	DashboardId        uint64 `json:"dashboard_id"`
+	GroupId            uint64 `json:"group_id"`
 	GroupName          string `json:"group_name"`
 	// if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
-	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard"`
+	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard" faker:"-"`
 	ChainIds []uint64    `json:"chain_ids"`
 }
 

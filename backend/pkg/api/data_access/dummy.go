@@ -577,6 +577,16 @@ func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, us
 	p := t.Paging{}
 	_ = commonFakeData(&r)
 	err := commonFakeData(&p)
+	for i, n := range r {
+		var settings interface{}
+		if n.IsAccountDashboard {
+			settings = t.NotificationSettingsAccountDashboard{}
+		} else {
+			settings = t.NotificationSettingsValidatorDashboard{}
+		}
+		_ = commonFakeData(&settings)
+		r[i].Settings = settings
+	}
 	return r, &p, err
 }
 func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
