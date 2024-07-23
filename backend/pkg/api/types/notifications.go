@@ -203,7 +203,7 @@ type NotificationSettingsAccountDashboard struct {
 	WebhookUrl                      string   `json:"webhook_url" faker:"url"`
 	IsWebhookDiscordEnabled         bool     `json:"is_webhook_discord_enabled"`
 	IsIgnoreSpamTransactionsEnabled bool     `json:"is_ignore_spam_transactions_enabled"`
-	SubscribedChainIds              []uint64 `json:"subscribed_chain_ids"`
+	SubscribedChainIds              []uint64 `json:"subscribed_chain_ids" faker:"chain_ids"`
 
 	IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 	IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
@@ -221,7 +221,7 @@ type NotificationSettingsDashboardsTableRow struct {
 	GroupName          string `json:"group_name"`
 	// if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
 	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard" faker:"-"`
-	ChainIds []uint64    `json:"chain_ids"`
+	ChainIds []uint64    `json:"chain_ids" faker:"chain_ids"`
 }
 
 type InternalGetUserNotificationSettingsDashboardsResponse ApiPagingResponse[NotificationSettingsDashboardsTableRow]
