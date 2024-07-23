@@ -18,6 +18,7 @@
     "@rollup/plugin-babel": "^6.0.4",
     "@types/lodash-es": "^4.17.12",
     "@types/luxon": "^3.4.2",
+    "@vee-validate/yup": "^4.13.2",
     "autoprefixer": "^10.4.17",
     "nuxt": "^3.12.3",
     "nuxt-primevue": "^0.2.2",
@@ -46,8 +47,7 @@
     "primevue": "3.46.0",
     "qrcode.vue": "^3.4.1",
     "vee-validate": "^4.13.2",
-    "vue-echarts": "^6.7.3",
-    "yup": "^1.4.0"
+    "vue-echarts": "^6.7.3"
   },
   "overrides": {
     "vue": "latest"
