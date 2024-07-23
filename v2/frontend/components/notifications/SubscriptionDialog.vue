@@ -14,7 +14,7 @@ interface Props {
   saveUserSettings: (settings: Record<keyof AllOptions, DefinedAPIentry>) => void
 }
 
-// #### DIALOG SETTINGS ####
+// #### CONFIGURATION OF THE DIALOGS ####
 
 const DefaultValues = new Map<keyof AllOptions, InternalEntry>([
   ['group_offline_threshold', { type: 'percent', check: false, num: 10 }],
@@ -40,7 +40,7 @@ const OptionsNeedingPremium: Array<keyof AllOptions> =
 const RowsThatExpectAPercentage: Array<keyof AllOptions> =
   ['group_offline_threshold']
 
-// #### END OF DIALOG SETTINGS ####
+// #### END OF CONFIGURATION OF THE DIALOGS ####
 
 type ModifiableOptions = Record<keyof AllOptions, InternalEntry>
 
