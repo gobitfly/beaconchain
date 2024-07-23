@@ -276,10 +276,8 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	publicNotificationRouter := publicRouter.PathPrefix(path).Subrouter()
 	internalNotificationRouter := internalRouter.PathPrefix(path).Subrouter()
 
-	if !debug {
-		publicNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
-		internalNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdBySession))
-	}
+	publicNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
+	internalNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdBySession))
 	endpoints := []endpoint{
 		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
 		{http.MethodGet, "/dashboards", nil, hs.InternalGetUserNotificationDashboards},
@@ -291,10 +289,13 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		{http.MethodGet, "/networks", nil, hs.InternalGetUserNotificationNetworks},
 		{http.MethodGet, "/settings", nil, hs.InternalGetUserNotificationSettings},
 		{http.MethodPut, "/settings/general", nil, hs.InternalPutUserNotificationSettingsGeneral},
-		{http.MethodPut, "/settings/networks", nil, hs.InternalPutUserNotificationSettingsNetworks},
+		{http.MethodPut, "/settings/networks/{network}", nil, hs.InternalPutUserNotificationSettingsNetworks},
 		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalPutUserNotificationSettingsPairedDevices},
 		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalDeleteUserNotificationSettingsPairedDevices},
 		{http.MethodGet, "/settings/dashboards", nil, hs.InternalGetUserNotificationSettingsDashboards},
+		{http.MethodPost, "/test-email", nil, hs.InternalPostUserNotificationsTestEmail},
+		{http.MethodPost, "/test-push", nil, hs.InternalPostUserNotificationsTestPush},
+		{http.MethodPost, "/test-webhook", nil, hs.InternalPostUserNotificationsTestWebhook},
 	}
 	addEndpointsToRouters(endpoints, publicNotificationRouter, internalNotificationRouter)
 
