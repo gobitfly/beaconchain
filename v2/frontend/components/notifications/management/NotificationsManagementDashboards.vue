@@ -11,6 +11,7 @@ import type { ApiPagingResponse, ApiErrorResponse } from '~/types/api/common'
 import type { NotificationSettingsDashboardsTableRow, NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
 import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
+import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { NotificationsSubscriptionDialog } from '#components'
 
 type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
@@ -45,6 +46,7 @@ const toast = useBcToast()
 const { t: $t } = useI18n()
 const dialog = useDialog()
 const { dashboardGroups, query, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch } = useNotificationsManagementDashboards()
+const { getDashboardLabel } = useUserDashboardStore()
 const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
 
@@ -71,22 +73,22 @@ const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow>|undefine
     paging: dashboardGroups.value.paging,
     data: dashboardGroups.value.data.map(d => ({
       ...d,
-      dashboard_type: dashboardType(d.is_account_dashboard),
-      dashboard_name: 'TODO: get the name of the dashboard',
+      dashboard_type: dashboardType(d),
+      dashboard_name: getDashboardLabel(String(d.dashboard_id), dashboardType(d)),
       subscriptions: subscriptionList(d),
-      identifier: `${dashboardType(d.is_account_dashboard)}-${d.dashboard_id}-${d.group_id}`
+      identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`
     }))
   }
 
-  function dashboardType (isAccountDashboard: boolean) : DashboardType {
-    return isAccountDashboard ? 'account' : 'validator'
+  function dashboardType (row: NotificationSettingsDashboardsTableRow) : DashboardType {
+    return row.is_account_dashboard ? 'account' : 'validator'
   }
 
   function subscriptionList (row: NotificationSettingsDashboardsTableRow) : string[] {
     const result: string[] = []
     for (const key of KeysIndicatingASubscription) {
       if ((row.settings as AllOptions)[key]) {
-        result.push($t('notifications.subscriptions.' + dashboardType(row.is_account_dashboard) + 's.' + key + '.option'))
+        result.push($t('notifications.subscriptions.' + dashboardType(row) + 's.' + key + '.option'))
       }
     }
     return result

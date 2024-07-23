@@ -60,10 +60,11 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
-    <Button @click="openSubscriptions({dashboardId:5295, groupId:0, validatorSub})">
+    Note: to test the saving of the options to the API, open the dialogs from the notification dashboard. The communication with the API is implemented there.
+    <Button @click="openSubscriptions({ dashboardType: 'validator', initialSettings: validatorSub, saveUserSettings: () => {} })">
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({dashboardId:5295, groupId:0, accountSub})">
+    <Button @click="openSubscriptions({ dashboardType: 'account', initialSettings: accountSub, saveUserSettings: () => {} })">
       Subscribe to notifications for your accounts
     </Button>
     <br>
