@@ -6,23 +6,35 @@ const props = defineProps<{ store: NotificationsOverview | null }>()
 console.log(props + 'this is props.store')
 
 const {t: $t} = useI18n()
+const tPath = 'notifications.overview.'
+
+// const labels = computed(() => {
+//   return [
+//     { label: $t(`${tPath}email_notifications`), value: props.store?.EmailNotifications ? 'Active' : 'not Active' },
+//     { label: $t(`${tPath}push_notifications`), value: props.store?.pushNotifications ? 'Active' : 'not Active' },
+//     { label: $t(`${tPath}most_notifications_30d`), value: props.store?.mostNotifications30d ?? 0 },
+//     { label: $t(`${tPath}most_notificatoins_24h`), value: props.store?.mostNotifications24h ?? 0 }
+//   ]
+// })
 
 </script>
 
 <template>
   <div class="container">
+    <!-- <div v-for="label in labels" :key="label.label">
+    </div> -->
     <div>
       <div v-if="props.store" class="box">
         <div class="box-item">
           <span class="big_text">Email Notifications:</span>
           <span class="big_text_label">
-            {{ props.store.EmailNotifications ? 'is Active' : 'not Active' }}
+            {{ props.store.EmailNotifications ? 'Active' : 'not Active' }}
           </span>
         </div>
         <div class="box-item">
           <span class="big_text">Push Notifications:</span>
           <span class="big_text_label">
-            {{ props.store.pushNotifications ? 'is Active' : 'not Active' }}
+            {{ props.store.pushNotifications ? 'Active' : 'not Active' }}
           </span>
         </div>
         <div class="box-item">
