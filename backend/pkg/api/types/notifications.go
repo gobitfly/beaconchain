@@ -217,6 +217,7 @@ type InternalPutUserNotificationSettingsAccountDashboardResponse ApiDataResponse
 type NotificationSettingsDashboardsTableRow struct {
 	IsAccountDashboard bool   `json:"is_account_dashboard"` // if false it's a validator dashboard
 	DashboardId        uint64 `json:"dashboard_id"`
+	GroupId            uint64 `json:"group_id"`
 	GroupName          string `json:"group_name"`
 	// if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
 	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard" faker:"-"`
