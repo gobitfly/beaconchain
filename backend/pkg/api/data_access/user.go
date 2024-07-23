@@ -33,6 +33,7 @@ type UserRepository interface {
 	MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error
 	AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error
 	GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error)
+	AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -626,6 +627,9 @@ func (d *DataAccessService) GetByRefreshToken(claimUserID, claimAppID, claimDevi
 	err := d.userWriter.Get(&userID,
 		`SELECT user_id FROM users_devices WHERE user_id = $1 AND 
 			refresh_token = $2 AND app_id = $3 AND id = $4 AND active = true`, claimUserID, hashedRefreshToken, claimAppID, claimDeviceID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return userID, fmt.Errorf("%w: user not found via refresh token", ErrNotFound)
+	}
 	return userID, err
 }
 
@@ -657,5 +661,15 @@ func (d *DataAccessService) AddUserDevice(userID uint64, hashedRefreshToken stri
 	_, err := d.userWriter.Exec("INSERT INTO users_devices (user_id, refresh_token, device_identifier, device_name, app_id, created_ts) VALUES($1, $2, $3, $4, $5, 'NOW()') ON CONFLICT DO NOTHING",
 		userID, hashedRefreshToken, deviceID, deviceName, appID,
 	)
+	return err
+}
+
+func (d *DataAccessService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
+	_, err := d.userWriter.Exec("UPDATE users_devices SET notification_token = $1 WHERE user_id = $2 AND device_identifier = $3;",
+		notifyToken, userID, deviceID,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("%w: user mobile device not found", ErrNotFound)
+	}
 	return err
 }

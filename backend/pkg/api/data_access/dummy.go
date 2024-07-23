@@ -538,3 +538,7 @@ func (d *DummyService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppDa
 func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
 	return nil
 }
+
+func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
+	return nil
+}
