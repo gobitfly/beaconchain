@@ -299,7 +299,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			return nil, nil, err
 		}
 
-		for _, validator := range validators {
+		for _, validator := range uiValidatorIndices {
 			metadata := validatorMapping.ValidatorMetadata[validator]
 
 			// As deposited and pending validators are neither online nor offline they are counted as the third state (exited)
