@@ -11,7 +11,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -171,39 +170,6 @@ func (d DataAccessService) calculateChartEfficiency(efficiencyType enums.VDBSumm
 		return 0, fmt.Errorf("unexpected efficiency type: %v", efficiency)
 	}
 	return efficiency, nil
-}
-
-func (d DataAccessService) getValidatorStatuses(validators []uint64) (map[uint64]enums.ValidatorStatus, error) {
-	validatorStatuses := make(map[uint64]enums.ValidatorStatus, len(validators))
-
-	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
-	if err != nil {
-		return nil, err
-	}
-
-	// Fill the data
-	for _, validator := range validators {
-		metadata := validatorMapping.ValidatorMetadata[validator]
-
-		switch constypes.ValidatorDbStatus(metadata.Status) {
-		case constypes.DbDeposited:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Deposited
-		case constypes.DbPending:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Pending
-		case constypes.DbActiveOnline, constypes.DbExitingOnline, constypes.DbSlashingOnline:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Online
-		case constypes.DbActiveOffline, constypes.DbExitingOffline, constypes.DbSlashingOffline:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Offline
-		case constypes.DbSlashed:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
-		case constypes.DbExited:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Exited
-		}
-	}
-
-	return validatorStatuses, nil
 }
 
 func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex t.VDBValidator, cursor uint64) (uint64, error) {
