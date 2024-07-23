@@ -173,6 +173,7 @@
     width: 20px;
     height: 20px;
     border-radius: var(--border-radius);
+    border: 1px solid var(--checkbox-border-color);
     background: var(--checkbox-background-color);
     &.p-highlight:not(:hover) {
       background: var(--primary-color);
