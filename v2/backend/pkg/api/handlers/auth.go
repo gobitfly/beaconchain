@@ -296,27 +296,27 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 // Response must conform to OAuth spec
 func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Request) {
 	req := struct {
-		DeviceID    string `json:"client_id"`
-		RedirectURI string `json:"redirect_uri"`
-		State       string `json:"state"`
+		DeviceIDAndName string `json:"client_id"`
+		RedirectURI     string `json:"redirect_uri"`
+		State           string `json:"state"`
 	}{}
 
 	// Retrieve parameters from GET request
-	req.DeviceID = r.URL.Query().Get("client_id")
+	req.DeviceIDAndName = r.URL.Query().Get("client_id")
 	req.RedirectURI = r.URL.Query().Get("redirect_uri")
 	req.State = r.URL.Query().Get("state")
 
-	// split req.DeviceID on _, first one is the client id and second one the client name
-	deviceIDParts := strings.Split(req.DeviceID, ":")
+	// To be compliant with OAuth 2 Spec, we include client_name in client_id instead of adding an additional param
+	// Split req.DeviceID on ":", first one is the client id and second one the client name
+	deviceIDParts := strings.Split(req.DeviceIDAndName, ":")
 	var clientID, clientName string
 	if len(deviceIDParts) != 2 {
-		clientID = req.DeviceID
+		clientID = req.DeviceIDAndName
 		clientName = "Unknown"
 	} else {
 		clientID = deviceIDParts[0]
 		clientName = deviceIDParts[1]
 	}
-	log.Infof("client ID: %s, client name: %s", clientID, clientName)
 
 	state := ""
 	if req.State != "" {
