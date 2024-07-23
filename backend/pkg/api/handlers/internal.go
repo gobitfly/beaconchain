@@ -1871,3 +1871,30 @@ func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w h
 	}
 	returnOk(w, response)
 }
+
+func (h *HandlerService) InternalPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		Url string `json:"url"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+	// TODO
+	returnOk(w, nil)
+}
