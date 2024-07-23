@@ -58,7 +58,6 @@ const checkboxAll = ref<InternalEntry>({ type: 'binary', check: false })
 let dataNonce = 0 // used by the watcher of `modifiableOptions` to know when it is unnecessary to send changes to the API (it doesn't send if the nonce is 0)
 
 watch(props, (props) => {
-  console.log(props)
   if (!props || !props.initialSettings) {
     return
   }
