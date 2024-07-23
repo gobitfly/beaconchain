@@ -17,6 +17,7 @@ const { dashboardKey, isPublic } = useDashboardKey()
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useI18n()
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const chartFilter = ref<SummaryChartFilter>({ aggregation: 'hourly', efficiency: 'all', groupIds: [] })
 
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
@@ -99,6 +100,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
     <BcTableControl
       v-model:="showAbsoluteValues"
       :search-placeholder="searchPlaceholder"
+      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #header-center="{tableIsShown}">
@@ -269,7 +271,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartSummaryChart :filter="chartFilter" />
+          <DashboardChartSummaryChart v-if="showInDevelopment" :filter="chartFilter" />
         </div>
       </template>
     </BcTableControl>
