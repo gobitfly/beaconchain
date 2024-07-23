@@ -67,7 +67,7 @@ watch(props, (props) => {
       tPath.value = 'notifications.subscriptions.validators.'
       orderOfTheRows = orderOfTheRowsInValidatorModal
       break
-    case 'notifications' :
+    case 'account' :
       tPath.value = 'notifications.subscriptions.accounts.'
       orderOfTheRows = orderOfTheRowsInAccountModal
       break
