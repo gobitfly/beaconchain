@@ -1,28 +1,25 @@
 <script setup lang="ts">
 import { warn } from 'vue'
-import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard, InternalEntry, APIentry } from '~/types/notifications/subscriptionModal'
+import type { InternalEntry, APIentry } from '~/types/notifications/subscriptionModal'
+import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
 import { ChainFamily } from '~/types/network'
-import type { ApiErrorResponse } from '~/types/api/common'
-import { API_PATH } from '~/types/customFetch'
+import type { DashboardType } from '~/types/dashboard'
+
+type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
+type DefinedAPIentry = Exclude<APIentry, null|undefined>
 
 interface Props {
-  dashboardId: number,
-  groupId: number,
-  validatorSub?: NotificationSettingsValidatorDashboard,
-  accountSub?: NotificationSettingsAccountDashboard
+  dashboardType: DashboardType,
+  initialSettings: AllOptions,
+  saveUserSettings: (settings: Record<keyof AllOptions, DefinedAPIentry>) => void
 }
-
-type DefinedAPIentry = Exclude<APIentry, null|undefined>
-type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
 
 // #### DIALOG SETTINGS ####
 
-const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
-const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
 const DefaultValues = new Map<keyof AllOptions, InternalEntry>([
   ['group_offline_threshold', { type: 'percent', check: false, num: 10 }],
   ['is_real_time_mode_enabled', { type: 'binary', check: false }],
-  ['erc20_token_transfers_threshold', { type: 'amount', check: false, num: NaN }], // NaN will leave the input field empty (the user sees the placeholder)
+  ['erc20_token_transfers_value_threshold', { type: 'amount', check: false, num: NaN }], // NaN will leave the input field empty (the user sees the placeholder)
   ['subscribed_chain_ids', { type: 'networks', networks: [] }]
 ])
 const orderOfTheRowsInValidatorModal: Array<keyof NotificationSettingsValidatorDashboard | 'ALL'> = [
@@ -30,11 +27,11 @@ const orderOfTheRowsInValidatorModal: Array<keyof NotificationSettingsValidatorD
   'is_sync_subscribed', 'is_withdrawal_processed_subscribed', 'is_slashed_subscribed', 'is_real_time_mode_enabled', 'ALL'
 ]
 const orderOfTheRowsInAccountModal: Array<keyof NotificationSettingsAccountDashboard | 'ALL'> = [
-  'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'erc20_token_transfers_threshold', 'is_erc721_token_transfers_subscribed',
+  'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'erc20_token_transfers_value_threshold', 'is_erc721_token_transfers_subscribed',
   'is_erc1155_token_transfers_subscribed', 'ALL', 'subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'
 ]
 const RowsWhoseCheckBoxIsInASeparateField = new Map<keyof AllOptions, keyof AllOptions>([
-  ['erc20_token_transfers_threshold', 'is_erc20_token_transfers_subscribed']
+  ['erc20_token_transfers_value_threshold', 'is_erc20_token_transfers_subscribed']
 ])
 const OptionsOutsideTheScopeOfCheckboxall: Array<keyof(AllOptions)> =
   ['subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'] // options that are not in the group of the all-checkbox
@@ -49,40 +46,39 @@ type ModifiableOptions = Record<keyof AllOptions, InternalEntry>
 
 const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
 const { t } = useI18n()
-const { fetch, setTimeout } = useCustomFetch()
-const toast = useBcToast()
 const { networkInfo } = useNetworkStore()
 const { user } = useUserStore()
 
 const tPath = ref('')
 let orderOfTheRows: typeof orderOfTheRowsInValidatorModal | typeof orderOfTheRowsInAccountModal = []
+let originalSettings: AllOptions
 const modifiableOptions = ref({} as ModifiableOptions)
 const checkboxAll = ref<InternalEntry>({ type: 'binary', check: false })
-
-const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
-watch(debouncer.value, sendUserPreferencesToAPI)
 
 let dataNonce = 0 // used by the watcher of `modifiableOptions` to know when it is unnecessary to send changes to the API (it doesn't send if the nonce is 0)
 
 watch(props, (props) => {
-  if (!props || (!props.validatorSub && !props.accountSub)) {
+  if (!props || !props.initialSettings) {
     return
   }
-  let originalSettings = {} as AllOptions
-  if (props.validatorSub) {
-    tPath.value = 'notifications.subscriptions.validators.'
-    originalSettings = toRaw(props.validatorSub) as AllOptions
-    orderOfTheRows = orderOfTheRowsInValidatorModal
-  } else {
-    tPath.value = 'notifications.subscriptions.accounts.'
-    originalSettings = toRaw(props.accountSub!) as AllOptions
-    orderOfTheRows = orderOfTheRowsInAccountModal
+  originalSettings = toRaw(props.initialSettings)
+  switch (props.dashboardType) {
+    case 'validator' :
+      tPath.value = 'notifications.subscriptions.validators.'
+      orderOfTheRows = orderOfTheRowsInValidatorModal
+      break
+    case 'notifications' :
+      tPath.value = 'notifications.subscriptions.accounts.'
+      orderOfTheRows = orderOfTheRowsInAccountModal
+      break
+    default :
+      return
   }
   modifiableOptions.value = {} as ModifiableOptions
   dataNonce = 0
   for (const key of orderOfTheRows) {
     if (key === 'ALL') { continue }
-    modifiableOptions.value[key] = convertAPIentryToInternalEntry(originalSettings, key)
+    modifiableOptions.value[key] = convertAPIentryToInternalEntry(key)
   }
 }, { immediate: true })
 
@@ -104,17 +100,16 @@ watch(modifiableOptions, (options) => {
     }
   }
   if (dataNonce > 0) {
-    // it will call `sendUserPreferencesToAPI()`
-    debouncer.bounce(dataNonce, false, true)
+    sendUserPreferencesToAPI()
   }
   dataNonce++
 }, { immediate: true, deep: true })
 
 /** reads data that our parent received from the API and converts it to our internal format */
-function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllOptions) : InternalEntry {
-  const srcValue = apiData[apiKey]
-  const type = getOptionType(apiData, apiKey)
-  if (!isOptionValueKnownInDB(apiData, apiKey)) {
+function convertAPIentryToInternalEntry (apiKey: keyof AllOptions) : InternalEntry {
+  const srcValue = originalSettings[apiKey]
+  const type = getOptionType(apiKey)
+  if (!isOptionValueKnownInDB(apiKey)) {
     if (DefaultValues.has(apiKey)) {
       return { ...DefaultValues.get(apiKey)! }
     } else {
@@ -136,22 +131,22 @@ function convertAPIentryToInternalEntry (apiData: AllOptions, apiKey: keyof AllO
     case 'percent' :
       return {
         type,
-        check: isOptionActivatedInDB(apiData, apiKey),
+        check: isOptionActivatedInDB(apiKey),
         num: srcValue as number * 100
       }
     case 'amount' :
       return {
         type,
-        check: isOptionActivatedInDB(apiData, apiKey),
+        check: isOptionActivatedInDB(apiKey),
         num: srcValue as number
       }
   }
 }
 
 /** converts our internal data to the format understood by the API and sends it */
-async function sendUserPreferencesToAPI () {
+function sendUserPreferencesToAPI () {
   // conversion
-  const output = {} as Record<string, DefinedAPIentry>
+  const output = {} as Record<keyof AllOptions, DefinedAPIentry>
   for (const k in modifiableOptions.value) {
     const key = k as keyof ModifiableOptions
     const value = toRaw(modifiableOptions.value[key])
@@ -177,35 +172,19 @@ async function sendUserPreferencesToAPI () {
     }
   }
   // sending
-  let response: ApiErrorResponse | undefined
-  try {
-    setTimeout(TimeoutForSavingFailures)
-    response = await fetch<ApiErrorResponse>(API_PATH.SAVE_DASHBOARDS_SETTINGS, {
-      method: 'POST',
-      body: output
-    }, {
-      for: props.value!.accountSub ? 'account' : 'validator',
-      dashboardKey: String(props.value?.dashboardId),
-      groupId: String(props.value?.groupId)
-    })
-  } catch {
-    response = undefined
-  }
-  if (!response || response.error) {
-    toast.showError({ summary: t('notifications.subscriptions.error_title'), group: t('notifications.subscriptions.error_group'), detail: t('notifications.subscriptions.error_message') })
-  }
+  props.value?.saveUserSettings(output)
 }
 
 function closeDialog () : void {
   dialogRef?.value.close()
 }
 
-const isOptionValueKnownInDB = (apiData: AllOptions, key: keyof AllOptions) =>
-  apiData[key] !== undefined && apiData[key] !== null &&
-  (typeof apiData[key] !== 'number' || apiData[key] as number > 0 || isOptionActivatedInDB(apiData, key)) &&
-  (!Array.isArray(apiData[key]) || !!(apiData[key] as Array<any>).length)
-const isOptionActivatedInDB = (apiData: AllOptions, key: keyof AllOptions) => RowsWhoseCheckBoxIsInASeparateField.has(key) ? !!apiData[RowsWhoseCheckBoxIsInASeparateField.get(key)!] : !!apiData[key]
-const getOptionType = (apiData: AllOptions, key: keyof AllOptions) => Array.isArray(apiData[key]) ? 'networks' : (typeof apiData[key] === 'boolean' ? 'binary' : (RowsThatExpectAPercentage.includes(key) ? 'percent' : 'amount'))
+const isOptionValueKnownInDB = (key: keyof AllOptions) =>
+  originalSettings[key] !== undefined && originalSettings[key] !== null &&
+  (typeof originalSettings[key] !== 'number' || originalSettings[key] as number > 0 || isOptionActivatedInDB(key)) &&
+  (!Array.isArray(originalSettings[key]) || !!(originalSettings[key] as Array<any>).length)
+const isOptionActivatedInDB = (key: keyof AllOptions) => RowsWhoseCheckBoxIsInASeparateField.has(key) ? !!originalSettings[RowsWhoseCheckBoxIsInASeparateField.get(key)!] : !!originalSettings[key]
+const getOptionType = (key: keyof AllOptions) => Array.isArray(originalSettings[key]) ? 'networks' : (typeof originalSettings[key] === 'boolean' ? 'binary' : (RowsThatExpectAPercentage.includes(key) ? 'percent' : 'amount'))
 const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !OptionsNeedingPremium.includes(key)
 </script>
 

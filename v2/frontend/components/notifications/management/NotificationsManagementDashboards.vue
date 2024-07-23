@@ -6,17 +6,54 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { type NotificationsManagementDashboardRow } from '~/types/notifications/management'
+import { API_PATH } from '~/types/customFetch'
+import type { ApiPagingResponse, ApiErrorResponse } from '~/types/api/common'
+import type { NotificationSettingsDashboardsTableRow, NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
 import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
+import { NotificationsSubscriptionDialog } from '#components'
 
+type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
+
+interface WrappedRow extends NotificationSettingsDashboardsTableRow {
+  dashboard_type: DashboardType,
+  dashboard_name: string,
+  subscriptions: string[],
+  identifier: string
+}
+
+interface SettingsWithContext {
+  row: WrappedRow,
+  settings: AllOptions
+}
+
+// #### SETTINGS FOR THE SUBSCRIPTION DIALOGS ####
+
+const KeysBelongingToWebhookDialog : Array<keyof AllOptions> = [
+  'webhook_url', 'is_webhook_discord_enabled'
+]
+const KeysIndicatingASubscription : Array<keyof AllOptions> = [
+  'is_validator_offline_subscribed', 'group_offline_threshold', 'is_attestations_missed_subscribed', 'is_block_proposal_subscribed',
+  'is_upcoming_block_proposal_subscribed', 'is_sync_subscribed', 'is_withdrawal_processed_subscribed', 'is_slashed_subscribed', 'is_real_time_mode_enabled',
+  'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'is_erc20_token_transfers_subscribed', 'is_erc721_token_transfers_subscribed',
+  'is_erc1155_token_transfers_subscribed', 'subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'
+]
+const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
+const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
+
+// #### END OF SETTINGS FOR THE SUBSCRIPTION DIALOGS ####
+
+const { fetch, setTimeout } = useCustomFetch()
+const toast = useBcToast()
 const { t: $t } = useI18n()
-
+const dialog = useDialog()
 const { dashboardGroups, query, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch } = useNotificationsManagementDashboards()
-
 const { groups } = useValidatorDashboardGroups()
-
 const { width } = useWindowSize()
+
+const debouncer = useDebounceValue<SettingsWithContext>({} as SettingsWithContext, MinimumTimeBetweenAPIcalls)
+watch(debouncer.value.value as readonly SettingsWithContext, saveUserSettings)
+
 const colsVisible = computed(() => {
   return {
     networks: width.value > 1101,
@@ -29,23 +66,49 @@ const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
-const wrappedDashboardGroups = computed(() => {
+const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow>|undefined> = computed(() => {
   if (!dashboardGroups.value) {
     return
   }
   return {
     paging: dashboardGroups.value.paging,
-    data: dashboardGroups.value.data.map(d => ({ ...d, identifier: `${d.dashboard_type}-${d.dashboard_id}-${d.group_id}` }))
+    data: dashboardGroups.value.data.map(d => ({
+      ...d,
+      dashboard_type: dashboardType(d.is_account_dashboard),
+      dashboard_name: 'TODO: get the name of the dashboard',
+      subscriptions: subscriptionList(d),
+      identifier: `${dashboardType(d.is_account_dashboard)}-${d.dashboard_id}-${d.group_id}`
+    }))
+  }
+
+  function dashboardType (isAccountDashboard: boolean) : DashboardType {
+    return isAccountDashboard ? 'account' : 'validator'
+  }
+
+  function subscriptionList (row: NotificationSettingsDashboardsTableRow) : string[] {
+    const result: string[] = []
+    for (const key of KeysIndicatingASubscription) {
+      if ((row.settings as AllOptions)[key]) {
+        result.push($t('notifications.subscriptions.' + dashboardType(row.is_account_dashboard) + 's.' + key))
+      }
+    }
+    return result
   }
 })
 
-const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: NotificationsManagementDashboardRow) => {
+const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: WrappedRow) => {
+  const data = {
+    dashboardType: row.dashboard_type,
+    subscriptions: row.settings,
+    saveUserSettings: (settings: AllOptions) => debouncer.bounce({ row, settings }, false, true)
+  }
   switch (col) {
     case 'subscriptions':
-      alert('TODO: edit subscriptions' + row.group_id)
+      dialog.open(NotificationsSubscriptionDialog, { data })
       break
     case 'webhook':
-      alert('TODO: edit webhook' + row.group_id)
+      /* TODO: replace `WebhookDialog` with the name of Marcel's component
+      dialog.open(WebhookDialog, { data }) */
       break
     case 'networks':
       alert('TODO: edit networks' + row.group_id)
@@ -53,6 +116,26 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: N
     case 'delete':
       alert('TODO: delete' + row.group_id)
       break
+  }
+}
+
+async function saveUserSettings (settingsAndContext: SettingsWithContext) {
+  let response: ApiErrorResponse | undefined
+  try {
+    setTimeout(TimeoutForSavingFailures)
+    response = await fetch<ApiErrorResponse>(API_PATH.SAVE_DASHBOARDS_SETTINGS, {
+      method: 'PUT',
+      body: { ...settingsAndContext.row.settings, ...settingsAndContext.settings }
+    }, {
+      for: settingsAndContext.row.dashboard_type,
+      dashboardKey: String(settingsAndContext.row.dashboard_id),
+      groupId: String(settingsAndContext.row.group_id)
+    })
+  } catch {
+    response = undefined
+  }
+  if (!response || response.error) {
+    toast.showError({ summary: $t('notifications.subscriptions.error_title'), group: $t('notifications.subscriptions.error_group'), detail: $t('notifications.subscriptions.error_message') })
   }
 }
 
@@ -137,7 +220,7 @@ function getTypeIcon (type: DashboardType) {
           <template #body="slotProps">
             <BcTablePopoutEdit
               :truncate-text="true"
-              :label="slotProps.data.webhook.url"
+              :label="slotProps.data.settings.webhook_url"
               @on-edit="() => onEdit('webhook', slotProps.data)"
             />
           </template>
@@ -152,12 +235,12 @@ function getTypeIcon (type: DashboardType) {
           <template #body="slotProps">
             <BcTablePopoutEdit
               :truncate-text="true"
-              :no-icon="slotProps.data.dashboard_type === 'validator'"
+              :no-icon="!slotProps.data.is_account_dashboard"
               @on-edit="onEdit('networks', slotProps.data)"
             >
               <template #content>
                 <IconNetwork
-                  v-for="chainId in slotProps.data.networks"
+                  v-for="chainId in slotProps.data.chain_ids"
                   :key="chainId"
                   :colored="true"
                   class="network-icon"
@@ -200,7 +283,7 @@ function getTypeIcon (type: DashboardType) {
 
               <BcTablePopoutEdit
                 class="value"
-                :label="slotProps.data.webhook.url"
+                :label="slotProps.data.settings.webhook_url"
                 @on-edit="() => onEdit('webhook', slotProps.data)"
               />
             </div>
@@ -211,13 +294,13 @@ function getTypeIcon (type: DashboardType) {
 
               <BcTablePopoutEdit
                 class="value"
-                :no-icon="slotProps.data.dashboard_type === 'validator'"
+                :no-icon="!slotProps.data.is_account_dashboard"
                 @on-edit="onEdit('networks', slotProps.data)"
               >
                 <template #content>
                   <div class="newtork-row">
                     <IconNetwork
-                      v-for="chainId in slotProps.data.networks"
+                      v-for="chainId in slotProps.data.chain_ids"
                       :key="chainId"
                       :colored="true"
                       class="network-icon"
