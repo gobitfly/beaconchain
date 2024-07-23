@@ -511,11 +511,6 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 		return nil, nil, err
 	}
 
-	validatorStatuses, err := d.getValidatorStatuses(validators)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// Fill the data
 	data := []t.VDBManageValidatorsTableRow{}
 	for _, validator := range validators {
@@ -526,11 +521,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 			PublicKey:            t.PubKey(hexutil.Encode(metadata.PublicKey)),
 			GroupId:              validatorGroupMap[validator].GroupId,
 			Balance:              utils.GWeiToWei(big.NewInt(int64(metadata.Balance))),
+			Status:               metadata.Status,
 			WithdrawalCredential: t.Hash(hexutil.Encode(metadata.WithdrawalCredentials)),
 		}
 
-		row.Status = validatorStatuses[validator].ToString()
-		if validatorStatuses[validator] == enums.ValidatorStatuses.Pending && metadata.Queues.ActivationIndex.Valid {
+		if constypes.ValidatorDbStatus(metadata.Status) == constypes.DbPending && metadata.Queues.ActivationIndex.Valid {
 			activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
 			row.QueuePosition = &activationIndex
 		}

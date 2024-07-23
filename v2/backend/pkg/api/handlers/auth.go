@@ -447,7 +447,6 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 }
 
 // Middlewares
-
 // returns a middleware that stores user id in context, using the provided function
 func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
