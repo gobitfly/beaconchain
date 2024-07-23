@@ -27,21 +27,18 @@ interface SettingsWithContext {
   settings: AllOptions
 }
 
-// #### SETTINGS FOR THE SUBSCRIPTION DIALOGS ####
+// #### CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
 
-const KeysBelongingToWebhookDialog : Array<keyof AllOptions> = [
-  'webhook_url', 'is_webhook_discord_enabled'
-]
 const KeysIndicatingASubscription : Array<keyof AllOptions> = [
   'is_validator_offline_subscribed', 'group_offline_threshold', 'is_attestations_missed_subscribed', 'is_block_proposal_subscribed',
   'is_upcoming_block_proposal_subscribed', 'is_sync_subscribed', 'is_withdrawal_processed_subscribed', 'is_slashed_subscribed', 'is_real_time_mode_enabled',
   'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'is_erc20_token_transfers_subscribed', 'is_erc721_token_transfers_subscribed',
-  'is_erc1155_token_transfers_subscribed', 'subscribed_chain_ids', 'is_ignore_spam_transactions_enabled'
+  'is_erc1155_token_transfers_subscribed', 'is_ignore_spam_transactions_enabled'
 ]
 const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
 const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
 
-// #### END OF SETTINGS FOR THE SUBSCRIPTION DIALOGS ####
+// #### END OF CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
 
 const { fetch, setTimeout } = useCustomFetch()
 const toast = useBcToast()
@@ -52,7 +49,7 @@ const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
 
 const debouncer = useDebounceValue<SettingsWithContext>({} as SettingsWithContext, MinimumTimeBetweenAPIcalls)
-watch(debouncer.value.value as readonly SettingsWithContext, saveUserSettings)
+watch(debouncer.value as Ref<SettingsWithContext>, saveUserSettings)
 
 const colsVisible = computed(() => {
   return {
@@ -89,7 +86,7 @@ const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow>|undefine
     const result: string[] = []
     for (const key of KeysIndicatingASubscription) {
       if ((row.settings as AllOptions)[key]) {
-        result.push($t('notifications.subscriptions.' + dashboardType(row.is_account_dashboard) + 's.' + key))
+        result.push($t('notifications.subscriptions.' + dashboardType(row.is_account_dashboard) + 's.' + key + '.option'))
       }
     }
     return result
