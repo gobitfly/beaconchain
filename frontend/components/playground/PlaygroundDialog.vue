@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BcDialogConfirm, NotificationsSubscriptionDialog } from '#components'
-import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/notifications/subscriptionModal'
+import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
 
 const dialog = useDialog()
 
@@ -24,6 +24,8 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
 }
 
 const validatorSub: NotificationSettingsValidatorDashboard = {
+  webhook_url: 'http://bablabla',
+  is_webhook_discord_enabled: true,
   is_validator_offline_subscribed: true,
   group_offline_threshold: 0, // means "deactivated/unchecked"
   is_attestations_missed_subscribed: true,
@@ -36,10 +38,12 @@ const validatorSub: NotificationSettingsValidatorDashboard = {
 }
 
 const accountSub: NotificationSettingsAccountDashboard = {
+  webhook_url: 'http://bablabla',
+  is_webhook_discord_enabled: true,
   is_incoming_transactions_subscribed: true,
   is_outgoing_transactions_subscribed: true,
   is_erc20_token_transfers_subscribed: false,
-  erc20_token_transfers_threshold: 0,
+  erc20_token_transfers_value_threshold: 0,
   is_erc721_token_transfers_subscribed: true,
   is_erc1155_token_transfers_subscribed: false,
   subscribed_chain_ids: [17000],
@@ -56,10 +60,10 @@ function openSubscriptions (props: any) {
 
 <template>
   <div class="container">
-    <Button @click="openSubscriptions({dashboardId:1, groupId:1, validatorSub})">
+    <Button @click="openSubscriptions({dashboardId:5295, groupId:0, validatorSub})">
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({dashboardId:1, groupId:1, accountSub})">
+    <Button @click="openSubscriptions({dashboardId:5295, groupId:0, accountSub})">
       Subscribe to notifications for your accounts
     </Button>
     <br>

@@ -368,7 +368,10 @@
         "is_outgoing_transactions_subscribed": {
           "option":"Outgoing transactions"
         },
-        "erc20_token_transfers_threshold": {
+        "is_erc20_token_transfers_subscribed": {
+          "option":"ERC20 token transfers"
+        },
+        "erc20_token_transfers_value_threshold": {
           "option":"ERC20 token transfers",
           "placeholder": "value ≥ $0"
         },

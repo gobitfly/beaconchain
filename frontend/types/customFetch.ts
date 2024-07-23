@@ -35,7 +35,7 @@ export enum API_PATH {
   DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
-  NOTIFICATIONS_MANAGEMENT_DASHBOARD = '/notifications/managementDashboard',
+  GET_NOTIFICATIONS_SETTINGS_DASHBOARD = '/notifications/managementDashboard',
   LATEST_STATE = '/latestState',
   NOTIFICATIONS_DASHBOARDS='/notifications/dashboards',
   REGISTER = '/register',
@@ -231,9 +231,9 @@ export const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false
   },
-  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD]: {
-    path: '/notifications/management/dashboard',
-    mock: true
+  [API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD]: {
+    path: '/users/me/notifications/settings/dashboards',
+    mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
