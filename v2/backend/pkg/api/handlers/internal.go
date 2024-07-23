@@ -542,7 +542,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalDeleteValidatorDashboardGroup(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
