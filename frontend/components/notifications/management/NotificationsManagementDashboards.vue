@@ -96,14 +96,14 @@ const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow>|undefine
 })
 
 const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: WrappedRow) => {
-  const data = {
+  const dialogProps = {
     dashboardType: row.dashboard_type,
-    subscriptions: row.settings,
+    initialSettings: row.settings,
     saveUserSettings: (settings: AllOptions) => debouncer.bounce({ row, settings }, false, true)
   }
   switch (col) {
     case 'subscriptions':
-      dialog.open(NotificationsSubscriptionDialog, { data })
+      dialog.open(NotificationsSubscriptionDialog, { data: dialogProps })
       break
     case 'webhook':
       /* TODO: replace `WebhookDialog` with the name of Marcel's component
@@ -238,13 +238,8 @@ function getTypeIcon (type: DashboardType) {
               @on-edit="onEdit('networks', slotProps.data)"
             >
               <template #content>
-                <IconNetwork
-                  v-for="chainId in slotProps.data.chain_ids"
-                  :key="chainId"
-                  :colored="true"
-                  class="network-icon"
-                  :chain-id="chainId"
-                />
+                <BcNetworkSelector :readonly-networks="slotProps.data.chain_ids" />
+                &nbsp;
               </template>
             </BcTablePopoutEdit>
           </template>
@@ -298,13 +293,8 @@ function getTypeIcon (type: DashboardType) {
               >
                 <template #content>
                   <div class="newtork-row">
-                    <IconNetwork
-                      v-for="chainId in slotProps.data.chain_ids"
-                      :key="chainId"
-                      :colored="true"
-                      class="network-icon"
-                      :chain-id="chainId"
-                    />
+                    <BcNetworkSelector :readonly-networks="slotProps.data.chain_ids" />
+                    &nbsp;
                   </div>
                 </template>
               </BcTablePopoutEdit>
@@ -346,12 +336,6 @@ function getTypeIcon (type: DashboardType) {
 
 .type-icon {
   margin-right: var(--padding);
-}
-
-.network-icon {
-  margin-right: var(--padding);
-  height: 20px;
-  width: 20px;
 }
 
 .newtork-row {
