@@ -11,24 +11,29 @@ const {t: $t} = useI18n()
 
 <template>
   <div class="container">
-    <div class="info-section">
-      <span class="icon">🔔</span>
-      <span class="text">Notification Overview</span>
-    </div>
     <div>
       <div v-if="props.store" class="box">
-        <div class="box-item"><span class="big_text">Email Notifications:</span> <span class="big_text_label">{{ props.store.EmailNotifications }}</span></div>
-        <div class="box-item"><span>Push Notifications:</span><span>{{ props.store.pushNotifications }}</span> </div>
-        <div class="box-item"><span>Most Notifications in 30 Days:</span><span>{{ props.store.mostNotifications30d }}</span> </div>
-        <div class="box-item"><span>Most Notifications in 24 Hours:</span><span>{{ props.store.mostNotifications24h }}</span> </div>
+        <div class="box-item">
+          <span class="big_text">Email Notifications:</span> 
+          <span class="big_text_label">
+            {{ props.store.EmailNotifications ? 'is Active' : 'not Active' }}
+          </span>
+        </div>
+        <div class="box-item">
+          <span class="big_text">Push Notifications:</span>
+          <span class="big_text_label">
+            {{ props.store.pushNotifications ? 'is Active' : 'not Active' }}
+          </span>
+        </div>
+        <div class="box-item">Most Notifications in 30 Days: {{ props.store.mostNotifications30d }}</div>
+        <div class="box-item">
+          <span>Most Notifications in 24 Hours:</span>
+          <span>{{ props.store.mostNotifications24h ? props.store.mostNotifications24h : '0' }}</span>
+        </div>
       </div>
       <div v-else>
         No data available from the component.
       </div>
-    </div>
-    <div class="action-section">
-      <span class="icon">⚙️</span>
-      <span class="text">Settings</span>
     </div>
   </div>
 </template>
@@ -50,6 +55,7 @@ const {t: $t} = useI18n()
 .info-section, .action-section {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
 }
 
