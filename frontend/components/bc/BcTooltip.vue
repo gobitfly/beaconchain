@@ -4,7 +4,7 @@ import { useTooltipStore } from '~/stores/useTooltipStore'
 interface Props {
   text?: string,
   title?: string,
-  layout?: 'dark' | 'default'
+  layout?: 'special' | 'default'
   position?: 'top' | 'left' | 'right' | 'bottom',
   hide?: boolean,
   tooltipClass?: string,
@@ -305,9 +305,9 @@ onUnmounted(() => {
   pointer-events: none;
   max-width: 300px;
 
-  &.dark {
-    --tt-bg-color: var(--light-black);
-    --tt-color: var(--light-grey);
+  &.special {
+    --tt-bg-color: var(--light-grey-5);
+    --tt-color: var(--light-black);
     border: solid 1px var(--container-border-color);
   }
 
@@ -332,7 +332,7 @@ onUnmounted(() => {
     opacity: 1;
     pointer-events: unset;
 
-    &:not(.dark)::after {
+    &:not(.special)::after {
       opacity: 1;
     }
   }
@@ -358,7 +358,6 @@ onUnmounted(() => {
 
   :deep(.bold),
   :deep(b) {
-    font-weight: bold;
     font-weight: var(--tooltip_text_bold_font_weight);
   }
 
@@ -369,6 +368,15 @@ onUnmounted(() => {
 
   &.fit-content {
     min-width: max-content;
+  }
+}
+
+.dark-mode{
+  .bc-tooltip {
+    &.special{
+    --tt-bg-color: var(--light-black);
+    --tt-color: var(--light-grey);
+    }
   }
 }
 </style>

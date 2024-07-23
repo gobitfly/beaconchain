@@ -158,7 +158,7 @@ const data = computed(() => {
 })
 </script>
 <template>
-  <BcTooltip :target="props.id" layout="dark" scroll-container="#slot-viz" :hover-delay="350">
+  <BcTooltip :target="props.id" layout="special" scroll-container="#slot-viz" :hover-delay="350">
     <slot />
     <template #tooltip>
       <div class="with-duties">
@@ -237,7 +237,6 @@ const data = computed(() => {
     }
 
     .row {
-      color: var(--light-grey);
         display: flex;
         align-items: center;
 
