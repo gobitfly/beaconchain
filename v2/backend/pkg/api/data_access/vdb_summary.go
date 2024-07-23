@@ -36,7 +36,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	table, _, _, err := d.getTablesForPeriod(period)
+	table, _, clickhouseTable, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -104,7 +104,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	var queryResult []struct {
 		GroupId                int64           `db:"result_group_id"`
 		GroupName              string          `db:"group_name"`
-		ValidatorIndices       pq.Int64Array   `db:"validator_indices"`
+		ValidatorIndices       []uint64        `db:"validator_indices"`
 		ClRewards              int64           `db:"cl_rewards"`
 		AttestationReward      decimal.Decimal `db:"attestations_reward"`
 		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
@@ -114,113 +114,123 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		BlocksScheduled        uint64          `db:"blocks_scheduled"`
 		SyncExecuted           uint64          `db:"sync_executed"`
 		SyncScheduled          uint64          `db:"sync_scheduled"`
+		MinEpochStart          int64           `db:"min_epoch_start"`
+		MaxEpochEnd            int64           `db:"max_epoch_end"`
 	}
 
-	wg.Go(func() error {
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
-				goqu.L("SUM(COALESCE(r.attestations_reward, 0) + COALESCE(r.blocks_cl_reward, 0) + COALESCE(r.sync_rewards, 0) + COALESCE(r.slasher_reward, 0)) AS cl_rewards"),
-				goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
-				goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
-				goqu.L("COALESCE(SUM(r.attestations_executed), 0) AS attestations_executed"),
-				goqu.L("COALESCE(SUM(r.attestations_scheduled), 0) AS attestations_scheduled"),
-				goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
-				goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
-				goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
-				goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled")).
-			From(goqu.T(table).As("r")).
-			GroupBy(goqu.L("result_group_id"))
+	ds := goqu.Dialect("postgres").
+		From(goqu.L(fmt.Sprintf(`"%s" AS "r" FINAL`, clickhouseTable))).
+		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+		Select(
+			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
+			goqu.L("SUM(COALESCE(r.attestations_reward, 0) + COALESCE(r.blocks_cl_reward, 0) + COALESCE(r.sync_rewards, 0) + COALESCE(r.blocks_cl_slasher_reward, 0)) AS cl_rewards"),
+			goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
+			goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
+			goqu.L("COALESCE(SUM(r.attestations_executed), 0) AS attestations_executed"),
+			goqu.L("COALESCE(SUM(r.attestations_scheduled), 0) AS attestations_scheduled"),
+			goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
+			goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
+			goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
+			goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"),
+			goqu.L("COALESCE(MIN(r.epoch_start), 0) AS min_epoch_start"),
+			goqu.L("COALESCE(MAX(r.epoch_end), 0) AS max_epoch_end")).
+		GroupBy(goqu.L("result_group_id"))
 
-		if len(validators) > 0 {
+	if len(validators) > 0 {
+		ds = ds.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("r.validator_index IN (?)", validators))
+	} else {
+		if dashboardId.AggregateGroups {
 			ds = ds.
-				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-				Where(goqu.L("r.validator_index = ANY(?)", pq.Array(validators)))
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
 		} else {
-			if dashboardId.AggregateGroups {
-				ds = ds.
-					SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
-			} else {
-				ds = ds.
-					SelectAppend(goqu.L("v.group_id AS result_group_id"))
-			}
-
 			ds = ds.
-				InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
-
-			if groupNameSearchEnabled && (search != "" || colSort.Column == enums.VDBSummaryColumns.Group) {
-				// Get the group names since we can filter and/or sort for them
-				ds = ds.
-					SelectAppend(goqu.L("g.name AS group_name")).
-					InnerJoin(goqu.L("users_val_dashboards_groups g"), goqu.On(goqu.L("v.group_id = g.id AND v.dashboard_id = g.dashboard_id"))).
-					GroupByAppend(goqu.L("group_name"))
-			}
+				SelectAppend(goqu.L("v.group_id AS result_group_id"))
 		}
 
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
-		}
+		ds = ds.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
+		if groupNameSearchEnabled && (search != "" || colSort.Column == enums.VDBSummaryColumns.Group) {
+			// Get the group names since we can filter and/or sort for them
+			ds = ds.
+				SelectAppend(goqu.L("g.name AS group_name")).
+				InnerJoin(goqu.L("users_val_dashboards_groups g"), goqu.On(goqu.L("v.group_id = g.id AND v.dashboard_id = g.dashboard_id"))).
+				GroupByAppend(goqu.L("group_name"))
 		}
-		return nil
-	})
+	}
 
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error preparing query: %v", err)
+	}
+
+	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error retrieving data from table %s: %v", table, err)
+	}
+
+	epochMin := int64(math.MaxInt64)
+	epochMax := int64(0)
+
+	for _, row := range queryResult {
+		if row.MinEpochStart < epochMin {
+			epochMin = row.MinEpochStart
+		}
+		if row.MaxEpochEnd > epochMax {
+			epochMax = row.MaxEpochEnd
+		}
+	}
 	// ------------------------------------------------------------------------------------------------------------------
 	// Get the EL rewards
 	elRewards := make(map[int64]decimal.Decimal)
-	wg.Go(func() error {
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
-			From(goqu.T(table).As("r")).
-			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.epoch >= r.epoch_start AND b.epoch <= r.epoch_end AND r.validator_index = b.proposer AND b.status = '1'"))).
-			LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-			LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
-			GroupBy(goqu.L("result_group_id"))
+	ds = goqu.Dialect("postgres").
+		Select(
+			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
+		From(goqu.L("blocks b")).
+		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochMin, epochMax)).
+		GroupBy(goqu.L("result_group_id"))
 
-		if len(validators) > 0 {
+	if len(validators) > 0 {
+		ds = ds.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(validators)))
+	} else {
+		if dashboardId.AggregateGroups {
 			ds = ds.
-				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-				Where(goqu.L("r.validator_index = ANY(?)", pq.Array(validators)))
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
 		} else {
-			if dashboardId.AggregateGroups {
-				ds = ds.
-					SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
-			} else {
-				ds = ds.
-					SelectAppend(goqu.L("v.group_id AS result_group_id"))
-			}
-
 			ds = ds.
-				InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+				SelectAppend(goqu.L("v.group_id AS result_group_id"))
 		}
 
-		var queryResult []struct {
-			GroupId   int64           `db:"result_group_id"`
-			ElRewards decimal.Decimal `db:"el_rewards"`
-		}
+		ds = ds.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+	}
 
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
-		}
+	var elRewardsQueryResult []struct {
+		GroupId   int64           `db:"result_group_id"`
+		ElRewards decimal.Decimal `db:"el_rewards"`
+	}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving data from table %s: %v", table, err)
-		}
+	query, args, err = ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error preparing query: %v", err)
+	}
 
-		for _, entry := range queryResult {
-			elRewards[entry.GroupId] = entry.ElRewards
-		}
-		return nil
-	})
+	err = d.alloyReader.SelectContext(ctx, &elRewardsQueryResult, query, args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error retrieving data from table %s: %v", table, err)
+	}
+
+	for _, entry := range elRewardsQueryResult {
+		elRewards[entry.GroupId] = entry.ElRewards
+	}
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Get the current and next sync committee validators
@@ -272,7 +282,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	for _, queryEntry := range queryResult {
 		uiValidatorIndices := make([]uint64, len(queryEntry.ValidatorIndices))
 		for i, validatorIndex := range queryEntry.ValidatorIndices {
-			uiValidatorIndices[i] = uint64(validatorIndex)
+			uiValidatorIndices[i] = validatorIndex
 		}
 
 		resultEntry := t.VDBSummaryTableRow{
@@ -496,13 +506,17 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// Get the table names based on the period
-	table, slashedByCountTable, days, err := d.getTablesForPeriod(period)
+	_, _, clickhouseTable, days, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
 
-	query := `select
-			users_val_dashboards_validators.validator_index,
+	query := `
+			WITH validators AS (
+				SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE (dashboard_id = $1 and (group_id = $2 OR $2 = -1))
+			)
+			select
+			validator_index,
 			epoch_start,
 			COALESCE(attestations_reward, 0) as attestations_reward,
 			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
@@ -514,15 +528,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(blocks_proposed, 0) as blocks_proposed,
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
-			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
-			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
+			COALESCE(CASE WHEN slashed THEN 1 ELSE 0 END, 0) AS slashed_in_period,
+			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
-		from users_val_dashboards_validators
-		inner join %[1]s on %[1]s.validator_index = users_val_dashboards_validators.validator_index
-		left join %[2]s on %[2]s.slashed_by = users_val_dashboards_validators.validator_index
-		where (dashboard_id = $1 and (group_id = $2 OR $2 = -1))
+		from %[1]s
+		inner join validators v on %[1]s.validator_index = v.validator_index
+		where validator_index IN (select validator_index FROM validators)
 		`
 
 	if dashboardId.Validators != nil {
@@ -539,14 +552,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(blocks_proposed, 0) as blocks_proposed,
 			COALESCE(sync_scheduled, 0) as sync_scheduled,
 			COALESCE(sync_executed, 0) as sync_executed,
-			%[1]s.slashed_by IS NOT NULL AS slashed_in_period,
-			COALESCE(%[2]s.slashed_amount, 0) AS slashed_amount,
+			COALESCE(CASE WHEN slashed THEN 1 ELSE 0 END, 0) AS slashed_in_period,
+			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
 			COALESCE(blocks_expected, 0) as blocks_expected,
 			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from %[1]s
-		left join %[2]s on %[2]s.slashed_by = %[1]s.validator_index
-		where %[1]s.validator_index = ANY($1)
+		where %[1]s.validator_index IN($1)
 	`
 	}
 
@@ -584,9 +596,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	var rows []*queryResult
 
 	if len(validators) > 0 {
-		err = d.alloyReader.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), validators)
+		err = d.clickhouseReader.SelectContext(ctx, &rows, fmt.Sprintf(query, clickhouseTable), validators)
 	} else {
-		err = d.alloyReader.SelectContext(ctx, &rows, fmt.Sprintf(query, table, slashedByCountTable), dashboardId.Id, groupId)
+		err = d.clickhouseReader.SelectContext(ctx, &rows, fmt.Sprintf(query, clickhouseTable), dashboardId.Id, groupId)
 	}
 
 	if err != nil {
@@ -1118,7 +1130,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	table, _, _, err := d.getTablesForPeriod(period)
+	table, _, _, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1236,7 +1248,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	}
 
 	// Get the table names based on the period
-	table, slashedByCountTable, _, err := d.getTablesForPeriod(period)
+	table, slashedByCountTable, _, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1436,7 +1448,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	// Get the table name based on the period
-	table, _, _, err := d.getTablesForPeriod(period)
+	table, _, _, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1555,31 +1567,36 @@ func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Cont
 	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
 }
 
-func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, string, int, error) {
+func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, string, string, int, error) {
 	table := ""
+	clickhouseTable := ""
 	slashedByCountTable := ""
 	days := 0
 
 	switch period {
 	case enums.TimePeriods.Last24h:
 		table = "validator_dashboard_data_rolling_daily"
+		clickhouseTable = "validator_dashboard_data_rolling_24h"
 		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
 		days = 1
 	case enums.TimePeriods.Last7d:
 		table = "validator_dashboard_data_rolling_weekly"
+		clickhouseTable = "validator_dashboard_data_rolling_7d"
 		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
 		days = 7
 	case enums.TimePeriods.Last30d:
 		table = "validator_dashboard_data_rolling_monthly"
+		clickhouseTable = "validator_dashboard_data_rolling_30d"
 		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
 		days = 30
 	case enums.TimePeriods.AllTime:
 		table = "validator_dashboard_data_rolling_total"
+		clickhouseTable = "validator_dashboard_data_rolling_total"
 		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
 		days = -1
 	default:
-		return "", "", 0, fmt.Errorf("not-implemented time period: %v", period)
+		return "", "", "", 0, fmt.Errorf("not-implemented time period: %v", period)
 	}
 
-	return table, slashedByCountTable, days, nil
+	return table, slashedByCountTable, clickhouseTable, days, nil
 }
