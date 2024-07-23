@@ -13,7 +13,11 @@ interface Props {
   scrollContainer?: string // query selector for scrollable parent container
   dontOpenPermanently?: boolean
   hoverDelay?: number
+  tooltipWidth?: `${number}px` | `${number}%`
+  tooltipTextAlign?: 'left' | 'center' | 'right'
 }
+
+const toolTipTextAlignWithDefault = computed(() => props.tooltipTextAlign || 'center')
 
 const props = defineProps<Props>()
 const bcTooltipOwner = ref<HTMLElement | null>(null)
@@ -222,14 +226,14 @@ onUnmounted(() => {
   >
     <slot />
     <Teleport v-if="isOpen" to="body">
-      <div class="bc-tooltip-wrapper" :style="pos" :class="tooltipClass">
+      <div class="bc-tooltip-wrapper" :style="{...pos, ...{ width: tooltipWidth }}"  :class="tooltipClass">
         <div
-          ref="bcTooltip"
-          class="bc-tooltip"
-          :class="classList"
-          @click="$event.stopImmediatePropagation()"
-          @mouseover="instantHoverTooltip(true)"
-          @mouseleave="bounceHoverTooltip(false, false, true)"
+        ref="bcTooltip"
+        class="bc-tooltip"
+        :class="classList"
+        @click="$event.stopImmediatePropagation()"
+        @mouseover="instantHoverTooltip(true)"
+        @mouseleave="bounceHoverTooltip(false, false, true)"
         >
           <slot name="tooltip">
             <span>
@@ -296,7 +300,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
   opacity: 0;
   transition: opacity 1s;
-  text-align: center;
+  text-align: v-bind(toolTipTextAlignWithDefault);
   padding: 9px 12px;
   border-radius: var(--border-radius);
   background: var(--tt-bg-color);

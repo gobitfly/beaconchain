@@ -22,7 +22,7 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
     }
   }
 
-  onBeforeMount(() => {
+  const setDialogDefaults = () => {
     if (dialogRef?.value?.options) {
       if (!dialogRef.value.options.props) {
         dialogRef.value.options.props = { }
@@ -37,6 +37,12 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
       dialogRef.value.options.props.pt = { ...dialogRef.value.options.props.pt, root: { uuid: uuid.value } }
     }
     props.value = dialogRef?.value?.data
+  }
+  
+  // is executed onSetup and onBeforeMount as in different cases the data was not available
+  setDialogDefaults()
+  onBeforeMount(() => {
+   setDialogDefaults()
   })
 
   onMounted(() => {
@@ -47,7 +53,7 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
     }
 
     setTouchableElement(dialog as HTMLElement, () => {
-      onClose()
+      close()
       return true
     })
   })
@@ -58,10 +64,11 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
     }
   }, { immediate: true })
 
-  const onClose = () => {
+  const close = () => {
     if (dialogRef?.value) {
       dialogRef.value.close()
     }
   }
-  return { props, dialogRef, setHeader }
+
+  return { close, props, dialogRef, setHeader}
 }
