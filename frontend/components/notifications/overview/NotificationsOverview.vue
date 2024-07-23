@@ -14,7 +14,7 @@ const {t: $t} = useI18n()
     <div>
       <div v-if="props.store" class="box">
         <div class="box-item">
-          <span class="big_text">Email Notifications:</span> 
+          <span class="big_text">Email Notifications:</span>
           <span class="big_text_label">
             {{ props.store.EmailNotifications ? 'is Active' : 'not Active' }}
           </span>
@@ -25,7 +25,10 @@ const {t: $t} = useI18n()
             {{ props.store.pushNotifications ? 'is Active' : 'not Active' }}
           </span>
         </div>
-        <div class="box-item">Most Notifications in 30 Days: {{ props.store.mostNotifications30d }}</div>
+        <div class="box-item">
+          <span>Most Notifications in 30 Days:</span>
+          <span>{{ props.store.mostNotifications30d ? props.store.mostNotifications30d : '0' }}</span>
+        </div>
         <div class="box-item">
           <span>Most Notifications in 24 Hours:</span>
           <span>{{ props.store.mostNotifications24h ? props.store.mostNotifications24h : '0' }}</span>
