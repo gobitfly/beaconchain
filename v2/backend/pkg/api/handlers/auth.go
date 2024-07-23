@@ -436,6 +436,32 @@ func (h *HandlerService) InternalExchangeLegacyMobileAuth(w http.ResponseWriter,
 	})
 }
 
+func (h *HandlerService) InternalRegisterMobilePushToken(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		Token    string `json:"token"`
+		DeviceID string `json:"client_id"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	err = h.dai.AddMobileNotificationToken(user.Id, req.DeviceID, req.Token)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Request) {
 	err := h.scs.Destroy(r.Context())
 	if err != nil {
