@@ -296,17 +296,27 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 // Response must conform to OAuth spec
 func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Request) {
 	req := struct {
-		DeviceName  string `json:"device_name"`
-		DeviceID    string `json:"device_id"`
+		DeviceID    string `json:"client_id"`
 		RedirectURI string `json:"redirect_uri"`
 		State       string `json:"state"`
 	}{}
 
 	// Retrieve parameters from GET request
-	req.DeviceName = r.URL.Query().Get("device_name")
-	req.DeviceID = r.URL.Query().Get("device_id")
+	req.DeviceID = r.URL.Query().Get("client_id")
 	req.RedirectURI = r.URL.Query().Get("redirect_uri")
 	req.State = r.URL.Query().Get("state")
+
+	// split req.DeviceID on _, first one is the client id and second one the client name
+	deviceIDParts := strings.Split(req.DeviceID, ":")
+	var clientID, clientName string
+	if len(deviceIDParts) != 2 {
+		clientID = req.DeviceID
+		clientName = "Unknown"
+	} else {
+		clientID = deviceIDParts[0]
+		clientName = deviceIDParts[1]
+	}
+	log.Infof("client ID: %s, client name: %s", clientID, clientName)
 
 	state := ""
 	if req.State != "" {
@@ -338,8 +348,8 @@ func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Re
 	}
 	session := h.scs.Token(r.Context())
 
-	sanitizedDeviceName := html.EscapeString(req.DeviceName)
-	err = h.dai.AddUserDevice(userInfo.Id, utils.HashAndEncode(session+session), req.DeviceID, sanitizedDeviceName, appInfo.ID)
+	sanitizedDeviceName := html.EscapeString(clientName)
+	err = h.dai.AddUserDevice(userInfo.Id, utils.HashAndEncode(session+session), clientID, sanitizedDeviceName, appInfo.ID)
 	if err != nil {
 		log.Warnf("Error adding user device: %v", err)
 		callback := req.RedirectURI + "?error=invalid_request&error_description=server_error" + state
@@ -348,7 +358,7 @@ func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Re
 	}
 
 	// pass via redirect to app oauth callback handler
-	callback := req.RedirectURI + "?code=session_" + session + state // prefixed session
+	callback := req.RedirectURI + "?access_token=" + session + "&token_type=bearer" + state // prefixed session
 	http.Redirect(w, r, callback, http.StatusFound)
 }
 
@@ -358,9 +368,9 @@ func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Re
 func (h *HandlerService) InternalExchangeLegacyMobileAuth(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
-		DeviceName   string `json:"device_name"`
+		DeviceName   string `json:"client_name"`
 		RefreshToken string `json:"refresh_token"`
-		DeviceID     string `json:"device_id"`
+		DeviceID     string `json:"client_id"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
