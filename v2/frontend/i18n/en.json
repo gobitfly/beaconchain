@@ -115,15 +115,16 @@
     "unlock": "Unlock Full Features"
   },
   "validator_state": {
-    "active": "active",
-    "withdrawn": "withdrawn",
-    "deposited": "deposited",
-    "online": "active",
-    "offline": "offline",
-    "pending": "pending",
+    "slashed": "slashed",
     "exited": "exited",
-    "exiting": "exiting",
-    "slashed": "slashed"
+    "deposited": "deposited",
+    "pending": "pending",
+    "slashing_offline": "slashing",
+    "slashing_online": "slashing",
+    "exiting_offline": "exiting",
+    "exiting_online": "exiting",
+    "active_offline": "active",
+    "active_online": "active"
   },
   "slot_state": {
     "orphaned": "Orphaned",
@@ -598,7 +599,7 @@
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
-          "live": "Validators missing three consecutive attestations are considered offline."
+          "live": "Validators missing two consecutive attestations are considered offline."
         }
       },
       "tabs": {

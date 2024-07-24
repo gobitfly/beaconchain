@@ -138,19 +138,28 @@ func (v *validationError) checkRegex(regex *regexp.Regexp, param, paramName stri
 	return param
 }
 
-func (v *validationError) checkName(name string, minLength int) string {
+func (v *validationError) checkLength(name, paramName string, minLength int) string {
 	if len(name) < minLength {
-		v.add("name", fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
-		return name
-	} else if len(name) > maxNameLength {
-		v.add("name", fmt.Sprintf(`given value '%s' is too long, maximum length is %d`, name, maxNameLength))
-		return name
+		v.add(paramName, fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
 	}
+	if len(name) > maxNameLength {
+		v.add(paramName, fmt.Sprintf(`given value '%s' is too long, maximum length is %d`, name, maxNameLength))
+	}
+	return name
+}
+
+func (v *validationError) checkName(name string, minLength int) string {
+	name = v.checkLength(name, "name", minLength)
 	return v.checkRegex(reName, name, "name")
 }
 
 func (v *validationError) checkNameNotEmpty(name string) string {
 	return v.checkName(name, 1)
+}
+
+func (v *validationError) checkKeyNotEmpty(key string) string {
+	key = v.checkLength(key, "key", 1)
+	return v.checkRegex(reName, key, "key")
 }
 
 func (v *validationError) checkEmail(email string) string {
@@ -234,6 +243,17 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 		v.add(paramName, fmt.Sprintf("given value %s is not a positive integer", param))
 	}
 	return num
+}
+
+func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
+	if keysString == "" {
+		return []string{}
+	}
+	var keys []string
+	for _, key := range splitParameters(keysString, ',') {
+		keys = append(keys, v.checkRegex(reName, key, "keys"))
+	}
+	return keys
 }
 
 type validatorSet struct {
@@ -353,14 +373,18 @@ func (v *validationError) checkExistingGroupId(param string) uint64 {
 	return v.checkUint(param, "group_id")
 }
 
-func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
-	// This splits the string by commas and removes empty strings
+//nolint:unparam
+func splitParameters(params string, delim rune) []string {
+	// This splits the string by delim and removes empty strings
 	f := func(c rune) bool {
-		return c == ','
+		return c == delim
 	}
-	groupIdsSlice := strings.FieldsFunc(groupIds, f)
+	return strings.FieldsFunc(params, f)
+}
+
+func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
 	var ids []T
-	for _, id := range groupIdsSlice {
+	for _, id := range splitParameters(groupIds, ',') {
 		ids = append(ids, convert(id, "group_ids"))
 	}
 	return ids
@@ -376,6 +400,20 @@ func (v *validationError) checkGroupIdList(groupIds string) []int64 {
 
 func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
+}
+
+type number interface {
+	uint64 | int64 | float64
+}
+
+func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+	if param < min {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
+	}
+	if param > max {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too large, maximum value is %v", param, max))
+	}
+	return param
 }
 
 func (v *validationError) checkAddress(publicId string) string {
@@ -395,10 +433,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
 			return paging
 		}
-		if limit > maxQueryLimit {
-			v.add("limit", fmt.Sprintf("given value '%d' is too large, maximum limit is %d", limit, maxQueryLimit))
-			return paging
-		}
+		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
 		paging.limit = limit
 	}
 
@@ -474,7 +509,7 @@ func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProt
 	if protocolModes == "" {
 		return modes
 	}
-	protocolsSlice := strings.Split(protocolModes, ",")
+	protocolsSlice := splitParameters(protocolModes, ',')
 	for _, protocolMode := range protocolsSlice {
 		switch protocolMode {
 		case "rocket_pool":
@@ -491,7 +526,7 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	validatorsSlice := strings.Split(validators, ",")
+	validatorsSlice := splitParameters(validators, ',')
 	var indexes []types.VDBValidator
 	var publicKeys []string
 	for _, validator := range validatorsSlice {
@@ -549,6 +584,18 @@ func (v *validationError) checkNetwork(network intOrString) uint64 {
 		v.add("network", fmt.Sprintf("given value '%s' is not a valid network", network))
 	}
 	return chainId
+}
+
+func (v *validationError) checkNetworkParameter(param string) uint64 {
+	if reInteger.MatchString(param) {
+		chainId, err := strconv.ParseUint(param, 10, 64)
+		if err != nil {
+			v.add("network", fmt.Sprintf("given value '%s' is not a valid network", param))
+			return 0
+		}
+		return v.checkNetwork(intOrString{intValue: &chainId})
+	}
+	return v.checkNetwork(intOrString{strValue: &param})
 }
 
 // isValidNetwork checks if the given network is a valid network.
@@ -732,8 +779,8 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	// Helper function to create a VDBValidatorIndices and append to data
 	appendData := func(category string, validators []uint64) {
 		validatorsData := make([]types.VDBSummaryValidator, len(validators))
-		for i, index := range validators {
-			validatorsData[i] = types.VDBSummaryValidator{Index: index}
+		for i, validatorIndex := range validators {
+			validatorsData[i] = types.VDBSummaryValidator{Index: validatorIndex}
 		}
 		data = append(data, types.VDBSummaryValidatorsData{
 			Category:   category,
@@ -747,8 +794,8 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 		appendData("offline", v.Offline)
 		appendData("deposited", v.Deposited)
 		pendingValidators := make([]types.VDBSummaryValidator, len(v.Pending))
-		for i, pending := range v.Pending {
-			pendingValidators[i] = types.VDBSummaryValidator{Index: pending.Index, DutyObjects: []uint64{pending.Timestamp}}
+		for i, validator := range v.Pending {
+			pendingValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Timestamp}}
 		}
 		data = append(data, types.VDBSummaryValidatorsData{
 			Category:   "pending",
@@ -759,7 +806,14 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		appendData("sync_current", v.Current)
 		appendData("sync_upcoming", v.Upcoming)
-		// appendData("sync_past", v.Past)
+		pastValidators := make([]types.VDBSummaryValidator, len(v.Past))
+		for i, validator := range v.Past {
+			pastValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Count}}
+		}
+		data = append(data, types.VDBSummaryValidatorsData{
+			Category:   "pending",
+			Validators: pastValidators,
+		})
 		return data, nil
 
 	case *types.VDBSlashingsSummaryValidators:
@@ -799,12 +853,12 @@ func mapVDBSummarySlashings(v *types.VDBSlashingsSummaryValidators) []types.VDBS
 func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSummaryValidatorsData {
 	proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
 	for i, proposed := range v.Proposed {
-		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.ProposedBlocks}
+		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.Blocks}
 	}
 
 	missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
 	for i, missed := range v.Missed {
-		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.MissedBlocks}
+		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.Blocks}
 	}
 
 	return []types.VDBSummaryValidatorsData{
