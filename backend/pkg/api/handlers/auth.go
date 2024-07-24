@@ -521,7 +521,7 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 	validationResult, err := userservice.VerifyReceipt(nil, nil, verifyPackage)
 	if err != nil {
 		log.Warn(err, "could not verify receipt %v", 0, map[string]interface{}{"receipt": verifyPackage.Receipt})
-		if errors.Is(err, userservice.ClientInitException) {
+		if errors.Is(err, userservice.ErrClientInit) {
 			log.Error(err, "Apple or Google client is NOT initialized. Did you provide their configuration?", 0, nil)
 			handleErr(w, err)
 			return

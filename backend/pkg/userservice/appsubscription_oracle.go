@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ClientInitException = errors.New("client init exception")
+var ErrClientInit = errors.New("client init exception")
 
 var duplicateOrderMap map[string]uint64 = make(map[string]uint64)
 
