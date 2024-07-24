@@ -115,7 +115,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 	returnCreated(w, nil)
 }
 
-func (h *HandlerService) PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
@@ -344,6 +344,22 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 }
 
 func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
