@@ -166,6 +166,8 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
 
+	userInfo.Email = utils.CensorEmail(userInfo.Email)
+
 	err = d.userReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
