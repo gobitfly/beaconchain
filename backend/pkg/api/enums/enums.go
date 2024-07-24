@@ -46,6 +46,18 @@ func (AdInsertMode) NewFromString(s string) AdInsertMode {
 	}
 }
 
+var AdInsertModes = struct {
+	Before  AdInsertMode
+	After   AdInsertMode
+	Replace AdInsertMode
+	Insert  AdInsertMode
+}{
+	AdInsertBefore,
+	AdInsertAfter,
+	AdInsertReplace,
+	AdInsertInsert,
+}
+
 // ----------------
 // Postgres sort direction enum
 // SortOrder represents the sorting order, either ascending or descending.

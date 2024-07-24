@@ -434,7 +434,6 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 			return paging
 		}
 		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
-		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
 		paging.limit = limit
 	}
 
@@ -855,12 +854,10 @@ func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSu
 	proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
 	for i, proposed := range v.Proposed {
 		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.Blocks}
-		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.Blocks}
 	}
 
 	missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
 	for i, missed := range v.Missed {
-		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.Blocks}
 		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.Blocks}
 	}
 
