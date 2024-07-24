@@ -91,8 +91,6 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
-		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
-
 		{http.MethodGet, "/latest-state", nil, hs.InternalGetLatestState},
 
 		{http.MethodGet, "/product-summary", nil, hs.InternalGetProductSummary},
