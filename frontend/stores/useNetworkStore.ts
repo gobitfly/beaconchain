@@ -63,6 +63,10 @@ export function useNetworkStore () {
     return networkTs.epochToTs(currentNetwork.value, epoch)
   }
 
+  function secondsPerEpoch ():number {
+    return networkTs.secondsPerEpoch(currentNetwork.value)
+  }
+
   function slotToTs (slot: number): number | undefined {
     return networkTs.slotToTs(currentNetwork.value, slot)
   }
@@ -89,6 +93,7 @@ export function useNetworkStore () {
     isL1,
     epochsPerDay,
     epochToTs,
+    secondsPerEpoch,
     slotToTs,
     tsToSlot,
     tsToEpoch,

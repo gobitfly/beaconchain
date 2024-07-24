@@ -328,6 +328,18 @@ export function slotToEpoch (chainId: ChainIDs, slot: number): number {
 }
 
 /**
+ * Should be used only when you work with a network different from the current one.
+ * Wherever you would write `secondsPerEpoch(currentNetwork.value)` you should rather use `secondsPerEpoch()` from `useNetworkStore.ts`.
+ */
+export function secondsPerEpoch (chainId: ChainIDs): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return -1
+  }
+  return info.slotsPerEpoch * info.secondsPerSlot
+}
+
+/**
  * @param list List to sort. Its order will be modified because the function sorts in place.
  * @returns List sorted in place, so the same as parameter `list`.
  */
