@@ -25,10 +25,12 @@ type DataAccessor interface {
 	UserRepository
 	NotificationsRepository
 	AdminRepository
+	BlockRepository
 
 	Close()
 
 	GetLatestSlot() (uint64, error)
+	GetLatestBlock() (uint64, error)
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
 	GetProductSummary(ctx context.Context) (*t.ProductSummary, error)

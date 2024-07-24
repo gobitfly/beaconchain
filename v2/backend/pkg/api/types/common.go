@@ -37,6 +37,12 @@ type Address struct {
 	Hash Hash   `json:"hash"`
 	Ens  string `json:"ens,omitempty"`
 }
+
+type ContractAddress struct {
+	Address
+	IsContract bool `json:"is_contract"`
+}
+
 type LuckItem struct {
 	Percent  float64       `json:"percent"`
 	Expected time.Time     `json:"expected"`

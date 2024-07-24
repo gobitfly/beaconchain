@@ -11,6 +11,11 @@ func (d *DataAccessService) GetLatestSlot() (uint64, error) {
 	return latestSlot, nil
 }
 
+func (d *DataAccessService) GetLatestBlock() (uint64, error) {
+	// @DATA-ACCESS implement
+	return d.dummy.GetLatestBlock()
+}
+
 func (d *DataAccessService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	result := []t.EthConversionRate{}
 
