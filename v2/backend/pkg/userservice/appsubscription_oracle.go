@@ -181,7 +181,7 @@ func verifyGoogle(client *playstore.Client, receipt *types.PremiumData) (*Verify
 		client, err = initGoogle()
 		if err != nil {
 			response.RejectReason = "gclient_init_exception"
-			return response, errors.Wrap(ClientInitException, "google client can't be initialized")
+			return response, errors.Wrap(ErrClientInit, "google client can't be initialized")
 		}
 	}
 
@@ -247,7 +247,7 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 		apple, err = initApple()
 		if err != nil {
 			response.RejectReason = "aclient_init_exception"
-			return response, errors.Wrap(ClientInitException, "apple client can't be initialized")
+			return response, errors.Wrap(ErrClientInit, "apple client can't be initialized")
 		}
 	}
 
