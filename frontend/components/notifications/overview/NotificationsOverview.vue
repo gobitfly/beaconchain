@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { defineProps } from 'vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-icons'
+import { faDesktop } from '@fortawesome/pro-solid-svg-icons'
 import type { NotificationsOverview } from '~/types/notifications/overview'
 
 const props = defineProps<{ store: NotificationsOverview | null }>()
@@ -40,10 +43,12 @@ const tPath = 'notifications.overview.'
         <div class="box-item">
           <span>Most Notifications in 30 Days:</span>
           <span>{{ props.store.mostNotifications30d ? props.store.mostNotifications30d : '0' }}</span>
+          <span><ol><li><icon><faDesktop /></icon> Hetzner</li></ol></span>
         </div>
         <div class="box-item">
           <span>Most Notifications in 24 Hours:</span>
           <span>{{ props.store.mostNotifications24h ? props.store.mostNotifications24h : '0' }}</span>
+          <span>10 Email | 100 Webhook | 100 Push</span> 
         </div>
       </div>
       <div v-else>
