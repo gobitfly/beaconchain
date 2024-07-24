@@ -18,7 +18,7 @@ const data = computed(() => {
 
   const status = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0) ? 'scheduled-past' : slot.status
 
-  const networkLabel = $t(`slotViz.tooltip.network.${status}`, { slot: formatNumber(slot.slot) })
+  const networkLabel = tAll($t, `slotViz.tooltip.network.${status}`)
 
   const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
   let hasSuccessDuties = false
@@ -164,7 +164,14 @@ const data = computed(() => {
       <div class="with-duties">
         <div class="rows">
           <div class="row network">
-            <BcFormatNumber :text="data.networkLabel" />
+            {{ data.networkLabel[0] }}&nbsp;
+            <BcFormatNumber v-if="props.data.status === 'scheduled'" :text="formatNumber(props.data.slot)" />
+            <BcLink v-else :to="`/slot/${props.data.slot}`" target="_blank" class="link">
+              <BcFormatNumber :text="formatNumber(props.data.slot)" />
+            </BcLink>
+            <span v-if="data.networkLabel[1]">
+              &nbsp;{{ data.networkLabel[1] }}
+            </span>
           </div>
           <!--eslint-disable-next-line vue/no-v-html-->
           <div class="row state" v-html="data.stateLabel" />
