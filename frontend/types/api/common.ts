@@ -52,6 +52,11 @@ export interface PeriodicValues<T extends any> {
   last_7d: T;
   last_30d: T;
 }
+export interface PercentageDetails<T extends any> {
+  percentage: number /* float64 */;
+  min_value: T;
+  max_value: T;
+}
 export interface ChartSeries<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
   id: I; // id may be a string or an int
   property?: string; // for stacking bar charts
@@ -105,4 +110,8 @@ export interface ChartHistorySeconds {
   hourly: number /* uint64 */;
   daily: number /* uint64 */;
   weekly: number /* uint64 */;
+}
+export interface IndexBlocks {
+  index: number /* uint64 */;
+  blocks: number /* uint64 */[];
 }
