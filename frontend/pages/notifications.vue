@@ -73,8 +73,13 @@ onMounted(async () => {
   await store.fetchNotificationsOverview()
 })
 
-const { isLoading } = store
-console.log(store + 'this store is from notifications')
+const { isLoading, error } = store
+
+const storeData = computed(() => store.data)
+// TODO: not working.
+watch(storeData, (newValue, oldValue) => {
+  console.log('Component: Notifications data changed from', oldValue, 'to', newValue)
+})
 
 </script>
 
@@ -84,7 +89,7 @@ console.log(store + 'this store is from notifications')
       <template #top>
         <DashboardHeader :dashboard-title="$t('notifications.title')" />
         <div class="overview">
-          <NotificationsOverview :store="store.data" />
+          <NotificationsOverview :store="storeData" />
         </div>
       </template>
       <NotificationsManagementModal v-model="manageNotificationsModalVisisble" />
@@ -132,7 +137,6 @@ console.log(store + 'this store is from notifications')
 </template>
 
 <style lang="scss" scoped>
-
 :global(.notifications-tab-view >.p-tabview-panels) {
   min-height: 699px;
 }
@@ -145,7 +149,7 @@ console.log(store + 'this store is from notifications')
   margin-top: var(--padding-large);
 }
 
-.button-row{
+.button-row {
   display: flex;
   justify-content: flex-end;
 }
