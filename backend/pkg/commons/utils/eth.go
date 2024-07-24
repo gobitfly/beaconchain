@@ -207,6 +207,9 @@ func GetSigningDomain() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(genForkVersion) == 0 {
+		return nil, fmt.Errorf("genesis fork version is empty")
+	}
 
 	domain, err := e2types.ComputeDomain(
 		e2types.DomainDeposit,

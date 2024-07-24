@@ -100,3 +100,13 @@ export interface VDBPublicId {
     share_groups: boolean;
   };
 }
+export interface ChartHistorySeconds {
+  epoch: number /* uint64 */;
+  hourly: number /* uint64 */;
+  daily: number /* uint64 */;
+  weekly: number /* uint64 */;
+}
+export interface IndexBlocks {
+  index: number /* uint64 */;
+  blocks: number /* uint64 */[];
+}

@@ -6,6 +6,7 @@ interface Props {
   cursor: Cursor
   pageSize: number
   paging?: Paging
+  stepperOnly?: boolean
 }
 const props = defineProps<Props>()
 
@@ -109,22 +110,24 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
         </div>
       </template>
       <Dropdown
-        v-if="props.pageSize"
+        v-if="props.pageSize && !stepperOnly"
         :model-value="props.pageSize"
         :options="pageSizes"
         class="table small"
         @change="(event) => setPageSize(event.value)"
       />
     </div>
-    <div class="left-info">
-      <slot name="bc-table-footer-left">
-        <span v-if="props.paging?.total_count">
-          {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
-        </span>
-      </slot>
-    </div>
-    <div v-if="$slots['bc-table-footer-right']" class="right-info">
-      <slot name="bc-table-footer-right" />
+    <div class="very-last">
+      <div v-if="!stepperOnly" class="left-info">
+        <slot name="bc-table-footer-left">
+          <span v-if="props.paging?.total_count">
+            {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
+          </span>
+        </slot>
+      </div>
+      <div v-if="$slots['bc-table-footer-right']" class="right-info">
+        <slot name="bc-table-footer-right" />
+      </div>
     </div>
   </div>
 </template>
@@ -136,28 +139,23 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
   position: relative;
   height: 78px;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   font-weight: var(--standard_text_medium_font_weight);
   margin: var(--padding) var(--padding-large);
 
-  .left-info {
+  .very-last {
     position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
     display: flex;
-    align-items: center;
-  }
-
-  .right-info {
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    padding-left: var(--padding);
+    flex-direction: row;
+    width: 100%;
+    .left-info {
+      margin-right: auto;
+    }
+    .right-info {
+      margin-left: auto;
+    }
   }
 
   .pager {
@@ -183,6 +181,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       height: 30px;
       padding: 0 22px;
       border-radius: 0;
+      white-space: nowrap;
 
       &:has(svg) {
         padding: 0 15px;
@@ -221,15 +220,12 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
   }
 
   @media screen and (max-width: 1399px) {
-    flex-direction: column;
     gap: var(--padding);
     height: unset;
-
-    .right-info,
-    .left-info {
-      position: relative;
-      height: unset;
-      padding-left: unset;
+    .very-last {
+      @media (max-width: 600px) {
+        position: relative;
+      }
     }
   }
 }

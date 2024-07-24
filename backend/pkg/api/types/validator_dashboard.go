@@ -21,22 +21,40 @@ type VDBOverviewGroup struct {
 }
 
 type VDBOverviewData struct {
-	Name       string                                     `json:"name,omitempty"`
-	Groups     []VDBOverviewGroup                         `json:"groups"`
-	Validators VDBOverviewValidators                      `json:"validators"`
-	Efficiency PeriodicValues[float64]                    `json:"efficiency"`
-	Rewards    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
-	Apr        PeriodicValues[ClElValue[float64]]         `json:"apr"`
+	Name                string                                     `json:"name,omitempty"`
+	Groups              []VDBOverviewGroup                         `json:"groups"`
+	Validators          VDBOverviewValidators                      `json:"validators"`
+	Efficiency          PeriodicValues[float64]                    `json:"efficiency"`
+	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
+	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
+	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
 }
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 
 // ------------------------------------------------------------
 // Summary Tab
+
+type VDBSummaryStatus struct {
+	UpcomingSyncCount uint64 `json:"next_sync_count"`
+	CurrentSyncCount  uint64 `json:"current_sync_count"`
+	SlashedCount      uint64 `json:"slashed_count"`
+}
+type VDBSummaryValidators struct {
+	Online  uint64 `json:"online"`
+	Offline uint64 `json:"offline"`
+	Exited  uint64 `json:"exited"`
+}
+
 type VDBSummaryTableRow struct {
-	GroupId    int64                   `json:"group_id"`
-	Efficiency PeriodicValues[float64] `json:"efficiency"`
-	Validators []uint64                `json:"validators"`
+	GroupId                  int64                      `json:"group_id"`
+	Status                   VDBSummaryStatus           `json:"status"`
+	Validators               VDBSummaryValidators       `json:"validators"`
+	Efficiency               float64                    `json:"efficiency"`
+	AverageNetworkEfficiency float64                    `json:"average_network_efficiency"`
+	Attestations             StatusCount                `json:"attestations"`
+	Proposals                StatusCount                `json:"proposals"`
+	Reward                   ClElValue[decimal.Decimal] `json:"reward" faker:"cl_el_eth"`
 }
 type InternalGetValidatorDashboardSummaryResponse ApiPagingResponse[VDBSummaryTableRow]
 
@@ -44,38 +62,55 @@ type VDBGroupSummaryColumnItem struct {
 	StatusCount StatusCount `json:"status_count"`
 	Validators  []uint64    `json:"validators,omitempty"`
 }
-type VDBGroupSummaryColumn struct {
-	AttestationsHead       VDBGroupSummaryColumnItem `json:"attestations_head"`
-	AttestationsSource     VDBGroupSummaryColumnItem `json:"attestations_source"`
-	AttestationsTarget     VDBGroupSummaryColumnItem `json:"attestations_target"`
-	AttestationCount       StatusCount               `json:"attestation_count"`
-	AttestationEfficiency  float64                   `json:"attestation_efficiency"`
-	AttestationAvgInclDist float64                   `json:"attestation_avg_incl_dist"`
 
-	SyncCommittee VDBGroupSummaryColumnItem `json:"sync"`
-	Proposals     VDBGroupSummaryColumnItem `json:"proposals"`
-	Slashed       VDBGroupSummaryColumnItem `json:"slashed"` // Failed slashings are count of validators in the group that were slashed
+type VDBGroupSummarySyncCount struct {
+	CurrentValidators  uint64 `json:"current_validators"`
+	UpcomingValidators uint64 `json:"upcoming_validators"`
+	PastPeriods        uint64 `json:"past_periods"`
+}
 
-	Apr    ClElValue[float64]         `json:"apr"`
-	Income ClElValue[decimal.Decimal] `json:"income"`
-
-	Luck Luck `json:"luck"`
+type VDBGroupSummaryMissedRewards struct {
+	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards" faker:"cl_el_eth"`
+	Attestations    decimal.Decimal            `json:"attestations" faker:"eth"`
+	Sync            decimal.Decimal            `json:"sync" faker:"eth"`
 }
 type VDBGroupSummaryData struct {
-	Last24h VDBGroupSummaryColumn `json:"last_24h"`
-	Last7d  VDBGroupSummaryColumn `json:"last_7d"`
-	Last30d VDBGroupSummaryColumn `json:"last_30d"`
-	AllTime VDBGroupSummaryColumn `json:"all_time"`
+	AttestationsHead       StatusCount `json:"attestations_head"`
+	AttestationsSource     StatusCount `json:"attestations_source"`
+	AttestationsTarget     StatusCount `json:"attestations_target"`
+	AttestationEfficiency  float64     `json:"attestation_efficiency"`
+	AttestationAvgInclDist float64     `json:"attestation_avg_incl_dist"`
+
+	SyncCommittee      VDBGroupSummaryColumnItem    `json:"sync"`
+	SyncCommitteeCount VDBGroupSummarySyncCount     `json:"sync_count"`
+	Slashings          VDBGroupSummaryColumnItem    `json:"slashings"` // Failed slashings are count of validators in the group that were slashed
+	ProposalValidators []uint64                     `json:"proposal_validators"`
+	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards"`
+
+	Apr ClElValue[float64] `json:"apr"`
+
+	Luck Luck `json:"luck"`
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
 type InternalGetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, float64]] // line chart, series id is group id
 
-type InternalGetValidatorDashboardValidatorIndicesResponse ApiDataResponse[[]uint64]
+// ------------------------------------------------------------
+// Summary Validators
+type VDBSummaryValidator struct {
+	Index       uint64   `json:"index"`
+	DutyObjects []uint64 `json:"duty_objects,omitempty"`
+}
+type VDBSummaryValidatorsData struct {
+	Category   string                `json:"category" tstype:"'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: online, offline, pending, deposited, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
+	Validators []VDBSummaryValidator `json:"validators"`
+}
+
+type InternalGetValidatorDashboardSummaryValidatorsResponse ApiDataResponse[[]VDBSummaryValidatorsData]
 
 // ------------------------------------------------------------
 // Rewards Tab
-type VDBRewardesTableDuty struct {
+type VDBRewardsTableDuty struct {
 	Attestation *float64 `json:"attestation,omitempty"`
 	Proposal    *float64 `json:"proposal,omitempty"`
 	Sync        *float64 `json:"sync,omitempty"`
@@ -84,7 +119,7 @@ type VDBRewardesTableDuty struct {
 
 type VDBRewardsTableRow struct {
 	Epoch   uint64                     `json:"epoch"`
-	Duty    VDBRewardesTableDuty       `json:"duty"`
+	Duty    VDBRewardsTableDuty        `json:"duty"`
 	GroupId int64                      `json:"group_id"`
 	Reward  ClElValue[decimal.Decimal] `json:"reward"`
 }
@@ -241,7 +276,7 @@ type VDBManageValidatorsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
-	Status               string          `json:"status" tstype:"'pending' | 'online' | 'offline' | 'exiting' | 'exited' | 'slashed' | 'withdrawn'" faker:"oneof: pending, online, offline, exiting, exited, slashed, withdrawn"`
+	Status               string          `json:"status" tstype:"'slashed' | 'exited' | 'deposited' | 'pending' | 'slashing_offline' | 'slashing_online' | 'exiting_offline' | 'exiting_online' | 'active_offline' | 'active_online'" faker:"oneof: slashed, exited, deposited, pending, slashing_offline, slashing_online, exiting_offline, exiting_online, active_offline, active_online"`
 	QueuePosition        *uint64         `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }

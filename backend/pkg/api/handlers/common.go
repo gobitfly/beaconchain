@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -62,6 +63,8 @@ var (
 	reNonEmpty                     = regexp.MustCompile(`^\s*\S.*$`)
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	rePassword                     = regexp.MustCompile(`^.{5,}$`)
+	reEmailConfirmationHash        = regexp.MustCompile(`^[a-z0-9]{40}$`)
 )
 
 const (
@@ -82,6 +85,8 @@ var (
 	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
 	errBadRequest   = errors.New("bad request")
 	errUnauthorized = errors.New("unauthorized")
+	errForbidden    = errors.New("forbidden")
+	errConflict     = errors.New("conflict")
 )
 
 type Paging struct {
@@ -133,14 +138,18 @@ func (v *validationError) checkRegex(regex *regexp.Regexp, param, paramName stri
 	return param
 }
 
-func (v *validationError) checkName(name string, minLength int) string {
+func (v *validationError) checkLength(name, paramName string, minLength int) string {
 	if len(name) < minLength {
-		v.add("name", fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
-		return name
-	} else if len(name) > maxNameLength {
-		v.add("name", fmt.Sprintf(`given value '%s' is too long, maximum length is %d`, name, maxNameLength))
-		return name
+		v.add(paramName, fmt.Sprintf(`given value '%s' is too short, minimum length is %d`, name, minLength))
 	}
+	if len(name) > maxNameLength {
+		v.add(paramName, fmt.Sprintf(`given value '%s' is too long, maximum length is %d`, name, maxNameLength))
+	}
+	return name
+}
+
+func (v *validationError) checkName(name string, minLength int) string {
+	name = v.checkLength(name, "name", minLength)
 	return v.checkRegex(reName, name, "name")
 }
 
@@ -148,8 +157,21 @@ func (v *validationError) checkNameNotEmpty(name string) string {
 	return v.checkName(name, 1)
 }
 
+func (v *validationError) checkKeyNotEmpty(key string) string {
+	key = v.checkLength(key, "key", 1)
+	return v.checkRegex(reName, key, "key")
+}
+
 func (v *validationError) checkEmail(email string) string {
-	return v.checkRegex(reEmail, email, "email")
+	return v.checkRegex(reEmail, strings.ToLower(email), "email")
+}
+
+func (v *validationError) checkPassword(password string) string {
+	return v.checkRegex(rePassword, password, "password")
+}
+
+func (v *validationError) checkConfirmationHash(hash string) string {
+	return v.checkRegex(reEmailConfirmationHash, hash, "token")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -223,6 +245,17 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 	return num
 }
 
+func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
+	if keysString == "" {
+		return []string{}
+	}
+	var keys []string
+	for _, key := range splitParameters(keysString, ',') {
+		keys = append(keys, v.checkRegex(reName, key, "keys"))
+	}
+	return keys
+}
+
 type validatorSet struct {
 	Indexes    []types.VDBValidator
 	PublicKeys []string
@@ -257,12 +290,12 @@ func parseDashboardId(id string) (interface{}, error) {
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
-func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VDBId, error) {
+func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam interface{}) (*types.VDBId, error) {
 	switch dashboardId := dashboardIdParam.(type) {
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
-		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(dashboardId)
+		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(ctx, dashboardId)
 		if err != nil {
 			return nil, err
 		}
@@ -285,14 +318,14 @@ func (h *HandlerService) getDashboardId(dashboardIdParam interface{}) (*types.VD
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard handlers.
-func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
+func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
 		return nil, err
 	}
 	// convert to VDBId
-	dashboardId, err := h.getDashboardId(dashboardIdParam)
+	dashboardId, err := h.getDashboardId(ctx, dashboardIdParam)
 	if err != nil {
 		return nil, err
 	}
@@ -301,6 +334,29 @@ func (h *HandlerService) handleDashboardId(param string) (*types.VDBId, error) {
 
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
+}
+
+// getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
+func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
+	// for guest dashboards, return free tier perks
+	if id.Validators != nil {
+		perk, err := h.dai.GetFreeTierPerks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return perk, nil
+	}
+	// could be made into a single query if needed
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(ctx, id.Id)
+	if err != nil {
+		return nil, err
+	}
+	userInfo, err := h.dai.GetUserInfo(ctx, dashboardInfo.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userInfo.PremiumPerks, nil
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
@@ -314,15 +370,50 @@ func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
 
 // checkExistingGroupId validates if the given group id is not empty and a positive integer.
 func (v *validationError) checkExistingGroupId(param string) uint64 {
-	id := v.checkGroupId(param, forbidEmpty)
-	if id < 0 {
-		v.add("group_id", fmt.Sprintf("given value '%s' is not a valid group id", param))
+	return v.checkUint(param, "group_id")
+}
+
+//nolint:unparam
+func splitParameters(params string, delim rune) []string {
+	// This splits the string by delim and removes empty strings
+	f := func(c rune) bool {
+		return c == delim
 	}
-	return uint64(id)
+	return strings.FieldsFunc(params, f)
+}
+
+func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
+	var ids []T
+	for _, id := range splitParameters(groupIds, ',') {
+		ids = append(ids, convert(id, "group_ids"))
+	}
+	return ids
+}
+
+func (v *validationError) checkExistingGroupIdList(groupIds string) []uint64 {
+	return parseGroupIdList(groupIds, v.checkUint)
+}
+
+func (v *validationError) checkGroupIdList(groupIds string) []int64 {
+	return parseGroupIdList(groupIds, v.checkInt)
 }
 
 func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
+}
+
+type number interface {
+	uint64 | int64 | float64
+}
+
+func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+	if param < min {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
+	}
+	if param > max {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too large, maximum value is %v", param, max))
+	}
+	return param
 }
 
 func (v *validationError) checkPagingParams(q url.Values) Paging {
@@ -338,10 +429,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
 			return paging
 		}
-		if limit > maxQueryLimit {
-			v.add("limit", fmt.Sprintf("given value '%d' is too large, maximum limit is %d", limit, maxQueryLimit))
-			return paging
-		}
+		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
 		paging.limit = limit
 	}
 
@@ -365,6 +453,8 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
 // precondition: the enum is the same type as the allowed enums.
+//
+//nolint:unparam
 func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
@@ -410,12 +500,29 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	return &types.Sort[T]{Column: sortCol, Desc: order}
 }
 
+func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {
+	var modes types.VDBProtocolModes
+	if protocolModes == "" {
+		return modes
+	}
+	protocolsSlice := splitParameters(protocolModes, ',')
+	for _, protocolMode := range protocolsSlice {
+		switch protocolMode {
+		case "rocket_pool":
+			modes.RocketPool = true
+		default:
+			v.add("modes", fmt.Sprintf("given value '%s' is not a valid protocol mode", protocolMode))
+		}
+	}
+	return modes
+}
+
 func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]types.VDBValidator, []string) {
 	if validators == "" && !allowEmpty {
 		v.add("validators", "list of validators is must not be empty")
 		return nil, nil
 	}
-	validatorsSlice := strings.Split(validators, ",")
+	validatorsSlice := splitParameters(validators, ',')
 	var indexes []types.VDBValidator
 	var publicKeys []string
 	for _, validator := range validatorsSlice {
@@ -475,6 +582,18 @@ func (v *validationError) checkNetwork(network intOrString) uint64 {
 	return chainId
 }
 
+func (v *validationError) checkNetworkParameter(param string) uint64 {
+	if reInteger.MatchString(param) {
+		chainId, err := strconv.ParseUint(param, 10, 64)
+		if err != nil {
+			v.add("network", fmt.Sprintf("given value '%s' is not a valid network", param))
+			return 0
+		}
+		return v.checkNetwork(intOrString{intValue: &chainId})
+	}
+	return v.checkNetwork(intOrString{strValue: &param})
+}
+
 // isValidNetwork checks if the given network is a valid network.
 // It returns the chain id of the network and true if it is valid, otherwise 0 and false.
 func isValidNetwork(network intOrString) (uint64, bool) {
@@ -484,6 +603,39 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func (v *validationError) checkTimestamps(afterParam string, beforeParam string, minAllowedTs uint64) (after uint64, before uint64) {
+	// TODO add functionality for max interval between timestamps
+	afterTs := minAllowedTs
+	if afterParam != "" {
+		afterTs = v.checkUint(afterParam, "after_ts")
+	}
+	beforeTs := uint64(time.Now().Unix())
+	if beforeParam != "" {
+		beforeTs = v.checkUint(beforeParam, "before_ts")
+	}
+	if afterTs > beforeTs {
+		v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
+	}
+	return afterTs, beforeTs
+}
+
+// getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
+func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartHistorySeconds) uint64 {
+	aggregations := enums.ChartAggregations
+	switch aggregation {
+	case aggregations.Epoch:
+		return perkSeconds.Epoch
+	case aggregations.Hourly:
+		return perkSeconds.Hourly
+	case aggregations.Daily:
+		return perkSeconds.Daily
+	case aggregations.Weekly:
+		return perkSeconds.Weekly
+	default:
+		return 0
+	}
 }
 
 // --------------------------------------
@@ -552,6 +704,10 @@ func returnConflict(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusConflict, err)
 }
 
+func returnForbidden(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusForbidden, err)
+}
+
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
@@ -567,6 +723,12 @@ func handleErr(w http.ResponseWriter, err error) {
 		return
 	} else if errors.Is(err, errUnauthorized) {
 		returnUnauthorized(w, err)
+		return
+	} else if errors.Is(err, errForbidden) {
+		returnForbidden(w, err)
+		return
+	} else if errors.Is(err, errConflict) {
+		returnConflict(w, err)
 		return
 	}
 	returnInternalServerError(w, err)
@@ -588,8 +750,123 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
 
+func newForbiddenErr(format string, args ...interface{}) error {
+	return errWithMsg(errForbidden, format, args...)
+}
+
+func newConflictErr(format string, args ...interface{}) error {
+	return errWithMsg(errConflict, format, args...)
+}
+
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
+}
+
+// --------------------------------------
+// misc. helper functions
+
+// maps different types of validator dashboard summary validators to a common format
+func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error) {
+	if indices == nil {
+		return nil, errors.New("no data found when mapping")
+	}
+
+	var data []types.VDBSummaryValidatorsData
+	// Helper function to create a VDBValidatorIndices and append to data
+	appendData := func(category string, validators []uint64) {
+		validatorsData := make([]types.VDBSummaryValidator, len(validators))
+		for i, validatorIndex := range validators {
+			validatorsData[i] = types.VDBSummaryValidator{Index: validatorIndex}
+		}
+		data = append(data, types.VDBSummaryValidatorsData{
+			Category:   category,
+			Validators: validatorsData,
+		})
+	}
+
+	switch v := indices.(type) {
+	case *types.VDBGeneralSummaryValidators:
+		appendData("online", v.Online)
+		appendData("offline", v.Offline)
+		appendData("deposited", v.Deposited)
+		pendingValidators := make([]types.VDBSummaryValidator, len(v.Pending))
+		for i, validator := range v.Pending {
+			pendingValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Timestamp}}
+		}
+		data = append(data, types.VDBSummaryValidatorsData{
+			Category:   "pending",
+			Validators: pendingValidators,
+		})
+		return data, nil
+
+	case *types.VDBSyncSummaryValidators:
+		appendData("sync_current", v.Current)
+		appendData("sync_upcoming", v.Upcoming)
+		pastValidators := make([]types.VDBSummaryValidator, len(v.Past))
+		for i, validator := range v.Past {
+			pastValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Count}}
+		}
+		data = append(data, types.VDBSummaryValidatorsData{
+			Category:   "pending",
+			Validators: pastValidators,
+		})
+		return data, nil
+
+	case *types.VDBSlashingsSummaryValidators:
+		return mapVDBSummarySlashings(v), nil
+
+	case *types.VDBProposalSummaryValidators:
+		return mapVDBSummaryProposals(v), nil
+
+	default:
+		return nil, fmt.Errorf("unsupported indices type")
+	}
+}
+
+func mapVDBSummarySlashings(v *types.VDBSlashingsSummaryValidators) []types.VDBSummaryValidatorsData {
+	gotSlashedValidators := make([]types.VDBSummaryValidator, len(v.GotSlashed))
+	for i, gotSlashed := range v.GotSlashed {
+		gotSlashedValidators[i] = types.VDBSummaryValidator{Index: gotSlashed.Index, DutyObjects: []uint64{gotSlashed.SlashedBy}}
+	}
+
+	hasSlashedValidators := make([]types.VDBSummaryValidator, len(v.HasSlashed))
+	for i, hasSlashed := range v.HasSlashed {
+		hasSlashedValidators[i] = types.VDBSummaryValidator{Index: hasSlashed.Index, DutyObjects: hasSlashed.SlashedIndices}
+	}
+
+	return []types.VDBSummaryValidatorsData{
+		{
+			Category:   "got_slashed",
+			Validators: gotSlashedValidators,
+		},
+		{
+			Category:   "has_slashed",
+			Validators: hasSlashedValidators,
+		},
+	}
+}
+
+func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSummaryValidatorsData {
+	proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
+	for i, proposed := range v.Proposed {
+		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.Blocks}
+	}
+
+	missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
+	for i, missed := range v.Missed {
+		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.Blocks}
+	}
+
+	return []types.VDBSummaryValidatorsData{
+		{
+			Category:   "proposal_proposed",
+			Validators: proposedValidators,
+		},
+		{
+			Category:   "proposal_missed",
+			Validators: missedValidators,
+		},
+	}
 }
 
 // --------------------------------------
