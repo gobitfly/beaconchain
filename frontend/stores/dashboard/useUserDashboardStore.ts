@@ -6,6 +6,7 @@ import { type DashboardKey, type DashboardType, type CookieDashboard, COOKIE_DAS
 import { COOKIE_KEY } from '~/types/cookie'
 import { API_PATH } from '~/types/customFetch'
 import type { ChainIDs } from '~/types/network'
+import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<UserDashboardsData | undefined | null>()
@@ -118,6 +119,10 @@ export function useUserDashboardStore () {
 
   // Update the hash (=hashed list of id's) of a specific local dashboard
   function updateHash (type: DashboardType, hash: string) {
+    if (!isPublicDashboardKey(hash) || isSharedKey(hash)) {
+      warn('updateHash: invalid public hashed key: ', hash)
+      return
+    }
     if (type === 'validator') {
       const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', ...dashboards.value?.validator_dashboards?.[0], hash }
       data.value = {
