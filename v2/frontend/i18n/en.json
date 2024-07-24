@@ -211,11 +211,11 @@
         }
       },
       "network": {
-        "proposed": "Network proposed slot {slot}",
-        "missed": "Network missed slot {slot}",
-        "scheduled": "Slot {slot} is scheduled",
-        "scheduled-past": "Slot {slot} is being queried from our database",
-        "orphaned": "Network orphaned slot {slot}"
+        "proposed": ["Network proposed slot", ""],
+        "missed": ["Network missed slot", ""],
+        "scheduled": ["Slot", "is scheduled"],
+        "scheduled-past": ["Slot", "is being queried from our database"],
+        "orphaned": ["Network orphaned slot", ""]
       },
       "status": {
         "scheduled": {
