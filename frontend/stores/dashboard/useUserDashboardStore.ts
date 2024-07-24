@@ -120,7 +120,7 @@ export function useUserDashboardStore () {
   // Update the hash (=hashed list of id's) of a specific local dashboard
   function updateHash (type: DashboardType, hash: string) {
     if (!isPublicDashboardKey(hash) || isSharedKey(hash)) {
-      warn('updateHash: invalid public hashed key: ', hash)
+      warn('invalid public hashed key: ', hash)
       return
     }
     if (type === 'validator') {
