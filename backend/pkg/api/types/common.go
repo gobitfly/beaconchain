@@ -137,3 +137,8 @@ type ChartHistorySeconds struct {
 	Daily  uint64 `json:"daily"`
 	Weekly uint64 `json:"weekly"`
 }
+
+type IndexBlocks struct {
+	Index  uint64   `json:"index"`
+	Blocks []uint64 `json:"blocks"`
+}

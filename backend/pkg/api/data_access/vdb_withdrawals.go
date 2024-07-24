@@ -66,7 +66,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 
 		queryParams := []interface{}{dashboardId.Id}
 		validatorsQuery := fmt.Sprintf(`
-			SELECT 
+			SELECT
 				validator_index,
 				group_id
 			FROM users_val_dashboards_validators
@@ -78,7 +78,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			validatorsQuery += fmt.Sprintf(" AND validator_index = ANY ($%d)", len(queryParams))
 		}
 
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, queryParams...)
+		err := d.alloyReader.SelectContext(ctx, &queryResult, validatorsQuery, queryParams...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -141,7 +141,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	sortColName := ""
 	sortColCursor := interface{}(nil)
 	switch colSort.Column {
-	case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot, enums.VDBWithdrawalsColumns.Age:
+	case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot:
 	case enums.VDBWithdrawalsColumns.Index:
 		sortColName = "w.validatorindex"
 		sortColCursor = currentCursor.Index
@@ -154,8 +154,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	if colSort.Column == enums.VDBWithdrawalsColumns.Epoch ||
-		colSort.Column == enums.VDBWithdrawalsColumns.Slot ||
-		colSort.Column == enums.VDBWithdrawalsColumns.Age {
+		colSort.Column == enums.VDBWithdrawalsColumns.Slot {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
 			queryParams = append(queryParams, currentCursor.Slot, currentCursor.WithdrawalIndex)
@@ -186,7 +185,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 
 	withdrawalsQuery += whereQuery + orderQuery + limitQuery
 
-	err = d.readerDb.Select(&queryResult, withdrawalsQuery, queryParams...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
 	}
@@ -431,7 +430,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 
 	queryParams := []interface{}{}
 	withdrawalsQuery := `
-		SELECT 
+		SELECT
 			t.validator_index,
 			MAX(t.epoch_end) AS epoch_end,
 			SUM(COALESCE(t.withdrawals_amount, 0)) AS acc_withdrawals_amount
@@ -473,7 +472,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, validatorsQuery)
 	}
 
-	err = d.alloyReader.Select(&queryResult, withdrawalsQuery, queryParams...)
+	err = d.alloyReader.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}
@@ -497,7 +496,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 	}
 
 	var latestWithdrawalsAmount int64
-	err = d.readerDb.Get(&latestWithdrawalsAmount, `
+	err = d.readerDb.GetContext(ctx, &latestWithdrawalsAmount, `
 		SELECT
 			COALESCE(SUM(w.amount), 0)
 		FROM

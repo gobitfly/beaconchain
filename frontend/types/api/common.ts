@@ -111,3 +111,7 @@ export interface ChartHistorySeconds {
   daily: number /* uint64 */;
   weekly: number /* uint64 */;
 }
+export interface IndexBlocks {
+  index: number /* uint64 */;
+  blocks: number /* uint64 */[];
+}
