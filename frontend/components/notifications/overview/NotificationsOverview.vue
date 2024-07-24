@@ -23,6 +23,8 @@ const mostNotifications24h = computed(() =>
   props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 }
 )
 
+const emailLimitCount = computed(() => 8)
+
 // Computed property to calculate the total notifications
 const totalNotifications24h = computed(() => {
   const notifications = mostNotifications24h.value
@@ -39,6 +41,7 @@ const totalNotifications24h = computed(() => {
         <div v-if="emailNotificationStatus === 'Inactive'" class="small_text">
           Click<a href="/notifications"> here </a> to activate
         </div>
+        <div v-else class="small_text">{{emailLimitCount}}/10 per day</div>
       </div>
       <div class="box-item">
         <span class="big_text_label">Push Notifications:</span>
