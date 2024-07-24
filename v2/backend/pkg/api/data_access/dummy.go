@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -10,7 +11,9 @@ import (
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
 )
 
@@ -540,5 +543,15 @@ func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, d
 }
 
 func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails types.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
 	return nil
 }

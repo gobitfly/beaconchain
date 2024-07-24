@@ -15,8 +15,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/mail"
-	commontsTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
+	commonTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -83,7 +84,7 @@ Best regards,
 
 %[1]s
 `, utils.Config.Frontend.SiteDomain, confirmationHash)
-	err = mail.SendTextMail(email, subject, msg, []commontsTypes.EmailAttachment{})
+	err = mail.SendTextMail(email, subject, msg, []commonTypes.EmailAttachment{})
 	if err != nil {
 		return errors.New("error sending confirmation email, try again later")
 	}
@@ -456,6 +457,77 @@ func (h *HandlerService) InternalRegisterMobilePushToken(w http.ResponseWriter, 
 	err = h.dai.AddMobileNotificationToken(user.Id, req.DeviceID, req.Token)
 	if err != nil {
 		handleErr(w, err)
+		return
+	}
+
+	returnOk(w, nil)
+}
+
+const USER_SUBSCRIPTION_LIMIT = 8
+
+func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := types.MobileSubscription{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	if req.ProductIDUnverified == "plankton" {
+		handleErr(w, newForbiddenErr("plankton subscription has been discontinued"))
+		return
+	}
+
+	// Only allow ios and android purchases to be registered via this endpoint
+	if req.Transaction.Type != "ios-appstore" && req.Transaction.Type != "android-playstore" {
+		handleErr(w, newForbiddenErr("only ios-appstore and android-playstore purchases are allowed"))
+		return
+	}
+
+	subscriptionCount, err := h.dai.GetAppSubscriptionCount(user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if subscriptionCount >= USER_SUBSCRIPTION_LIMIT {
+		handleErr(w, newForbiddenErr("user has reached the subscription limit"))
+		return
+	}
+
+	// Verify subscription with apple/google
+	verifyPackage := &commonTypes.PremiumData{
+		ID:        0,
+		Receipt:   req.Transaction.Receipt,
+		Store:     req.Transaction.Type,
+		Active:    false,
+		ProductID: req.ProductIDUnverified,
+		ExpiresAt: time.Now(),
+	}
+
+	validationResult, err := userservice.VerifyReceipt(nil, nil, verifyPackage)
+	if err != nil {
+		log.Warn(err, "could not verify receipt %v", 0, map[string]interface{}{"receipt": verifyPackage.Receipt})
+		if errors.Is(err, userservice.ClientInitException) {
+			log.Error(err, "Apple or Google client is NOT initialized. Did you provide their configuration?", 0, nil)
+			handleErr(w, err)
+			return
+		}
+	}
+
+	err = h.dai.AddMobilePurchase(nil, user.Id, req, validationResult, "")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	if !validationResult.Valid {
+		handleErr(w, newForbiddenErr("receipt is not valid"))
 		return
 	}
 
