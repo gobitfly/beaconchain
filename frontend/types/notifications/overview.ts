@@ -1,13 +1,19 @@
-import type { ApiDataResponse } from '~/types/api/common'
+import type { ApiDataResponse } from '~/types/api/common';
 
 export interface NotificationsOverview {
-    // TODO: Update types with given structure.
-    id: number;
-    EmailNotifications: boolean;
-    pushNotifications: boolean;
-    mostNotifications30d: number;
-    mostNotifications24h: number;
-  }
+  id: number;
+  EmailNotifications: boolean;
+  pushNotifications: boolean;
+  mostNotifications30d: {
+    providers: string[];
+    abo: string[];
+  };
+  mostNotifications24h: {
+    Email: number;
+    Webhook: number;
+    Push: number;
+  };
+}
 
 export type GetNotificationsOverviewResponse = ApiDataResponse<NotificationsOverview>;
 
