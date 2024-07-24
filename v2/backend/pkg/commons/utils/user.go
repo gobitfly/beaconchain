@@ -4,6 +4,7 @@ import (
 	securerand "crypto/rand"
 	"encoding/base64"
 	"math/big"
+	"strings"
 )
 
 // GenerateAPIKey generates an API key for a user
@@ -43,4 +44,16 @@ func GenerateRandomBytesSecure(n int) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+func CensorEmail(mail string) string {
+	parts := strings.Split(mail, "@")
+	username := parts[0]
+	domain := parts[1]
+
+	if len(username) > 2 {
+		username = string(username[0]) + "***" + string(username[len(username)-1])
+	}
+
+	return username + "@" + domain
 }
