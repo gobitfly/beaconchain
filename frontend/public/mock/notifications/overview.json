@@ -1,7 +1,14 @@
 {
     "id": 1,
-    "EmailNotifications": true,
+    "EmailNotifications": false,
     "pushNotifications": true,
-    "mostNotifications30d": 5,
-    "mostNotifications24h" : 2   
+    "mostNotifications30d": {
+        "providers": [ "Hetzner", "OVH", "-" ],
+        "abo": [ "Whales", "Dolphins", "Guppies" ]
+    },
+    "mostNotifications24h": {
+        "Email": 8,
+        "Webhook": 100,
+        "Push": 100
+    }
 }
