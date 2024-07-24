@@ -18,7 +18,7 @@ const data = computed(() => {
 
   const status = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0) ? 'scheduled-past' : slot.status
 
-  const networkLabel = $t(`slotViz.tooltip.network.${status}`, { slot: formatNumber(slot.slot) })
+  const networkLabel = $t(`slotViz.tooltip.network.${status}`)
 
   const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
   let hasSuccessDuties = false
@@ -164,7 +164,7 @@ const data = computed(() => {
       <div class="with-duties">
         <div class="rows">
           <div class="row network">
-            <BcFormatNumber :text="data.networkLabel" />
+            <BcMiniParser :input="data.networkLabel" :numbers="{ slotNum: props.data.slot }" :links="{ slotUrl: `/slot/${props.data.slot}` }" />
           </div>
           <!--eslint-disable-next-line vue/no-v-html-->
           <div class="row state" v-html="data.stateLabel" />
