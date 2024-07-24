@@ -211,11 +211,11 @@
         }
       },
       "network": {
-        "proposed": "Network proposed slot [slotNum](slotUrl)",
-        "missed": "Network missed slot [slotNum](slotUrl)",
-        "scheduled": "Slot {slot} is scheduled",
-        "scheduled-past": "Slot {slot} is being queried from our database",
-        "orphaned": "Network orphaned slot [slotNum](slotUrl)"
+        "proposed": "Network proposed slot [$slotNum](slotUrl)",
+        "missed": "Network missed slot [$slotNum](slotUrl)",
+        "scheduled": "Slot $slotNum is scheduled",
+        "scheduled-past": "Slot $slotNum is being queried from our database",
+        "orphaned": "Network orphaned slot [$slotNum](slotUrl)"
       },
       "status": {
         "scheduled": {
