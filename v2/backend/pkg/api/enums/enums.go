@@ -16,8 +16,6 @@ func IsInvalidEnum(e Enum) bool {
 	return e.Int() == -1
 }
 
-// Validator Dashboard Rewards Table
-
 type AdInsertMode int
 
 var _ EnumFactory[AdInsertMode] = AdInsertMode(0)
@@ -46,96 +44,6 @@ func (AdInsertMode) NewFromString(s string) AdInsertMode {
 	default:
 		return AdInsertMode(-1)
 	}
-}
-
-// ----------------
-// Validator Dashboard Rocket Pool Table
-
-type VDBRocketPoolColumn int
-
-var _ EnumFactory[VDBRocketPoolColumn] = VDBRocketPoolColumn(0)
-
-const (
-	VDBRocketPoolNode VDBRocketPoolColumn = iota
-	VDBRocketPoolMinipools
-	VDBRocketPoolCollateral
-	VDBRocketPoolRpl
-	VDBRocketPoolEffectiveRpl
-	VDBRocketPoolRplApr
-	VDBRocketPoolSmoothingPool
-)
-
-func (c VDBRocketPoolColumn) Int() int {
-	return int(c)
-}
-
-func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
-	switch s {
-	case "node":
-		return VDBRocketPoolNode
-	case "minipools":
-		return VDBRocketPoolMinipools
-	case "collateral":
-		return VDBRocketPoolCollateral
-	case "rpl":
-		return VDBRocketPoolRpl
-	case "effective_rpl":
-		return VDBRocketPoolEffectiveRpl
-	case "rpl_apr":
-		return VDBRocketPoolRplApr
-	case "smoothing_pool":
-		return VDBRocketPoolSmoothingPool
-	default:
-		return VDBRocketPoolColumn(-1)
-	}
-}
-
-var VDBRocketPoolColumns = struct {
-	Node          VDBRocketPoolColumn
-	Minipools     VDBRocketPoolColumn
-	Collateral    VDBRocketPoolColumn
-	Rpl           VDBRocketPoolColumn
-	EffectiveRpl  VDBRocketPoolColumn
-	RplApr        VDBRocketPoolColumn
-	SmoothingPool VDBRocketPoolColumn
-}{
-	VDBRocketPoolNode,
-	VDBRocketPoolMinipools,
-	VDBRocketPoolCollateral,
-	VDBRocketPoolRpl,
-	VDBRocketPoolEffectiveRpl,
-	VDBRocketPoolRplApr,
-	VDBRocketPoolSmoothingPool,
-}
-
-// ----------------
-// Validator Dashboard Rocket Pool Minipools modal
-
-type VDBRocketPoolMinipoolsColumn int
-
-var _ EnumFactory[VDBRocketPoolMinipoolsColumn] = VDBRocketPoolMinipoolsColumn(0)
-
-const (
-	VDBRocketPoolMinipoolsGroup VDBRocketPoolMinipoolsColumn = iota
-)
-
-func (c VDBRocketPoolMinipoolsColumn) Int() int {
-	return int(c)
-}
-
-func (VDBRocketPoolMinipoolsColumn) NewFromString(s string) VDBRocketPoolMinipoolsColumn {
-	switch s {
-	case "group":
-		return VDBRocketPoolMinipoolsGroup
-	default:
-		return VDBRocketPoolMinipoolsColumn(-1)
-	}
-}
-
-var VDBWRocketPoolColumns = struct {
-	Group VDBRocketPoolMinipoolsColumn
-}{
-	VDBRocketPoolMinipoolsGroup,
 }
 
 // ----------------
