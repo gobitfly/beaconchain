@@ -7,8 +7,10 @@ import (
 	"math"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/pkg/errors"
 )
 
@@ -34,6 +36,8 @@ type UserRepository interface {
 	AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error
 	GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error)
 	AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error
+	GetAppSubscriptionCount(userID uint64) (uint64, error)
+	AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails types.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -673,5 +677,34 @@ func (d *DataAccessService) AddMobileNotificationToken(userID uint64, deviceID, 
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: user mobile device not found", ErrNotFound)
 	}
+	return err
+}
+
+func (d *DataAccessService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
+	var count uint64
+	err := d.userReader.Get(&count, "SELECT COUNT(receipt) FROM users_app_subscriptions WHERE user_id = $1", userID)
+	return count, err
+}
+
+func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails types.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
+	now := time.Now()
+	nowTs := now.Unix()
+	receiptHash := utils.HashAndEncode(verifyResponse.Receipt)
+
+	query := `INSERT INTO users_app_subscriptions 
+				(user_id, product_id, price_micros, currency, created_at, updated_at, validate_remotely, active, store, receipt, expires_at, reject_reason, receipt_hash, subscription_id) 
+				VALUES($1, $2, $3, $4, TO_TIMESTAMP($5), TO_TIMESTAMP($6), $7, $8, $9, $10, TO_TIMESTAMP($11), $12, $13, $14) 
+			  ON CONFLICT(receipt_hash) DO UPDATE SET product_id = $2, active = $7, updated_at = TO_TIMESTAMP($5);`
+	var err error
+	if tx == nil {
+		_, err = d.userWriter.Exec(query,
+			userID, verifyResponse.ProductID, paymentDetails.PriceMicros, paymentDetails.Currency, nowTs, nowTs, verifyResponse.Valid, verifyResponse.Valid, paymentDetails.Transaction.Type, verifyResponse.Receipt, verifyResponse.ExpirationDate, verifyResponse.RejectReason, receiptHash, extSubscriptionId,
+		)
+	} else {
+		_, err = tx.Exec(query,
+			userID, verifyResponse.ProductID, paymentDetails.PriceMicros, paymentDetails.Currency, nowTs, nowTs, verifyResponse.Valid, verifyResponse.Valid, paymentDetails.Transaction.Type, verifyResponse.Receipt, verifyResponse.ExpirationDate, verifyResponse.RejectReason, receiptHash, extSubscriptionId,
+		)
+	}
+
 	return err
 }

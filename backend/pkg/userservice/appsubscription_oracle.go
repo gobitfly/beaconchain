@@ -22,6 +22,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var ClientInitException = errors.New("client init exception")
+
 var duplicateOrderMap map[string]uint64 = make(map[string]uint64)
 
 func CheckMobileSubscriptions() {
@@ -95,22 +97,27 @@ func verifyManuall(receipt *types.PremiumData) (*VerifyResponse, error) {
 		Valid:          valid,
 		ExpirationDate: receipt.ExpiresAt.Unix(),
 		RejectReason:   rejectReason(valid),
+		ProductID:      receipt.ProductID,
+		Receipt:        receipt.Receipt,
 	}, nil
 }
 
 // Does not verify stripe or ethpool payments as those are handled differently
 func VerifyReceipt(googleClient *playstore.Client, appleClient *api.StoreClient, receipt *types.PremiumData) (*VerifyResponse, error) {
-	if receipt.Store == "ios-appstore" {
+	switch receipt.Store {
+	case "ios-appstore":
 		return verifyApple(appleClient, receipt)
-	} else if receipt.Store == "android-playstore" {
+	case "android-playstore":
 		return verifyGoogle(googleClient, receipt)
-	} else if receipt.Store == "manuall" {
+	case "manuall":
 		return verifyManuall(receipt)
-	} else {
+	default:
 		return &VerifyResponse{
 			Valid:          false,
 			ExpirationDate: 0,
 			RejectReason:   "invalid_store",
+			ProductID:      receipt.ProductID,
+			Receipt:        receipt.Receipt,
 		}, nil
 	}
 }
@@ -165,6 +172,8 @@ func verifyGoogle(client *playstore.Client, receipt *types.PremiumData) (*Verify
 		Valid:          false,
 		ExpirationDate: 0,
 		RejectReason:   "",
+		ProductID:      receipt.ProductID,
+		Receipt:        receipt.Receipt,
 	}
 
 	if client == nil {
@@ -172,7 +181,7 @@ func verifyGoogle(client *playstore.Client, receipt *types.PremiumData) (*Verify
 		client, err = initGoogle()
 		if err != nil {
 			response.RejectReason = "gclient_init_exception"
-			return response, errors.New("google client can't be initialized")
+			return response, errors.Wrap(ClientInitException, "google client can't be initialized")
 		}
 	}
 
@@ -229,6 +238,8 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 		Valid:          false,
 		ExpirationDate: 0,
 		RejectReason:   "",
+		ProductID:      receipt.ProductID, // may be changed by this function to be different than receipt.ProductID
+		Receipt:        receipt.Receipt,   // may be changed by this function to be different than receipt.Receipt
 	}
 
 	if apple == nil {
@@ -236,23 +247,25 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 		apple, err = initApple()
 		if err != nil {
 			response.RejectReason = "aclient_init_exception"
-			return response, errors.New("apple client can't be initialized")
+			return response, errors.Wrap(ClientInitException, "apple client can't be initialized")
 		}
 	}
 
+	receiptToken := receipt.Receipt
 	// legacy resolver for old receipts, can be removed at some point
-	if len(receipt.Receipt) > 100 {
-		transactionID, err := getLegacyAppstoreTransactionIDByReceipt(receipt.Receipt, receipt.ProductID)
+	if len(receiptToken) > 100 {
+		transactionID, err := getLegacyAppstoreTransactionIDByReceipt(receiptToken, receipt.ProductID)
 		if err != nil {
 			log.Error(err, "error resolving legacy appstore receipt", 0, nil)
 			response.RejectReason = "exception_legresolve"
 			return response, err
 		}
-		receipt.Receipt = transactionID
+		receiptToken = transactionID
 		time.Sleep(50 * time.Millisecond) // avoid rate limiting
 	}
+	response.Receipt = receiptToken // update response to reflect the resolved receipt
 
-	res, err := apple.GetALLSubscriptionStatuses(context.Background(), receipt.Receipt, nil)
+	res, err := apple.GetALLSubscriptionStatuses(context.Background(), receiptToken, nil)
 	if err != nil {
 		response.RejectReason = "exception"
 		return response, err
@@ -287,7 +300,7 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 					response.RejectReason = "invalid_product_id"
 					return response, nil
 				}
-				receipt.ProductID = productId
+				response.ProductID = productId // update response to reflect the resolved product id
 
 				expiresDateFloat, ok := claims["expiresDate"].(float64)
 				if !ok {
@@ -377,4 +390,6 @@ type VerifyResponse struct {
 	Valid          bool
 	ExpirationDate int64
 	RejectReason   string
+	ProductID      string
+	Receipt        string
 }
