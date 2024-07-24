@@ -28,7 +28,7 @@ const showAbsoluteValues = ref<boolean | null>(null)
 const { overview, hasValidators, validatorCount } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
-const timeFrames = computed(() => SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })))
+const timeFrames = computed(() => SummaryTimeFrames.filter(t => showInDevelopment || t !== 'last_1h').map(t => ({ name: $t(`time_frames.${t}`), id: t })))
 const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
 
 const { width } = useWindowSize()
