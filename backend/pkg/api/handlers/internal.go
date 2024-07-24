@@ -1898,3 +1898,177 @@ func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.Respons
 	// TODO
 	returnOk(w, nil)
 }
+
+// --------------------------------------
+// Blocks
+
+func (h *HandlerService) InternalGetBlock(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlock(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockOverview(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockOverview(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetBlockOverviewResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockTransactions(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockTransactions(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockTransactionsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+// WIP FROM HERE
+func (h *HandlerService) InternalGetBlockVotes(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockVotes(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVotesResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockAttestations(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockAttestations(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockAttestationsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockWithdrawals(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockWithdrawals(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockWtihdrawalsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockBlsChange(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockBlsChange(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlsChangeResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockVoluntaryExits(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVoluntaryExitsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockBlobs(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockBlobs(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlobsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}

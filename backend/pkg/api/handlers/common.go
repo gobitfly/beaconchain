@@ -359,6 +359,31 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 	return &userInfo.PremiumPerks, nil
 }
 
+// helper function to unify handling of block detail request validation
+func (h *HandlerService) validateBlockRequest(r *http.Request) (uint64, uint64, error) {
+	var v validationError
+	req := struct {
+		Network intOrString `json:"network"`
+		Block   string      `json:"block"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		return 0, 0, err
+	}
+	chainId := v.checkNetwork(req.Network)
+	block, err := h.dai.GetLatestBlock()
+	if err != nil {
+		return 0, 0, err
+	}
+	if req.Block != "latest" {
+		block = v.checkUintMinMax(req.Block, 0, block, "block")
+	}
+	if v.hasErrors() {
+		return 0, 0, v
+	}
+
+	return chainId, block, nil
+}
+
 // checkGroupId validates the given group id and returns it as an int64.
 // If the given group id is empty and allowEmpty is true, it returns -1 (all groups).
 func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
@@ -416,6 +441,10 @@ func checkMinMax[T number](v *validationError, param T, min T, max T, paramName 
 	return param
 }
 
+func (v *validationError) checkUintMinMax(param string, min uint64, max uint64, paramName string) uint64 {
+	return checkMinMax(v, v.checkUint(param, paramName), min, max, paramName)
+}
+
 func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -424,13 +453,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	}
 
 	if limitStr := q.Get("limit"); limitStr != "" {
-		limit, err := strconv.ParseUint(limitStr, 10, 64)
-		if err != nil {
-			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
-			return paging
-		}
-		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
-		paging.limit = limit
+		paging.limit = v.checkUintMinMax(limitStr, 1, maxQueryLimit, "limit")
 	}
 
 	if paging.cursor != "" {
