@@ -611,7 +611,7 @@
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
-          "live": "Validators missing three consecutive attestations are considered offline."
+          "live": "Validators missing two consecutive attestations are considered offline."
         }
       },
       "tabs": {
