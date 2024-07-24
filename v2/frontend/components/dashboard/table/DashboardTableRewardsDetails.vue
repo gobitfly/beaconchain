@@ -125,9 +125,7 @@ const openDuties = () => {
     <div v-if="details" class="details-container">
       <div>
         <div class="small-screen-value">
-          <div class="label">
-            <b>{{ $t('common.age') }}</b>
-          </div>
+          <b><BcTableAgeHeader class="label" /></b>
           <div class="value">
             <BcFormatTimePassed :value="row.epoch" />
           </div>
@@ -170,7 +168,7 @@ const openDuties = () => {
                 v-else-if="!item.hasNoReward"
                 :success="item.value?.status_count?.success!"
                 :failed="item.value?.status_count?.failed!"
-                :hide-percentage="true"
+                :absolute="true"
               />
               <div v-else class="text-disabled">
                 0 / 0

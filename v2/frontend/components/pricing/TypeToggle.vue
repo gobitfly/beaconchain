@@ -5,13 +5,16 @@
 <template>
   <div class="type-toggle-container">
     <div class="premium">
-      <div class="text">
+      <div class="label">
         {{ $t('pricing.premium') }}
       </div>
     </div>
     <div class="api-keys" disabled>
-      <div class="text">
+      <div class="label">
         {{ $t('pricing.API_keys') }}
+      </div>
+      <div class="subtext">
+        {{ $t('common.coming_soon') }}
       </div>
     </div>
   </div>
@@ -20,7 +23,7 @@
 <style lang="scss" scoped>
 .type-toggle-container {
   width: 280px;
-  height: 41px;
+  height: 50px;
   display: flex;
   align-items: center;
   user-select: none;
@@ -35,7 +38,7 @@
     border-bottom-left-radius: 3px;
     background: var(--button-color-active);
 
-    .text {
+    .label {
       color: var(--primary-contrast-color);
       font-size: 15px;
       font-weight: var(--montserrat-semi-bold);
@@ -45,34 +48,50 @@
   }
 
   .api-keys {
-    flex: 1;
     height: 100%;
     box-sizing: border-box;
+    flex: 1;
+
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
-    background: var(--container-background);
+
     border-width: 1px 1px 1px 0;
     border-style: solid;
     border-color: var(--container-border-color);
     border-top-right-radius: 3px;
     border-bottom-right-radius: 3px;
 
-    .text {
-      color: var(--grey);
+    background: var(--container-background);
+    color: var(--grey);
+    font-weight: var(--montserrat-semi-bold);
+
+    .label {
+      padding-left: 18px;
       font-size: 16px;
-      font-weight: var(--montserrat-semi-bold);
+    }
+
+    .subtext {
+      padding-left: 18px;
+      font-size: 11px;
     }
   }
 }
 
 @media (max-width: 1360px) {
   .type-toggle-container {
+    width: 240px;
+    height: 43px;
 
-    .api-keys .text,
-    .premium .text {
+    .api-keys .label,
+    .premium .label {
       font-size: 11px;
       font-weight: var(--montserrat-bold);
+    }
+
+    .api-keys .subtext{
+      font-size: 9px;
     }
   }
 }

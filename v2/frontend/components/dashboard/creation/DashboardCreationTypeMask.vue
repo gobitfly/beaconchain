@@ -14,8 +14,19 @@ const props = defineProps<Props>()
 const type = defineModel<DashboardType | ''>('type', { required: true })
 
 const typeButtons = [
-  { text: $t('dashboard.creation.type.accounts'), value: 'account', component: IconAccount, disabled: props.accountsDisabled },
-  { text: $t('dashboard.creation.type.validators'), value: 'validator', component: IconValidator, disabled: props.validatorsDisabled }
+  {
+    text: $t('dashboard.creation.type.validators'),
+    value: 'validator',
+    component: IconValidator,
+    disabled: props.validatorsDisabled
+  },
+  {
+    text: $t('dashboard.creation.type.accounts'),
+    subText: $t('common.coming_soon'),
+    value: 'account',
+    component: IconAccount,
+    disabled: props.accountsDisabled
+  }
 ]
 
 const name = defineModel<string>('name', { required: true })
@@ -45,7 +56,7 @@ const next = () => {
       <div class="subtitle_text">
         {{ $t('dashboard.creation.type.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" :initial="type" />
+      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" />
       <div class="row-container">
         <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="next" />
         <Button class="button" :disabled="continueDisabled" @click="next">

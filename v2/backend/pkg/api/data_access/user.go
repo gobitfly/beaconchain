@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"math"
@@ -12,22 +13,88 @@ import (
 )
 
 type UserRepository interface {
-	GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error)
-	GetUserIdByApiKey(apiKey string) (uint64, error)
-	GetUserInfo(id uint64) (*t.UserInfo, error)
-	GetUserDashboards(userId uint64) (*t.UserDashboardsData, error)
-	GetUserValidatorDashboardCount(userId uint64) (uint64, error)
+	GetUserByEmail(ctx context.Context, email string) (uint64, error)
+	CreateUser(ctx context.Context, email, password string) (uint64, error)
+	RemoveUser(ctx context.Context, userId uint64) error
+	UpdateUserEmail(ctx context.Context, userId uint64) error
+	UpdateUserPassword(ctx context.Context, userId uint64, password string) error
+	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
+	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
+	GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error)
+	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
+	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
+	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
+	GetUserIdByConfirmationHash(hash string) (uint64, error)
+	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
+	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
+	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
 }
 
-func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredentialInfo, error) {
+func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
+	// TODO @DATA-ACCESS i quickly hacked this together, maybe improve
+	result := uint64(0)
+	err := d.userReader.GetContext(ctx, &result, `SELECT id FROM users WHERE email = $1 LIMIT 1`, email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("%w: user not found", ErrNotFound)
+	}
+	return result, err
+}
+
+func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
+	// TODO @DATA-ACCESS
+	// (password is already hashed)
+	return d.dummy.CreateUser(ctx, email, password)
+}
+
+func (d *DataAccessService) RemoveUser(ctx context.Context, userId uint64) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.RemoveUser(ctx, userId)
+}
+
+func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) error {
+	// TODO @DATA-ACCESS
+	// Called after user clicked link for email confirmations + changes, so:
+	// set user_confirmed true, set email (from email_change_to_value), update stripe email
+	// unset email_confirmation_hash
+	return d.dummy.UpdateUserEmail(ctx, userId)
+}
+
+func (d *DataAccessService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
+	// TODO @DATA-ACCESS
+	// (password is already hashed)
+	return d.dummy.UpdateUserPassword(ctx, userId, password)
+}
+
+func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetEmailConfirmationTime(ctx, userId)
+}
+
+func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationTime(ctx, userId)
+}
+
+func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetEmailConfirmationHash(ctx, userId)
+}
+
+func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateEmailConfirmationHash(ctx, userId, email, confirmationHash)
+}
+
+func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
 	// TODO @patrick post-beta improve product-mgmt
+	// TODO @DATA-ACCESS i quickly hacked this together, maybe improve
 	result := &t.UserCredentialInfo{}
-	err := d.userReader.Get(result, `
+	err := d.userReader.GetContext(ctx, result, `
 		WITH
 			latest_and_greatest_sub AS (
-				SELECT user_id, product_id FROM users_app_subscriptions 
+				SELECT user_id, product_id FROM users_app_subscriptions
 				LEFT JOIN users ON users.id = user_id AND product_id IN ('orca.yearly', 'orca', 'dolphin.yearly', 'dolphin', 'guppy.yearly', 'guppy', 'whale', 'goldfish', 'plankton')
-				WHERE users.email = $1 AND active = true
+				WHERE users.id = $1 AND active = true
 				ORDER BY CASE product_id
 					WHEN 'orca.yearly'    THEN  1
 					WHEN 'orca'           THEN  2
@@ -41,26 +108,31 @@ func (d *DataAccessService) GetUserCredentialInfo(email string) (*t.UserCredenti
 					ELSE                       10  -- For any other product_id values
 				END, users_app_subscriptions.created_at DESC LIMIT 1
 			)
-		SELECT users.id AS id, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group 
+		SELECT users.id AS id, users.email, users.email_confirmed, password, COALESCE(product_id, '') AS product_id, COALESCE(user_group, '') AS user_group
 		FROM users
-		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id  
-		WHERE email = $1`, email)
+		LEFT JOIN latest_and_greatest_sub ON latest_and_greatest_sub.user_id = users.id
+		WHERE users.id = $1`, userId)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: user with email %s not found", ErrNotFound, email)
+		return nil, fmt.Errorf("%w: user not found", ErrNotFound)
 	}
 	return result, err
 }
 
-func (d *DataAccessService) GetUserIdByApiKey(apiKey string) (uint64, error) {
+func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
 	var userId uint64
-	err := d.userReader.Get(&userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
+	err := d.userReader.GetContext(ctx, &userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
 	}
 	return userId, err
 }
 
-func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
+func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserIdByConfirmationHash(hash)
+}
+
+func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 	// TODO @patrick post-beta improve and unmock
 	userInfo := &t.UserInfo{
 		Id:      userId,
@@ -78,17 +150,17 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		Subscriptions: []t.UserSubscription{},
 	}
 
-	productSummary, err := d.GetProductSummary()
+	productSummary, err := d.GetProductSummary(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
 
-	err = d.userReader.Get(&userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
+	err = d.userReader.GetContext(ctx, &userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
 
-	err = d.userReader.Select(&userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
+	err = d.userReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
 	}
@@ -99,11 +171,11 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		Start     time.Time `db:"start"`
 		End       time.Time `db:"end"`
 	}{}
-	err = d.userReader.Get(&premiumProduct, `
-		SELECT 
-			COALESCE(uas.product_id, '') AS product_id, 
+	err = d.userReader.GetContext(ctx, &premiumProduct, `
+		SELECT
+			COALESCE(uas.product_id, '') AS product_id,
 			COALESCE(uas.store, '') AS store,
-			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start, 
+			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start,
 			COALESCE(to_timestamp((uss.payload->>'current_period_end')::bigint),uas.expires_at) AS end
 		FROM users_app_subscriptions uas
 		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
@@ -183,13 +255,13 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 		End      time.Time `db:"end"`
 		Quantity int       `db:"quantity"`
 	}{}
-	err = d.userReader.Select(&premiumAddons, `
-		SELECT 
+	err = d.userReader.SelectContext(ctx, &premiumAddons, `
+		SELECT
 			price_id,
-			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start,
 			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end,
 			COALESCE((uss.payload->>'quantity')::int,1) AS quantity
-		FROM users_stripe_subscriptions uss		
+		FROM users_stripe_subscriptions uss
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
@@ -225,7 +297,45 @@ func (d *DataAccessService) GetUserInfo(userId uint64) (*t.UserInfo, error) {
 	return userInfo, nil
 }
 
-func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
+const hour uint64 = 3600
+const day = 24 * hour
+const week = 7 * day
+const month = 30 * day
+const fullHistory uint64 = 9007199254740991 // 2^53-1 (max int in JS)
+
+var freeTierProduct t.PremiumProduct = t.PremiumProduct{
+	ProductName: "Free",
+	PremiumPerks: t.PremiumPerks{
+		AdFree:                      false,
+		ValidatorDasboards:          1,
+		ValidatorsPerDashboard:      20,
+		ValidatorGroupsPerDashboard: 1,
+		ShareCustomDashboards:       false,
+		ManageDashboardViaApi:       false,
+		BulkAdding:                  false,
+		ChartHistorySeconds: t.ChartHistorySeconds{
+			Epoch:  0,
+			Hourly: 12 * hour,
+			Daily:  0,
+			Weekly: 0,
+		},
+		EmailNotificationsPerDay:        5,
+		ConfigureNotificationsViaApi:    false,
+		ValidatorGroupNotifications:     1,
+		WebhookEndpoints:                1,
+		MobileAppCustomThemes:           false,
+		MobileAppWidget:                 false,
+		MonitorMachines:                 1,
+		MachineMonitoringHistorySeconds: 3600 * 3,
+		CustomMachineAlerts:             false,
+	},
+	PricePerMonthEur: 0,
+	PricePerYearEur:  0,
+	ProductIdMonthly: "premium_free",
+	ProductIdYearly:  "premium_free.yearly",
+}
+
+func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
 	// TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
 		ValidatorsPerDashboardLimit: 102_000,
@@ -297,43 +407,23 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			},
 		},
 		PremiumProducts: []t.PremiumProduct{
-			{
-				ProductName: "Free",
-				PremiumPerks: t.PremiumPerks{
-					AdFree:                          false,
-					ValidatorDasboards:              1,
-					ValidatorsPerDashboard:          20,
-					ValidatorGroupsPerDashboard:     1,
-					ShareCustomDashboards:           false,
-					ManageDashboardViaApi:           false,
-					HeatmapHistorySeconds:           0,
-					SummaryChartHistorySeconds:      3600 * 12,
-					EmailNotificationsPerDay:        5,
-					ConfigureNotificationsViaApi:    false,
-					ValidatorGroupNotifications:     1,
-					WebhookEndpoints:                1,
-					MobileAppCustomThemes:           false,
-					MobileAppWidget:                 false,
-					MonitorMachines:                 1,
-					MachineMonitoringHistorySeconds: 3600 * 3,
-					CustomMachineAlerts:             false,
-				},
-				PricePerMonthEur: 0,
-				PricePerYearEur:  0,
-				ProductIdMonthly: "premium_free",
-				ProductIdYearly:  "premium_free.yearly",
-			},
+			freeTierProduct,
 			{
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                          true,
-					ValidatorDasboards:              1,
-					ValidatorsPerDashboard:          100,
-					ValidatorGroupsPerDashboard:     3,
-					ShareCustomDashboards:           true,
-					ManageDashboardViaApi:           false,
-					HeatmapHistorySeconds:           3600 * 24 * 7,
-					SummaryChartHistorySeconds:      3600 * 24 * 7,
+					AdFree:                      true,
+					ValidatorDasboards:          1,
+					ValidatorsPerDashboard:      100,
+					ValidatorGroupsPerDashboard: 3,
+					ShareCustomDashboards:       true,
+					ManageDashboardViaApi:       false,
+					BulkAdding:                  true,
+					ChartHistorySeconds: t.ChartHistorySeconds{
+						Epoch:  day,
+						Hourly: 7 * day,
+						Daily:  month,
+						Weekly: 0,
+					},
 					EmailNotificationsPerDay:        15,
 					ConfigureNotificationsViaApi:    false,
 					ValidatorGroupNotifications:     3,
@@ -354,14 +444,19 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			{
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                          true,
-					ValidatorDasboards:              2,
-					ValidatorsPerDashboard:          300,
-					ValidatorGroupsPerDashboard:     10,
-					ShareCustomDashboards:           true,
-					ManageDashboardViaApi:           false,
-					HeatmapHistorySeconds:           3600 * 24 * 30,
-					SummaryChartHistorySeconds:      3600 * 24 * 14,
+					AdFree:                      true,
+					ValidatorDasboards:          2,
+					ValidatorsPerDashboard:      300,
+					ValidatorGroupsPerDashboard: 10,
+					ShareCustomDashboards:       true,
+					ManageDashboardViaApi:       false,
+					BulkAdding:                  true,
+					ChartHistorySeconds: t.ChartHistorySeconds{
+						Epoch:  5 * day,
+						Hourly: month,
+						Daily:  2 * month,
+						Weekly: 8 * week,
+					},
 					EmailNotificationsPerDay:        20,
 					ConfigureNotificationsViaApi:    false,
 					ValidatorGroupNotifications:     10,
@@ -382,14 +477,19 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 			{
 				ProductName: "Orca",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                          true,
-					ValidatorDasboards:              2,
-					ValidatorsPerDashboard:          1000,
-					ValidatorGroupsPerDashboard:     30,
-					ShareCustomDashboards:           true,
-					ManageDashboardViaApi:           true,
-					HeatmapHistorySeconds:           3600 * 24 * 365,
-					SummaryChartHistorySeconds:      3600 * 24 * 365,
+					AdFree:                      true,
+					ValidatorDasboards:          2,
+					ValidatorsPerDashboard:      1000,
+					ValidatorGroupsPerDashboard: 30,
+					ShareCustomDashboards:       true,
+					ManageDashboardViaApi:       true,
+					BulkAdding:                  true,
+					ChartHistorySeconds: t.ChartHistorySeconds{
+						Epoch:  3 * week,
+						Hourly: 6 * month,
+						Daily:  12 * month,
+						Weekly: fullHistory,
+					},
 					EmailNotificationsPerDay:        50,
 					ConfigureNotificationsViaApi:    true,
 					ValidatorGroupNotifications:     60,
@@ -434,7 +534,11 @@ func (d *DataAccessService) GetProductSummary() (*t.ProductSummary, error) {
 	}, nil
 }
 
-func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsData, error) {
+func (d *DataAccessService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
+	return &freeTierProduct.PremiumPerks, nil
+}
+
+func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
 	result := &t.UserDashboardsData{}
 
 	dbReturn := []struct {
@@ -446,8 +550,8 @@ func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsD
 	}{}
 
 	// Get the validator dashboards including the public ones
-	err := d.alloyReader.Select(&dbReturn, `
-		SELECT 
+	err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
 			uvd.id,
 			uvd.name,
 			uvds.public_id,
@@ -485,8 +589,8 @@ func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsD
 	}
 
 	// Get the account dashboards
-	err = d.alloyReader.Select(&result.AccountDashboards, `
-		SELECT 
+	err = d.alloyReader.SelectContext(ctx, &result.AccountDashboards, `
+		SELECT
 			id,
 			name
 		FROM users_acc_dashboards
@@ -499,9 +603,9 @@ func (d *DataAccessService) GetUserDashboards(userId uint64) (*t.UserDashboardsD
 	return result, nil
 }
 
-func (d *DataAccessService) GetUserValidatorDashboardCount(userId uint64) (uint64, error) {
+func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
 		WHERE user_id = $1
 	`, userId)

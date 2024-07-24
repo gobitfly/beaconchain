@@ -501,7 +501,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 
 .left {
   display: flex;
-  align-items: center;
+  margin-top: 4px;
   gap: var(--padding-small);
 
   .labels {

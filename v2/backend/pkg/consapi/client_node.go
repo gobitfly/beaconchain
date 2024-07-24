@@ -149,8 +149,12 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 	requestURL := fmt.Sprintf("%s/eth/v1/events?topics=%v", r.Endpoint, joinedTopics)
 	responseCh := make(chan *types.EventResponse, 32)
 
+	req, _ := http.NewRequest(http.MethodGet, requestURL, nil)
+	// disable gzip compression for sse
+	req.Header.Set("accept-encoding", "identity")
+
 	go func() {
-		stream, err := eventsource.Subscribe(requestURL, "")
+		stream, err := eventsource.SubscribeWithRequest("", req)
 
 		if err != nil {
 			responseCh <- &types.EventResponse{Error: err}

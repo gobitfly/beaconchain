@@ -2,7 +2,7 @@ import { pullAll, union } from 'lodash-es'
 import { provide, warn } from 'vue'
 import { COOKIE_KEY } from '~/types/cookie'
 import type { DashboardKey, DashboardKeyData, DashboardType } from '~/types/dashboard'
-import { isPublicKey, isSharedKey } from '~/utils/dashboard/key'
+import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
 export function useDashboardKeyProvider (type: DashboardType = 'validator', mockKey: DashboardKey = '') {
   const route = useRoute()
   const router = useRouter()
@@ -33,7 +33,7 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
         return
       }
       // only use the dashboard cookie key as default if you are not logged in and it's not private
-      if (!isLoggedIn.value && isPublicKey(dashboardKeyCookie.value) && !isSharedKey(dashboardKeyCookie.value)) {
+      if (!isLoggedIn.value && isPublicDashboardKey(dashboardKeyCookie.value) && !isSharedKey(dashboardKeyCookie.value)) {
         setDashboardKey(`${dashboardKeyCookie.value}`)
       }
       return
@@ -47,7 +47,7 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
   initialCheck()
 
   const isPublic = computed(() => {
-    return isPublicKey(dashboardKey.value)
+    return isPublicDashboardKey(dashboardKey.value)
   })
 
   const isShared = computed(() => {

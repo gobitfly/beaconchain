@@ -1,6 +1,7 @@
 // When updating values here, please keep in mind that you might have to updated utils/colors.ts too
 
 :root {
+  --white: #ffffff;
   --grey: #a5a5a5;
   --medium-grey: #b3b3b3;
   --grey-1: #e9e9e9;
@@ -27,6 +28,7 @@
   --green: #7dc382;
   --flashy-red: #f3454a;
   --light-red: #d42127;
+  --dark-red: #ce3438;
   --yellow: #ffd600;
   --purple: #9747ff;
   --light-orange: #e77f27;
@@ -55,15 +57,19 @@
   --button-color-pressed: var(--primary-orange-pressed);
   --button-color-disabled: var(--grey);
   --button-color-dark-pattern: var(--light-grey-2);
+  --button-color-dangerous: var(--flashy-red);
+  --button-color-dangerous-hover: var(--dark-red);
   --button-text-color-dark-pattern: var(--light-black);
   --button-text-color-disabled: var(--grey-4);
+  --button-text-color-dangerous: var(--white);
 
   --checkbox-background-color: var(--light-grey-4);
 
   --container-background: var(--grey-4);
   --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
-
+  --container-border: 1px solid var(--container-border-color);
+  
   --subcontainer-background: var(--light-grey-2);
 
   --input-background: var(--grey-4);
@@ -90,6 +96,7 @@
 
   --link-color: var(--blue);
 
+  --equal-color: var(--yellow);
   --negative-color: var(--light-red);
   --negative-contrast-color: var(--text-color-inverted);
   --positive-color: var(--light-green);
@@ -138,6 +145,7 @@
     --button-color-disabled: var(--grey);
     --button-color-dark-pattern: var(--light-grey);
     --button-text-color-disabled: var(--light-grey);
+    --button-text-color-dangerous: var(--light-grey);
 
     --checkbox-background-color: var(--light-grey);
 
