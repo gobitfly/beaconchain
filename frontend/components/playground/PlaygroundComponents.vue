@@ -1,5 +1,8 @@
 <template>
   <TabView lazy>
+    <TabPanel header="MiniParser">
+      <PlaygroundMiniParser />
+    </TabPanel>
     <TabPanel header="Accordeon">
       <PlaygroundAccordeon />
     </TabPanel>
