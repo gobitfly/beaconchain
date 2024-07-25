@@ -17,6 +17,7 @@ import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import { getSummaryChartGroupColors, getChartTextColor, getChartTooltipBackgroundColor } from '~/utils/colors'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import { formatTsToTime } from '~/utils/format'
 import { API_PATH } from '~/types/customFetch'
 import { SUMMARY_CHART_GROUP_NETWORK_AVERAGE, SUMMARY_CHART_GROUP_TOTAL, type AggregationTimeframe, type SummaryChartFilter } from '~/types/dashboard/summary'
 
@@ -47,11 +48,12 @@ const { latestState } = useLatestStateStore()
 const latestSlot = ref(latestState.value?.current_slot || 0)
 const { value: timeFrames, temp: tempTimeFrames, bounce: bounceTimeFrames, instant: instantTimeFrames } = useDebounceValue<{from:number, to:number}>({ from: 0, to: 0 }, 1000)
 const currentZoom = { start: 80, end: 100 }
-const MAX_DATA_POINTS = 10
+const MAX_DATA_POINTS = 200
 
 const { value: filter, bounce: bounceFilter } = useDebounceValue(props.filter, 1000)
 const aggregation = ref<AggregationTimeframe>('hourly')
 const isLoading = ref(false)
+let reloadCounter = 0
 
 interface SeriesObject {
     data: number[];
@@ -61,7 +63,8 @@ interface SeriesObject {
     name: string;
   }
 // we don't want the series to be responsive to not trigger an auto update of the option computed
-let series: (SeriesObject | undefined)[] = []
+const series = ref<SeriesObject[]>([])
+const chartCategories = ref<number[]>([])
 
 const categories = computed<number[]>(() => {
   // charts have 5 slots delay
@@ -118,17 +121,23 @@ watch(() => props.filter?.aggregation, (agg) => {
 }, { immediate: true })
 
 const loadData = async () => {
-  series = []
-  let liveCategories: number[] = []
+  reloadCounter++
+  const currentCounter = reloadCounter
+  let newCategories: number[] = []
   if (!dashboardKey.value || !timeFrames.value.to) {
-    chart.value?.setOption({ series })
+    series.value = []
     return
   }
   isLoading.value = true
+  const newSeries: SeriesObject[] = []
   try {
     const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(API_PATH.DASHBOARD_SUMMARY_CHART, { query: { after_ts: timeFrames.value.from, before_ts: timeFrames.value.to, group_ids: props.filter?.groupIds.join(','), efficiency_type: props.filter?.efficiency, aggregation: aggregation.value } }, { dashboardKey: dashboardKey.value })
+    if (currentCounter !== reloadCounter) {
+      return // make sure we only use the data from the latest call
+    }
+
     if (res.data) {
-      liveCategories = res.data.categories
+      newCategories = res.data.categories
       const allGroups = $t('dashboard.validator.summary.chart.all_groups')
       res.data.series.forEach((element) => {
         let name: string
@@ -146,18 +155,15 @@ const loadData = async () => {
           symbol: 'none',
           name
         }
-        series.push(newObj)
+        newSeries.push(newObj)
       })
-      series.push()
     }
   } catch (e) {
     // TODO: Maybe we want to show an error here (either a toast or inline centred in the chart space)
   }
   isLoading.value = false
-  const axis0 = get(chart.value, 'xAxis[0]') || {}
-  const axis1 = get(chart.value, 'xAxis[1]')
-  const xAxis = [{ ...axis0, data: liveCategories }, axis1]
-  chart.value?.setOption({ series, xAxis })
+  chartCategories.value = newCategories
+  series.value = newSeries
 }
 
 watch([dashboardKey, filter, aggregation, timeFrames], () => {
@@ -194,12 +200,17 @@ const formatToDateOrEpoch = (value: string) => {
 
 const formatTimestamp = (value: string) => {
   const date = formatTSToDate(value)
-  if (aggregation.value === 'epoch') {
-    return `${date}\n${formatTSToEpoch(value)}`
+  switch (aggregation.value) {
+    case 'epoch':
+      return `${date}\n${formatTSToEpoch(value)}`
+    case 'hourly':
+      return `${date}\n${formatTsToTime(Number(value), $t('locales.date'))}`
+    default:
+      return date
   }
-  return date
 }
 
+// chart options
 const option = computed(() => {
   return {
     grid: {
@@ -209,9 +220,9 @@ const option = computed(() => {
       right: '5%'
     },
     xAxis: [
-      {
+      { // xAxis of the chart
         type: 'category',
-        data: categories.value,
+        data: chartCategories.value,
         boundaryGap: false,
         axisLabel: {
           fontSize: textSize,
@@ -219,14 +230,14 @@ const option = computed(() => {
           formatter: formatTimestamp
         }
       },
-      {
+      { // xAxis of the time frame selection
         type: 'category',
         data: categories.value,
         show: false,
         boundaryGap: false
       }
     ],
-    series,
+    series: series.value,
     yAxis: {
       name: $t(`dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`),
       nameLocation: 'center',
@@ -313,6 +324,7 @@ const option = computed(() => {
   }
 })
 
+// get the current dataZoom settings in the chart
 const getDataZoomValues = () => {
   const chartOptions = chart.value?.getOption()
   const start: number = get(chartOptions, 'dataZoom[0].start', 80) as number
@@ -323,6 +335,7 @@ const getDataZoomValues = () => {
   }
 }
 
+// get the from to values for the selected zoom settings
 const getZoomTimestamps = () => {
   const max = categories.value.length - 1
   if (max <= 0) {
@@ -340,6 +353,7 @@ const getZoomTimestamps = () => {
   }
 }
 
+// validate and adjust zoom settings
 const validateDataZoom = (instant?: boolean) => {
   if (!chart.value) {
     return
@@ -349,8 +363,8 @@ const validateDataZoom = (instant?: boolean) => {
     return
   }
 
+  const max = categories.value.length - 1
   if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS) {
-    const max = categories.value.length - 1
     if (timestamps.start !== currentZoom.start) {
       timestamps.toIndex = Math.min(timestamps.fromIndex + MAX_DATA_POINTS, max)
       timestamps.end = timestamps.toIndex * 100 / max
@@ -361,10 +375,23 @@ const validateDataZoom = (instant?: boolean) => {
       timestamps.fromTs = categories.value[timestamps.fromIndex]
     }
   }
+  // make sure from and to are not the same
+  if (timestamps.toIndex === timestamps.fromIndex) {
+    if ((timestamps.start !== currentZoom.start && timestamps.fromIndex !== max) || timestamps.toIndex === 0) {
+      timestamps.toIndex = timestamps.fromIndex + 1
+      timestamps.end = timestamps.toIndex * 100 / max
+      timestamps.toTs = categories.value[timestamps.toIndex]
+    } else {
+      timestamps.fromIndex = timestamps.toIndex - 1
+      timestamps.start = timestamps.fromIndex * 100 / max
+      timestamps.fromTs = categories.value[timestamps.fromIndex]
+    }
+  }
   const newTimeFrames = {
     from: timestamps.fromTs,
     to: timestamps.toTs
   }
+  // when the timeframes of the slider change we bounce the new timeframe for the chart
   if (tempTimeFrames.value.to !== newTimeFrames.to || tempTimeFrames.value.from !== newTimeFrames.from) {
     if (instant) {
       instantTimeFrames(newTimeFrames)
@@ -372,35 +399,39 @@ const validateDataZoom = (instant?: boolean) => {
       bounceTimeFrames(newTimeFrames, false, true)
     }
   }
+  // if we had to fix the slider ranges we need to update the zoom settings
   if (timestamps.start !== currentZoom.start || timestamps.end !== currentZoom.end) {
     currentZoom.end = timestamps.end
     currentZoom.start = timestamps.start
 
     // check if dataZoom is ready for the action otherwise use set options
-    if (get(chart.value?.getOption(), 'dataZoom[0]')) {
-      chart.value.dispatchAction({
-        type: 'dataZoom',
-        ...currentZoom
-      })
-    } else {
-      chart.value?.setOption({
-        dataZoom: {
-          ...(get(chart.value, 'xAxis[1]') || {}),
+    nextTick(() => {
+      if (get(chart.value?.getOption(), 'dataZoom[0]')) {
+        chart.value?.dispatchAction({
+          type: 'dataZoom',
           ...currentZoom
-        }
-      })
-    }
+        })
+      } else {
+        chart.value?.setOption({
+          dataZoom: {
+            ...(get(chart.value, 'xAxis[1]') || {}),
+            ...currentZoom
+          }
+        })
+      }
+    })
   }
 }
 
 watch([categories, option, chart], () => {
-  validateDataZoom()
+  validateDataZoom(true)
 }, { immediate: true })
 
 const onDatazoom = () => {
   validateDataZoom()
 }
 
+// we store the last mouse position so we can highlight the closest entry in the tooltip
 const onMouseMove = (e: MouseEvent) => {
   lastMouseYPos = e.offsetY
 }
