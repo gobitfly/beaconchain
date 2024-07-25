@@ -74,7 +74,11 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	}
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
-	const epochLookBack = 10
+	const epochLookBack = 9
+	startEpoch := uint64(0)
+	if latestFinalizedEpoch > epochLookBack {
+		startEpoch = latestFinalizedEpoch - epochLookBack
+	}
 
 	groupIdSearchMap := make(map[uint64]bool, 0)
 
@@ -85,13 +89,13 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("e.epoch")).
-		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(latestFinalizedEpoch-epochLookBack).Unix()))
+		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(startEpoch).Unix()))
 
 	dsPostgres := goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.epoch")).
 		From(goqu.L("users_val_dashboards_validators v")).
-		Where(goqu.L("b.epoch > ?", latestFinalizedEpoch-epochLookBack))
+		Where(goqu.L("b.epoch >= ?", startEpoch))
 
 	if dashboardId.Validators == nil {
 		dsClickhouse = dsClickhouse.
@@ -708,7 +712,11 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	wg := errgroup.Group{}
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
-	const epochLookBack = 225
+	const epochLookBack = 224
+	startEpoch := uint64(0)
+	if latestFinalizedEpoch > epochLookBack {
+		startEpoch = latestFinalizedEpoch - epochLookBack
+	}
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the query that serves as base for both the main and EL rewards queries
@@ -717,13 +725,13 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("e.epoch")).
-		Where(goqu.L("e.epoch_timestamp > fromUnixTimestamp(?)", utils.EpochToTime(latestFinalizedEpoch-epochLookBack).Unix()))
+		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(startEpoch).Unix()))
 
 	dsPostgres := goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.epoch")).
 		From(goqu.L("users_val_dashboards_validators v")).
-		Where(goqu.L("b.epoch > ?", latestFinalizedEpoch-epochLookBack))
+		Where(goqu.L("b.epoch >= ?", startEpoch))
 
 	if dashboardId.Validators == nil {
 		dsClickhouse = dsClickhouse.
@@ -956,20 +964,20 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
 			goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
 			goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
-			goqu.L("e.slashed_by IS NOT NULL AS slashed_in_epoch"),
+			goqu.L("e.slashed AS slashed_in_epoch"),
 			goqu.L("COALESCE(e.blocks_slashing_count, 0) AS slashed_amount"),
-			goqu.L("COALESCE(e.slasher_reward, 0) AS slasher_reward"),
+			goqu.L("COALESCE(e.blocks_cl_slasher_reward, 0) AS slasher_reward"),
 			goqu.L("COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled"),
 			goqu.L("COALESCE(e.blocks_proposed, 0) AS blocks_proposed"),
 			goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
 			goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward")).
 		From(goqu.L("validator_dashboard_data_epoch e")).
-		Where(goqu.L("e.epoch = ?", epoch)).
+		Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(epoch).Unix())).
 		Where(goqu.L(`
 			(COALESCE(e.attestations_scheduled, 0) +
 			COALESCE(e.sync_scheduled,0) +
 			COALESCE(e.blocks_scheduled,0) +
-			CASE WHEN e.slashed_by IS NOT NULL THEN 1 ELSE 0 END +
+			CASE WHEN e.slashed THEN 1 ELSE 0 END +
 			COALESCE(e.blocks_slashing_count, 0)) > 0`))
 
 	elDs := goqu.Dialect("postgres").
@@ -1048,7 +1056,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving validator rewards data: %v", err)
 		}
@@ -1152,9 +1160,16 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 	// Sort the result
 	totalReward := func(resultEntry t.VDBEpochDutiesTableRow) decimal.Decimal {
-		totalReward := resultEntry.Duties.AttestationHead.Income.Add(resultEntry.Duties.AttestationSource.Income).Add(resultEntry.Duties.AttestationTarget.Income).
-			Add(resultEntry.Duties.Sync.Income).
-			Add(resultEntry.Duties.Proposal.ElIncome).Add(resultEntry.Duties.Proposal.ClAttestationInclusionIncome).Add(resultEntry.Duties.Proposal.ClSyncInclusionIncome).Add(resultEntry.Duties.Proposal.ClSlashingInclusionIncome)
+		totalReward := decimal.Zero
+		if resultEntry.Duties.AttestationSource != nil {
+			totalReward = totalReward.Add(resultEntry.Duties.AttestationHead.Income).Add(resultEntry.Duties.AttestationSource.Income).Add(resultEntry.Duties.AttestationTarget.Income)
+		}
+		if resultEntry.Duties.Sync != nil {
+			totalReward = totalReward.Add(resultEntry.Duties.Sync.Income)
+		}
+		if resultEntry.Duties.Proposal != nil {
+			totalReward = totalReward.Add(resultEntry.Duties.Proposal.ElIncome).Add(resultEntry.Duties.Proposal.ClAttestationInclusionIncome).Add(resultEntry.Duties.Proposal.ClSyncInclusionIncome).Add(resultEntry.Duties.Proposal.ClSlashingInclusionIncome)
+		}
 		return totalReward
 	}
 
@@ -1177,8 +1192,9 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 				return result[i].Validator < result[j].Validator
 			}
 			return totalReward(result[i]).LessThan(totalReward(result[j]))
+		default:
+			return false
 		}
-		return false
 	})
 
 	sort.Slice(cursorData, func(i, j int) bool {
@@ -1200,8 +1216,9 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 				return cursorData[i].Index < cursorData[j].Index
 			}
 			return cursorData[i].Reward.LessThan(cursorData[j].Reward)
+		default:
+			return false
 		}
-		return false
 	})
 
 	// Remove data before the cursor
