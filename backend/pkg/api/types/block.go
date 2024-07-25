@@ -17,11 +17,6 @@ type BlockSummary struct {
 
 type InternalGetBlockResponse ApiDataResponse[BlockSummary]
 
-type BlockMevTag struct {
-	Name  string `json:"name"`
-	Color string `json:"color"`
-}
-
 type BlockExecutionPayload struct {
 	Block                 uint64          `json:"block"`
 	BlockHash             Hash            `json:"block_hash"`
@@ -102,15 +97,18 @@ type BlockOverview struct {
 	ParentHash Hash             `json:"parent_hash,omitempty"`
 
 	// New blocks only
-	MevTags                 []BlockMevTag               `json:"mev_tags,omitempty"`
+	MevTags []struct {
+		Name  string `json:"name"`
+		Color string `json:"color"`
+	} `json:"mev_tags,omitempty"`
 	Epoch                   uint64                      `json:"epoch,omitempty"`
 	Slot                    uint64                      `json:"slot,omitempty"`
 	Proposer                uint64                      `json:"proposer,omitempty"`
 	ProposerReward          *ClElValue[decimal.Decimal] `json:"proposer_reward,omitempty"`
 	ProposerRewardRecipient *Address                    `json:"proposer_reward_recipient,omitempty"`
 	Status                  *struct {
-		Proposal  string `json:"proposal"`  // proposed, orphaned, missed, scheduled
-		Finalized string `json:"finalized"` // finalized, justified, not_finalized
+		Proposal  string `json:"proposal" tstype:"'proposed' | 'orphaned' | 'missed' | 'scheduled'" faker:"oneof: proposed, orphaned, missed, scheduled"`
+		Finalized string `json:"finalized" tstype:"'finalized' | 'justified' | 'not_finalized'" faker:"oneof: finalized, justified, not_finalized"`
 	} `json:"status,omitempty"`
 	PriorityFees *decimal.Decimal `json:"priority_fees,omitempty"`
 	Transactions *struct {
@@ -133,9 +131,9 @@ type BlockTransactionTableRow struct {
 	Method   string          `json:"method"`
 	Block    uint64          `json:"block"`
 	Age      uint64          `json:"age"`
-	From     ContractAddress `json:"from"`
-	Type     string          `json:"type"` // in, out, self, contract
-	To       ContractAddress `json:"to"`
+	From     Address         `json:"from"`
+	Type     string          `json:"type" tstype:"'out' | 'in' | 'out_in' | 'self' | 'contract'" faker:"oneof: out, int, out_in, self, contract"`
+	To       Address         `json:"to"`
 	Value    decimal.Decimal `json:"value"`
 	GasPrice decimal.Decimal `json:"gas_price"`
 	TxFee    decimal.Decimal `json:"tx_fee"`
@@ -171,19 +169,25 @@ type BlockAttestationTableRow struct {
 type InternalGetBlockAttestationsResponse ApiDataResponse[[]BlockAttestationTableRow]
 
 type BlockWithdrawalTableRow struct {
-	// TODO
+	// no design present yet, TODO confirm this
+	Index     uint64          `json:"index"`
+	Epoch     uint64          `json:"epoch"`
+	Slot      uint64          `json:"slot"`
+	Age       uint64          `json:"age"`
+	Recipient Address         `json:"recipient"`
+	Amount    decimal.Decimal `json:"amount"`
 }
 
 type InternalGetBlockWtihdrawalsResponse ApiDataResponse[[]BlockWithdrawalTableRow]
 
 type BlockBlsChangeTableRow struct {
-	Index                uint64          `json:"index"`
-	Signature            Hash            `json:"signature"`
-	BlsPubkey            Hash            `json:"bls_pubkey"`
-	NewWithdrawalAddress ContractAddress `json:"new_withdrawal_address"`
+	Index                uint64  `json:"index"`
+	Signature            Hash    `json:"signature"`
+	BlsPubkey            Hash    `json:"bls_pubkey"`
+	NewWithdrawalAddress Address `json:"new_withdrawal_address"`
 }
 
-type InternalGetBlockBlsChangeResponse ApiDataResponse[[]BlockBlsChangeTableRow]
+type InternalGetBlockBlsChangesResponse ApiDataResponse[[]BlockBlsChangeTableRow]
 
 type BlockVoluntaryExitTableRow struct {
 	Validator uint64 `json:"validator"`

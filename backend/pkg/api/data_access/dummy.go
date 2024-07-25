@@ -661,7 +661,7 @@ func (d *DummyService) GetBlockWithdrawals(ctx context.Context, chainId, block u
 	return r, err
 }
 
-func (d *DummyService) GetBlockBlsChange(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
+func (d *DummyService) GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
 	r := []t.BlockBlsChangeTableRow{}
 	err := commonFakeData(&r)
 	return r, err
