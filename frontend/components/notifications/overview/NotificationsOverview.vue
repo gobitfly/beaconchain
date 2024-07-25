@@ -6,15 +6,13 @@ import type { NotificationsOverview } from '~/types/notifications/overview'
 
 const props = defineProps<{ store: NotificationsOverview | null }>()
 
-const { t: $t } = useI18n()
-const tPath = 'notifications.overview.'
+// const { t: $t } = useI18n()
+// const tPath = 'notifications.overview.'
 
 // Computed properties for labels and values
-const emailNotificationStatus = computed(() => 
-  props.store?.EmailNotifications ? 'Active' : 'Inactive'
+const emailNotificationStatus = computed(() => props.store?.EmailNotifications ? 'Active' : 'Inactive'
 )
-const pushNotificationStatus = computed(() => 
-  props.store?.pushNotifications ? 'Active' : 'Inactive'
+const pushNotificationStatus = computed(() => props.store?.pushNotifications ? 'Active' : 'Inactive'
 )
 const mostNotifications30d = computed(() => {
   const providers = props.store?.mostNotifications30d.providers ?? []
@@ -24,8 +22,7 @@ const mostNotifications30d = computed(() => {
     abo: [...abo, ...Array(3 - abo.length).fill('-')].slice(0, 3)
   }
 })
-const mostNotifications24h = computed(() => 
-  props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 }
+const mostNotifications24h = computed(() => props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 }
 )
 
 const emailLimitCount = computed(() => 8)
@@ -46,7 +43,9 @@ const totalNotifications24h = computed(() => {
         <div v-if="emailNotificationStatus === 'Inactive'" class="premium-invitation small_text">
           Click <a href="/notifications" class="inline-link">here</a> to activate <BcPremiumGem class="gem" />
         </div>
-        <div v-else class="small_text">{{ emailLimitCount }}/10 per day</div>
+        <div v-else class="small_text">
+          {{ emailLimitCount }}/10 per day
+        </div>
       </div>
       <div class="box-item">
         <span class="big_text_label">Push Notifications:</span>
