@@ -43,8 +43,8 @@ const totalNotifications24h = computed(() => {
       <div class="box-item">
         <span class="big_text_label">Email Notifications:</span>
         <span class="big_text">{{ emailNotificationStatus }}</span>
-        <div v-if="emailNotificationStatus === 'Inactive'" class="small_text">
-          Click<a href="/notifications"> here </a> to activate
+        <div v-if="emailNotificationStatus === 'Inactive'" class="premium-invitation small_text">
+          Click <a href="/notifications" class="inline-link">here</a> to activate <BcPremiumGem class="gem" />
         </div>
         <div v-else class="small_text">{{ emailLimitCount }}/10 per day</div>
       </div>
@@ -71,14 +71,6 @@ const totalNotifications24h = computed(() => {
         <span class="big_text_label">Most Notifications in 24 Hours:</span>
         <span class="big_text">{{ totalNotifications24h }}</span>
         <span class="small_text">{{ mostNotifications24h.Email }} Email | {{ mostNotifications24h.Webhook }} Webhook | {{ mostNotifications24h.Push }} Push</span>
-      </div>
-      <!-- Example Premium Feature -->
-      <div class="box-item">
-        <span class="big_text_label">Premium Feature:</span>
-        <div class="premium-invitation">
-          <BcPremiumGem class="gem" />
-          <span class="small_text">Unlock more notifications with premium!</span>
-        </div>
       </div>
     </div>
     <div v-else>
@@ -159,12 +151,14 @@ a:hover {
   font-size: 16px;
 }
 
+.inline-link,
+.gem {
+  display: inline-block;
+}
+
 .premium-invitation {
   display: flex;
   align-items: center;
-  .gem {
-    margin-left: 10px;
-  }
-  pointer-events: auto;
+  gap: 5px; /* Adjust the gap as needed */
 }
 </style>
