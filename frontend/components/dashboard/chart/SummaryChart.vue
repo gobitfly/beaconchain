@@ -364,6 +364,7 @@ const validateDataZoom = (instant?: boolean) => {
   }
 
   const max = categories.value.length - 1
+  // check for max data points
   if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS) {
     if (timestamps.start !== currentZoom.start) {
       timestamps.toIndex = Math.min(timestamps.fromIndex + MAX_DATA_POINTS, max)
@@ -375,8 +376,8 @@ const validateDataZoom = (instant?: boolean) => {
       timestamps.fromTs = categories.value[timestamps.fromIndex]
     }
   }
-  // make sure from and to are not the same
-  if (timestamps.toIndex === timestamps.fromIndex) {
+  // to index must be greater then from index
+  if (timestamps.toIndex <= timestamps.fromIndex) {
     if ((timestamps.start !== currentZoom.start && timestamps.fromIndex !== max) || timestamps.toIndex === 0) {
       timestamps.toIndex = timestamps.fromIndex + 1
       timestamps.end = timestamps.toIndex * 100 / max
