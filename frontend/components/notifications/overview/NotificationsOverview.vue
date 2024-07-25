@@ -72,6 +72,14 @@ const totalNotifications24h = computed(() => {
         <span class="big_text">{{ totalNotifications24h }}</span>
         <span class="small_text">{{ mostNotifications24h.Email }} Email | {{ mostNotifications24h.Webhook }} Webhook | {{ mostNotifications24h.Push }} Push</span>
       </div>
+      <!-- Example Premium Feature -->
+      <div class="box-item">
+        <span class="big_text_label">Premium Feature:</span>
+        <div class="premium-invitation">
+          <BcPremiumGem class="gem" />
+          <span class="small_text">Unlock more notifications with premium!</span>
+        </div>
+      </div>
     </div>
     <div v-else>
       No data available from the component.
@@ -149,5 +157,14 @@ a:hover {
 
 .icon {
   font-size: 16px;
+}
+
+.premium-invitation {
+  display: flex;
+  align-items: center;
+  .gem {
+    margin-left: 10px;
+  }
+  pointer-events: auto;
 }
 </style>
