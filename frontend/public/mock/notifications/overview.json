@@ -3,7 +3,7 @@
     "EmailNotifications": false,
     "pushNotifications": true,
     "mostNotifications30d": {
-        "providers": [ "Hetzner", "OVH", "-" ],
+        "providers": [ "Hetzner", "OVH"],
         "abo": [ "Whales", "Dolphins", "Guppies" ]
     },
     "mostNotifications24h": {
