@@ -16,9 +16,14 @@ const emailNotificationStatus = computed(() =>
 const pushNotificationStatus = computed(() => 
   props.store?.pushNotifications ? 'Active' : 'Inactive'
 )
-const mostNotifications30d = computed(() => 
-  props.store?.mostNotifications30d ?? { providers: [], abo: [] }
-)
+const mostNotifications30d = computed(() => {
+  const providers = props.store?.mostNotifications30d.providers ?? []
+  const abo = props.store?.mostNotifications30d.abo ?? []
+  return {
+    providers: [...providers, ...Array(3 - providers.length).fill('-')].slice(0, 3),
+    abo: [...abo, ...Array(3 - abo.length).fill('-')].slice(0, 3)
+  }
+})
 const mostNotifications24h = computed(() => 
   props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 }
 )
@@ -41,7 +46,7 @@ const totalNotifications24h = computed(() => {
         <div v-if="emailNotificationStatus === 'Inactive'" class="small_text">
           Click<a href="/notifications"> here </a> to activate
         </div>
-        <div v-else class="small_text">{{emailLimitCount}}/10 per day</div>
+        <div v-else class="small_text">{{ emailLimitCount }}/10 per day</div>
       </div>
       <div class="box-item">
         <span class="big_text_label">Push Notifications:</span>
@@ -106,8 +111,8 @@ const totalNotifications24h = computed(() => {
 
 .box {
   display: flex;
-  align-items: center;    /* Center items horizontally */
-  justify-content: space-between; /* Center items vertically if they do not exceed the container height */
+  align-items: center;
+  justify-content: space-between;
   gap: 100px;
   align-content: center;
 }
@@ -123,26 +128,26 @@ a:hover {
 }
 
 .lists-container {
-  display: flex; /* Aligns child elements (the ol elements) in a row */
-  gap: 20px; /* Space between the lists */
+  display: flex;
+  gap: 20px;
 }
 
 .icon-list {
-  list-style-type: none; /* Remove default list numbers */
-  padding: 0; /* Remove default padding */
-  margin: 0; /* Remove default margin */
-  display: flex; /* Align list items horizontally */
-  flex-direction: column; /* Stack list items vertically */
-  gap: 10px; /* Space between list items */
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .icon-list li {
-  display: flex; /* Align items within the list item horizontally */
-  align-items: center; /* Center icon and text vertically */
-  gap: 10px; /* Space between the icon and text */
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .icon {
-  font-size: 16px; /* Adjust icon size if necessary */
+  font-size: 16px;
 }
 </style>
