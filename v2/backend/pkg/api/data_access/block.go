@@ -13,7 +13,7 @@ type BlockRepository interface {
 	GetBlockVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error)
 	GetBlockAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error)
 	GetBlockWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error)
-	GetBlockBlsChange(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error)
+	GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error)
 	GetBlockVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error)
 	GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error)
 }
@@ -42,8 +42,8 @@ func (d *DataAccessService) GetBlockWithdrawals(ctx context.Context, chainId, bl
 	return d.dummy.GetBlockWithdrawals(ctx, chainId, block)
 }
 
-func (d *DataAccessService) GetBlockBlsChange(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
-	return d.dummy.GetBlockBlsChange(ctx, chainId, block)
+func (d *DataAccessService) GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
+	return d.dummy.GetBlockBlsChanges(ctx, chainId, block)
 }
 
 func (d *DataAccessService) GetBlockVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {

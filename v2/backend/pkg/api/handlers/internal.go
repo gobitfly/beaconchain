@@ -2016,20 +2016,20 @@ func (h *HandlerService) InternalGetBlockWithdrawals(w http.ResponseWriter, r *h
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetBlockBlsChange(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetBlockBlsChanges(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
-	data, err := h.dai.GetBlockBlsChange(r.Context(), chainId, block)
+	data, err := h.dai.GetBlockBlsChanges(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
-	response := types.InternalGetBlockBlsChangeResponse{
+	response := types.InternalGetBlockBlsChangesResponse{
 		Data: data,
 	}
 	returnOk(w, response)

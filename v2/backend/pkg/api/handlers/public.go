@@ -451,6 +451,10 @@ func (h *HandlerService) PublicGetNetworkBlockAttestations(w http.ResponseWriter
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) PublicGetNetworkBlockVotes(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) PublicGetNetworkAggregatedAttestations(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
