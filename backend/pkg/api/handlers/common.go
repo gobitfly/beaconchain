@@ -402,6 +402,24 @@ func (v *validationError) checkValidatorDashboardPublicId(publicId string) types
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
+type number interface {
+	uint64 | int64 | float64
+}
+
+func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+	if param < min {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
+	}
+	if param > max {
+		v.add(paramName, fmt.Sprintf("given value '%v' is too large, maximum value is %v", param, max))
+	}
+	return param
+}
+
+func (v *validationError) checkAddress(publicId string) string {
+	return v.checkRegex(reEthereumAddress, publicId, "address")
+}
+
 func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -415,10 +433,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
 			return paging
 		}
-		if limit > maxQueryLimit {
-			v.add("limit", fmt.Sprintf("given value '%d' is too large, maximum limit is %d", limit, maxQueryLimit))
-			return paging
-		}
+		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
 		paging.limit = limit
 	}
 
@@ -569,6 +584,18 @@ func (v *validationError) checkNetwork(network intOrString) uint64 {
 		v.add("network", fmt.Sprintf("given value '%s' is not a valid network", network))
 	}
 	return chainId
+}
+
+func (v *validationError) checkNetworkParameter(param string) uint64 {
+	if reInteger.MatchString(param) {
+		chainId, err := strconv.ParseUint(param, 10, 64)
+		if err != nil {
+			v.add("network", fmt.Sprintf("given value '%s' is not a valid network", param))
+			return 0
+		}
+		return v.checkNetwork(intOrString{intValue: &chainId})
+	}
+	return v.checkNetwork(intOrString{strValue: &param})
 }
 
 // isValidNetwork checks if the given network is a valid network.
@@ -826,12 +853,12 @@ func mapVDBSummarySlashings(v *types.VDBSlashingsSummaryValidators) []types.VDBS
 func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSummaryValidatorsData {
 	proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
 	for i, proposed := range v.Proposed {
-		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.ProposedBlocks}
+		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.Blocks}
 	}
 
 	missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
 	for i, missed := range v.Missed {
-		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.MissedBlocks}
+		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.Blocks}
 	}
 
 	return []types.VDBSummaryValidatorsData{
