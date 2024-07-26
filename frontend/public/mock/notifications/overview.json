@@ -1,7 +1,8 @@
 {
     "id": 1,
-    "EmailNotifications": false,
-    "pushNotifications": true,
+    "EmailNotifications": true,
+    "EmailLimitCount": 6,
+    "pushNotifications": false,
     "mostNotifications30d": {
         "providers": [ "Hetzner", "OVH"],
         "abo": [ "Whales", "Dolphins", "Guppies" ]
