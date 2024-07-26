@@ -11,6 +11,7 @@ import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
 import { DashboardRenameModal } from '#components'
 
+const { count, keys } = useVarTest('header')
 const { width } = useWindowSize()
 const dialog = useDialog()
 
@@ -144,6 +145,7 @@ const editDashboard = () => {
 <template>
   <div class="header-container">
     <div class="h1 dashboard-title">
+      Header count: {{ count }}, keys: {{ keys.join(',') }}
       {{ title }}
     </div>
     <Button v-if="isPrivate" class="p-button-icon-only edit_button" @click="editDashboard">

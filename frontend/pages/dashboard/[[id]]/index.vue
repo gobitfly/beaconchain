@@ -16,6 +16,7 @@ import type { HashTabs } from '~/types/hashTabs'
 
 const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const { count, keys } = useVarTest('dashboard')
 
 const tabs: HashTabs = {
   summary: {
@@ -114,6 +115,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
     />
     <BcPageWrapper>
       <template #top>
+        DB count: {{ count }}, keys: {{ keys.join(',') }}
         <DashboardHeader :dashboard-title="overview?.name" @show-creation="showDashboardCreationDialog()" />
         <DashboardValidatorOverview class="overview" />
       </template>

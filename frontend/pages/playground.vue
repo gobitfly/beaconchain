@@ -6,6 +6,7 @@ import { formatNumber } from '~/utils/format'
 const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
 
 useBcSeo()
+const { count, keys } = useVarTest('playground')
 
 const { latestState, refreshLatestState } = useLatestStateStore()
 const slotVizData = ref<SlotVizEpoch[] | null>(null)
@@ -29,6 +30,7 @@ onMounted(async () => {
 
 <template>
   <div class="content">
+    Playground: {{ count }}, keys: {{ keys.join(',') }}
     <h1>Playground for testing UI components</h1>
     <BcLink to="/" class="row">
       <Button class="row">
