@@ -294,11 +294,11 @@
     &.p-toast-message-success {
       border: solid var(--toast-border-sucess-color) 1px;
       background: var(--toast-background-success-color);
-      color: var(--toast-message-success-color);
+      color: var(--toast-background-color--success);
 
       .p-toast-message-icon,
       .p-toast-icon-close {
-        color: var(--toast-message-success-color);
+        color: var(--toast-background-color--success);
       }
     }
 
