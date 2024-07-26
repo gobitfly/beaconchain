@@ -949,6 +949,8 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 	returnOk(w, response)
 }
 
+const maxDatapoits = 200
+
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	ctx := r.Context()
@@ -966,24 +968,23 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	groupIds := v.checkGroupIdList(q.Get("group_ids"))
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 	aggregation := checkEnum[enums.ChartAggregation](&v, q.Get("aggregation"), "aggregation")
-	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds)
-	now := uint64(time.Now().Unix())
-	if now < maxAge {
-		maxAge = now
-	}
-	minAllowedTs := now - maxAge
-	afterTs, beforeTs := v.checkTimestamps(q.Get("after_ts"), q.Get("before_ts"), minAllowedTs)
-	if v.hasErrors() {
-		handleErr(w, v)
-		return
-	}
+	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
 	if maxAge == 0 {
 		returnConflict(w, fmt.Errorf("requested aggregation is not available for dashboard owner's premium subscription"))
 		return
 	}
+
+	now := uint64(time.Now().Unix())
+	minAllowedTs := now - min(maxAge, now)
+	maxAllowedInterval := maxDatapoits * uint64(aggregation.Duration().Seconds())
+	afterTs, beforeTs := v.checkTimestamps(q.Get("after_ts"), q.Get("before_ts"), minAllowedTs, maxAllowedInterval)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 	// afterTs is inclusive, beforeTs is exclusive
 	if afterTs < minAllowedTs || beforeTs <= minAllowedTs {
-		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription is %v seconds", maxAge))
+		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription for this aggregation is %v seconds", maxAge))
 		return
 	}
 

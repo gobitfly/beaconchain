@@ -255,3 +255,19 @@ var ChartAggregations = struct {
 	IntervalDaily,
 	IntervalWeekly,
 }
+
+func (c ChartAggregation) Duration() time.Duration {
+	switch c {
+	case IntervalEpoch:
+		// TODO: use network config to determine epoch duration once available
+		return time.Second * 12 * 32
+	case IntervalHourly:
+		return time.Hour
+	case IntervalDaily:
+		return 24 * time.Hour
+	case IntervalWeekly:
+		return 7 * 24 * time.Hour
+	default:
+		return 0
+	}
+}

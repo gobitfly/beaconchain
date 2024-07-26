@@ -605,20 +605,40 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
-func (v *validationError) checkTimestamps(afterParam string, beforeParam string, minAllowedTs uint64) (after uint64, before uint64) {
-	// TODO add functionality for max interval between timestamps
-	afterTs := minAllowedTs
-	if afterParam != "" {
-		afterTs = v.checkUint(afterParam, "after_ts")
+func (v *validationError) checkTimestamps(afterParam string, beforeParam string, minAllowedTs uint64, maxAllowedInterval uint64) (after uint64, before uint64) {
+	switch {
+	// If both parameters are empty, return the latest data
+	case afterParam == "" && beforeParam == "":
+		now := uint64(time.Now().Unix())
+		return max(now-maxAllowedInterval, minAllowedTs), now
+
+	// If only the afterParam is provided
+	case afterParam != "" && beforeParam == "":
+		afterTs := v.checkUint(afterParam, "after_ts")
+		beforeTs := afterTs + maxAllowedInterval
+		return afterTs, beforeTs
+
+	// If only the beforeParam is provided
+	case beforeParam != "" && afterParam == "":
+		beforeTs := v.checkUint(beforeParam, "before_ts")
+		afterTs := max(minAllowedTs, beforeTs-min(maxAllowedInterval, beforeTs))
+		return afterTs, beforeTs
+
+	// If both parameters are provided, validate them
+	default:
+		afterTs := v.checkUint(afterParam, "after_ts")
+		beforeTs := v.checkUint(beforeParam, "before_ts")
+
+		if afterTs > beforeTs {
+			v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
+		}
+
+		if beforeTs-afterTs > maxAllowedInterval {
+			v.add("before_ts", fmt.Sprintf("parameters `after_ts` and `before_ts` must not lie apart more than %d seconds for this aggregation", maxAllowedInterval))
+		}
+
+		return afterTs, beforeTs
 	}
-	beforeTs := uint64(time.Now().Unix())
-	if beforeParam != "" {
-		beforeTs = v.checkUint(beforeParam, "before_ts")
-	}
-	if afterTs > beforeTs {
-		v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
-	}
-	return afterTs, beforeTs
 }
 
 // getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks

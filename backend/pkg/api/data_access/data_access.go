@@ -140,7 +140,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 		)
 	}()
 
-	wg.Add(1)
+	/* wg.Add(1)
 	go func() {
 		defer wg.Done()
 		dataAccessService.clickhouseReader, _ = db.MustInitDB(
@@ -166,7 +166,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				SSL:          true,
 			}, "clickhouse", "clickhouse",
 		)
-	}()
+	}() */
 
 	// Initialize the user database
 	wg.Add(1)
