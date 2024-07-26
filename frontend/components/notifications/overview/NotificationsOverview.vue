@@ -25,7 +25,7 @@ const totalNotifications24h = computed(() => {
 })
 
 // Tooltip texts
-const tooltipEmail = 'Email notifications status'
+const tooltipEmail = 'You current limit is 10 emails per day.Your email limit resets in X hours. Upgrade to premium for more. '
 const tooltipPush = 'Push notifications status'
 const tooltipMost30d = 'Most notifications in the last 30 days'
 const tooltipMost24h = 'Most notifications in the last 24 hours'
