@@ -3,6 +3,7 @@ import type { ApiDataResponse } from '~/types/api/common';
 export interface NotificationsOverview {
   id: number;
   EmailNotifications: boolean;
+  EmailLimitCount: number;
   pushNotifications: boolean;
   mostNotifications30d: {
     providers: string[];
