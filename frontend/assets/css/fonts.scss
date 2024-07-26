@@ -292,7 +292,7 @@ h1 {
   @include text-toast
 }
 
-@mixin text-tost--sm(){
+@mixin text-toast--sm(){
   font-family:var(--roboto-family);
   font-size: var(--small_text_font_size);
   font-weight: var(--roboto-regular);
