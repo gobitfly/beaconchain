@@ -1,19 +1,14 @@
 <script setup lang="ts">
 import { defineProps, computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faDesktop, faUser } from '@fortawesome/pro-solid-svg-icons'
+import { faDesktop, faUser, faInfoCircle } from '@fortawesome/pro-solid-svg-icons'
 import type { NotificationsOverview } from '~/types/notifications/overview'
 
 const props = defineProps<{ store: NotificationsOverview | null }>()
 
-// const { t: $t } = useI18n()
-// const tPath = 'notifications.overview.'
-
 // Computed properties for labels and values
-const emailNotificationStatus = computed(() => props.store?.EmailNotifications ? 'Active' : 'Inactive'
-)
-const pushNotificationStatus = computed(() => props.store?.pushNotifications ? 'Active' : 'Inactive'
-)
+const emailNotificationStatus = computed(() => props.store?.EmailNotifications ? 'Active' : 'Inactive')
+const pushNotificationStatus = computed(() => props.store?.pushNotifications ? 'Active' : 'Inactive')
 const mostNotifications30d = computed(() => {
   const providers = props.store?.mostNotifications30d.providers ?? []
   const abo = props.store?.mostNotifications30d.abo ?? []
@@ -22,54 +17,65 @@ const mostNotifications30d = computed(() => {
     abo: [...abo, ...Array(3 - abo.length).fill('-')].slice(0, 3)
   }
 })
-const mostNotifications24h = computed(() => props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 }
-)
-
+const mostNotifications24h = computed(() => props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 })
 const emailLimitCount = computed(() => 8)
-
-// Computed property to calculate the total notifications
 const totalNotifications24h = computed(() => {
   const notifications = mostNotifications24h.value
   return notifications.Email + notifications.Webhook + notifications.Push
 })
+
+// Tooltip texts
+const tooltipEmail = 'Email notifications status'
+const tooltipPush = 'Push notifications status'
+const tooltipMost30d = 'Most notifications in the last 30 days'
+const tooltipMost24h = 'Most notifications in the last 24 hours'
 </script>
 
 <template>
   <div class="container">
     <div v-if="props.store" class="box">
       <div class="box-item">
-        <span class="big_text_label">Email Notifications:</span>
-        <span class="big_text">{{ emailNotificationStatus }}</span>
+        <BcTooltip :text="tooltipEmail" position="top" tooltip-class="tooltip">
+          <span class="big_text_label">Email Notifications:</span>
+          <span class="big_text">{{ emailNotificationStatus }}</span>
+        </BcTooltip>
         <div v-if="emailNotificationStatus === 'Inactive'" class="premium-invitation small_text">
           Click <a href="/notifications" class="inline-link">here</a> to activate <BcPremiumGem class="gem" />
         </div>
-        <div v-else class="small_text">
-          {{ emailLimitCount }}/10 per day
-        </div>
+        <div v-else class="small_text">{{ emailLimitCount }}/10 per day</div>
+        <BcTooltip :text="tooltipEmail" position="top" tooltip-class="tooltip">
+          <FontAwesomeIcon :icon="faInfoCircle" />
+        </BcTooltip>
       </div>
       <div class="box-item">
-        <span class="big_text_label">Push Notifications:</span>
-        <span class="big_text">{{ pushNotificationStatus }}</span>
+        <BcTooltip :text="tooltipPush" position="top" tooltip-class="tooltip">
+          <span class="big_text_label">Push Notifications:</span>
+          <span class="big_text">{{ pushNotificationStatus }}</span>
+        </BcTooltip>
       </div>
       <div class="box-item">
-        <span class="big_text_label">Most Notifications in 30 Days:</span>
-        <span class="lists-container">
-          <ol class="icon-list">
-            <li v-for="(provider, index) in mostNotifications30d.providers" :key="'provider-' + index" class="small_text">
-              <icon><FontAwesomeIcon :icon="faDesktop" /></icon> {{ provider }}
-            </li>
-          </ol>
-          <ol class="icon-list">
-            <li v-for="(abo, index) in mostNotifications30d.abo" :key="'abo-' + index" class="small_text">
-              <icon><FontAwesomeIcon :icon="faUser" /></icon> {{ abo }}
-            </li>
-          </ol>
-        </span>
+        <BcTooltip :text="tooltipMost30d" position="top" tooltip-class="tooltip">
+          <span class="big_text_label">Most Notifications in 30 Days:</span>
+          <span class="lists-container">
+            <ol class="icon-list">
+              <li v-for="(provider, index) in mostNotifications30d.providers" :key="'provider-' + index" class="small_text">
+                <icon><FontAwesomeIcon :icon="faDesktop" /></icon> {{ provider }}
+              </li>
+            </ol>
+            <ol class="icon-list">
+              <li v-for="(abo, index) in mostNotifications30d.abo" :key="'abo-' + index" class="small_text">
+                <icon><FontAwesomeIcon :icon="faUser" /></icon> {{ abo }}
+              </li>
+            </ol>
+          </span>
+        </BcTooltip>
       </div>
       <div class="box-item">
-        <span class="big_text_label">Most Notifications in 24 Hours:</span>
-        <span class="big_text">{{ totalNotifications24h }}</span>
-        <span class="small_text">{{ mostNotifications24h.Email }} Email | {{ mostNotifications24h.Webhook }} Webhook | {{ mostNotifications24h.Push }} Push</span>
+        <BcTooltip :text="tooltipMost24h" position="top" tooltip-class="tooltip">
+          <span class="big_text_label">Most Notifications in 24 Hours:</span>
+          <span class="big_text">{{ totalNotifications24h }}</span>
+          <span class="small_text">{{ mostNotifications24h.Email }} Email | {{ mostNotifications24h.Webhook }} Webhook | {{ mostNotifications24h.Push }} Push</span>
+        </BcTooltip>
       </div>
     </div>
     <div v-else>
