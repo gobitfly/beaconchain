@@ -2,7 +2,6 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import BcTooltip from '../bc/BcTooltip.vue'
 import type { Feature } from '~/types/pricing'
 
 interface Props {

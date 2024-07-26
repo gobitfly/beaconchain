@@ -3,7 +3,6 @@ import { faArrowUpRightFromSquare, faSigma, faSnooze } from '@fortawesome/pro-so
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardValidatorEpochDutiesModal, IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
 import type { VDBGroupRewardsDetails, VDBRewardsTableRow } from '~/types/api/validator_dashboard'
-import type BcTooltip from '~/components/bc/BcTooltip.vue'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
 
 interface Props {

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { InternalEntry } from '~/types/notifications/subscriptionModal'
 
 const props = defineProps<{
@@ -15,7 +13,7 @@ const { t } = useI18n()
 
 const parentVmodel = defineModel<InternalEntry>({ required: true })
 
-const tooltipLines = computed(() => {
+const tOptions = computed(() => {
   let options
   if (props.valueInText !== undefined) {
     options = { plural: props.valueInText }
@@ -31,7 +29,7 @@ const tooltipLines = computed(() => {
       }
       options = { plural }
     }
-  return tAll(t, props.tPath + '.hint', options)
+  return options
 })
 
 const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
@@ -42,38 +40,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <span class="caption" :class="deactivationClass">
       {{ t(tPath+'.option') }}
     </span>
-    <BcTooltip v-if="tooltipLines[0]" :fit-content="true">
-      <FontAwesomeIcon :icon="faInfoCircle" class="info" />
-      <template #tooltip>
-        <div v-if="tPath.includes('is_validator_offline_subscribed')" class="tt-content">
-          {{ tooltipLines[0] }}
-          <ul>
-            <li>{{ tooltipLines[1] }}</li>
-            <li>{{ tooltipLines[2] }}</li>
-            <li>{{ tooltipLines[3] }}</li>
-          </ul>
-        </div>
-        <div v-else-if="tPath.includes('group_offline_threshold')" class="tt-content">
-          {{ tooltipLines[0] }}
-          <ul>
-            <li>{{ tooltipLines[1] }}</li>
-            <li>{{ tooltipLines[2] }}</li>
-            <li>{{ tooltipLines[3] }}</li>
-            <li>{{ tooltipLines[4] }}</li>
-          </ul>
-          <b>{{ tooltipLines[5] }}</b> {{ tooltipLines[6] }}
-        </div>
-        <div v-else-if="tPath.includes('is_ignore_spam_transactions_enabled')" class="tt-content">
-          {{ tooltipLines[0] }}
-          <b>{{ tooltipLines[1] }}</b>
-          {{ tooltipLines[2] }}
-          <b>{{ tooltipLines[3] }}</b>{{ tooltipLines[4] }}
-        </div>
-        <div v-else class="tt-content">
-          {{ tooltipLines[0] }}
-        </div>
-      </template>
-    </BcTooltip>
+    <BcTooltipInfoWithList :t-path="`${tPath}.hint`" :t-options="tOptions" />
     <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
     <div v-if="parentVmodel.type != 'networks'" class="right">
       <div v-if="parentVmodel.type == 'amount' || parentVmodel.type == 'percent'" class="input">

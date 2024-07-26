@@ -48,12 +48,13 @@
     "and_more": "and {count} more",
     "live": "Live",
     "current": "Current",
-    "upcoming": "Upcoming", 
+    "upcoming": "Upcoming",
     "past": "Past",
     "total": "Total",
     "selected": "Selected",
     "deselected": "Not selected",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "note": "Note"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -299,7 +300,7 @@
     "title": "Notifications",
     "login_question": "Do you want to login to set notifications?",
     "manage": "Manage Notifications",
-    "tabs":{
+    "tabs": {
       "general": "General",
       "dashboards": "Dashboards",
       "machines": "Machines",
@@ -309,90 +310,108 @@
     },
     "subscriptions": {
       "dialog_title": "Edit Subscriptions",
-      "validators" : {
+      "validators": {
         "explanation": "All notifications are sent after network finality (~{count} min).",
         "is_validator_offline_subscribed": {
           "option": "Validator is offline",
-          "hint": [
-            "We will trigger a notification:",
-            "Once the validator has been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online again."
-          ]
+          "hint": {
+            "title": "We will trigger a notification:",
+            "list": [
+              "Once the validator has been offline for 3 epochs.",
+              "Every 32 Epochs (~3 hours) during your downtime.",
+              "Once you are back online again."
+            ]
+          }
         },
         "group_offline_threshold": {
-          "option":"Group is offline",
-          "hint": [
-            "We will trigger a notification:",
-            "Once validators in your group are offline. | Once {count}% of your group is offline. | Once {count}% of your group is offline.",
-            "Once you have been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online.",
-            "Note:", "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
-          ],
+          "option": "Group is offline",
+          "hint": {
+            "title": "We will trigger a notification:",
+            "list": [
+              "Once validators in your group are offline. | Once {count}% of your group is offline. | Once {count}% of your group is offline.",
+              "Once you have been offline for 3 epochs.",
+              "Every 32 Epochs (~3 hours) during your downtime.",
+              "Once you are back online."
+            ],
+            "note": "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
+          },
           "placeholder": ""
         },
         "is_attestations_missed_subscribed": {
-          "option":"Attestations missed",
-          "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime."
+          "option": "Attestations missed",
+          "hint": {
+            "title": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime."
+          }
         },
         "is_block_proposal_subscribed": {
-          "option":"Block proposal (missed & success)"
+          "option": "Block proposal (missed & success)"
         },
         "is_upcoming_block_proposal_subscribed": {
-          "option":"Upcoming block proposal",
-          "hint": "May trigger false positive notifications during reorgs."
+          "option": "Upcoming block proposal",
+          "hint": {
+            "title": "May trigger false positive notifications during reorgs."
+          }
         },
         "is_sync_subscribed": {
-          "option":"Sync committee"
+          "option": "Sync committee"
         },
         "is_withdrawal_processed_subscribed": {
-          "option":"Withdrawal processed"
+          "option": "Withdrawal processed"
         },
         "is_slashed_subscribed": {
-          "option":"Validator got slashed"
+          "option": "Validator got slashed"
         },
         "is_real_time_mode_enabled": {
-          "option":"Realtime mode",
-          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
+          "option": "Realtime mode",
+          "hint": {
+            "title": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
+          }
         },
         "all": {
-          "option":"All events"
+          "option": "All events"
         }
       },
       "accounts": {
         "explanation": "",
         "is_incoming_transactions_subscribed": {
-          "option":"Incoming transactions"
+          "option": "Incoming transactions"
         },
         "is_outgoing_transactions_subscribed": {
-          "option":"Outgoing transactions"
+          "option": "Outgoing transactions"
         },
         "is_erc20_token_transfers_subscribed": {
-          "option":"ERC20 token transfers"
+          "option": "ERC20 token transfers"
         },
         "erc20_token_transfers_value_threshold": {
-          "option":"ERC20 token transfers",
+          "option": "ERC20 token transfers",
           "placeholder": "value ≥ $0"
         },
         "is_erc721_token_transfers_subscribed": {
-          "option":"ERC721 token transfers"
+          "option": "ERC721 token transfers"
         },
         "is_erc1155_token_transfers_subscribed": {
-          "option":"ERC1155 token transfers"
+          "option": "ERC1155 token transfers"
         },
         "all": {
-          "option":"All events"
+          "option": "All events"
         },
         "subscribed_chain_ids": {
-          "option":"Networks"
+          "option": "Networks"
         },
         "is_ignore_spam_transactions_enabled": {
-          "option":"Ignore spam transactions",
-          "hint": ["Ignores", "zero value transfer tx's", "and token tx's that have the", "\"hidden\" token label", "."]
+          "option": "Ignore spam transactions",
+          "hint": {
+            "title": [
+              "Ignores",
+              "zero value transfer tx's",
+              "and token tx's that have the",
+              "\"hidden\" token label",
+              "."
+            ]
+          }
         }
       },
-      "button":"Close",
+      "button": "Close",
       "error_title": "Error",
       "error_group": "Notification subscriptions",
       "error_message": "We could not save your preferences."
@@ -549,9 +568,9 @@
           "proposal_proposed": "Proposed",
           "proposal_missed": "Missed",
           "exiting": "Exiting",
-          "exited":"Exited",
-          "withdrawing":"Withdrawing",
-          "withdrawn":"Withdrawn"
+          "exited": "Exited",
+          "withdrawing": "Withdrawing",
+          "withdrawn": "Withdrawn"
         }
       },
       "blocks": {
@@ -684,10 +703,10 @@
             "proposal": "Proposal Eff."
           }
         },
-        "tooltip":{
+        "tooltip": {
           "lower": "{name}'s efficiency is below the network average of {average}",
           "higher": "{name}'s efficiency is above the network average of {average}",
-          "equal":"{name}'s OVH’s efficiency is at the network average of {average}",
+          "equal": "{name}'s OVH’s efficiency is at the network average of {average}",
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
@@ -737,7 +756,12 @@
     "password": "Password",
     "choose_password": "Choose a password",
     "confirm_password": "Confirm your password",
-    "please_agree": ["I agree to the", "Terms and Conditions", "and", "Privacy Policy"],
+    "please_agree": [
+      "I agree to the",
+      "Terms and Conditions",
+      "and",
+      "Privacy Policy"
+    ],
     "error_title": "Error",
     "error_login_group": "Cannot log in",
     "error_login_message": "your email or your password is unknown.",
@@ -999,7 +1023,7 @@
     "years": "{amount} year | {amount} years"
   },
   "validation": {
-    "email" : {
+    "email": {
       "empty": "Please enter your email address.",
       "invalid": "Please enter a valid email address.",
       "no_match": "The email addresses don't match."

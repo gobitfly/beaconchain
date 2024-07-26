@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import BcTooltip from '../BcTooltip.vue'
-
 interface Props {
   icon?: IconDefinition,
   falseIcon?: IconDefinition,
