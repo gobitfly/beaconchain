@@ -9,6 +9,7 @@ const props = defineProps<{ store: NotificationsOverview | null }>()
 // Computed properties for labels and values
 const emailNotificationStatus = computed(() => props.store?.EmailNotifications ? 'Active' : 'Inactive')
 const pushNotificationStatus = computed(() => props.store?.pushNotifications ? 'Active' : 'Inactive')
+const emailLimitCount = computed(() => props.store?.EmailLimitCount ?? 0) // Updated to use EmailLimitCount from store
 const mostNotifications30d = computed(() => {
   const providers = props.store?.mostNotifications30d.providers ?? []
   const abo = props.store?.mostNotifications30d.abo ?? []
@@ -18,64 +19,59 @@ const mostNotifications30d = computed(() => {
   }
 })
 const mostNotifications24h = computed(() => props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 })
-const emailLimitCount = computed(() => 8)
 const totalNotifications24h = computed(() => {
   const notifications = mostNotifications24h.value
   return notifications.Email + notifications.Webhook + notifications.Push
 })
 
 // Tooltip texts
-const tooltipEmail = 'You current limit is 10 emails per day.Your email limit resets in X hours. Upgrade to premium for more. '
-const tooltipPush = 'Push notifications status'
-const tooltipMost30d = 'Most notifications in the last 30 days'
-const tooltipMost24h = 'Most notifications in the last 24 hours'
+const tooltipEmail = 'Your current limit is ' + emailLimitCount.value + ' emails per day. Your email limit resets in X hours. Upgrade to premium for more.'
 </script>
 
 <template>
   <div class="container">
     <div v-if="props.store" class="box">
       <div class="box-item">
-        <BcTooltip :text="tooltipEmail" position="top" tooltip-class="tooltip">
-          <span class="big_text_label">Email Notifications:</span>
-          <span class="big_text">{{ emailNotificationStatus }}</span>
-        </BcTooltip>
-        <div v-if="emailNotificationStatus === 'Inactive'" class="premium-invitation small_text">
-          Click <a href="/notifications" class="inline-link">here</a> to activate <BcPremiumGem class="gem" />
+        <span class="big_text_label">Email Notifications:</span>
+        <span class="big_text">{{ emailNotificationStatus }}</span>
+        <div class="inline-items" v-if="emailNotificationStatus === 'Active'">
+          <!---TODO: change the info icon. --->
+          <span class="small_text">{{ emailLimitCount }}/10 per day</span>
+          <BcTooltip :text="tooltipEmail" position="top" tooltip-class="tooltip">
+            <FontAwesomeIcon :icon="faInfoCircle" />
+          </BcTooltip>
+          <BcPremiumGem class="gem" />
         </div>
-        <div v-else class="small_text">{{ emailLimitCount }}/10 per day</div>
-        <BcTooltip :text="tooltipEmail" position="top" tooltip-class="tooltip">
-          <FontAwesomeIcon :icon="faInfoCircle" />
-        </BcTooltip>
+        <div v-if="emailNotificationStatus === 'Inactive'" class="premium-invitation small_text">
+          Click <a href="/notifications" class="inline-link">here</a> to activate
+        </div>
       </div>
       <div class="box-item">
-        <BcTooltip :text="tooltipPush" position="top" tooltip-class="tooltip">
-          <span class="big_text_label">Push Notifications:</span>
-          <span class="big_text">{{ pushNotificationStatus }}</span>
-        </BcTooltip>
+        <span class="big_text_label">Push Notifications:</span>
+        <span class="big_text">{{ pushNotificationStatus }}</span>
+        <div v-if="pushNotificationStatus === 'Inactive'" class="push-invitation small_text">
+          Download the <a href="/notifications" class="inline-link">mobile app</a> to activate
+        </div>
       </div>
       <div class="box-item">
-        <BcTooltip :text="tooltipMost30d" position="top" tooltip-class="tooltip">
-          <span class="big_text_label">Most Notifications in 30 Days:</span>
-          <span class="lists-container">
-            <ol class="icon-list">
-              <li v-for="(provider, index) in mostNotifications30d.providers" :key="'provider-' + index" class="small_text">
-                <icon><FontAwesomeIcon :icon="faDesktop" /></icon> {{ provider }}
-              </li>
-            </ol>
-            <ol class="icon-list">
-              <li v-for="(abo, index) in mostNotifications30d.abo" :key="'abo-' + index" class="small_text">
-                <icon><FontAwesomeIcon :icon="faUser" /></icon> {{ abo }}
-              </li>
-            </ol>
-          </span>
-        </BcTooltip>
+        <span class="big_text_label">Most Notifications in 30 Days:</span>
+        <span class="lists-container">
+          <ol class="icon-list">
+            <li v-for="(provider, index) in mostNotifications30d.providers" :key="'provider-' + index" class="small_text">
+              <icon><FontAwesomeIcon :icon="faDesktop" /></icon> {{ provider }}
+            </li>
+          </ol>
+          <ol class="icon-list">
+            <li v-for="(abo, index) in mostNotifications30d.abo" :key="'abo-' + index" class="small_text">
+              <icon><FontAwesomeIcon :icon="faUser" /></icon> {{ abo }}
+            </li>
+          </ol>
+        </span>
       </div>
       <div class="box-item">
-        <BcTooltip :text="tooltipMost24h" position="top" tooltip-class="tooltip">
-          <span class="big_text_label">Most Notifications in 24 Hours:</span>
-          <span class="big_text">{{ totalNotifications24h }}</span>
-          <span class="small_text">{{ mostNotifications24h.Email }} Email | {{ mostNotifications24h.Webhook }} Webhook | {{ mostNotifications24h.Push }} Push</span>
-        </BcTooltip>
+        <span class="big_text_label">Most Notifications in 24 Hours:</span>
+        <span class="big_text">{{ totalNotifications24h }}</span>
+        <span class="small_text">{{ mostNotifications24h.Email }} Email | {{ mostNotifications24h.Webhook }} Webhook | {{ mostNotifications24h.Push }} Push</span>
       </div>
     </div>
     <div v-else>
@@ -128,6 +124,12 @@ const tooltipMost24h = 'Most notifications in the last 24 hours'
   gap: 10px;
 }
 
+.inline-items {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 a:hover {
   color: var(--light-blue);
 }
@@ -162,6 +164,12 @@ a:hover {
 }
 
 .premium-invitation {
+  display: flex;
+  align-items: center;
+  gap: 5px; /* Adjust the gap as needed */
+}
+
+.push-invitation {
   display: flex;
   align-items: center;
   gap: 5px; /* Adjust the gap as needed */
