@@ -5,21 +5,21 @@ interface Props {
   text?: string, // for already formatted numbers
   minDecimals?: number, // defaults to 0
   maxDecimals?: number, // defaults to 2
-  default?: number | string // used if value is not defined
+  default?: number | string, // used if value is not defined
 }
 const props = defineProps<Props>()
 
-const label = computed(() => {
+function renderer (props: Props) : Array<VNode|string> {
   if (props.text?.length) {
-    return formattedNumberToHtml(props.text)
+    return formattedNumberToVDOM(props.text)
   }
   if (props.value === undefined || props.value === '') {
-    return props.default
+    return props.default === undefined ? [] : [String(props.default)]
   }
-  return formattedNumberToHtml(trim(props.value, props.maxDecimals ?? 2, props.minDecimals ?? 0))
-})
+  return formattedNumberToVDOM(trim(props.value, props.maxDecimals ?? 2, props.minDecimals ?? 0))
+}
 </script>
+
 <template>
-  <!-- eslint-disable-next-line vue/no-v-html -->
-  <span v-if="label" v-html="label" />
+  <span><renderer v-bind="props" /></span>
 </template>

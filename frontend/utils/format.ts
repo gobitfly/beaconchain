@@ -165,8 +165,9 @@ export function formatEpochToDate (chainId: ChainIDs, epoch: number, locales: st
   return formatEpochToDateTime(chainId, epoch, undefined, 'absolute', undefined, locales, false)
 }
 
-export function formattedNumberToHtml (value?:string):string | undefined {
-  return value?.split(',').join("<span class='comma' />")
+export function formattedNumberToVDOM (value?:string) : Array<VNode|string> {
+  if (!value) { return [] }
+  return value.split(',').map((part, i) => (i === 0) ? part : h('span', { class: 'comma' }, part))
 }
 
 export function formatTimeDuration (seconds: number | undefined, t: ComposerTranslation) : string | undefined {

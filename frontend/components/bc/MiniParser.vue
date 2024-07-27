@@ -5,16 +5,19 @@
  *
  *    Simplest case:
  *      <BcMiniParser :input="stringOrArrayOfStrings" />
- *    You can pass an object containing variables whose values will be inserted:
- *      <BcMiniParser :input="stringOrArrayOfStrings" :variables="{darkLink: 'www.choco.com', easterDuration: 50}" />
- *    (see the example just below to see how to use the variables)
+ *    You can pass an object containing values and even components that will be inserted:
+ *      <BcMiniParser
+ *       :input="stringOrArrayOfStrings"
+ *       :insertions="{ darkLink: 'www.choco.com', mySuperInsertion: { comp: BcFormatNumber, props: {value: 50.111, maxDecimals: 0} }"
+ *      />
+ *    (see the example just below to see how to refer to :insertions in the input)
  *
  *  Example of input:
  *
  *    # About chocolate
  *    We will eat `chocolate` in 2 cases:
- *    - If your *validator* is _online_
- *    - During the $easterDuration days of Easter\*.
+ *    - If *your validator* is _online_
+ *    - During the $mySuperInsertion days of Easter\*.
  *    It can be [very dark]($darkLink) or with milk, we enjoy both.
  *    \*note that Christmas is also _a good moment_ to do so
  *
@@ -27,8 +30,7 @@
  *      parts surrounded with _ will be surrounded with <i> tags
  *      parts surrounded with * will be surrounded with <b> tags
  *      parts surrounded with ` will be shown with a type-writter font and not parsed (formatting tags between ` and ` are ineffective)
- *      a link can be created by writing [a caption](and-a-url). The url can written directly or come from an entry in the object in prop :variables.
- *    When numbers are inserted from prop :variables, they are formatted according to the local settings of the user.
+ *      a link can be created by writing [a caption](and-a-url). The url can written directly or come from an entry in the object of prop :insertions.
  *    Mixes are possible: italic inside bold or bold inside italic, code in italic or bold (if you surround ` and ` with the tags)...
  *
  *    If you need to display a character that is a tag, escape it with `\` and the parser will not interpret it.
@@ -47,24 +49,26 @@
  *      <BcMiniParser ... class="my-own-bi" />
 */
 
-import { type VNode } from 'vue'
 import { BcLink } from '#components'
 import { Target } from '~/types/links'
 
 const Escapement = '\\'
-enum Tag { H1 = '#', H2 = '##', H3 = '###', Item = '-', Italic = '_', Bold = '*', Code = '`', LinkStart = '[', LinkMid = '](', LinkEnd = ')', Variable = '$' }
-const OpeningTags = [Tag.Italic, Tag.Bold, Tag.Code, Tag.LinkStart]
-const ClosingTags: Record<string, Tag> = { [Tag.Italic]: Tag.Italic, [Tag.Bold]: Tag.Bold, [Tag.Code]: Tag.Code, [Tag.LinkStart]: Tag.LinkEnd }
+enum Tag { H1 = '#', H2 = '##', H3 = '###', Item = '-', Italic = '_', Bold = '*', Code = '`', LinkStart = '[', LinkMid = '](', LinkEnd = ')', Variable = '$', None = '' }
+const OpeningTags = [Tag.Italic, Tag.Bold, Tag.Code, Tag.LinkStart, Tag.Variable]
+const ClosingTags: Record<string, Tag> = { [Tag.Italic]: Tag.Italic, [Tag.Bold]: Tag.Bold, [Tag.Code]: Tag.Code, [Tag.LinkStart]: Tag.LinkEnd, [Tag.Variable]: Tag.None }
 
-const props = defineProps<{ input: string|string[], variables?: Record<string, string> }>()
-
+type Insertion = string | number | {comp: Component, props: Object}
+type Props = { input: string|string[], insertions?: Record<string, Insertion> }
 type VDOMnodes = Array<VNode|string>
 enum LineType { Useless, Blank, Title, List, Div }
 const ESC = '\u001B'
 const inputArray = { lines: [] as string[], pos: 0 as number }
-const variableNamesSortedByLength = !props.variables ? [] : Object.keys(props.variables).sort((a, b) => b.length - a.length)
+let variablesSortedByLength: Array<[string, Insertion]> = []
 
-function parse (props: {input: string|string[]}) : VDOMnodes {
+defineProps<Props>()
+
+function parse (props: Props) : VDOMnodes {
+  variablesSortedByLength = !props.insertions ? [] : Object.entries(props.insertions).sort((a, b) => b[0].length - a[0].length)
   if (!Array.isArray(props.input)) {
     if (typeof props.input !== 'string') { return [] }
     inputArray.lines = (props.input.includes('\r\n')) ? props.input.split('\r\n') : props.input.split('\n')
@@ -114,22 +118,29 @@ function parseText (text: string) : VDOMnodes {
   const output: VDOMnodes = []
   do {
     const { pos: openingTagPos, tag: openingTag } = findTag(text, 0)
-    const { pos: closingTagPos } = findTag(text, openingTagPos + openingTag.length, ClosingTags[openingTag])
-    if (openingTagPos < 0 || closingTagPos < 0) { // First case: no tag, we can copy the raw line. Second case: syntax error (either the closing tag has been forgotten or nested tags have their closure swapped)
-      output.push(cleanText(text)) // in both cases we output the text without parsing it
-      break
+    let part: VNode|string
+    let endOfPart: number
+    if (openingTag === Tag.Variable) {
+      [endOfPart, part] = getInsertionValue(text, openingTagPos, true)
+    } else {
+      endOfPart = findTag(text, openingTagPos + openingTag.length, ClosingTags[openingTag]).pos
+      if (openingTagPos < 0 || endOfPart < 0) { // First case: no tag, we can copy the raw line. Second case: syntax error (either the closing tag has been forgotten or nested tags have their closure swapped)
+        output.push(cleanText(text)) // in both cases we output the text without parsing it
+        break
+      }
+      part = text.slice(openingTagPos + openingTag.length, endOfPart)
     }
     if (openingTagPos > 0) {
       output.push(cleanText(text.slice(0, openingTagPos)))
     }
-    const middle = text.slice(openingTagPos + openingTag.length, closingTagPos)
     switch (openingTag) {
-      case Tag.Italic : output.push(h('i', {}, parseText(middle))); break
-      case Tag.Bold : output.push(h('b', {}, parseText(middle))); break
-      case Tag.Code : output.push(h('span', { style: 'font-family: monospace;' }, cleanText(middle, true))); break
-      case Tag.LinkStart : output.push(parseLink(middle)); break
+      case Tag.Italic : output.push(h('i', {}, parseText(part as string))); break
+      case Tag.Bold : output.push(h('b', {}, parseText(part as string))); break
+      case Tag.Code : output.push(h('span', { style: 'font-family: monospace;' }, cleanText(part as string, true))); break
+      case Tag.LinkStart : output.push(parseLink(part as string)); break
+      case Tag.Variable : output.push((typeof part === 'string') ? h('span', {}, part) : part); break
     }
-    text = text.slice(closingTagPos + ClosingTags[openingTag].length)
+    text = text.slice(endOfPart + ClosingTags[openingTag].length)
   } while (text)
   return output
 }
@@ -141,7 +152,7 @@ function parseLink (text: string) : VNode|string {
     return cleanText(text)
   }
   const urlRef = text.slice(middleTagPos + Tag.LinkMid.length)
-  const to = urlRef.startsWith(Tag.Variable) ? getVariableValue(urlRef) : urlRef
+  const to = urlRef.startsWith(Tag.Variable) ? getInsertionValue(urlRef, 0, false)[1] as string : urlRef
   const target = (to.includes('://') || to.startsWith('www.')) ? Target.External : Target.Internal // correct 99% of the time I suppose
   return h(BcLink, { to, target, class: 'link' }, () => parseText(text.slice(0, middleTagPos)))
 }
@@ -195,13 +206,17 @@ function cleanText (raw: string, forceSpaces = false) : string {
   return raw.replaceAll(ESC, '')
 }
 
-function getVariableValue (name: string) : any {
-  if (!props.variables) { return name }
-  const key = name.startsWith(Tag.Variable) ? name.slice(Tag.Variable.length) : name
-  for (const v of variableNamesSortedByLength) {
-    if (key.startsWith(v)) { return props.variables[v] }
+/** @returns [index of the character just after the variable, variable value] */
+function getInsertionValue (variable: string, start: number, stopAtTagIfNotFound: boolean) : [number, VNode|string] {
+  for (const v of variablesSortedByLength) {
+    if (variable.startsWith(v[0], start + Tag.Variable.length)) {
+      return [
+        start + Tag.Variable.length + v[0].length,
+        (typeof v[1] !== 'object') ? String(v[1]) : h(v[1].comp, v[1].props)
+      ]
+    }
   }
-  return name
+  return stopAtTagIfNotFound ? [start + Tag.Variable.length, Tag.Variable] : [variable.length, variable.slice(start)]
 }
 
 function getTitleType (pos: number) : { height: number, tag: Tag } | undefined {
@@ -224,7 +239,7 @@ function getLineType () : LineType {
 
 <template>
   <div>
-    <parse :input="props.input" />
+    <parse :input="input" :insertions="insertions" />
   </div>
 </template>
 
