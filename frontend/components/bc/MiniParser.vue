@@ -5,19 +5,22 @@
  *
  *    Simplest case:
  *      <BcMiniParser :input="stringOrArrayOfStrings" />
- *    You can pass an object containing values and even components that will be inserted:
+ *    You can pass an object containing values and even components, they will be inserted in the text each time the input refers to them:
  *      <BcMiniParser
  *       :input="stringOrArrayOfStrings"
- *       :insertions="{ darkLink: 'www.choco.com', mySuperInsertion: { comp: BcFormatNumber, props: {value: 50.111, maxDecimals: 0} }"
+ *       :insertions="{ darkLink: 'www.choco.com', aSuperComponent: { comp: BcFormatNumber, props: {value: 50.111, maxDecimals: 0} }"
  *      />
- *    (see the example just below to see how to refer to :insertions in the input)
+ *      See the example below to see how to refer to the entries of :insertions in the input.
+ *    If the text has links (see the two sections below for the syntax), the parser decides automatically to open them in the same window
+ *    or in a new window according to the form of the URL, unless you force the targets with this optional prop:
+ *      link-target="_blank" or "_self"
  *
  *  Example of input:
  *
  *    # About chocolate
  *    We will eat `chocolate` in 2 cases:
  *    - If *your validator* is _online_
- *    - During the $mySuperInsertion days of Easter\*.
+ *    - During the $aSuperComponent days of Easter\*.
  *    It can be [very dark]($darkLink) or with milk, we enjoy both.
  *    \*note that Christmas is also _a good moment_ to do so
  *
@@ -30,7 +33,7 @@
  *      parts surrounded with _ will be surrounded with <i> tags
  *      parts surrounded with * will be surrounded with <b> tags
  *      parts surrounded with ` will be shown with a type-writter font and not parsed (formatting tags between ` and ` are ineffective)
- *      a link can be created by writing [a caption](and-a-url). The url can written directly or come from an entry in the object of prop :insertions.
+ *      links can be created by writing [a caption](and-a-url). The url can written directly or come from an entry in prop :insertions.
  *    Mixes are possible: italic inside bold or bold inside italic, code in italic or bold (if you surround ` and ` with the tags)...
  *
  *    If you need to display a character that is a tag, escape it with `\` and the parser will not interpret it.
@@ -40,7 +43,7 @@
  *  About <i> and <b>:
  *
  *    Depending on the stylesheet of your website, those tags might not display your text in italic and bold.
- *    If you want to force them to display italic and bold text against the style preferences of your website, you can define a class like so:
+ *    If you want to force them to display italic and bold texts against the style preferences of your website, you can define a class like so:
  *      .my-own-bi {
  *        :deep(i) { font-style: italic }
  *        :deep(b) { font-weight: bold }
@@ -65,7 +68,7 @@ const ESC = '\u001B'
 const inputArray = { lines: [] as string[], pos: 0 as number }
 let insertionsSortedByKeyLength: Array<[string, InsertionValue]> = []
 
-defineProps<Props>()
+const props = defineProps<Props & {linkTarget?: `${Target}`}>()
 
 function parse (props: Props) : VDOMnodes {
   insertionsSortedByKeyLength = !props.insertions ? [] : Object.entries(props.insertions).sort((a, b) => b[0].length - a[0].length)
@@ -153,7 +156,7 @@ function parseLink (text: string) : VNode|string {
   }
   const urlRef = text.slice(middleTagPos + Tag.LinkMid.length)
   const to = urlRef.startsWith(Tag.Variable) ? getInsertionValue(urlRef, 0, false)[1] as string : urlRef
-  const target = (to.includes('://') || to.startsWith('www.')) ? Target.External : Target.Internal // correct 99% of the time I suppose
+  const target = props.linkTarget ?? (to.includes('://') || to.startsWith('www.') ? Target.External : Target.Internal) // correct 99% of the time I suppose
   return h(BcLink, { to, target, class: 'link' }, () => parseText(text.slice(0, middleTagPos)))
 }
 
