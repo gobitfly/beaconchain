@@ -57,18 +57,18 @@ enum Tag { H1 = '#', H2 = '##', H3 = '###', Item = '-', Italic = '_', Bold = '*'
 const OpeningTags = [Tag.Italic, Tag.Bold, Tag.Code, Tag.LinkStart, Tag.Variable]
 const ClosingTags: Record<string, Tag> = { [Tag.Italic]: Tag.Italic, [Tag.Bold]: Tag.Bold, [Tag.Code]: Tag.Code, [Tag.LinkStart]: Tag.LinkEnd, [Tag.Variable]: Tag.None }
 
-type Insertion = string | number | {comp: Component, props: Object}
-type Props = { input: string|string[], insertions?: Record<string, Insertion> }
+type InsertionValue = string | number | {comp: Component, props: Object}
+type Props = { input: string|string[], insertions?: Record<string, InsertionValue> }
 type VDOMnodes = Array<VNode|string>
 enum LineType { Useless, Blank, Title, List, Div }
 const ESC = '\u001B'
 const inputArray = { lines: [] as string[], pos: 0 as number }
-let variablesSortedByLength: Array<[string, Insertion]> = []
+let insertionsSortedByKeyLength: Array<[string, InsertionValue]> = []
 
 defineProps<Props>()
 
 function parse (props: Props) : VDOMnodes {
-  variablesSortedByLength = !props.insertions ? [] : Object.entries(props.insertions).sort((a, b) => b[0].length - a[0].length)
+  insertionsSortedByKeyLength = !props.insertions ? [] : Object.entries(props.insertions).sort((a, b) => b[0].length - a[0].length)
   if (!Array.isArray(props.input)) {
     if (typeof props.input !== 'string') { return [] }
     inputArray.lines = (props.input.includes('\r\n')) ? props.input.split('\r\n') : props.input.split('\n')
@@ -98,7 +98,7 @@ function parseTitle () : VNode {
 function parseList () : VNode {
   const items : VDOMnodes = []
   while (inputArray.pos < inputArray.lines.length && getLineType() === LineType.List) {
-    items.push(h('li', {}, parseText(inputArray.lines[inputArray.pos].slice(Tag.Item.length)))) // new item
+    items.push(h('li', {}, parseText(inputArray.lines[inputArray.pos].slice(Tag.Item.length))))
     inputArray.pos++
   }
   return h('ul', {}, items)
@@ -206,17 +206,17 @@ function cleanText (raw: string, forceSpaces = false) : string {
   return raw.replaceAll(ESC, '')
 }
 
-/** @returns [index of the character just after the variable, variable value] */
-function getInsertionValue (variable: string, start: number, stopAtTagIfNotFound: boolean) : [number, VNode|string] {
-  for (const v of variablesSortedByLength) {
-    if (variable.startsWith(v[0], start + Tag.Variable.length)) {
+/** @returns [index of the character just after the key in `keyAndRest`, value to insert] */
+function getInsertionValue (keyAndRest: string, start: number, stopAtTagIfNotFound: boolean) : [number, VNode|string] {
+  for (const v of insertionsSortedByKeyLength) {
+    if (keyAndRest.startsWith(v[0], start + Tag.Variable.length)) {
       return [
         start + Tag.Variable.length + v[0].length,
         (typeof v[1] !== 'object') ? String(v[1]) : h(v[1].comp, v[1].props)
       ]
     }
   }
-  return stopAtTagIfNotFound ? [start + Tag.Variable.length, Tag.Variable] : [variable.length, variable.slice(start)]
+  return stopAtTagIfNotFound ? [start + Tag.Variable.length, Tag.Variable] : [keyAndRest.length, keyAndRest.slice(start)]
 }
 
 function getTitleType (pos: number) : { height: number, tag: Tag } | undefined {
