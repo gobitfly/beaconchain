@@ -155,7 +155,7 @@ function parseLink (text: string) : VNode|string {
     return cleanText(text)
   }
   const urlRef = text.slice(middleTagPos + Tag.LinkMid.length)
-  const to = urlRef.startsWith(Tag.Variable) ? getInsertionValue(urlRef, 0, false)[1] as string : urlRef
+  const to = urlRef.startsWith(Tag.Variable) ? String(getInsertionValue(urlRef, 0, false)[1]) : urlRef
   const target = props.linkTarget ?? (to.includes('://') || to.startsWith('www.') ? Target.External : Target.Internal) // correct 99% of the time I suppose
   return h(BcLink, { to, target, class: 'link' }, () => parseText(text.slice(0, middleTagPos)))
 }
