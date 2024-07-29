@@ -45,33 +45,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <BcTooltip v-if="tooltipLines[0]" :fit-content="true">
       <FontAwesomeIcon :icon="faInfoCircle" class="info" />
       <template #tooltip>
-        <div v-if="tPath.includes('is_validator_offline_subscribed')" class="tt-content">
-          {{ tooltipLines[0] }}
-          <ul>
-            <li>{{ tooltipLines[1] }}</li>
-            <li>{{ tooltipLines[2] }}</li>
-            <li>{{ tooltipLines[3] }}</li>
-          </ul>
-        </div>
-        <div v-else-if="tPath.includes('group_offline_threshold')" class="tt-content">
-          {{ tooltipLines[0] }}
-          <ul>
-            <li>{{ tooltipLines[1] }}</li>
-            <li>{{ tooltipLines[2] }}</li>
-            <li>{{ tooltipLines[3] }}</li>
-            <li>{{ tooltipLines[4] }}</li>
-          </ul>
-          <b>{{ tooltipLines[5] }}</b> {{ tooltipLines[6] }}
-        </div>
-        <div v-else-if="tPath.includes('is_ignore_spam_transactions_enabled')" class="tt-content">
-          {{ tooltipLines[0] }}
-          <b>{{ tooltipLines[1] }}</b>
-          {{ tooltipLines[2] }}
-          <b>{{ tooltipLines[3] }}</b>{{ tooltipLines[4] }}
-        </div>
-        <div v-else class="tt-content">
-          {{ tooltipLines[0] }}
-        </div>
+        <BcMiniParser :input="tooltipLines" class="tt-content" />
       </template>
     </BcTooltip>
     <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
@@ -170,11 +144,6 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
   width: 220px;
   min-width: 100%;
   text-align: left;
-  ul {
-    padding: 0;
-    margin: 0;
-    padding-left: 1.4em;
-  }
   .italic {
     font-style: italic;
   }

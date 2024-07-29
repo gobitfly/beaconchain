@@ -18,7 +18,7 @@ const data = computed(() => {
 
   const status = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0) ? 'scheduled-past' : slot.status
 
-  const networkLabelPath = `slotViz.tooltip.network.${status}`
+  const networkLabel = $t(`slotViz.tooltip.network.${status}`)
 
   const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
   let hasSuccessDuties = false
@@ -150,7 +150,7 @@ const data = computed(() => {
 
   return {
     stateLabel,
-    networkLabelPath,
+    networkLabel,
     rows,
     hasDuties,
     minWidth: (1 + (`${maxCount}`.length) * 11) + 'px'
@@ -164,7 +164,7 @@ const data = computed(() => {
       <div class="with-duties">
         <div class="rows">
           <div class="row network">
-            <BcMiniParser :input="data.networkLabelPath" :insertions="{ slotUrl: `/slot/${props.data.slot}`, slotNum: { comp: BcFormatNumber, props: { value: props.data.slot } }}" />
+            <BcMiniParser :input="data.networkLabel" :insertions="{ slotUrl: `/slot/${props.data.slot}`, slotNum: { comp: BcFormatNumber, props: { value: props.data.slot } }}" link-target="_blank" />
           </div>
           <!--eslint-disable-next-line vue/no-v-html-->
           <div class="row state" v-html="data.stateLabel" />

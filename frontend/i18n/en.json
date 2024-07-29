@@ -315,20 +315,20 @@
           "option": "Validator is offline",
           "hint": [
             "We will trigger a notification:",
-            "Once the validator has been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online again."
+            "- Once the validator has been offline for 3 epochs.",
+            "- Every 32 Epochs (~3 hours) during your downtime.",
+            "- Once you are back online again."
           ]
         },
         "group_offline_threshold": {
           "option":"Group is offline",
           "hint": [
             "We will trigger a notification:",
-            "Once validators in your group are offline. | Once {count}% of your group is offline. | Once {count}% of your group is offline.",
-            "Once you have been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online.",
-            "Note:", "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
+            "- Once validators in your group are offline. | - Once {count}% of your group is offline. | - Once {count}% of your group is offline.",
+            "- Once you have been offline for 3 epochs.",
+            "- Every 32 Epochs (~3 hours) during your downtime.",
+            "- Once you are back online.",
+            "*Note:* Notification resets if you do not meet the threshold given in the input field. | *Note:* Notification resets if you do not meet the threshold of {count}%. | *Note:* Notification resets if you do not meet the threshold of {count}%."
           ],
           "placeholder": ""
         },
@@ -389,7 +389,7 @@
         },
         "is_ignore_spam_transactions_enabled": {
           "option":"Ignore spam transactions",
-          "hint": ["Ignores", "zero value transfer tx's", "and token tx's that have the", "\"hidden\" token label", "."]
+          "hint": ["Ignores *zero value transfer tx's* and token tx's that have the *\"hidden\" token label*."]
         }
       },
       "button":"Close",
