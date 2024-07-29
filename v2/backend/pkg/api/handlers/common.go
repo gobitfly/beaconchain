@@ -773,41 +773,35 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 
 	var data []types.VDBSummaryValidatorsData
 	// Helper function to create a VDBValidatorIndices and append to data
-	appendData := func(category string, validators []uint64) {
-		validatorsData := make([]types.VDBSummaryValidator, len(validators))
-		for i, validatorIndex := range validators {
-			validatorsData[i] = types.VDBSummaryValidator{Index: validatorIndex}
-		}
-		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   category,
-			Validators: validatorsData,
-		})
-	}
 
 	switch v := indices.(type) {
 	case *types.VDBGeneralSummaryValidators:
-		appendData("online", v.Online)
-		appendData("offline", v.Offline)
-		appendData("deposited", v.Deposited)
-		pendingValidators := make([]types.VDBSummaryValidator, len(v.Pending))
-		for i, validator := range v.Pending {
-			pendingValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Timestamp}}
-		}
-		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   "pending",
-			Validators: pendingValidators,
-		})
+		// deposited, online, offline, slashing, slashed, exited, withdrawn, pending, exiting, withdrawing
+		data = append(data,
+			mapUintSlice("deposited", v.Deposited),
+			mapUintSlice("online", v.Online),
+			mapUintSlice("offline", v.Offline),
+			mapUintSlice("slashing", v.Slashing),
+			mapUintSlice("slashed", v.Slashed),
+			mapUintSlice("exited", v.Exited),
+			mapUintSlice("withdrawn", v.Withdrawn),
+			mapIndexTimestampSlice("pending", v.Pending),
+			mapIndexTimestampSlice("exiting", v.Exiting),
+			mapIndexTimestampSlice("withdrawing", v.Withdrawing),
+		)
 		return data, nil
 
 	case *types.VDBSyncSummaryValidators:
-		appendData("sync_current", v.Current)
-		appendData("sync_upcoming", v.Upcoming)
+		data = append(data,
+			mapUintSlice("sync_current", v.Current),
+			mapUintSlice("sync_upcoming", v.Current),
+		)
 		pastValidators := make([]types.VDBSummaryValidator, len(v.Past))
 		for i, validator := range v.Past {
 			pastValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Count}}
 		}
 		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   "pending",
+			Category:   "sync_past",
 			Validators: pastValidators,
 		})
 		return data, nil
@@ -820,6 +814,27 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 
 	default:
 		return nil, fmt.Errorf("unsupported indices type")
+	}
+}
+func mapUintSlice(category string, validators []uint64) types.VDBSummaryValidatorsData {
+	validatorsData := make([]types.VDBSummaryValidator, len(validators))
+	for i, validatorIndex := range validators {
+		validatorsData[i] = types.VDBSummaryValidator{Index: validatorIndex}
+	}
+	return types.VDBSummaryValidatorsData{
+		Category:   category,
+		Validators: validatorsData,
+	}
+}
+
+func mapIndexTimestampSlice(category string, validators []types.IndexTimestamp) types.VDBSummaryValidatorsData {
+	validatorsData := make([]types.VDBSummaryValidator, len(validators))
+	for i, validator := range validators {
+		validatorsData[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Timestamp}}
+	}
+	return types.VDBSummaryValidatorsData{
+		Category:   category,
+		Validators: validatorsData,
 	}
 }
 

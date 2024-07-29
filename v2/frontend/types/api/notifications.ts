@@ -203,6 +203,7 @@ export type InternalPutUserNotificationSettingsAccountDashboardResponse = ApiDat
 export interface NotificationSettingsDashboardsTableRow {
   is_account_dashboard: boolean; // if false it's a validator dashboard
   dashboard_id: number /* uint64 */;
+  group_id: number /* uint64 */;
   group_name: string;
   /**
    * if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
