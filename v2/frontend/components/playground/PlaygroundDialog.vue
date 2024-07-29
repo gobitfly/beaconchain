@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BcDialogConfirm, NotificationsSubscriptionDialog } from '#components'
+import { BcDialogConfirm, NotificationsManagementSubscriptionDialog } from '#components'
 import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
 
 const dialog = useDialog()
@@ -51,7 +51,7 @@ const accountSub: NotificationSettingsAccountDashboard = {
 }
 
 function openSubscriptions (props: any) {
-  dialog.open(NotificationsSubscriptionDialog, {
+  dialog.open(NotificationsManagementSubscriptionDialog, {
     data: props,
     onClose: response => onClose(response?.data)
   })
