@@ -1016,13 +1016,13 @@ func (d *DataAccessService) GetLatestExportedChartTs(aggregation enums.ChartAggr
 	}
 
 	query := fmt.Sprintf(`SELECT max(%s) FROM holesky.%s`, dateColumn, table)
-	var ts uint64
+	var ts time.Time
 	err := d.clickhouseReader.Get(&ts, query)
 	if err != nil {
 		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %v", err)
 	}
 
-	return ts, nil
+	return uint64(ts.Unix()), nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
