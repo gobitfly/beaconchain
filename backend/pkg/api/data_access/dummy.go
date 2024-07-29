@@ -618,3 +618,9 @@ func (d *DummyService) UpdateAdConfiguration(ctx context.Context, key, jquerySel
 func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) error {
 	return nil
 }
+
+func (d *DummyService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
