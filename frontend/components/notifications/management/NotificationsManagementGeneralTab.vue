@@ -31,7 +31,7 @@ const unmuteNotifications = () => {
   timestampMute.value = 0
 }
 
-const setMuteNotifications = (value: number) => {
+const muteNotifications = (value: number) => {
   if (value === Number.MAX_SAFE_INTEGER) {
     timestampMute.value = Number.MAX_SAFE_INTEGER
     return
@@ -103,7 +103,7 @@ const mutedUntilText = computed(() => {
         option-value="value"
         option-label="label"
         panel-class="mute-notifications-dropdown-panel"
-        @update:model-value="(value: number)=>setMuteNotifications(value)"
+        @update:model-value="(value: number)=>muteNotifications(value)"
       >
         <template #value>
           {{ $t('notifications.general.mute.select_duration') }}
