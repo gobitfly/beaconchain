@@ -105,7 +105,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
 				} else {
 					// The cursor is on a specific group so get the data for groups before/after it
-					ds = ds.Where(goqu.L(fmt.Sprintf("e.epoch %[1]s ? OR (e.epoch = ? AND v.group_id %[1]s ?)", sortSearchDirection),
+					ds = ds.Where(goqu.L(fmt.Sprintf("(e.epoch %[1]s ? OR (e.epoch = ? AND v.group_id %[1]s ?))", sortSearchDirection),
 						currentCursor.Epoch, currentCursor.Epoch, currentCursor.GroupId))
 				}
 			}

@@ -12,7 +12,7 @@ const props = defineProps({
   harmonizePerceivedSize: { type: Boolean, default: false } // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
 })
 
-const family = computed(() => ChainInfo[props.chainId as ChainIDs].family)
+const family = computed(() => (props.chainId in ChainInfo) ? ChainInfo[props.chainId as ChainIDs].family : ChainFamily.Ethereum)
 const coloring = computed(() => !props.colored ? 'monochromatic' : (colorMode.value !== 'dark' || props.doNotAdaptToColorTheme ? '' : 'pastel'))
 const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
 </script>
