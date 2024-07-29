@@ -121,9 +121,9 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: W
 async function saveUserSettings (settingsAndContext: SettingsWithContext) {
   let response: ApiErrorResponse | undefined
   try {
-    setTimeout(TimeoutForSavingFailures)
     response = await fetch<ApiErrorResponse>(API_PATH.SAVE_DASHBOARDS_SETTINGS, {
       method: 'PUT',
+      signal = AbortSignal.timeout(TimeoutForSavingFailures),
       body: { ...settingsAndContext.row.settings, ...settingsAndContext.settings }
     }, {
       for: settingsAndContext.row.dashboard_type,
