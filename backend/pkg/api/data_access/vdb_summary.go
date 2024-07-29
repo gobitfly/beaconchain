@@ -853,7 +853,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 				COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
 			FROM holesky.%[1]s d
 			WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
-			GROUP BY $[2]s;
+			GROUP BY %[2]s;
 		`, dataTable, dateColumn)
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Validators)
 		if err != nil {
