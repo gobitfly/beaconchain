@@ -851,7 +851,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 				COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
 				COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 				COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-			FROM holesky.%[1]s d
+			FROM %[1]s d
 			WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
 			GROUP BY %[2]s;
 		`, dataTable, dateColumn)
@@ -873,7 +873,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
 			COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-		FROM holesky.%[1]s d
+		FROM %[1]s d
 		INNER JOIN validators v ON d.validator_index = v.validator_index
 		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
 		GROUP BY 1, 2;`, dataTable, dateColumn)
@@ -1015,7 +1015,7 @@ func (d *DataAccessService) GetLatestExportedChartTs(aggregation enums.ChartAggr
 		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
 	}
 
-	query := fmt.Sprintf(`SELECT max(%s) FROM holesky.%s`, dateColumn, table)
+	query := fmt.Sprintf(`SELECT max(%s) FROM %s`, dateColumn, table)
 	var ts time.Time
 	err := d.clickhouseReader.Get(&ts, query)
 	if err != nil {
