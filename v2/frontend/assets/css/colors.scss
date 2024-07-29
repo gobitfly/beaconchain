@@ -64,10 +64,10 @@
   --button-text-color-disabled: var(--grey-4);
   --button-text-color-dangerous: var(--white);
 
-  --secondary-button-color: var(--light-black);
-  --secondary-button-hover-color: var(--light-grey-6);
-  --secondary-button-background-color: var(--grey-4);
-  --secondary-button-border-color: var(--light-grey-7);
+  --button-secondary-color: var(--light-black);
+  --button-secondary-hover-color: var(--light-grey-6);
+  --button-secondary-background-color: var(--grey-4);
+  --button-secondary-border-color: var(--light-grey-7);
 
   --checkbox-background-color: var(--light-grey-4);
 
@@ -154,10 +154,10 @@
     --button-text-color-disabled: var(--light-grey);
     --button-text-color-dangerous: var(--light-grey);
 
-    --secondary-button-color: var(--light-grey);
-    --secondary-button-hover-color: var(--light-black);
-    --secondary-button-background-color: var(--very-dark-grey);
-    --secondary-button-border-color: var(--dark-grey);
+    --button-secondary-color: var(--light-grey);
+    --button-secondary-hover-color: var(--light-black);
+    --button-secondary-background-color: var(--very-dark-grey);
+    --button-secondary-border-color: var(--dark-grey);
 
     --checkbox-background-color: var(--light-grey);
 
