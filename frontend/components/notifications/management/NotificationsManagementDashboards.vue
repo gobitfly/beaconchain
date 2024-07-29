@@ -12,7 +12,7 @@ import type { NotificationSettingsDashboardsTableRow, NotificationSettingsValida
 import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
-import { NotificationsSubscriptionDialog } from '#components'
+import { NotificationsManagementSubscriptionDialog } from '#components'
 
 type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
 
@@ -41,7 +41,7 @@ const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, s
 
 // #### END OF CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
 
-const { fetch, setTimeout } = useCustomFetch()
+const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { t: $t } = useI18n()
 const dialog = useDialog()
@@ -99,11 +99,11 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: W
   const dialogProps = {
     dashboardType: row.dashboard_type,
     initialSettings: row.settings,
-    saveUserSettings: (settings: AllOptions) => debouncer.bounce({ row, settings }, false, true)
+    saveUserSettings: (settings: AllOptions) => debouncer.bounce({ row, settings }, true, true)
   }
   switch (col) {
     case 'subscriptions':
-      dialog.open(NotificationsSubscriptionDialog, { data: dialogProps })
+      dialog.open(NotificationsManagementSubscriptionDialog, { data: dialogProps })
       break
     case 'webhook':
       /* TODO: replace `WebhookDialog` with the name of Marcel's component
@@ -121,9 +121,9 @@ const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: W
 async function saveUserSettings (settingsAndContext: SettingsWithContext) {
   let response: ApiErrorResponse | undefined
   try {
-    setTimeout(TimeoutForSavingFailures)
     response = await fetch<ApiErrorResponse>(API_PATH.SAVE_DASHBOARDS_SETTINGS, {
       method: 'PUT',
+      signal: AbortSignal.timeout(TimeoutForSavingFailures),
       body: { ...settingsAndContext.row.settings, ...settingsAndContext.settings }
     }, {
       for: settingsAndContext.row.dashboard_type,
