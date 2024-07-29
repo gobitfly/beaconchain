@@ -247,7 +247,7 @@ const option = computed(() => {
       type: 'value',
       minInterval: 10,
       maxInterval: 20,
-      min: (range: any) => 10 * Math.ceil(range.min / 10 - 1),
+      min: (range: any) => range.min >= 0 ? Math.max(0, 10 * Math.ceil(range.min / 10 - 1)) : 10 * Math.ceil(range.min / 10 - 1),
       silent: true,
       axisLabel: {
         formatter: '{value} %',
