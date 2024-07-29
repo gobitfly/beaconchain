@@ -19,7 +19,7 @@ const isEmailToggleOn = ref(false)
 const isPushToggleOn = ref(false)
 const { value: testButtonsDisabled, bounce: bounceTestButton, instant: setTestButton } = useDebounceValue<boolean>(false, 5000)
 
-const muteTimestamp = ref<number | undefined>()
+const timestampMute = ref<number | undefined>()
 const muteDropdownList = [
   { value: 1 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 1 }) },
   { value: 2 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 2 }) },
@@ -28,15 +28,15 @@ const muteDropdownList = [
   { value: Number.MAX_SAFE_INTEGER, label: $t('notifications.general.mute.until_turned_on') }]
 
 const unmuteNotifications = () => {
-  muteTimestamp.value = 0
+  timestampMute.value = 0
 }
 
 const setMuteNotifications = (value: number) => {
   if (value === Number.MAX_SAFE_INTEGER) {
-    muteTimestamp.value = Number.MAX_SAFE_INTEGER
+    timestampMute.value = Number.MAX_SAFE_INTEGER
     return
   }
-  muteTimestamp.value = (Date.now() / 1000) + value
+  timestampMute.value = (Date.now() / 1000) + value
 }
 
 const sendTestNotification = async (type: 'email' | 'push') => {
@@ -59,11 +59,11 @@ watch(generalSettings, (g) => {
   if (g) {
     isEmailToggleOn.value = g.is_email_notifications_enabled
     isPushToggleOn.value = g.is_push_notifications_enabled
-    muteTimestamp.value = g.do_not_disturb_timestamp > (Date.now() / 1000) ? g.do_not_disturb_timestamp : undefined
+    timestampMute.value = g.do_not_disturb_timestamp > (Date.now() / 1000) ? g.do_not_disturb_timestamp : undefined
   }
 }, { immediate: true })
 
-watch([isEmailToggleOn, isPushToggleOn, muteTimestamp], ([enableEmail, enablePush, muteTs]) => {
+watch([isEmailToggleOn, isPushToggleOn, timestampMute], ([enableEmail, enablePush, muteTs]) => {
   if (!generalSettings.value) {
     return
   }
@@ -73,11 +73,11 @@ watch([isEmailToggleOn, isPushToggleOn, muteTimestamp], ([enableEmail, enablePus
 })
 
 const mutedUntilText = computed(() => {
-  if (muteTimestamp.value) {
-    if (muteTimestamp.value === Number.MAX_SAFE_INTEGER) {
+  if (timestampMute.value) {
+    if (timestampMute.value === Number.MAX_SAFE_INTEGER) {
       return $t('notifications.general.mute.muted_until_turned_on')
     }
-    return $t('notifications.general.mute.muted_until_date', { date: formatTsToAbsolute(muteTimestamp.value, $t('locales.date'), true) })
+    return $t('notifications.general.mute.muted_until_date', { date: formatTsToAbsolute(timestampMute.value, $t('locales.date'), true) })
   }
 })
 
