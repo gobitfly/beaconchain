@@ -402,9 +402,9 @@
           "option": "Ignore spam transactions",
           "hint": {
             "title": [
-              "Ignores",
-              "zero value transfer tx's",
-              "and token tx's that have the",
+              "Ignores ",
+              "zero value transfer tx's ",
+              "and token tx's that have the ",
               "\"hidden\" token label",
               "."
             ]
