@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { VDBSlotVizDuty, VDBSlotVizSlot, VDBSlotVizStatus } from '~/types/api/slot_viz'
 import { type SlotVizIcons } from '~/types/dashboard/slotViz'
-import { formatNumber } from '~/utils/format'
 type RowDuty = { validator?: number; dutySubText?: string; dutySubLink?: string, duty_object?: number }
 type Row = { count?: number; icon: SlotVizIcons; class?: string; change?: string; dutyText?: string, validators?: number[], duties?: RowDuty[], andMore?: number }
 interface Props {
@@ -18,7 +17,7 @@ const data = computed(() => {
 
   const status = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0) ? 'scheduled-past' : slot.status
 
-  const networkLabel = $t(`slotViz.tooltip.network.${status}`, { slot: formatNumber(slot.slot) })
+  const networkLabelPath = `slotViz.tooltip.network.${status}`
 
   const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
   let hasSuccessDuties = false
@@ -150,7 +149,7 @@ const data = computed(() => {
 
   return {
     stateLabel,
-    networkLabel,
+    networkLabelPath,
     rows,
     hasDuties,
     minWidth: (1 + (`${maxCount}`.length) * 11) + 'px'
@@ -164,7 +163,13 @@ const data = computed(() => {
       <div class="with-duties">
         <div class="rows">
           <div class="row network">
-            <BcFormatNumber :text="data.networkLabel" />
+            <i18n-t :keypath="data.networkLabelPath" tag="span">
+              <template #slot>
+                <BcLink :to="`/slot/${props.data.slot}`" target="_blank" class="link">
+                  <BcFormatNumber :value="props.data.slot" />
+                </BcLink>
+              </template>
+            </i18n-t>
           </div>
           <!--eslint-disable-next-line vue/no-v-html-->
           <div class="row state" v-html="data.stateLabel" />
