@@ -985,8 +985,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 		handleErr(w, v)
 		return
 	}
-	// afterTs is inclusive, beforeTs is exclusive
-	if afterTs < minAllowedTs || beforeTs <= minAllowedTs {
+	if afterTs < minAllowedTs || beforeTs < minAllowedTs {
 		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription for this aggregation is %v seconds", maxAge))
 		return
 	}
