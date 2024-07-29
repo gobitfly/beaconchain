@@ -14,9 +14,9 @@ const { fetch } = useCustomFetch()
 
 const { generalSettings, updateGeneralSettings, pairedDevices } = useNotificationsManagementSettings()
 
-const pairedDevicesModalVisible = ref(false)
-const emailToggle = ref(false)
-const pushToggle = ref(false)
+const isVisible = ref(false)
+const isEmailToggleOn = ref(false)
+const isPushToggleOn = ref(false)
 const { value: testButtonsDisabled, bounce: bounceTestButton, instant: setTestButton } = useDebounceValue<boolean>(false, 5000)
 
 const muteTimestamp = ref<number | undefined>()
@@ -52,18 +52,18 @@ const sendTestNotification = async (type: 'email' | 'push') => {
 const pairedDevicesCount = computed(() => pairedDevices.value?.length || 0)
 
 const openPairdeDevicesModal = () => {
-  pairedDevicesModalVisible.value = true
+  isVisible.value = true
 }
 
 watch(generalSettings, (g) => {
   if (g) {
-    emailToggle.value = g.is_email_notifications_enabled
-    pushToggle.value = g.is_push_notifications_enabled
+    isEmailToggleOn.value = g.is_email_notifications_enabled
+    isPushToggleOn.value = g.is_push_notifications_enabled
     muteTimestamp.value = g.do_not_disturb_timestamp > (Date.now() / 1000) ? g.do_not_disturb_timestamp : undefined
   }
 }, { immediate: true })
 
-watch([emailToggle, pushToggle, muteTimestamp], ([enableEmail, enablePush, muteTs]) => {
+watch([isEmailToggleOn, isPushToggleOn, muteTimestamp], ([enableEmail, enablePush, muteTs]) => {
   if (!generalSettings.value) {
     return
   }
@@ -84,7 +84,7 @@ const mutedUntilText = computed(() => {
 </script>
 
 <template>
-  <NotificationsManagementPairedDevicesModal v-model="pairedDevicesModalVisible" />
+  <NotificationsManagementPairedDevicesModal v-model="isVisible" />
   <div class="container">
     <div class="row divider">
       <div>
@@ -117,7 +117,7 @@ const mutedUntilText = computed(() => {
       <div>
         {{ $t('notifications.general.email_notifications') }}
       </div>
-      <BcToggle v-model="emailToggle" />
+      <BcToggle v-model="isEmailToggleOn" />
     </div>
     <div class="row divider">
       <div>
@@ -131,7 +131,7 @@ const mutedUntilText = computed(() => {
           />
         </span>
       </div>
-      <BcToggle v-if="pairedDevicesCount > 0" v-model="pushToggle" />
+      <BcToggle v-if="pairedDevicesCount > 0" v-model="isPushToggleOn" />
       <div v-else>
         {{ tOf($t, 'notifications.general.download_app', 0) }}
         <BcLink to="/mobile  " :target="Target.External" class="link">
