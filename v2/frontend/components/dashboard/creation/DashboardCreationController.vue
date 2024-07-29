@@ -19,7 +19,7 @@ const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
 const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
-const network = ref<ChainIDs>()
+const network = ref<ChainIDs>(0)
 const { dashboardKey, publicEntities } = useDashboardKey()
 const { fetch } = useCustomFetch()
 const route = useRoute()
@@ -49,7 +49,7 @@ function show () {
     type.value = 'account'
   }
   name.value = isLoggedIn.value ? '' : 'cookie'
-  network.value = undefined
+  network.value = 0
 }
 
 defineExpose({
