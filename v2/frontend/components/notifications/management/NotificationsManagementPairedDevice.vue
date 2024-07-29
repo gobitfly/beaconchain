@@ -23,7 +23,7 @@ const accountAccessToggle = ref(false)
       <div class="device">
         {{ $t('notifications.general.paired_devices.device') }}: {{ props.device.name || $t('notifications.general.paired_devices.unknown') }}
       </div>
-      <Button secondary class="p-button-icon-only">
+      <Button data-secondary class="p-button-icon-only">
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>

@@ -18,12 +18,12 @@
   border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
 
-  &:not([secondary]) {
+  &:not([data-secondary]) {
     color: var(--primary-contrast-color);
     background: var(--button-color-active);
   }
 
-  &[secondary]{
+  &[data-secondary]{
     color: var(--button-secondary-color);
     background: var(--button-secondary-background-color);
     border-color: var(--button-secondary-border-color);
@@ -41,11 +41,11 @@
     background: var(--button-color-disabled);
     border-color: var(--button-color-disabled);
   }
-  &:not(:disabled):not([secondary]):hover {
+  &:not(:disabled):not([data-secondary]):hover {
     background: var(--button-color-hover);
     border-color: var(--button-color-hover);
   }
-  &:not(:disabled)[secondary]:hover {
+  &:not(:disabled)[data-secondary]:hover {
     background: var(--button-secondary-hover-color);
   }
   &:not(:disabled):active {
