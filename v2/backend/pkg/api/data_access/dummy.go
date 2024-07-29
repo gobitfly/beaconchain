@@ -483,7 +483,7 @@ func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainI
 	return &r, err
 }
 
-func (d *DummyService) GetUserValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
+func (d *DummyService) GetUserValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
 	r := t.ValidatorDashboard{}
 	// return semi-valid data to not break staging
 	//nolint:errcheck
