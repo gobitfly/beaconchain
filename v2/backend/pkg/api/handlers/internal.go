@@ -949,11 +949,6 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 }
 
 const chartDatapointLimit uint64 = 200
-const hour uint64 = 3600
-const day = 24 * hour
-const week = 7 * day
-const month = 30 * day
-const fullHistory uint64 = 9007199254740991
 
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
