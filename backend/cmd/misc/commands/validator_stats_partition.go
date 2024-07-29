@@ -246,7 +246,7 @@ func tableRenaming(currentTableName, destinationTableName string, numberOfPartit
 	}
 
 	// rename new tables partition names
-	for i := 0; i < numberOfPartitions; i++ {
+	for i := range numberOfPartitions {
 		_, err = tx.Exec(fmt.Sprintf("ALTER TABLE %s_%d RENAME TO %s_%d", destinationTableName, i, currentTableName, i))
 		if err != nil {
 			return errors.Wrap(err, "error renaming destination table partition to current table")
@@ -439,7 +439,7 @@ func (s *statsMigratorConfig) createValidatorStatsPartionedTableSchemav1(tableNa
 		}
 	}
 
-	for i := 0; i < numberOfPartitions; i++ {
+	for i := range numberOfPartitions {
 		partitionCreate := fmt.Sprintf(`
 			CREATE TABLE %s_%d PARTITION OF %[1]s
 				FOR VALUES WITH (MODULUS %[3]d, REMAINDER %[2]d)

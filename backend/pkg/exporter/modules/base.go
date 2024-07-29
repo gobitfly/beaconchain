@@ -157,7 +157,6 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 
 func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
 	for _, module := range modules {
-		module := module
 		goPool.Go(func() error {
 			err := f(module)
 			if err != nil {

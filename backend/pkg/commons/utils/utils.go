@@ -221,7 +221,7 @@ func SortedUniqueUint64(arr []uint64) []uint64 {
 
 func GetParticipatingSyncCommitteeValidators(syncAggregateBits []byte, validators []uint64) []uint64 {
 	participatingValidators := []uint64{}
-	for i := 0; i < len(syncAggregateBits)*8; i++ {
+	for i := range len(syncAggregateBits) * 8 {
 		val := validators[i]
 		if BitAtVector(syncAggregateBits, i) {
 			participatingValidators = append(participatingValidators, val)
@@ -302,7 +302,7 @@ func GetPagingFromData[T t.CursorLike, V any](data []V, usedCursor T, hasMoreDat
 	columns := make([]string, 0)
 
 	// extract cursor attributes which act as columns
-	for i := 0; i < fields.NumField(); i++ {
+	for i := range fields.NumField() {
 		n := fields.Field(i).Name
 		if n == "GenericCursor" {
 			continue

@@ -182,7 +182,7 @@ func GeneratePdfReport(hist rewardHistory, currency string) []byte {
 	pdf.SetTextColor(224, 224, 224)
 	pdf.SetFillColor(64, 64, 64)
 	pdf.Cell(-5, 0, "")
-	for col := 0; col < colCount; col++ {
+	for col := range colCount {
 		pdf.CellFormat(colWd, maxHt, header[col], "1", 0, "CM", true, 0, "")
 	}
 	pdf.Ln(-1)
@@ -200,7 +200,7 @@ func GeneratePdfReport(hist rewardHistory, currency string) []byte {
 			pdf.AddPage()
 			y = pdf.GetY()
 		}
-		for col := 0; col < colCount; col++ {
+		for col := range colCount {
 			if i%2 != 0 {
 				pdf.SetFillColor(191, 191, 191)
 			}
@@ -243,7 +243,7 @@ func GeneratePdfReport(hist rewardHistory, currency string) []byte {
 	pdf.SetTextColor(224, 224, 224)
 	pdf.SetFillColor(64, 64, 64)
 	pdf.Cell(-5, 0, "")
-	for col := 0; col < vColCount; col++ {
+	for col := range vColCount {
 		pdf.CellFormat(vColWd, maxHt, vHeader[col], "1", 0, "CM", true, 0, "")
 	}
 	pdf.Ln(-1)
@@ -262,7 +262,7 @@ func GeneratePdfReport(hist rewardHistory, currency string) []byte {
 			y = pdf.GetY()
 		}
 
-		for col := 0; col < vColCount; col++ {
+		for col := range vColCount {
 			if i%2 != 0 {
 				pdf.SetFillColor(191, 191, 191)
 			}

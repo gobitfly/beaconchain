@@ -945,7 +945,7 @@ func GatherValidatorSyncDutiesForDay(validators []uint64, day uint64, data []*ty
 
 		mux.Lock()
 		bits := proposedSlots[types.Slot(slot)]
-		for i := 0; i < len(committee); i++ {
+		for i := range len(committee) {
 			validator := committee[types.CommitteeIndex(i)]
 
 			if len(bits) == 0 { // slot is empty
@@ -1158,7 +1158,7 @@ func GetValidatorIncomeHistoryChart(validatorIndices []uint64, currency string, 
 
 	p := price.GetPrice(utils.Config.Frontend.ClCurrency, currency)
 
-	for i := 0; i < len(incomeHistory); i++ {
+	for i := range len(incomeHistory) {
 		color := "#7cb5ec"
 		if incomeHistory[i].ClRewards < 0 {
 			color = "#f7a35c"

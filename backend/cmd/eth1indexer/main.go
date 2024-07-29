@@ -451,7 +451,6 @@ func UpdateTokenPrices(bt *db.Bigtable, client *rpc.ErigonClient, tokenListPath 
 	g := new(errgroup.Group)
 	g.SetLimit(20)
 	for i := range tokenPrices {
-		i := i
 		g.Go(func() error {
 			metadata, err := client.GetERC20TokenMetadata(tokenPrices[i].Token)
 			if err != nil {
@@ -600,7 +599,6 @@ func IndexFromNode(bt *db.Bigtable, client *rpc.ErigonClient, start, end, concur
 	processedBlocks := int64(0)
 
 	for i := start; i <= end; i++ {
-		i := i
 		g.Go(func() error {
 			select {
 			case <-gCtx.Done():
@@ -719,7 +717,7 @@ func ImportMainnetERC20TokenMetadataFromTokenDirectory(bt *db.Bigtable) {
 		if len(token.LogoURI) > 0 {
 			resp, err := client.Get(token.LogoURI)
 
-			if err == nil && resp.StatusCode == 200 {
+			if err == nil && resp.StatusCode == http.StatusOK {
 				body, err := io.ReadAll(resp.Body)
 
 				if err != nil {

@@ -91,7 +91,7 @@ func DumpToClickhouse(data interface{}, table string) error {
 			log.Warnf("failed to abort batch: %v", err)
 		}
 	}()
-	for c := 0; c < len(columns); c++ {
+	for c := range len(columns) {
 		// type assert to correct type
 		log.Debugf("appending column %d", c)
 		switch columns[c].(type) {
@@ -115,7 +115,7 @@ func DumpToClickhouse(data interface{}, table string) error {
 			cValue := reflect.ValueOf(columns[c])
 			length := cValue.Len()
 			cSlice := reflect.MakeSlice(reflect.SliceOf(cType.Elem()), length, length)
-			for i := 0; i < length; i++ {
+			for i := range length {
 				cSlice.Index(i).Set(cValue.Index(i))
 			}
 			err = batch.Column(c).Append(cSlice.Interface())
@@ -156,7 +156,7 @@ func ConvertToColumnar(data interface{}) ([]interface{}, error) {
 	columns := make([]interface{}, numFields)
 	colValues := make([]reflect.Value, numFields)
 
-	for i := 0; i < numFields; i++ {
+	for i := range numFields {
 		fieldType := elemType.Field(i).Type
 		colSlice := reflect.MakeSlice(reflect.SliceOf(fieldType), v.Len(), v.Len())
 		x := reflect.New(colSlice.Type())
@@ -168,10 +168,10 @@ func ConvertToColumnar(data interface{}) ([]interface{}, error) {
 	var wg sync.WaitGroup
 	wg.Add(numFields)
 
-	for j := 0; j < numFields; j++ {
+	for j := range numFields {
 		go func(j int) {
 			defer wg.Done()
-			for i := 0; i < v.Len(); i++ {
+			for i := range v.Len() {
 				structValue := v.Index(i)
 				colValues[j].Index(i).Set(structValue.Field(j))
 			}

@@ -188,7 +188,7 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 	switch {
 	case version == -3:
 		// downgrade once branch. 15 second countdown to prevent shit hitting the fan
-		for i := 0; i < 15; i++ {
+		for i := range 15 {
 			log.Warnf("downgrading %s by one version. you have %d seconds to abort the command", database, 15-i)
 			time.Sleep(time.Second)
 		}
@@ -208,7 +208,7 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 	case version < 0:
 		// downgrade target branch. 15 second countdown to prevent shit hitting the fan
 		version = -version
-		for i := 0; i < 15; i++ {
+		for i := range 15 {
 			log.Warnf("downgrading %s to version %d. you have %d seconds to abort the command", database, version, 15-i)
 			time.Sleep(time.Second)
 		}
@@ -1099,7 +1099,7 @@ func GetSlotVizData(latestEpoch uint64) ([]*types.SlotVizEpochs, error) {
 	}
 
 	for _, epoch := range epochMap {
-		for i := uint64(0); i < utils.Config.Chain.ClConfig.SlotsPerEpoch; i++ {
+		for i := range utils.Config.Chain.ClConfig.SlotsPerEpoch {
 			if epoch.Slots[i] == nil {
 				status := "scheduled"
 				slot := (epoch.Epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) + i
@@ -1140,7 +1140,7 @@ func GetSlotVizData(latestEpoch uint64) ([]*types.SlotVizEpochs, error) {
 		return res[i].Epoch > res[j].Epoch
 	})
 
-	for i := 0; i < len(res); i++ {
+	for i := range len(res) {
 		if !res[i].Finalized && i != 0 {
 			res[i-1].Justifying = true
 		}

@@ -1244,7 +1244,7 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 				return err
 			}
 
-			for j := 0; j < len(events); j++ {
+			for j := range len(events) {
 				execData, found := execBlockNrToExecBlockMap[events[j].ExecBlock]
 				if found {
 					reward := utils.Eth1TotalReward(execData)
