@@ -20,15 +20,20 @@
   --dark-blue: #2f2e42;
   --purple-blue: #3e4461;
   --light-purple-blue: #545C7E;
-  --blue: #2e82ae;
+  --sky-blue:#CDE3EE;
   --light-blue: #66bce9;
-  --melllow-blue: #7DB5EC;
+  --blue: #2e82ae;
+  --dark-blue: #116897;
+  --mint-green: #D3E4D4;
   --flashy-green: #90ed7d;
   --light-green: #4e7451;
   --green: #7dc382;
+  --dark-green: #346f39;
   --flashy-red: #f3454a;
   --light-red: #d42127;
   --dark-red: #ce3438;
+  --bold-red: #b10b11;
+  --pastel-red: #F1C5C6;
   --yellow: #ffd600;
   --purple: #9747ff;
   --light-orange: #e77f27;
@@ -123,6 +128,19 @@
   --list-hover-descrete-color: var(--light-grey-5);
 
   --toggle-button-slider-color: var(--light-grey);
+
+  --toast-background-color--success: var(--dark-green);
+  --toast-background-success-color: var(--mint-green);
+  --toast-border-sucess-color: var(--dark-green);
+
+  --toast-message-info-color: var(--dark-blue);
+  --toast-background-info-color: var(--sky-blue);
+  --toast-border-info-color: var(--dark-blue);
+
+  --toast-message-error-color: var(--bold-red);
+  --toast-background-error-color: var(--pastel-red);
+  --toast-border-error-color: var(--bold-red);
+
 
   &.dark-mode {
     --primary-color: var(--primary-orange);

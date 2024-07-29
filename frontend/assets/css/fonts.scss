@@ -277,6 +277,27 @@ h1 {
   font-weight: var(--button_font_weight);
 }
 
+
 .button_text{
   @include button_text
+}
+
+@mixin text-toast(){
+  font-family:var(--roboto-family);
+  font-size:var(--standard_text_font_size);
+  font-weight: var(--roboto-bold);
+}
+
+.text-toast{
+  @include text-toast
+}
+
+@mixin text-toast--sm(){
+  font-family:var(--roboto-family);
+  font-size: var(--small_text_font_size);
+  font-weight: var(--roboto-regular);
+}
+
+.text-toast--sm{
+  @include text-toast--sm
 }
