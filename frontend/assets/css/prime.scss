@@ -24,9 +24,9 @@
   }
 
   &[secondary]{
-    color: var(--secondary-button-color);
-    background: var(--secondary-button-background-color);
-    border-color: var(--secondary-button-border-color);
+    color: var(--button-secondary-color);
+    background: var(--button-secondary-background-color);
+    border-color: var(--button-secondary-border-color);
   }
 
   display: inline-flex;
@@ -46,7 +46,7 @@
     border-color: var(--button-color-hover);
   }
   &:not(:disabled)[secondary]:hover {
-    background: var(--secondary-button-hover-color);
+    background: var(--button-secondary-hover-color);
   }
   &:not(:disabled):active {
     background: var(--button-color-pressed);
