@@ -41,7 +41,7 @@ const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, s
 
 // #### END OF CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
 
-const { fetch, setTimeout } = useCustomFetch()
+const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { t: $t } = useI18n()
 const dialog = useDialog()
