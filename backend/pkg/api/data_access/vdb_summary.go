@@ -995,6 +995,36 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	return ret, nil
 }
 
+func (d *DataAccessService) GetLatestExportedChartTs(aggregation enums.ChartAggregation) (uint64, error) {
+	var table string
+	var dateColumn string
+	switch aggregation {
+	case enums.IntervalEpoch:
+		table = "validator_dashboard_data_epoch"
+		dateColumn = "epoch_timestamp"
+	case enums.IntervalHourly:
+		table = "validator_dashboard_data_hourly"
+		dateColumn = "hour"
+	case enums.IntervalDaily:
+		table = "validator_dashboard_data_daily"
+		dateColumn = "day"
+	case enums.IntervalWeekly:
+		table = "validator_dashboard_data_weekly"
+		dateColumn = "week"
+	default:
+		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	}
+
+	query := fmt.Sprintf(`SELECT max(%s) FROM holesky.%s`, dateColumn, table)
+	var ts uint64
+	err := d.clickhouseReader.Get(&ts, query)
+	if err != nil {
+		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %v", err)
+	}
+
+	return ts, nil
+}
+
 func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
 	result := &t.VDBGeneralSummaryValidators{}
 
