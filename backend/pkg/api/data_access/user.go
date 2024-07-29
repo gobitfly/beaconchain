@@ -27,7 +27,8 @@ type UserRepository interface {
 	GetUserIdByConfirmationHash(hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
-	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
+	GetUserValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error)
+	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -604,7 +605,14 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	return result, nil
 }
 
-func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
+func (d *DataAccessService) GetUserValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserValidatorDashboard(ctx, dashboardId)
+}
+
+// return number of active / archived dashboards
+func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
+	// @DATA-ACCESS return number of dashboards depending on archival status (see comment above)
 	var count uint64
 	err := d.alloyReader.Get(&count, `
 		SELECT COUNT(*) FROM users_val_dashboards

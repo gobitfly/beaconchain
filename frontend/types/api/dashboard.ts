@@ -13,7 +13,7 @@ export interface ValidatorDashboard {
   id: number /* uint64 */;
   name: string;
   public_ids?: VDBPublicId[];
-  archived: boolean;
+  is_archived: boolean;
   archived_reason?: string; // dashboard_limit, validator_limit, group_limit, none
   validator_count: number /* uint64 */;
   group_count: number /* uint64 */;

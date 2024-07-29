@@ -442,7 +442,7 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 
 // returns a middleware that checks if user has access to dashboard when a primary id is used
 // expects a userIdFunc to return user id, probably GetUserIdBySession or GetUserIdByApiKey
-func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
+func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error), rejectArchived bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var err error
@@ -475,6 +475,18 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 				// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
 				handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
 				return
+			}
+			if rejectArchived {
+				db, err := h.dai.GetUserValidatorDashboard(r.Context(), types.VDBIdPrimary(dashboardId))
+				if err != nil {
+					handleErr(w, err)
+					return
+				}
+				if db.IsArchived {
+					// user does not have access to dashboard
+					handleErr(w, newConflictErr("dashboard with id %v is archived", dashboardId))
+					return
+				}
 			}
 
 			next.ServeHTTP(w, r)
