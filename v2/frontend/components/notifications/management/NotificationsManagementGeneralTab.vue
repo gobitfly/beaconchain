@@ -55,11 +55,11 @@ const openPairdeDevicesModal = () => {
   isVisible.value = true
 }
 
-watch(generalSettings, (g) => {
-  if (g) {
-    isEmailToggleOn.value = g.is_email_notifications_enabled
-    isPushToggleOn.value = g.is_push_notifications_enabled
-    timestampMute.value = g.do_not_disturb_timestamp > (Date.now() / 1000) ? g.do_not_disturb_timestamp : undefined
+watch(generalSettings, (newGeneralSettings) => {
+  if (newGeneralSettings) {
+    isEmailToggleOn.value = newGeneralSettings.is_email_notifications_enabled
+    isPushToggleOn.value = newGeneralSettings.is_push_notifications_enabled
+    timestampMute.value = newGeneralSettings.do_not_disturb_timestamp > (Date.now() / 1000) ? newGeneralSettings.do_not_disturb_timestamp : undefined
   }
 }, { immediate: true })
 
