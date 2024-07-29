@@ -33,7 +33,7 @@ export interface VDBOverviewData {
 export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBPostArchivingReturnData {
   id: number /* uint64 */;
-  archived: boolean;
+  is_archived: boolean;
 }
 export interface VDBSummaryStatus {
   next_sync_count: number /* uint64 */;

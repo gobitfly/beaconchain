@@ -206,14 +206,13 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		handleErr(w, err)
 		return
 	}
-	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId)
+	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, true)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
 		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
-		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboard(r.Context(), userId, name, chainId)
@@ -297,7 +296,7 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		Archived bool `json:"archived"`
+		IsArchived bool `json:"is_archived"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
@@ -307,7 +306,56 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		handleErr(w, v)
 		return
 	}
-	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, req.Archived)
+
+	// check conditions for changing archival status
+	dashboardInfo, err := h.dai.GetUserValidatorDashboard(r.Context(), dashboardId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if dashboardInfo.IsArchived == req.IsArchived {
+		// nothing to do
+		returnOk(w, types.ApiDataResponse[types.VDBPostArchivingReturnData]{
+			Data: types.VDBPostArchivingReturnData{Id: uint64(dashboardId), IsArchived: req.IsArchived},
+		})
+	}
+
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
+		return
+	}
+	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, !req.IsArchived)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if req.IsArchived {
+		if dashboardCount >= maxArchivedDashboardsCount {
+			returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
+			return
+		}
+	} else {
+		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+			returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
+			return
+		}
+		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+			returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
+			return
+		}
+		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+			returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
+			return
+		}
+	}
+
+	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, req.IsArchived)
 	if err != nil {
 		handleErr(w, err)
 		return
