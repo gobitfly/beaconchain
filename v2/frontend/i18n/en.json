@@ -329,6 +329,11 @@
       "push_notifications": "Push Notifications",
       "send_test_email": "Send Test E-Mail",
       "send_test_push": "Send Test Push Notification",
+      "test_notification_error": {
+        "toast_title": "Error",
+        "toast_group": "An error occurred while sending the test notification",
+        "toast_message": "Please try again."
+      },
       "download_app": ["Download the", "mobile app", "to activate"],
       "paired_devices": {
         "title": "Paired Devices",
