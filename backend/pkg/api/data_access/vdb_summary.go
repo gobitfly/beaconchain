@@ -809,24 +809,19 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	// log.Infof("retrieving data between %v and %v for aggregation %v", time.Unix(int64(afterTs), 0), time.Unix(int64(beforeTs), 0), aggregation)
 	dataTable := ""
 	dateColumn := ""
-	epochColumnName := ""
 	switch aggregation {
 	case enums.IntervalEpoch:
 		dataTable = "validator_dashboard_data_epoch"
 		dateColumn = "epoch_timestamp"
-		epochColumnName = "epoch"
 	case enums.IntervalHourly:
 		dataTable = "validator_dashboard_data_hourly"
 		dateColumn = "hour"
-		epochColumnName = "epoch_start"
 	case enums.IntervalDaily:
 		dataTable = "validator_dashboard_data_daily"
 		dateColumn = "day"
-		epochColumnName = "epoch_start"
 	case enums.IntervalWeekly:
 		dataTable = "validator_dashboard_data_weekly"
 		dateColumn = "week"
-		epochColumnName = "epoch_start"
 	default:
 		return nil, fmt.Errorf("unexpected aggregation type: %v", aggregation)
 	}
@@ -848,7 +843,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	if dashboardId.Validators != nil {
 		query := fmt.Sprintf(`
 			SELECT
-				%[1]s AS epoch_start,
+				%[2]s as ts,
 				0 AS group_id, 
 				COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
 				COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
@@ -856,10 +851,10 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 				COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
 				COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 				COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-			FROM holesky.%[2]s d
-			WHERE %[3]s >= fromUnixTimestamp($1) AND %[3]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
-			GROUP BY epoch_start;
-		`, epochColumnName, dataTable, dateColumn)
+			FROM holesky.%[1]s d
+			WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
+			GROUP BY $[2]s;
+		`, dataTable, dateColumn)
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Validators)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving data from table %s: %v", dataTable, err)
@@ -870,7 +865,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
 		)		
 		SELECT
-			d.%[1]s AS epoch_start,
+			%[2]s as ts,
 			v.group_id,
 			COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
 			COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
@@ -878,10 +873,10 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
 			COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
 			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-		FROM holesky.%[2]s d
+		FROM holesky.%[1]s d
 		INNER JOIN validators v ON d.validator_index = v.validator_index
-		WHERE %[3]s >= fromUnixTimestamp($1) AND %[3]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
-		GROUP BY 1, 2;`, epochColumnName, dataTable, dateColumn)
+		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
+		GROUP BY 1, 2;`, dataTable, dateColumn)
 
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
 		if err != nil {
@@ -890,15 +885,15 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	}
 
 	// convert the returned data to the expected return type (not pretty)
-	epochsMap := make(map[uint64]bool)
-	data := make(map[uint64]map[int64]float64)
+	tsMap := make(map[time.Time]bool)
+	data := make(map[time.Time]map[int64]float64)
 
-	totalEfficiencyMap := make(map[uint64]*t.VDBValidatorSummaryChartRow)
+	totalEfficiencyMap := make(map[time.Time]*t.VDBValidatorSummaryChartRow)
 	for _, row := range queryResults {
-		epochsMap[row.StartEpoch] = true
+		tsMap[row.Timestamp] = true
 
-		if data[row.StartEpoch] == nil {
-			data[row.StartEpoch] = make(map[int64]float64)
+		if data[row.Timestamp] == nil {
+			data[row.Timestamp] = make(map[int64]float64)
 		}
 
 		if requestedGroupsMap[row.GroupId] {
@@ -907,21 +902,21 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 				return nil, err
 			}
 
-			data[row.StartEpoch][row.GroupId] = groupEfficiency
+			data[row.Timestamp][row.GroupId] = groupEfficiency
 		}
 
 		if totalLineRequested {
-			if totalEfficiencyMap[row.StartEpoch] == nil {
-				totalEfficiencyMap[row.StartEpoch] = &t.VDBValidatorSummaryChartRow{
-					StartEpoch: row.StartEpoch,
+			if totalEfficiencyMap[row.Timestamp] == nil {
+				totalEfficiencyMap[row.Timestamp] = &t.VDBValidatorSummaryChartRow{
+					Timestamp: row.Timestamp,
 				}
 			}
-			totalEfficiencyMap[row.StartEpoch].AttestationReward += row.AttestationReward
-			totalEfficiencyMap[row.StartEpoch].AttestationIdealReward += row.AttestationIdealReward
-			totalEfficiencyMap[row.StartEpoch].BlocksProposed += row.BlocksProposed
-			totalEfficiencyMap[row.StartEpoch].BlocksScheduled += row.BlocksScheduled
-			totalEfficiencyMap[row.StartEpoch].SyncExecuted += row.SyncExecuted
-			totalEfficiencyMap[row.StartEpoch].SyncScheduled += row.SyncScheduled
+			totalEfficiencyMap[row.Timestamp].AttestationReward += row.AttestationReward
+			totalEfficiencyMap[row.Timestamp].AttestationIdealReward += row.AttestationIdealReward
+			totalEfficiencyMap[row.Timestamp].BlocksProposed += row.BlocksProposed
+			totalEfficiencyMap[row.Timestamp].BlocksScheduled += row.BlocksScheduled
+			totalEfficiencyMap[row.Timestamp].SyncExecuted += row.SyncExecuted
+			totalEfficiencyMap[row.Timestamp].SyncScheduled += row.SyncScheduled
 		}
 	}
 
@@ -936,8 +931,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
 		releaseEfficiencyLock()
 
-		for epoch := range epochsMap {
-			data[epoch][int64(t.NetworkAverage)] = averageNetworkEfficiency
+		for ts := range tsMap {
+			data[ts][int64(t.NetworkAverage)] = averageNetworkEfficiency
 		}
 	}
 
@@ -948,16 +943,16 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 				return nil, err
 			}
 
-			data[row.StartEpoch][t.AllGroups] = totalEfficiency
+			data[row.Timestamp][t.AllGroups] = totalEfficiency
 		}
 	}
 
-	epochsArray := make([]uint64, 0, len(epochsMap))
-	for epoch := range epochsMap {
-		epochsArray = append(epochsArray, epoch)
+	tsArray := make([]time.Time, 0, len(tsMap))
+	for ts := range tsMap {
+		tsArray = append(tsArray, ts)
 	}
-	sort.Slice(epochsArray, func(i, j int) bool {
-		return epochsArray[i] < epochsArray[j]
+	sort.Slice(tsArray, func(i, j int) bool {
+		return tsArray[i].Before(tsArray[j])
 	})
 
 	groupsArray := make([]int64, 0, len(requestedGroupsMap))
@@ -968,9 +963,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return groupsArray[i] < groupsArray[j]
 	})
 
-	ret.Categories = make([]uint64, 0, len(epochsArray))
-	for _, epoch := range epochsArray {
-		ret.Categories = append(ret.Categories, uint64(utils.EpochToTime(epoch).Unix()))
+	ret.Categories = make([]uint64, 0, len(tsArray))
+	for _, ts := range tsArray {
+		ret.Categories = append(ret.Categories, uint64(ts.Unix()))
 	}
 	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
 
@@ -978,14 +973,14 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	for group := range requestedGroupsMap {
 		series := t.ChartSeries[int, float64]{
 			Id:   int(group),
-			Data: make([]float64, 0, len(epochsMap)),
+			Data: make([]float64, 0, len(tsMap)),
 		}
 		seriesMap[group] = &series
 	}
 
-	for _, epoch := range epochsArray {
+	for _, ts := range tsArray {
 		for _, group := range groupsArray {
-			seriesMap[group].Data = append(seriesMap[group].Data, data[epoch][group])
+			seriesMap[group].Data = append(seriesMap[group].Data, data[ts][group])
 		}
 	}
 
