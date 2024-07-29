@@ -72,7 +72,7 @@ watch([isEmailToggleOn, isPushToggleOn, timestampMute], ([enableEmail, enablePus
   }
 })
 
-const mutedUntilText = computed(() => {
+const textMutedUntil = computed(() => {
   if (timestampMute.value) {
     if (timestampMute.value === Number.MAX_SAFE_INTEGER) {
       return $t('notifications.general.mute.muted_until_turned_on')
@@ -94,7 +94,7 @@ const mutedUntilText = computed(() => {
       <div v-if="generalSettings?.do_not_disturb_timestamp" class="unmute-container">
         <Button :label="$t('notifications.general.mute.unmute')" @click="unmuteNotifications()" />
         <div class="muted-until">
-          {{ mutedUntilText }}
+          {{ textMutedUntil }}
         </div>
       </div>
       <BcDropdown
