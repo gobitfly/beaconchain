@@ -585,6 +585,7 @@
           "all_groups": "All Groups",
           "average": "Network Average",
           "total": "Total",
+          "no_data": "No chart data",
           "efficiency": {
             "all": "Efficiency",
             "attestation": "Attestation Eff.",

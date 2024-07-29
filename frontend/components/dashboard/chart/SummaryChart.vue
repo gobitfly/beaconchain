@@ -444,6 +444,9 @@ const onMouseMove = (e: MouseEvent) => {
     <ClientOnly>
       <VChart ref="chart" class="chart" :option="option" autoresize @datazoom="onDatazoom" />
       <BcLoadingSpinner v-if="isLoading" class="loading-spinner" :loading="true" alignment="center" />
+      <div v-if="!isLoading && !series?.length" class="no-data" alignment="center">
+        {{ $t('dashboard.validator.summary.chart.no_data') }}
+      </div>
     </ClientOnly>
   </div>
 </template>
@@ -457,6 +460,16 @@ const onMouseMove = (e: MouseEvent) => {
     position: absolute;
     top: 0;
     left: 0;
+  }
+  .no-data {
+    position: absolute;
+    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
   }
 }
 </style>
