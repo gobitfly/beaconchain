@@ -19,12 +19,11 @@ const selection = defineModel<ChainIDs|ChainIDs[]>({ required: false })
 let barSelection: Ref<string> | Ref<string[]>
 if (props.readonlyNetworks) {
   barSelection = ref<string[]>([])
-} else
-  if (Array.isArray(selection.value)) {
-    barSelection = useArrayRefBridge<ChainIDs, string>(selection as Ref<ChainIDs[]>)
-  } else {
-    barSelection = usePrimitiveRefBridge<ChainIDs, string>(selection as Ref<ChainIDs>)
-  }
+} else if (Array.isArray(selection.value)) {
+  barSelection = useArrayRefBridge<ChainIDs, string>(selection as Ref<ChainIDs[]>)
+} else {
+  barSelection = usePrimitiveRefBridge<ChainIDs, string>(selection as Ref<ChainIDs>)
+}
 
 const buttons = computed(() => {
   const list: MultiBarItem[] = []

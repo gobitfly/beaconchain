@@ -62,8 +62,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.Ethereum]: {
-    nameParts: ['Ethereum', 'Mainnet'],
-    name: 'Ethereum Mainnet',
+    nameParts: ['Ethereum', ''],
+    name: 'Ethereum',
     description: 'Mainnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
@@ -105,8 +105,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.ArbitrumOneEthereum]: {
-    nameParts: ['Arbitrum One', 'Mainnet'],
-    name: 'Arbitrum One Mainnet',
+    nameParts: ['Arbitrum One', ''],
+    name: 'Arbitrum One',
     description: 'L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
@@ -119,8 +119,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
-    nameParts: ['Arbitrum Nova', 'Mainnet'],
-    name: 'Arbitrum Nova Mainnet',
+    nameParts: ['Arbitrum Nova', ''],
+    name: 'Arbitrum Nova',
     description: 'L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumNovaEthereum,
@@ -148,8 +148,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.OptimismEthereum]: {
-    nameParts: ['Optimism', 'Mainnet'],
-    name: 'Optimism Mainnet',
+    nameParts: ['Optimism', ''],
+    name: 'Optimism',
     description: 'L2',
     family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
@@ -177,8 +177,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.BaseEthereum]: {
-    nameParts: ['Base', 'Mainnet'],
-    name: 'Base Mainnet',
+    nameParts: ['Base', ''],
+    name: 'Base',
     description: 'L2',
     family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
@@ -206,8 +206,8 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   },
 
   [ChainIDs.Gnosis]: {
-    nameParts: ['Gnosis', 'Mainnet'],
-    name: 'Gnosis Mainnet',
+    nameParts: ['Gnosis', ''],
+    name: 'Gnosis',
     description: 'Mainnet',
     family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,

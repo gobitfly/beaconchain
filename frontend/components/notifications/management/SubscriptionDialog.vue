@@ -199,7 +199,7 @@ const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.a
     </div>
 
     <div v-for="row of orderOfTheRows" :key="row" class="row-container">
-      <NotificationsSubscriptionRow
+      <NotificationsManagementSubscriptionRow
         v-if="row != 'ALL'"
         v-model="modifiableOptions[row]"
         :t-path="tPath+row"
@@ -208,7 +208,7 @@ const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.a
         class="row"
       />
       <div v-if="row == 'ALL'" class="separation" />
-      <NotificationsSubscriptionRow
+      <NotificationsManagementSubscriptionRow
         v-if="row == 'ALL'"
         v-model="checkboxAll"
         :t-path="tPath+'all'"
