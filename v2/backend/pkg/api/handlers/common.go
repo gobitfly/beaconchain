@@ -300,7 +300,7 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
 // it should be used as the last validation step for all internal dashboard GET-handlers.
 // Modifying handlers (POST, PUT, DELETE) should only accept primary dashboard ids and just use checkPrimaryDashboardId.
-func (h *HandlerService) handleDashboardIdArchived(ctx context.Context, param string, rejectArchived bool) (*types.VDBId, error) {
+func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
@@ -312,20 +312,14 @@ func (h *HandlerService) handleDashboardIdArchived(ctx context.Context, param st
 		return nil, err
 	}
 
-	if rejectArchived {
-		dashboardInfo, err := h.dai.GetUserValidatorDashboard(ctx, *dashboardId)
-		if err != nil {
-			return nil, err
-		}
-		if dashboardInfo.IsArchived {
-			return nil, newBadRequestErr("can't access archived dashboard")
-		}
+	dashboardInfo, err := h.dai.GetUserValidatorDashboard(ctx, *dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	if dashboardInfo.IsArchived {
+		return nil, newBadRequestErr("can't access archived dashboard")
 	}
 	return dashboardId, nil
-}
-
-func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
-	return h.handleDashboardIdArchived(ctx, param, true)
 }
 
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
