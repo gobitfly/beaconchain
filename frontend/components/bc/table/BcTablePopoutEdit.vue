@@ -12,20 +12,21 @@ interface Props {
   truncateText?: boolean,
 }
 defineProps<Props>()
-
 </script>
+
 <template>
   <div class="bc-poput-edit" :class="{ 'truncate-text': truncateText }">
     <slot name="content">
-      <span v-if="label" class="content">
+      <BcTooltip v-if="label" :hide="!truncateText" :fit-content="true" class="content" :text="label">
         {{ label }}
-      </span>
+      </BcTooltip>
     </slot>
     <div class="icon">
       <FontAwesomeIcon v-if="!noIcon" class="link" :icon="faEdit" @click="() => emit('onEdit')" />
     </div>
   </div>
 </template>
+
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
 
@@ -37,6 +38,7 @@ defineProps<Props>()
 
     .content {
       @include utils.truncate-text;
+      user-select: none;
     }
   }
 

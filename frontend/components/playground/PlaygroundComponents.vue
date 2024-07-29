@@ -1,12 +1,12 @@
 <template>
   <TabView lazy>
-    <TabPanel header="Dialog">
+    <TabPanel header="Dialogs">
       <PlaygroundDialog />
     </TabPanel>
     <TabPanel header="Accordeon">
       <PlaygroundAccordeon />
     </TabPanel>
-    <TabPanel header="Clipping in the middle">
+    <TabPanel header="MiddleEllipsis">
       <PlaygroundMiddleEllipsisTests />
     </TabPanel>
     <TabPanel header="Tags">

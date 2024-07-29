@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -10,7 +11,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -129,37 +129,47 @@ func (d DataAccessService) calculateTotalEfficiency(attestationEff, proposalEff,
 	return efficiency
 }
 
-func (d DataAccessService) getValidatorStatuses(validators []uint64) (map[uint64]enums.ValidatorStatus, error) {
-	validatorStatuses := make(map[uint64]enums.ValidatorStatus, len(validators))
-
-	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
-	if err != nil {
-		return nil, err
-	}
-
-	// Fill the data
-	for _, validator := range validators {
-		metadata := validatorMapping.ValidatorMetadata[validator]
-
-		switch constypes.ValidatorDbStatus(metadata.Status) {
-		case constypes.DbDeposited:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Deposited
-		case constypes.DbPending:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Pending
-		case constypes.DbActiveOnline, constypes.DbExitingOnline, constypes.DbSlashingOnline:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Online
-		case constypes.DbActiveOffline, constypes.DbExitingOffline, constypes.DbSlashingOffline:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Offline
-		case constypes.DbSlashed:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
-		case constypes.DbExited:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Exited
+func (d DataAccessService) calculateChartEfficiency(efficiencyType enums.VDBSummaryChartEfficiencyType, row *t.VDBValidatorSummaryChartRow) (float64, error) {
+	efficiency := float64(0)
+	switch efficiencyType {
+	case enums.VDBSummaryChartAll:
+		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
+		if row.AttestationIdealReward > 0 {
+			attestationEfficiency.Float64 = row.AttestationReward / row.AttestationIdealReward
+			attestationEfficiency.Valid = true
 		}
-	}
+		if row.BlocksScheduled > 0 {
+			proposerEfficiency.Float64 = row.BlocksProposed / row.BlocksScheduled
+			proposerEfficiency.Valid = true
+		}
+		if row.SyncScheduled > 0 {
+			syncEfficiency.Float64 = row.SyncExecuted / row.SyncScheduled
+			syncEfficiency.Valid = true
+		}
 
-	return validatorStatuses, nil
+		efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+	case enums.VDBSummaryChartAttestation:
+		if row.AttestationIdealReward > 0 {
+			efficiency = (row.AttestationReward / row.AttestationIdealReward) * 100
+		} else {
+			efficiency = 100
+		}
+	case enums.VDBSummaryChartProposal:
+		if row.BlocksScheduled > 0 {
+			efficiency = (row.BlocksProposed / row.BlocksScheduled) * 100
+		} else {
+			efficiency = 100
+		}
+	case enums.VDBSummaryChartSync:
+		if row.SyncScheduled > 0 {
+			efficiency = (row.SyncExecuted / row.SyncScheduled) * 100
+		} else {
+			efficiency = 100
+		}
+	default:
+		return 0, fmt.Errorf("unexpected efficiency type: %v", efficiency)
+	}
+	return efficiency, nil
 }
 
 func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex t.VDBValidator, cursor uint64) (uint64, error) {
