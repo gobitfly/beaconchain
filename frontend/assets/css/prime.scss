@@ -208,12 +208,12 @@
     border-radius: 30px;
 
     &:not(.p-inputswitch-checked) {
-      background: var(--toggle-button-deactivated-color);
+      background: var(--button-toggle-color-disabled);
     }
   }
 
   .p-inputswitch-slider:before {
-    background: var(--toggle-button-slider-color);
+    background: var(--button-toggle-slider-color);
     width: 20px;
     height: 20px;
     left: 0.3px;
@@ -231,7 +231,7 @@
   }
 
   &:not(.p-disabled):hover:not(.p-inputswitch-checked) .p-inputswitch-slider {
-    background: var(--toggle-button-deactivated-hover-color);
+    background: var(--button-toggle-color-disabled-hover);
   }
 
   &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {
