@@ -995,7 +995,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	return ret, nil
 }
 
-func (d *DataAccessService) GetLatestExportedChartTs(aggregation enums.ChartAggregation) (uint64, error) {
+func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
 	var table string
 	var dateColumn string
 	switch aggregation {
@@ -1017,7 +1017,7 @@ func (d *DataAccessService) GetLatestExportedChartTs(aggregation enums.ChartAggr
 
 	query := fmt.Sprintf(`SELECT max(%s) FROM %s`, dateColumn, table)
 	var ts time.Time
-	err := d.clickhouseReader.Get(&ts, query)
+	err := d.clickhouseReader.GetContext(ctx, &ts, query)
 	if err != nil {
 		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %v", err)
 	}

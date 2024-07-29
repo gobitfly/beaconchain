@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 	"reflect"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -949,6 +948,13 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 	returnOk(w, response)
 }
 
+const chartDatapointLimit uint64 = 200
+const hour uint64 = 3600
+const day = 24 * hour
+const week = 7 * day
+const month = 30 * day
+const fullHistory uint64 = 9007199254740991
+
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	ctx := r.Context()
@@ -966,24 +972,27 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	groupIds := v.checkGroupIdList(q.Get("group_ids"))
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 	aggregation := checkEnum[enums.ChartAggregation](&v, q.Get("aggregation"), "aggregation")
-	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds)
-	now := uint64(time.Now().Unix())
-	if now < maxAge {
-		maxAge = now
-	}
-	minAllowedTs := now - maxAge
-	afterTs, beforeTs := v.checkTimestamps(q.Get("after_ts"), q.Get("before_ts"), minAllowedTs)
-	if v.hasErrors() {
-		handleErr(w, v)
-		return
-	}
+	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
 	if maxAge == 0 {
 		returnConflict(w, fmt.Errorf("requested aggregation is not available for dashboard owner's premium subscription"))
 		return
 	}
+	latestExportedTs, err := h.dai.GetLatestExportedChartTs(ctx, aggregation)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	minAllowedTs := latestExportedTs - min(maxAge, latestExportedTs)                                      // min to prevent underflow
+	secondsPerEpoch := uint64(12 * 32)                                                                    // TODO: fetch dashboards chain id and use correct value for network once available
+	maxAllowedInterval := chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
+	afterTs, beforeTs := v.checkTimestamps(q.Get("after_ts"), q.Get("before_ts"), latestExportedTs, minAllowedTs, maxAllowedInterval)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 	// afterTs is inclusive, beforeTs is exclusive
 	if afterTs < minAllowedTs || beforeTs <= minAllowedTs {
-		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription is %v seconds", maxAge))
+		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription for this aggregation is %v seconds", maxAge))
 		return
 	}
 

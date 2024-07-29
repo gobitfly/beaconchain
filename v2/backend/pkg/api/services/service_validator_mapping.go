@@ -159,7 +159,7 @@ func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, func(), erro
 	currentMappingMutex.RLock()
 
 	if currentValidatorMapping == nil {
-		return nil, currentMappingMutex.RUnlock, errors.New("waiting for validator mapping to be initialized")
+		return nil, currentMappingMutex.RUnlock, fmt.Errorf("%w: validator mapping", ErrWaiting)
 	}
 
 	return currentValidatorMapping, currentMappingMutex.RUnlock, nil

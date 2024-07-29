@@ -22,6 +22,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/services"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
@@ -605,20 +606,39 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
-func (v *validationError) checkTimestamps(afterParam string, beforeParam string, minAllowedTs uint64) (after uint64, before uint64) {
-	// TODO add functionality for max interval between timestamps
-	afterTs := minAllowedTs
-	if afterParam != "" {
-		afterTs = v.checkUint(afterParam, "after_ts")
+func (v *validationError) checkTimestamps(afterParam string, beforeParam string, latestExportedTs uint64, minAllowedTs uint64, maxAllowedInterval uint64) (after uint64, before uint64) {
+	switch {
+	// If both parameters are e mpty, return the latest data
+	case afterParam == "" && beforeParam == "":
+		return max(latestExportedTs-maxAllowedInterval, minAllowedTs), latestExportedTs
+
+	// If only the afterParam is provided
+	case afterParam != "" && beforeParam == "":
+		afterTs := v.checkUint(afterParam, "after_ts")
+		beforeTs := afterTs + maxAllowedInterval
+		return afterTs, beforeTs
+
+	// If only the beforeParam is provided
+	case beforeParam != "" && afterParam == "":
+		beforeTs := v.checkUint(beforeParam, "before_ts")
+		afterTs := max(beforeTs-maxAllowedInterval, minAllowedTs)
+		return afterTs, beforeTs
+
+	// If both parameters are provided, validate them
+	default:
+		afterTs := v.checkUint(afterParam, "after_ts")
+		beforeTs := v.checkUint(beforeParam, "before_ts")
+
+		if afterTs > beforeTs {
+			v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
+		}
+
+		if beforeTs-afterTs > maxAllowedInterval {
+			v.add("before_ts", fmt.Sprintf("parameters `after_ts` and `before_ts` must not lie apart more than %d seconds for this aggregation", maxAllowedInterval))
+		}
+
+		return afterTs, beforeTs
 	}
-	beforeTs := uint64(time.Now().Unix())
-	if beforeParam != "" {
-		beforeTs = v.checkUint(beforeParam, "before_ts")
-	}
-	if afterTs > beforeTs {
-		v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
-	}
-	return afterTs, beforeTs
 }
 
 // getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
@@ -715,23 +735,23 @@ func returnInternalServerError(w http.ResponseWriter, err error) {
 }
 
 func handleErr(w http.ResponseWriter, err error) {
-	if _, ok := err.(validationError); ok || errors.Is(err, errBadRequest) {
+	_, isValidationError := err.(validationError)
+	switch {
+	case isValidationError || errors.Is(err, errBadRequest):
 		returnBadRequest(w, err)
-		return
-	} else if errors.Is(err, dataaccess.ErrNotFound) {
+	case errors.Is(err, dataaccess.ErrNotFound):
 		returnNotFound(w, err)
-		return
-	} else if errors.Is(err, errUnauthorized) {
+	case errors.Is(err, errUnauthorized):
 		returnUnauthorized(w, err)
-		return
-	} else if errors.Is(err, errForbidden) {
+	case errors.Is(err, errForbidden):
 		returnForbidden(w, err)
-		return
-	} else if errors.Is(err, errConflict) {
+	case errors.Is(err, errConflict):
 		returnConflict(w, err)
-		return
+	case errors.Is(err, services.ErrWaiting):
+		returnError(w, http.StatusServiceUnavailable, err)
+	default:
+		returnInternalServerError(w, err)
 	}
-	returnInternalServerError(w, err)
 }
 
 // --------------------------------------
