@@ -11,6 +11,7 @@ import { Target } from '~/types/links'
 
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
+const toast = useBcToast()
 
 const { generalSettings, updateGeneralSettings, pairedDevices } = useNotificationsManagementSettings()
 
@@ -41,10 +42,15 @@ const muteNotifications = (value: number) => {
 
 const sendTestNotification = async (type: 'email' | 'push') => {
   setTestButton(true)
-  if (type === 'email') {
-    await fetch(API_PATH.NOTIFICATIONS_TEST_EMAIL)
-  } else {
-    await fetch(API_PATH.NOTIFICATIONS_TEST_PUSH)
+  try {
+    await fetch(type === 'email' ? API_PATH.NOTIFICATIONS_TEST_EMAIL : API_PATH.NOTIFICATIONS_TEST_PUSH)
+  } catch (error) {
+    toast.showError(
+      {
+        summary: $t('notifications.general.test_notification_error.toast_title'),
+        group: $t('notifications.general.test_notification_error.toast_group'),
+        detail: $t('notifications.general.test_notification_error.toast_message')
+      })
   }
   bounceTestButton(false)
 }
