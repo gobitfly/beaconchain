@@ -3,9 +3,6 @@
     <TabPanel header="Dialogs">
       <PlaygroundDialog />
     </TabPanel>
-    <TabPanel header="MiniParser">
-      <PlaygroundMiniParser />
-    </TabPanel>
     <TabPanel header="Accordeon">
       <PlaygroundAccordeon />
     </TabPanel>
