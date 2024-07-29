@@ -71,6 +71,7 @@ func main() {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
 
 	enableEnsUpdater := flag.Bool("ens.enabled", false, "Enable ens update process")
+	ensBatchSize := flag.Int64("ens.batch", 200, "Batch size for ens updates")
 
 	flag.Parse()
 
@@ -362,7 +363,7 @@ func main() {
 		}
 
 		if *enableEnsUpdater {
-			err := bt.ImportEnsUpdates(client.GetNativeClient(), 1000)
+			err := bt.ImportEnsUpdates(client.GetNativeClient(), *ensBatchSize)
 			if err != nil {
 				log.Error(err, "error importing ens updates", 0, nil)
 				continue
