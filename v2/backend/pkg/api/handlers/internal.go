@@ -1958,7 +1958,6 @@ func (h *HandlerService) InternalGetBlockTransactions(w http.ResponseWriter, r *
 	returnOk(w, response)
 }
 
-// WIP FROM HERE
 func (h *HandlerService) InternalGetBlockVotes(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r)
 	if err != nil {

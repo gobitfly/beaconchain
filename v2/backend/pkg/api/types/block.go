@@ -203,7 +203,7 @@ type BlockBlobTableRow struct {
 	Size            uint64 `json:"size"`
 	TransactionHash Hash   `json:"transaction_hash"`
 	Block           uint64 `json:"block"`
-	Data            []byte `json:"data"`
+	Data            string `json:"data"`
 }
 
 type InternalGetBlockBlobsResponse ApiDataResponse[[]BlockBlobTableRow]
