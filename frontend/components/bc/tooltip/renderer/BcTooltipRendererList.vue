@@ -2,10 +2,10 @@
 
 defineProps<{
   tKeys?: string[],
-  tHighlightPath?: string, // Path to the translation highlight definitions
-  tOptions?: any // translation options
+  tHighlightPath?: string,
+  tOptions?: any
   url?: string
-  target?: string // url target - defaults to _blank
+  target?: string
 }>()
 
 </script>
@@ -30,6 +30,6 @@ defineProps<{
   text-align: left;
   padding: 0;
   margin: 0;
-  padding-left: 1.4em;
+  padding-left: 20px;
 }
 </style>

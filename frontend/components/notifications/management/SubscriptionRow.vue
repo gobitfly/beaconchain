@@ -13,7 +13,7 @@ const { t } = useI18n()
 
 const parentVmodel = defineModel<InternalEntry>({ required: true })
 
-const tOptions = computed(() => {
+const hintTranslationOptions = computed(() => {
   let options
   if (props.valueInText !== undefined) {
     options = { plural: props.valueInText }
@@ -40,7 +40,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
     <span class="caption" :class="deactivationClass">
       {{ t(tPath+'.option') }}
     </span>
-    <BcTooltipInfoWithList :t-path="`${tPath}.hint`" :t-options="tOptions" />
+    <BcTooltipInfoWithList :t-path="`${tPath}.hint`" :t-options="hintTranslationOptions" />
     <BcPremiumGem v-if="lacksPremiumSubscription" class="gem" />
     <div v-if="parentVmodel.type != 'networks'" class="right">
       <div v-if="parentVmodel.type == 'amount' || parentVmodel.type == 'percent'" class="input">

@@ -51,7 +51,7 @@ export function tAll (t: ComposerTranslation, path : string, options?: any) : st
   return list
 }
 
-/** returns an array of translations path's for a list */
+/** returns true if there is a translation for the provided path */
 export function hasTranslation (t: ComposerTranslation, path : string) {
   if (tD(t, path, undefined, NOT_FOUND) !== NOT_FOUND) {
     return true
