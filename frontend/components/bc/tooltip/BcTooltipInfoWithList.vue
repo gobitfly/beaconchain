@@ -9,37 +9,61 @@ const props = defineProps<{
 
 const { t: $t } = useI18n()
 
-const texts = computed(() => {
-  const title = tAll($t, props.tPath + '.title', props.tOptions)
+const keys = computed(() => {
+  const title = hasTranslation($t, `${props.tPath}.title`) ? `${props.tPath}.title` : undefined
 
-  const list = []
-  let notFound = true
-  while (notFound) {
+  const list: string[] = []
+  let notFound = false
+  while (!notFound) {
     const path: string = `${props.tPath}.list.${(list.length)}`
-    const items = tAll($t, `${path}`, props.tOptions)
-    if (!items.length) {
-      notFound = false
+    if (hasTranslation($t, path)) {
+      list.push(path)
     } else {
-      list.push(items)
+      notFound = true
     }
   }
 
-  const note = tAll($t, props.tPath + '.note', props.tOptions)
+  const note = hasTranslation($t, `${props.tPath}.note`) ? `${props.tPath}.note` : undefined
   return {
     title,
+    titleHighlight: `${props.tPath}.highlight.title`,
     list,
+    listHighlight: `${props.tPath}.highlight.list`,
     note,
-    hasItems: title.length || list.length || note.length
+    noteHighlight: `${props.tPath}.highlight.note`,
+    hasItems: title || list.length || note
   }
 })
 
 </script>
 
 <template>
-  <BcTooltip v-if="texts.hasItems" :fit-content="true">
+  <BcTooltip v-if="keys.hasItems" :fit-content="true">
     <FontAwesomeIcon :icon="faInfoCircle" class="info" />
     <template #tooltip>
-      <BcTooltipRendererList :title="texts.title" :list="texts.list" :note="texts.note" />
+      <div class="list-tooltip">
+        <BcTooltipRendererText
+          v-if="keys.title"
+          :t-path="keys.title"
+          :t-highlight-path="keys.titleHighlight"
+          :t-options="tOptions"
+        />
+        <BcTooltipRendererList v-if="keys.list.length" :t-keys="keys.list" :t-options="tOptions" />
+        <BcTooltipRendererText
+          v-if="keys.note"
+          :t-path="keys.note"
+          :t-highlight-path="keys.noteHighlight"
+          :t-options="tOptions"
+        />
+      </div>
     </template>
   </BcTooltip>
 </template>
+
+<style scoped lang="scss">
+.list-tooltip {
+  text-align: left;
+  width: 220px;
+  min-width: 100%;
+}
+</style>

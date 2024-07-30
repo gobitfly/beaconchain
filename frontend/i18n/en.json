@@ -318,7 +318,7 @@
             "title": "We will trigger a notification:",
             "list": [
               "Once the validator has been offline for 3 epochs.",
-              "Every 32 Epochs (~3 hours) during your downtime.",
+              "Every 32 Epochs (~3 hours) during your  downtime.",
               "Once you are back online again."
             ]
           }
@@ -401,13 +401,10 @@
         "is_ignore_spam_transactions_enabled": {
           "option": "Ignore spam transactions",
           "hint": {
-            "title": [
-              "Ignores ",
-              "zero value transfer tx's ",
-              "and token tx's that have the ",
-              "\"hidden\" token label",
-              "."
-            ]
+            "title": "Ignores {highlight_1} and token tx's that have the {highlight_2}.",
+            "highlight": {
+              "title": ["zero value transfer tx's", "\"hidden\" token label"]
+            }
           }
         }
       },
