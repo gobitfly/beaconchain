@@ -1,4 +1,3 @@
-import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
 import type { InternalGetUserNotificationSettingsResponse, NotificationSettings, NotificationPairedDevice } from '~/types/api/notifications'
 import type { NotificationsManagementSettingsGeneralTab, NotificationsManagementSettingsProvider } from '~/types/notifications/settings'
@@ -44,7 +43,7 @@ export function useUseNotificationsManagementSettingsProvider () {
     if (updateRequested) {
       updateRequested = false
       try {
-        warn('TODO: implement saving of new settings', newSettings)
+        alert(`TODO: implement saving of new settings ${newSettings}`) // adding newSettings here so the parameter is used :)
       } catch (e) {
         refreshSettings()
       }
