@@ -57,6 +57,11 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Cont
 	return result, err
 }
 
+func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetValidatorDashboard(ctx, dashboardId)
+}
+
 func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
 	var name string
 	err := d.alloyReader.Get(&name, `

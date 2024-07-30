@@ -308,7 +308,7 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 	}
 
 	// check conditions for changing archival status
-	dashboardInfo, err := h.dai.GetUserValidatorDashboard(r.Context(), types.VDBId{Id: dashboardId})
+	dashboardInfo, err := h.dai.GetValidatorDashboard(r.Context(), types.VDBId{Id: dashboardId})
 	if err != nil {
 		handleErr(w, err)
 		return

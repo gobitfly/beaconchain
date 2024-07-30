@@ -27,7 +27,6 @@ type UserRepository interface {
 	GetUserIdByConfirmationHash(hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
-	GetUserValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
 }
 
@@ -603,11 +602,6 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}
 
 	return result, nil
-}
-
-func (d *DataAccessService) GetUserValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetUserValidatorDashboard(ctx, dashboardId)
 }
 
 // return number of active / archived dashboards
