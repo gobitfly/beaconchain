@@ -650,7 +650,7 @@ func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) er
 	return nil
 }
 
-func (d *DummyService) GetByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+func (d *DummyService) GetUserIdByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
