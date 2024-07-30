@@ -92,7 +92,7 @@ const textMutedUntil = computed(() => {
 <template>
   <NotificationsManagementPairedDevicesModal v-model="isVisible" />
   <div class="container">
-    <div class="row divider">
+    <div class="row divider do-not-disturb">
       <div>
         <span>{{ $t('notifications.general.do_not_disturb') }}</span>
         <span class="explanation">{{ $t('notifications.general.mute.all') }}</span>
@@ -210,6 +210,10 @@ const textMutedUntil = computed(() => {
       padding-bottom: calc(var(--padding-large) - var(--padding-small));
       margin-bottom: var(--padding-small);
       border-bottom: 1px solid var(--container-border-color);
+    }
+
+    &.do-not-disturb {
+      min-height: 76px;
     }
   }
 }
