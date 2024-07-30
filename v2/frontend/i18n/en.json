@@ -317,13 +317,13 @@
     "general": {
       "do_not_disturb": "Do not disturb",
       "mute": {
-        "mutes_all": "Mutes all notifications",
+        "all": "Mutes all notifications",
         "unmute": "Unmute",
-        "muted_until_date": "Muted until {date}",
-        "muted_until_turned_on": "Muted until turned back on",
+        "until": "Muted until {date}",
+        "until_turned_on": "Muted until turned back on",
         "select_duration": "Select mute duration",
-        "count_hours": "{count} hour|{count} hours",
-        "until_turned_on": "Until I turn it back on"
+        "hours": "{count} hour|{count} hours",
+        "until_i_turn_on": "Until I turn it back on"
       },
       "email_notifications": "Email Notifications",
       "push_notifications": "Push Notifications",

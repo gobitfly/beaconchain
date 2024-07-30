@@ -22,11 +22,11 @@ const { value: testButtonsDisabled, bounce: bounceTestButton, instant: setTestBu
 
 const timestampMute = ref<number | undefined>()
 const muteDropdownList = [
-  { value: 1 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 1 }) },
-  { value: 2 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 2 }) },
-  { value: 4 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 4 }) },
-  { value: 8 * 60 * 60, label: $t('notifications.general.mute.count_hours', { count: 8 }) },
-  { value: Number.MAX_SAFE_INTEGER, label: $t('notifications.general.mute.until_turned_on') }]
+  { value: 1 * 60 * 60, label: $t('notifications.general.mute.hours', { count: 1 }) },
+  { value: 2 * 60 * 60, label: $t('notifications.general.mute.hours', { count: 2 }) },
+  { value: 4 * 60 * 60, label: $t('notifications.general.mute.hours', { count: 4 }) },
+  { value: 8 * 60 * 60, label: $t('notifications.general.mute.hours', { count: 8 }) },
+  { value: Number.MAX_SAFE_INTEGER, label: $t('notifications.general.mute.until_i_turn_on') }]
 
 const unmuteNotifications = () => {
   timestampMute.value = 0
@@ -81,9 +81,9 @@ watch([isEmailToggleOn, isPushToggleOn, timestampMute], ([enableEmail, enablePus
 const textMutedUntil = computed(() => {
   if (timestampMute.value) {
     if (timestampMute.value === Number.MAX_SAFE_INTEGER) {
-      return $t('notifications.general.mute.muted_until_turned_on')
+      return $t('notifications.general.mute.until_turned_on')
     }
-    return $t('notifications.general.mute.muted_until_date', { date: formatTsToAbsolute(timestampMute.value, $t('locales.date'), true) })
+    return $t('notifications.general.mute.until', { date: formatTsToAbsolute(timestampMute.value, $t('locales.date'), true) })
   }
 })
 
@@ -95,7 +95,7 @@ const textMutedUntil = computed(() => {
     <div class="row divider">
       <div>
         <span>{{ $t('notifications.general.do_not_disturb') }}</span>
-        <span class="explanation">{{ $t('notifications.general.mute.mutes_all') }}</span>
+        <span class="explanation">{{ $t('notifications.general.mute.all') }}</span>
       </div>
       <div v-if="generalSettings?.do_not_disturb_timestamp" class="unmute-container">
         <Button :label="$t('notifications.general.mute.unmute')" @click="unmuteNotifications()" />
