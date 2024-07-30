@@ -416,6 +416,10 @@ func checkMinMax[T number](v *validationError, param T, min T, max T, paramName 
 	return param
 }
 
+func (v *validationError) checkAddress(publicId string) string {
+	return v.checkRegex(reEthereumAddress, publicId, "address")
+}
+
 func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
