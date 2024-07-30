@@ -108,10 +108,10 @@ watch(() => props, () => {
         </BcLink>
       </BCTooltip>
       <div class="filter-row">
-        <BcToggleMultiBar v-model="selectedCategories" :icons="icons" />
+        <BcToggleMultiBar v-model="selectedCategories" :buttons="icons" />
       </div>
       <h1 class="network">
-        {{ networkInfo?.family }} {{ networkInfo?.name }}
+        {{ networkInfo?.name }}
       </h1>
       <div class="header-right">
         <slot name="header-right" />

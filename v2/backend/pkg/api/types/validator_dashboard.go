@@ -107,7 +107,7 @@ type VDBSummaryValidator struct {
 	DutyObjects []uint64 `json:"duty_objects,omitempty"`
 }
 type VDBSummaryValidatorsData struct {
-	Category   string                `json:"category" tstype:"'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: online, offline, pending, deposited, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
+	Category   string                `json:"category" tstype:"'deposited' | 'online' | 'offline' | 'slashing' | 'slashed' | 'exited' | 'withdrawn' | 'pending' | 'exiting' | 'withdrawing' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: deposited, online, offline, slashing, slashed, exited, withdrawn, pending, exiting, withdrawing, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
 	Validators []VDBSummaryValidator `json:"validators"`
 }
 

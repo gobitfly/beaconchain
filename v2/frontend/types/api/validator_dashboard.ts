@@ -95,7 +95,7 @@ export interface VDBSummaryValidator {
   duty_objects?: number /* uint64 */[];
 }
 export interface VDBSummaryValidatorsData {
-  category: 'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed';
+  category: 'deposited' | 'online' | 'offline' | 'slashing' | 'slashed' | 'exited' | 'withdrawn' | 'pending' | 'exiting' | 'withdrawing' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed';
   validators: VDBSummaryValidator[];
 }
 export type InternalGetValidatorDashboardSummaryValidatorsResponse = ApiDataResponse<VDBSummaryValidatorsData[]>;

@@ -108,14 +108,14 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
-      <DashboardCreationController class="panel-controller" :display-type="'panel'" :initially-visislbe="true" />
+      <DashboardCreationController class="panel-controller" :display-mode="'panel'" :initially-visible="true" />
     </BcPageWrapper>
   </div>
   <div v-else>
     <DashboardCreationController
       ref="dashboardCreationControllerModal"
       class="modal-controller"
-      :display-type="'modal'"
+      :display-mode="'modal'"
     />
     <BcPageWrapper>
       <template #top>
