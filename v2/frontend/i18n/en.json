@@ -329,6 +329,7 @@
       "push_notifications": "Push Notifications",
       "send_test_email": "Send Test E-Mail",
       "send_test_push": "Send Test Push Notification",
+      "send": "Send",
       "test_notification_error": {
         "toast_title": "Error",
         "toast_group": "An error occurred while sending the test notification",

@@ -150,7 +150,8 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_email') }}
       </div>
-      <Button class="p-button-icon-only" :disabled="testButtonsDisabled" @click="sendTestNotification('email')">
+      <Button class="button-send" :disabled="testButtonsDisabled" @click="sendTestNotification('email')">
+        {{ $t('notifications.general.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
     </div>
@@ -158,7 +159,8 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_push') }}
       </div>
-      <Button class="p-button-icon-only" :disabled="testButtonsDisabled" @click="sendTestNotification('push')">
+      <Button class="button-send" :disabled="testButtonsDisabled" @click="sendTestNotification('push')">
+        {{ $t('notifications.general.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
     </div>
@@ -204,6 +206,11 @@ const textMutedUntil = computed(() => {
 
     .popout {
       margin-left: var(--padding-small);
+    }
+
+    .button-send {
+      display: flex;
+      gap: var(--padding-small);
     }
 
     &.divider {
