@@ -37,7 +37,6 @@ import {
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
