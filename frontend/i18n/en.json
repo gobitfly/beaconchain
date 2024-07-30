@@ -693,6 +693,7 @@
           "all_groups": "All Groups",
           "average": "Network Average",
           "total": "Total",
+          "no_data": "No chart data",
           "efficiency": {
             "all": "Efficiency",
             "attestation": "Attestation Eff.",
@@ -703,7 +704,7 @@
         "tooltip": {
           "lower": "{name}'s efficiency is below the network average of {average}",
           "higher": "{name}'s efficiency is above the network average of {average}",
-          "equal": "{name}'s OVH’s efficiency is at the network average of {average}",
+          "equal": "{name}'s efficiency is at the network average of {average}",
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
