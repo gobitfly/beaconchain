@@ -76,6 +76,16 @@ const icon = computed(() => {
   return { icon, className, slotVizCategory }
 })
 
+const count = computed(() => {
+  switch (props.category) {
+    case 'proposal_proposed':
+    case 'proposal_missed':
+      return props.validators?.reduce((sum, v) => sum + (v.duty_objects?.length ?? 1), 0) ?? 0
+    default:
+      return props.validators?.length ?? 0
+  }
+})
+
 </script>
 
 <template>
@@ -83,7 +93,7 @@ const icon = computed(() => {
     <FontAwesomeIcon v-if="icon.icon" :icon="icon.icon" :class="icon.className" />
     <SlotVizIcon v-else-if="icon.slotVizCategory" :icon="icon.slotVizCategory" :class="icon.className" />
     <span>{{ $t(`dashboard.validator.subset_dialog.category.${category}`) }}</span>
-    <span> ({{ validators.length }})</span>
+    <span> ({{ count }}|{{ validators?.length }})</span>
   </div>
 </template>
 

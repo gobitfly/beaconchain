@@ -6,7 +6,7 @@ import {
 import { uniqBy } from 'lodash-es'
 import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
 import type { DashboardKey } from '~/types/dashboard'
-import type { ValidatorSubset } from '~/types/validator'
+import type { ValidatorSubset, ValidatorSubsetCategory } from '~/types/validator'
 import { sortSummaryValidators } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
 import { type InternalGetValidatorDashboardSummaryValidatorsResponse, type VDBGroupSummaryData, type VDBSummaryTableRow, type VDBSummaryValidator, type VDBSummaryValidatorsData } from '~/types/api/validator_dashboard'
@@ -98,14 +98,55 @@ const mapped = computed<ValidatorSubset[]>(() => {
     category: sub.category,
     validators: sortAndFilter(sub.validators)
   })).filter(s => !!s.validators.length)
-  if (filtered.length && !filter.value) {
+
+  // Let's combine what needs to be combined
+  if (filtered.length > 1) {
     const all:ValidatorSubset = {
       category: 'all',
       validators: []
     }
     all.validators = sortSummaryValidators(uniqBy(filtered.reduce((list, sub) => list.concat(sub.validators), all.validators), 'index'))
     filtered.splice(0, 0, all)
-    return filtered
+
+    // we need to split up the withdrawn and withrawing categories into exited and slashed and not show them individually
+    const withdrawnIndex = filtered.findIndex(s => s.category === 'withdrawn')
+    const withdrawn = withdrawnIndex >= 0 ? filtered.splice(withdrawnIndex, 1)[0] : undefined
+    const withdrawingIndex = filtered.findIndex(s => s.category === 'withdrawing')
+    const withdrawing = withdrawingIndex >= 0 ? filtered.splice(withdrawingIndex, 1)[0] : undefined
+    if (withdrawn?.validators.length || withdrawing?.validators.length) {
+      // a withrawn/withrawing validator can either be in the exited or slashed group
+      const categories: ValidatorSubsetCategory[] = ['exited', 'slashed']
+      categories.forEach((category) => {
+        const index = filtered.findIndex(s => s.category === category)
+        if (index >= 0) {
+          const baseSubset = filtered[index]
+
+          const xWithdrawn: ValidatorSubset = {
+            category: `${category}_withdrawn` as ValidatorSubsetCategory,
+            validators: []
+          }
+          const xWithdrawing: ValidatorSubset = {
+            category: `${category}_withdrawing`as ValidatorSubsetCategory,
+            validators: []
+          }
+
+          const subsets = [[withdrawn, xWithdrawn], [withdrawing, xWithdrawing]]
+          baseSubset.validators.forEach((v) => {
+            subsets.forEach(([origin, merged]) => {
+              if (origin?.validators.find(sV => v.index === sV.index)) {
+                merged?.validators.push({ ...v, duty_objects: [] })
+              }
+            })
+          })
+
+          subsets.forEach(([_origin, merged]) => {
+            if (merged?.validators.length) {
+              filtered.splice(index + 1, 0, merged)
+            }
+          })
+        }
+      })
+    }
   }
   return filtered
 })
@@ -124,7 +165,7 @@ const mapped = computed<ValidatorSubset[]>(() => {
       <BcContentFilter v-model="filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
     </div>
 
-    <Accordion :active-index="0" class="accordion basic">
+    <Accordion :active-index="-1" class="accordion basic">
       <AccordionTab v-for="subset in mapped" :key="subset.category">
         <template #headericon>
           <FontAwesomeIcon :icon="faCaretRight" />

@@ -48,7 +48,7 @@
     "and_more": "and {count} more",
     "live": "Live",
     "current": "Current",
-    "upcoming": "Upcoming", 
+    "upcoming": "Upcoming",
     "past": "Past",
     "total": "Total",
     "selected": "Selected",
@@ -299,7 +299,7 @@
     "title": "Notifications",
     "login_question": "Do you want to login to set notifications?",
     "manage": "Manage Notifications",
-    "tabs":{
+    "tabs": {
       "general": "General",
       "dashboards": "Dashboards",
       "machines": "Machines",
@@ -549,9 +549,15 @@
           "proposal_proposed": "Proposed",
           "proposal_missed": "Missed",
           "exiting": "Exiting",
-          "exited":"Exited",
-          "withdrawing":"Withdrawing",
-          "withdrawn":"Withdrawn"
+          "exited": "Exited",
+          "withdrawing": "Withdrawing",
+          "withdrawn": "Withdrawn",
+          "slashing": "Slashing",
+          "slashed": "Slashed",
+          "exited_withdrawing": "Exited [Withdrawing]",
+          "exited_withdrawn": "Exited [Withdrawn]",
+          "slashed_withdrawing": "Slashed [Withdrawing]",
+          "slashed_withdrawn": "Slashed [Withdrawn]"
         }
       },
       "blocks": {
@@ -685,10 +691,10 @@
             "proposal": "Proposal Eff."
           }
         },
-        "tooltip":{
+        "tooltip": {
           "lower": "{name}'s efficiency is below the network average of {average}",
           "higher": "{name}'s efficiency is above the network average of {average}",
-          "equal":"{name}'s efficiency is at the network average of {average}",
+          "equal": "{name}'s efficiency is at the network average of {average}",
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
@@ -738,7 +744,12 @@
     "password": "Password",
     "choose_password": "Choose a password",
     "confirm_password": "Confirm your password",
-    "please_agree": ["I agree to the", "Terms and Conditions", "and", "Privacy Policy"],
+    "please_agree": [
+      "I agree to the",
+      "Terms and Conditions",
+      "and",
+      "Privacy Policy"
+    ],
     "error_title": "Error",
     "error_login_group": "Cannot log in",
     "error_login_message": "your email or your password is unknown.",
@@ -1000,7 +1011,7 @@
     "years": "{amount} year | {amount} years"
   },
   "validation": {
-    "email" : {
+    "email": {
       "empty": "Please enter your email address.",
       "invalid": "Please enter a valid email address.",
       "no_match": "The email addresses don't match."
