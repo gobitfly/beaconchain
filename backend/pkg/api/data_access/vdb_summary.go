@@ -36,7 +36,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	table, _, clickhouseTable, _, err := d.getTablesForPeriod(period)
+	table, clickhouseTable, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -516,7 +516,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// Get the table names based on the period
-	_, _, clickhouseTable, days, err := d.getTablesForPeriod(period)
+	_, clickhouseTable, days, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1140,7 +1140,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	table, _, _, _, err := d.getTablesForPeriod(period)
+	table, _, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1258,7 +1258,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	}
 
 	// Get the table names based on the period
-	table, slashedByCountTable, _, _, err := d.getTablesForPeriod(period)
+	table, _, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1282,10 +1282,9 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		goqu.L("r.epoch_end"),
 		goqu.L("r.validator_index"),
 		goqu.L("r.slashed_by"),
-		goqu.L("COALESCE(s.slashed_amount, 0) AS slashed_amount")).
+		goqu.L("COALESCE(r.blocks_slashing_count, 0) AS slashed_amount")).
 		From(goqu.T(table).As("r")).
-		LeftJoin(goqu.T(slashedByCountTable).As("s"), goqu.On(goqu.L("r.validator_index = s.slashed_by"))).
-		Where(goqu.L("(r.slashed_by IS NOT NULL OR s.slashed_amount > 0)"))
+		Where(goqu.L("(r.slashed_by IS NOT NULL OR r.blocks_slashing_count > 0)"))
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
@@ -1306,7 +1305,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		return nil, err
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		log.Error(err, "error while getting validator dashboard slashed validators list", 0)
 		return nil, err
@@ -1458,7 +1457,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	// Get the table name based on the period
-	table, _, _, _, err := d.getTablesForPeriod(period)
+	table, _, _, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1577,36 +1576,31 @@ func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Cont
 	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
 }
 
-func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, string, string, int, error) {
+func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, string, int, error) {
 	table := ""
 	clickhouseTable := ""
-	slashedByCountTable := ""
 	days := 0
 
 	switch period {
 	case enums.TimePeriods.Last24h:
 		table = "validator_dashboard_data_rolling_daily"
 		clickhouseTable = "validator_dashboard_data_rolling_24h"
-		slashedByCountTable = "validator_dashboard_data_rolling_daily_slashedby_count"
 		days = 1
 	case enums.TimePeriods.Last7d:
 		table = "validator_dashboard_data_rolling_weekly"
 		clickhouseTable = "validator_dashboard_data_rolling_7d"
-		slashedByCountTable = "validator_dashboard_data_rolling_weekly_slashedby_count"
 		days = 7
 	case enums.TimePeriods.Last30d:
 		table = "validator_dashboard_data_rolling_monthly"
 		clickhouseTable = "validator_dashboard_data_rolling_30d"
-		slashedByCountTable = "validator_dashboard_data_rolling_monthly_slashedby_count"
 		days = 30
 	case enums.TimePeriods.AllTime:
 		table = "validator_dashboard_data_rolling_total"
 		clickhouseTable = "validator_dashboard_data_rolling_total"
-		slashedByCountTable = "validator_dashboard_data_rolling_total_slashedby_count"
 		days = -1
 	default:
-		return "", "", "", 0, fmt.Errorf("not-implemented time period: %v", period)
+		return "", "", 0, fmt.Errorf("not-implemented time period: %v", period)
 	}
 
-	return table, slashedByCountTable, clickhouseTable, days, nil
+	return table, clickhouseTable, days, nil
 }
