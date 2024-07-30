@@ -1,6 +1,8 @@
 package types
 
 import (
+	"time"
+
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/shopspring/decimal"
@@ -182,12 +184,12 @@ type VDBProtocolModes struct {
 }
 
 type VDBValidatorSummaryChartRow struct {
-	StartEpoch             uint64  `db:"epoch_start"`
-	GroupId                int64   `db:"group_id"`
-	AttestationReward      float64 `db:"attestation_reward"`
-	AttestationIdealReward float64 `db:"attestations_ideal_reward"`
-	BlocksProposed         float64 `db:"blocks_proposed"`
-	BlocksScheduled        float64 `db:"blocks_scheduled"`
-	SyncExecuted           float64 `db:"sync_executed"`
-	SyncScheduled          float64 `db:"sync_scheduled"`
+	Timestamp              time.Time `db:"ts"`
+	GroupId                int64     `db:"group_id"`
+	AttestationReward      float64   `db:"attestation_reward"`
+	AttestationIdealReward float64   `db:"attestations_ideal_reward"`
+	BlocksProposed         float64   `db:"blocks_proposed"`
+	BlocksScheduled        float64   `db:"blocks_scheduled"`
+	SyncExecuted           float64   `db:"sync_executed"`
+	SyncScheduled          float64   `db:"sync_scheduled"`
 }

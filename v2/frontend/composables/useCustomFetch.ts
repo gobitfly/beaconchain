@@ -93,5 +93,6 @@ export function useCustomFetch () {
       throw (e)
     }
   }
+
   return { fetch }
 }
