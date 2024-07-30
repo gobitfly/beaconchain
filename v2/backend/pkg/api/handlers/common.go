@@ -312,13 +312,6 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 		return nil, err
 	}
 
-	dashboardInfo, err := h.dai.GetValidatorDashboard(ctx, *dashboardId)
-	if err != nil {
-		return nil, err
-	}
-	if dashboardInfo.IsArchived {
-		return nil, newBadRequestErr("can't access archived dashboard")
-	}
 	return dashboardId, nil
 }
 
