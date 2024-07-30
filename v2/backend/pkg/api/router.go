@@ -28,8 +28,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
 
-	debug := cfg.Frontend.Debug
-	if !debug {
+	if !cfg.Frontend.CsrfInsecure {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
