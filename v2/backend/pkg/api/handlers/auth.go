@@ -36,7 +36,7 @@ type ctxKet string
 
 const ctxUserIdKey ctxKet = "user_id"
 
-var errorBadCredentials = newUnauthorizedErr("invalid email or password")
+var errBadCredentials = newUnauthorizedErr("invalid email or password")
 
 func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredentialInfo, error) {
 	authenticated := h.scs.GetBool(r.Context(), authenticatedKey)
@@ -269,7 +269,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	user, err := h.dai.GetUserCredentialInfo(r.Context(), userId)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
-			err = errorBadCredentials
+			err = errBadCredentials
 		}
 		handleErr(w, err)
 		return
@@ -282,7 +282,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	// validate password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		handleErr(w, errorBadCredentials)
+		handleErr(w, errBadCredentials)
 		return
 	}
 
@@ -401,7 +401,7 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 	user, err := h.dai.GetUserCredentialInfo(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
-			err = errorBadCredentials
+			err = errBadCredentials
 		}
 		handleErr(w, err)
 		return
