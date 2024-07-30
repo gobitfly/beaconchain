@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -362,20 +363,18 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 // helper function to unify handling of block detail request validation
 func (h *HandlerService) validateBlockRequest(r *http.Request) (uint64, uint64, error) {
 	var v validationError
-	req := struct {
-		Network intOrString `json:"network"`
-		Block   string      `json:"block"`
-	}{}
-	if err := v.checkBody(&req, r); err != nil {
-		return 0, 0, err
-	}
-	chainId := v.checkNetwork(req.Network)
-	block, err := h.dai.GetLatestBlock()
-	if err != nil {
-		return 0, 0, err
-	}
-	if req.Block != "latest" {
-		block = v.checkUintMinMax(req.Block, 0, block, "block")
+	var err error
+	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+	var block uint64
+	switch blockParam := mux.Vars(r)["block"]; blockParam {
+	// possibly add other values like "genesis", "finalized", hardforks etc. later
+	case "latest":
+		block, err = h.dai.GetLatestBlock()
+		if err != nil {
+			return 0, 0, err
+		}
+	default:
+		block = v.checkUint(blockParam, "block")
 	}
 	if v.hasErrors() {
 		return 0, 0, v
