@@ -30,6 +30,7 @@
   --light-red: #d42127;
   --dark-red: #ce3438;
   --yellow: #ffd600;
+  --light-yellow: #969100;
   --purple: #9747ff;
   --light-orange: #e77f27;
   --orange: #f7a35c;
@@ -91,12 +92,12 @@
   --searchbar-networkdropdown-bground-blue: var(--light-grey);
   --searchbar-networkdropdown-border-blue: var(--light-grey-3);
   --dropdown-background-hover: var(--grey);
-  --tooltip-background: var(--light-grey-2);
+  --tooltip-background: var(--light-grey-3);
   --tooltip-text-color: var(--light-black);
 
   --link-color: var(--blue);
 
-  --equal-color: var(--yellow);
+  --equal-color: var(--light-yellow);
   --negative-color: var(--light-red);
   --negative-contrast-color: var(--text-color-inverted);
   --positive-color: var(--light-green);
@@ -164,11 +165,12 @@
     --searchbar-text-detail-default: var(--grey);
     --searchbar-filter-unselected-default: var(--light-grey);
     --dropdown-background-hover: var(--dark-grey);
-    --tooltip-background: var(--light-grey);
-    --tooltip-text-color: var(--light-black);
+    --tooltip-background: var(--dark-grey);
+    --tooltip-text-color: var(--light-grey);
 
     --link-color: var(--light-blue);
 
+    --equal-color: var(--yellow);
     --negative-color: var(--flashy-red);
     --negative-contrast-color: var(--text-color);
     --positive-color: var(--green);

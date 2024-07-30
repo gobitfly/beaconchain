@@ -11,7 +11,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -80,6 +79,11 @@ type ValidatorDashboardRepository interface {
 
 	GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error)
 	GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error)
+
+	GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error)
+	GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error)
+	GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error)
+	GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error)
 }
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
@@ -171,39 +175,6 @@ func (d DataAccessService) calculateChartEfficiency(efficiencyType enums.VDBSumm
 		return 0, fmt.Errorf("unexpected efficiency type: %v", efficiency)
 	}
 	return efficiency, nil
-}
-
-func (d DataAccessService) getValidatorStatuses(validators []uint64) (map[uint64]enums.ValidatorStatus, error) {
-	validatorStatuses := make(map[uint64]enums.ValidatorStatus, len(validators))
-
-	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
-	if err != nil {
-		return nil, err
-	}
-
-	// Fill the data
-	for _, validator := range validators {
-		metadata := validatorMapping.ValidatorMetadata[validator]
-
-		switch constypes.ValidatorDbStatus(metadata.Status) {
-		case constypes.DbDeposited:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Deposited
-		case constypes.DbPending:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Pending
-		case constypes.DbActiveOnline, constypes.DbExitingOnline, constypes.DbSlashingOnline:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Online
-		case constypes.DbActiveOffline, constypes.DbExitingOffline, constypes.DbSlashingOffline:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Offline
-		case constypes.DbSlashed:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Slashed
-		case constypes.DbExited:
-			validatorStatuses[validator] = enums.ValidatorStatuses.Exited
-		}
-	}
-
-	return validatorStatuses, nil
 }
 
 func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex t.VDBValidator, cursor uint64) (uint64, error) {

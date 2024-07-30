@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { Currency } from '~/types/currencies'
 
+defineProps<{
+  showCurrencyIcon: boolean
+}>()
+
 const { currency, withLabel, setCurrency } = useCurrency()
 
 </script>
@@ -16,7 +20,7 @@ const { currency, withLabel, setCurrency } = useCurrency()
   >
     <template #value>
       <span class="item in-header ">
-        <span class="icon">
+        <span v-if="showCurrencyIcon" class="icon">
           <IconCurrency v-if="currency" :currency="currency" />
         </span>{{ currency }}
       </span>
