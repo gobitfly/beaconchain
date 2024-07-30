@@ -519,7 +519,7 @@ func updateStatsEntries(entries []DbEntry) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer utils.Rollback(tx)
 
 	numArgs := 5
 	batchSize := 65535 / numArgs // max 65535 params per batch, since postgres uses int16 for binding input params
@@ -581,7 +581,7 @@ func updateRateLimits() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer utils.Rollback(tx)
 
 	dbApiKeys := []struct {
 		UserID     int64     `db:"user_id"`
