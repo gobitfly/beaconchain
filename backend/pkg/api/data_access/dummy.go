@@ -435,6 +435,34 @@ func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context
 	return &r, err
 }
 
+func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
+	r := []t.VDBRocketPoolTableRow{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, &p, err
+}
+
+func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
+	r := t.VDBRocketPoolTableRow{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
+	r := t.VDBNodeRocketPoolData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
+	r := []t.VDBRocketPoolMinipoolsTableRow{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, &p, err
+}
+
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 	r := []t.NetworkInfo{}
 	err := commonFakeData(&r)

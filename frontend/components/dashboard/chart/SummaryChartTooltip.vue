@@ -11,7 +11,8 @@ interface Props {
     name: string,
     efficiency: number,
     color: string
-  }[]
+  }[],
+  highlightGroup?: string
 }
 
 defineProps<Props>()
@@ -21,9 +22,9 @@ defineProps<Props>()
 <template>
   <div class="tooltip-container">
     <DashboardChartTooltipHeader :t="t" :ts="ts" :aggregation="aggregation" :efficiency-type="efficiencyType" />
-    <div v-for="(entry, index) in groupInfos" :key="index" class="line-container">
+    <div v-for="(entry, index) in groupInfos" :key="index" class="line-container" :class="{highlight: entry.name === highlightGroup}">
       <div class="circle" :style="{ 'background-color': entry.color }" />
-      <div>
+      <div class="name">
         {{ entry.name }}:
       </div>
       <BcFormatPercent class="efficiency" :percent="entry.efficiency" />
@@ -35,9 +36,9 @@ defineProps<Props>()
 @use '~/assets/css/fonts.scss';
 
 .tooltip-container {
-  @include fonts.tooltip_text_bold;
   background-color: var(--tooltip-background);
   color: var(--tooltip-text-color);
+  border: 1px transparent solid;
   line-height: 1.5;
   padding: var(--padding);
 
@@ -52,8 +53,16 @@ defineProps<Props>()
       border-radius: 50%;
     }
 
+    .name,
     .efficiency{
       @include fonts.tooltip_text;
+    }
+
+    &.highlight{
+      .efficiency,
+      .name {
+        font-weight: var(--tooltip_text_bold_font_weight);
+      }
     }
   }
 }

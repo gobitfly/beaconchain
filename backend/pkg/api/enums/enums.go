@@ -16,8 +16,6 @@ func IsInvalidEnum(e Enum) bool {
 	return e.Int() == -1
 }
 
-// Validator Dashboard Rewards Table
-
 type AdInsertMode int
 
 var _ EnumFactory[AdInsertMode] = AdInsertMode(0)

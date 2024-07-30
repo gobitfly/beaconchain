@@ -124,6 +124,15 @@ export function formatTsToAbsolute (ts: number, locales: string, includeTime?: b
   return includeTime ? date.toLocaleString(locales, options) : date.toLocaleDateString(locales, options)
 }
 
+export function formatTsToTime (ts: number, locales: string): string {
+  const options: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: 'numeric'
+  }
+  const date = new Date(ts * 1000)
+  return date.toLocaleTimeString(locales, options)
+}
+
 function formatTsToRelative (targetTimestamp?: number, baseTimestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') : string | null | undefined {
   if (!targetTimestamp) {
     return undefined

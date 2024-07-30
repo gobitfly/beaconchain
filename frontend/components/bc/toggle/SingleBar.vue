@@ -2,7 +2,9 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { Component } from 'vue'
 interface Props {
+  layout: 'minimal' | 'gaudy'
   buttons: {
+    className?: string,
     icon?: IconDefinition,
     text?: string,
     subText?: string,
@@ -10,7 +12,8 @@ interface Props {
     componentProps?: any,
     componentClass?: string,
     value: string,
-    disabled?: boolean
+    tooltip?: string,
+    disabled?: boolean,
   }[],
   allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
 }
@@ -39,7 +42,7 @@ function onButtonClicked (value: string) {
 </script>
 
 <template>
-  <div class="bc-togglebar">
+  <div class="bc-togglebar" :class="layout">
     <BcToggleSingleBarButton
       v-for="button in props.buttons"
       :key="button.value"
@@ -47,7 +50,10 @@ function onButtonClicked (value: string) {
       :text="button.text"
       :sub-text="button.subText"
       :selected="values[button.value]"
+      :tooltip="button.tooltip"
       :disabled="button.disabled"
+      :class="[layout, button.className]"
+      :layout="layout"
       @click="!button.disabled && onButtonClicked(button.value)"
     >
       <template #icon>
@@ -62,6 +68,19 @@ function onButtonClicked (value: string) {
 <style lang="scss" scoped>
 .bc-togglebar {
   display: inline-flex;
-  gap: var(--padding);
+  &.gaudy {
+    gap: var(--padding);
+  }
+  &.minimal {
+    gap: var(--padding-small);
+    padding: 7px 10px;
+    background-color: var(--container-background);
+    border: solid 1px var(--container-border-color);
+    border-radius: var(--border-radius);
+  }
+  .gaudy {
+    width: 100%;
+    height: 100%;
+  }
 }
 </style>
