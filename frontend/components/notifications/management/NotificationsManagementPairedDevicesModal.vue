@@ -16,7 +16,7 @@ const { pairedDevices } = useNotificationsManagementSettings()
     <div class="container">
       <h1>{{ $t('notifications.general.paired_devices.title') }}</h1>
       <div class="paired-devices">
-        <NotificationsManagementPairedDevice v-for="device in pairedDevices" :key="device.id" :device="device" />
+        <NotificationsManagementPairedDeviceModalContent v-for="device in pairedDevices" :key="device.id" :device="device" />
       </div>
     </div>
     <div class="button-row">
