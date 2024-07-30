@@ -832,7 +832,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
-	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
 	if v.hasErrors() {
 		handleErr(w, v)
@@ -1246,7 +1246,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDailyHeatmap(w http.Respon
 func (h *HandlerService) InternalGetValidatorDashboardGroupEpochHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1273,7 +1273,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupEpochHeatmap(w http.R
 func (h *HandlerService) InternalGetValidatorDashboardGroupDailyHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1437,6 +1437,114 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.Re
 
 	response := types.InternalGetValidatorDashboardTotalWithdrawalsResponse{
 		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	q := r.URL.Query()
+	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBRocketPoolColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, paging, err := h.dai.GetValidatorDashboardRocketPool(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardRocketPoolResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	q := r.URL.Query()
+	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	pagingParams := v.checkPagingParams(q)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardTotalRocketPool(r.Context(), *dashboardId, pagingParams.search)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardTotalRocketPoolResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	// support ENS names ?
+	nodeAddress := v.checkAddress(vars["node_address"])
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, err := h.dai.GetValidatorDashboardNodeRocketPool(r.Context(), *dashboardId, nodeAddress)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardNodeRocketPoolResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	q := r.URL.Query()
+	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	// support ENS names ?
+	nodeAddress := v.checkAddress(vars["node_address"])
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBRocketPoolMinipoolsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	data, paging, err := h.dai.GetValidatorDashboardRocketPoolMinipools(r.Context(), *dashboardId, nodeAddress, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardRocketPoolMinipoolsResponse{
+		Data:   data,
+		Paging: *paging,
 	}
 	returnOk(w, response)
 }

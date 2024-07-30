@@ -100,7 +100,6 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
     <BcTableControl
       v-model:="showAbsoluteValues"
       :search-placeholder="searchPlaceholder"
-      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #header-center="{tableIsShown}">
@@ -271,7 +270,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartSummaryChart v-if="showInDevelopment" :filter="chartFilter" />
+          <DashboardChartSummaryChart :filter="chartFilter" />
         </div>
       </template>
     </BcTableControl>

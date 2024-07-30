@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { BcDialogConfirm, NotificationsManagementSubscriptionDialog } from '#components'
+import { BcDialogConfirm, NotificationsManagementSubscriptionDialog, DashboardCreationController } from '#components'
 import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
 
 const dialog = useDialog()
+const { currentNetwork } = useNetworkStore()
 
 function onClose (answer: boolean) {
   setTimeout(() => {
@@ -56,10 +57,21 @@ function openSubscriptions (props: any) {
     onClose: response => onClose(response?.data)
   })
 }
+
+const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
 </script>
 
 <template>
   <div class="container">
+    <Button @click="dashboardCreationControllerModal?.show()">
+      Create dashboard with free will!
+    </Button>
+    <Button @click="dashboardCreationControllerModal?.show('validator', currentNetwork)">
+      Create validator dashboard with currentNetwork.value forced
+    </Button>
+    <Button @click="dashboardCreationControllerModal?.show('account')">
+      Create account dashboard with account mode forced
+    </Button>
     Note: to test the saving of the options to the API, open the dialogs from the notification dashboard.<br>The communication with the API is implemented there.
     <Button @click="openSubscriptions({ dashboardType: 'validator', initialSettings: validatorSub, saveUserSettings: () => {} })">
       Subscribe to notifications for your validators
@@ -77,6 +89,12 @@ function openSubscriptions (props: any) {
     <Button @click="openQuestion(undefined, 'cancel')">
       Open Question cancel?
     </Button>
+
+    <DashboardCreationController
+      ref="dashboardCreationControllerModal"
+      class="modal-controller"
+      :display-mode="'modal'"
+    />
   </div>
 </template>
 
