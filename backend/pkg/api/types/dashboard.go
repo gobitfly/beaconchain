@@ -9,7 +9,7 @@ type ValidatorDashboard struct {
 	Name           string        `json:"name"`
 	PublicIds      []VDBPublicId `json:"public_ids,omitempty"`
 	IsArchived     bool          `json:"is_archived"`
-	ArchivedReason string        `json:"archived_reason,omitempty"` // dashboard_limit, validator_limit, group_limit, none
+	ArchivedReason string        `json:"archived_reason,omitempty" tstype:"'dashboard_limit' | 'validator_limit' | 'group_limit'"`
 	ValidatorCount uint64        `json:"validator_count"`
 	GroupCount     uint64        `json:"group_count"`
 }

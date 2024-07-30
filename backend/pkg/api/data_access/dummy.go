@@ -155,6 +155,15 @@ func (d *DummyService) GetValidatorDashboardInfoByPublicId(ctx context.Context, 
 	return &r, err
 }
 
+func (d *DummyService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+	r := t.ValidatorDashboard{}
+	// return semi-valid data to not break staging
+	//nolint:errcheck
+	commonFakeData(&r)
+	r.IsArchived = false
+	return &r, nil
+}
+
 func (d *DummyService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
 	r := ""
 	err := commonFakeData(&r)
@@ -481,15 +490,6 @@ func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainI
 	r := t.SearchValidatorsByGraffiti{}
 	err := commonFakeData(&r)
 	return &r, err
-}
-
-func (d *DummyService) GetUserValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
-	r := t.ValidatorDashboard{}
-	// return semi-valid data to not break staging
-	//nolint:errcheck
-	commonFakeData(&r)
-	r.IsArchived = false
-	return &r, nil
 }
 
 func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {

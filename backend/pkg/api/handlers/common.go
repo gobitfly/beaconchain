@@ -312,7 +312,7 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 		return nil, err
 	}
 
-	dashboardInfo, err := h.dai.GetUserValidatorDashboard(ctx, *dashboardId)
+	dashboardInfo, err := h.dai.GetValidatorDashboard(ctx, *dashboardId)
 	if err != nil {
 		return nil, err
 	}
