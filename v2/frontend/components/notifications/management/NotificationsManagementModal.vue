@@ -122,5 +122,3 @@ refreshSettings()
   right: calc(var(--padding-large) + var(--padding));
 }
 </style>
-~/composables/notifications/useNotificationsManagementProvider
-~/composables/notifications/useNotificationsManagementSettingsProvider
