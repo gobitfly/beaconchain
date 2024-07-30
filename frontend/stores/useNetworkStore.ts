@@ -71,7 +71,7 @@ export function useNetworkStore () {
   function secondsPerEpoch ():number {
     return networkTs.secondsPerEpoch(currentNetwork.value)
   }
- 
+
   function slotToTs (slot: number) : number | undefined {
     return networkTs.slotToTs(currentNetwork.value, slot)
   }
