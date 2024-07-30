@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"html"
@@ -36,6 +35,8 @@ const authEmailExpireTime = time.Minute * 30
 type ctxKet string
 
 const ctxUserIdKey ctxKet = "user_id"
+
+var errorBadCredentials = newUnauthorizedErr("invalid email or password")
 
 func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredentialInfo, error) {
 	authenticated := h.scs.GetBool(r.Context(), authenticatedKey)
@@ -259,7 +260,6 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
 	userId, err := h.dai.GetUserByEmail(r.Context(), email)
 	if err != nil {
@@ -269,7 +269,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	user, err := h.dai.GetUserCredentialInfo(r.Context(), userId)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
-			err = badCredentialsErr
+			err = errorBadCredentials
 		}
 		handleErr(w, err)
 		return
@@ -282,7 +282,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	// validate password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		handleErr(w, badCredentialsErr)
+		handleErr(w, errorBadCredentials)
 		return
 	}
 
@@ -303,7 +303,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 
 // Can be used to login on mobile, requires an authenticated session
 // Response must conform to OAuth spec
-func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostMobileAuthorize(w http.ResponseWriter, r *http.Request) {
 	req := struct {
 		DeviceIDAndName string `json:"client_id"`
 		RedirectURI     string `json:"redirect_uri"`
@@ -374,7 +374,7 @@ func (h *HandlerService) InternalPostAuthorize(w http.ResponseWriter, r *http.Re
 // Abstract: One time Transitions old v1 app sessions to new v2 sessions so users stay signed in
 // Can be used to exchange a legacy mobile auth access_token & refresh_token pair for a session
 // Refresh token is consumed and can no longer be used after this
-func (h *HandlerService) InternalExchangeLegacyMobileAuth(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
 		DeviceName   string `json:"client_name"`
@@ -385,27 +385,23 @@ func (h *HandlerService) InternalExchangeLegacyMobileAuth(w http.ResponseWriter,
 		handleErr(w, err)
 		return
 	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
 
 	// get user id by refresh token
 	userID, refreshTokenHashed, err := h.getTokenByRefresh(r, req.RefreshToken)
 	if err != nil {
-		switch {
-		case errors.Is(err, errInvalidTokenClaims):
-			handleErr(w, newUnauthorizedErr("invalid token"))
-		case errors.Is(err, sql.ErrNoRows):
-			handleErr(w, dataaccess.ErrNotFound)
-		default:
-			handleErr(w, err)
-		}
+		handleErr(w, err)
 		return
 	}
 
 	// Get user info
-	badCredentialsErr := newUnauthorizedErr("invalid email or password") // same error as to not leak information
 	user, err := h.dai.GetUserCredentialInfo(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
-			err = badCredentialsErr
+			err = errorBadCredentials
 		}
 		handleErr(w, err)
 		return
@@ -445,14 +441,18 @@ func (h *HandlerService) InternalExchangeLegacyMobileAuth(w http.ResponseWriter,
 	})
 }
 
-func (h *HandlerService) InternalRegisterMobilePushToken(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostUsersMeNotificationSettingsPairedDevicesToken(w http.ResponseWriter, r *http.Request) {
+	deviceID := mux.Vars(r)["client_id"]
 	var v validationError
 	req := struct {
-		Token    string `json:"token"`
-		DeviceID string `json:"client_id"`
+		Token string `json:"token"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 
@@ -462,7 +462,7 @@ func (h *HandlerService) InternalRegisterMobilePushToken(w http.ResponseWriter, 
 		return
 	}
 
-	err = h.dai.AddMobileNotificationToken(user.Id, req.DeviceID, req.Token)
+	err = h.dai.AddMobileNotificationToken(user.Id, deviceID, req.Token)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -478,6 +478,10 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 	req := types.MobileSubscription{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
 

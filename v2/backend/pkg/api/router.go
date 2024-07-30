@@ -86,9 +86,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
 
-		{http.MethodGet, "/mobile/authorize", nil, hs.InternalPostAuthorize},
-		{http.MethodPost, "/mobile/equivalent-exchange", nil, hs.InternalExchangeLegacyMobileAuth},
-		{http.MethodPost, "/mobile/notify/register", nil, hs.InternalRegisterMobilePushToken},
+		{http.MethodGet, "/mobile/authorize", nil, hs.InternalPostMobileAuthorize},
+		{http.MethodPost, "/mobile/equivalent-exchange", nil, hs.InternalPostMobileEquivalentExchange},
 		{http.MethodPost, "/mobile/purchase", nil, hs.InternalHandleMobilePurchase},
 
 		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
@@ -110,6 +109,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodPut, "/users/me/password", nil, hs.InternalPutUserPassword},
 		// TODO reset password
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
+		{http.MethodPut, "/users/me/notifications/settings/paired-devices/{client_id}/token", nil, hs.InternalPostUsersMeNotificationSettingsPairedDevicesToken},
 
 		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
 

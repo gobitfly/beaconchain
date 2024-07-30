@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -8,12 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/golang-jwt/jwt"
 )
-
-var errInvalidTokenClaims = errors.New("Error getting claims from access token")
 
 var signingMethod = jwt.SigningMethodHS256
 
@@ -37,14 +37,17 @@ func (h *HandlerService) getTokenByRefresh(r *http.Request, refreshToken string)
 	unsafeClaims, err := UnsafeGetClaims(accessToken)
 	if err != nil {
 		log.Warnf("Error getting claims from access token: %v", err)
-		return 0, "", errInvalidTokenClaims
+		return 0, "", newUnauthorizedErr("invalid token")
 	}
 
 	log.Infof("refresh token: %v, claims: %v, hashed refresh: %v", refreshToken, unsafeClaims, refreshTokenHashed)
 
 	// confirm all claims via db lookup and refreshtoken check
-	userID, err := h.dai.GetByRefreshToken(unsafeClaims.UserID, unsafeClaims.AppID, unsafeClaims.DeviceID, refreshTokenHashed)
+	userID, err := h.dai.GetUserIdByRefreshToken(unsafeClaims.UserID, unsafeClaims.AppID, unsafeClaims.DeviceID, refreshTokenHashed)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, "", dataaccess.ErrNotFound
+		}
 		return 0, "", errors.Wrap(err, "Error getting user by refresh token")
 	}
 

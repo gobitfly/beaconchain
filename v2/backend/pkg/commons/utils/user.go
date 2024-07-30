@@ -4,6 +4,7 @@ import (
 	securerand "crypto/rand"
 	"encoding/base64"
 	"math/big"
+	"slices"
 	"strings"
 )
 
@@ -65,16 +66,8 @@ func CensorEmail(mail string) string {
 	if len(parts) == 2 {
 		// https://email-verify.my-addr.com/list-of-most-popular-email-domains.php
 		wellKnownDomains := []string{"gmail", "hotmail", "yahoo", "apple", "aol", "outlook", "gmx", "live", "comcast", "msn"}
-		isWellKnownDomain := false
 
-		for _, domain := range wellKnownDomains {
-			if domain == domainParts[0] {
-				isWellKnownDomain = true
-				break
-			}
-		}
-
-		if !isWellKnownDomain && len(domainParts[0]) > 2 {
+		if !slices.Contains(wellKnownDomains, domainParts[0]) && len(domainParts[0]) > 2 {
 			domain = string(domainParts[0][0]) + "***" + string(domainParts[0][len(domainParts[0])-1]) + "." + domainParts[1]
 		}
 	}
