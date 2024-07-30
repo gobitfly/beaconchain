@@ -249,7 +249,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		// In case a list of validators is provided set the group to the default id
 		rewardsDs = rewardsDs.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("e.validator_index IN (?)", dashboardId.Validators)).
+			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators)).
 			GroupBy(goqu.L("e.epoch"))
 		elDs = elDs.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
@@ -527,7 +527,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		From(goqu.L("validator_dashboard_data_epoch e")).
 		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
-			goqu.L("e.epoch"),
 			goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
 			goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
 			goqu.L("COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward"),
@@ -552,7 +551,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	elDs := goqu.Dialect("postgres").
 		Select(
-			goqu.L("b.epoch"),
 			goqu.L("COALESCE(SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)), 0) AS blocks_el_reward")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
@@ -574,7 +572,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		}
 	} else { // handle the case when we have a dashboard id and an optional group id
 		rewardsDs = rewardsDs.
-			Where(goqu.L("e.validator_index IN (?)", dashboardId.Validators))
+			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators))
 		elDs = elDs.
 			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
 	}
@@ -757,7 +755,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		// In case a list of validators is provided set the group to the default id
 		rewardsDs = rewardsDs.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("e.validator_index IN (?)", dashboardId.Validators)).
+			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators)).
 			GroupBy(goqu.L("e.epoch")).
 			Order(goqu.L("e.epoch").Asc())
 		elDs = elDs.
@@ -1007,7 +1005,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			return result, &paging, nil
 		}
 
-		rewardsDs = rewardsDs.Where(goqu.L("e.validator_index = ANY(?)", pq.Array(validators)))
+		rewardsDs = rewardsDs.Where(goqu.L("e.validator_index IN ?", validators))
 		elDs = elDs.Where(goqu.L("b.proposer = ANY(?)", pq.Array(validators)))
 	}
 
