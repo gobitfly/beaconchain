@@ -59,7 +59,6 @@ import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 const { t: $t } = useI18n()
 const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
-const { withLabel, currency, setCurrency } = useCurrency()
 const route = useRoute()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const megaMenu = ref<{toggle:(evt:Event)=>void, mobileActive: boolean} | null>(null)
@@ -938,7 +937,7 @@ const items = computed(() => {
         label: $t('header.settings'),
         command: async () => { await navigateTo('../user/settings') }
       })
-    } else {
+    } /* else {
       list.push({
         label: currency.value,
         currency: currency.value,
@@ -947,7 +946,7 @@ const items = computed(() => {
           items: withLabel.value.map(m => ({ ...m, command: () => setCurrency(m.currency) }))
         }]]
       })
-    }
+    } */
   }
   if (isSmallScreen.value && isLoggedIn.value) {
     list.push({
