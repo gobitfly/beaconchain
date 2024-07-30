@@ -1,47 +1,33 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainIDs } from '~/types/network'
+import { ChainInfo, ChainIDs, isL1 } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
+const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
 const { t: $t } = useI18n()
-const { currentNetwork, isMainNet } = useNetworkStore()
 
-const network = defineModel<ChainIDs>('network')
-const selection = ref<`${ChainIDs}` | ''>('')
-// TODO: get the list from the API...
-let ValidatorDashboardNetworkList: ChainIDs[]
-if (isMainNet()) {
-  ValidatorDashboardNetworkList = [ChainIDs.Ethereum, ChainIDs.Gnosis]
-  selection.value = `${ChainIDs.Ethereum}` // preselecting here, because Ethereum (Mainnet) is the only network that is available at the moment
-} else {
-  ValidatorDashboardNetworkList = [ChainIDs.Holesky, ChainIDs.Chiado]
-  selection.value = `${ChainIDs.Holesky}` // preselecting here, because Ethereum (Holesky) is the only network that is available at the moment
-}
-// ... and remove this.
+const network = defineModel<ChainIDs>('network', { required: true })
+const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}`|''>(network)
 
-watch(selection, (value) => { network.value = Number(value) as ChainIDs }, { immediate: true })
+const buttonList = shallowRef<any[]>([])
 
-const showNameOrDescription = (chainId: ChainIDs): string => {
-  const chain = ChainInfo[chainId]
-  if (chain.name === chain.family) {
-    return chain.description
-  }
-  return chain.name
-}
-
-const buttonList = ValidatorDashboardNetworkList.map((chainId) => {
-  // TODO: simply set `false` for everything once dashboards can be created for all the networks in `ValidatorDashboardNetworkList`
-  const isDisabled = chainId !== currentNetwork.value
-  return {
-    value: String(chainId),
-    text: ChainInfo[chainId].family as string,
-    subText: isDisabled ? $t('common.coming_soon') : showNameOrDescription(chainId),
-    disabled: isDisabled,
-    component: IconNetwork,
-    componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
-    componentClass: 'dashboard-creation-button-network-icon'
-  }
-})
+watch(currentNetwork, (id) => { network.value = id })
+watch(availableNetworks, () => {
+  buttonList.value = [] as any[]
+  availableNetworks.value.forEach((chainId) => {
+    if (isL1(chainId)) {
+      buttonList.value.push({
+        value: String(chainId),
+        text: ChainInfo[chainId].nameParts[0],
+        subText: isNetworkDisabled(chainId) ? $t('common.coming_soon') : ChainInfo[chainId].nameParts[1],
+        disabled: isNetworkDisabled(chainId),
+        component: IconNetwork,
+        componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
+        componentClass: 'dashboard-creation-button-network-icon'
+      })
+    }
+  })
+}, { immediate: true })
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
@@ -64,6 +50,7 @@ const continueDisabled = computed(() => {
         class="single-bar"
         :buttons="buttonList"
         :are-buttons-networks="true"
+        layout="gaudy"
       />
       <div class="row-container">
         <Button @click="emit('back')">
