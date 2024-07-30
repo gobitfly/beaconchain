@@ -1,5 +1,6 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import type { ApiDataResponse } from '~/types/api/common'
+import { isMainNet } from '~/types/network'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
 import { type InternalGetUserNotificationSettingsResponse } from '~/types/api/notifications'
 
@@ -354,14 +355,17 @@ interface ApiChainInfo {
 
 export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChainInfo[]> {
   const result = { data: [] } as ApiDataResponse<ApiChainInfo[]>
-
-  result.data.push(
-    { chain_id: 1, name: 'ethereum' },
-    { chain_id: 17000, name: 'holesky' },
-    { chain_id: 100, name: 'gnosis' },
-    { chain_id: 10200, name: 'chiado' }
-  )
-
+  if (isMainNet(Number(useRuntimeConfig().public.chainIdByDefault))) {
+    result.data.push({ chain_id: 1, name: 'ethereum' }, { chain_id: 100, name: 'gnosis' })
+    if (useRuntimeConfig().public.showInDevelopment) {
+      result.data.push({ chain_id: 42161, name: 'arbitrum' }, { chain_id: 8453, name: 'base' })
+    }
+  } else {
+    result.data.push({ chain_id: 17000, name: 'holesky' }, { chain_id: 10200, name: 'chiado' })
+    if (useRuntimeConfig().public.showInDevelopment) {
+      result.data.push({ chain_id: 421614, name: 'arbitrum testnet' }, { chain_id: 84532, name: 'base testnet' })
+    }
+  }
   return result
 }
 

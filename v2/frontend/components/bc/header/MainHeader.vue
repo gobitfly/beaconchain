@@ -8,7 +8,7 @@ import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
-import { smallHeaderThreshold } from '~/types/header'
+import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
 const props = defineProps({ isHomePage: { type: Boolean } })
 const { latestState } = useLatestStateStore()
@@ -20,6 +20,7 @@ const { t: $t } = useI18n()
 
 const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
+const isMobileScreen = computed(() => width.value < mobileHeaderThreshold)
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished' // TODO: once the searchbar is enabled in production, delete this line
@@ -96,7 +97,7 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell controls">
-        <BcCurrencySelection class="currency" />
+        <BcCurrencySelection v-if="!isMobileScreen || isLoggedIn" class="currency" />
         <div v-if="!isLoggedIn" class="logged-out">
           <BcLink to="/login" class="login">
             {{ $t('header.login') }}
@@ -247,9 +248,6 @@ $smallHeaderThreshold: 1024px;
       justify-content: right;
 
       .currency {
-        @media (max-width: $mobileHeaderThreshold) {
-          display: none;
-        }
         color: var(--header-top-font-color);
       }
       .logged-out {

@@ -938,16 +938,16 @@ const items = computed(() => {
         label: $t('header.settings'),
         command: async () => { await navigateTo('../user/settings') }
       })
+    } else {
+      list.push({
+        label: currency.value,
+        currency: currency.value,
+        items: [[{
+          label: $t('header.megamenu.select_currency'),
+          items: withLabel.value.map(m => ({ ...m, command: () => setCurrency(m.currency) }))
+        }]]
+      })
     }
-
-    list.push({
-      label: currency.value,
-      currency: currency.value,
-      items: [[{
-        label: $t('header.megamenu.select_currency'),
-        items: withLabel.value.map(m => ({ ...m, command: () => setCurrency(m.currency) }))
-      }]]
-    })
   }
   if (isSmallScreen.value && isLoggedIn.value) {
     list.push({
