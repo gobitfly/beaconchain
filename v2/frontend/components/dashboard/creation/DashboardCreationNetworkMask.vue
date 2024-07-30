@@ -7,15 +7,16 @@ const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore
 const { t: $t } = useI18n()
 
 const network = defineModel<ChainIDs>('network', { required: true })
-const selection = ref<`${ChainIDs}` | ''>('')
+const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}`|''>(network)
 
-watch(selection, (value) => { network.value = Number(value) as ChainIDs }, { immediate: true })
+const buttonList = shallowRef<any[]>([])
 
-const buttonList = computed(() => {
-  const list = [] as any[]
+watch(currentNetwork, (id) => { network.value = id })
+watch(availableNetworks, () => {
+  buttonList.value = [] as any[]
   availableNetworks.value.forEach((chainId) => {
     if (isL1(chainId)) {
-      list.push({
+      buttonList.value.push({
         value: String(chainId),
         text: ChainInfo[chainId].nameParts[0],
         subText: isNetworkDisabled(chainId) ? $t('common.coming_soon') : ChainInfo[chainId].nameParts[1],
@@ -26,9 +27,7 @@ const buttonList = computed(() => {
       })
     }
   })
-  selection.value = `${currentNetwork.value}`
-  return list
-})
+}, { immediate: true })
 
 const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
