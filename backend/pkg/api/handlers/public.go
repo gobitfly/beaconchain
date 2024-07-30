@@ -22,10 +22,6 @@ func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicPostOauthToken(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
 func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	userId, err := h.GetUserIdByApiKey(r)
 	if err != nil {
@@ -348,6 +344,22 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 }
 
 func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 

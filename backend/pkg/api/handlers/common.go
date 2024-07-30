@@ -416,6 +416,10 @@ func checkMinMax[T number](v *validationError, param T, min T, max T, paramName 
 	return param
 }
 
+func (v *validationError) checkAddress(publicId string) string {
+	return v.checkRegex(reEthereumAddress, publicId, "address")
+}
+
 func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -741,6 +745,8 @@ func errWithMsg(err error, format string, args ...interface{}) error {
 	return fmt.Errorf("%w: %s", err, fmt.Sprintf(format, args...))
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
 }
@@ -750,14 +756,19 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
 
+//nolint:unparam
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
 }

@@ -28,8 +28,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
 
-	debug := cfg.Frontend.Debug
-	if !debug {
+	if !cfg.Frontend.CsrfInsecure {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
@@ -86,9 +85,13 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
 
 		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
-		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
-		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
+		{http.MethodGet, "/mobile/authorize", nil, hs.InternalPostAuthorize},
+		{http.MethodPost, "/mobile/equivalent-exchange", nil, hs.InternalExchangeLegacyMobileAuth},
+		{http.MethodPost, "/mobile/notify/register", nil, hs.InternalRegisterMobilePushToken},
+		{http.MethodPost, "/mobile/purchase", nil, hs.InternalHandleMobilePurchase},
+
+		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
 		{http.MethodGet, "/latest-state", nil, hs.InternalGetLatestState},
 
@@ -231,7 +234,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
 		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession), GetAuthMiddleware(cfg.ApiKeySecret))
+		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession))
 	}
 
 	endpoints := []endpoint{
@@ -267,6 +270,10 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/total-consensus-layer-deposits", nil, hs.InternalGetValidatorDashboardTotalConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/withdrawals", hs.PublicGetValidatorDashboardWithdrawals, hs.InternalGetValidatorDashboardWithdrawals},
 		{http.MethodGet, "/{dashboard_id}/total-withdrawals", nil, hs.InternalGetValidatorDashboardTotalWithdrawals},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool", hs.PublicGetValidatorDashboardRocketPool, hs.InternalGetValidatorDashboardRocketPool},
+		{http.MethodGet, "/{dashboard_id}/total-rocket-pool", hs.PublicGetValidatorDashboardTotalRocketPool, hs.InternalGetValidatorDashboardTotalRocketPool},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}", hs.PublicGetValidatorDashboardNodeRocketPool, hs.InternalGetValidatorDashboardNodeRocketPool},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}/minipools", hs.PublicGetValidatorDashboardRocketPoolMinipools, hs.InternalGetValidatorDashboardRocketPoolMinipools},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
 }

@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand/v2"
 	"reflect"
@@ -10,7 +11,9 @@ import (
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
 )
 
@@ -435,6 +438,34 @@ func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context
 	return &r, err
 }
 
+func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
+	r := []t.VDBRocketPoolTableRow{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, &p, err
+}
+
+func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
+	r := t.VDBRocketPoolTableRow{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
+	r := t.VDBNodeRocketPoolData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
+	r := []t.VDBRocketPoolMinipoolsTableRow{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, &p, err
+}
+
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 	r := []t.NetworkInfo{}
 	err := commonFakeData(&r)
@@ -616,5 +647,39 @@ func (d *DummyService) UpdateAdConfiguration(ctx context.Context, key, jquerySel
 }
 
 func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) error {
+	return nil
+}
+
+func (d *DummyService) GetByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
+	r := t.OAuthAppData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+	return nil
+}
+
+func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails types.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
 	return nil
 }
