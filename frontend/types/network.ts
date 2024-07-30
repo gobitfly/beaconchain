@@ -31,6 +31,7 @@ export enum ChainIDs {
 }
 
 export interface ChainInfoFields {
+  nameParts: string[],
   name: string,
   description: string,
   family: ChainFamily,
@@ -41,13 +42,13 @@ export interface ChainInfoFields {
   timeStampSlot0: number, // if this property is 0, it means that the network has no slots
   secondsPerSlot: number, // if this property is 0, it means that the network has no slots
   slotsPerEpoch: number, // if this property is 0, it means that the network has no slots
-  path: string,
   priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Any]: {
-    name: 'Any',
+    nameParts: ['Any', 'network'],
+    name: 'Any network',
     description: 'Any network',
     family: ChainFamily.Any,
     mainNet: ChainIDs.Any,
@@ -57,11 +58,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/undefined',
     priority: 0 // data belonging to all networks is displayed first by default
   },
 
   [ChainIDs.Ethereum]: {
+    nameParts: ['Ethereum', ''],
     name: 'Ethereum',
     description: 'Mainnet',
     family: ChainFamily.Ethereum,
@@ -72,11 +73,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1606824023,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/ethereum',
     priority: 1
   },
   [ChainIDs.Holesky]: {
-    name: 'Holesky',
+    nameParts: ['Ethereum', 'Holesky'],
+    name: 'Ethereum Holesky',
     description: 'Testnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
@@ -86,11 +87,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1695902400,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/holesky',
     priority: 2
   },
   [ChainIDs.Sepolia]: {
-    name: 'Sepolia',
+    nameParts: ['Ethereum', 'Sepolia'],
+    name: 'Ethereum Sepolia',
     description: 'Testnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
@@ -100,11 +101,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1655733600,
     secondsPerSlot: 12,
     slotsPerEpoch: 32,
-    path: '/sepolia',
     priority: 3
   },
 
   [ChainIDs.ArbitrumOneEthereum]: {
+    nameParts: ['Arbitrum One', ''],
     name: 'Arbitrum One',
     description: 'L2',
     family: ChainFamily.Arbitrum,
@@ -115,10 +116,10 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/arbitrum-one-ethereum',
     priority: 10
   },
   [ChainIDs.ArbitrumNovaEthereum]: {
+    nameParts: ['Arbitrum Nova', ''],
     name: 'Arbitrum Nova',
     description: 'L2',
     family: ChainFamily.Arbitrum,
@@ -129,10 +130,10 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/arbitrum-nova-ethereum',
     priority: 11
   },
   [ChainIDs.ArbitrumOneSepolia]: {
+    nameParts: ['Arbitrum', 'Sepolia'],
     name: 'Arbitrum Sepolia',
     description: 'Testnet',
     family: ChainFamily.Arbitrum,
@@ -143,11 +144,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/arbitrum-one-sepolia',
     priority: 12
   },
 
   [ChainIDs.OptimismEthereum]: {
+    nameParts: ['Optimism', ''],
     name: 'Optimism',
     description: 'L2',
     family: ChainFamily.Optimism,
@@ -158,10 +159,10 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/optimism-ethereum',
     priority: 20
   },
   [ChainIDs.OptimismSepolia]: {
+    nameParts: ['Optimism', 'Sepolia'],
     name: 'Optimism Sepolia',
     description: 'Testnet',
     family: ChainFamily.Optimism,
@@ -172,11 +173,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/optimism-sepolia',
     priority: 21
   },
 
   [ChainIDs.BaseEthereum]: {
+    nameParts: ['Base', ''],
     name: 'Base',
     description: 'L2',
     family: ChainFamily.Base,
@@ -187,10 +188,10 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/base-ethereum',
     priority: 30
   },
   [ChainIDs.BaseSepolia]: {
+    nameParts: ['Base', 'Sepolia'],
     name: 'Base Sepolia',
     description: 'Testnet',
     family: ChainFamily.Base,
@@ -201,11 +202,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 0,
     secondsPerSlot: 0,
     slotsPerEpoch: 0,
-    path: '/base-sepolia',
     priority: 31
   },
 
   [ChainIDs.Gnosis]: {
+    nameParts: ['Gnosis', ''],
     name: 'Gnosis',
     description: 'Mainnet',
     family: ChainFamily.Gnosis,
@@ -216,11 +217,11 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1638993340,
     secondsPerSlot: 5,
     slotsPerEpoch: 16,
-    path: '/gnosis',
     priority: 40
   },
   [ChainIDs.Chiado]: {
-    name: 'Chiado',
+    nameParts: ['Gnosis', 'Chiado'],
+    name: 'Gnosis Chiado',
     description: 'Testnet',
     family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
@@ -230,7 +231,6 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1665396300,
     secondsPerSlot: 5,
     slotsPerEpoch: 16,
-    path: '/chiado',
     priority: 41
   }
 }

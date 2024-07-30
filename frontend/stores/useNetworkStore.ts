@@ -43,6 +43,11 @@ export function useNetworkStore () {
   const currentNetwork = computed(() => availableNetworks.value.includes(data.value.currentNetwork) ? data.value.currentNetwork : availableNetworks.value[0])
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
+  function isNetworkDisabled (chainId: networkTs.ChainIDs) : boolean {
+    // TODO: return `false` for everything once we are ready
+    return !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value
+  }
+
   function setCurrentNetwork (chainId: networkTs.ChainIDs) {
     data.value.currentNetwork = chainId
   }
@@ -55,27 +60,27 @@ export function useNetworkStore () {
     return networkTs.isL1(currentNetwork.value)
   }
 
-  function epochsPerDay (): number {
+  function epochsPerDay () : number {
     return networkTs.epochsPerDay(currentNetwork.value)
   }
 
-  function epochToTs (epoch: number): number | undefined {
+  function epochToTs (epoch: number) : number | undefined {
     return networkTs.epochToTs(currentNetwork.value, epoch)
   }
 
   function secondsPerEpoch ():number {
     return networkTs.secondsPerEpoch(currentNetwork.value)
   }
-
-  function slotToTs (slot: number): number | undefined {
+ 
+  function slotToTs (slot: number) : number | undefined {
     return networkTs.slotToTs(currentNetwork.value, slot)
   }
 
-  function tsToSlot (ts: number): number {
+  function tsToSlot (ts: number) : number {
     return networkTs.tsToSlot(currentNetwork.value, ts)
   }
 
-  function slotToEpoch (slot: number): number {
+  function slotToEpoch (slot: number) : number {
     return networkTs.slotToEpoch(currentNetwork.value, slot)
   }
 
@@ -86,6 +91,7 @@ export function useNetworkStore () {
   return {
     loadAvailableNetworks,
     availableNetworks,
+    isNetworkDisabled,
     currentNetwork,
     networkInfo,
     setCurrentNetwork,
