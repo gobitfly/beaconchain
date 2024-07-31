@@ -100,7 +100,7 @@ const textMutedUntil = computed(() => {
         <span class="explanation">{{ $t('notifications.general.mute.all') }}</span>
       </div>
       <div v-if="generalSettings?.do_not_disturb_timestamp" class="unmute-container">
-        <Button :label="$t('notifications.general.mute.unmute')" @click="unmuteNotifications()" />
+        <Button :label="$t('notifications.general.mute.unmute')" @click="unmuteNotifications" />
         <div class="muted-until">
           {{ textMutedUntil }}
         </div>
@@ -111,7 +111,7 @@ const textMutedUntil = computed(() => {
         option-value="value"
         option-label="label"
         panel-class="mute-notifications-dropdown-panel"
-        @update:model-value="(value: number)=>muteNotifications(value)"
+        @update:model-value="muteNotifications"
       >
         <template #value>
           {{ $t('notifications.general.mute.select_duration') }}
