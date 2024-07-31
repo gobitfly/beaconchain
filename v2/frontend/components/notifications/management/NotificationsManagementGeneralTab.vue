@@ -18,7 +18,7 @@ const { generalSettings, updateGeneralSettings, pairedDevices } = useNotificatio
 const isVisible = ref(false)
 const isEmailToggleOn = ref(false)
 const isPushToggleOn = ref(false)
-const { value: testButtonsDisabled, bounce: bounceTestButton, instant: setTestButton } = useDebounceValue<boolean>(false, 5000)
+const { value: areTestButtonsDisabled, bounce: bounceTestButton, instant: setTestButton } = useDebounceValue<boolean>(false, 5000)
 
 const timestampMute = ref<number | undefined>()
 const muteDropdownList = [
@@ -152,7 +152,7 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_email') }}
       </div>
-      <Button class="button-send" :disabled="testButtonsDisabled" @click="sendTestNotification('email')">
+      <Button class="button-send" :disabled="areTestButtonsDisabled" @click="sendTestNotification('email')">
         {{ $t('notifications.general.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
@@ -161,7 +161,7 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_push') }}
       </div>
-      <Button class="button-send" :disabled="testButtonsDisabled" @click="sendTestNotification('push')">
+      <Button class="button-send" :disabled="areTestButtonsDisabled" @click="sendTestNotification('push')">
         {{ $t('notifications.general.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
