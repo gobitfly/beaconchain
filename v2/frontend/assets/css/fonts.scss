@@ -292,12 +292,12 @@ h1 {
   @include text-toast
 }
 
-@mixin text-toast--sm(){
+@mixin text-toast-sm(){
   font-family:var(--roboto-family);
   font-size: var(--small_text_font_size);
   font-weight: var(--roboto-regular);
 }
 
-.text-toast--sm{
-  @include text-toast--sm
+.text-toast-sm{
+  @include text-toast-sm
 }
