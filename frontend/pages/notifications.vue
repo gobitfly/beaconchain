@@ -88,14 +88,14 @@ watch(storeData, (newValue, oldValue) => {
     <BcPageWrapper>
       <template #top>
         <DashboardHeader :dashboard-title="$t('notifications.title')" />
+        <div class="button-row">
+          <Button :label="$t('notifications.manage')" @click="openManageNotifications" />
+        </div>
         <div class="overview">
           <NotificationsOverview :store="storeData" />
         </div>
       </template>
       <NotificationsManagementModal v-model="manageNotificationsModalVisisble" />
-      <div class="button-row">
-        <Button :label="$t('notifications.manage')" @click="openManageNotifications" />
-      </div>
       <TabView lazy class="notifications-tab-view" :active-index="activeIndex" @update:active-index="setActiveIndex">
         <TabPanel>
           <template #header>
@@ -152,5 +152,6 @@ watch(storeData, (newValue, oldValue) => {
 .button-row {
   display: flex;
   justify-content: flex-end;
+  margin-bottom:2em;
 }
 </style>
