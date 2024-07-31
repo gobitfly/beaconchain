@@ -6,10 +6,9 @@ import type { NotificationsOverview } from '~/types/notifications/overview'
 
 const props = defineProps<{ store: NotificationsOverview | null }>()
 
-// Computed properties for labels and values
 const emailNotificationStatus = computed(() => props.store?.EmailNotifications ? 'Active' : 'Inactive')
 const pushNotificationStatus = computed(() => props.store?.pushNotifications ? 'Active' : 'Inactive')
-const emailLimitCount = computed(() => props.store?.EmailLimitCount ?? 0) // Updated to use EmailLimitCount from store
+const emailLimitCount = computed(() => props.store?.EmailLimitCount ?? 0)
 const mostNotifications30d = computed(() => {
   const providers = props.store?.mostNotifications30d.providers ?? []
   const abo = props.store?.mostNotifications30d.abo ?? []
@@ -24,7 +23,6 @@ const totalNotifications24h = computed(() => {
   return notifications.Email + notifications.Webhook + notifications.Push
 })
 
-// Tooltip texts
 const tooltipEmail = 'Your current limit is ' + emailLimitCount.value + ' emails per day. Your email limit resets in X hours. Upgrade to premium for more.'
 </script>
 
@@ -35,7 +33,6 @@ const tooltipEmail = 'Your current limit is ' + emailLimitCount.value + ' emails
         <span class="big_text_label">Email Notifications:</span>
         <span class="big_text">{{ emailNotificationStatus }}</span>
         <div class="inline-items" v-if="emailNotificationStatus === 'Active'">
-          <!---TODO: change the info icon. --->
           <span class="small_text">{{ emailLimitCount }}/10 per day</span>
           <BcTooltip :text="tooltipEmail" position="top" tooltip-class="tooltip">
             <FontAwesomeIcon :icon="faInfoCircle" />
@@ -116,6 +113,14 @@ const tooltipEmail = 'Your current limit is ' + emailLimitCount.value + ' emails
   justify-content: space-between;
   gap: 100px;
   align-content: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for WebKit browsers */
+  }
+
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
 }
 
 .box-item {
@@ -173,5 +178,16 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 5px; /* Adjust the gap as needed */
+}
+
+@media (max-width: 600px) {
+  .box {
+    flex-direction: row;
+    gap: 20px;
+  }
+
+  .box-item {
+    min-width: 250px; /* Adjust based on content width */
+  }
 }
 </style>
