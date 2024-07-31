@@ -129,9 +129,9 @@
   --list-hover-color: var(--light-grey);
   --list-hover-descrete-color: var(--light-grey-5);
 
-  --button-toggle-slider-color: var(--light-grey);
-  --button-toggle-color-disabled: var(--dark-grey);
-  --button-toggle-color-disabled-hover: var(--very-dark-grey-2);
+  --switch-slider-color: var(--light-grey);
+  --switch-color-disabled: var(--dark-grey);
+  --switch-color-disabled-hover: var(--very-dark-grey-2);
 
   &.dark-mode {
     --primary-color: var(--primary-orange);
