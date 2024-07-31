@@ -97,14 +97,10 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell controls">
-        <BcCurrencySelection v-if="!isMobileScreen || isLoggedIn" class="currency" />
+        <BcCurrencySelection class="currency" :show-currency-icon="!isMobileScreen" />
         <div v-if="!isLoggedIn" class="logged-out">
-          <BcLink to="/login" class="login">
-            {{ $t('header.login') }}
-          </BcLink>
-          |
-          <BcLink to="/register">
-            <Button class="register" :label="$t('header.register')" />
+          <BcLink to="/login">
+            <Button class="login" :label="$t('header.login')" />
           </BcLink>
         </div>
         <div v-else-if="!isSmallScreen" class="user-menu">
@@ -128,7 +124,9 @@ const userMenu = computed(() => {
           <span class="name">beaconcha.in</span>
         </BcLink>
         <span class="variant">
-          v2 beta | {{ networkInfo.name }}
+          v2 beta |
+          <span class="mobile">{{ networkInfo.shortName }}</span>
+          <span class="large-screen">{{ networkInfo.name }}</span>
         </span>
       </div>
 
@@ -256,9 +254,6 @@ $smallHeaderThreshold: 1024px;
         align-items: center;
         gap: var(--padding-small);
         .login {
-          font-weight: var(--main_header_bold_font_weight);
-        }
-        .register {
           padding: 8px;
         }
       }
@@ -336,16 +331,20 @@ $smallHeaderThreshold: 1024px;
         position: relative;
         margin-top: auto;
         font-size: var(--tiny_text_font_size);
-        @media (max-width: $mobileHeaderThreshold) {
-          margin-bottom: auto;
-          font-size: var(--button_font_size);
-        }
         color: var(--megamenu-text-color);
+        line-height: 10px;
+        .large-screen { display: inline }
+        .mobile { display: none }
         @media (max-width: $smallHeaderThreshold) { // when it is in the upper header...
           // ... the background is always dark blue (no matter the theme (dark/light)), so we need a light grey:
           color: var(--grey);
         }
-        line-height: 10px;
+        @media (max-width: $mobileHeaderThreshold) {
+          margin-bottom: auto;
+          font-size: var(--button_font_size);
+          .large-screen { display: none }
+          .mobile { display: inline }
+        }
       }
     }
 

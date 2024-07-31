@@ -538,7 +538,7 @@
     "deletion": {
       "delete": {
         "title": "Delete Dashboard",
-        "text": "This will delete dashboard {dashboard} from the archive and is irreversible.",
+        "text": "This will permanently delete the dashboard {dashboard}.",
         "no_label": "Cancel",
         "yes_label": "Delete Dashboard"
       },
@@ -1017,7 +1017,7 @@
       "button": "Delete My Account",
       "dialog": {
         "title": "Delete Account",
-        "warning": "This will delete your account from the archive and is irreversible.",
+        "warning": "This will permanently delete your account: {email}",
         "no_label": "Cancel",
         "yes_label": "Delete Account"
       }
