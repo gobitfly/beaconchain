@@ -443,6 +443,10 @@ func checkMinMax[T number](v *validationError, param T, min T, max T, paramName 
 	return param
 }
 
+func (v *validationError) checkAddress(publicId string) string {
+	return v.checkRegex(reEthereumAddress, publicId, "address")
+}
+
 func (v *validationError) checkUintMinMax(param string, min uint64, max uint64, paramName string) uint64 {
 	return checkMinMax(v, v.checkUint(param, paramName), min, max, paramName)
 }

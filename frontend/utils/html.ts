@@ -5,7 +5,7 @@ export function isParent (parent:HTMLElement | null, child:HTMLElement | null): 
   let node = child.parentNode
 
   // keep iterating unless null
-  while (node !== null) {
+  while (node) {
     if (node === parent) {
       return true
     }

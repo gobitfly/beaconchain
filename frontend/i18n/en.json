@@ -507,7 +507,7 @@
     "deletion": {
       "delete": {
         "title": "Delete Dashboard",
-        "text": "This will delete dashboard {dashboard} from the archive and is irreversible.",
+        "text": "This will permanently delete the dashboard {dashboard}.",
         "no_label": "Cancel",
         "yes_label": "Delete Dashboard"
       },
@@ -677,6 +677,7 @@
           "all_groups": "All Groups",
           "average": "Network Average",
           "total": "Total",
+          "no_data": "No chart data",
           "efficiency": {
             "all": "Efficiency",
             "attestation": "Attestation Eff.",
@@ -687,7 +688,7 @@
         "tooltip":{
           "lower": "{name}'s efficiency is below the network average of {average}",
           "higher": "{name}'s efficiency is above the network average of {average}",
-          "equal":"{name}'s OVH’s efficiency is at the network average of {average}",
+          "equal":"{name}'s efficiency is at the network average of {average}",
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
@@ -985,7 +986,7 @@
       "button": "Delete My Account",
       "dialog": {
         "title": "Delete Account",
-        "warning": "This will delete your account from the archive and is irreversible.",
+        "warning": "This will permanently delete your account: {email}",
         "no_label": "Cancel",
         "yes_label": "Delete Account"
       }
