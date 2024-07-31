@@ -13,12 +13,21 @@
 .p-button {
   @include fonts.button_text;
 
-  color: var(--primary-contrast-color);
-  background: var(--button-color-active);
   height: var(--default-button-height);
   padding: 8px 24px;
   border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
+
+  &:not([data-secondary]) {
+    color: var(--primary-contrast-color);
+    background: var(--button-color-active);
+  }
+
+  &[data-secondary]{
+    color: var(--button-secondary-color);
+    background: var(--button-secondary-background-color);
+    border-color: var(--button-secondary-border-color);
+  }
 
   display: inline-flex;
   flex-grow: 0;
@@ -32,9 +41,12 @@
     background: var(--button-color-disabled);
     border-color: var(--button-color-disabled);
   }
-  &:not(:disabled):hover {
+  &:not(:disabled):not([data-secondary]):hover {
     background: var(--button-color-hover);
     border-color: var(--button-color-hover);
+  }
+  &:not(:disabled)[data-secondary]:hover {
+    background: var(--button-secondary-hover-color);
   }
   &:not(:disabled):active {
     background: var(--button-color-pressed);
@@ -194,10 +206,14 @@
     transition: background-color 0.2s, color 0.2s, border-color 0.2s,
       box-shadow 0.2s;
     border-radius: 30px;
+
+    &:not(.p-inputswitch-checked) {
+      background: var(--switch-color-disabled);
+    }
   }
 
   .p-inputswitch-slider:before {
-    background: var(--toggle-button-slider-color);
+    background: var(--switch-slider-color);
     width: 20px;
     height: 20px;
     left: 0.3px;
@@ -210,8 +226,12 @@
     transform: translateX(20.6px);
   }
 
-  &:not(.p-disabled):hover .p-inputswitch-slider {
+  &:not(.p-disabled):hover.p-inputswitch-checked .p-inputswitch-slider {
     background: var(--button-color-hover);
+  }
+
+  &:not(.p-disabled):hover:not(.p-inputswitch-checked) .p-inputswitch-slider {
+    background: var(--switch-color-disabled-hover);
   }
 
   &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {
