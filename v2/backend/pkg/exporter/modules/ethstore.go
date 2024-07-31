@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -13,6 +12,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pkg/errors"
 
 	ethstore "github.com/gobitfly/eth.store"
 	"github.com/jmoiron/sqlx"
@@ -66,98 +69,158 @@ func StartEthStoreExporter(bnAddress string, enAddress string, updateInterval, e
 }
 
 func (ese *EthStoreExporter) reexportDay(day string, concurrency, receiptsMode int) error {
-	tx, err := ese.DB.Beginx()
+	conn, err := ese.DB.Conn(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving raw sql connection: %w", err)
 	}
-	defer utils.Rollback(tx)
-	err = ese.prepareClearDayTx(tx, day)
+	defer conn.Close()
+
+	err = conn.Raw(func(driverConn interface{}) error {
+		conn := driverConn.(*stdlib.Conn).Conn()
+
+		pgxdecimal.Register(conn.TypeMap())
+		tx, err := conn.Begin(context.Background())
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := tx.Rollback(context.Background())
+			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.Error(err, "error rolling back transaction", 0)
+			}
+		}()
+
+		err = ese.prepareClearDayTx(tx, day)
+		if err != nil {
+			return err
+		}
+
+		err = ese.prepareExportDayTx(tx, day, concurrency, receiptsMode)
+		if err != nil {
+			return err
+		}
+
+		err = tx.Commit(context.Background())
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return err
+		return fmt.Errorf("error during ethstore data export: %w", err)
 	}
 
-	err = ese.prepareExportDayTx(tx, day, concurrency, receiptsMode)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return nil
 }
 
 func (ese *EthStoreExporter) exportDay(day string, concurrency, receiptsMode int) error {
-	tx, err := ese.DB.Beginx()
+	conn, err := ese.DB.Conn(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("error retrieving raw sql connection: %w", err)
 	}
-	defer utils.Rollback(tx)
+	defer conn.Close()
 
-	err = ese.prepareExportDayTx(tx, day, concurrency, receiptsMode)
+	err = conn.Raw(func(driverConn interface{}) error {
+		conn := driverConn.(*stdlib.Conn).Conn()
+
+		pgxdecimal.Register(conn.TypeMap())
+		tx, err := conn.Begin(context.Background())
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := tx.Rollback(context.Background())
+			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.Error(err, "error rolling back transaction", 0)
+			}
+		}()
+
+		err = ese.prepareExportDayTx(tx, day, concurrency, receiptsMode)
+		if err != nil {
+			return err
+		}
+
+		err = tx.Commit(context.Background())
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return err
+		return fmt.Errorf("error during ethsore data export: %w", err)
 	}
 
-	return tx.Commit()
+	return nil
 }
 
-func (ese *EthStoreExporter) prepareClearDayTx(tx *sqlx.Tx, day string) error {
+func (ese *EthStoreExporter) prepareClearDayTx(tx pgx.Tx, day string) error {
+	log.Infof("removing data for day %s", day)
 	dayInt, err := strconv.ParseInt(day, 10, 64)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(`DELETE FROM eth_store_stats WHERE day = $1`, dayInt)
+	_, err = tx.Exec(context.Background(), `DELETE FROM eth_store_stats WHERE day = $1`, dayInt)
 	return err
 }
 
-func (ese *EthStoreExporter) prepareExportDayTx(tx *sqlx.Tx, day string, concurrency, receiptsMode int) error {
+func (ese *EthStoreExporter) prepareExportDayTx(tx pgx.Tx, day string, concurrency, receiptsMode int) error {
 	ethStoreDay, validators, err := ese.getStoreDay(day, concurrency, receiptsMode)
 	if err != nil {
 		return err
 	}
 
-	numArgs := 10
-	batchSize := 65535 / numArgs // max 65535 params per batch, since postgres uses int16 for binding input params
-	valueArgs := make([]interface{}, 0, batchSize*numArgs)
-	valueStrings := make([]string, 0, batchSize)
-	valueStringArr := make([]string, numArgs)
-	batchIdx, allIdx := 0, 0
-	for index, day := range validators {
-		for u := 0; u < numArgs; u++ {
-			valueStringArr[u] = fmt.Sprintf("$%d", batchIdx*numArgs+1+u)
-		}
-		valueStrings = append(valueStrings, "("+strings.Join(valueStringArr, ",")+")")
-		valueArgs = append(valueArgs, day.Day)
-		valueArgs = append(valueArgs, index)
-		valueArgs = append(valueArgs, day.EffectiveBalanceGwei.Mul(decimal.NewFromInt(1e9)))
-		valueArgs = append(valueArgs, day.StartBalanceGwei.Mul(decimal.NewFromInt(1e9)))
-		valueArgs = append(valueArgs, day.EndBalanceGwei.Mul(decimal.NewFromInt(1e9)))
-		valueArgs = append(valueArgs, day.DepositsSumGwei.Mul(decimal.NewFromInt(1e9)))
-		valueArgs = append(valueArgs, day.TxFeesSumWei)
-		valueArgs = append(valueArgs, day.ConsensusRewardsGwei.Mul(decimal.NewFromInt(1e9)))
-		valueArgs = append(valueArgs, day.TotalRewardsWei)
-		valueArgs = append(valueArgs, day.Apr)
-		batchIdx++
-		allIdx++
-		if batchIdx >= batchSize || allIdx >= len(validators) {
-			stmt := fmt.Sprintf(`INSERT INTO eth_store_stats (day, validator, effective_balances_sum_wei, start_balances_sum_wei, end_balances_sum_wei, deposits_sum_wei, tx_fees_sum_wei, consensus_rewards_sum_wei, total_rewards_wei, apr) VALUES %s`, strings.Join(valueStrings, ","))
-			_, err := tx.Exec(stmt, valueArgs...)
-			if err != nil {
-				return err
-			}
-			batchIdx = 0
-			valueArgs = valueArgs[:0]
-			valueStrings = valueStrings[:0]
-		}
+	type EthStoreDayWrapper struct {
+		ValidatorIndex uint64
+		Data           *ethstore.Day
 	}
 
-	stmt, err := tx.Prepare(`
-	INSERT INTO eth_store_stats (day, validator, effective_balances_sum_wei, start_balances_sum_wei, end_balances_sum_wei, deposits_sum_wei, tx_fees_sum_wei, consensus_rewards_sum_wei, total_rewards_wei, apr)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`)
+	validatorsArr := make([]*EthStoreDayWrapper, 0, len(validators))
+	for validatorIndex, data := range validators {
+		validatorsArr = append(validatorsArr, &EthStoreDayWrapper{
+			ValidatorIndex: validatorIndex,
+			Data:           data,
+		})
+	}
+
+	log.Infof("inserting validator data in bulk")
+	_, err = tx.CopyFrom(context.Background(), pgx.Identifier{"eth_store_stats"}, []string{
+		"day",
+		"validator",
+		"effective_balances_sum_wei",
+		"start_balances_sum_wei",
+		"end_balances_sum_wei",
+		"deposits_sum_wei",
+		"tx_fees_sum_wei",
+		"consensus_rewards_sum_wei",
+		"total_rewards_wei",
+		"apr",
+	}, pgx.CopyFromSlice(len(validatorsArr), func(i int) ([]interface{}, error) {
+		return []interface{}{
+			validatorsArr[i].Data.Day,
+			validatorsArr[i].ValidatorIndex,
+			validatorsArr[i].Data.EffectiveBalanceGwei.Mul(decimal.NewFromInt(1e9)),
+			validatorsArr[i].Data.StartBalanceGwei.Mul(decimal.NewFromInt(1e9)),
+			validatorsArr[i].Data.EndBalanceGwei.Mul(decimal.NewFromInt(1e9)),
+			validatorsArr[i].Data.DepositsSumGwei.Mul(decimal.NewFromInt(1e9)),
+			validatorsArr[i].Data.TxFeesSumWei,
+			validatorsArr[i].Data.ConsensusRewardsGwei.Mul(decimal.NewFromInt(1e9)),
+			validatorsArr[i].Data.TotalRewardsWei,
+			validatorsArr[i].Data.Apr,
+		}, nil
+	}))
+
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
 
-	_, err = stmt.Exec(
+	log.Infof("inserting aggregated day data data")
+	_, err = tx.Exec(context.Background(), `
+	INSERT INTO eth_store_stats (day, validator, effective_balances_sum_wei, start_balances_sum_wei, end_balances_sum_wei, deposits_sum_wei, tx_fees_sum_wei, consensus_rewards_sum_wei, total_rewards_wei, apr)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		ethStoreDay.Day,
 		-1,
 		ethStoreDay.EffectiveBalanceGwei.Mul(decimal.NewFromInt(1e9)),
@@ -173,7 +236,8 @@ func (ese *EthStoreExporter) prepareExportDayTx(tx *sqlx.Tx, day string, concurr
 		return err
 	}
 
-	_, err = tx.Exec(`
+	log.Infof("inserting historical pool performance data")
+	_, err = tx.Exec(context.Background(), `
 		insert into historical_pool_performance
 		select
 			eth_store_stats.day,
