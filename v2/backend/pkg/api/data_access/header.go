@@ -11,6 +11,11 @@ func (d *DataAccessService) GetLatestSlot() (uint64, error) {
 	return latestSlot, nil
 }
 
+func (d *DataAccessService) GetLatestFinalizedEpoch() (uint64, error) {
+	finalizedEpoch := cache.LatestFinalizedEpoch.Get()
+	return finalizedEpoch, nil
+}
+
 func (d *DataAccessService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	result := []t.EthConversionRate{}
 

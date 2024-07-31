@@ -66,6 +66,12 @@ func (d *DummyService) GetLatestSlot() (uint64, error) {
 	return r, err
 }
 
+func (d *DummyService) GetLatestFinalizedEpoch() (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	r := []t.EthConversionRate{}
 	err := commonFakeData(&r)
