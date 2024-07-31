@@ -140,7 +140,7 @@ const textMutedUntil = computed(() => {
       <BcToggle v-if="pairedDevicesCount > 0" v-model="isPushToggleOn" />
       <div v-else>
         {{ tOf($t, 'notifications.general.download_app', 0) }}
-        <BcLink to="/mobile  " :target="Target.External" class="link">
+        <BcLink to="/mobile" :target="Target.External" class="link">
           {{ tOf($t, 'notifications.general.download_app', 1) }}
         </BcLink>
         {{ tOf($t, 'notifications.general.download_app', 2) }}
