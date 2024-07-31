@@ -684,7 +684,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		}
 	}
 
-	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, validatorArr, days)
+	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, groupId, days)
 	if err != nil {
 		return nil, err
 	}
@@ -743,8 +743,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	return ret, nil
 }
 
-func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators []t.VDBValidator, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
-	var reward sql.NullInt64
+func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
 	table := ""
 
 	switch days {
@@ -760,14 +759,45 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid days value: %v", days)
 	}
 
-	query := `
-		SELECT
-			(SUM(COALESCE(balance_end,0)) + SUM(COALESCE(withdrawals_amount,0)) - SUM(COALESCE(deposits_amount,0)) - SUM(COALESCE(balance_start,0))) AS reward
-		FROM %s
-		WHERE validator_index IN ($1)`
+	type RewardsResult struct {
+		EpochStart     uint64        `db:"epoch_start"`
+		EpochEnd       uint64        `db:"epoch_end"`
+		ValidatorCount uint64        `db:"validator_count"`
+		Reward         sql.NullInt64 `db:"reward"`
+	}
 
-	err = d.clickhouseReader.GetContext(ctx, &reward, fmt.Sprintf(query, table), validators)
-	if err != nil || !reward.Valid {
+	var rewardsResultTable RewardsResult
+	var rewardsResultTotal RewardsResult
+
+	rewardsDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("MIN(epoch_start) AS epoch_start"),
+			goqu.L("MAX(epoch_end) AS epoch_end"),
+			goqu.L("COUNT(*) AS validator_count"),
+			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS reward")).
+		From(goqu.T(table).As("r"))
+
+	if len(dashboardId.Validators) > 0 {
+		rewardsDs = rewardsDs.
+			Where(goqu.L("validator_index IN (?)", dashboardId.Validators))
+	} else {
+		rewardsDs = rewardsDs.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+
+		if groupId != -1 {
+			rewardsDs = rewardsDs.
+				Where(goqu.L("v.group_id = ?", groupId))
+		}
+	}
+
+	query, args, err := rewardsDs.Prepared(true).ToSQL()
+	if err != nil {
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+	}
+
+	err = d.clickhouseReader.GetContext(ctx, &rewardsResultTable, query, args...)
+	if err != nil || !rewardsResultTable.Reward.Valid {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
@@ -775,34 +805,76 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, validators 
 	if days == -1 { // for all time APR
 		aprDivisor = 90
 	}
-	clAPR = ((float64(reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(len(validators)))) * 365.0 * 100.0
+	clAPR = ((float64(rewardsResultTable.Reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(rewardsResultTable.ValidatorCount))) * 365.0 * 100.0
 	if math.IsNaN(clAPR) {
 		clAPR = 0
 	}
+
+	clIncome = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+
 	if days == -1 {
-		err = d.clickhouseReader.GetContext(ctx, &reward, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators)
-		if err != nil || !reward.Valid {
+		rewardsDs = rewardsDs.
+			From(goqu.L("validator_dashboard_data_rolling_total AS r"))
+
+		query, args, err = rewardsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.clickhouseReader.GetContext(ctx, &rewardsResultTotal, query, args...)
+		if err != nil || !rewardsResultTotal.Reward.Valid {
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
-	}
-	clIncome = decimal.NewFromInt(reward.Int64).Mul(decimal.NewFromInt(1e9))
 
-	query = `
-	SELECT
-		COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0)
-	FROM blocks
-	LEFT JOIN execution_payloads ON blocks.exec_block_hash = execution_payloads.block_hash
-	LEFT JOIN relays_blocks rb ON blocks.exec_block_hash = rb.exec_block_hash
-	WHERE proposer = ANY($1) AND status = '1' AND slot >= (SELECT MIN(epoch_start) * $2 FROM %s WHERE validator_index = ANY($1));`
-	err = d.alloyReader.GetContext(ctx, &elIncome, fmt.Sprintf(query, table), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		clIncome = decimal.NewFromInt(rewardsResultTotal.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+	}
+
+	elDs := goqu.Dialect("postgres").
+		Select(goqu.L("SUM(COALESCE(rb.value / 1e18, ep.fee_recipient_reward, 0)) AS el_reward")).
+		From(goqu.L("blocks AS b")).
+		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("b.exec_block_hash = ep.block_hash"))).
+		LeftJoin(goqu.L("relays_blocks AS rb"), goqu.On(goqu.L("b.exec_block_hash = rb.exec_block_hash"))).
+		Where(goqu.L("b.status = '1'"))
+
+	if len(dashboardId.Validators) > 0 {
+		elDs = elDs.
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
+	} else {
+		elDs = elDs.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+
+		if groupId != -1 {
+			elDs = elDs.
+				Where(goqu.L("v.group_id = ?", groupId))
+		}
+	}
+
+	elTableDs := elDs.
+		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTable.EpochStart, rewardsResultTable.EpochEnd))
+
+	query, args, err = elTableDs.Prepared(true).ToSQL()
+	if err != nil {
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+	}
+
+	err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 	elIncomeFloat, _ := elIncome.Float64()
-	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(len(validators)))) * 365.0 * 100.0
+	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(rewardsResultTable.ValidatorCount))) * 365.0 * 100.0
 
 	if days == -1 {
-		err = d.alloyReader.GetContext(ctx, &elIncome, fmt.Sprintf(query, "validator_dashboard_data_rolling_total"), validators, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		elTotalDs := elDs.
+			Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTotal.EpochStart, rewardsResultTotal.EpochEnd))
+
+		query, args, err = elTotalDs.Prepared(true).ToSQL()
+		if err != nil {
+			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
 		if err != nil {
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
@@ -1501,7 +1573,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 			goqu.L("b.status"),
 			goqu.L("b.proposer")).
 		From(goqu.L("blocks b")).
-		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?"))
+		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", epochQueryResult.EpochStart, epochQueryResult.EpochEnd))
 
 	if len(dashboardId.Validators) > 0 {
 		ds = ds.
