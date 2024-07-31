@@ -8,7 +8,7 @@ const { t: $t } = useI18n()
 
 const emit = defineEmits<{(e: 'next' | 'back'): void }>()
 const network = defineModel<ChainIDs>('network', { required: true })
-const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}`|''>(network, o => `${o || ''}`, c => Number(c || 0))
+const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}`|''>(network, net => `${net || ''}`, sel => Number(sel || 0))
 
 const buttonList = shallowRef<any[]>([])
 
