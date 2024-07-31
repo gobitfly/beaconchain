@@ -57,6 +57,13 @@ const sendTestNotification = async (type: 'email' | 'push') => {
 
 const pairedDevicesCount = computed(() => pairedDevices.value?.length || 0)
 
+const buttonStates = computed(() => {
+  return {
+    isEmailDisabled: areTestButtonsDisabled.value || !isEmailToggleOn.value,
+    isPushDisabled: areTestButtonsDisabled.value || !isPushToggleOn.value || pairedDevicesCount.value === 0
+  }
+})
+
 const openPairdeDevicesModal = () => {
   isVisible.value = true
 }
@@ -152,7 +159,7 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_email') }}
       </div>
-      <Button class="button-send" :disabled="areTestButtonsDisabled" @click="sendTestNotification('email')">
+      <Button class="button-send" :disabled="buttonStates.isEmailDisabled" @click="sendTestNotification('email')">
         {{ $t('common.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
@@ -161,7 +168,7 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_push') }}
       </div>
-      <Button class="button-send" :disabled="areTestButtonsDisabled" @click="sendTestNotification('push')">
+      <Button class="button-send" :disabled="buttonStates.isPushDisabled" @click="sendTestNotification('push')">
         {{ $t('common.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
