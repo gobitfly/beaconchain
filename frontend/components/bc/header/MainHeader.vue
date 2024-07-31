@@ -10,7 +10,10 @@ import { useNetworkStore } from '~/stores/useNetworkStore'
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
 import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
-const props = defineProps({ isHomePage: { type: Boolean } })
+defineProps<{
+  isHomePage: boolean,
+  minimalist: boolean
+}>()
 const { latestState } = useLatestStateStore()
 const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
 const { doLogout, isLoggedIn } = useUserStore()
@@ -62,7 +65,16 @@ const userMenu = computed(() => {
 </script>
 
 <template>
-  <div class="anchor" :class="hideInDevelopmentClass">
+  <div v-if="minimalist" class="minimalistic" :class="hideInDevelopmentClass">
+    <div class="row">
+      <BcLink to="/" class="logo">
+        <IconBeaconchainLogo alt="Beaconcha.in logo" />
+        <span class="name">beaconcha.in</span>
+      </BcLink>
+    </div>
+  </div>
+
+  <div v-else class="anchor" :class="hideInDevelopmentClass">
     <div class="top-background" />
     <div class="rows">
       <div class="grid-cell blockchain-info">
@@ -88,7 +100,7 @@ const userMenu = computed(() => {
 
       <div class="grid-cell search-bar">
         <BcSearchbarGeneral
-          v-if="showInDevelopment && !props.isHomePage"
+          v-if="showInDevelopment && !isHomePage"
           class="bar"
           :bar-shape="SearchbarShape.Medium"
           :color-theme="isSmallScreen && colorMode.value != 'dark' ? SearchbarColors.LightBlue : SearchbarColors.DarkBlue"
@@ -145,8 +157,58 @@ const userMenu = computed(() => {
 $mobileHeaderThreshold: 600px;
 $smallHeaderThreshold: 1024px;
 
+.minimalistic {
+  position: relative;
+  display: flex;
+  width: 100%;
+  background-color: var(--dark-blue);
+  color: var(--header-top-font-color);
+  justify-content: center;
+  @media (min-width: $mobileHeaderThreshold) {
+    background-color: var(--container-background);
+    border-bottom: 1px solid var(--container-border-color);
+    color: var(--container-color);
+  }
+  .row {
+    width: var(--content-width);
+    .logo {
+      display: flex;
+      position: relative;
+      gap: var(--padding);
+      font-family: var(--logo_font_family);
+      font-weight: var(--logo_font_weight);
+      letter-spacing: var(--logo_small_letter_spacing);
+      font-size: var(--logo_font_size);
+      svg {
+        margin-top: auto;
+        margin-bottom: 13px;
+        height: 30px;
+      }
+      .name {
+        display: inline-flex;
+        position: relative;
+        margin-top: 14px;
+        margin-bottom: 14px;
+        line-height: 22px;
+      }
+      @media (max-width: $mobileHeaderThreshold) {
+        font-size: var(--logo_small_font_size);
+        gap: 6px;
+        .name {
+          margin-top: 11px;
+          margin-bottom: 11px;
+        }
+        svg {
+          height: 18px;
+          margin-bottom: 15px;
+        }
+      }
+    }
+  }
+}
+
 .anchor {
-  top: -1px;
+  top: -1px; // needed for some reason to perfectly match Figma
   position: relative;
   display: flex;
   width: 100%;
@@ -282,14 +344,13 @@ $smallHeaderThreshold: 1024px;
 
     .explorer-info {
       grid-column: 2;
+      height: unset;
       @media (min-width: $smallHeaderThreshold) {
         @include bottom-cell(2);
       }
       @media (max-width: $smallHeaderThreshold) {
         grid-row: 1;
       }
-      height: unset;
-
       .logo {
         display: flex;
         position: relative;
@@ -307,9 +368,6 @@ $smallHeaderThreshold: 1024px;
           position: relative;
           margin-top: auto;
           line-height: 22px;
-          @media (max-width: $mobileHeaderThreshold) {
-            display: none;
-          }
         }
         @media (max-width: 1360px) {
           font-size: var(--logo_small_font_size);
@@ -317,6 +375,9 @@ $smallHeaderThreshold: 1024px;
           gap: 6px;
           .name {
             line-height: 14px;
+            @media (max-width: $mobileHeaderThreshold) {
+              display: none;
+            }
           }
           svg {
             height: 18px;
@@ -326,7 +387,6 @@ $smallHeaderThreshold: 1024px;
           }
         }
       }
-
       .variant {
         position: relative;
         margin-top: auto;
