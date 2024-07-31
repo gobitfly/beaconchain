@@ -53,7 +53,8 @@
     "total": "Total",
     "selected": "Selected",
     "deselected": "Not selected",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "send": "Send"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -406,6 +407,36 @@
       "subscriptions": "Subscriptions",
       "webhook": "Webhook",
       "networks": "Networks"
+    },
+    "general": {
+      "do_not_disturb": "Do not disturb",
+      "mute": {
+        "all": "Mutes all notifications",
+        "unmute": "Unmute",
+        "until": "Muted until {date}",
+        "until_turned_on": "Muted until turned back on",
+        "select_duration": "Select mute duration",
+        "hours": "{count} hour|{count} hours",
+        "until_i_turn_on": "Until I turn it back on"
+      },
+      "email_notifications": "Email Notifications",
+      "push_notifications": "Push Notifications",
+      "send_test_email": "Send Test E-Mail",
+      "send_test_push": "Send Test Push Notification",
+      "test_notification_error": {
+        "toast_title": "Error",
+        "toast_group": "An error occurred while sending the test notification",
+        "toast_message": "Please try again."
+      },
+      "download_app": ["Download the", "mobile app", "to activate"],
+      "paired_devices": {
+        "title": "Paired Devices",
+        "device": "Device",
+        "mobile_notifications": "Mobile notifications",
+        "grant_account_access": "Grant account access (required)",
+        "paired_date": "Paired: {date}",
+        "unknown": "Unknown"
+      }
     },
     "dashboards": {
       "title": "Dashboards",

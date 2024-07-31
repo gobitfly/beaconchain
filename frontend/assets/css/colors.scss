@@ -11,8 +11,11 @@
   --light-grey-3: #d3d3d3;
   --light-grey-4: #dddddd;
   --light-grey-5: #eaeaea;
+  --light-grey-6: #e9e9e9;
+  --light-grey-7: #c0c0c0;
   --dark-grey: #5c4e4e;
   --very-dark-grey: #362f32;
+  --very-dark-grey-2: #444142;
   --asphalt: #484f56;
   --graphite: #343a40;
   --almost-black: #232024;
@@ -20,15 +23,21 @@
   --dark-blue: #2f2e42;
   --purple-blue: #3e4461;
   --light-purple-blue: #545C7E;
-  --blue: #2e82ae;
+  --sky-blue:#cde3ee;
   --light-blue: #66bce9;
-  --melllow-blue: #7DB5EC;
+  --melllow-blue: #7db5eC;
+  --blue: #2e82ae;
+  --dark-blue: #116897;
+  --mint-green: #D3E4D4;
   --flashy-green: #90ed7d;
   --light-green: #4e7451;
   --green: #7dc382;
+  --dark-green: #346f39;
   --flashy-red: #f3454a;
   --light-red: #d42127;
   --dark-red: #ce3438;
+  --bold-red: #b10b11;
+  --pastel-red: #F1C5C6;
   --yellow: #ffd600;
   --light-yellow: #969100;
   --purple: #9747ff;
@@ -57,12 +66,15 @@
   --button-color-hover: var(--primary-orange-hover);
   --button-color-pressed: var(--primary-orange-pressed);
   --button-color-disabled: var(--grey);
-  --button-color-dark-pattern: var(--light-grey-2);
   --button-color-dangerous: var(--flashy-red);
   --button-color-dangerous-hover: var(--dark-red);
-  --button-text-color-dark-pattern: var(--light-black);
   --button-text-color-disabled: var(--grey-4);
   --button-text-color-dangerous: var(--white);
+
+  --button-secondary-color: var(--light-black);
+  --button-secondary-hover-color: var(--light-grey-6);
+  --button-secondary-background-color: var(--grey-4);
+  --button-secondary-border-color: var(--light-grey-7);
 
   --checkbox-background-color: var(--light-grey-4);
 
@@ -123,7 +135,22 @@
   --list-hover-color: var(--light-grey);
   --list-hover-descrete-color: var(--light-grey-5);
 
-  --toggle-button-slider-color: var(--light-grey);
+  --switch-slider-color: var(--light-grey);
+  --switch-color-disabled: var(--dark-grey);
+  --switch-color-disabled-hover: var(--very-dark-grey-2);
+
+  --toast-background-color-success: var(--dark-green);
+  --toast-background-success-color: var(--mint-green);
+  --toast-border-sucess-color: var(--dark-green);
+
+  --toast-message-info-color: var(--dark-blue);
+  --toast-background-info-color: var(--sky-blue);
+  --toast-border-info-color: var(--dark-blue);
+
+  --toast-message-error-color: var(--bold-red);
+  --toast-background-error-color: var(--pastel-red);
+  --toast-border-error-color: var(--bold-red);
+
 
   &.dark-mode {
     --primary-color: var(--primary-orange);
@@ -144,9 +171,13 @@
     --button-color-hover: var(--primary-orange-hover);
     --button-color-pressed: var(--primary-orange-pressed);
     --button-color-disabled: var(--grey);
-    --button-color-dark-pattern: var(--light-grey);
     --button-text-color-disabled: var(--light-grey);
     --button-text-color-dangerous: var(--light-grey);
+
+    --button-secondary-color: var(--light-grey);
+    --button-secondary-hover-color: var(--light-black);
+    --button-secondary-background-color: var(--very-dark-grey);
+    --button-secondary-border-color: var(--dark-grey);
 
     --checkbox-background-color: var(--light-grey);
 
