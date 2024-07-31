@@ -361,26 +361,29 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 }
 
 // helper function to unify handling of block detail request validation
-func (h *HandlerService) validateBlockRequest(r *http.Request) (uint64, uint64, error) {
+func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string) (uint64, uint64, error) {
 	var v validationError
 	var err error
 	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
-	var block uint64
-	switch blockParam := mux.Vars(r)["block"]; blockParam {
+	var value uint64
+	switch paramValue := mux.Vars(r)[paramName]; paramValue {
 	// possibly add other values like "genesis", "finalized", hardforks etc. later
 	case "latest":
-		block, err = h.dai.GetLatestBlock()
+		if paramName == "block" {
+			value, err = h.dai.GetLatestBlock()
+		} else if paramName == "slot" {
+			value, err = h.dai.GetLatestSlot()
+		}
 		if err != nil {
 			return 0, 0, err
 		}
 	default:
-		block = v.checkUint(blockParam, "block")
+		value = v.checkUint(paramValue, paramName)
 	}
 	if v.hasErrors() {
 		return 0, 0, v
 	}
-
-	return chainId, block, nil
+	return chainId, value, nil
 }
 
 // checkGroupId validates the given group id and returns it as an int64.

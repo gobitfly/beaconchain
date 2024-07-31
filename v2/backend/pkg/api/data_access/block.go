@@ -16,6 +16,16 @@ type BlockRepository interface {
 	GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error)
 	GetBlockVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error)
 	GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error)
+
+	GetSlot(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error)
+	GetSlotOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error)
+	GetSlotTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error)
+	GetSlotVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error)
+	GetSlotAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error)
+	GetSlotWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error)
+	GetSlotBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error)
+	GetSlotVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error)
+	GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error)
 }
 
 func (d *DataAccessService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
@@ -61,4 +71,76 @@ func (d *DataAccessService) GetBlockVoluntaryExits(ctx context.Context, chainId,
 func (d *DataAccessService) GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
 	// @DATA-ACCESS
 	return d.dummy.GetBlockBlobs(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlot(ctx context.Context, chainId, slot uint64) (*t.BlockSummary, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlock(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotOverview(ctx context.Context, chainId, slot uint64) (*t.BlockOverview, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockOverview(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotTransactions(ctx context.Context, chainId, slot uint64) ([]t.BlockTransactionTableRow, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockTransactions(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotVotes(ctx context.Context, chainId, slot uint64) ([]t.BlockVoteTableRow, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockVotes(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotAttestations(ctx context.Context, chainId, slot uint64) ([]t.BlockAttestationTableRow, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockAttestations(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotWithdrawals(ctx context.Context, chainId, slot uint64) ([]t.BlockWithdrawalTableRow, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockWithdrawals(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotBlsChanges(ctx context.Context, chainId, slot uint64) ([]t.BlockBlsChangeTableRow, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockBlsChanges(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotVoluntaryExits(ctx context.Context, chainId, slot uint64) ([]t.BlockVoluntaryExitTableRow, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockVoluntaryExits(ctx, chainId, block)
+}
+
+func (d *DataAccessService) GetSlotBlobs(ctx context.Context, chainId, slot uint64) ([]t.BlockBlobTableRow, error) {
+	block, err := d.GetBlockHeightAt(slot)
+	if err != nil {
+		return nil, err
+	}
+	return d.GetBlockBlobs(ctx, chainId, block)
 }

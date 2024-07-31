@@ -1903,7 +1903,7 @@ func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.Respons
 // Blocks
 
 func (h *HandlerService) InternalGetBlock(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1922,7 +1922,7 @@ func (h *HandlerService) InternalGetBlock(w http.ResponseWriter, r *http.Request
 }
 
 func (h *HandlerService) InternalGetBlockOverview(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1940,7 +1940,7 @@ func (h *HandlerService) InternalGetBlockOverview(w http.ResponseWriter, r *http
 }
 
 func (h *HandlerService) InternalGetBlockTransactions(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1959,7 +1959,7 @@ func (h *HandlerService) InternalGetBlockTransactions(w http.ResponseWriter, r *
 }
 
 func (h *HandlerService) InternalGetBlockVotes(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1978,7 +1978,7 @@ func (h *HandlerService) InternalGetBlockVotes(w http.ResponseWriter, r *http.Re
 }
 
 func (h *HandlerService) InternalGetBlockAttestations(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1997,7 +1997,7 @@ func (h *HandlerService) InternalGetBlockAttestations(w http.ResponseWriter, r *
 }
 
 func (h *HandlerService) InternalGetBlockWithdrawals(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -2016,7 +2016,7 @@ func (h *HandlerService) InternalGetBlockWithdrawals(w http.ResponseWriter, r *h
 }
 
 func (h *HandlerService) InternalGetBlockBlsChanges(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -2035,7 +2035,7 @@ func (h *HandlerService) InternalGetBlockBlsChanges(w http.ResponseWriter, r *ht
 }
 
 func (h *HandlerService) InternalGetBlockVoluntaryExits(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -2054,13 +2054,186 @@ func (h *HandlerService) InternalGetBlockVoluntaryExits(w http.ResponseWriter, r
 }
 
 func (h *HandlerService) InternalGetBlockBlobs(w http.ResponseWriter, r *http.Request) {
-	chainId, block, err := h.validateBlockRequest(r)
+	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockBlobs(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlobsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+// --------------------------------------
+// Slots
+
+func (h *HandlerService) InternalGetSlot(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlot(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotOverview(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotOverview(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetBlockOverviewResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotTransactions(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotTransactions(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockTransactionsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotVotes(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotVotes(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVotesResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotAttestations(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotAttestations(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockAttestationsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotWithdrawals(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotWithdrawals(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockWtihdrawalsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotBlsChanges(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotBlsChanges(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlsChangesResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotVoluntaryExits(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVoluntaryExitsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotBlobs(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotBlobs(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, err)
 		return

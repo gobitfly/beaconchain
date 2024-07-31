@@ -16,6 +16,11 @@ func (d *DataAccessService) GetLatestBlock() (uint64, error) {
 	return d.dummy.GetLatestBlock()
 }
 
+func (d *DataAccessService) GetBlockHeightAt(slot uint64) (uint64, error) {
+	// @DATA-ACCESS implement; return error if no block at slot
+	return d.dummy.GetBlockHeightAt(slot)
+}
+
 func (d *DataAccessService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	result := []t.EthConversionRate{}
 
