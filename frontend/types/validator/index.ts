@@ -8,3 +8,9 @@ export type ValidatorSubset = {
   category: ValidatorSubsetCategory,
   validators: VDBSummaryValidator[]
 }
+export type ValidatorSummaryIconRowKey = 'online' | 'offline' | 'exited'
+
+export type SummaryValidatorsIconRowInfo = {
+  count: number,
+  key: ValidatorSummaryIconRowKey
+}
