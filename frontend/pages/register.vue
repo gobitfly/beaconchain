@@ -106,30 +106,25 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
             </div>
           </div>
           <div class="last-row">
-            <div class="input-with-error">
-              <div class="agreement">
-                <Checkbox
-                  v-model="agreement"
-                  v-bind="agreementAttrs"
-                  input-id="agreement"
-                  :binary="true"
-                  type="checkbox"
-                  class="checkbox"
-                  aria-describedby="text-error"
-                />
-                <div class="text">
-                  <label for="agreement">{{ tOf($t, 'login_and_register.please_agree', 0) + ' ' }}</label>
-                  <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/tos.pdf" :target="Target.External" class="link">
-                    {{ tOf($t, 'login_and_register.please_agree', 1) }}
-                  </BcLink>
-                  {{ tOf($t, 'login_and_register.please_agree', 2) }}
-                  <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
-                    {{ tOf($t, 'login_and_register.please_agree', 3) }}
-                  </BcLink>
-                </div>
-              </div>
-              <div class="p-error">
-                {{ errors?.agreement }}
+            <div class="agreement">
+              <Checkbox
+                v-model="agreement"
+                v-bind="agreementAttrs"
+                input-id="agreement"
+                :binary="true"
+                type="checkbox"
+                class="checkbox"
+                aria-describedby="text-error"
+              />
+              <div class="text">
+                <label for="agreement">{{ tOf($t, 'login_and_register.please_agree', 0) + ' ' }}</label>
+                <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/tos.pdf" :target="Target.External" class="link">
+                  {{ tOf($t, 'login_and_register.please_agree', 1) }}
+                </BcLink>
+                {{ tOf($t, 'login_and_register.please_agree', 2) }}
+                <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
+                  {{ tOf($t, 'login_and_register.please_agree', 3) }}
+                </BcLink>
               </div>
             </div>
             <Button class="button" type="submit" :label="$t('login_and_register.submit_register')" :disabled="!canSubmit" />
@@ -191,29 +186,24 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
       .last-row {
         position: relative;
         display: flex;
+        flex-direction: row;
         margin-top: auto;
-        .input-with-error {
+        .agreement {
           display: flex;
           position: relative;
           margin: auto;
           margin-left: 0;
-          .agreement {
-            display: flex;
-            position: relative;
-            flex-direction: row;
-            gap: 10px;
-            .checkbox {
-              margin-top: auto;
-              margin-bottom: auto;
-            }
-            .text {
-              @media (max-width: 600px) { // mobile
-                font-size: var(--small_text_font_size);
-                line-height: 20px;
-              }
+          gap: 10px;
+          .checkbox {
+            margin-top: auto;
+            margin-bottom: auto;
+          }
+          .text {
+            @media (max-width: 600px) { // mobile
+              font-size: var(--small_text_font_size);
+              line-height: 20px;
             }
           }
-
         }
         .button {
           margin: auto;
