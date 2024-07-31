@@ -229,7 +229,7 @@
   opacity: 1;
 
   .p-toast-message {
-    margin: 0 0 1rem 0;
+    margin: var(--content-margin);
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
     border-radius: var(--border-radius);
 
@@ -242,8 +242,7 @@
       }
 
       .p-toast-message-icon {
-        font-size: 2rem;
-
+        font-size: var(--logo_font_size);
         &.p-icon {
           width: 1rem;
           height: 1rem;
@@ -258,7 +257,7 @@
       .p-toast-detail {
         color: var(--light-black);
         margin: 0.5rem 0 0 0;
-        @include text-toast--sm;
+        @include text-toast-sm;
       }
     }
 
@@ -294,11 +293,11 @@
     &.p-toast-message-success {
       border: solid var(--toast-border-sucess-color) 1px;
       background: var(--toast-background-success-color);
-      color: var(--toast-background-color--success);
+      color: var(--toast-background-color-success);
 
       .p-toast-message-icon,
       .p-toast-icon-close {
-        color: var(--toast-background-color--success);
+        color: var(--toast-background-color-success);
       }
     }
 
