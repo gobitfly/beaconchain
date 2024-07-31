@@ -3,8 +3,6 @@ import { faTrash } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type NotificationPairedDevice } from '~/types/api/notifications'
 
-// TODO: Implement handling of user input
-
 const { t: $t } = useI18n()
 
 interface Props {
