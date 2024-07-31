@@ -142,7 +142,9 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/blocks/{block}/overview", hs.PublicGetNetworkBlock, hs.InternalGetBlockOverview},
 		{http.MethodGet, "/networks/{network}/blocks/{block}/votes", hs.PublicGetNetworkBlockVotes, hs.InternalGetBlockVotes},
 		{http.MethodGet, "/networks/{network}/slots", hs.PublicGetNetworkSlots, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}", hs.PublicGetNetworkSlot, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}", nil, hs.InternalGetSlot},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/overview", hs.PublicGetNetworkSlot, hs.InternalGetSlotOverview},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/votes", hs.PublicGetNetworkSlotVotes, hs.InternalGetSlotVotes},
 		{http.MethodGet, "/networks/{network}/validators/{validator}/blocks", hs.PublicGetNetworkValidatorBlocks, nil},
 		{http.MethodGet, "/networks/{network}/addresses/{address}/priority-fee-blocks", hs.PublicGetNetworkAddressPriorityFeeBlocks, nil},
 		{http.MethodGet, "/networks/{network}/addresses/{address}/proposer-reward-blocks", hs.PublicGetNetworkAddressProposerRewardBlocks, nil},
@@ -153,7 +155,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodGet, "/networks/{network}/validators/{validator}/attestations", hs.PublicGetNetworkValidatorAttestations, nil},
 		{http.MethodGet, "/networks/{network}/epochs/{epoch}/attestations", hs.PublicGetNetworkEpochAttestations, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/attestations", hs.PublicGetNetworkSlotAttestations, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/attestations", hs.PublicGetNetworkSlotAttestations, hs.InternalGetSlotAttestations},
 		{http.MethodGet, "/networks/{network}/blocks/{block}/attestations", hs.PublicGetNetworkBlockAttestations, hs.InternalGetBlockAttestations},
 		{http.MethodGet, "/networks/{network}/aggregated-attestations", hs.PublicGetNetworkAggregatedAttestations, nil},
 
@@ -170,14 +172,14 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/transactions/{hash}/deposits", hs.PublicGetNetworkTransactionDeposits, nil},
 
 		{http.MethodGet, "/networks/{network}/withdrawals", hs.PublicGetNetworkWithdrawals, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/withdrawals", hs.PublicGetNetworkSlotWithdrawals, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/withdrawals", hs.PublicGetNetworkSlotWithdrawals, hs.InternalGetSlotWithdrawals},
 		{http.MethodGet, "/networks/{network}/blocks/{block}/withdrawals", hs.PublicGetNetworkBlockWithdrawals, hs.InternalGetBlockWithdrawals},
 		{http.MethodGet, "/networks/{network}/validators/{validator}/withdrawals", hs.PublicGetNetworkValidatorWithdrawals, nil},
 		{http.MethodGet, "/networks/{network}/withdrawal-credentials/{credential}/withdrawals", hs.PublicGetNetworkWithdrawalCredentialWithdrawals, nil},
 
 		{http.MethodGet, "/networks/{network}/voluntary-exits", hs.PublicGetNetworkVoluntaryExits, nil},
 		{http.MethodGet, "/networks/{network}/epochs/{epoch}/voluntary-exits", hs.PublicGetNetworkEpochVoluntaryExits, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/voluntary-exits", hs.PublicGetNetworkSlotVoluntaryExits, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/voluntary-exits", hs.PublicGetNetworkSlotVoluntaryExits, hs.InternalGetSlotVoluntaryExits},
 		{http.MethodGet, "/networks/{network}/blocks/{block}/voluntary-exits", hs.PublicGetNetworkBlockVoluntaryExits, hs.InternalGetBlockVoluntaryExits},
 
 		{http.MethodGet, "/networks/{network}/addresses/{address}/balance-history", hs.PublicGetNetworkAddressBalanceHistory, nil},
@@ -187,13 +189,13 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/transactions", hs.PublicGetNetworkTransactions, nil},
 		{http.MethodGet, "/networks/{network}/transactions/{hash}", hs.PublicGetNetworkTransaction, nil},
 		{http.MethodGet, "/networks/{network}/addresses/{address}/transactions", hs.PublicGetNetworkAddressTransactions, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/transactions", hs.PublicGetNetworkSlotTransactions, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/transactions", hs.PublicGetNetworkSlotTransactions, hs.InternalGetSlotTransactions},
 		{http.MethodGet, "/networks/{network}/blocks/{block}/transactions", hs.PublicGetNetworkBlockTransactions, hs.InternalGetBlockTransactions},
 		{http.MethodGet, "/networks/{network}/blocks/{block}/blobs", hs.PublicGetNetworkBlockBlobs, hs.InternalGetBlockBlobs},
 
 		{http.MethodGet, "/networks/{network}/handlerService-changes", hs.PublicGetNetworkBlsChanges, nil},
 		{http.MethodGet, "/networks/{network}/epochs/{epoch}/handlerService-changes", hs.PublicGetNetworkEpochBlsChanges, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/handlerService-changes", hs.PublicGetNetworkSlotBlsChanges, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/handlerService-changes", hs.PublicGetNetworkSlotBlsChanges, hs.InternalGetSlotBlsChanges},
 		{http.MethodGet, "/networks/{network}/blocks/{block}/handlerService-changes", hs.PublicGetNetworkBlockBlsChanges, hs.InternalGetBlockBlsChanges},
 		{http.MethodGet, "/networks/{network}/validators/{validator}/handlerService-changes", hs.PublicGetNetworkValidatorBlsChanges, nil},
 

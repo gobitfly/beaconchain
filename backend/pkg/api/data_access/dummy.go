@@ -69,6 +69,12 @@ func (d *DummyService) GetLatestBlock() (uint64, error) {
 	return r, err
 }
 
+func (d *DummyService) GetBlockHeightAt(slot uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	r := []t.EthConversionRate{}
 	err := commonFakeData(&r)
@@ -674,6 +680,60 @@ func (d *DummyService) GetBlockVoluntaryExits(ctx context.Context, chainId, bloc
 }
 
 func (d *DummyService) GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
+	r := []t.BlockBlobTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlot(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
+	r := t.BlockSummary{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSlotOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
+	r := t.BlockOverview{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSlotTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
+	r := []t.BlockTransactionTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
+	r := []t.BlockVoteTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
+	r := []t.BlockAttestationTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
+	r := []t.BlockWithdrawalTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
+	r := []t.BlockBlsChangeTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
+	r := []t.BlockVoluntaryExitTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
 	r := []t.BlockBlobTableRow{}
 	err := commonFakeData(&r)
 	return r, err
