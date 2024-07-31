@@ -85,6 +85,8 @@ const textMutedUntil = computed(() => {
     }
     return $t('notifications.general.mute.until', { date: formatTsToAbsolute(timestampMute.value, $t('locales.date'), true) })
   }
+
+  return undefined
 })
 
 </script>
