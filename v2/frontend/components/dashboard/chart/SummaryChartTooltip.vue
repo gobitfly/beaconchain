@@ -22,7 +22,12 @@ defineProps<Props>()
 <template>
   <div class="tooltip-container">
     <DashboardChartTooltipHeader :t="t" :ts="ts" :aggregation="aggregation" :efficiency-type="efficiencyType" />
-    <div v-for="(entry, index) in groupInfos" :key="index" class="line-container" :class="{highlight: entry.name === highlightGroup}">
+    <div
+      v-for="(entry, index) in groupInfos"
+      :key="index"
+      class="line-container"
+      :class="{ highlight: entry.name === highlightGroup }"
+    >
       <div class="circle" :style="{ 'background-color': entry.color }" />
       <div class="name">
         {{ entry.name }}:
@@ -42,23 +47,32 @@ defineProps<Props>()
   line-height: 1.5;
   padding: var(--padding);
 
-  .line-container{
+  .line-container {
     display: flex;
     align-items: center;
     gap: 3px;
 
-    .circle{
+    .circle {
       width: 10px;
       height: 10px;
       border-radius: 50%;
     }
 
     .name,
-    .efficiency{
+    .efficiency {
       @include fonts.tooltip_text;
     }
 
-    &.highlight{
+    &:not(.highlight) {
+
+      .efficiency,
+      .name {
+        opacity: 0.5;
+      }
+    }
+
+    &.highlight {
+
       .efficiency,
       .name {
         font-weight: var(--tooltip_text_bold_font_weight);
