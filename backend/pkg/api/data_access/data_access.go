@@ -29,6 +29,7 @@ type DataAccessor interface {
 
 	Close()
 
+	GetLatestFinalizedEpoch() (uint64, error)
 	GetLatestSlot() (uint64, error)
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
