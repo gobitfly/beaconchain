@@ -77,7 +77,7 @@ watch(props, async (p) => {
   }
 }, { immediate: true })
 
-const mapped = computed<ValidatorSubset[]>(() => {
+const subsets = computed<ValidatorSubset[]>(() => {
   const sortAndFilter = (validators:VDBSummaryValidator[]):VDBSummaryValidator[] => {
     if (!filter.value) {
       return sortSummaryValidators(validators)
@@ -101,12 +101,14 @@ const mapped = computed<ValidatorSubset[]>(() => {
 
   // Let's combine what needs to be combined
   if (filtered.length > 1) {
-    const all:ValidatorSubset = {
-      category: 'all',
-      validators: []
+    if (props.value?.context === 'group' || props.value?.context === 'dashboard') {
+      const all:ValidatorSubset = {
+        category: 'all',
+        validators: []
+      }
+      all.validators = sortSummaryValidators(uniqBy(filtered.reduce((list, sub) => list.concat(sub.validators.map(v => ({ index: v.index, duty_objects: [] }))), all.validators), 'index'))
+      filtered.splice(0, 0, all)
     }
-    all.validators = sortSummaryValidators(uniqBy(filtered.reduce((list, sub) => list.concat(sub.validators), all.validators), 'index'))
-    filtered.splice(0, 0, all)
 
     // we need to split up the withdrawn and withrawing categories into exited and slashed and not show them individually
     const withdrawnIndex = filtered.findIndex(s => s.category === 'withdrawn')
@@ -161,12 +163,13 @@ const mapped = computed<ValidatorSubset[]>(() => {
         :context="props.context"
         :sub-title="props.groupName || props.dashboardName"
         :summary="props.summary"
+        :subsets="subsets"
       />
       <BcContentFilter v-model="filter" :search-placeholder="$t('common.index')" @filter-changed="(f:string)=>filter=f" />
     </div>
 
     <Accordion :active-index="-1" class="accordion basic">
-      <AccordionTab v-for="subset in mapped" :key="subset.category">
+      <AccordionTab v-for="subset in subsets" :key="subset.category">
         <template #headericon>
           <FontAwesomeIcon :icon="faCaretRight" />
         </template>
@@ -175,8 +178,8 @@ const mapped = computed<ValidatorSubset[]>(() => {
         </template>
         <DashboardValidatorSubsetList :category="subset.category" :validators="subset.validators" />
       </AccordionTab>
-      <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
     </Accordion>
+    <BcLoadingSpinner :loading="isLoading" alignment="center" class="spinner" />
   </div>
 </template>
 
@@ -215,7 +218,7 @@ const mapped = computed<ValidatorSubset[]>(() => {
     position: relative;
     flex-grow: 1;
     max-height: 453px;
-    min-height: 200px;
+    min-height: 453px;
     overflow-y: auto;
     overflow-x: hidden;
     word-break: break-all;

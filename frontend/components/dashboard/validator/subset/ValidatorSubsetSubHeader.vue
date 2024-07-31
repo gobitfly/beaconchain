@@ -2,6 +2,8 @@
 import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import type { ValidatorSubset, ValidatorSubsetCategory } from '~/types/validator'
+import { countSubsetDuties } from '~/utils/dashboard/validator'
 
 interface Props {
   context: DashboardValidatorContext,
@@ -9,7 +11,8 @@ interface Props {
   summary?: {
     data?: VDBGroupSummaryData,
     row: VDBSummaryTableRow
-  }
+  },
+  subsets?: ValidatorSubset[]
 }
 const props = defineProps<Props>()
 
@@ -19,7 +22,13 @@ const infos = computed(() => {
     total: 0,
     value: 0
   }
-  const addSuccessFailed = (category: SlotVizCategories, success?: number, failed?: number) => {
+  const addSuccessFailed = (category: SlotVizCategories, success?: number, failed?: number, successCategories?: ValidatorSubsetCategory[], failedCategories?: ValidatorSubsetCategory[]) => {
+    if (props.subsets?.length && successCategories) {
+      success = countSubsetDuties(props.subsets, successCategories)
+    }
+    if (props.subsets?.length && failedCategories) {
+      failed = countSubsetDuties(props.subsets, failedCategories)
+    }
     percent.total = (success ?? 0) + (failed ?? 0)
     if (percent.total > 0) {
       if (success !== undefined) {
@@ -39,10 +48,10 @@ const infos = computed(() => {
       addSuccessFailed('sync', props.summary?.data?.sync.status_count.success, props.summary?.data?.sync.status_count.failed)
       break
     case 'slashings':
-      addSuccessFailed('slashing', props.summary?.data?.slashings.status_count.success, props.summary?.data?.slashings.status_count.failed)
+      addSuccessFailed('slashing', props.summary?.data?.slashings.status_count.success, props.summary?.data?.slashings.status_count.failed, ['has_slashed'], ['got_slashed'])
       break
     case 'proposal':
-      addSuccessFailed('proposal', props.summary?.row.proposals.success, props.summary?.row.proposals.failed)
+      addSuccessFailed('proposal', props.summary?.row.proposals.success, props.summary?.row.proposals.failed, ['proposal_proposed'], ['proposal_missed'])
       break
     case 'dashboard':
     case 'group':

@@ -12,6 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorSubsetCategory } from '~/types/validator'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
+import { countSummaryValidatorDuties } from '~/utils/dashboard/validator'
 
 interface Props {
   category: ValidatorSubsetCategory,
@@ -77,13 +78,7 @@ const icon = computed(() => {
 })
 
 const count = computed(() => {
-  switch (props.category) {
-    case 'proposal_proposed':
-    case 'proposal_missed':
-      return props.validators?.reduce((sum, v) => sum + (v.duty_objects?.length ?? 1), 0) ?? 0
-    default:
-      return props.validators?.length ?? 0
-  }
+  return countSummaryValidatorDuties(props.validators, props.category)
 })
 
 </script>
@@ -93,7 +88,7 @@ const count = computed(() => {
     <FontAwesomeIcon v-if="icon.icon" :icon="icon.icon" :class="icon.className" />
     <SlotVizIcon v-else-if="icon.slotVizCategory" :icon="icon.slotVizCategory" :class="icon.className" />
     <span>{{ $t(`dashboard.validator.subset_dialog.category.${category}`) }}</span>
-    <span> ({{ count }}|{{ validators?.length }})</span>
+    <span> ({{ count }})</span>
   </div>
 </template>
 

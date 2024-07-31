@@ -102,6 +102,24 @@ function mapDutyLinks (dutyObjects?: number[]): { to?: string, label: string }[]
   }
 }
 
+const valiDic: { [Name: number]: number} = {}
+const propDic: { [Name: number]: number} = {}
+props.validators?.forEach((v) => {
+  valiDic[v.index] = (valiDic[v.index] ?? 0) + 1
+  if (valiDic[v.index] > 1) {
+    console.log('we have a winner', v.index, valiDic[v.index])
+  }
+  if ((v.duty_objects?.length ?? 0) > 1) {
+    console.log('double power', v.index, v.duty_objects)
+  }
+  v.duty_objects?.forEach((d) => {
+    propDic[d] = (propDic[d] ?? 0) + 1
+    if (propDic[d] > 1) {
+      console.log('we have a duty winner', v.index, d, propDic[v.index])
+    }
+  })
+})
+
 </script>
 
 <template>
