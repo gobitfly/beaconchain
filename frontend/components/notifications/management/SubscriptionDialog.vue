@@ -57,6 +57,14 @@ const checkboxAll = ref<InternalEntry>({ type: 'binary', check: false })
 
 let dataNonce = 0 // used by the watcher of `modifiableOptions` to know when it is unnecessary to send changes to the API (it doesn't send if the nonce is 0)
 
+const getOptionType = (key: keyof AllOptions) => Array.isArray(originalSettings[key]) ? 'networks' : (typeof originalSettings[key] === 'boolean' ? 'binary' : (RowsThatExpectAPercentage.includes(key) ? 'percent' : 'amount'))
+const isOptionValueKnownInDB = (key: keyof AllOptions) =>
+  originalSettings[key] !== undefined && originalSettings[key] !== null &&
+  (typeof originalSettings[key] !== 'number' || originalSettings[key] as number > 0 || isOptionActivatedInDB(key)) &&
+  (!Array.isArray(originalSettings[key]) || !!(originalSettings[key] as Array<any>).length)
+const isOptionActivatedInDB = (key: keyof AllOptions) => RowsWhoseCheckBoxIsInASeparateField.has(key) ? !!originalSettings[RowsWhoseCheckBoxIsInASeparateField.get(key)!] : !!originalSettings[key]
+const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !OptionsNeedingPremium.includes(key)
+
 watch(props, (props) => {
   if (!props || !props.initialSettings) {
     return
@@ -179,13 +187,6 @@ function closeDialog () : void {
   dialogRef?.value.close()
 }
 
-const isOptionValueKnownInDB = (key: keyof AllOptions) =>
-  originalSettings[key] !== undefined && originalSettings[key] !== null &&
-  (typeof originalSettings[key] !== 'number' || originalSettings[key] as number > 0 || isOptionActivatedInDB(key)) &&
-  (!Array.isArray(originalSettings[key]) || !!(originalSettings[key] as Array<any>).length)
-const isOptionActivatedInDB = (key: keyof AllOptions) => RowsWhoseCheckBoxIsInASeparateField.has(key) ? !!originalSettings[RowsWhoseCheckBoxIsInASeparateField.get(key)!] : !!originalSettings[key]
-const getOptionType = (key: keyof AllOptions) => Array.isArray(originalSettings[key]) ? 'networks' : (typeof originalSettings[key] === 'boolean' ? 'binary' : (RowsThatExpectAPercentage.includes(key) ? 'percent' : 'amount'))
-const isOptionAvailable = (key: keyof AllOptions) => user.value?.premium_perks.ad_free || !OptionsNeedingPremium.includes(key)
 </script>
 
 <template>
