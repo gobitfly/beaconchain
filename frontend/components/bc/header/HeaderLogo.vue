@@ -23,7 +23,6 @@ $largeHeaderThreshold: 1360px;
   display: flex;
   position: relative;
   gap: var(--padding);
-  color: var(--container-color);
   svg {
     margin-top: auto;
     height: 30px;
@@ -42,7 +41,6 @@ $largeHeaderThreshold: 1360px;
 
 @mixin smaller() {
   gap: 6px;
-  color: var(--header-top-font-color);
   svg {
     height: 18px;
   }

@@ -170,6 +170,7 @@ $smallHeaderThreshold: 1024px;
 
 .minimalist {
   @include common();
+  color: var(--header-top-font-color);
   @media (max-width: $mobileHeaderThreshold) {
     .top-background {
       height: 36px;
