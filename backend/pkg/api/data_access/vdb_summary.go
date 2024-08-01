@@ -118,7 +118,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	}
 
 	ds := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf(`"%s" AS "r" FINAL`, clickhouseTable))).
+		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable))).
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
@@ -775,7 +775,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 			goqu.L("MAX(epoch_end) AS epoch_end"),
 			goqu.L("COUNT(*) AS validator_count"),
 			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS reward")).
-		From(goqu.T(table).As("r"))
+		From(goqu.L(fmt.Sprintf("%s AS r FINAL", table)))
 
 	if len(dashboardId.Validators) > 0 {
 		rewardsDs = rewardsDs.
@@ -814,7 +814,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 
 	if days == -1 {
 		rewardsDs = rewardsDs.
-			From(goqu.L("validator_dashboard_data_rolling_total AS r"))
+			From(goqu.L("validator_dashboard_data_rolling_total AS r FINAL"))
 
 		query, args, err = rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
@@ -1259,7 +1259,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 		ds := goqu.Dialect("postgres").
 			Select(
 				goqu.L("epoch_start")).
-			From(clickhouseTable).
+			From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
 			Limit(1)
 
 		query, args, err := ds.Prepared(true).ToSQL()
@@ -1343,11 +1343,11 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	}
 
 	var queryResult []struct {
-		EpochStart     uint64        `db:"epoch_start"`
-		EpochEnd       uint64        `db:"epoch_end"`
-		ValidatorIndex uint64        `db:"validator_index"`
-		SlashedBy      sql.NullInt64 `db:"slashed_by"`
-		SlashedAmount  uint32        `db:"slashed_amount"`
+		EpochStart     uint64 `db:"epoch_start"`
+		EpochEnd       uint64 `db:"epoch_end"`
+		ValidatorIndex uint64 `db:"validator_index"`
+		Slashed        bool   `db:"slashed"`
+		SlashedAmount  uint32 `db:"slashed_amount"`
 	}
 
 	// Build the query
@@ -1355,10 +1355,10 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		goqu.L("r.epoch_start"),
 		goqu.L("r.epoch_end"),
 		goqu.L("r.validator_index"),
-		goqu.L("r.slashed_by"),
+		goqu.L("r.slashed"),
 		goqu.L("COALESCE(r.blocks_slashing_count, 0) AS slashed_amount")).
-		From(goqu.T(clickhouseTable).As("r")).
-		Where(goqu.L("(r.slashed_by IS NOT NULL OR r.blocks_slashing_count > 0)"))
+		From(goqu.L(fmt.Sprintf("%s AS r FINAL", clickhouseTable))).
+		Where(goqu.L("(r.slashed OR r.blocks_slashing_count > 0)"))
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
@@ -1387,27 +1387,30 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 	// Process the data and get the slashing validators
 	var slashingValidators []uint64
+	var slashedValidators []uint64
 	for _, queryEntry := range queryResult {
-		if queryEntry.SlashedBy.Valid {
-			result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
-				Index:     queryEntry.ValidatorIndex,
-				SlashedBy: uint64(queryEntry.SlashedBy.Int64),
-			})
-		}
-
 		if queryEntry.SlashedAmount > 0 {
 			slashingValidators = append(slashingValidators, queryEntry.ValidatorIndex)
 		}
+
+		if queryEntry.Slashed {
+			slashedValidators = append(slashingValidators, queryEntry.ValidatorIndex)
+		}
 	}
 
-	if len(slashingValidators) == 0 {
-		// We don't have any slashing validators so we can return early
+	if len(slashingValidators) == 0 && len(slashedValidators) == 0 {
+		// We don't have any slashing or slashed validators so we can return early
 		return result, nil
 	}
 
+	slashingValidatorsMap := utils.SliceToMap(slashingValidators)
+	slashedValidatorsMap := utils.SliceToMap(slashedValidators)
+
 	// If we have slashing validators then get the validators that got slashed
 	proposalSlashings := make(map[uint64][]uint64)
+	proposalSlashed := make(map[uint64]uint64)
 	attestationSlashings := make(map[uint64][]uint64)
+	attestationSlashed := make(map[uint64]uint64)
 
 	slotStart := queryResult[0].EpochStart * utils.Config.Chain.ClConfig.SlotsPerEpoch
 	slotEnd := (queryResult[0].EpochEnd+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
@@ -1427,7 +1430,8 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 				goqu.L("bps.proposerindex")).
 			From(goqu.L("blocks_proposerslashings bps")).
 			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = bps.block_slot"))).
-			Where(goqu.L("bps.block_slot >= ? AND bps.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
+			Where(goqu.L("bps.block_slot >= ? AND bps.block_slot <= ?", slotStart, slotEnd)).
+			Where(goqu.L("(b.proposer = ANY(?) OR bps.proposerindex = ANY(?))", pq.Array(slashingValidators), pq.Array(slashedValidators)))
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
@@ -1440,10 +1444,15 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		}
 
 		for _, queryEntry := range queryResult {
-			if _, ok := proposalSlashings[queryEntry.ProposerSlashing]; !ok {
-				proposalSlashings[queryEntry.ProposerSlashing] = make([]uint64, 0)
+			if _, ok := slashingValidatorsMap[queryEntry.ProposerSlashing]; ok {
+				if _, ok := proposalSlashings[queryEntry.ProposerSlashing]; !ok {
+					proposalSlashings[queryEntry.ProposerSlashing] = make([]uint64, 0)
+				}
+				proposalSlashings[queryEntry.ProposerSlashing] = append(proposalSlashings[queryEntry.ProposerSlashing], queryEntry.ProposerSlashed)
 			}
-			proposalSlashings[queryEntry.ProposerSlashing] = append(proposalSlashings[queryEntry.ProposerSlashing], queryEntry.ProposerSlashed)
+			if _, ok := slashedValidatorsMap[queryEntry.ProposerSlashed]; ok {
+				proposalSlashed[queryEntry.ProposerSlashed] = queryEntry.ProposerSlashing
+			}
 		}
 		return nil
 	})
@@ -1463,7 +1472,13 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 				goqu.L("bas.attestation2_indices")).
 			From(goqu.L("blocks_attesterslashings bas")).
 			LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("b.slot = bas.block_slot"))).
-			Where(goqu.L("bas.block_slot >= ? AND bas.block_slot <= ? AND b.proposer = ANY(?)", slotStart, slotEnd, pq.Array(slashingValidators)))
+			Where(goqu.L("bas.block_slot >= ? AND bas.block_slot <= ?", slotStart, slotEnd))
+
+		if len(slashedValidators) == 0 {
+			// If we don't have any slashed validators then we can just get the slashing validators
+			ds = ds.
+				Where(goqu.L("b.proposer = ANY(?)", pq.Array(slashingValidators)))
+		}
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
@@ -1481,10 +1496,15 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 				log.WarnWithStackTrace(nil, "No intersection found for attestation violation", 0)
 			}
 			for _, v := range inter {
-				if _, ok := attestationSlashings[queryEntry.Proposer]; !ok {
-					attestationSlashings[queryEntry.Proposer] = make([]uint64, 0)
+				if _, ok := slashingValidatorsMap[queryEntry.Proposer]; ok {
+					if _, ok := attestationSlashings[queryEntry.Proposer]; !ok {
+						attestationSlashings[queryEntry.Proposer] = make([]uint64, 0)
+					}
+					attestationSlashings[queryEntry.Proposer] = append(attestationSlashings[queryEntry.Proposer], uint64(v.(int64)))
 				}
-				attestationSlashings[queryEntry.Proposer] = append(attestationSlashings[queryEntry.Proposer], uint64(v.(int64)))
+				if _, ok := slashedValidatorsMap[uint64(v.(int64))]; ok {
+					attestationSlashed[uint64(v.(int64))] = queryEntry.Proposer
+				}
 			}
 		}
 		return nil
@@ -1518,6 +1538,20 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		})
 	}
 
+	// Fill the slashed validators
+	for slashedIdx, slashingIdx := range proposalSlashed {
+		result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
+			Index:     slashedIdx,
+			SlashedBy: slashingIdx,
+		})
+	}
+	for slashedIdx, slashingIdx := range attestationSlashed {
+		result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
+			Index:     slashedIdx,
+			SlashedBy: slashingIdx,
+		})
+	}
+
 	return result, nil
 }
 
@@ -1545,7 +1579,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		Select(
 			goqu.L("epoch_start"),
 			goqu.L("epoch_end")).
-		From(clickhouseTable).
+		From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
 		Limit(1)
 
 	query, args, err := ds.Prepared(true).ToSQL()
