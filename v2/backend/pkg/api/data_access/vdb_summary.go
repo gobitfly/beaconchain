@@ -279,18 +279,13 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	}
 
 	for _, queryEntry := range queryResult {
-		uiValidatorIndices := make([]uint64, len(queryEntry.ValidatorIndices))
-		for i, validatorIndex := range queryEntry.ValidatorIndices {
-			uiValidatorIndices[i] = validatorIndex
-		}
-
 		resultEntry := t.VDBSummaryTableRow{
 			GroupId:                  queryEntry.GroupId,
 			AverageNetworkEfficiency: averageNetworkEfficiency,
 		}
 
 		// Status
-		for _, validatorIndex := range uiValidatorIndices {
+		for _, validatorIndex := range queryEntry.ValidatorIndices {
 			if currentSyncCommitteeValidators[validatorIndex] {
 				resultEntry.Status.CurrentSyncCount++
 			}
@@ -308,7 +303,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			return nil, nil, err
 		}
 
-		for _, validator := range validators {
+		for _, validator := range queryEntry.ValidatorIndices {
 			metadata := validatorMapping.ValidatorMetadata[validator]
 
 			// As deposited and pending validators are neither online nor offline they are counted as the third state (exited)
@@ -378,7 +373,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		// If the search permits it add the entry to the result
 		if search != "" {
 			prefixSearch := strings.ToLower(search)
-			for _, validatorIndex := range uiValidatorIndices {
+			for _, validatorIndex := range queryEntry.ValidatorIndices {
 				if searchValidator != -1 && validatorIndex == uint64(searchValidator) ||
 					(groupNameSearchEnabled && strings.HasPrefix(strings.ToLower(queryEntry.GroupName), prefixSearch)) {
 					result = append(result, resultEntry)
