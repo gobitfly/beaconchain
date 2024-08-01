@@ -56,6 +56,7 @@
   &.p-button-icon-only {
     padding: 8px;
     width: var(--default-button-height);
+    flex-shrink: 1;
   }
 
   &.p-button-danger {

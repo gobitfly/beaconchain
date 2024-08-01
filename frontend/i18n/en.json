@@ -479,6 +479,10 @@
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "entity": {
+      "validator": "Validator",
+      "account": "Account"
+    },
     "rename": {
       "title": "Rename Dashboard"
     },

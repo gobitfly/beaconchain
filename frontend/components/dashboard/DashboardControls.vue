@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import {
+  faEdit,
   faShare,
   faUsers,
   faTrash
@@ -7,13 +8,21 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
+import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal, DashboardRenameModal } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
+interface Props {
+  dashboardTitle?: string,
+}
+const props = defineProps<Props>()
+
+const route = useRoute()
+const isValidatorDashboard = route.name === 'dashboard-id'
 const { isLoggedIn } = useUserStore()
 const { dashboardKey, isPublic, isPrivate, isShared, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
 
 const { t: $t } = useI18n()
@@ -175,12 +184,39 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   // no private dashboard available, forward to creation screen
   setDashboardKey('')
 }
+
+const title = computed(() => {
+  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+})
+
+const editDashboard = () => {
+  const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
+  const dashboard = list?.find(d => `${d.id}` === dashboardKey.value)
+  if (!dashboard) {
+    return
+  }
+  dialog.open(DashboardRenameModal, {
+    data: {
+      dashboard,
+      dashboardType: dashboardType.value
+    },
+    onClose: (value?: DynamicDialogCloseOptions | undefined) => {
+      if (value?.data === true) {
+        refreshDashboards()
+        refreshOverview(dashboardKey.value)
+      }
+    }
+  })
+}
 </script>
 
 <template>
   <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
   <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
+    <div class="h1 dashboard-title">
+      {{ title }}
+    </div>
     <div class="action-button-container">
       <Button class="share-button" :disabled="shareButtonOptions.disabled" @click="share()">
         {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
@@ -189,6 +225,9 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
+    <Button v-if="isPrivate" class="p-button-icon-only edit_button" @click="editDashboard">
+      <FontAwesomeIcon :icon="faEdit" />
+    </Button>
     <Menubar v-if="manageButtons" :model="manageButtons" breakpoint="0px" class="right-aligned-submenu">
       <template #item="{ item }">
         <span class="button-content pointer">
@@ -210,6 +249,10 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   justify-content: space-between;
   gap: var(--padding);
   margin-bottom: var(--padding-large);
+
+  .dashboard-title {
+    @include utils.truncate-text;
+  }
 
   .action-button-container{
     display: flex;

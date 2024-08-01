@@ -9,12 +9,14 @@
   .p-menubar-root-list {
     flex-wrap: nowrap;
     gap: var(--padding);
+    min-width: 1px;
 
     > .p-menuitem {
       background: var(--list-background);
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
       height: 30px;
+      min-width: 1px;
       &:has(.router-link-active),
       &:has(.p-active) {
         color: var(--primary-color);
