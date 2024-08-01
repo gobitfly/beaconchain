@@ -18,22 +18,13 @@ type BlockSummary struct {
 type InternalGetBlockResponse ApiDataResponse[BlockSummary]
 
 type BlockExecutionPayload struct {
-	Block                 uint64          `json:"block"`
 	BlockHash             Hash            `json:"block_hash"`
 	ParentHash            Hash            `json:"parent_hash"`
 	PriorityFeesRecipient Address         `json:"priority_fees_recipient"`
-	PriorityFees          decimal.Decimal `json:"priority_fees"`
 	GasUsed               uint64          `json:"gas_used"`
 	GasLimit              uint64          `json:"gas_limit"`
 	BaseFeePerGas         decimal.Decimal `json:"base_fee_per_gas"`
 	BaseFees              decimal.Decimal `json:"base_fees"`
-	Transactions          struct {
-		General uint64 `json:"general"`
-		Blob    uint64 `json:"blob"`
-	} `json:"transactions"`
-	Time      int64  `json:"time"`
-	ExtraData string `json:"extra_data,omitempty"`
-	Graffiti  string `json:"graffiti"`
 }
 
 type BlockConsensusLayer struct {
@@ -49,6 +40,7 @@ type BlockConsensusLayer struct {
 	Deposits          uint64             `json:"deposit"`
 	SyncCommittee     BlockSyncCommittee `json:"sync_committee"`
 	Eth1Data          BlockEth1Data      `json:"eth1_data"`
+	Graffiti          string             `json:"graffiti"`
 }
 
 type BlockSyncCommittee struct {
@@ -114,7 +106,7 @@ type BlockOverview struct {
 	Transactions *struct {
 		General  uint64 `json:"general"`
 		Internal uint64 `json:"internal"`
-		Blob     uint64 `json:"blob"`
+		Blob     uint64 `json:"blob,omitempty"`
 	} `json:"transactions,omitempty"`
 	BlockRoot  Hash `json:"block_root,omitempty"`
 	ParentRoot Hash `json:"parent_root,omitempty"`
