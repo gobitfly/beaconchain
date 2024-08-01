@@ -345,7 +345,7 @@ func updateWeights(firstRun bool) error {
 		Bucket    string    `db:"bucket"`
 		ValidFrom time.Time `db:"valid_from"`
 	}{}
-	err := db.FrontendWriterDB.Select(&dbWeights, "SELECT DISTINCT ON (endpoint) endpoint, bucket, weight, valid_from FROM api_weights WHERE valid_from <= NOW() ORDER BY endpoint, valid_from DESC")
+	err := db.UserWriter.Select(&dbWeights, "SELECT DISTINCT ON (endpoint) endpoint, bucket, weight, valid_from FROM api_weights WHERE valid_from <= NOW() ORDER BY endpoint, valid_from DESC")
 	if err != nil {
 		return err
 	}
@@ -515,7 +515,7 @@ func updateStats(redisClient *redis.Client) error {
 }
 
 func updateStatsEntries(entries []DbEntry) error {
-	tx, err := db.FrontendWriterDB.Beginx()
+	tx, err := db.UserWriter.Beginx()
 	if err != nil {
 		return err
 	}
@@ -577,7 +577,7 @@ func updateRateLimits() error {
 	lastTRateLimits := lastRateLimitUpdateRateLimits
 	lastRateLimitUpdateMu.Unlock()
 
-	tx, err := db.FrontendWriterDB.Beginx()
+	tx, err := db.UserWriter.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1027,7 +1027,7 @@ func (rl *FallbackRateLimiter) Handle(w http.ResponseWriter, r *http.Request, ne
 
 func DBGetUserApiRateLimit(userId int64) (*RateLimit, error) {
 	rl := &RateLimit{}
-	err := db.FrontendWriterDB.Get(rl, `
+	err := db.UserWriter.Get(rl, `
         select second, hour, month
         from api_ratelimits
         where user_id = $1 and bucket = 'default'`, userId)
@@ -1040,7 +1040,7 @@ func DBGetUserApiRateLimit(userId int64) (*RateLimit, error) {
 
 func DBGetCurrentApiProducts() ([]*ApiProduct, error) {
 	apiProducts := []*ApiProduct{}
-	err := db.FrontendWriterDB.Select(&apiProducts, `
+	err := db.UserWriter.Select(&apiProducts, `
         select distinct on (name, bucket) name, bucket, stripe_price_id, second, hour, month, valid_from 
         from api_products 
         where valid_from <= now()
@@ -1124,7 +1124,7 @@ func DBUpdate(redisClient *redis.Client) {
 
 // DBInvalidateApiKeys invalidates api_keys that are not associated with a user. This func is only needed until api-key-mgmt is fully implemented - where users.apikey column is not used anymore.
 func DBInvalidateApiKeys() (sql.Result, error) {
-	return db.FrontendWriterDB.Exec(`
+	return db.UserWriter.Exec(`
         update api_keys 
         set changed_at = now(), valid_until = now() 
         where valid_until > now() and not exists (select id from users where id = api_keys.user_id)`)
@@ -1132,7 +1132,7 @@ func DBInvalidateApiKeys() (sql.Result, error) {
 
 // DBUpdateApiKeys updates the api_keys table with the api_keys from the users table. This func is only needed until api-key-mgmt is fully implemented - where users.apikey column is not used anymore.
 func DBUpdateApiKeys() (sql.Result, error) {
-	return db.FrontendWriterDB.Exec(
+	return db.UserWriter.Exec(
 		`insert into api_keys (user_id, api_key, valid_until, changed_at)
         select 
             id as user_id, 
@@ -1150,7 +1150,7 @@ func DBUpdateApiKeys() (sql.Result, error) {
 }
 
 func DBUpdateApiRatelimits() (sql.Result, error) {
-	return db.FrontendWriterDB.Exec(
+	return db.UserWriter.Exec(
 		`with 
 			current_api_products as (
 				select distinct on (name, bucket) name, bucket, stripe_price_id, second, hour, month, valid_from 
