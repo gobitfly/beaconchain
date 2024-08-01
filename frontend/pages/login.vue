@@ -97,9 +97,6 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
 @use "~/assets/css/fonts.scss";
 
 .page {
-  display: flex;
-  flex-direction: column;
-
   .container {
     position: relative;
     margin: auto;
@@ -136,6 +133,7 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
           margin-bottom: 12px;
           .right-cell {
             margin-left: auto;
+            @include fonts.small_text;
           }
         }
       }

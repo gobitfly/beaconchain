@@ -65,16 +65,14 @@ const userMenu = computed(() => {
 </script>
 
 <template>
-  <div v-if="minimalist" class="minimalistic" :class="hideInDevelopmentClass">
-    <div class="row">
-      <BcLink to="/" class="logo">
-        <IconBeaconchainLogo alt="Beaconcha.in logo" />
-        <span class="name">beaconcha.in</span>
-      </BcLink>
+  <div v-if="minimalist" class="minimalist">
+    <div class="top-background" />
+    <div class="rows">
+      <BcHeaderLogo layout-adaptability="low" />
     </div>
   </div>
 
-  <div v-else class="anchor" :class="hideInDevelopmentClass">
+  <div v-else class="complete" :class="hideInDevelopmentClass">
     <div class="top-background" />
     <div class="rows">
       <div class="grid-cell blockchain-info">
@@ -131,10 +129,7 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell explorer-info">
-        <BcLink to="/" class="logo">
-          <IconBeaconchainLogo alt="Beaconcha.in logo" />
-          <span class="name">beaconcha.in</span>
-        </BcLink>
+        <BcHeaderLogo layout-adaptability="high" />
         <span class="variant">
           v2 beta |
           <span class="mobile">{{ networkInfo.shortName }}</span>
@@ -153,66 +148,38 @@ const userMenu = computed(() => {
 <style lang="scss" scoped>
 @use "~/assets/css/fonts.scss";
 
-// do not change these two values without changing the values in types/header.ts accordingly
+// do not change these two values without changing the values in HeaderLogo.vue and in types/header.ts accordingly
 $mobileHeaderThreshold: 600px;
 $smallHeaderThreshold: 1024px;
 
-.minimalistic {
+@mixin common {
   position: relative;
   display: flex;
   width: 100%;
-  background-color: var(--dark-blue);
-  color: var(--header-top-font-color);
   justify-content: center;
-  @media (min-width: $mobileHeaderThreshold) {
-    background-color: var(--container-background);
-    border-bottom: 1px solid var(--container-border-color);
-    color: var(--container-color);
+  .top-background {
+    position: absolute;
+    width: 100%;
+    height: var(--navbar-height);
+    background-color: var(--dark-blue);
   }
-  .row {
+  .rows {
     width: var(--content-width);
-    .logo {
-      display: flex;
-      position: relative;
-      gap: var(--padding);
-      font-family: var(--logo_font_family);
-      font-weight: var(--logo_font_weight);
-      letter-spacing: var(--logo_small_letter_spacing);
-      font-size: var(--logo_font_size);
-      svg {
-        margin-top: auto;
-        margin-bottom: 13px;
-        height: 30px;
-      }
-      .name {
-        display: inline-flex;
-        position: relative;
-        margin-top: 14px;
-        margin-bottom: 14px;
-        line-height: 22px;
-      }
-      @media (max-width: $mobileHeaderThreshold) {
-        font-size: var(--logo_small_font_size);
-        gap: 6px;
-        .name {
-          margin-top: 11px;
-          margin-bottom: 11px;
-        }
-        svg {
-          height: 18px;
-          margin-bottom: 15px;
-        }
-      }
+  }
+}
+
+.minimalist {
+  @include common();
+  @media (max-width: $mobileHeaderThreshold) {
+    .top-background {
+      height: 36px;
     }
   }
 }
 
-.anchor {
+.complete {
+  @include common();
   top: -1px; // needed for some reason to perfectly match Figma
-  position: relative;
-  display: flex;
-  width: 100%;
-  justify-content: center;
   border-bottom: 1px solid var(--container-border-color);
   &.hide-because-it-is-unfinished {  // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
     @media (max-width: $smallHeaderThreshold) {
@@ -220,12 +187,6 @@ $smallHeaderThreshold: 1024px;
     }
   }
   background-color: var(--container-background);
-  .top-background {
-    position: absolute;
-    width: 100%;
-    height: var(--navbar-height);
-    background-color: var(--dark-blue);
-  }
 
   .rows {
     position: relative;
@@ -236,7 +197,6 @@ $smallHeaderThreshold: 1024px;
       grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
     }
-    width: var(--content-width);
     color: var(--header-top-font-color);
     @mixin bottom-cell($row) {
       color: var(--container-color);
@@ -351,42 +311,6 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         grid-row: 1;
       }
-      .logo {
-        display: flex;
-        position: relative;
-        margin-top: auto;
-        gap: var(--padding);
-        font-family: var(--logo_font_family);
-        font-size: var(--logo_font_size);
-        font-weight: var(--logo_font_weight);
-        letter-spacing: var(--logo_letter_spacing);
-        svg {
-          margin-top: auto;
-        }
-        .name {
-          display: inline-flex;
-          position: relative;
-          margin-top: auto;
-          line-height: 22px;
-        }
-        @media (max-width: 1360px) {
-          font-size: var(--logo_small_font_size);
-          letter-spacing: var(--logo_small_letter_spacing);
-          gap: 6px;
-          .name {
-            line-height: 14px;
-            @media (max-width: $mobileHeaderThreshold) {
-              display: none;
-            }
-          }
-          svg {
-            height: 18px;
-            @media (max-width: $mobileHeaderThreshold) {
-              height: 30px;
-            }
-          }
-        }
-      }
       .variant {
         position: relative;
         margin-top: auto;
@@ -395,8 +319,7 @@ $smallHeaderThreshold: 1024px;
         line-height: 10px;
         .large-screen { display: inline }
         .mobile { display: none }
-        @media (max-width: $smallHeaderThreshold) { // when it is in the upper header...
-          // ... the background is always dark blue (no matter the theme (dark/light)), so we need a light grey:
+        @media (max-width: $smallHeaderThreshold) {
           color: var(--grey);
         }
         @media (max-width: $mobileHeaderThreshold) {

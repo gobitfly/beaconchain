@@ -139,9 +139,6 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
 @use "~/assets/css/fonts.scss";
 
 .page {
-  display: flex;
-  flex-direction: column;
-
   .container {
     position: relative;
     margin: auto;
