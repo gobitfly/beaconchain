@@ -65,6 +65,8 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// This should be removed and the db functions should become methods of a struct that contains the db pointers.
 	db.ReaderDb = das.readerDb
 	db.WriterDb = das.writerDb
+	db.UserReader = das.userWriter
+	db.UserWriter = das.userReader
 	db.AlloyReader = das.alloyReader
 	db.AlloyWriter = das.alloyWriter
 	db.ClickHouseReader = das.clickhouseReader

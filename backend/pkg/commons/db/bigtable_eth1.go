@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -3138,8 +3139,11 @@ func (bigtable *Bigtable) GetAddressName(address []byte) (string, error) {
 	add := common.Address{}
 	add.SetBytes(address)
 	name, err := GetEnsNameForAddress(add)
-	if err == nil && name != nil && len(*name) > 0 {
-		return *name, nil
+	if err == nil && len(name) > 0 {
+		return name, nil
+	}
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
 	}
 
 	rowKey := fmt.Sprintf("%s:%x", bigtable.chainId, address)
