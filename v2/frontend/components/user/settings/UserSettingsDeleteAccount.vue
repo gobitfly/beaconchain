@@ -5,6 +5,7 @@ import { API_PATH } from '~/types/customFetch'
 const dialog = useDialog()
 const { t: $t } = useI18n()
 const { fetch } = useCustomFetch()
+const { user } = useUserStore()
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
@@ -12,7 +13,7 @@ const onDelete = () => {
   dialog.open(BcDialogConfirm, {
     data: {
       title: $t('user_settings.delete_account.dialog.title'),
-      question: $t('user_settings.delete_account.dialog.warning'),
+      question: $t('user_settings.delete_account.dialog.warning', { email: user.value?.email || $t('common.unavailable') }),
       noLabel: $t('user_settings.delete_account.dialog.no_label'),
       yesLabel: $t('user_settings.delete_account.dialog.yes_label'),
       severity: 'danger'

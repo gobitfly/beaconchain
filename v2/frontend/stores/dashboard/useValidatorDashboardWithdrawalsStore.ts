@@ -25,6 +25,8 @@ export function useValidatorDashboardWithdrawalsStore () {
   async function getWithdrawals (dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (!dashboardKey) {
       data.value = undefined
+      isLoadingWithdrawals.value = false
+      storedQuery.value = undefined
       return undefined
     }
 
@@ -44,6 +46,7 @@ export function useValidatorDashboardWithdrawalsStore () {
   async function getTotalAmount (dashboardKey: DashboardKey) {
     if (!dashboardKey) {
       total.value = undefined
+      isLoadingTotal.value = false
       return undefined
     }
 
