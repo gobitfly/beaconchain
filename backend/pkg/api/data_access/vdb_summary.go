@@ -138,7 +138,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	if len(validators) > 0 {
 		ds = ds.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("r.validator_index IN (?)", validators))
+			Where(goqu.L("r.validator_index IN ?", validators))
 	} else {
 		if dashboardId.AggregateGroups {
 			ds = ds.
@@ -774,7 +774,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 
 	if len(dashboardId.Validators) > 0 {
 		rewardsDs = rewardsDs.
-			Where(goqu.L("validator_index IN (?)", dashboardId.Validators))
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	} else {
 		rewardsDs = rewardsDs.
 			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
@@ -825,7 +825,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	}
 
 	elDs := goqu.Dialect("postgres").
-		Select(goqu.L("SUM(COALESCE(rb.value / 1e18, ep.fee_recipient_reward, 0)) AS el_reward")).
+		Select(goqu.L("COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0) AS el_reward")).
 		From(goqu.L("blocks AS b")).
 		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("b.exec_block_hash = ep.block_hash"))).
 		LeftJoin(goqu.L("relays_blocks AS rb"), goqu.On(goqu.L("b.exec_block_hash = rb.exec_block_hash"))).
@@ -1358,7 +1358,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
 		ds = ds.
-			Where(goqu.L("r.validator_index = ANY(?)", pq.Array(dashboardId.Validators)))
+			Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 	} else {
 		ds = ds.
 			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
@@ -1606,7 +1606,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 
 	if len(dashboardId.Validators) > 0 {
 		ds = ds.
-			Where(goqu.L("r.validator_index = ANY(?)", pq.Array(dashboardId.Validators)))
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
 	} else {
 		ds = ds.
 			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
