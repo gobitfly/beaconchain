@@ -1389,7 +1389,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		}
 
 		if queryEntry.Slashed {
-			slashedValidators = append(slashingValidators, queryEntry.ValidatorIndex)
+			slashedValidators = append(slashedValidators, queryEntry.ValidatorIndex)
 		}
 	}
 
@@ -1592,7 +1592,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		Slot           uint64        `db:"slot"`
 		Block          sql.NullInt64 `db:"exec_block_number"`
 		Status         string        `db:"status"`
-		ValidatorIndex uint64        `db:"validator_index"`
+		ValidatorIndex uint64        `db:"proposer"`
 	}
 
 	ds = goqu.Dialect("postgres").
