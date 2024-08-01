@@ -608,7 +608,7 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 
 func (v *validationError) checkTimestamps(afterParam string, beforeParam string, latestExportedTs uint64, minAllowedTs uint64, maxAllowedInterval uint64) (after uint64, before uint64) {
 	switch {
-	// If both parameters are e mpty, return the latest data
+	// If both parameters are empty, return the latest data
 	case afterParam == "" && beforeParam == "":
 		return max(latestExportedTs-maxAllowedInterval, minAllowedTs), latestExportedTs
 
