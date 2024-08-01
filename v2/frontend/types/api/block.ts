@@ -19,22 +19,13 @@ export interface BlockSummary {
 }
 export type InternalGetBlockResponse = ApiDataResponse<BlockSummary>;
 export interface BlockExecutionPayload {
-  block: number /* uint64 */;
   block_hash: Hash;
   parent_hash: Hash;
   priority_fees_recipient: Address;
-  priority_fees: string /* decimal.Decimal */;
   gas_used: number /* uint64 */;
   gas_limit: number /* uint64 */;
   base_fee_per_gas: string /* decimal.Decimal */;
   base_fees: string /* decimal.Decimal */;
-  transactions: {
-    general: number /* uint64 */;
-    blob: number /* uint64 */;
-  };
-  time: number /* int64 */;
-  extra_data?: string;
-  graffiti: string;
 }
 export interface BlockConsensusLayer {
   state_root: Hash;
@@ -49,6 +40,7 @@ export interface BlockConsensusLayer {
   deposit: number /* uint64 */;
   sync_committee: BlockSyncCommittee;
   eth1_data: BlockEth1Data;
+  graffiti: string;
 }
 export interface BlockSyncCommittee {
   participation: number /* float64 */;
@@ -116,7 +108,7 @@ export interface BlockOverview {
   transactions?: {
     general: number /* uint64 */;
     internal: number /* uint64 */;
-    blob: number /* uint64 */;
+    blob?: number /* uint64 */;
   };
   block_root?: Hash;
   parent_root?: Hash;
