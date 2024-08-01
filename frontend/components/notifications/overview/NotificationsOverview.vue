@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { defineProps, computed } from 'vue'
+import { defineProps, computed, ref, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faDesktop, faUser, faInfoCircle } from '@fortawesome/pro-solid-svg-icons'
 import type { NotificationsOverview } from '~/types/notifications/overview'
 
-const props = defineProps<{ store: NotificationsOverview | null }>()
+const props = defineProps<{ initialStore: NotificationsOverview | null }>()
 
-const emailNotificationStatus = computed(() => props.store?.EmailNotifications ? 'Active' : 'Inactive')
-const pushNotificationStatus = computed(() => props.store?.pushNotifications ? 'Active' : 'Inactive')
-const emailLimitCount = computed(() => props.store?.EmailLimitCount ?? 0)
+const store = ref<NotificationsOverview | null>(props.initialStore)
+
+const emailNotificationStatus = computed(() => store.value?.EmailNotifications ? 'Active' : 'Inactive')
+const pushNotificationStatus = computed(() => store.value?.pushNotifications ? 'Active' : 'Inactive')
+const emailLimitCount = computed(() => store.value?.EmailLimitCount ?? 0)
 const mostNotifications30d = computed(() => {
-  const notificationsActive = props.store?.EmailNotifications || props.store?.pushNotifications
+  const notificationsActive = store.value?.EmailNotifications || store.value?.pushNotifications
   if (!notificationsActive) {
     return {
       providers: ['-', '-', '-'],
@@ -18,16 +20,16 @@ const mostNotifications30d = computed(() => {
     }
   }
 
-  const providers = props.store?.mostNotifications30d.providers ?? []
-  const abo = props.store?.mostNotifications30d.abo ?? []
+  const providers = store.value?.mostNotifications30d.providers ?? []
+  const abo = store.value?.mostNotifications30d.abo ?? []
   return {
     providers: [...providers, ...Array(3 - providers.length).fill('-')].slice(0, 3),
     abo: [...abo, ...Array(3 - abo.length).fill('-')].slice(0, 3)
   }
 })
 const mostNotifications24h = computed(() => {
-  const notificationsActive = props.store?.EmailNotifications || props.store?.pushNotifications
-  return notificationsActive ? props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 } : { Email: 0, Webhook: 0, Push: 0 }
+  const notificationsActive = store.value?.EmailNotifications || store.value?.pushNotifications
+  return notificationsActive ? store.value?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 } : { Email: 0, Webhook: 0, Push: 0 }
 })
 const totalNotifications24h = computed(() => {
   const notifications = mostNotifications24h.value
@@ -35,11 +37,31 @@ const totalNotifications24h = computed(() => {
 })
 
 const tooltipEmail = 'Your current limit is ' + emailLimitCount.value + ' emails per day. Your email limit resets in X hours. Upgrade to premium for more.'
+
+const fetchNotificationsData = async () => {
+  try {
+    // Replace with your actual API call
+    const response = await fetch('/api/notifications-overview')
+    const data: NotificationsOverview = await response.json()
+    store.value = data
+  } catch (error) {
+    console.error('Failed to fetch notifications data:', error)
+  }
+}
+
+onMounted(() => {
+  fetchNotificationsData()
+  const intervalId = setInterval(fetchNotificationsData, 3600000) // 3600000 ms = 1 hour
+
+  onUnmounted(() => {
+    clearInterval(intervalId)
+  })
+})
 </script>
 
 <template>
   <div class="container">
-    <div v-if="props.store" class="box">
+    <div v-if="store" class="box">
       <div class="box-item">
         <span class="big_text_label">Email Notifications:</span>
         <span class="big_text">{{ emailNotificationStatus }}</span>
