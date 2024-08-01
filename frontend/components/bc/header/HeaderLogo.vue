@@ -75,8 +75,7 @@ $largeHeaderThreshold: 1360px;
 
 .high-adaptability {
   @include common();
-  margin-top: auto;
-  @media (max-width: $smallHeaderThreshold) {
+  @media (max-width: $largeHeaderThreshold) {
     @include smaller();
     @media (max-width: $mobileHeaderThreshold) {
       svg {
