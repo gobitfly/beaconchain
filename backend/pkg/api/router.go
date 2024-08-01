@@ -222,16 +222,26 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
+
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.VDBPublicApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession), GetAuthMiddleware(cfg.ApiKeySecret))
+		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey, false), hs.VDBPublicApiCheckMiddleware)
+		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession, false), GetAuthMiddleware(cfg.ApiKeySecret))
+	}
+	// endpoints which should be accessible even if dashboard is archived
+	publicDashboardRouter.HandleFunc("/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving).Methods(http.MethodPut, http.MethodOptions)
+	internalDashboardRouter.HandleFunc("/{dashboard_id}/archiving", hs.InternalPutValidatorDashboardArchiving).Methods(http.MethodPut, http.MethodOptions)
+	publicDashboardRouter.HandleFunc("/{dashboard_id}/", hs.PublicDeleteValidatorDashboard).Methods(http.MethodDelete, http.MethodOptions)
+	internalDashboardRouter.HandleFunc("/{dashboard_id}/", hs.InternalDeleteValidatorDashboard).Methods(http.MethodDelete, http.MethodOptions)
+
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey, true), hs.VDBPublicApiCheckMiddleware)
+		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession, true), GetAuthMiddleware(cfg.ApiKeySecret))
 	}
 
+	// only non-archived dashboards
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
-		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
-		{http.MethodPut, "/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving, hs.InternalPutValidatorDashboardArchiving},
 		{http.MethodPut, "/{dashboard_id}/name", nil, hs.InternalPutValidatorDashboardName},
 		{http.MethodPost, "/{dashboard_id}/groups", hs.PublicPostValidatorDashboardGroups, hs.InternalPostValidatorDashboardGroups},
 		{http.MethodPut, "/{dashboard_id}/groups/{group_id}", hs.PublicPutValidatorDashboardGroups, hs.InternalPutValidatorDashboardGroups},
