@@ -203,7 +203,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		return
 	}
 
-	userId, err := h.dai.GetUserIdByConfirmationHash(confirmationHash)
+	userId, err := h.dai.GetUserIdByConfirmationHash(r.Context(), confirmationHash)
 	if err != nil {
 		handleErr(w, err)
 		return

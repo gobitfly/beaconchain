@@ -24,7 +24,7 @@ type UserRepository interface {
 	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
 	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
-	GetUserIdByConfirmationHash(hash string) (uint64, error)
+	GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
@@ -69,7 +69,7 @@ func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) 
 	// unset email_confirmation_hash
 
 	_, err := d.userWriter.ExecContext(ctx, `
-		UPDATE users_val_dashboards_groups 
+		UPDATE users 
 		SET 
 			email = email_change_to_value,
 			email_change_to_value = NULL,
@@ -85,7 +85,7 @@ func (d *DataAccessService) UpdateUserPassword(ctx context.Context, userId uint6
 	// (password is already hashed)
 
 	_, err := d.userWriter.ExecContext(ctx, `
-		UPDATE users_val_dashboards_groups 
+		UPDATE users 
 		SET 
 			password = $1
 		WHERE id = $2
@@ -108,7 +108,7 @@ func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId
 
 func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
 	_, err := d.userWriter.ExecContext(ctx, `
-		UPDATE users_val_dashboards_groups 
+		UPDATE users 
 		SET 
 			email_confirmation_ts = NOW()
 		WHERE id = $1
@@ -131,11 +131,12 @@ func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId
 
 func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
 	_, err := d.userWriter.ExecContext(ctx, `
-		UPDATE users_val_dashboards_groups 
+		UPDATE users 
 		SET 
-			email_confirmation_hash = $1
-		WHERE id = $2
-	`, confirmationHash, userId)
+			email_confirmation_hash = $1,
+			email_change_to_value = $2
+		WHERE id = $3
+	`, confirmationHash, email, userId)
 
 	return err
 }
@@ -182,9 +183,16 @@ func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string
 	return userId, err
 }
 
-func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetUserIdByConfirmationHash(hash)
+func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
+	var result uint64
+
+	err := d.userWriter.GetContext(ctx, &result, `
+    	SELECT
+			id
+		FROM users
+		WHERE email_confirmation_hash = $1`, hash)
+
+	return result, err
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
