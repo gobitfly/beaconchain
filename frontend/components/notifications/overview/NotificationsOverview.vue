@@ -10,6 +10,14 @@ const emailNotificationStatus = computed(() => props.store?.EmailNotifications ?
 const pushNotificationStatus = computed(() => props.store?.pushNotifications ? 'Active' : 'Inactive')
 const emailLimitCount = computed(() => props.store?.EmailLimitCount ?? 0)
 const mostNotifications30d = computed(() => {
+  const notificationsActive = props.store?.EmailNotifications || props.store?.pushNotifications
+  if (!notificationsActive) {
+    return {
+      providers: ['-', '-', '-'],
+      abo: ['-', '-', '-']
+    }
+  }
+
   const providers = props.store?.mostNotifications30d.providers ?? []
   const abo = props.store?.mostNotifications30d.abo ?? []
   return {
@@ -17,7 +25,10 @@ const mostNotifications30d = computed(() => {
     abo: [...abo, ...Array(3 - abo.length).fill('-')].slice(0, 3)
   }
 })
-const mostNotifications24h = computed(() => props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 })
+const mostNotifications24h = computed(() => {
+  const notificationsActive = props.store?.EmailNotifications || props.store?.pushNotifications
+  return notificationsActive ? props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 } : { Email: 0, Webhook: 0, Push: 0 }
+})
 const totalNotifications24h = computed(() => {
   const notifications = mostNotifications24h.value
   return notifications.Email + notifications.Webhook + notifications.Push
