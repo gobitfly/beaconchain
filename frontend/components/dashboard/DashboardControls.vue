@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import {
+  faDesktop,
   faEdit,
+  faPeopleGroup,
   faShare,
   faUsers,
   faTrash
@@ -30,6 +32,7 @@ const { width } = useWindowSize()
 const dialog = useDialog()
 const { fetch } = useCustomFetch()
 
+const isMobile = computed(() => width.value < 520)
 const manageGroupsModalVisisble = ref(false)
 const manageValidatorsModalVisisble = ref(false)
 
@@ -42,6 +45,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
 
   buttons.push({
     dropdown: false,
+    faIcon: isMobile.value ? faPeopleGroup : undefined,
     label: $t('dashboard.validator.manage_groups'),
     command: () => { manageGroupsModalVisisble.value = true }
   })
@@ -50,17 +54,20 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
     buttons.push(
       {
         dropdown: false,
+        faIcon: isMobile.value ? faDesktop : undefined,
+        highlight: !isMobile.value,
         label: $t('dashboard.validator.manage_validators'),
         command: () => { manageValidatorsModalVisisble.value = true }
       }
     )
   }
 
-  if (width.value < 520 && buttons.length > 1) {
+  if (isMobile.value && buttons.length > 1) {
     return [
       {
         label: 'Manage',
         dropdown: true,
+        highlight: true,
         items: buttons
       }
     ]
@@ -78,7 +85,7 @@ const shareDashboard = computed(() => {
 const shareButtonOptions = computed(() => {
   const edit = isPrivate.value && !shareDashboard.value?.public_ids?.length
 
-  const label = !edit ? $t('dashboard.shared') : $t('dashboard.share')
+  const label = isMobile.value ? '' : !edit ? $t('dashboard.shared') : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
   const disabled = isShared.value || !dashboardKey.value
   return { label, icon, edit, disabled }
@@ -212,30 +219,35 @@ const editDashboard = () => {
 
 <template>
   <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
-  <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
+  <DashboardValidatorManagementModal v-if="dashboardType == 'validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
     <div class="h1 dashboard-title">
       {{ title }}
     </div>
     <div class="action-button-container">
-      <Button class="share-button" :disabled="shareButtonOptions.disabled" @click="share()">
-        {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
+      <Button
+        data-secondary
+        class="share-button"
+        :class="{ 'p-button-icon-only': !shareButtonOptions.label }"
+        :disabled="shareButtonOptions.disabled"
+        @click="share()"
+      >
+        {{ shareButtonOptions.label }}
+        <FontAwesomeIcon :icon="shareButtonOptions.icon" />
       </Button>
-      <Button v-if="deleteButtonOptions.visible" class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
+      <Button
+        v-if="deleteButtonOptions.visible"
+        class="p-button-icon-only"
+        :disabled="deleteButtonOptions.disabled"
+        @click="onDelete()"
+      >
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
+      <Button v-if="isPrivate" class="p-button-icon-only edit_button" @click="editDashboard">
+        <FontAwesomeIcon :icon="faEdit" />
+      </Button>
     </div>
-    <Button v-if="isPrivate" class="p-button-icon-only edit_button" @click="editDashboard">
-      <FontAwesomeIcon :icon="faEdit" />
-    </Button>
-    <Menubar v-if="manageButtons" :model="manageButtons" breakpoint="0px" class="right-aligned-submenu">
-      <template #item="{ item }">
-        <span class="button-content pointer">
-          <span class="text">{{ item.label }}</span>
-          <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
-        </span>
-      </template>
-    </Menubar>
+    <BcMenuBar :buttons="manageButtons" :align-right="true" />
   </div>
 </template>
 
@@ -246,46 +258,29 @@ const editDashboard = () => {
 .header-row {
   height: 30px;
   display: flex;
-  justify-content: space-between;
   gap: var(--padding);
   margin-bottom: var(--padding-large);
+  @media (max-width: 519px) {
+    gap: var(--padding-small);
+  }
 
   .dashboard-title {
     @include utils.truncate-text;
   }
 
-  .action-button-container{
+  .action-button-container {
+    flex-grow: 1;
     display: flex;
+    justify-content: flex-start;
     gap: var(--padding);
-
-    .share-button{
-      display: flex;
+    @media (max-width: 519px) {
+      justify-content: flex-end;
       gap: var(--padding-small);
     }
-  }
 
-  :deep(.p-menubar .p-menubar-root-list) {
-    >.p-menuitem{
-      color: var(--text-color-inverted);
-      background: var(--button-color-active);
-      border-color: var(--button-color-active);
-
-      >.p-menuitem-content {
-        margin-top: 1px;
-        .button-content{
-          .toggle {
-            margin-left: var(--padding);
-          }
-        }
-      }
-
-      >.p-submenu-list {
-        font-weight: var(--standard_text_font_weight);
-      }
-
-      &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
-        background: var(--button-color-hover);
-      }
+    .share-button {
+      display: flex;
+      gap: var(--padding-small);
     }
   }
 }

@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import type Menubar from 'primevue/menubar'
-import BcTooltip from '../bc/BcTooltip.vue'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
@@ -65,7 +63,7 @@ const items = computed<MenuBarEntry[]>(() => {
     const cd = db as CookieDashboard
     return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash !== undefined ? cd.hash : cd.id}`)
   }))
-  addToSortedItems($t('dashboard.entity.validator'), dashboards.value?.account_dashboards?.map((db) => {
+  addToSortedItems($t('dashboard.entity.account'), dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
     return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
   }))
@@ -79,33 +77,7 @@ const items = computed<MenuBarEntry[]>(() => {
 
 <template>
   <div class="header-container">
-    <Menubar class="menu-bar" :model="items" breakpoint="0px">
-      <template #item="{ item }">
-        <BcTooltip
-          v-if="item.disabledTooltip"
-          :text="item.disabledTooltip"
-          class="button-content"
-          @click.stop.prevent="() => undefined"
-        >
-          <span class="text-disabled">{{ item.label }}</span>
-        </BcTooltip>
-        <BcLink
-          v-else-if="item.route && !item.command"
-          :to="item.route"
-          class="pointer"
-          :class="{ 'p-active': item.active }"
-        >
-          <span class="button-content" :class="[item.class]">
-            <span class="text">{{ item.label }}</span>
-            <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
-          </span>
-        </BcLink>
-        <span v-else class="button-content pointer" :class="{ 'p-active': item.active }">
-          <span class="text">{{ item.label }}</span>
-          <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
-        </span>
-      </template>
-    </Menubar>
+    <BcMenuBar class="menu-bar" :buttons="items" />
     <Button v-if="!isShared" class="p-button-icon-only" @click="emit('showCreation')">
       <IconPlus title="Add new dashboard" width="100%" height="100%" />
     </Button>
@@ -113,16 +85,16 @@ const items = computed<MenuBarEntry[]>(() => {
 </template>
 
 <style lang="scss" scoped>
-@use "~/assets/css/utils.scss";
-
 .header-container {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   margin-top: var(--padding);
-  margin-bottom: var(--padding-large);
+  padding-bottom: var(--padding-medium);
+  margin-bottom: var(--padding-medium);
   min-width: 1px;
   gap: var(--padding);
+  border-bottom: var(--container-border);
 
   .edit_button {
     border-color: var(--container-border-color);
@@ -135,42 +107,12 @@ const items = computed<MenuBarEntry[]>(() => {
     display: flex;
     flex-shrink: 1;
     overflow: hidden;
-
-    .button-content {
-      display: flex;
-
-      &:has(.toggle) {
-        justify-content: space-between;
-      }
-
-      .text {
-        @include utils.truncate-text;
-      }
-
-      .toggle {
-        flex-shrink: 0;
-        margin-top: auto;
-        margin-bottom: auto;
-      }
-
-      .pointer {
-        cursor: pointer;
-      }
-    }
   }
 
   :deep(.p-menubar-root-list > .p-menuitem) {
     width: 145px;
-  }
-
-  :deep(.p-menubar-root-list .p-menuitem) {
-
-    &:has(>.p-menuitem-content .text-disabled) {
-      cursor: default;
-
-      >.p-menuitem-content {
-        opacity: 0.5;
-      }
+    .button-content {
+      gap: unset;
     }
   }
 

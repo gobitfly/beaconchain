@@ -1,4 +1,4 @@
-export type GlobalSetting = 'age-format'
+export type GlobalSetting = 'age-format' | 'rpl'
 
 export type AgeFormat = 'absolute' | 'relative'
 
@@ -19,5 +19,8 @@ type SettingsConfig = {
 export const SettingDefaults:Record<GlobalSetting, SettingsConfig> = {
   'age-format': {
     default: 'absolute'
+  },
+  rpl: {
+    default: true
   }
 }
