@@ -511,7 +511,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// Get the table names based on the period
-	clickhouseTable, days, err := d.getTablesForPeriod(period)
+	clickhouseTable, hours, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -680,7 +680,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		}
 	}
 
-	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, groupId, days)
+	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, groupId, hours)
 	if err != nil {
 		return nil, err
 	}
@@ -701,11 +701,11 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		ret.AttestationEfficiency = 0
 	}
 
-	luckDays := float64(days)
-	if days == -1 {
-		luckDays = time.Since(time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)).Hours() / 24
-		if luckDays == 0 {
-			luckDays = 1
+	luckHours := float64(hours)
+	if hours == -1 {
+		luckHours = time.Since(time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)).Hours()
+		if luckHours == 0 {
+			luckHours = 24
 		}
 	}
 
@@ -713,7 +713,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		ret.Luck.Proposal.Percent = (float64(totalProposals)) / totalBlockChance * 100
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
-		ret.Luck.Proposal.Average = time.Duration((luckDays / totalBlockChance) * float64(utils.Day))
+		ret.Luck.Proposal.Average = time.Duration((luckHours / totalBlockChance) * float64(time.Hour))
 	} else {
 		ret.Luck.Proposal.Percent = 0
 	}
@@ -727,7 +727,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
 
 		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
-		ret.Luck.Sync.Average = time.Duration((luckDays / totalSyncExpected) * float64(utils.Day))
+		ret.Luck.Sync.Average = time.Duration((luckHours / totalSyncExpected) * float64(time.Hour))
 	}
 
 	if totalInclusionDelayDivisor > 0 {
@@ -739,20 +739,22 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	return ret, nil
 }
 
-func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, days int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
+func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
 	table := ""
 
-	switch days {
+	switch hours {
 	case 1:
+		table = "validator_dashboard_data_rolling_1h"
+	case 24:
 		table = "validator_dashboard_data_rolling_24h"
-	case 7:
+	case 7 * 24:
 		table = "validator_dashboard_data_rolling_7d"
-	case 30:
+	case 30 * 24:
 		table = "validator_dashboard_data_rolling_30d"
 	case -1:
 		table = "validator_dashboard_data_rolling_90d"
 	default:
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid days value: %v", days)
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid hours value: %v", hours)
 	}
 
 	type RewardsResult struct {
@@ -798,18 +800,18 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
-	aprDivisor := days
-	if days == -1 { // for all time APR
-		aprDivisor = 90
+	aprDivisor := hours
+	if hours == -1 { // for all time APR
+		aprDivisor = 90 * 24
 	}
-	clAPR = ((float64(rewardsResultTable.Reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(rewardsResultTable.ValidatorCount))) * 365.0 * 100.0
+	clAPR = ((float64(rewardsResultTable.Reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
 	if math.IsNaN(clAPR) {
 		clAPR = 0
 	}
 
 	clIncome = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
 
-	if days == -1 {
+	if hours == -1 {
 		rewardsDs = rewardsDs.
 			From(goqu.L("validator_dashboard_data_rolling_total AS r FINAL"))
 
@@ -860,9 +862,9 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 	elIncomeFloat, _ := elIncome.Float64()
-	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(rewardsResultTable.ValidatorCount))) * 365.0 * 100.0
+	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
 
-	if days == -1 {
+	if hours == -1 {
 		elTotalDs := elDs.
 			Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTotal.EpochStart, rewardsResultTotal.EpochEnd))
 
@@ -1732,24 +1734,27 @@ func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Cont
 
 func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, int, error) {
 	clickhouseTable := ""
-	days := 0
+	hours := 0
 
 	switch period {
+	case enums.TimePeriods.Last1h:
+		clickhouseTable = "validator_dashboard_data_rolling_1h"
+		hours = 1
 	case enums.TimePeriods.Last24h:
 		clickhouseTable = "validator_dashboard_data_rolling_24h"
-		days = 1
+		hours = 24
 	case enums.TimePeriods.Last7d:
 		clickhouseTable = "validator_dashboard_data_rolling_7d"
-		days = 7
+		hours = 7 * 24
 	case enums.TimePeriods.Last30d:
 		clickhouseTable = "validator_dashboard_data_rolling_30d"
-		days = 30
+		hours = 30 * 24
 	case enums.TimePeriods.AllTime:
 		clickhouseTable = "validator_dashboard_data_rolling_total"
-		days = -1
+		hours = -1
 	default:
 		return "", 0, fmt.Errorf("not-implemented time period: %v", period)
 	}
 
-	return clickhouseTable, days, nil
+	return clickhouseTable, hours, nil
 }
