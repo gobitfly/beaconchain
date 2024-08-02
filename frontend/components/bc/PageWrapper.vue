@@ -1,11 +1,14 @@
 <script setup lang="ts">
-const props = defineProps({ isHomePage: { type: Boolean } })
+defineProps<{
+  isHomePage?: boolean,
+  minimalistHeader?: boolean
+}>()
 </script>
 
 <template>
   <BcCookieModal />
   <div class="page">
-    <BcHeaderMainHeader :is-home-page="props.isHomePage" />
+    <BcHeaderMainHeader :is-home-page="!!isHomePage" :minimalist="!!minimalistHeader" />
     <BcMaintenanceBanner />
     <div class="content">
       <slot name="top" />

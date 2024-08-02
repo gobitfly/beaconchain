@@ -1,25 +1,29 @@
 <script lang="ts" setup>
 import { type DashboardType } from '~/types/dashboard'
-import { type DashboardCreationDisplayType, type DashboardCreationState } from '~/types/dashboard/creation'
+import { type DashboardCreationDisplayMode, type DashboardCreationState } from '~/types/dashboard/creation'
 import { ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
 const { dashboards } = useUserDashboardStore()
 const { user, isLoggedIn } = useUserStore()
+const { currentNetwork } = useNetworkStore()
 
 interface Props {
-  displayType: DashboardCreationDisplayType,
-  initiallyVisislbe?: boolean
+  displayMode: DashboardCreationDisplayMode,
+  initiallyVisible?: boolean
 }
 const props = defineProps<Props>()
 
-const visible = ref<boolean>(false)
+const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
+const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
 const type = ref<DashboardType | ''>('')
 const name = ref<string>('')
 const network = ref<ChainIDs>(0)
+const forcedDashboardType = ref<DashboardType | ''>('')
+let forcedNetworkIfValidatorDashboard = 0
 const { dashboardKey, publicEntities } = useDashboardKey()
 const { fetch } = useCustomFetch()
 const route = useRoute()
@@ -30,32 +34,34 @@ const maxDashboards = computed(() => {
 })
 const accountsDisabled = computed(() => {
   // TODO: Once account dashboards are being tackled, use something like
-  // return !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards.value
+  // return !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards.value  || (!!forcedDashboardType.value && forcedDashboardType.value !== 'account')
 
-  return true
+  return !showInDevelopment || (!!forcedDashboardType.value && forcedDashboardType.value !== 'account')
 })
 const validatorsDisabled = computed(() => {
-  return (dashboards.value?.validator_dashboards?.length ?? 0) >= maxDashboards.value
+  return (dashboards.value?.validator_dashboards?.length ?? 0) >= maxDashboards.value || (!!forcedDashboardType.value && forcedDashboardType.value !== 'validator')
 })
 
-function show () {
+function show (forcedType : DashboardType|'' = '', forcedNetwork: ChainIDs = 0) {
   visible.value = true
-
-  state.value = 'type'
-  type.value = ''
-  if (!validatorsDisabled.value) {
-    type.value = 'validator'
-  } else if (!accountsDisabled.value) {
-    type.value = 'account'
+  forcedNetworkIfValidatorDashboard = forcedNetwork
+  type.value = forcedDashboardType.value = forcedType
+  if (!type.value) {
+    if (!validatorsDisabled.value) {
+      type.value = 'validator'
+    } else if (!accountsDisabled.value) {
+      type.value = 'account'
+    }
   }
+  network.value = forcedNetwork || currentNetwork.value
+  state.value = 'type'
   name.value = isLoggedIn.value ? '' : 'cookie'
-  network.value = 0
 }
 
 defineExpose({
   show
 })
-if (props.initiallyVisislbe) {
+if (props.initiallyVisible) {
   show()
 }
 
@@ -63,9 +69,12 @@ function onNext () {
   if (state.value === 'type') {
     if (type.value === 'account') {
       createDashboard()
-    } else {
-      state.value = 'network'
-    }
+    } else
+      if (forcedNetworkIfValidatorDashboard) {
+        createDashboard()
+      } else {
+        state.value = 'network'
+      }
   } else if (state.value === 'network') {
     createDashboard()
   }
@@ -104,7 +113,7 @@ async function createDashboard () {
 </script>
 
 <template>
-  <BcDialog v-if="visible && props.displayType === 'modal'" v-model="visible">
+  <BcDialog v-if="visible && props.displayMode === 'modal'" v-model="visible">
     <DashboardCreationTypeMask
       v-if="state === 'type'"
       v-model:state="state"
@@ -122,7 +131,7 @@ async function createDashboard () {
       @back="onBack()"
     />
   </BcDialog>
-  <div v-else-if="visible && props.displayType === 'panel'">
+  <div v-else-if="visible && props.displayMode === 'panel'">
     <div class="panel-container">
       <DashboardCreationTypeMask
         v-if="state === 'type'"

@@ -33,6 +33,7 @@ export enum ChainIDs {
 export interface ChainInfoFields {
   nameParts: string[],
   name: string,
+  shortName: string,
   description: string,
   family: ChainFamily,
   mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
@@ -49,6 +50,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Any]: {
     nameParts: ['Any', 'network'],
     name: 'Any network',
+    shortName: 'Any',
     description: 'Any network',
     family: ChainFamily.Any,
     mainNet: ChainIDs.Any,
@@ -64,6 +66,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Ethereum]: {
     nameParts: ['Ethereum', ''],
     name: 'Ethereum',
+    shortName: 'Ethereum',
     description: 'Mainnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
@@ -78,6 +81,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Holesky]: {
     nameParts: ['Ethereum', 'Holesky'],
     name: 'Ethereum Holesky',
+    shortName: 'Holesky',
     description: 'Testnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
@@ -92,6 +96,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Sepolia]: {
     nameParts: ['Ethereum', 'Sepolia'],
     name: 'Ethereum Sepolia',
+    shortName: 'Sepolia',
     description: 'Testnet',
     family: ChainFamily.Ethereum,
     mainNet: ChainIDs.Ethereum,
@@ -107,6 +112,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.ArbitrumOneEthereum]: {
     nameParts: ['Arbitrum One', ''],
     name: 'Arbitrum One',
+    shortName: 'Arbitrum',
     description: 'L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
@@ -121,6 +127,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.ArbitrumNovaEthereum]: {
     nameParts: ['Arbitrum Nova', ''],
     name: 'Arbitrum Nova',
+    shortName: 'Arbitrum',
     description: 'L2',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumNovaEthereum,
@@ -135,6 +142,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.ArbitrumOneSepolia]: {
     nameParts: ['Arbitrum', 'Sepolia'],
     name: 'Arbitrum Sepolia',
+    shortName: 'Arbitrum',
     description: 'Testnet',
     family: ChainFamily.Arbitrum,
     mainNet: ChainIDs.ArbitrumOneEthereum,
@@ -150,6 +158,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.OptimismEthereum]: {
     nameParts: ['Optimism', ''],
     name: 'Optimism',
+    shortName: 'Optimism',
     description: 'L2',
     family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
@@ -164,6 +173,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.OptimismSepolia]: {
     nameParts: ['Optimism', 'Sepolia'],
     name: 'Optimism Sepolia',
+    shortName: 'Optimism',
     description: 'Testnet',
     family: ChainFamily.Optimism,
     mainNet: ChainIDs.OptimismEthereum,
@@ -179,6 +189,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.BaseEthereum]: {
     nameParts: ['Base', ''],
     name: 'Base',
+    shortName: 'Base',
     description: 'L2',
     family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
@@ -193,6 +204,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.BaseSepolia]: {
     nameParts: ['Base', 'Sepolia'],
     name: 'Base Sepolia',
+    shortName: 'Base',
     description: 'Testnet',
     family: ChainFamily.Base,
     mainNet: ChainIDs.BaseEthereum,
@@ -208,6 +220,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Gnosis]: {
     nameParts: ['Gnosis', ''],
     name: 'Gnosis',
+    shortName: 'Gnosis',
     description: 'Mainnet',
     family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
@@ -222,6 +235,7 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
   [ChainIDs.Chiado]: {
     nameParts: ['Gnosis', 'Chiado'],
     name: 'Gnosis Chiado',
+    shortName: 'Chiado',
     description: 'Testnet',
     family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
@@ -325,6 +339,18 @@ export function slotToEpoch (chainId: ChainIDs, slot: number): number {
     return -1
   }
   return Math.floor(slot / info.slotsPerEpoch)
+}
+
+/**
+ * Should be used only when you work with a network different from the current one.
+ * Wherever you would write `secondsPerEpoch(currentNetwork.value)` you should rather use `secondsPerEpoch()` from `useNetworkStore.ts`.
+ */
+export function secondsPerEpoch (chainId: ChainIDs): number {
+  const info = ChainInfo[chainId]
+  if (info.timeStampSlot0 === undefined) {
+    return -1
+  }
+  return info.slotsPerEpoch * info.secondsPerSlot
 }
 
 /**

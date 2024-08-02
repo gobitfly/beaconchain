@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -360,6 +361,32 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 	return &userInfo.PremiumPerks, nil
 }
 
+// helper function to unify handling of block detail request validation
+func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string) (uint64, uint64, error) {
+	var v validationError
+	var err error
+	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+	var value uint64
+	switch paramValue := mux.Vars(r)[paramName]; paramValue {
+	// possibly add other values like "genesis", "finalized", hardforks etc. later
+	case "latest":
+		if paramName == "block" {
+			value, err = h.dai.GetLatestBlock()
+		} else if paramName == "slot" {
+			value, err = h.dai.GetLatestSlot()
+		}
+		if err != nil {
+			return 0, 0, err
+		}
+	default:
+		value = v.checkUint(paramValue, paramName)
+	}
+	if v.hasErrors() {
+		return 0, 0, v
+	}
+	return chainId, value, nil
+}
+
 // checkGroupId validates the given group id and returns it as an int64.
 // If the given group id is empty and allowEmpty is true, it returns -1 (all groups).
 func (v *validationError) checkGroupId(param string, allowEmpty bool) int64 {
@@ -417,6 +444,14 @@ func checkMinMax[T number](v *validationError, param T, min T, max T, paramName 
 	return param
 }
 
+func (v *validationError) checkAddress(publicId string) string {
+	return v.checkRegex(reEthereumAddress, publicId, "address")
+}
+
+func (v *validationError) checkUintMinMax(param string, min uint64, max uint64, paramName string) uint64 {
+	return checkMinMax(v, v.checkUint(param, paramName), min, max, paramName)
+}
+
 func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -425,13 +460,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	}
 
 	if limitStr := q.Get("limit"); limitStr != "" {
-		limit, err := strconv.ParseUint(limitStr, 10, 64)
-		if err != nil {
-			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
-			return paging
-		}
-		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
-		paging.limit = limit
+		paging.limit = v.checkUintMinMax(limitStr, 1, maxQueryLimit, "limit")
 	}
 
 	if paging.cursor != "" {
