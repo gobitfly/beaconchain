@@ -69,17 +69,18 @@ var (
 )
 
 const (
-	maxNameLength              = 50
-	maxValidatorsInList        = 20
-	maxQueryLimit       uint64 = 100
-	defaultReturnLimit  uint64 = 10
-	sortOrderAscending         = "asc"
-	sortOrderDescending        = "desc"
-	defaultSortOrder           = sortOrderAscending
-	ethereum                   = "ethereum"
-	gnosis                     = "gnosis"
-	allowEmpty                 = true
-	forbidEmpty                = false
+	maxNameLength                     = 50
+	maxValidatorsInList               = 20
+	maxQueryLimit              uint64 = 100
+	defaultReturnLimit         uint64 = 10
+	sortOrderAscending                = "asc"
+	sortOrderDescending               = "desc"
+	defaultSortOrder                  = sortOrderAscending
+	ethereum                          = "ethereum"
+	gnosis                            = "gnosis"
+	allowEmpty                        = true
+	forbidEmpty                       = false
+	maxArchivedDashboardsCount        = 10
 )
 
 var (
@@ -318,7 +319,8 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 }
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
-// it should be used as the last validation step for all internal dashboard handlers.
+// it should be used as the last validation step for all internal dashboard GET-handlers.
+// Modifying handlers (POST, PUT, DELETE) should only accept primary dashboard ids and just use checkPrimaryDashboardId.
 func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
@@ -330,6 +332,7 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	if err != nil {
 		return nil, err
 	}
+
 	return dashboardId, nil
 }
 
