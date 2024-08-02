@@ -1000,9 +1000,9 @@
   },
   "validation": {
     "email" : {
-      "empty": "Please provide your email address",
-      "invalid": "Please provide a valid email address",
-      "no_match": "The email addresses do not match"
+      "empty": "Please provide your email address.",
+      "invalid": "Please provide a valid email address.",
+      "no_match": "The email addresses do not match."
     },
     "password": {
       "empty": "Please enter your password.",
