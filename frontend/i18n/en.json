@@ -470,7 +470,8 @@
     }
   },
   "rocketpool": {
-    "mode": "RP Mode"
+    "mode": "RP Mode",
+    "tooltip": "Enables Rocket Pool stats for this dashboard"
   },
   "dashboard": {
     "title": "Dashboard",
