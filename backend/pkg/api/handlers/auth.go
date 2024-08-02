@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -528,4 +529,67 @@ func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Han
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// middleware check to return if specified dashboard is not archived (and accessible)
+func (h *HandlerService) GetVDBArchivedCheckMiddleware(ctx context.Context, r *http.Request, params ...interface{}) error {
+	dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		return err
+	}
+	dashboard, err := h.dai.GetValidatorDashboard(ctx, *dashboardId)
+	if err != nil {
+		return err
+	}
+	if dashboard.IsArchived {
+		return newForbiddenErr("dashboard with id %v is archived", dashboardId)
+	}
+	return nil
+}
+
+// allows to return a middleware auth check which excludes specified endpoints under the same subrouter
+func (h *HandlerService) GetMiddlewareExcludRoutes(middlewareCheckFunc func(context.Context, *http.Request, ...interface{}) error, excludedRoutes []*mux.Route, params interface{}) func(http.Handler) http.Handler {
+	var excludedRoutesRegexp []*regexp.Regexp
+	for _, excludedRoute := range excludedRoutes {
+		pathRegexp, err := excludedRoute.GetPathRegexp()
+		if err != nil {
+			log.Error(err, "error getting path regexp for route", 0, nil)
+			continue
+		}
+		regx, err := regexp.Compile(pathRegexp)
+		if err != nil {
+			log.Error(err, "error compiling path regexp", 0, nil)
+			continue
+		}
+		excludedRoutesRegexp = append(excludedRoutesRegexp, regx)
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for i := range excludedRoutes {
+				methods, err := excludedRoutes[i].GetMethods()
+				if err != nil {
+					log.Error(err, "error getting methods for route", 0, nil)
+					continue
+				}
+				if !excludedRoutesRegexp[i].MatchString(r.RequestURI) {
+					continue
+				}
+				for _, method := range methods {
+					if method == r.Method {
+						// route and method matched
+						// endpoint is excluded from middleware check
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+			}
+
+			if err := middlewareCheckFunc(r.Context(), r, params); err != nil {
+				handleErr(w, err)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
