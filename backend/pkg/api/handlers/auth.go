@@ -121,6 +121,14 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 	return userId, err
 }
 
+func GetUserIdByContext(r *http.Request) (uint64, error) {
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		return 0, errors.New("error getting user id from context, not a uint64")
+	}
+	return userId, nil
+}
+
 // Handlers
 
 func (h *HandlerService) InternalPostOauthAuthorize(w http.ResponseWriter, r *http.Request) {
@@ -438,6 +446,23 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 }
 
 // Middlewares
+// returns a middleware that stores user id in context, using the provided function
+func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userId, err := userIdFunc(r)
+			if err != nil {
+				handleErr(w, err)
+				return
+			}
+			// store user id in context
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
+			r = r.WithContext(ctx)
+			next.ServeHTTP(w, r)
+		})
+	}
+}
 
 // returns a middleware that checks if user has access to dashboard when a primary id is used
 // expects a userIdFunc to return user id, probably GetUserIdBySession or GetUserIdByApiKey
@@ -504,7 +529,7 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 
 // returns a middleware that checks if user has premium perk to use public validator dashboard api
 // in the middleware chain, this should be used after GetVDBAuthMiddleware
-func (h *HandlerService) VDBPublicApiCheckMiddleware(next http.Handler) http.Handler {
+func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get user id from context
 		userId, ok := r.Context().Value(ctxUserIdKey).(uint64)

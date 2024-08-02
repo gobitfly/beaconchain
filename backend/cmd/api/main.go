@@ -11,6 +11,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/ratelimit"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -61,6 +62,9 @@ func main() {
 			}
 		}(cfg.Metrics.Address)
 	}
+
+	ratelimit.Init()
+	router.Use(ratelimit.HttpMiddleware)
 
 	srv := &http.Server{
 		Handler:      router,

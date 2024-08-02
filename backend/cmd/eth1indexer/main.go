@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -71,6 +72,7 @@ func main() {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
 
 	enableEnsUpdater := flag.Bool("ens.enabled", false, "Enable ens update process")
+	ensBatchSize := flag.Int64("ens.batch", 200, "Batch size for ens updates")
 
 	flag.Parse()
 
@@ -88,6 +90,16 @@ func main() {
 	utils.Config = cfg
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+
+	if utils.Config.Metrics.Enabled {
+		go func(addr string) {
+			log.Infof("serving metrics on %v", addr)
+			if err := metrics.Serve(addr); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}(utils.Config.Metrics.Address)
+	}
+
 	// enable pprof endpoint if requested
 	if utils.Config.Pprof.Enabled {
 		go func() {
@@ -362,7 +374,7 @@ func main() {
 		}
 
 		if *enableEnsUpdater {
-			err := bt.ImportEnsUpdates(client.GetNativeClient(), 1000)
+			err := bt.ImportEnsUpdates(client.GetNativeClient(), *ensBatchSize)
 			if err != nil {
 				log.Error(err, "error importing ens updates", 0, nil)
 				continue

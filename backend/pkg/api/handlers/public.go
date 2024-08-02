@@ -123,7 +123,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 	returnCreated(w, nil)
 }
 
-func (h *HandlerService) PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
@@ -355,6 +355,22 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) PublicGetNetworkValidators(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
@@ -451,7 +467,15 @@ func (h *HandlerService) PublicGetNetworkSlotAttestations(w http.ResponseWriter,
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) PublicGetNetworkSlotVotes(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) PublicGetNetworkBlockAttestations(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetNetworkBlockVotes(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
