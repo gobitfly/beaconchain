@@ -63,8 +63,11 @@ func main() {
 		}(cfg.Metrics.Address)
 	}
 
-	ratelimit.Init()
-	router.Use(ratelimit.HttpMiddleware)
+	if cfg.Frontend.RatelimitEnabled {
+		log.Infof("enabling ratelimit")
+		ratelimit.Init()
+		router.Use(ratelimit.HttpMiddleware)
+	}
 
 	srv := &http.Server{
 		Handler:      router,
