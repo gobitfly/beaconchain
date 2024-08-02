@@ -173,6 +173,15 @@ func (d *DummyService) GetValidatorDashboardInfoByPublicId(ctx context.Context, 
 	return &r, err
 }
 
+func (d *DummyService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+	r := t.ValidatorDashboard{}
+	// return semi-valid data to not break staging
+	//nolint:errcheck
+	commonFakeData(&r)
+	r.IsArchived = false
+	return &r, nil
+}
+
 func (d *DummyService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
 	r := ""
 	err := commonFakeData(&r)
@@ -205,6 +214,12 @@ func (d *DummyService) GetValidatorDashboardOverview(ctx context.Context, dashbo
 
 func (d *DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
 	return nil
+}
+
+func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+	r := t.VDBPostArchivingReturnData{}
+	err := commonFakeData(&r)
+	return &r, err
 }
 
 func (d *DummyService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
@@ -523,7 +538,7 @@ func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainI
 	return &r, err
 }
 
-func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
+func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
