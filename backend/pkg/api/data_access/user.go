@@ -27,7 +27,7 @@ type UserRepository interface {
 	GetUserIdByConfirmationHash(hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
-	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
+	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -539,6 +539,7 @@ func (d *DataAccessService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPer
 }
 
 func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
+	// TODO @DATA-ACCESS Adjust to api changes: return archival related fields
 	result := &t.UserDashboardsData{}
 
 	dbReturn := []struct {
@@ -603,7 +604,9 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	return result, nil
 }
 
-func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
+// return number of active / archived dashboards
+func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
+	// @DATA-ACCESS return number of dashboards depending on archival status (see comment above)
 	var count uint64
 	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
