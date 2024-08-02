@@ -67,7 +67,6 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
               v-model="email"
               v-bind="emailAttrs"
               type="text"
-              :placeholder="$t('login_and_register.email')"
               :class="{ 'p-invalid': errors?.email }"
               aria-describedby="text-error"
             />
@@ -82,7 +81,6 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
               v-model="password"
               v-bind="passwordAttrs"
               type="password"
-              :placeholder="$t('login_and_register.password')"
               :class="{ 'p-invalid': errors?.password }"
               aria-describedby="text-error"
             />
@@ -97,7 +95,6 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
               v-model="confirmPassword"
               v-bind="confirmPasswordAttrs"
               type="password"
-              :placeholder="$t('login_and_register.password')"
               :class="{ 'p-invalid': errors?.confirmPassword }"
               aria-describedby="text-error"
             />
