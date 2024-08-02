@@ -19,9 +19,9 @@ export function getChartTooltipBackgroundColor (theme: string) {
   const styles = window.getComputedStyle(document.documentElement)
 
   if (theme === 'light') {
-    return styles.getPropertyValue('--light-grey-2')
+    return styles.getPropertyValue('--light-grey-3')
   } else {
-    return styles.getPropertyValue('--light-grey')
+    return styles.getPropertyValue('--dark-grey')
   }
 }
 
