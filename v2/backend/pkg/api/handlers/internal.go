@@ -340,14 +340,13 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		handleErr(w, err)
 		return
 	}
-	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId)
+	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, true)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
 		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
-		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboard(r.Context(), userId, name, chainId)
@@ -425,6 +424,80 @@ func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter,
 		return
 	}
 	returnNoContent(w)
+}
+
+func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	req := struct {
+		IsArchived bool `json:"is_archived"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	// check conditions for changing archival status
+	dashboardInfo, err := h.dai.GetValidatorDashboard(r.Context(), types.VDBId{Id: dashboardId})
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if dashboardInfo.IsArchived == req.IsArchived {
+		// nothing to do
+		returnOk(w, types.ApiDataResponse[types.VDBPostArchivingReturnData]{
+			Data: types.VDBPostArchivingReturnData{Id: uint64(dashboardId), IsArchived: req.IsArchived},
+		})
+	}
+
+	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	if !ok {
+		handleErr(w, errors.New("error getting user id from context"))
+		return
+	}
+	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, !req.IsArchived)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if req.IsArchived {
+		if dashboardCount >= maxArchivedDashboardsCount {
+			returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
+			return
+		}
+	} else {
+		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+			returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
+			return
+		}
+		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+			returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
+			return
+		}
+		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+			returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
+			return
+		}
+	}
+
+	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, req.IsArchived)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.ApiDataResponse[types.VDBPostArchivingReturnData]{
+		Data: *data,
+	}
+	returnOk(w, response)
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter, r *http.Request) {
@@ -2005,4 +2078,350 @@ func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.Respons
 	}
 	// TODO
 	returnOk(w, nil)
+}
+
+// --------------------------------------
+// Blocks
+
+func (h *HandlerService) InternalGetBlock(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlock(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockOverview(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockOverview(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetBlockOverviewResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockTransactions(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockTransactions(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockTransactionsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockVotes(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockVotes(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVotesResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockAttestations(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockAttestations(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockAttestationsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockWithdrawals(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockWithdrawals(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockWtihdrawalsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockBlsChanges(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockBlsChanges(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlsChangesResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockVoluntaryExits(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVoluntaryExitsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetBlockBlobs(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "block")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetBlockBlobs(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlobsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+// --------------------------------------
+// Slots
+
+func (h *HandlerService) InternalGetSlot(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlot(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotOverview(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotOverview(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.InternalGetBlockOverviewResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotTransactions(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotTransactions(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockTransactionsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotVotes(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotVotes(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVotesResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotAttestations(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotAttestations(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockAttestationsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotWithdrawals(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotWithdrawals(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockWtihdrawalsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotBlsChanges(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotBlsChanges(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlsChangesResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotVoluntaryExits(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockVoluntaryExitsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
+}
+
+func (h *HandlerService) InternalGetSlotBlobs(w http.ResponseWriter, r *http.Request) {
+	chainId, block, err := h.validateBlockRequest(r, "slot")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	data, err := h.dai.GetSlotBlobs(r.Context(), chainId, block)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetBlockBlobsResponse{
+		Data: data,
+	}
+	returnOk(w, response)
 }
