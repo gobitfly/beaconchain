@@ -122,7 +122,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
-			goqu.L("SUM(COALESCE(r.attestations_reward, 0) + COALESCE(r.blocks_cl_reward, 0) + COALESCE(r.sync_rewards, 0) + COALESCE(r.blocks_cl_slasher_reward, 0)) AS cl_rewards"),
+			goqu.L("COALESCE(SUM(r.attestations_reward + r.blocks_cl_reward + r.sync_rewards + r.blocks_cl_slasher_reward), 0) AS cl_rewards"),
 			goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
 			goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
 			goqu.L("COALESCE(SUM(r.attestations_executed), 0) AS attestations_executed"),
@@ -149,8 +149,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		}
 
 		ds = ds.
-			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index")))
 
 		if groupNameSearchEnabled && (search != "" || colSort.Column == enums.VDBSummaryColumns.Group) {
 			// Get the group names since we can filter and/or sort for them
@@ -540,7 +539,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from %[1]s FINAL
 		inner join validators v on %[1]s.validator_index = v.validator_index
-		where validator_index IN (select validator_index FROM validators)
 		`
 
 	if dashboardId.Validators != nil {
@@ -766,20 +764,20 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	var rewardsResultTotal RewardsResult
 
 	rewardsDs := goqu.Dialect("postgres").
+		From(goqu.L(fmt.Sprintf("%s AS r FINAL", table))).
+		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("MIN(epoch_start) AS epoch_start"),
 			goqu.L("MAX(epoch_end) AS epoch_end"),
 			goqu.L("COUNT(*) AS validator_count"),
-			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS reward")).
-		From(goqu.L(fmt.Sprintf("%s AS r FINAL", table)))
+			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS reward"))
 
 	if len(dashboardId.Validators) > 0 {
 		rewardsDs = rewardsDs.
 			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	} else {
 		rewardsDs = rewardsDs.
-			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index")))
 
 		if groupId != -1 {
 			rewardsDs = rewardsDs.
@@ -958,7 +956,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
 		FROM %[1]s d
 		INNER JOIN validators v ON d.validator_index = v.validator_index
-		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
+		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2)
 		GROUP BY 1, 2;`, dataTable, dateColumn)
 
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
@@ -1372,13 +1370,15 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	}
 
 	// Build the query
-	ds := goqu.Dialect("postgres").Select(
-		goqu.L("r.epoch_start"),
-		goqu.L("r.epoch_end"),
-		goqu.L("r.validator_index"),
-		goqu.L("r.slashed"),
-		goqu.L("COALESCE(r.blocks_slashing_count, 0) AS slashed_amount")).
+	ds := goqu.Dialect("postgres").
 		From(goqu.L(fmt.Sprintf("%s AS r FINAL", clickhouseTable))).
+		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+		Select(
+			goqu.L("r.epoch_start"),
+			goqu.L("r.epoch_end"),
+			goqu.L("r.validator_index"),
+			goqu.L("r.slashed"),
+			goqu.L("COALESCE(r.blocks_slashing_count, 0) AS slashed_amount")).
 		Where(goqu.L("(r.slashed OR r.blocks_slashing_count > 0)"))
 
 	// handle the case when we have a list of validators
@@ -1387,8 +1387,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 	} else {
 		ds = ds.
-			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index")))
 
 		if groupId != t.AllGroups {
 			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
