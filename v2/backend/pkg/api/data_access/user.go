@@ -95,13 +95,18 @@ func (d *DataAccessService) UpdateUserPassword(ctx context.Context, userId uint6
 }
 
 func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
-	var result time.Time
+	result := time.Time{}
 
-	err := d.userWriter.GetContext(ctx, &result, `
+	var queryResult sql.NullTime
+	err := d.userWriter.GetContext(ctx, &queryResult, `
     	SELECT
 			email_confirmation_ts
 		FROM users
 		WHERE id = $1`, userId)
+
+	if queryResult.Valid {
+		result = queryResult.Time
+	}
 
 	return result, err
 }
