@@ -51,6 +51,15 @@ func main() {
 		log.Fatal(err, "invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file", 0)
 	}
 
+	if utils.Config.Metrics.Enabled {
+		go func(addr string) {
+			log.Infof("serving metrics on %v", addr)
+			if err := metrics.Serve(addr); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}(utils.Config.Metrics.Address)
+	}
+
 	if utils.Config.Pprof.Enabled {
 		go func() {
 			log.Infof("starting pprof http server on port %s", utils.Config.Pprof.Port)

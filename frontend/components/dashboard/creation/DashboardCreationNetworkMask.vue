@@ -6,12 +6,14 @@ import { useNetworkStore } from '~/stores/useNetworkStore'
 const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
 const { t: $t } = useI18n()
 
+const emit = defineEmits<{(e: 'next' | 'back'): void }>()
 const network = defineModel<ChainIDs>('network', { required: true })
-const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}`|''>(network)
+const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}`|''>(network, net => `${net || ''}`, sel => Number(sel || 0))
 
 const buttonList = shallowRef<any[]>([])
 
 watch(currentNetwork, (id) => { network.value = id })
+
 watch(availableNetworks, () => {
   buttonList.value = [] as any[]
   availableNetworks.value.forEach((chainId) => {
@@ -28,8 +30,6 @@ watch(availableNetworks, () => {
     }
   })
 }, { immediate: true })
-
-const emit = defineEmits<{(e: 'next'): void, (e: 'back'): void }>()
 
 const continueDisabled = computed(() => {
   return !selection.value

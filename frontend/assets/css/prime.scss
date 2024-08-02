@@ -13,12 +13,21 @@
 .p-button {
   @include fonts.button_text;
 
-  color: var(--primary-contrast-color);
-  background: var(--button-color-active);
   height: var(--default-button-height);
   padding: 8px 24px;
   border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
+
+  &:not([data-secondary]) {
+    color: var(--primary-contrast-color);
+    background: var(--button-color-active);
+  }
+
+  &[data-secondary]{
+    color: var(--button-secondary-color);
+    background: var(--button-secondary-background-color);
+    border-color: var(--button-secondary-border-color);
+  }
 
   display: inline-flex;
   flex-grow: 0;
@@ -32,9 +41,12 @@
     background: var(--button-color-disabled);
     border-color: var(--button-color-disabled);
   }
-  &:not(:disabled):hover {
+  &:not(:disabled):not([data-secondary]):hover {
     background: var(--button-color-hover);
     border-color: var(--button-color-hover);
+  }
+  &:not(:disabled)[data-secondary]:hover {
+    background: var(--button-secondary-hover-color);
   }
   &:not(:disabled):active {
     background: var(--button-color-pressed);
@@ -194,10 +206,14 @@
     transition: background-color 0.2s, color 0.2s, border-color 0.2s,
       box-shadow 0.2s;
     border-radius: 30px;
+
+    &:not(.p-inputswitch-checked) {
+      background: var(--switch-color-disabled);
+    }
   }
 
   .p-inputswitch-slider:before {
-    background: var(--toggle-button-slider-color);
+    background: var(--switch-slider-color);
     width: 20px;
     height: 20px;
     left: 0.3px;
@@ -210,8 +226,12 @@
     transform: translateX(20.6px);
   }
 
-  &:not(.p-disabled):hover .p-inputswitch-slider {
+  &:not(.p-disabled):hover.p-inputswitch-checked .p-inputswitch-slider {
     background: var(--button-color-hover);
+  }
+
+  &:not(.p-disabled):hover:not(.p-inputswitch-checked) .p-inputswitch-slider {
+    background: var(--switch-color-disabled-hover);
   }
 
   &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {
@@ -225,93 +245,106 @@
 
 // Toast
 // https://primevue.org/toast/
-// TODO: apply our styles
 .p-toast {
   opacity: 1;
+
+  .p-toast-message {
+    margin: var(--content-margin);
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius);
+
+    &-content {
+      padding: var(--padding-large);
+      border-width: 0 0 0 6px;
+
+      .p-toast-message-text {
+        margin: 0 0 0 16px;
+      }
+
+      .p-toast-message-icon {
+        font-size: var(--logo_font_size);
+        &.p-icon {
+          width: 16px;
+          height: 16px;
+          align-self: center;
+        }
+      }
+
+      .p-toast-summary {
+        @include text-toast;
+      }
+
+      .p-toast-detail {
+        color: var(--light-black);
+        margin: 8px 0 0 0;
+        @include text-toast-sm;
+      }
+    }
+
+    .p-toast-icon-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: transparent;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      &:focus-visible {
+        outline: 0 none;
+        outline-offset: 0;
+        box-shadow: 0 0 0 3.2px #a7f3d0;
+      }
+    }
+
+    &.p-toast-message-info {
+      border: solid var(--toast-border-info-color) 1px;
+      background: var(--toast-background-info-color);
+      color: var(--toast-message-info-color);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--toast-message-info-color);
+      }
+    }
+
+    &.p-toast-message-success {
+      border: solid var(--toast-border-sucess-color) 1px;
+      background: var(--toast-background-success-color);
+      color: var(--toast-background-color-success);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--toast-background-color-success);
+      }
+    }
+
+    &.p-toast-message-warn {
+      border: solid var(--toast-border-error-color) 1px;
+      background: var(--toast-background-error-color);
+      color: var(--primary-color);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--primary-color);
+      }
+    }
+
+    &.p-toast-message-error {
+      border: solid var(--toast-border-error-color) 1px;
+      background: var(--toast-background-error-color);
+      color: var(--toast-message-error-color);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--toast-message-error-color);
+      }
+    }
+  }
 }
-.p-toast .p-toast-message {
-  margin: 0 0 1rem 0;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  border-radius: var(--border-radius);
-}
-.p-toast .p-toast-message .p-toast-message-content {
-  padding: 1rem;
-  border-width: 0 0 0 6px;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-message-text {
-  margin: 0 0 0 1rem;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-message-icon {
-  font-size: 2rem;
-}
-.p-toast
-  .p-toast-message
-  .p-toast-message-content
-  .p-toast-message-icon.p-icon {
-  width: 2rem;
-  height: 2rem;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-summary {
-  font-weight: 700;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-detail {
-  margin: 0.5rem 0 0 0;
-}
-.p-toast .p-toast-message .p-toast-icon-close {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: transparent;
-  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
-}
-.p-toast .p-toast-message .p-toast-icon-close:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-.p-toast .p-toast-message .p-toast-icon-close:focus-visible {
-  outline: 0 none;
-  outline-offset: 0;
-  box-shadow: 0 0 0 0.2rem #a7f3d0;
-}
-.p-toast .p-toast-message.p-toast-message-info {
-  background: rgba(219, 234, 254, 0.7);
-  border: solid #3b82f6;
-  border-width: 0 0 0 6px;
-  color: #3b82f6;
-}
-.p-toast .p-toast-message.p-toast-message-info .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-info .p-toast-icon-close {
-  color: #3b82f6;
-}
-.p-toast .p-toast-message.p-toast-message-success {
-  background: rgba(228, 248, 240, 0.7);
-  border: solid #1ea97c;
-  border-width: 0 0 0 6px;
-  color: #1ea97c;
-}
-.p-toast .p-toast-message.p-toast-message-success .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-success .p-toast-icon-close {
-  color: #1ea97c;
-}
-.p-toast .p-toast-message.p-toast-message-warn {
-  background: rgba(255, 242, 226, 0.7);
-  border: solid #cc8925;
-  border-width: 0 0 0 6px;
-  color: #cc8925;
-}
-.p-toast .p-toast-message.p-toast-message-warn .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-warn .p-toast-icon-close {
-  color: #cc8925;
-}
-.p-toast .p-toast-message.p-toast-message-error {
-  background: rgba(255, 231, 230, 0.7);
-  border: solid #ff5757;
-  border-width: 0 0 0 6px;
-  color: #ff5757;
-}
-.p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
-  color: #ff5757;
-}
+
 
 // Multiselect drop-down
 
