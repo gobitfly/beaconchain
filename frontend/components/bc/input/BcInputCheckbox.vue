@@ -27,14 +27,15 @@
       {{ label }}
     </label>
     <BcTooltip 
-      v-if="infoText"
+      v-if="infoText || $slots.tooltip"
       class="bc-input-checkbox__info"
-      tooltip-width="217px"
+      tooltip-width="220px"
       tooltip-text-align="left"
     >
       <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         {{ infoText }}
+        <slot v-if="$slots.tooltip" name="tooltip" />
       </template>
     </BcTooltip>
   </span>

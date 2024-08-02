@@ -128,9 +128,16 @@ const id = useId()
           v-model="is_discord_webhook_enabled"
           v-bind="is_discord_webhook_enabled_attrs"
           :label="$t('notifications.dashboards.dialog.label_send_via_discord')"
-          :info-text="$t('notifications.dashboards.dialog.info_send_via_discord')"
           :error="errors.is_discord_webhook_enabled"
-        />
+        >
+          <template #tooltip>
+            <BcTranslation
+              keypath="notifications.dashboards.dialog.info_send_via_discord.template"
+              linkpath="notifications.dashboards.dialog.info_send_via_discord._link"
+              to="https://discord.com/developers/docs/resources/webhook"
+            />
+          </template>
+        </BcInputCheckbox>
       </BcFormRow>
       <div class="notifications-management-dialog-webhook-footer">
         <BcButton

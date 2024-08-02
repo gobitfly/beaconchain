@@ -1,7 +1,7 @@
 <script setup lang="ts">
 </script>
 <template>
-  <NuxtLink :no-prefetch="true">
+  <NuxtLink class="link" :no-prefetch="true">
     <template #default>
       <slot />
     </template>
