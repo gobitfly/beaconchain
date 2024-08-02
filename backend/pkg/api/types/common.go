@@ -37,6 +37,7 @@ type Address struct {
 	Hash Hash   `json:"hash"`
 	Ens  string `json:"ens,omitempty"`
 }
+
 type LuckItem struct {
 	Percent  float64       `json:"percent"`
 	Expected time.Time     `json:"expected"`
