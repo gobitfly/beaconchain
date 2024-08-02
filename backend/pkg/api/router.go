@@ -233,23 +233,12 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 
-	// add middleware to check if user has access to dashboard
-	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey, false), hs.ManageViaApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession, false), GetAuthMiddleware(cfg.ApiKeySecret))
-	}
 	// endpoints which should be accessible even if dashboard is archived
-	publicDashboardRouter.HandleFunc("/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving).Methods(http.MethodPut, http.MethodOptions)
-	internalDashboardRouter.HandleFunc("/{dashboard_id}/archiving", hs.InternalPutValidatorDashboardArchiving).Methods(http.MethodPut, http.MethodOptions)
-	publicDashboardRouter.HandleFunc("/{dashboard_id}/", hs.PublicDeleteValidatorDashboard).Methods(http.MethodDelete, http.MethodOptions)
-	internalDashboardRouter.HandleFunc("/{dashboard_id}/", hs.InternalDeleteValidatorDashboard).Methods(http.MethodDelete, http.MethodOptions)
-
-	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey, true), hs.ManageViaApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession, true), GetAuthMiddleware(cfg.ApiKeySecret))
+	archivalEndpoints := []endpoint{
+		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
+		{http.MethodPut, "/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving, hs.InternalPutValidatorDashboardArchiving},
 	}
-
-	// only non-archived dashboards
+	archivalRoutes := addEndpointsToRouters(archivalEndpoints, publicDashboardRouter, internalDashboardRouter)
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", nil, hs.InternalPutValidatorDashboardName},
@@ -288,6 +277,11 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}/minipools", hs.PublicGetValidatorDashboardRocketPoolMinipools, hs.InternalGetValidatorDashboardRocketPoolMinipools},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
+	// add middleware to check if user has access to dashboard
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware, hs.GetMiddlewareExcludRoutes(hs.GetVDBArchivedCheckMiddleware, archivalRoutes, nil))
+		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession), GetAuthMiddleware(cfg.ApiKeySecret), hs.GetMiddlewareExcludRoutes(hs.GetVDBArchivedCheckMiddleware, archivalRoutes, nil))
+	}
 }
 
 func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
@@ -321,8 +315,8 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
 	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
 	if !debug {
-		publicDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext, true))
-		internalDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext, true))
+		publicDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
+		internalDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
 	}
 	dashboardSettingsEndpoints := []endpoint{
 		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
@@ -331,13 +325,15 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
 }
 
-func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {
+func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) []*mux.Route {
+	var routes []*mux.Route
 	for _, endpoint := range endpoints {
 		if endpoint.PublicHandler != nil {
-			publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method, http.MethodOptions)
+			routes = append(routes, publicRouter.HandleFunc(endpoint.Path, endpoint.PublicHandler).Methods(endpoint.Method, http.MethodOptions))
 		}
 		if endpoint.InternalHander != nil {
-			internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method, http.MethodOptions)
+			routes = append(routes, internalRouter.HandleFunc(endpoint.Path, endpoint.InternalHander).Methods(endpoint.Method, http.MethodOptions))
 		}
 	}
+	return routes
 }
