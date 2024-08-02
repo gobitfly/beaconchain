@@ -59,11 +59,11 @@ const items = computed<MenuBarEntry[]>(() => {
     }
     return { label, route: `/account-dashboard/${id}` }
   }
-  addToSortedItems($t('dashboard.entity.validator'), dashboards.value?.validator_dashboards?.map((db) => {
+  addToSortedItems($t('dashboard.header.validator'), dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
     return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash !== undefined ? cd.hash : cd.id}`)
   }))
-  addToSortedItems($t('dashboard.entity.account'), dashboards.value?.validator_dashboards?.map((db) => {
+  addToSortedItems($t('dashboard.header.account'), dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
     return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
   }))

@@ -13,8 +13,9 @@ defineProps<Props>()
 <template>
   <Menubar v-if="buttons?.length" :model="buttons" breakpoint="0px" :class="{ 'right-aligned-submenu': alignRight }">
     <template #item="{ item }">
+      <component :is="item.component" v-if="item.component" class="button-content" />
       <BcTooltip
-        v-if="item.disabledTooltip"
+        v-else-if="item.disabledTooltip"
         :text="item.disabledTooltip"
         class="button-content"
         @click.stop.prevent="() => undefined"

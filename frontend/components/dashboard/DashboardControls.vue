@@ -2,6 +2,7 @@
 import {
   faDesktop,
   faEdit,
+  faGear,
   faPeopleGroup,
   faShare,
   faUsers,
@@ -10,9 +11,9 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal, DashboardRenameModal } from '#components'
+import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal, DashboardRenameModal, RocketpoolToggle } from '#components'
 import type { DashboardKey } from '~/types/dashboard'
-import type { MenuBarEntry } from '~/types/menuBar'
+import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
@@ -65,7 +66,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   if (isMobile.value && buttons.length > 1) {
     return [
       {
-        label: 'Manage',
+        label: $t('dashboard.header.manage'),
         dropdown: true,
         highlight: true,
         items: buttons
@@ -74,6 +75,23 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   }
 
   return buttons
+})
+
+const editButtons = computed<MenuBarEntry[]>(() => {
+  const buttons: MenuBarButton[] = []
+
+  buttons.push({
+    component: RocketpoolToggle
+  })
+
+  return [
+    {
+      faIcon: faGear,
+      dropdown: true,
+      highlight: true,
+      items: buttons
+    }
+  ]
 })
 
 const shareDashboard = computed(() => {
@@ -246,6 +264,7 @@ const editDashboard = () => {
       <Button v-if="isPrivate" class="p-button-icon-only edit_button" @click="editDashboard">
         <FontAwesomeIcon :icon="faEdit" />
       </Button>
+      <BcMenuBar :buttons="editButtons" :align-right="isMobile" />
     </div>
     <BcMenuBar :buttons="manageButtons" :align-right="true" />
   </div>

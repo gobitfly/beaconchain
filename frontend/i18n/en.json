@@ -469,6 +469,9 @@
       }
     }
   },
+  "rocketpool": {
+    "mode": "RP Mode"
+  },
   "dashboard": {
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
@@ -479,7 +482,8 @@
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
     "delete_dashboard": "Delete Dashboard",
-    "entity": {
+    "header": {
+      "manage": "Manage",
       "validator": "Validator",
       "account": "Account"
     },
