@@ -25,13 +25,28 @@ import { getAllExistingChainIDs, ChainIDs } from '~/types/network'
       </BcTooltip>
     </div>
     <div>
-      <IconSlotBlockProposal /> Block Proposal
+      <BcTooltip position="top" text="top over icon" :fit-content="true" scroll-container="#iconHolder">
+        <IconSlotBlockProposal />
+      </BcTooltip>
+      Block Proposal
     </div>
     <div>
-      <IconSlotSlashing /> Slashing
+      <BcTooltip position="bottom" text="bottom over icon" :fit-content="true" scroll-container="#iconHolder">
+        <IconSlotSlashing />
+      </BcTooltip>
+      Slashing
     </div>
     <div>
-      <IconSlotSync /> Slot Sync
+      <BcTooltip position="left" text="left over icon" scroll-container="#iconHolder">
+        <IconSlotSync />
+      </BcTooltip>
+      Slot Sync
+    </div>
+    <div>
+      <BcTooltip position="right" text="right over icon" scroll-container="#iconHolder">
+        <IconSlotSync />
+      </BcTooltip>
+      Slot Sync
     </div>
   </div>
 
@@ -103,6 +118,7 @@ import { getAllExistingChainIDs, ChainIDs } from '~/types/network'
   gap: var(--padding);
   height: 100px;
   width: 200px;
+  color: green;
 }
 
 .icon-size {

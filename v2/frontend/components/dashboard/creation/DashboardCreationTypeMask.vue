@@ -56,7 +56,7 @@ const next = () => {
       <div class="subtitle_text">
         {{ $t('dashboard.creation.type.subtitle') }}
       </div>
-      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" />
+      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" layout="gaudy" />
       <div class="row-container">
         <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="next" />
         <Button class="button" :disabled="continueDisabled" @click="next">

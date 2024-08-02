@@ -27,9 +27,9 @@ import (
 func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
-	err := d.alloyReader.Get(result, `
-		SELECT 
-			id, 
+	err := d.alloyReader.GetContext(ctx, result, `
+		SELECT
+			id,
 			user_id
 		FROM users_val_dashboards
 		WHERE id = $1
@@ -43,8 +43,8 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
 	result := &t.DashboardInfo{}
 
-	err := d.alloyReader.Get(result, `
-		SELECT 
+	err := d.alloyReader.GetContext(ctx, result, `
+		SELECT
 			uvd.id,
 			uvd.user_id
 		FROM users_val_dashboards_sharing uvds
@@ -64,7 +64,7 @@ func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboard
 
 func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
 	var name string
-	err := d.alloyReader.Get(&name, `
+	err := d.alloyReader.GetContext(ctx, &name, `
 		SELECT name
 		FROM users_val_dashboards
 		WHERE id = $1
@@ -107,14 +107,14 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, pu
 func (d *DataAccessService) CreateValidatorDashboard(ctx context.Context, userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
 
-	tx, err := d.alloyWriter.Beginx()
+	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error starting db transactions to create a validator dashboard: %w", err)
 	}
 	defer utils.Rollback(tx)
 
 	// Create validator dashboard for user
-	err = tx.Get(result, `
+	err = tx.GetContext(ctx, result, `
 		INSERT INTO users_val_dashboards (user_id, network, name)
 			VALUES ($1, $2, $3)
 		RETURNING id, user_id, name, network, (EXTRACT(epoch FROM created_at))::BIGINT as created_at
@@ -124,7 +124,7 @@ func (d *DataAccessService) CreateValidatorDashboard(ctx context.Context, userId
 	}
 
 	// Create a default group for the new dashboard
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO users_val_dashboards_groups (dashboard_id, name)
 			VALUES ($1, $2)
 	`, result.Id, t.DefaultGroupName)
@@ -141,14 +141,14 @@ func (d *DataAccessService) CreateValidatorDashboard(ctx context.Context, userId
 }
 
 func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
-	tx, err := d.alloyWriter.Beginx()
+	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
 	}
 	defer utils.Rollback(tx)
 
 	// Delete the dashboard
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = $1
 	`, dashboardId)
 	if err != nil {
@@ -156,7 +156,7 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	}
 
 	// Delete all groups for the dashboard
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1
 	`, dashboardId)
 	if err != nil {
@@ -164,7 +164,7 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	}
 
 	// Delete all validators for the dashboard
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1
 	`, dashboardId)
 	if err != nil {
@@ -172,7 +172,7 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	}
 
 	// Delete all shared dashboards for the dashboard
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_sharing WHERE dashboard_id = $1
 	`, dashboardId)
 	if err != nil {
@@ -194,7 +194,7 @@ func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Contex
 func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
 
-	err := d.alloyWriter.Get(result, `
+	err := d.alloyWriter.GetContext(ctx, result, `
 		UPDATE users_val_dashboards SET name = $1 WHERE id = $2
 		RETURNING id, user_id, name, network, (EXTRACT(epoch FROM created_at))::BIGINT as created_at
 	`, name, dashboardId)
@@ -228,7 +228,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				groups.dashboard_id = $1
 			GROUP BY
 				groups.id, groups.name`
-			if err := d.alloyReader.Select(&queryResult, query, dashboardId.Id); err != nil {
+			if err := d.alloyReader.SelectContext(ctx, &queryResult, query, dashboardId.Id); err != nil {
 				return err
 			}
 			for _, res := range queryResult {
@@ -264,7 +264,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			GROUP BY status`
 			params = append(params, validators)
 		}
-		err := d.alloyReader.Select(&queryResult, query, params...)
+		err := d.alloyReader.SelectContext(ctx, &queryResult, query, params...)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators data: %v", err)
 		}
@@ -336,7 +336,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 			}
 
-			err := d.alloyReader.Get(&queryResult, fmt.Sprintf(query, table), params)
+			err := d.alloyReader.GetContext(ctx, &queryResult, fmt.Sprintf(query, table), params)
 			if err != nil {
 				return err
 			}
@@ -363,7 +363,7 @@ func (d *DataAccessService) CreateValidatorDashboardGroup(ctx context.Context, d
 	result := &t.VDBPostCreateGroupData{}
 
 	// Create a new group that has the smallest unique id possible
-	err := d.alloyWriter.Get(result, `
+	err := d.alloyWriter.GetContext(ctx, result, `
 		WITH NextAvailableId AS (
 		    SELECT COALESCE(MIN(uvdg1.id) + 1, 0) AS next_id
 		    FROM users_val_dashboards_groups uvdg1
@@ -381,14 +381,14 @@ func (d *DataAccessService) CreateValidatorDashboardGroup(ctx context.Context, d
 
 // updates the group name
 func (d *DataAccessService) UpdateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
-	tx, err := d.alloyWriter.Beginx()
+	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
 	}
 	defer utils.Rollback(tx)
 
 	// Update the group name
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		UPDATE users_val_dashboards_groups SET name = $1 WHERE dashboard_id = $2 AND id = $3
 	`, name, dashboardId, groupId)
 	if err != nil {
@@ -408,14 +408,14 @@ func (d *DataAccessService) UpdateValidatorDashboardGroup(ctx context.Context, d
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
-	tx, err := d.alloyWriter.Beginx()
+	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
 	}
 	defer utils.Rollback(tx)
 
 	// Delete the group
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
 	if err != nil {
@@ -423,7 +423,7 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, d
 	}
 
 	// Delete all validators for the group
-	_, err = tx.Exec(`
+	_, err = tx.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND group_id = $2
 	`, dashboardId, groupId)
 	if err != nil {
@@ -439,7 +439,7 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, d
 
 func (d *DataAccessService) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards_groups WHERE dashboard_id = $1
 	`, dashboardId)
 	return count, err
@@ -471,7 +471,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 		}{}
 
 		validatorsQuery := `
-		SELECT 
+		SELECT
 			v.validator_index,
 			v.group_id,
 			g.name AS group_name
@@ -485,7 +485,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 			validatorsQuery += " AND group_id = $2"
 			validatorsParams = append(validatorsParams, groupId)
 		}
-		err := d.alloyReader.Select(&queryResult, validatorsQuery, validatorsParams...)
+		err := d.alloyReader.SelectContext(ctx, &queryResult, validatorsQuery, validatorsParams...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -521,11 +521,6 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 		return nil, nil, err
 	}
 
-	validatorStatuses, err := d.getValidatorStatuses(validators)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// Fill the data
 	data := []t.VDBManageValidatorsTableRow{}
 	for _, validator := range validators {
@@ -536,11 +531,11 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 			PublicKey:            t.PubKey(hexutil.Encode(metadata.PublicKey)),
 			GroupId:              validatorGroupMap[validator].GroupId,
 			Balance:              utils.GWeiToWei(big.NewInt(int64(metadata.Balance))),
+			Status:               metadata.Status,
 			WithdrawalCredential: t.Hash(hexutil.Encode(metadata.WithdrawalCredentials)),
 		}
 
-		row.Status = validatorStatuses[validator].ToString()
-		if validatorStatuses[validator] == enums.ValidatorStatuses.Pending && metadata.Queues.ActivationIndex.Valid {
+		if constypes.ValidatorDbStatus(metadata.Status) == constypes.DbPending && metadata.Queues.ActivationIndex.Valid {
 			activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
 			row.QueuePosition = &activationIndex
 		}
@@ -647,7 +642,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 
 func (d *DataAccessService) GetValidatorDashboardGroupExists(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
 	groupExists := false
-	err := d.alloyReader.Get(&groupExists, `
+	err := d.alloyReader.GetContext(ctx, &groupExists, `
 		SELECT EXISTS(
 			SELECT
 				dashboard_id,
@@ -666,7 +661,7 @@ func (d *DataAccessService) GetValidatorDashboardExistingValidatorCount(ctx cont
 	}
 
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*)
 		FROM users_val_dashboards_validators
 		WHERE dashboard_id = $1 AND validator_index = ANY($2)
@@ -702,7 +697,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	// Query to add the validators to the dashboard and group
 	addValidatorsQuery := `
 		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
-			VALUES 
+			VALUES
 	`
 
 	for idx := range validators {
@@ -713,7 +708,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	// If a validator is already in the dashboard, update the group
 	// If the validator is already in that group nothing changes but we will include it in the result anyway
 	addValidatorsQuery += `
-		ON CONFLICT (dashboard_id, validator_index) DO UPDATE SET 
+		ON CONFLICT (dashboard_id, validator_index) DO UPDATE SET
 			dashboard_id = EXCLUDED.dashboard_id,
 			group_id = EXCLUDED.group_id,
 			validator_index = EXCLUDED.validator_index
@@ -721,7 +716,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	`
 
 	// Find all the pubkeys
-	err := d.alloyReader.Select(&pubkeys, pubkeysQuery, pq.Array(validators))
+	err := d.alloyReader.SelectContext(ctx, &pubkeys, pubkeysQuery, pq.Array(validators))
 	if err != nil {
 		return nil, err
 	}
@@ -731,7 +726,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	for _, validatorIndex := range validators {
 		addValidatorsArgsIntf = append(addValidatorsArgsIntf, validatorIndex)
 	}
-	err = d.alloyWriter.Select(&addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
+	err = d.alloyWriter.SelectContext(ctx, &addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
 	if err != nil {
 		return nil, err
 	}
@@ -770,14 +765,14 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(ctx 
 		return nil, fmt.Errorf("invalid deposit address: %s", address)
 	}
 	var validatorIndicesToAdd []uint64
-	err = d.readerDb.Select(&validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	err = d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// retrieve the existing validators
 	var existingValidators []uint64
-	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
 	if err != nil {
 		return nil, err
 	}
@@ -829,14 +824,14 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(c
 		return nil, err
 	}
 	var validatorIndicesToAdd []uint64
-	err = d.readerDb.Select(&validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	err = d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// retrieve the existing validators
 	var existingValidators []uint64
-	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
 	if err != nil {
 		return nil, err
 	}
@@ -884,14 +879,14 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx contex
 	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
 	// then add no more than `limit` validators associated with the deposit address to the dashboard
 	var validatorIndicesToAdd []uint64
-	err := d.readerDb.Select(&validatorIndicesToAdd, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
+	err := d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// retrieve the existing validators
 	var existingValidators []uint64
-	err = d.alloyWriter.Select(&existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
+	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
 	if err != nil {
 		return nil, err
 	}
@@ -938,7 +933,7 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx contex
 func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
 		// // Remove all validators for the dashboard
-		// _, err := d.alloyWriter.Exec(`
+		// _, err := d.alloyWriter.ExecContext(ctx, `
 		// 	DELETE FROM users_val_dashboards_validators
 		// 	WHERE dashboard_id = $1
 		// `, dashboardId)
@@ -952,14 +947,14 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Conte
 	`
 
 	// Delete the validators
-	_, err := d.alloyWriter.Exec(deleteValidatorsQuery, dashboardId, pq.Array(validators))
+	_, err := d.alloyWriter.ExecContext(ctx, deleteValidatorsQuery, dashboardId, pq.Array(validators))
 
 	return err
 }
 
 func (d *DataAccessService) GetValidatorDashboardValidatorsCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*)
 		FROM users_val_dashboards_validators
 		WHERE dashboard_id = $1
@@ -975,7 +970,7 @@ func (d *DataAccessService) CreateValidatorDashboardPublicId(ctx context.Context
 	}{}
 
 	// Create the public validator dashboard, multiple entries for the same dashboard are possible
-	err := d.alloyWriter.Get(&dbReturn, `
+	err := d.alloyWriter.GetContext(ctx, &dbReturn, `
 		INSERT INTO users_val_dashboards_sharing (dashboard_id, name, shared_groups)
 			VALUES ($1, $2, $3)
 		RETURNING public_id, name, shared_groups
@@ -1001,7 +996,7 @@ func (d *DataAccessService) GetValidatorDashboardPublicId(ctx context.Context, p
 	}{}
 
 	// Get the public validator dashboard
-	err := d.alloyReader.Get(&dbReturn, `
+	err := d.alloyReader.GetContext(ctx, &dbReturn, `
 		SELECT public_id, dashboard_id, name, shared_groups
 		FROM users_val_dashboards_sharing
 		WHERE public_id = $1
@@ -1027,7 +1022,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(ctx context.Context
 	}{}
 
 	// Update the name and settings of the public validator dashboard
-	err := d.alloyWriter.Get(&dbReturn, `
+	err := d.alloyWriter.GetContext(ctx, &dbReturn, `
 		UPDATE users_val_dashboards_sharing SET
 			name = $1,
 			shared_groups = $2
@@ -1051,7 +1046,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(ctx context.Context
 
 func (d *DataAccessService) RemoveValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) error {
 	// Delete the public validator dashboard
-	result, err := d.alloyWriter.Exec(`
+	result, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_sharing WHERE public_id = $1
 	`, publicDashboardId)
 	if err != nil {
@@ -1072,7 +1067,7 @@ func (d *DataAccessService) RemoveValidatorDashboardPublicId(ctx context.Context
 
 func (d *DataAccessService) GetValidatorDashboardPublicIdCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*)
 		FROM users_val_dashboards_sharing
 		WHERE dashboard_id = $1

@@ -12,13 +12,16 @@ const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 /** aggregation */
 const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
-const aggregationList = AggregationTimeframes.map(a => ({
-  id: a,
-  label: $t(`time_frames.${a}`)
-}))
+const aggregationList = computed(() => {
+  return AggregationTimeframes.map(a => ({
+    id: a,
+    label: $t(`time_frames.${a}`),
+    disabled: (overview.value?.chart_history_seconds?.[a] ?? 0) === 0
+  }))
+})
 
 watch(aggregation, (a) => { chartFilter.value.aggregation = a })
-const aggregationDisabled = ({ id }: { id: AggregationTimeframe }) => (overview.value?.chart_history_seconds[id] ?? 0) === 0
+const aggregationDisabled = ({ disabled }: { disabled: boolean }) => disabled
 
 /** efficiency */
 const efficiency = ref<EfficiencyType>(chartFilter.value.efficiency)

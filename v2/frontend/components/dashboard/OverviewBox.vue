@@ -22,7 +22,8 @@ const openValidatorModal = () => {
     data: {
       context: 'dashboard',
       dashboardName: getDashboardLabel(dashboardKey.value, 'validator'),
-      dashboardKey: dashboardKey.value
+      dashboardKey: dashboardKey.value,
+      timeFrame: 'last_24h'
     }
   })
 }

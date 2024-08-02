@@ -120,7 +120,7 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId ui
 
 func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
 	var userId uint64
-	err := d.userReader.Get(&userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
+	err := d.userReader.GetContext(ctx, &userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
 	}
@@ -155,12 +155,12 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
 
-	err = d.userReader.Get(&userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
+	err = d.userReader.GetContext(ctx, &userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
 
-	err = d.userReader.Select(&userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
+	err = d.userReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
 	}
@@ -171,11 +171,11 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		Start     time.Time `db:"start"`
 		End       time.Time `db:"end"`
 	}{}
-	err = d.userReader.Get(&premiumProduct, `
-		SELECT 
-			COALESCE(uas.product_id, '') AS product_id, 
+	err = d.userReader.GetContext(ctx, &premiumProduct, `
+		SELECT
+			COALESCE(uas.product_id, '') AS product_id,
 			COALESCE(uas.store, '') AS store,
-			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start, 
+			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start,
 			COALESCE(to_timestamp((uss.payload->>'current_period_end')::bigint),uas.expires_at) AS end
 		FROM users_app_subscriptions uas
 		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
@@ -255,13 +255,13 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		End      time.Time `db:"end"`
 		Quantity int       `db:"quantity"`
 	}{}
-	err = d.userReader.Select(&premiumAddons, `
-		SELECT 
+	err = d.userReader.SelectContext(ctx, &premiumAddons, `
+		SELECT
 			price_id,
-			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start,
 			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end,
 			COALESCE((uss.payload->>'quantity')::int,1) AS quantity
-		FROM users_stripe_subscriptions uss		
+		FROM users_stripe_subscriptions uss
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
@@ -551,8 +551,8 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}{}
 
 	// Get the validator dashboards including the public ones
-	err := d.alloyReader.Select(&dbReturn, `
-		SELECT 
+	err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
 			uvd.id,
 			uvd.name,
 			uvds.public_id,
@@ -590,8 +590,8 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}
 
 	// Get the account dashboards
-	err = d.alloyReader.Select(&result.AccountDashboards, `
-		SELECT 
+	err = d.alloyReader.SelectContext(ctx, &result.AccountDashboards, `
+		SELECT
 			id,
 			name
 		FROM users_acc_dashboards
@@ -608,7 +608,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
 	// @DATA-ACCESS return number of dashboards depending on archival status (see comment above)
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
 		WHERE user_id = $1
 	`, userId)

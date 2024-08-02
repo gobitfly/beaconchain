@@ -25,13 +25,13 @@ function showDashboardCreation () {
       <DashboardCreationController
         ref="dashboardCreationControllerPanel"
         class="panel-controller"
-        :display-type="'panel'"
-        :initially-visislbe="true"
+        :display-mode="'panel'"
+        :initially-visible="true"
       />
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-type="'modal'" />
+    <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller" :display-mode="'modal'" />
     <BcPageWrapper>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreation()" />
