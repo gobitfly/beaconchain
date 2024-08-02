@@ -315,7 +315,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency := func(table string, days int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		wg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, validators, days)
+			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, days)
 			if err != nil {
 				return err
 			}
