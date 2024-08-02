@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -466,34 +468,12 @@ func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) 
 
 // returns a middleware that checks if user has access to dashboard when a primary id is used
 // expects a userIdFunc to return user id, probably GetUserIdBySession or GetUserIdByApiKey
-func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error), rejectArchived bool) func(http.Handler) http.Handler {
+func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var err error
-			ctx := r.Context()
-
-			if rejectArchived {
-				// archived dashboards can't be accessed with any type of id
-				dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])
-				if err != nil {
-					handleErr(w, err)
-					return
-				}
-				dashboard, err := h.dai.GetValidatorDashboard(ctx, *dashboardId)
-				if err != nil {
-					handleErr(w, err)
-					return
-				}
-				if dashboard.IsArchived {
-					handleErr(w, newForbiddenErr("dashboard with id %v is archived", dashboardId))
-					return
-				}
-			}
-
-			// make sure we don't have a public dashboard ID
-			var v validationError
-			primaryDashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-			if v.hasErrors() {
+			dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
+			if err != nil {
 				// if primary id is not used, no need to check access
 				next.ServeHTTP(w, r)
 				return
@@ -506,10 +486,11 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 				return
 			}
 			// store user id in context
+			ctx := r.Context()
 			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 			r = r.WithContext(ctx)
 
-			dashboard, err := h.dai.GetValidatorDashboardInfo(ctx, primaryDashboardId)
+			dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
 			if err != nil {
 				handleErr(w, err)
 				return
@@ -518,7 +499,7 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 			if dashboard.UserId != userId {
 				// user does not have access to dashboard
 				// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
-				handleErr(w, newNotFoundErr("dashboard with id %v not found", primaryDashboardId))
+				handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
 				return
 			}
 
@@ -548,4 +529,67 @@ func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Han
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// middleware check to return if specified dashboard is not archived (and accessible)
+func (h *HandlerService) GetVDBArchivedCheckMiddleware(ctx context.Context, r *http.Request, params ...interface{}) error {
+	dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		return err
+	}
+	dashboard, err := h.dai.GetValidatorDashboard(ctx, *dashboardId)
+	if err != nil {
+		return err
+	}
+	if dashboard.IsArchived {
+		return newForbiddenErr("dashboard with id %v is archived", dashboardId)
+	}
+	return nil
+}
+
+// allows to return a middleware auth check which excludes specified endpoints under the same subrouter
+func (h *HandlerService) GetMiddlewareExcludRoutes(middlewareCheckFunc func(context.Context, *http.Request, ...interface{}) error, excludedRoutes []*mux.Route, params interface{}) func(http.Handler) http.Handler {
+	var excludedRoutesRegexp []*regexp.Regexp
+	for _, excludedRoute := range excludedRoutes {
+		pathRegexp, err := excludedRoute.GetPathRegexp()
+		if err != nil {
+			log.Error(err, "error getting path regexp for route", 0, nil)
+			continue
+		}
+		regx, err := regexp.Compile(pathRegexp)
+		if err != nil {
+			log.Error(err, "error compiling path regexp", 0, nil)
+			continue
+		}
+		excludedRoutesRegexp = append(excludedRoutesRegexp, regx)
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for i := range excludedRoutes {
+				methods, err := excludedRoutes[i].GetMethods()
+				if err != nil {
+					log.Error(err, "error getting methods for route", 0, nil)
+					continue
+				}
+				if !excludedRoutesRegexp[i].MatchString(r.RequestURI) {
+					continue
+				}
+				for _, method := range methods {
+					if method == r.Method {
+						// route and method matched
+						// endpoint is excluded from middleware check
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+			}
+
+			if err := middlewareCheckFunc(r.Context(), r, params); err != nil {
+				handleErr(w, err)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
