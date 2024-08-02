@@ -149,7 +149,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		}
 
 		ds = ds.
-			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index")))
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
 		if groupNameSearchEnabled && (search != "" || colSort.Column == enums.VDBSummaryColumns.Group) {
 			// Get the group names since we can filter and/or sort for them
@@ -539,6 +540,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(sync_committees_expected, 0) as sync_committees_expected
 		from %[1]s FINAL
 		inner join validators v on %[1]s.validator_index = v.validator_index
+		where validator_index IN (select validator_index FROM validators)
 		`
 
 	if dashboardId.Validators != nil {
@@ -777,7 +779,8 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	} else {
 		rewardsDs = rewardsDs.
-			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index")))
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
 		if groupId != -1 {
 			rewardsDs = rewardsDs.
@@ -956,7 +959,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
 		FROM %[1]s d
 		INNER JOIN validators v ON d.validator_index = v.validator_index
-		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2)
+		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
 		GROUP BY 1, 2;`, dataTable, dateColumn)
 
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
@@ -1387,7 +1390,8 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 	} else {
 		ds = ds.
-			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index")))
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
 		if groupId != t.AllGroups {
 			ds = ds.Where(goqu.L("v.group_id = ?", groupId))
