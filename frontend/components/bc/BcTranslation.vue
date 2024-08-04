@@ -3,6 +3,7 @@ import type { MessageSchema } from '~/i18n.config'
 import type { KeyPaths } from '~/types/helper'
 
 defineProps<{
+  boldpath?: string,
   /**
    * The path to the key in the translation file (e.g. en.json)
    */
@@ -33,6 +34,16 @@ defineProps<{
     scope="global"
     :tag="tag || 'span'"
   >
+    <template #_bold>
+      <slot
+        v-if="boldpath"
+        name="_bold"
+      >
+        <span class="bold">
+          {{ $t(boldpath) }}
+        </span>
+      </slot>
+    </template>
     <template #_link>
       <slot
         v-if="to && linkpath"
@@ -50,4 +61,8 @@ defineProps<{
   </I18nT>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+  .bold {
+    font-weight: bold;
+  }
+</style>

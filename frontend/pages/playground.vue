@@ -52,6 +52,13 @@ onMounted(async () => {
       Latest Slot: {{ formatNumber(latestState?.current_slot) }}
     </div>
 
+    <BcTranslation
+      keypath="notifications.dashboards.dialog.info_send_via_discord.template"
+      linkpath="notifications.dashboards.dialog.info_send_via_discord._link"
+      boldpath="notifications.dashboards.dialog.info_send_via_discord._bold"
+      to="https://discord.com/developers/docs/resources/webhook"
+    />
+    <br>
     <TabView :lazy="true">
       <TabPanel header="Components">
         <PlaygroundComponents />

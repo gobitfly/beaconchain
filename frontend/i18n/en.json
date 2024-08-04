@@ -480,8 +480,9 @@
         "button_webhook_test": "Send Test Notification",
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
-          "template": "Enable this to receive notifications via Discord. Ensure you have a {_link} set up.",
-          "_link": "Discord webhook"
+          "template": "{0} this to receive {1} via Discord. Ensure you have a {_link} set up.",
+          "_link": "Discord webhook",
+          "_bold": ["Enable", "notifications"]
         },
         "label_webhook_url": "Webhook URL",
         "label_send_via_discord": "Send via Discord",
