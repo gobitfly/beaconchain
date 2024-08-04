@@ -8,6 +8,9 @@ const props = defineProps<{
    */
   keypath: KeyPaths<MessageSchema>,
   linkpath?: KeyPaths<MessageSchema>,
+  boldpath?: KeyPaths<MessageSchema>,
+  boldpath1?: KeyPaths<MessageSchema>,
+  boldpath2?: KeyPaths<MessageSchema>,
   tag?: keyof HTMLElementTagNameMap
    /**
    * URL to link to
@@ -33,10 +36,20 @@ const isExternal = computed(() => {
 
 <template>
   <I18nT 
-    :keypath
-    scope="global"
-    :tag="tag || 'span'"
+  :keypath
+  scope="global"
+  :tag="tag || 'span'"
   >
+    <template #_bold>
+      <slot
+        v-if="boldpath"
+        name="_bold"
+      >
+        <span class="bold">
+          {{ $t(boldpath) }}
+        </span>
+      </slot>
+    </template>
     <template #_link>
       <slot
         v-if="to && linkpath"
@@ -55,4 +68,7 @@ const isExternal = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+  .bold {
+    font-weight: bold;
+  }
 </style>
