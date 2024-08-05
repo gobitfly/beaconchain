@@ -265,7 +265,7 @@ class Eye {
       ratio[h2] = 1
       if (this.space === CS.EyePercI) {
         const Ir = [Eye.sensicolNorm[R] * ratio[R], Eye.sensicolNorm[G] * ratio[G], Eye.sensicolNorm[B] * ratio[B]]
-        const [x, y, z] = Eye.RGBtoOrder(Ir)
+        const [x, y, z] = Eye.RGBtoChannelOrder(Ir)
         to.chan[h2] = i ** gamma / (Ir[x] * Eye.iotaD + Ir[y] * Eye.iotaM + Ir[z])
         to.chan[h1] = to.chan[h2] * ratio[h1]
       } else {
@@ -283,7 +283,7 @@ class Eye {
   protected fillIntensityFromRGB (rgb : number[]) : void {
     if (this.space === CS.EyePercI) {
       const I = [Eye.sensicolNorm[R] * rgb[R], Eye.sensicolNorm[G] * rgb[G], Eye.sensicolNorm[B] * rgb[B]]
-      const [x, y, z] = Eye.RGBtoOrder(I)
+      const [x, y, z] = Eye.RGBtoChannelOrder(I)
       this.i = (I[x] * Eye.iotaD + I[y] * Eye.iotaM + I[z]) ** gammaInv
     } else {
       const h = Eye.RGBtoHighestChannel(rgb)
@@ -292,31 +292,43 @@ class Eye {
     }
   }
 
-  /** @returns the channel carrying the lowest value */
+  /** @returns the channel carrying the lowest value. In case of equality(ies), B is preferred over R and R is preferred over G. */
   protected static RGBtoLowestChannel (rgb : number[]) : Channel {
-    if (rgb[R] < rgb[G]) {
+    if (rgb[R] <= rgb[G]) {
       if (rgb[R] < rgb[B]) { return R }
     } else
       if (rgb[G] < rgb[B]) { return G }
     return B
   }
 
-  /** @returns the channel carrying the highest value */
+  /** @returns the channel carrying the highest value. In case of equality(ies), G is preferred over R and R is preferred over B. */
   protected static RGBtoHighestChannel (rgb : number[]) : Channel {
     if (rgb[R] > rgb[G]) {
-      if (rgb[R] > rgb[B]) { return R }
+      if (rgb[R] >= rgb[B]) { return R }
     } else
-      if (rgb[G] > rgb[B]) { return G }
+      if (rgb[G] >= rgb[B]) { return G }
     return B
   }
 
-  protected static RGBtoOrder (rgb : number[]) : Channel[] {
-    if (rgb[R] < rgb[G]) {
+  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is placed before R and R is placed before G. */
+  protected static RGBtoChannelOrder (rgb : number[]) : Channel[] {
+    if (rgb[R] <= rgb[G]) {
       if (rgb[G] < rgb[B]) { return [R, G, B] }
       return (rgb[R] < rgb[B]) ? [R, B, G] : [B, R, G]
     }
     if (rgb[R] < rgb[B]) { return [G, R, B] }
-    return (rgb[G] < rgb[B]) ? [G, B, R] : [B, G, R] // note that white, grey and black return [G, R], which is what we want (they are the primaries bringing the most brightness to the human eye)
+    return (rgb[G] < rgb[B]) ? [G, B, R] : [B, G, R]
+  }
+
+  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is placed before R and R is placed before G. */
+  protected static rToChannelOrder (r : number) : Channel[] {
+    if (r <= 2 / 6) {
+      return (r < 1 / 6) ? [B, G, R] : [B, R, G]
+    }
+    if (r <= 4 / 6) {
+      return (r <= 3 / 6) ? [R, B, G] : [R, G, B]
+    }
+    return (r < 5 / 6) ? [G, R, B] : [G, B, R]
   }
 
   /** @returns the anchors in the same order as on the rainbow (note that R is both before G and after B) */
@@ -327,27 +339,6 @@ class Eye {
       case B : return [R, G]
     }
     return [] // impossible but the static checker believes it can happen
-  }
-
-  /** @returns the anchor having the lowest value followed by the highest-value anchor */
-  /* protected static RGBtoAnchorOrder (rgb : number[]) : Channel[] {
-    if (rgb[R] < rgb[G]) {
-      if (rgb[G] < rgb[B]) { return [G, B] }
-      return (rgb[R] < rgb[B]) ? [B, G] : [R, G]
-    }
-    if (rgb[R] < rgb[B]) { return [R, B] }
-    return (rgb[G] < rgb[B]) ? [B, R] : [G, R] // note that white, grey and black return [G, R], which is what we want (they are the primaries bringing the most brightness to the human eye)
-  } */
-
-  /** @returns the order of the channels from the lowest value to the highest-value */
-  protected static rToChannelOrder (r : number) : Channel[] {
-    if (r < 2 / 6) {
-      return (r < 1 / 6) ? [B, G, R] : [B, R, G]
-    }
-    if (r < 4 / 6) {
-      return (r < 3 / 6) ? [R, B, G] : [R, G, B]
-    }
-    return (r < 5 / 6) ? [G, R, B] : [G, B, R]
   }
 }
 
