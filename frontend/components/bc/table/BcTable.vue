@@ -41,6 +41,7 @@ const toggleAll = (forceClose = false) => {
   const wasExpanded = allExpanded.value
   props.data?.data?.forEach((item) => {
     if (wasExpanded || forceClose) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete expandedRows.value[item[props.dataKey!]]
     } else if (!props.isRowExpandable || props.isRowExpandable(item)) {
       expandedRows.value[item[props.dataKey!]] = true
@@ -55,6 +56,7 @@ const toggleItem = (item: any) => {
   }
   if (expandedRows.value[item[props.dataKey]]) {
     if (expandedRows.value) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete expandedRows.value[item[props.dataKey]]
     }
   } else {
