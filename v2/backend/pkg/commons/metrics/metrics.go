@@ -70,6 +70,10 @@ var (
 		Name: "state",
 		Help: "Gauge for various states",
 	}, []string{"state"})
+	Counter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "counter",
+		Help: "Generic counter of events with name in labels",
+	}, []string{"name"})
 )
 
 func init() {
