@@ -710,7 +710,7 @@ func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notif
 func (d *DummyService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
-	return &r, err
+	return r, err
 }
 
 func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails types.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
