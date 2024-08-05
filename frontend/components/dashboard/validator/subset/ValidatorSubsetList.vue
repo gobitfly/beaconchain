@@ -71,11 +71,10 @@ function mapDutyLabel (dutyObjects?: number[]) {
       return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
   }
 }
-function mapDutyLinks (dutyObjects?: number[]) {
+function mapDutyLinks (dutyObjects?: number[]): { to?: string, label: string }[] {
   if (!dutyObjects) {
-    return
+    return []
   }
-  const links: { to: string, label: string }[] = []
   let path = ''
   let formatValue = true
   switch (props.category) {
@@ -96,8 +95,11 @@ function mapDutyLinks (dutyObjects?: number[]) {
       to: `${path}${o}`,
       label: `${formatValue ? formatNumber(o) : o}`
     }))
+  } else {
+    return dutyObjects.map(o => ({
+      label: `${formatValue ? formatNumber(o) : o}`
+    }))
   }
-  return links
 }
 
 </script>
@@ -112,13 +114,14 @@ function mapDutyLinks (dutyObjects?: number[]) {
         <BcLink :to="`/validator/${v.index}`" target="_blank" class="link">
           {{ v.index }}
         </BcLink>
-        <template v-if="mapDutyLabel(v.duty_objects)">
+        <template v-if="v.duty_objects?.length">
           <span class="round-brackets">
             <span class="label">{{ mapDutyLabel(v.duty_objects) }}</span>
             <template v-for="link in mapDutyLinks(v.duty_objects)" :key="link.label">
-              <BcLink :to="link.to" target="_blank" class="link">
+              <BcLink v-if="link.to" :to="link.to" target="_blank" class="link">
                 {{ link.label }}
               </BcLink>
+              <span v-else>{{ link.label }}</span>
               <span>, </span>
 
             </template>
