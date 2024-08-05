@@ -826,7 +826,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		data = append(data,
 			mapUintSlice("sync_current", v.Current),
-			mapUintSlice("sync_upcoming", v.Current),
+			mapUintSlice("sync_upcoming", v.Upcoming),
 		)
 		pastValidators := make([]types.VDBSummaryValidator, len(v.Past))
 		for i, validator := range v.Past {
