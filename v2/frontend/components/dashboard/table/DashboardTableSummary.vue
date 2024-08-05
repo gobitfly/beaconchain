@@ -10,7 +10,6 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { SummaryTimeFrames, type SummaryChartFilter, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
-import type { DashboardTableSummaryValidators } from '#build/components'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
