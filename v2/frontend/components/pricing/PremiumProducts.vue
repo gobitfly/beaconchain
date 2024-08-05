@@ -29,6 +29,7 @@ defineProps<Props>()
 .premium-products-container {
   width: 100%;
   max-width: fit-content;
+  margin-bottom: 38px;
 
   .premium-products-row {
     display: flex;
@@ -47,12 +48,11 @@ defineProps<Props>()
     justify-content: flex-end;
     margin-top: 4px;
   }
-
-  margin-bottom: 38px;
 }
 
 @media (max-width: 1360px) {
   .premium-products-container{
+    margin-bottom: 36px;
     .premium-products-row {
       gap: 10px;
     }
@@ -60,8 +60,6 @@ defineProps<Props>()
     .footnote {
       font-size: 8px;
     }
-
-    margin-bottom: 36px;
   }
 }
 </style>

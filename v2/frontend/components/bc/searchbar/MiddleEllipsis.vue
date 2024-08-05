@@ -12,7 +12,7 @@ const props = defineProps<{
   widthMediaqueryThreshold?: number, // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
   // !! The props below are for internal use only !!
   meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
-  class?: string // to make the list of classes reactive
+  class?: string | string[] // to make the list of classes reactive
 }>()
 
 interface ExposedMembers {
@@ -57,7 +57,6 @@ enum SignalDirection {
 
 type TextProperties = { text: string, width: number }
 
-const SSR = !process.client
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
 const slot = computed(() => _s.default ? _s.default() : []) // `slot`s is always an array, empty if there is no slot
 
@@ -71,7 +70,7 @@ const innerElements = {
 }
 const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle : CSSStyleDeclaration
-let frameText = props.text || '' // After mounting, this variable will always mirror the text in the frame. Before mounting, it contains the full text so that <template> can display it during SSR.
+let frameText = props.text || '' // After mounting, this variable will always mirror the text in the frame. Before mounting, it contains the full text so that <template> can display it during isServer.
 
 let mediaqueryWidthListener: MediaQueryList
 let delayedForcedUpdateIncoming = false
@@ -86,7 +85,7 @@ let frameWidthAfterLastUpdate = 0 // used by determineReason() to find out why a
 let lastMeasuredFrameWidth = 0
 let currentAdditionalWidthAvailable = 0
 let currentText = ''
-const canvasContextToCalculateTextWidths = (SSR ? null : document.createElement('canvas').getContext('2d')) as CanvasRenderingContext2D
+const canvasContextToCalculateTextWidths = (isServer ? null : document.createElement('canvas').getContext('2d')) as CanvasRenderingContext2D
 const lastTextWidthCalculation: TextProperties = { text: '', width: 0 }
 let amImounted = false
 let didTheResizingObserverFireSinceMount = false
@@ -230,7 +229,7 @@ watch(() => props.widthMediaqueryThreshold, (threshold, previousThreshold) => {
     The first resizing is approximate for some reason and triggers the resizeObserver.
     The second resizing is definitive and accurate but does not trigger the resizeObserver, so MiddleEllipsis stays with a wrong clipping.
   */
-  if (SSR || !navigator.userAgent.includes('Chrom')) {
+  if (isServer || !navigator.userAgent.includes('Chrom')) {
     return
   }
   if (mediaqueryWidthListener) {
@@ -257,7 +256,7 @@ function catchResizingCausedByMediaquery () {
 }
 
 let resizingObserver: ResizeObserver
-if (!SSR) {
+if (!isServer) {
   resizingObserver = new ResizeObserver(() => { // will react to changes of width
     if (!didTheResizingObserverFireSinceMount) {
       // we do this test because the resizing observer fires when is starts to watch, although no resizing occured at that moment
@@ -873,7 +872,7 @@ const frameClassList = computed(() => 'middle-ellipsis-root-frame ' + props.clas
   <span ref="frameSpan" :class="frameClassList">
     {{ frameText }}
     <!--
-      The text above is not reactive because its only purpose is to provide a content during SSR. During CSR, MiddleEllipsis clips and overwrites the text
+      The text above is not reactive because its only purpose is to provide a content during isServer. During CSR, MiddleEllipsis clips and overwrites the text
       of the frame with a direct assignment (frameSpan.value.textContent = ...), which has an immediate effect within one reflow unlike reactive properties.
       If for some reason Vue were to rewrite the content of the frame with the variable above while the component is mounted, this would not cause any problem
       because it always mirrors what has been directly assigned to the frame.

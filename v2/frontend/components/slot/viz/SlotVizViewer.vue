@@ -70,6 +70,7 @@ const mostRecentScheduledSlotId = computed(() => {
       }
     }
   }
+  return id
 })
 
 const currentSlotId = computed(() => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import { type SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 
 defineProps<{
   barShape: SearchbarShape,

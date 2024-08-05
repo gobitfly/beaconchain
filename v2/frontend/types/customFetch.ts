@@ -49,7 +49,8 @@ export enum API_PATH {
   PRODUCT_SUMMARY = '/productSummary',
   STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
   STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
-  SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards'
+  SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards',
+  NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test-webhook'
 }
 
 export type PathValues = Record<string, string | number>
@@ -316,6 +317,11 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.SAVE_DASHBOARDS_SETTINGS]: {
     path: '/users/me/notifications/settings/{for}-dashboards/{dashboard_key}/groups/{group_id}',
     getPath: values => `/users/me/notifications/settings/${values?.for}-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
+    method: 'POST',
+    mock: false
+  },
+  [API_PATH.NOTIFICATIONS_TEST_WEBHOOK]: {
+    path: '/users/me/notifications/test-webhook',
     method: 'POST',
     mock: false
   }

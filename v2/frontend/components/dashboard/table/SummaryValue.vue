@@ -121,6 +121,7 @@ const data = computed(() => {
       missedRewards: col.missed_rewards
     }
   }
+  return undefined
 })
 
 const groupName = computed(() => {

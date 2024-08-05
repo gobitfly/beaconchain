@@ -1,4 +1,4 @@
-import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
+import type { ComposerTranslation } from 'vue-i18n'
 
 const NOT_FOUND = 'NOT_FOUND'
 const END_OF_ARRAY = 'END_OF_ARRAY'
