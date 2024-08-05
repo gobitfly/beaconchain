@@ -20,6 +20,29 @@ type UserSubscription struct {
 
 type InternalGetUserInfoResponse ApiDataResponse[UserInfo]
 
+type EmailUpdate struct {
+	Id           uint64 `json:"id"`
+	CurrentEmail string `json:"current_email"`
+	PendingEmail string `json:"pending_email"`
+}
+
+type InternalPutUserEmailResponse ApiDataResponse[EmailUpdate]
+
+type AdConfigurationUpdateData struct {
+	JQuerySelector  string `json:"jquery_selector"`
+	InsertMode      string `json:"insert_mode"`
+	RefreshInterval uint64 `json:"refresh_interval"`
+	ForAllUsers     bool   `json:"for_all_users"`
+	BannerId        uint64 `json:"banner_id"`
+	HtmlContent     string `json:"html_content"`
+	Enabled         bool   `json:"enabled"`
+}
+
+type AdConfigurationData struct {
+	Key string `json:"key"`
+	*AdConfigurationUpdateData
+}
+
 type ProductCategory string
 
 const ProductCategoryApi ProductCategory = "api"
@@ -90,23 +113,23 @@ type ExtraDashboardValidatorsPremiumAddon struct {
 }
 
 type PremiumPerks struct {
-	AdFree                          bool   `json:"ad_free"` // note that this is somhow redunant, since there is already ApiPerks.NoAds
-	ValidatorDasboards              uint64 `json:"validator_dashboards"`
-	ValidatorsPerDashboard          uint64 `json:"validators_per_dashboard"`
-	ValidatorGroupsPerDashboard     uint64 `json:"validator_groups_per_dashboard"`
-	ShareCustomDashboards           bool   `json:"share_custom_dashboards"`
-	ManageDashboardViaApi           bool   `json:"manage_dashboard_via_api"`
-	HeatmapHistorySeconds           uint64 `json:"heatmap_history_seconds"`
-	SummaryChartHistorySeconds      uint64 `json:"summary_chart_history_seconds"`
-	EmailNotificationsPerDay        uint64 `json:"email_notifications_per_day"`
-	ConfigureNotificationsViaApi    bool   `json:"configure_notifications_via_api"`
-	ValidatorGroupNotifications     uint64 `json:"validator_group_notifications"`
-	WebhookEndpoints                uint64 `json:"webhook_endpoints"`
-	MobileAppCustomThemes           bool   `json:"mobile_app_custom_themes"`
-	MobileAppWidget                 bool   `json:"mobile_app_widget"`
-	MonitorMachines                 uint64 `json:"monitor_machines"`
-	MachineMonitoringHistorySeconds uint64 `json:"machine_monitoring_history_seconds"`
-	CustomMachineAlerts             bool   `json:"custom_machine_alerts"`
+	AdFree                          bool                `json:"ad_free"` // note that this is somhow redunant, since there is already ApiPerks.NoAds
+	ValidatorDasboards              uint64              `json:"validator_dashboards"`
+	ValidatorsPerDashboard          uint64              `json:"validators_per_dashboard"`
+	ValidatorGroupsPerDashboard     uint64              `json:"validator_groups_per_dashboard"`
+	ShareCustomDashboards           bool                `json:"share_custom_dashboards"`
+	ManageDashboardViaApi           bool                `json:"manage_dashboard_via_api"`
+	BulkAdding                      bool                `json:"bulk_adding"`
+	ChartHistorySeconds             ChartHistorySeconds `json:"chart_history_seconds"`
+	EmailNotificationsPerDay        uint64              `json:"email_notifications_per_day"`
+	ConfigureNotificationsViaApi    bool                `json:"configure_notifications_via_api"`
+	ValidatorGroupNotifications     uint64              `json:"validator_group_notifications"`
+	WebhookEndpoints                uint64              `json:"webhook_endpoints"`
+	MobileAppCustomThemes           bool                `json:"mobile_app_custom_themes"`
+	MobileAppWidget                 bool                `json:"mobile_app_widget"`
+	MonitorMachines                 uint64              `json:"monitor_machines"`
+	MachineMonitoringHistorySeconds uint64              `json:"machine_monitoring_history_seconds"`
+	CustomMachineAlerts             bool                `json:"custom_machine_alerts"`
 }
 
 // TODO @patrick post-beta StripeCreateCheckoutSession and StripeCustomerPortal are currently served from v1 (loadbalanced), Once V1 is not affected by this anymore, consider wrapping this with ApiDataResponse

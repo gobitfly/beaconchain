@@ -24,3 +24,23 @@ func GenerateRandomAPIKey() (string, error) {
 	apiKeyBase64 := base64.RawURLEncoding.EncodeToString(key)
 	return apiKeyBase64, nil
 }
+
+// RandomString returns a random hex-string
+func RandomString(length int) string {
+	b, _ := GenerateRandomBytesSecure(length)
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	for i := range b {
+		b[i] = charset[int(b[i])%len(charset)]
+	}
+	return string(b)
+}
+
+func GenerateRandomBytesSecure(n int) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := securerand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}

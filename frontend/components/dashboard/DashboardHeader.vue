@@ -97,7 +97,8 @@ const items = computed<MenuBarEntry[]>(() => {
     return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
   }))
   const disabledTooltip = !showInDevelopment ? $t('common.coming_soon') : undefined
-  addToSortedItems(2, [{ label: $t('dashboard.notifications'), route: '/notifications', disabledTooltip }])
+  const onNotificationsPage = dashboardType.value === 'notifications'
+  addToSortedItems(2, [{ label: $t('notifications.title'), route: !onNotificationsPage ? '/notifications' : undefined, disabledTooltip, active: onNotificationsPage }])
 
   // if we are in a public dashboard and change the validators then the route does not get updated
   const fixedRoute = router.resolve({ name: route.name!, params: { id: dashboardKey.value } })
@@ -167,7 +168,7 @@ const editDashboard = () => {
         </template>
       </Menubar>
       <Button v-if="!isShared" class="p-button-icon-only" @click="emit('showCreation')">
-        <IconPlus alt="Plus icon" width="100%" height="100%" />
+        <IconPlus title="Add new dashboard" width="100%" height="100%" />
       </Button>
     </div>
   </div>

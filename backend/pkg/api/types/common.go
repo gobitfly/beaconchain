@@ -124,3 +124,15 @@ type VDBPublicId struct {
 		ShareGroups bool `json:"share_groups"`
 	} `json:"share_settings"`
 }
+
+type ChartHistorySeconds struct {
+	Epoch  uint64 `json:"epoch"`
+	Hourly uint64 `json:"hourly"`
+	Daily  uint64 `json:"daily"`
+	Weekly uint64 `json:"weekly"`
+}
+
+type IndexBlocks struct {
+	Index  uint64   `json:"index"`
+	Blocks []uint64 `json:"blocks"`
+}

@@ -3,6 +3,9 @@ import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
   USER = '/user/me',
+  USER_CHANGE_EMAIL = '/user/changeEmail',
+  USER_CHANGE_PASSWORD = '/user/changePassword',
+  USER_DELETE = '/user/delete',
   USER_DASHBOARDS = '/user/dashboards',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
@@ -32,7 +35,10 @@ export enum API_PATH {
   DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD = '/notifications/managementDashboard',
   LATEST_STATE = '/latestState',
+  NOTIFICATIONS_DASHBOARDS='/notifications/dashboards',
+  REGISTER = '/register',
   LOGIN = '/login',
   LOGOUT = '/logout',
   SEARCH = '/search',
@@ -98,6 +104,21 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.USER]: {
     path: '/users/me',
     mock: false
+  },
+  [API_PATH.USER_CHANGE_EMAIL]: {
+    path: '/users/me/email',
+    mock: true,
+    method: 'PUT'
+  },
+  [API_PATH.USER_CHANGE_PASSWORD]: {
+    path: '/users/me/password',
+    mock: true,
+    method: 'PUT'
+  },
+  [API_PATH.USER_DELETE]: {
+    path: '/users/me',
+    mock: true,
+    method: 'DELETE'
   },
   [API_PATH.USER_DASHBOARDS]: {
     path: '/users/me/dashboards',
@@ -209,20 +230,33 @@ export const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false
   },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD]: {
+    path: '/notifications/management/dashboard',
+    mock: true
+  },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
     mock: false
   },
   [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
-    path: '/validator-dashboards/{dashboard_id}/validator-indices',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validator-indices`,
+    path: '/validator-dashboards/{dashboard_id}/summary/validators',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false
+  },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
+    path: '/notifications/dashboards',
+    mock: true
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',
     mockFunction: mockLatestState,
     mock: false
+  },
+  [API_PATH.REGISTER]: {
+    path: '/users',
+    method: 'POST',
+    mock: true
   },
   [API_PATH.LOGIN]: {
     path: '/login',

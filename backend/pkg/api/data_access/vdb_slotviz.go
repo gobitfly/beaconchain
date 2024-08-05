@@ -1,13 +1,16 @@
 package dataaccess
 
 import (
+	"context"
+
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
-	validatorsArray, err := d.getDashboardValidators(dashboardId)
+func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error) {
+	// If groupIds is empty, get all groups; otherwise only fetch data for the specific groups
+	validatorsArray, err := d.getDashboardValidators(ctx, dashboardId, groupIds)
 	if err != nil {
 		return nil, err
 	}

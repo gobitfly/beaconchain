@@ -31,19 +31,47 @@ const label = computed(() => {
   if (props.value === undefined) {
     return
   }
+
   const ts: number = props.noUpdate ? initTs.value : timestamp.value
+  let text: string | null | undefined = ''
   switch (props.type) {
     case 'go-timestamp':
-      return formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      break
     case 'slot':
-      return formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      break
     case 'epoch':
     default:
-      return formatEpochToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatEpochToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
   }
+
+  if (text && mappedSetting.value === 'absolute') {
+    const lastComma = text.lastIndexOf(',')
+    if (lastComma > 0) {
+      return { text: text.slice(0, lastComma), subtext: text.slice(lastComma + 1) }
+    }
+  }
+
+  return { text }
 })
 </script>
 
 <template>
-  <span v-if="label">{{ label }}</span>
+  <span v-if="label" class="text">
+    <div>{{ label.text }}</div>
+    <div v-if="label.subtext" class="subtext">{{ label.subtext }}</div>
+  </span>
 </template>
+
+<style lang="scss" scoped>
+.text{
+  display: flex;
+  flex-direction: column;
+
+  .subtext {
+    font-size: 80%;
+    color: var(--text-color-discreet);
+  }
+}
+</style>
