@@ -2,6 +2,7 @@ import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import type { ApiDataResponse } from '~/types/api/common'
 import { isMainNet } from '~/types/network'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
+import { type InternalGetUserNotificationSettingsResponse } from '~/types/api/notifications'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -366,4 +367,39 @@ export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChai
     }
   }
   return result
+}
+
+export function mockManageNotificationsGeneral (): InternalGetUserNotificationSettingsResponse {
+  return {
+    data: {
+      general_settings: {
+        do_not_disturb_timestamp: 9000,
+        is_email_notifications_enabled: false,
+        is_push_notifications_enabled: true,
+        is_machine_offline_subscribed: true,
+        machine_storage_usage_threshold: 80,
+        machine_cpu_usage_threshold: 40,
+        machine_memory_usage_threshold: 50,
+        subscribed_clients: [],
+        is_rocket_pool_new_reward_round_subscribed: true,
+        rocket_pool_max_collateral_threshold: 29823,
+        rocket_pool_min_collateral_threshold: 123
+      },
+      networks: [],
+      paired_devices: [
+        {
+          id: 'ABC-test',
+          name: 'My device',
+          is_notifications_enabled: true,
+          paired_timestamp: 1620000000
+        },
+        {
+          id: 'DEF-test',
+          name: 'My other device',
+          is_notifications_enabled: false,
+          paired_timestamp: 1700000000
+        }
+      ]
+    }
+  }
 }

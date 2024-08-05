@@ -57,6 +57,11 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Cont
 	return result, err
 }
 
+func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetValidatorDashboard(ctx, dashboardId)
+}
+
 func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
 	var name string
 	err := d.alloyReader.GetContext(ctx, &name, `
@@ -179,6 +184,11 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 		return fmt.Errorf("error committing tx to remove a validator dashboard: %w", err)
 	}
 	return nil
+}
+
+func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateValidatorDashboardArchiving(ctx, dashboardId, archived)
 }
 
 func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
@@ -305,7 +315,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency := func(table string, days int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		wg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, validators, days)
+			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, days)
 			if err != nil {
 				return err
 			}

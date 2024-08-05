@@ -1,4 +1,4 @@
-import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList } from '~/utils/mock'
+import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList, mockManageNotificationsGeneral } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
@@ -36,6 +36,9 @@ export enum API_PATH {
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
   GET_NOTIFICATIONS_SETTINGS_DASHBOARD = '/notifications/managementDashboard',
+  NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
+  NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
+  NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   LATEST_STATE = '/latestState',
   NOTIFICATIONS_DASHBOARDS='/notifications/dashboards',
   REGISTER = '/register',
@@ -234,6 +237,21 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD]: {
     path: '/users/me/notifications/settings/dashboards',
     mock: false
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
+    path: '/users/me/notifications/settings/general',
+    mockFunction: mockManageNotificationsGeneral,
+    mock: true
+  },
+  [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
+    path: '/users/me/notifications/test-push',
+    method: 'POST',
+    mock: true
+  },
+  [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
+    path: '/users/me/notifications/test-emails',
+    method: 'POST',
+    mock: true
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
