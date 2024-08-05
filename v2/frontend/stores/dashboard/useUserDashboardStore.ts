@@ -70,7 +70,7 @@ export function useUserDashboardStore () {
   async function createValidatorDashboard (name: string, network: ChainIDs, dashboardKey?: string):Promise<CookieDashboard |undefined> {
     if (!isLoggedIn.value) {
       // Create local Validator dashboard
-      const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', hash: dashboardKey ?? ''}
+      const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', hash: dashboardKey ?? '' }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [cd as ValidatorDashboard]
