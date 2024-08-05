@@ -12,7 +12,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const total = computed<number>(() => props.total ?? props.icons?.reduce((sum, icon) => sum + icon.count, 0) ?? 0)
+const combinedTotal = computed<number>(() => props.total ?? props.icons?.reduce((sum, icon) => sum + icon.count, 0) ?? 0)
 
 </script>
 <template>
@@ -21,7 +21,7 @@ const total = computed<number>(() => props.total ?? props.icons?.reduce((sum, ic
       <FontAwesomeIcon :icon="faPowerOff" />
     </div>
     <BcFormatNumber v-if="absolute" :value="status.count" />
-    <BcFormatPercent v-else :value="status.count" :base="total" />
+    <BcFormatPercent v-else :value="status.count" :base="combinedTotal" />
   </div>
 </template>
 
