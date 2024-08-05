@@ -650,6 +650,10 @@ func (h *HandlerService) PublicGetNetworkGasUsedHistory(w http.ResponseWriter, r
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) PublicGetRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) PublicGetRocketPoolNodes(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }

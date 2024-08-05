@@ -282,8 +282,11 @@ type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTo
 // ------------------------------------------------------------
 // Rocket Pool Tab
 type VDBRocketPoolTableRow struct {
-	Node      Address         `json:"node"`
-	StakedEth decimal.Decimal `json:"staked_eth"`
+	Node   Address `json:"node"`
+	Staked struct {
+		Eth decimal.Decimal `json:"eth"`
+		Rpl decimal.Decimal `json:"rpl"`
+	} `json:"staked"`
 	Minipools struct {
 		Total uint64 `json:"total"`
 		Leb16 uint64 `json:"leb_16"`
@@ -297,6 +300,7 @@ type VDBRocketPoolTableRow struct {
 	} `json:"rpl"`
 	EffectiveRpl  decimal.Decimal `json:"effective_rpl"`
 	RplApr        float64         `json:"rpl_apr"`
+	RplEstimate   decimal.Decimal `json:"rpl_estimate"`
 	SmoothingPool struct {
 		IsOptIn   bool            `json:"is_opt_in"`
 		Claimed   decimal.Decimal `json:"claimed"`
