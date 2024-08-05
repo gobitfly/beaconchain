@@ -61,5 +61,8 @@ export default function ({ name, params, query }: RouteLocationNormalizedLoaded)
       if (!showInDevelopment) {
         return navigateTo(`${v1Domain}/user/settings`, { external: true })
       }
+      break
+    case 'requestReset':
+      return navigateTo(`${v1Domain}/requestReset`, { external: true })
   }
 }
