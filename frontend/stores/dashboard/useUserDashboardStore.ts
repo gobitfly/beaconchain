@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { warn } from 'vue'
-import type { GetUserDashboardsResponse, UserDashboardsData } from '~/types/api/dashboard'
+import type { GetUserDashboardsResponse, UserDashboardsData, ValidatorDashboard } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
 import { type DashboardKey, type DashboardType, type CookieDashboard, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
@@ -73,7 +73,7 @@ export function useUserDashboardStore () {
       const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', hash: dashboardKey ?? '' }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [cd]
+        validator_dashboards: [cd as ValidatorDashboard]
       }
       saveToCookie(data.value)
       return cd
@@ -85,7 +85,7 @@ export function useUserDashboardStore () {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [
           ...(dashboards.value?.validator_dashboards || []),
-          { id: res.data.id, name: res.data.name }
+          { id: res.data.id, name: res.data.name, is_archived: false, validator_count: 0, group_count: 1 }
         ]
       }
       return res.data
@@ -127,7 +127,7 @@ export function useUserDashboardStore () {
       const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', ...dashboards.value?.validator_dashboards?.[0], hash }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [cd]
+        validator_dashboards: [cd as ValidatorDashboard]
       }
     } else {
       const cd:CookieDashboard = { id: COOKIE_DASHBOARD_ID.ACCOUNT, name: '', ...dashboards.value?.account_dashboards?.[0], hash }
