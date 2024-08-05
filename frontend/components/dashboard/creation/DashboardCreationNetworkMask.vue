@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { ChainInfo, ChainIDs, isL1 } from '~/types/network'
+import { ChainInfo, type ChainIDs, isL1 } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
