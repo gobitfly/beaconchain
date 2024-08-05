@@ -57,7 +57,8 @@ await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLog
 
 const { error: validatorOverviewError } = await useAsyncData('validator_overview', () => refreshOverview(dashboardKey.value), { watch: [dashboardKey] })
 watch(validatorOverviewError, (error) => {
-  if (error && dashboardKey.value) {
+  // we temporary blacklist dashboard id's that threw an error 
+  if (error && dashboardKey.value && !(!!dashboards.value?.account_dashboards?.find(d => d.id.toString() === dashboardKey.value) || !!dashboards.value?.validator_dashboards?.find(d => !d.is_archived && d.id.toString() === dashboardKey.value))) {
     if (!errorDashboardKeys.includes(dashboardKey.value)) {
       errorDashboardKeys.push(dashboardKey.value)
     }
@@ -66,7 +67,7 @@ watch(validatorOverviewError, (error) => {
 }, { immediate: true })
 
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
-function showDashboardCreationDialog () {
+function showDashboardCreationDialog() {
   dashboardCreationControllerModal.value?.show()
 }
 
@@ -112,11 +113,8 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
     </BcPageWrapper>
   </div>
   <div v-else>
-    <DashboardCreationController
-      ref="dashboardCreationControllerModal"
-      class="modal-controller"
-      :display-mode="'modal'"
-    />
+    <DashboardCreationController ref="dashboardCreationControllerModal" class="modal-controller"
+      :display-mode="'modal'" />
     <BcPageWrapper>
       <template #top>
         <DashboardHeader :dashboard-title="overview?.name" @show-creation="showDashboardCreationDialog()" />
