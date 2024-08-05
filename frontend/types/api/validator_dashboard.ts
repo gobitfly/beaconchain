@@ -21,6 +21,11 @@ export interface VDBOverviewGroup {
   name: string;
   count: number /* uint64 */;
 }
+export interface VDBOverviewBalances {
+  total: number /* uint64 */;
+  effective: number /* uint64 */;
+  staked_eth: number /* uint64 */;
+}
 export interface VDBOverviewData {
   name?: string;
   groups: VDBOverviewGroup[];
@@ -29,6 +34,7 @@ export interface VDBOverviewData {
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
   chart_history_seconds: ChartHistorySeconds;
+  balances: VDBOverviewBalances;
 }
 export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBPostArchivingReturnData {
