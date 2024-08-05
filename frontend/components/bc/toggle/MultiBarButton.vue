@@ -75,10 +75,10 @@ const icon = computed(() => {
         display: none;
       }
       &.p-disabled {
+        cursor: default;
         &:not(.read-only) {
           opacity: 0.5;
         }
-        cursor: default;
       }
     }
   }

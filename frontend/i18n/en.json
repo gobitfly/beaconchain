@@ -482,7 +482,28 @@
           "accounts": "Accounts ({count} Subscription) |Accounts ({count} Subscriptions)",
           "accounts_shortened": "Accounts ({count} Sub) |Accounts ({count} Subs)"
         }
-      }
+      },
+      "dialog": {
+        "button_webhook_test": "Send Test Notification",
+        "heading_webhook": "Edit Webhook",
+        "info_send_via_discord": {
+          "template": "Enable this to receive notifications via Discord. Ensure you have a {_link} set up.",
+          "_link": "Discord webhook"
+        },
+        "label_webhook_url": "Webhook URL",
+        "label_send_via_discord": "Send via Discord",
+        "placeholder_webhook": "https://webhook.example.com/id"
+      },
+      "toast": {
+        "success": {
+          "test_webhook_url": "Webhook send successfully",
+          "test_discord": "Discord webhook send successfully"
+        },
+        "error": {
+          "webhook_url": "Webhook could not be sent successfully",
+          "discord": "Discord webhook could not be sent successfully."
+        }
+      } 
     }
   },
   "dashboard": {
@@ -598,7 +619,13 @@
           "exiting": "Exiting",
           "exited": "Exited",
           "withdrawing": "Withdrawing",
-          "withdrawn": "Withdrawn"
+          "withdrawn": "Withdrawn",
+          "slashing": "Slashing",
+          "slashed": "Slashed",
+          "exited_withdrawing": "Exited [Withdrawing]",
+          "exited_withdrawn": "Exited [Withdrawn]",
+          "slashed_withdrawing": "Slashed [Withdrawing]",
+          "slashed_withdrawn": "Slashed [Withdrawn]"
         }
       },
       "blocks": {
@@ -1062,6 +1089,13 @@
       "max": "Please provide at most {amount} characters.",
       "no_match": "The passwords do not match yet.",
       "not_new": "The new password must differ from the old one."
+    },
+    "url": {
+      "invalid": "Please enter a valid URL."
+    },
+    "webhook": {
+      "empty": "Please provide a webhook URL.",
+      "discord_empty": "Please provide a webhook URL for discord."
     }
   }
 }

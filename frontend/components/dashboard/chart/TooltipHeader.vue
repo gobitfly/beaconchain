@@ -23,6 +23,7 @@ const startTs = computed(() => {
   if (props.startEpoch) {
     return epochToTs(props.startEpoch)
   }
+  return undefined
 })
 
 const endTs = computed(() => {
@@ -71,6 +72,7 @@ const title = computed(() => {
   if (props.efficiencyType) {
     return props.t(`dashboard.validator.summary.chart.efficiency.${props.efficiencyType}`)
   }
+  return undefined
 })
 </script>
 
