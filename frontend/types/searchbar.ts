@@ -1,5 +1,5 @@
-import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
-import { ChainIDs } from '~/types/network'
+import type { ComposerTranslation } from 'vue-i18n'
+import type { ChainIDs } from '~/types/network'
 import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
 
 export const MinimumTimeBetweenAPIcalls = 400 // ms

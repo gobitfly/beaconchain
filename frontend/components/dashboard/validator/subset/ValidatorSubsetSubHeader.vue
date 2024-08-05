@@ -2,6 +2,8 @@
 import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import type { SummaryValidatorsIconRowInfo, ValidatorSubset, ValidatorSubsetCategory } from '~/types/validator'
+import { countSubsetDuties } from '~/utils/dashboard/validator'
 
 interface Props {
   context: DashboardValidatorContext,
@@ -9,17 +11,25 @@ interface Props {
   summary?: {
     data?: VDBGroupSummaryData,
     row: VDBSummaryTableRow
-  }
+  },
+  subsets?: ValidatorSubset[]
 }
 const props = defineProps<Props>()
 
 const infos = computed(() => {
+  const validatorIcons: SummaryValidatorsIconRowInfo[] = []
   const list: { value: number | string, slotVizCategory?: SlotVizCategories, className?: string }[] = []
   const percent = {
     total: 0,
     value: 0
   }
-  const addSuccessFailed = (category: SlotVizCategories, success?: number, failed?: number) => {
+  const addSuccessFailed = (category: SlotVizCategories, success?: number, failed?: number, successCategories?: ValidatorSubsetCategory[], failedCategories?: ValidatorSubsetCategory[]) => {
+    if (props.subsets?.length && successCategories) {
+      success = countSubsetDuties(props.subsets, successCategories)
+    }
+    if (props.subsets?.length && failedCategories) {
+      failed = countSubsetDuties(props.subsets, failedCategories)
+    }
     percent.total = (success ?? 0) + (failed ?? 0)
     if (percent.total > 0) {
       if (success !== undefined) {
@@ -39,21 +49,41 @@ const infos = computed(() => {
       addSuccessFailed('sync', props.summary?.data?.sync.status_count.success, props.summary?.data?.sync.status_count.failed)
       break
     case 'slashings':
-      addSuccessFailed('slashing', props.summary?.data?.slashings.status_count.success, props.summary?.data?.slashings.status_count.failed)
+      addSuccessFailed('slashing', props.summary?.data?.slashings.status_count.success, props.summary?.data?.slashings.status_count.failed, ['has_slashed'], ['got_slashed'])
       break
     case 'proposal':
-      addSuccessFailed('proposal', props.summary?.row.proposals.success, props.summary?.row.proposals.failed)
+      addSuccessFailed('proposal', props.summary?.row.proposals.success, props.summary?.row.proposals.failed, ['proposal_proposed'], ['proposal_missed'])
       break
     case 'dashboard':
-    case 'group':
-      if (props.summary?.row.validators) {
-        percent.total = props.summary.row.validators.offline + props.summary.row.validators.online
-        percent.value = props.summary.row.validators.online
+    case 'group': {
+      let online = 0
+      let offline = 0
+      let exited = 0
+      if (props.subsets?.length) {
+        online = countSubsetDuties(props.subsets, ['online'])
+        offline = countSubsetDuties(props.subsets, ['offline'])
+        exited = countSubsetDuties(props.subsets, ['exited', 'slashed'])
+      } else if (props.summary?.row.validators) {
+        online = props.summary.row.validators.online
+        offline = props.summary.row.validators.offline
+        exited = props.summary.row.validators.exited
       }
-      break
+      if (online) {
+        validatorIcons.push({ count: online, key: 'online' })
+      }
+      if (offline) {
+        validatorIcons.push({ count: offline, key: 'offline' })
+      }
+      if (exited) {
+        validatorIcons.push({ count: exited, key: 'exited' })
+      }
+      // for the total percentage we ignore the exited validators
+      percent.total = online + offline
+      percent.value = online
+    }
   }
 
-  return { list, percent }
+  return { list, percent, validatorIcons }
 })
 
 </script>
@@ -61,12 +91,9 @@ const infos = computed(() => {
 <template>
   <div class="subset-header">
     <span class="sub-title">{{ props?.subTitle }}</span>
-    <DashboardTableSummaryValidators
-      v-if="props.summary && (context === 'group' || context === 'dashboard')"
-      :is-tooltip="true"
-      :context="props.context"
+    <DashboardTableSummaryValidatorsIconRow
+      :icons="infos.validatorIcons"
       :absolute="true"
-      :row="props.summary.row"
     />
     <div v-for="(info, index) in infos.list" :key="index" :class="info.className" class="info">
       <SlotVizIcon v-if="info.slotVizCategory" :icon="info.slotVizCategory" />

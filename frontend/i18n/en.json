@@ -48,7 +48,7 @@
     "and_more": "and {count} more",
     "live": "Live",
     "current": "Current",
-    "upcoming": "Upcoming", 
+    "upcoming": "Upcoming",
     "past": "Past",
     "total": "Total",
     "selected": "Selected",
@@ -300,7 +300,7 @@
     "title": "Notifications",
     "login_question": "Do you want to login to set notifications?",
     "manage": "Manage Notifications",
-    "tabs":{
+    "tabs": {
       "general": "General",
       "dashboards": "Dashboards",
       "machines": "Machines",
@@ -466,7 +466,28 @@
           "accounts": "Accounts ({count} Subscription) |Accounts ({count} Subscriptions)",
           "accounts_shortened": "Accounts ({count} Sub) |Accounts ({count} Subs)"
         }
-      }
+      },
+      "dialog": {
+        "button_webhook_test": "Send Test Notification",
+        "heading_webhook": "Edit Webhook",
+        "info_send_via_discord": {
+          "template": "Enable this to receive notifications via Discord. Ensure you have a {_link} set up.",
+          "_link": "Discord webhook"
+        },
+        "label_webhook_url": "Webhook URL",
+        "label_send_via_discord": "Send via Discord",
+        "placeholder_webhook": "https://webhook.example.com/id"
+      },
+      "toast": {
+        "success": {
+          "test_webhook_url": "Webhook send successfully",
+          "test_discord": "Discord webhook send successfully"
+        },
+        "error": {
+          "webhook_url": "Webhook could not be sent successfully",
+          "discord": "Discord webhook could not be sent successfully."
+        }
+      } 
     }
   },
   "rocketpool": {
@@ -589,9 +610,15 @@
           "proposal_proposed": "Proposed",
           "proposal_missed": "Missed",
           "exiting": "Exiting",
-          "exited":"Exited",
-          "withdrawing":"Withdrawing",
-          "withdrawn":"Withdrawn"
+          "exited": "Exited",
+          "withdrawing": "Withdrawing",
+          "withdrawn": "Withdrawn",
+          "slashing": "Slashing",
+          "slashed": "Slashed",
+          "exited_withdrawing": "Exited [Withdrawing]",
+          "exited_withdrawn": "Exited [Withdrawn]",
+          "slashed_withdrawing": "Slashed [Withdrawing]",
+          "slashed_withdrawn": "Slashed [Withdrawn]"
         }
       },
       "blocks": {
@@ -725,10 +752,10 @@
             "proposal": "Proposal Eff."
           }
         },
-        "tooltip":{
+        "tooltip": {
           "lower": "{name}'s efficiency is below the network average of {average}",
           "higher": "{name}'s efficiency is above the network average of {average}",
-          "equal":"{name}'s efficiency is at the network average of {average}",
+          "equal": "{name}'s efficiency is at the network average of {average}",
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
@@ -768,26 +795,30 @@
     }
   },
   "login_and_register": {
-    "title_login": "Log in",
+    "title_login": "Sign in",
     "title_register": "Sign up",
-    "text1_register": "Sign up to beaconcha.in",
-    "text2_register": "to manage and monitor your validators.",
     "submit_login": "Log in",
     "submit_register": "Sign up",
     "email": "Email address",
     "password": "Password",
+    "forgotten": "Forgot password?",
     "choose_password": "Choose a password",
     "confirm_password": "Confirm your password",
-    "please_agree": ["I agree to the", "Terms and Conditions", "and", "Privacy Policy"],
+    "please_agree": [
+      "I agree to the",
+      "T&C",
+      "and",
+      "Privacy Policy"
+    ],
     "error_title": "Error",
     "error_login_group": "Cannot log in",
     "error_login_message": "your email or your password is unknown.",
     "error_register_group": "Cannot sign up",
     "error_register_message": "An error of communication with the served happened.",
-    "dont_have_account": "You do not have an account?",
-    "signup_here": "Click here to sign up.",
-    "already_have_account": "You already have an account?",
-    "login_here": "Click here to log in."
+    "dont_have_account": "Don't have an account?",
+    "signup_here": "Register",
+    "already_have_account": "Already have an account?",
+    "login_here": "Log in"
   },
   "header": {
     "current_slot": "Current Slot",
@@ -1040,18 +1071,24 @@
     "years": "{amount} year | {amount} years"
   },
   "validation": {
-    "email" : {
-      "empty": "Please enter your email address.",
-      "invalid": "Please enter a valid email address.",
-      "no_match": "The email addresses don't match."
+    "email": {
+      "empty": "Please provide your email address.",
+      "invalid": "Please provide a valid email address.",
+      "no_match": "The email addresses do not match."
     },
     "password": {
       "empty": "Please enter your password.",
-      "min": "Your password must contain at least {amount} characters.",
-      "max": "Your password must contain at most {amount} characters.",
-      "no_match": "The passwords don't match.",
+      "min": "Please provide at least {amount} characters.",
+      "max": "Please provide at most {amount} characters.",
+      "no_match": "The passwords do not match yet.",
       "not_new": "The new password must differ from the old one."
     },
-    "tos_not_agreed": "Please accept the ToS & Privacy Policy."
+    "url": {
+      "invalid": "Please enter a valid URL."
+    },
+    "webhook": {
+      "empty": "Please provide a webhook URL.",
+      "discord_empty": "Please provide a webhook URL for discord."
+    }
   }
 }
