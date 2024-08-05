@@ -7,6 +7,7 @@ import { API_PATH } from '~/types/customFetch'
 const { createValidatorDashboard, createAccountDashboard } = useUserDashboardStore()
 const { dashboards } = useUserDashboardStore()
 const { user, isLoggedIn } = useUserStore()
+const { currentNetwork } = useNetworkStore()
 
 interface Props {
   displayMode: DashboardCreationDisplayMode,
@@ -52,7 +53,7 @@ function show (forcedType : DashboardType|'' = '', forcedNetwork: ChainIDs = 0) 
       type.value = 'account'
     }
   }
-  network.value = forcedNetwork
+  network.value = forcedNetwork || currentNetwork.value
   state.value = 'type'
   name.value = isLoggedIn.value ? '' : 'cookie'
 }
