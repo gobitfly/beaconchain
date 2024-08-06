@@ -7,7 +7,7 @@ import type { ValidatorHistoryDuties } from '~/types/api/common'
 import type { PathValues } from '~/types/customFetch'
 import { API_PATH } from '~/types/customFetch'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 
 const { width } = useWindowSize()

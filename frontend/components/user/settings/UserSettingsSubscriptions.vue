@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { currentPremiumSubscription } = useProductsStore()
 const { stripeCustomerPortal, isStripeDisabled } = useStripe()
 

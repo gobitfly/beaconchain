@@ -3,7 +3,7 @@ import { orderBy } from 'lodash-es'
 import { type AggregationTimeframe, AggregationTimeframes, type EfficiencyType, EfficiencyTypes, SUMMARY_CHART_GROUP_NETWORK_AVERAGE, SUMMARY_CHART_GROUP_TOTAL, type SummaryChartFilter } from '~/types/dashboard/summary'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { overview } = useValidatorDashboardOverviewStore()
 

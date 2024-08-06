@@ -8,7 +8,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const mapped = computed(() => {
   const total = totalDutyRewards(props.data)

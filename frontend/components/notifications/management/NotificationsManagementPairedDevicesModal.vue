@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useNotificationsManagementSettings } from '~/composables/notifications/useNotificationsManagementSettings'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
 const { pairedDevices } = useNotificationsManagementSettings()
