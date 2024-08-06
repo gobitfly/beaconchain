@@ -8,6 +8,7 @@ import {
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 import NotificationsOverview from '~/components/notifications/overview/NotificationsOverview.vue'
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 
 useDashboardKeyProvider('notifications')
 const { refreshDashboards } = useUserDashboardStore()
@@ -71,16 +72,25 @@ const store = useNotificationsStore()
 
 onMounted(async () => {
   await store.fetchNotificationsOverview()
+
+  // Set up the interval to refresh every hour (3600000 ms)
+  const interval = setInterval(async () => {
+    await store.fetchNotificationsOverview()
+  }, 120000)
+
+  // Clean up the interval on component unmount
+  onUnmounted(() => {
+    clearInterval(interval)
+  })
 })
 
 const { isLoading, error } = store
 
 const storeData = computed(() => store.data)
-// TODO: not working.
+
 watch(storeData, (newValue, oldValue) => {
   console.log('Component: Notifications data changed from', oldValue, 'to', newValue)
 })
-
 </script>
 
 <template>

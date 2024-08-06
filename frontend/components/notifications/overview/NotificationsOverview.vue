@@ -1,18 +1,34 @@
 <script setup lang="ts">
-import { defineProps, computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faDesktop, faUser, faInfoCircle } from '@fortawesome/pro-solid-svg-icons'
 import type { NotificationsOverview } from '~/types/notifications/overview'
 
-const props = defineProps<{ initialStore: NotificationsOverview | null }>()
+interface Props {
+  store: NotificationsOverview | null
+}
+const props = defineProps<Props>()
 
-const store = ref<NotificationsOverview | null>(props.initialStore)
+// Computed properties
+const emailNotificationStatus = computed(() => {
+  console.log('Computing emailNotificationStatus:', props.store?.EmailNotifications)
+  return props.store?.EmailNotifications ? 'Active' : 'Inactive'
+})
 
-const emailNotificationStatus = computed(() => store.value?.EmailNotifications ? 'Active' : 'Inactive')
-const pushNotificationStatus = computed(() => store.value?.pushNotifications ? 'Active' : 'Inactive')
-const emailLimitCount = computed(() => store.value?.EmailLimitCount ?? 0)
+const pushNotificationStatus = computed(() => {
+  console.log('Computing pushNotificationStatus:', props.store?.pushNotifications)
+  return props.store?.pushNotifications ? 'Active' : 'Inactive'
+})
+
+const emailLimitCount = computed(() => {
+  console.log('Computing emailLimitCount:', props.store?.EmailLimitCount)
+  return props.store?.EmailLimitCount ?? 0
+})
+
 const mostNotifications30d = computed(() => {
-  const notificationsActive = store.value?.EmailNotifications || store.value?.pushNotifications
+  const notificationsActive = props.store?.EmailNotifications || props.store?.pushNotifications
+  console.log('Computing mostNotifications30d, notificationsActive:', notificationsActive)
+
   if (!notificationsActive) {
     return {
       providers: ['-', '-', '-'],
@@ -20,48 +36,41 @@ const mostNotifications30d = computed(() => {
     }
   }
 
-  const providers = store.value?.mostNotifications30d.providers ?? []
-  const abo = store.value?.mostNotifications30d.abo ?? []
+  const providers = props.store?.mostNotifications30d.providers ?? []
+  const abo = props.store?.mostNotifications30d.abo ?? []
   return {
     providers: [...providers, ...Array(3 - providers.length).fill('-')].slice(0, 3),
     abo: [...abo, ...Array(3 - abo.length).fill('-')].slice(0, 3)
   }
 })
+
 const mostNotifications24h = computed(() => {
-  const notificationsActive = store.value?.EmailNotifications || store.value?.pushNotifications
-  return notificationsActive ? store.value?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 } : { Email: 0, Webhook: 0, Push: 0 }
+  const notificationsActive = props.store?.EmailNotifications || props.store?.pushNotifications
+  console.log('Computing mostNotifications24h, notificationsActive:', notificationsActive)
+  return notificationsActive ? props.store?.mostNotifications24h ?? { Email: 0, Webhook: 0, Push: 0 } : { Email: 0, Webhook: 0, Push: 0 }
 })
+
 const totalNotifications24h = computed(() => {
   const notifications = mostNotifications24h.value
+  console.log('Computing totalNotifications24h, notifications:', notifications)
   return notifications.Email + notifications.Webhook + notifications.Push
 })
 
-const tooltipEmail = 'Your current limit is ' + emailLimitCount.value + ' emails per day. Your email limit resets in X hours. Upgrade to premium for more.'
+const tooltipEmail = `Your current limit is ${emailLimitCount.value} emails per day. Your email limit resets in X hours. Upgrade to premium for more.`
 
-const fetchNotificationsData = async () => {
-  try {
-    // Replace with your actual API call
-    const response = await fetch('/api/notifications-overview')
-    const data: NotificationsOverview = await response.json()
-    store.value = data
-  } catch (error) {
-    console.error('Failed to fetch notifications data:', error)
+// Watch for changes in props.store
+watch(() => props.store, (newStore, oldStore) => {
+  console.log('Props store changed from:', oldStore, 'to:', newStore)
+  if (newStore) {
+    console.log('Updated store data:', newStore)
+    // Handle the updated store data if needed
   }
-}
-
-onMounted(() => {
-  fetchNotificationsData()
-  const intervalId = setInterval(fetchNotificationsData, 3600000) // 3600000 ms = 1 hour
-
-  onUnmounted(() => {
-    clearInterval(intervalId)
-  })
-})
+}, { immediate: true })
 </script>
 
 <template>
   <div class="container">
-    <div v-if="store" class="box">
+    <div v-if="props.store" class="box">
       <div class="box-item">
         <span class="big_text_label">Email Notifications:</span>
         <span class="big_text">{{ emailNotificationStatus }}</span>
@@ -105,7 +114,7 @@ onMounted(() => {
       </div>
     </div>
     <div v-else>
-      No data available from the component.
+      {{ props.store }}
     </div>
   </div>
 </template>
