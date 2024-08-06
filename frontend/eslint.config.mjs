@@ -1,16 +1,17 @@
 // @ts-check
 import withNuxt from './.nuxt/eslint.config.mjs'
 
-export default withNuxt(
+export default withNuxt()
+.prepend(
   {
     ignores: [
       "types/api",
       "public",
     ],
-  },
-  {
-      rules: {
-        "@typescript-eslint/no-explicit-any": "off", // should be removed eventually
-      },
-  },
+  }
 )
+.override('nuxt/typescript/rules', {
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off', // TODO: remove this rule
+  }
+})
