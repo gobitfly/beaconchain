@@ -674,6 +674,12 @@ func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) er
 	return nil
 }
 
+func (d *DummyService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
 	r := t.BlockSummary{}
 	err := commonFakeData(&r)
