@@ -3,7 +3,7 @@ import { warn } from 'vue'
 
 const { public: { maintenanceTS } } = useRuntimeConfig()
 const { tick } = useInterval(60)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const maintenanceLabel = computed(() => {
   if (!maintenanceTS) {

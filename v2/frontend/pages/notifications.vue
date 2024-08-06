@@ -12,7 +12,7 @@ useDashboardKeyProvider('notifications')
 const { refreshDashboards } = useUserDashboardStore()
 const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] })
 

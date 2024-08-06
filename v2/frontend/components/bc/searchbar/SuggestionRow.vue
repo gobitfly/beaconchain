@@ -29,7 +29,7 @@ const props = defineProps<{
   screenWidthCausingSuddenChange: number
 }>()
 
-const { t } = useI18n()
+const { t } = useTranslation()
 
 function formatSubcategoryCell () : string {
   const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title)

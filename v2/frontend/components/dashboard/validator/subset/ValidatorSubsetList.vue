@@ -15,7 +15,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const paging = ref<Paging | null>(null)
 const cursor = ref<Cursor>(undefined)

@@ -9,7 +9,7 @@ import { API_PATH } from '~/types/customFetch'
 import { useNotificationsManagementSettings } from '~/composables/notifications/useNotificationsManagementSettings'
 import { Target } from '~/types/links'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 

@@ -10,7 +10,7 @@ import type { Feature } from '~/types/pricing'
 
 const { products, bestPremiumProduct, currentPremiumSubscription, isPremiumSubscribedViaApp } = useProductsStore()
 const { isLoggedIn } = useUserStore()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {

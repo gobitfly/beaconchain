@@ -5,7 +5,7 @@ interface Props {
 }
 
 const { props, dialogRef, setHeader } = useBcDialog<Props>({ contentClass: 'premium-modal' })
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const hide = () => {
   dialogRef?.value.close()

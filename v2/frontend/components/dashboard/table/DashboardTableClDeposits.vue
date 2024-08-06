@@ -11,7 +11,7 @@ const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { slotToEpoch } = useNetworkStore()
 

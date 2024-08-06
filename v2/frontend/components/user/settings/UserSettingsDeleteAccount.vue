@@ -3,7 +3,7 @@ import { BcDialogConfirm } from '#components'
 import { API_PATH } from '~/types/customFetch'
 
 const dialog = useDialog()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const { user } = useUserStore()
 

@@ -12,7 +12,7 @@ const props = defineProps<Props>()
 
 const { dashboardKey } = useDashboardKey()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { details: summary, getDetails } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
 
 watch(() => props.timeFrame, () => {

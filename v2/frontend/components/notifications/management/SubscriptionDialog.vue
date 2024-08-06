@@ -45,7 +45,7 @@ const RowsThatExpectAPercentage: Array<keyof AllOptions> =
 type ModifiableOptions = Record<keyof AllOptions, InternalEntry>
 
 const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
-const { t } = useI18n()
+const { t } = useTranslation()
 const { networkInfo } = useNetworkStore()
 const { user } = useUserStore()
 

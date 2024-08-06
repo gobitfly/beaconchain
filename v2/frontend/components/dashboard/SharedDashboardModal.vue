@@ -4,7 +4,7 @@ import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
 const cookiePreference = useCookie<CookiesPreference>(COOKIE_KEY.COOKIES_PREFERENCE, { default: () => undefined })
 const { isShared } = useDashboardKey()
 const { dashboards } = useUserDashboardStore()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const route = useRoute()
 
 const dismissed = ref(false)

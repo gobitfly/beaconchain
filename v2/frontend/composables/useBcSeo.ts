@@ -1,5 +1,5 @@
 export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>, removeDynamicUrlValue = false) {
-  const { t: $t } = useI18n()
+  const { t: $t } = useTranslation()
   const route = useRoute()
   const { networkInfo } = useNetworkStore()
 

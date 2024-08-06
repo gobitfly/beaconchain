@@ -13,7 +13,7 @@ const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { rewards, query: lastQuery, isLoading, getRewards } = useValidatorDashboardRewardsStore()

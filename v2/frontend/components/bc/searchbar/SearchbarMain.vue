@@ -42,7 +42,7 @@ const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
 defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
-const { t } = useI18n()
+const { t } = useTranslation()
 const { fetch } = useCustomFetch()
 const { availableNetworks } = useNetworkStore()
 

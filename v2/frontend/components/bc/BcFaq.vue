@@ -7,7 +7,7 @@ interface Props {
   translationPath?: string
 }
 const props = defineProps<Props>()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const questions = computed(() => {
   const list = []

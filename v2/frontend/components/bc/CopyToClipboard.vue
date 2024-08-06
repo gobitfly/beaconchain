@@ -10,7 +10,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { value: tooltip, bounce, instant } = useDebounceValue<string>($t('clipboard.copy'), 2000)
 
 function copyToClipboard (): void {

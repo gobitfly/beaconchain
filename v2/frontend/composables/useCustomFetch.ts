@@ -14,7 +14,7 @@ export function useCustomFetch () {
   const xRealIp = useRequestHeader('x-real-ip')
   const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
-  const { t: $t } = useI18n()
+  const { t: $t } = useTranslation()
   const { $bcLogger } = useNuxtApp()
   const uuid = inject<{value: string}>('app-uuid')
 

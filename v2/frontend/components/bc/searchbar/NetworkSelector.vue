@@ -12,7 +12,7 @@ defineProps<{
 }>()
 const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
-const { t } = useI18n()
+const { t } = useTranslation()
 
 const headState = ref<{look : 'on'|'off', network : string}>({
   look: 'off',

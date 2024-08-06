@@ -14,7 +14,7 @@ const props = defineProps<Props>()
 
 const { dashboardKey } = useDashboardKey()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { details } = useValidatorDashboardRewardsDetailsStore(dashboardKey.value, props.row.group_id, props.row.epoch)
 
 const dialog = useDialog()

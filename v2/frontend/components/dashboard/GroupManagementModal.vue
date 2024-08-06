@@ -14,7 +14,7 @@ import type { Cursor, SortOrder } from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
 import { API_PATH } from '~/types/customFetch'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const dialog = useDialog()
 

@@ -19,7 +19,7 @@ const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const { width } = useWindowSize()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)

@@ -6,7 +6,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { PremiumPerks } from '~/types/api/user'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 

@@ -2,7 +2,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCirclePlus, faRightFromBracket } from '@fortawesome/pro-regular-svg-icons'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const emit = defineEmits<{(e: 'openDialog'): void }>()
 

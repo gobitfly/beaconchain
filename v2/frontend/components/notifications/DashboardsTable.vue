@@ -12,7 +12,7 @@ defineEmits<{(e: 'openDialog'): void }>()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { onSort, setCursor, setPageSize, setSearch, notificationsDashboards, query, isLoading } = useNotificationsDashboardStore()
 

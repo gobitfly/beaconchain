@@ -3,7 +3,7 @@ import type { DashboardType } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 
 const name = defineModel<string>('name', { default: '' })

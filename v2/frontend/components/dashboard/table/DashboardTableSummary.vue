@@ -15,7 +15,7 @@ const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const chartFilter = ref<SummaryChartFilter>({ aggregation: 'hourly', efficiency: 'all', groupIds: [] })
 
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
