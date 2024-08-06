@@ -5,7 +5,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type Menubar from 'primevue/menubar'
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import BcTooltip from '../bc/BcTooltip.vue'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'

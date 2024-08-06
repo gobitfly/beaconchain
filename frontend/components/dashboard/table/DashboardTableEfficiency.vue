@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
   success: number,

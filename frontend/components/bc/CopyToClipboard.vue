@@ -3,7 +3,6 @@
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { warn } from 'vue'
-import BcTooltip from './BcTooltip.vue'
 
 interface Props {
   value?: string,
