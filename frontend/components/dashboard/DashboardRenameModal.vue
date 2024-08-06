@@ -48,7 +48,7 @@ const rename = async () => {
 
 <template>
   <div class="dashboard_rename_modal_container">
-    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="rename" />
+    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" :maxlength="50" class="input-field" @keypress.enter="rename" />
     <div class="footer">
       <Button :disabled="renameDisabled" @click="rename">
         {{ $t('navigation.save') }}
