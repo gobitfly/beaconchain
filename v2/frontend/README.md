@@ -117,5 +117,9 @@ bun run preview
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
 
+## Descision Record
+
+We documented our decisions in the [decisions](decisions.md) file.
+The documentation should be inspired by Architecture Decision Records ([ADR](https://adr.github.io/)).
 
 
