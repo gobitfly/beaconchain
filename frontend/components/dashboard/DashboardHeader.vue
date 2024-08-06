@@ -19,7 +19,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const route = useRoute()
 const router = useRouter()
 const isValidatorDashboard = route.name === 'dashboard-id'

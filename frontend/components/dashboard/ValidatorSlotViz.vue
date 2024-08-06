@@ -4,7 +4,7 @@ import { orderBy } from 'lodash-es'
 import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { dashboardKey } = useDashboardKey()
 const { validatorCount, overview } = useValidatorDashboardOverviewStore()
 const { networkInfo } = useNetworkStore()

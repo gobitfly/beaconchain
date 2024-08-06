@@ -9,7 +9,7 @@ interface Props {
   currentSlotId?: number
 }
 const props = defineProps<Props>()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const data = computed(() => {
   const slot = props.data

@@ -21,7 +21,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { groups } = useValidatorDashboardGroups()
 
 const dialog = useDialog()

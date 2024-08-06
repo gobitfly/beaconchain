@@ -15,7 +15,7 @@ const userDashboardStore = defineStore('user_dashboards_store', () => {
 
 export function useUserDashboardStore () {
   const { fetch } = useCustomFetch()
-  const { t: $t } = useI18n()
+  const { t: $t } = useTranslation()
   const { data } = storeToRefs(userDashboardStore())
   const { isLoggedIn } = useUserStore()
   const dashboardCookie = useCookie(COOKIE_KEY.USER_DASHBOARDS)

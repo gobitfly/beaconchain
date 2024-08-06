@@ -56,7 +56,7 @@ import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 import { Target } from '~/types/links'
 import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
 const route = useRoute()

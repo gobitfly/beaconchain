@@ -4,7 +4,7 @@ import { useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 import { Target } from '~/types/links'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { doLogin } = useUserStore()
 const toast = useBcToast()
 

@@ -2,7 +2,7 @@
 import { type DashboardType } from '~/types/dashboard'
 import { IconAccount, IconValidator } from '#components'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()
 
 interface Props {

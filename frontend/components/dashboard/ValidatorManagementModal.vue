@@ -16,7 +16,7 @@ import { type SearchBar, SearchbarShape, SearchbarColors, SearchbarPurpose, type
 import { API_PATH, type PathValues } from '~/types/customFetch'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const { currentNetwork } = useNetworkStore()
 

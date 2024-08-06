@@ -3,7 +3,7 @@ import { faTrash } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type NotificationPairedDevice } from '~/types/api/notifications'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 interface Props {
   device: NotificationPairedDevice

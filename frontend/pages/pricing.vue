@@ -2,7 +2,7 @@
 import { faArrowDown } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 useBcSeo('pricing.seo_title')
 const { stripeInit } = useStripeProvider()

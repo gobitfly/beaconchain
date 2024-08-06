@@ -5,7 +5,7 @@ import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
