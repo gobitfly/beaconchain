@@ -34,8 +34,14 @@
       > .p-menuitem-content {
         padding: var(--padding-small) var(--padding);
         border-radius: var(--border-radius);
-        height: 28px;
+        height: 27px;
         margin-top: 1px;
+        justify-content: center;
+
+        &:not(:has(.text)) {
+          padding-left: 8px;
+          padding-right: 8px;
+        }
       }
 
       &:has(> .p-menuitem-content .text-disabled) {
@@ -59,7 +65,6 @@
     margin-top: 1px;
     display: flex;
     white-space: nowrap;
-    justify-content: center;
     text-align: center;
     gap: var(--padding);
 

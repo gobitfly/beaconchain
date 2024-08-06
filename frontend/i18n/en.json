@@ -503,7 +503,9 @@
     "share": "Share",
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
+    "shared_dashboard": "Shared Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "rename_dashboard": "Rename Dashboard",
     "header": {
       "manage": "Manage",
       "validator": "Validator",

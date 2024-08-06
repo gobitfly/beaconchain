@@ -2,6 +2,7 @@
 interface Props {
   trueOption?: string,
   falseOption?: string,
+  disabled?: boolean
 }
 defineProps<Props>()
 
@@ -16,7 +17,7 @@ const selected = defineModel<boolean>({ required: true })
         {{ falseOption }}
       </div>
     </slot>
-    <InputSwitch v-model="selected" />
+    <InputSwitch v-model="selected" :disabled="disabled" />
     <slot name="trueOption">
       <div v-if="trueOption" class="option-label" :class="{ selected }">
         {{ trueOption }}

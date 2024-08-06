@@ -25,7 +25,13 @@ const filter = ref<string>('')
       :disabled="disabledFilter || !filterVisible"
       @input="$emit('filter-changed', filter)"
     />
-    <Button :disabled="disabledFilter" class="p-button-icon-only" :class="{filter_visible:filterVisible}" @click="filterVisible=!filterVisible">
+    <Button 
+      :disabled="disabledFilter" 
+      data-secondary  
+      class="p-button-icon-only" 
+      :class="{filter_visible:filterVisible}"
+      @click="filterVisible=!filterVisible"
+    >
       <FontAwesomeIcon :icon="faMagnifyingGlass" />
     </Button>
   </div>

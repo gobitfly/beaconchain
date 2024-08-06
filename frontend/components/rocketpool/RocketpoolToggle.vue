@@ -19,7 +19,7 @@ const rpActive = {
 
 </script>
 <template>
-  <div class="rp-row" @click.stop="">
+  <div class="rp-row" :class="{ 'disable-in-production': !showInDevelopment }" @click.stop="">
     <IconRocketPool class="icon" />
     <span class="text">
       {{ $t(`rocketpool.mode`) }}
@@ -31,15 +31,19 @@ const rpActive = {
   </div>
 </template>
 <style lang="scss" scoped>
-.rp-row{
+.rp-row {
   display: flex;
   align-items: center;
 
-  .link{
+  &.disable-in-production {
+    opacity: 0.5;
+  }
+
+  .link {
     z-index: 2;
   }
 
-  .toggle{
+  .toggle {
     flex-grow: 1;
     justify-content: flex-end;
   }

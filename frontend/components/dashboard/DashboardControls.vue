@@ -77,23 +77,6 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   return buttons
 })
 
-const editButtons = computed<MenuBarEntry[]>(() => {
-  const buttons: MenuBarButton[] = []
-
-  buttons.push({
-    component: RocketpoolToggle
-  })
-
-  return [
-    {
-      faIcon: faGear,
-      dropdown: true,
-      highlight: true,
-      items: buttons
-    }
-  ]
-})
-
 const shareDashboard = computed(() => {
   return dashboards.value?.validator_dashboards?.find((d) => {
     return d.id === parseInt(dashboardKey.value) || d.public_ids?.find(p => p.public_id === dashboardKey.value)
@@ -107,6 +90,46 @@ const shareButtonOptions = computed(() => {
   const icon = !edit ? faUsers : faShare
   const disabled = isShared.value || !dashboardKey.value
   return { label, icon, edit, disabled }
+})
+
+const editButtons = computed<MenuBarEntry[]>(() => {
+  const buttons: MenuBarButton[] = []
+
+  buttons.push({
+    component: RocketpoolToggle
+  })
+
+  if( isPrivate.value ){
+    buttons.push({
+      faIcon: faEdit,
+      label: $t('dashboard.rename_dashboard'),
+      command: editDashboard
+    })    
+  }
+
+  if(!shareButtonOptions.value.disabled) {
+    buttons.push({
+      faIcon: shareButtonOptions.value.icon,
+      label: shareButtonOptions.value.edit ? $t('dashboard.share_dashboard') : $t('dashboard.shared_dashboard'),
+      command: share
+    })
+  }
+
+  if(!isShared.value && dashboardKey.value) {
+    buttons.push({
+      faIcon: faTrash,
+      label: $t('dashboard.delete_dashboard'),
+      command: onDelete
+    })
+  }
+
+  return [
+    {
+      faIcon: faGear,
+      dropdown: true,
+      items: buttons
+    }
+  ]
 })
 
 const shareView = () => {
@@ -252,17 +275,6 @@ const editDashboard = () => {
       >
         {{ shareButtonOptions.label }}
         <FontAwesomeIcon :icon="shareButtonOptions.icon" />
-      </Button>
-      <Button
-        v-if="deleteButtonOptions.visible"
-        class="p-button-icon-only"
-        :disabled="deleteButtonOptions.disabled"
-        @click="onDelete()"
-      >
-        <FontAwesomeIcon :icon="faTrash" />
-      </Button>
-      <Button v-if="isPrivate" class="p-button-icon-only edit_button" @click="editDashboard">
-        <FontAwesomeIcon :icon="faEdit" />
       </Button>
       <BcMenuBar :buttons="editButtons" :align-right="isMobile" />
     </div>

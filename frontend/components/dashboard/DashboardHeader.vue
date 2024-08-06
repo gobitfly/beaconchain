@@ -78,7 +78,12 @@ const items = computed<MenuBarEntry[]>(() => {
 <template>
   <div class="header-container">
     <BcMenuBar class="menu-bar" :buttons="items" />
-    <Button v-if="!isShared" class="p-button-icon-only" @click="emit('showCreation')">
+    <Button
+      v-if="!isShared" 
+      data-secondary 
+      class="p-button-icon-only" 
+      @click="emit('showCreation')"
+    >
       <IconPlus title="Add new dashboard" width="100%" height="100%" />
     </Button>
   </div>
