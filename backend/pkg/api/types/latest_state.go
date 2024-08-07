@@ -19,8 +19,9 @@ type LatestStateData struct {
 type InternalGetLatestStateResponse ApiDataResponse[LatestStateData]
 
 type RocketPoolData struct {
-	LatestUpdateSlot uint64 `json:"latest_update_slot"`
-	EthRates         struct {
+	LastUpdateSlot uint64 `json:"last_update_slot"`
+	NextUpdateSlot uint64 `json:"next_update_slot"`
+	EthRates       struct {
 		Rpl  float64 `json:"rpl"`
 		Reth float64 `json:"reth"`
 	} `json:"eth_rates"`

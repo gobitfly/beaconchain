@@ -298,10 +298,11 @@ type VDBRocketPoolTableRow struct {
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
 	} `json:"rpl"`
-	EffectiveRpl  decimal.Decimal `json:"effective_rpl"`
-	RplApr        float64         `json:"rpl_apr"`
-	RplEstimate   decimal.Decimal `json:"rpl_estimate"`
-	SmoothingPool struct {
+	EffectiveRpl   decimal.Decimal `json:"effective_rpl"`
+	RplApr         float64         `json:"rpl_apr"`
+	RplAprUpdateTs int64           `json:"rpl_apr_update_ts"`
+	RplEstimate    decimal.Decimal `json:"rpl_estimate"`
+	SmoothingPool  struct {
 		IsOptIn   bool            `json:"is_opt_in"`
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
