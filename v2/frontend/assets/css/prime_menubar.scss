@@ -52,10 +52,10 @@
         }
       }
 
-      &:not(:has([highlight])):not(.p-disabled) > .p-menuitem-content:hover {
+      &:not(:has([highlight])):not(.p-disabled):hover {
         background: var(--list-hover-background);
       }
-      &:has([highlight]):not(.p-disabled) > .p-menuitem-content:hover {
+      &:has([highlight]):not(.p-disabled):hover {
         background: var(--button-color-hover);
       }
     }
