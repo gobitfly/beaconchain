@@ -109,8 +109,10 @@
     "valid": "Valid"
   },
   "filter": {
+    "close": "Open Filter.",
+    "disabled": "Filter disabled.",
     "enabled": "Filter enabled.",
-    "disabled": "Filter disabled."
+    "open": "Close Filter."
   },
   "premium": {
     "title": "beaconcha.in Premium",

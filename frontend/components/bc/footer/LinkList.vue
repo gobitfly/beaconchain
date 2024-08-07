@@ -13,7 +13,7 @@ import {
 
 import { Target } from '~/types/links'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 type Row = { title: string, links: [string, IconDefinition, string, Target][] }
 const columns: Row[] = [
   {

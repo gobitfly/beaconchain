@@ -28,7 +28,7 @@ const { dashboardKey, isPublic, isPrivate, isShared, setDashboardKey, dashboardT
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const dialog = useDialog()
 const { fetch } = useCustomFetch()

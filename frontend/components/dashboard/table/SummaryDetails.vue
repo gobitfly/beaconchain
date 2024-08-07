@@ -12,7 +12,7 @@ const props = defineProps<Props>()
 
 const { dashboardKey } = useDashboardKey()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { details: summary, getDetails } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
 
 watch(() => props.timeFrame, () => {
@@ -34,7 +34,7 @@ const data = computed<SummaryRow[][]>(() => {
 
   const rewardCols: SummaryDetailsEfficiencyCombinedProp[] = ['reward', 'missed_rewards']
   let addCols: SummaryDetailsEfficiencyCombinedProp[] = props.tableVisibility.attestations ? [] : rewardCols
-  addPropsTolist(0, ['efficiency', ...addCols, 'attestations', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist'])
+  addPropsTolist(0, ['efficiency', ...addCols, 'attestations', 'attestations_source', 'attestations_target', 'attestations_head', 'attestation_efficiency', 'attestation_avg_incl_dist'])
 
   addPropsTolist(1, ['sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings'])
 

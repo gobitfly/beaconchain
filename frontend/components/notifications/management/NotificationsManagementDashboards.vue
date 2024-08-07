@@ -44,7 +44,7 @@ const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, s
 
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const dialog = useDialog()
 const { dashboardGroups, query, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch } = useNotificationsManagementDashboards()
 const { getDashboardLabel } = useUserDashboardStore()

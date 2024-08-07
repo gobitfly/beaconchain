@@ -11,7 +11,7 @@ const props = defineProps<{
 
 const emitEvent = defineEmits<{(e: 'checkboxClick', checked: boolean) : void}>()
 
-const { t } = useI18n()
+const { t } = useTranslation()
 
 const parentVmodel = defineModel<InternalEntry>({ required: true })
 

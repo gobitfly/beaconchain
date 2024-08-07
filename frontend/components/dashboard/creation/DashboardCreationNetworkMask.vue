@@ -4,7 +4,7 @@ import { ChainInfo, type ChainIDs, isL1 } from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const emit = defineEmits<{(e: 'next' | 'back'): void }>()
 const network = defineModel<ChainIDs>('network', { required: true })

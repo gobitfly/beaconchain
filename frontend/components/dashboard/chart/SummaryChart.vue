@@ -37,7 +37,7 @@ interface Props {
 const props = defineProps<Props>()
 const chart = ref<ECharts | undefined>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const colorMode = useColorMode()
 const { fetch } = useCustomFetch()
 const { tsToEpoch, slotToTs, secondsPerEpoch } = useNetworkStore()

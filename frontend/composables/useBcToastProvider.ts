@@ -5,7 +5,7 @@ const TOAST_TIME = 3000
 
 export function useBcToastProvider () {
   const toast = useToast()
-  const { t: $t } = useI18n()
+  const { t: $t } = useTranslation()
 
   const { bounce, instant, temp, value } = useDebounceValue<ToastData[]>([], TOAST_TIME)
 

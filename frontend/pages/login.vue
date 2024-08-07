@@ -3,10 +3,12 @@ import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 import { Target } from '~/types/links'
+import { provideMobileAuthParams, handleMobileAuth } from '~/utils/mobileAuth'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { doLogin } = useUserStore()
 const toast = useBcToast()
+const route = useRoute()
 
 useBcSeo('login_and_register.title_login')
 
@@ -23,6 +25,11 @@ const [password, passwordAttrs] = defineField('password')
 const onSubmit = handleSubmit(async (values) => {
   try {
     await doLogin(values.email, values.password)
+
+    if (handleMobileAuth(route.query)) {
+      return
+    }
+
     await navigateTo('/')
   } catch (error) {
     password.value = ''
@@ -31,6 +38,11 @@ const onSubmit = handleSubmit(async (values) => {
 })
 
 const canSubmit = computed(() => email.value && password.value && !Object.keys(errors.value).length)
+
+const registerLink = computed(() => {
+  return provideMobileAuthParams(route.query, '/register')
+})
+
 </script>
 
 <template>
@@ -79,7 +91,7 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
           <div class="last-row">
             <div class="account-invitation">
               {{ $t('login_and_register.dont_have_account') }}
-              <BcLink to="/register" :target="Target.Internal" class="link">
+              <BcLink :to="registerLink" :target="Target.Internal" class="link">
                 {{ $t('login_and_register.signup_here') }}
               </BcLink>
             </div>

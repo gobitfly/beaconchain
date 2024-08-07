@@ -11,7 +11,7 @@ import { sortSummaryValidators } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
 import { type InternalGetValidatorDashboardSummaryValidatorsResponse, type VDBGroupSummaryData, type VDBSummaryTableRow, type VDBSummaryValidator, type VDBSummaryValidatorsData } from '~/types/api/validator_dashboard'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 
 interface Props {

@@ -6,7 +6,7 @@ import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon 
 import { formatPremiumProductPrice } from '~/utils/format'
 import { Target } from '~/types/links'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { user, isLoggedIn } = useUserStore()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 

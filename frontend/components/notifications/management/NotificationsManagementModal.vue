@@ -8,7 +8,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { useUseNotificationsManagementSettingsProvider } from '~/composables/notifications/useNotificationsManagementSettingsProvider'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
 

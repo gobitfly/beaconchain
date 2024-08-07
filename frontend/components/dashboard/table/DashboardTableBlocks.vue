@@ -10,7 +10,7 @@ const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { blocks, query: lastQuery, isLoading, getBlocks } = useValidatorDashboardBlocksStore()
 const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)

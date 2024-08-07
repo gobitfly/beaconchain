@@ -3,7 +3,7 @@ import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import { type Dashboard, type CookieDashboard, COOKIE_DASHBOARD_ID, type DashboardType, type DashboardKey } from '~/types/dashboard'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const route = useRoute()
 const router = useRouter()
