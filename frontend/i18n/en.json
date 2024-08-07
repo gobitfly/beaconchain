@@ -718,6 +718,7 @@
         "title": "Summary",
         "search_placeholder": "Index, Public Key, Group",
         "search_placeholder_public": "Index, Public Key",
+        "empty_table": "Nothing to see here... yet",
         "add_validator": "Click here to add a validator",
         "row": {
           "efficiency": "Efficiency",
