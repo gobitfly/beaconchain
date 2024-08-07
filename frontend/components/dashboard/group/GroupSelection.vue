@@ -3,11 +3,11 @@ import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 interface Props {
-  includeAll?: boolean,
+  includeAll?: boolean
 }
 const props = defineProps<Props>()
 
-const emit = defineEmits<{(e: 'setGroup', value: number): void}>()
+const emit = defineEmits<{ (e: 'setGroup', value: number): void }>()
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -23,7 +23,6 @@ const selected = defineModel<number | undefined>({ required: true })
 const selectedGroup = computed(() => {
   return list.value.find(item => item.id === selected.value)
 })
-
 </script>
 
 <template>
@@ -33,9 +32,12 @@ const selectedGroup = computed(() => {
     option-value="id"
     option-label="name"
     :placeholder="$t('dashboard.group.selection.placeholder')"
-    @update:model-value="(value: number)=>emit('setGroup', value)"
+    @update:model-value="(value: number) => emit('setGroup', value)"
   >
-    <template v-if="selectedGroup" #value>
+    <template
+      v-if="selectedGroup"
+      #value
+    >
       <DashboardGroupLabel :group="selectedGroup" />
     </template>
 

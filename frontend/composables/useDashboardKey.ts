@@ -1,7 +1,7 @@
 import { inject } from 'vue'
 import type { DashboardKeyData } from '~/types/dashboard'
 
-export function useDashboardKey () {
+export function useDashboardKey() {
   const data = inject<DashboardKeyData>('dashboard-key')
   const { isLoggedIn } = useUserStore()
 

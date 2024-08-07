@@ -1,31 +1,31 @@
 <script lang="ts" setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faPaperPlane
+  faPaperPlane,
 } from '@fortawesome/pro-solid-svg-icons'
-import { useForm } from 'vee-validate';
-import { API_PATH } from '~/types/customFetch';
+import { useForm } from 'vee-validate'
 import { warn } from 'vue'
+import { API_PATH } from '~/types/customFetch'
 
 export type WebhookForm = {
-  webhook_url: string,
-  is_discord_webhook_enabled: boolean,
+  webhook_url: string
+  is_discord_webhook_enabled: boolean
 }
 const { props, close } = useBcDialog<WebhookForm>()
 
 const { t: $t } = useTranslation()
 
 const validationSchema = createSchemaObject({
-    webhook_url: validation.url($t('validation.url.invalid')),
-    is_discord_webhook_enabled: validation.boolean(),
+  webhook_url: validation.url($t('validation.url.invalid')),
+  is_discord_webhook_enabled: validation.boolean(),
 })
 
-const { defineField, errors, handleSubmit, setFieldError, meta, values} = useForm({
+const { defineField, errors, handleSubmit, setFieldError, meta, values } = useForm({
   validationSchema,
   initialValues: {
     webhook_url: props.value?.webhook_url || '',
     is_discord_webhook_enabled: props.value?.is_discord_webhook_enabled || false,
-  }
+  },
 })
 
 const [webhook_url, webhook_url_attrs] = defineField('webhook_url', {
@@ -42,53 +42,53 @@ const isFormValid = computed(() => meta.value.valid)
 const toast = useBcToast()
 const { fetch } = useCustomFetch()
 const handleTestNotification = async () => {
-  // 1. could not be implemented as a custom validation rule, 
+  // 1. could not be implemented as a custom validation rule,
   // as they are always triggerd onMounted (at cast time)
-  if(!webhook_url.value && is_discord_webhook_enabled.value) { // 1. 
+  if (!webhook_url.value && is_discord_webhook_enabled.value) { // 1.
     setFieldError('webhook_url', $t('validation.webhook.discord_empty'))
     return
   }
-  if(!webhook_url.value && !is_discord_webhook_enabled.value) { // 1.
+  if (!webhook_url.value && !is_discord_webhook_enabled.value) { // 1.
     setFieldError('webhook_url', $t('validation.webhook.empty'))
     return
   }
-  if(!isFormValid.value) {
+  if (!isFormValid.value) {
     return
   }
   try {
-    if(is_discord_webhook_enabled.value) {
+    if (is_discord_webhook_enabled.value) {
       await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
         method: 'POST',
         body: {
           webhook_url: webhook_url.value,
           is_discord_webhook_enabled: is_discord_webhook_enabled.value,
-        }
+        },
       })
-      toast.showSuccess({summary:$t('notifications.dashboards.toast.success.test_discord')})
+      toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_discord') })
       return
     }
     await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
       method: 'POST',
       body: {
         webhook_url: webhook_url.value,
-      }
+      },
     })
-    toast.showSuccess({summary:$t('notifications.dashboards.toast.success.test_webhook_url')})
-  } catch (error) {
-    const summary = is_discord_webhook_enabled.value ? 
-      $t('notifications.dashboards.toast.error.discord') :
-      $t('notifications.dashboards.toast.error.webhook_url')
-    toast.showError({summary})
-
+    toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
+  }
+  catch (error) {
+    const summary = is_discord_webhook_enabled.value
+      ? $t('notifications.dashboards.toast.error.discord')
+      : $t('notifications.dashboards.toast.error.webhook_url')
+    toast.showError({ summary })
   }
   warn('Test notification sent', values)
 }
 const emit = defineEmits<{
-  (e: 'save', values: WebhookForm, closeCallback: () => void):void
+  (e: 'save', values: WebhookForm, closeCallback: () => void): void
 }>()
 
-const onSubmit = handleSubmit(values => {
-  if(!isFormDirty.value) {
+const onSubmit = handleSubmit((values) => {
+  if (!isFormDirty.value) {
     close()
     return
   }
@@ -96,63 +96,65 @@ const onSubmit = handleSubmit(values => {
 })
 
 const id = useId()
-
-
 </script>
+
 <template>
-    <h2 :id class="notifications-management-dialog-webhook__header">
-      {{ $t('notifications.dashboards.dialog.heading_webhook') }}
-    </h2>
-    <BcForm 
-      v-focustrap
-      novalidate
-      class="notifications-management-dialog-webhook__form"
-      :aria-describedby="id"
-      @keydown.esc.stop.prevent="close"
-      @submit.prevent="onSubmit"
-    >
-      <BcFormRow>
-        <BcInputText 
-          v-model="webhook_url"
-          v-bind="webhook_url_attrs"
-          :label="$t('notifications.dashboards.dialog.label_webhook_url')"
-          :placeholder="$t('notifications.dashboards.dialog.placeholder_webhook')"
-          input-width="200px"
-          :error="errors.webhook_url"
-          type="url"
-          should-autoselect
-        />
-      </BcFormRow>
-      <BcFormRow>
-        <BcInputCheckbox
-          v-model="is_discord_webhook_enabled"
-          v-bind="is_discord_webhook_enabled_attrs"
-          :label="$t('notifications.dashboards.dialog.label_send_via_discord')"
-          :error="errors.is_discord_webhook_enabled"
-        >
-          <template #tooltip>
-            <BcTranslation
-              keypath="notifications.dashboards.dialog.info_send_via_discord.template"
-              linkpath="notifications.dashboards.dialog.info_send_via_discord._link"
-              to="https://discord.com/developers/docs/resources/webhook"
-            />
-          </template>
-        </BcInputCheckbox>
-      </BcFormRow>
-      <div class="notifications-management-dialog-webhook-footer">
-        <BcButton
-          font-awesome-icon="faPaperPlane"
-          variant="secondary"
-          :is-aria-disabled="!isFormValid || !webhook_url"
-          @click="handleTestNotification()"
-        >
+  <h2
+    :id
+    class="notifications-management-dialog-webhook__header"
+  >
+    {{ $t('notifications.dashboards.dialog.heading_webhook') }}
+  </h2>
+  <BcForm
+    v-focustrap
+    novalidate
+    class="notifications-management-dialog-webhook__form"
+    :aria-describedby="id"
+    @keydown.esc.stop.prevent="close"
+    @submit.prevent="onSubmit"
+  >
+    <BcFormRow>
+      <BcInputText
+        v-model="webhook_url"
+        v-bind="webhook_url_attrs"
+        :label="$t('notifications.dashboards.dialog.label_webhook_url')"
+        :placeholder="$t('notifications.dashboards.dialog.placeholder_webhook')"
+        input-width="200px"
+        :error="errors.webhook_url"
+        type="url"
+        should-autoselect
+      />
+    </BcFormRow>
+    <BcFormRow>
+      <BcInputCheckbox
+        v-model="is_discord_webhook_enabled"
+        v-bind="is_discord_webhook_enabled_attrs"
+        :label="$t('notifications.dashboards.dialog.label_send_via_discord')"
+        :error="errors.is_discord_webhook_enabled"
+      >
+        <template #tooltip>
+          <BcTranslation
+            keypath="notifications.dashboards.dialog.info_send_via_discord.template"
+            linkpath="notifications.dashboards.dialog.info_send_via_discord._link"
+            to="https://discord.com/developers/docs/resources/webhook"
+          />
+        </template>
+      </BcInputCheckbox>
+    </BcFormRow>
+    <div class="notifications-management-dialog-webhook-footer">
+      <BcButton
+        font-awesome-icon="faPaperPlane"
+        variant="secondary"
+        :is-aria-disabled="!isFormValid || !webhook_url"
+        @click="handleTestNotification()"
+      >
         {{ $t('notifications.dashboards.dialog.button_webhook_test') }}
         <template #icon>
-          <FontAwesomeIcon :icon="faPaperPlane" />      
+          <FontAwesomeIcon :icon="faPaperPlane" />
         </template>
       </BcButton>
       <BcButton
-        class="notifications-management-dialog-webhook__primary-button" 
+        class="notifications-management-dialog-webhook__primary-button"
         @click="onSubmit"
       >
         {{ isFormDirty ? $t('navigation.save') : $t('navigation.done') }}
@@ -183,4 +185,3 @@ const id = useId()
   min-width: 90px;
 }
 </style>
-

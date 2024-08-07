@@ -5,11 +5,11 @@ import { type AggregationTimeframe, type EfficiencyType } from '~/types/dashboar
 import { ONE_HOUR, ONE_DAY, ONE_WEEK } from '~/utils/format'
 
 interface Props {
-  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
-  ts?: number,
-  startEpoch?: number,
-  aggregation?: AggregationTimeframe,
-  efficiencyType?: EfficiencyType,
+  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context,
+  ts?: number
+  startEpoch?: number
+  aggregation?: AggregationTimeframe
+  efficiencyType?: EfficiencyType
 }
 
 const props = defineProps<Props>()

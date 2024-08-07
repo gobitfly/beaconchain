@@ -3,47 +3,84 @@ import { getAllExistingChainIDs, type ChainIDs } from '~/types/network'
 </script>
 
 <template>
-  <div id="iconHolder" class="icon_holder">
+  <div
+    id="iconHolder"
+    class="icon_holder"
+  >
     <div>
-      <BcTooltip position="left" text="left tt" scroll-container="#iconHolder">
+      <BcTooltip
+        position="left"
+        text="left tt"
+        scroll-container="#iconHolder"
+      >
         <IconSlotAttestation /> Attestation
       </BcTooltip>
     </div>
     <div>
-      <BcTooltip position="right" text="right tt" scroll-container="#iconHolder">
+      <BcTooltip
+        position="right"
+        text="right tt"
+        scroll-container="#iconHolder"
+      >
         <IconSlotHeadAttestation /> Head Attestation
       </BcTooltip>
     </div>
     <div>
-      <BcTooltip position="top" text="top tt" scroll-container="#iconHolder">
+      <BcTooltip
+        position="top"
+        text="top tt"
+        scroll-container="#iconHolder"
+      >
         <IconSlotSourceAttestation /> Source Attestation
       </BcTooltip>
     </div>
     <div>
-      <BcTooltip position="bottom" text="bottom tt" scroll-container="#iconHolder">
+      <BcTooltip
+        position="bottom"
+        text="bottom tt"
+        scroll-container="#iconHolder"
+      >
         <IconSlotTargetAttestation /> Target Attestation
       </BcTooltip>
     </div>
     <div>
-      <BcTooltip position="top" text="top over icon" :fit-content="true" scroll-container="#iconHolder">
+      <BcTooltip
+        position="top"
+        text="top over icon"
+        :fit-content="true"
+        scroll-container="#iconHolder"
+      >
         <IconSlotBlockProposal />
       </BcTooltip>
       Block Proposal
     </div>
     <div>
-      <BcTooltip position="bottom" text="bottom over icon" :fit-content="true" scroll-container="#iconHolder">
+      <BcTooltip
+        position="bottom"
+        text="bottom over icon"
+        :fit-content="true"
+        scroll-container="#iconHolder"
+      >
         <IconSlotSlashing />
       </BcTooltip>
       Slashing
     </div>
     <div>
-      <BcTooltip position="left" text="left over icon" scroll-container="#iconHolder">
+      <BcTooltip
+        position="left"
+        text="left over icon"
+        scroll-container="#iconHolder"
+      >
         <IconSlotSync />
       </BcTooltip>
       Slot Sync
     </div>
     <div>
-      <BcTooltip position="right" text="right over icon" scroll-container="#iconHolder">
+      <BcTooltip
+        position="right"
+        text="right over icon"
+        scroll-container="#iconHolder"
+      >
         <IconSlotSync />
       </BcTooltip>
       Slot Sync
@@ -102,8 +139,14 @@ import { getAllExistingChainIDs, type ChainIDs } from '~/types/network'
     <IconDatatypeBatchIcon class="icon-size" />
     <IconDatatypeContractIcon class="icon-size" />
     <IconDatatypeAccountIcon class="icon-size" />
-    <IconDatatypeEnsIcon class="icon-size" style="color:red" />
-    <IconDatatypeEnsIcon class="icon-size" style="color:blue" />
+    <IconDatatypeEnsIcon
+      class="icon-size"
+      style="color:red"
+    />
+    <IconDatatypeEnsIcon
+      class="icon-size"
+      style="color:blue"
+    />
     <IconDatatypeGraffitiIcon class="icon-size" />
     <IconDatatypeValidatorIcon class="icon-size" />
   </div>

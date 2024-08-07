@@ -12,7 +12,7 @@ const validatorDashboardWithdrawalsStore = defineStore('validator_dashboard_with
   return { data, query, total }
 })
 
-export function useValidatorDashboardWithdrawalsStore () {
+export function useValidatorDashboardWithdrawalsStore() {
   const { fetch } = useCustomFetch()
   const { data, total, query: storedQuery } = storeToRefs(validatorDashboardWithdrawalsStore())
 
@@ -22,7 +22,7 @@ export function useValidatorDashboardWithdrawalsStore () {
   const isLoadingWithdrawals = ref(false)
   const isLoadingTotal = ref(false)
 
-  async function getWithdrawals (dashboardKey: DashboardKey, query?: TableQueryParams) {
+  async function getWithdrawals(dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (!dashboardKey) {
       data.value = undefined
       isLoadingWithdrawals.value = false
@@ -43,7 +43,7 @@ export function useValidatorDashboardWithdrawalsStore () {
     return res
   }
 
-  async function getTotalAmount (dashboardKey: DashboardKey) {
+  async function getTotalAmount(dashboardKey: DashboardKey) {
     if (!dashboardKey) {
       total.value = undefined
       isLoadingTotal.value = false

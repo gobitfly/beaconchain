@@ -1,33 +1,40 @@
 <script setup lang="ts">
 import {
-  faPowerOff
+  faPowerOff,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorStatus } from '~/types/validator'
 
 interface Props {
-  status: ValidatorStatus,
-  position?: number,
+  status: ValidatorStatus
+  position?: number
   hideLabel?: boolean
 }
 const props = defineProps<Props>()
 
 const iconColor = computed(() => {
-  if (props.status.includes('online')) { return 'green' }
-  if (props.status.includes('offline')) { return 'red' }
+  if (props.status.includes('online')) return 'green'
+  if (props.status.includes('offline')) return 'red'
   return 'orange'
 })
-
 </script>
+
 <template>
   <div class="wrapper">
-    <FontAwesomeIcon :icon="faPowerOff" :class="iconColor" />
-    <span v-if="!hideLabel" class="status">
+    <FontAwesomeIcon
+      :icon="faPowerOff"
+      :class="iconColor"
+    />
+    <span
+      v-if="!hideLabel"
+      class="status"
+    >
       {{ $t(`validator_state.${status}`) }}
       <span v-if="position"> #<BcFormatNumber :value="position" /></span>
     </span>
   </div>
 </template>
+
 <style lang="scss" scoped>
 .wrapper {
   display: flex;

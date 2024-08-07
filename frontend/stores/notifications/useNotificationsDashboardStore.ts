@@ -8,7 +8,7 @@ const notificationsDashboardStore = defineStore('notifications-dashboard-store',
   return { data }
 })
 
-export function useNotificationsDashboardStore () {
+export function useNotificationsDashboardStore() {
   const { isLoggedIn } = useUserStore()
 
   const { fetch } = useCustomFetch()
@@ -16,7 +16,7 @@ export function useNotificationsDashboardStore () {
   const { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery } = useTableQuery({ limit: 10, sort: 'dashboard:desc' }, 10)
   const isLoading = ref(false)
 
-  async function loadNotificationsDashboards (q: TableQueryParams) {
+  async function loadNotificationsDashboards(q: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
     const result = await fetch<NotifcationDashboardResponse>(API_PATH.NOTIFICATIONS_DASHBOARDS, undefined, undefined, q)
@@ -49,6 +49,6 @@ export function useNotificationsDashboardStore () {
     query: pendingQuery,
     setCursor,
     setPageSize,
-    setSearch
+    setSearch,
   }
 }

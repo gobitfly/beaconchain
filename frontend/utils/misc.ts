@@ -8,7 +8,7 @@ export const addUpValues = (obj?: Record<string, number>): number => {
 /**
  * @returns Levenshtein distance between the two strings. Lower value means better similarity and vice-versa.
  */
-export function levenshteinDistance (str1 : string, str2 : string) : number {
+export function levenshteinDistance(str1: string, str2: string): number {
   const dist = []
 
   for (let i = 0; i <= str1.length; i++) {
@@ -16,7 +16,8 @@ export function levenshteinDistance (str1 : string, str2 : string) : number {
     for (let j = 1; j <= str2.length; j++) {
       if (i === 0) {
         dist[i][j] = j
-      } else {
+      }
+      else {
         const subst = (str1[i - 1] === str2[j - 1]) ? 0 : 1
         dist[i][j] = Math.min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + subst)
       }
@@ -25,7 +26,7 @@ export function levenshteinDistance (str1 : string, str2 : string) : number {
   return dist[str1.length][str2.length]
 }
 
-export function generateUUID () {
+export function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
     .replace(/[xy]/g, function (c) {
       const r = Math.random() * 16 | 0
@@ -34,7 +35,7 @@ export function generateUUID () {
     })
 }
 
-export function isInt (value?: string): boolean {
+export function isInt(value?: string): boolean {
   if (!value) {
     return false
   }

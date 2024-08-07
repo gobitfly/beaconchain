@@ -33,7 +33,7 @@ import {
   type PremiumRowCallBackFunction,
   type ExposedSearchbarMethods,
   type CategoryFilter,
-  type NetworkFilter
+  type NetworkFilter,
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
@@ -47,39 +47,39 @@ const { fetch } = useCustomFetch()
 const { availableNetworks } = useNetworkStore()
 
 const props = defineProps<{
-  barShape: SearchbarShape, // shape of the bar
-  colorTheme: SearchbarColors, // colors of the bar and its dropdown
-  barPurpose: SearchbarPurpose, // what the bar will be used for
-  screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
-  onlyNetworks?: ChainIDs[], // the bar will search on these networks only
-  rowLacksPremiumSubscription?: PremiumRowCallBackFunction, // the bar calls this function for each row and deactivates the row if it returns `true`
-  pickByDefault: PickingCallBackFunction, // see the declaration of the type to get an explanation
+  barShape: SearchbarShape // shape of the bar
+  colorTheme: SearchbarColors // colors of the bar and its dropdown
+  barPurpose: SearchbarPurpose // what the bar will be used for
+  screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
+  onlyNetworks?: ChainIDs[] // the bar will search on these networks only
+  rowLacksPremiumSubscription?: PremiumRowCallBackFunction // the bar calls this function for each row and deactivates the row if it returns `true`
+  pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
   keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
 }>()
-const emit = defineEmits<{(e: 'go', result : ResultSuggestion) : any}>()
+const emit = defineEmits<{ (e: 'go', result: ResultSuggestion): any }>()
 
 enum States {
   NoText,
   WaitingForResults,
   ApiHasResponded,
   Error,
-  UpdateIncoming
+  UpdateIncoming,
 }
 
 interface GlobalState {
-  state: States,
+  state: States
   functionToCallAfterResultsGetOrganized: (() => void) | null
   showDropdown: boolean
 }
 
-let differentialRequests : boolean
+let differentialRequests: boolean
 let searchableTypes: ResultType[]
 let allTypesBelongToAllNetworks = false
 
 const globalState = ref<GlobalState>({
   state: States.NoText,
   functionToCallAfterResultsGetOrganized: null,
-  showDropdown: false
+  showDropdown: false,
 })
 
 const wholeComponent = ref<HTMLDivElement>()
@@ -97,7 +97,7 @@ let lastKnownText = ''
 
 const nextSearchScope = {
   networks: new Set<ChainIDs>(),
-  categories: new Set<Category>()
+  categories: new Set<Category>(),
 }
 
 const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
@@ -106,28 +106,28 @@ watch(debouncer.value, callAPIthenOrganizeResultsThenCallBack)
 const results = {
   raw: {
     stringifyiedList: new Set<string>(), // List of results returned by the API, without structure nor order. The list can be built in serveral steps (for a same text input, if the user selects new filters, the list can augment).
-    scopeMatrix: {} as Record<ChainIDs, Record<Category, boolean>> // tells which network × category combinations have been explored to obtain the current list of results (as the user can select/deselect successively filters in any order, the scope is not straightforward)
+    scopeMatrix: {} as Record<ChainIDs, Record<Category, boolean>>, // tells which network × category combinations have been explored to obtain the current list of results (as the user can select/deselect successively filters in any order, the scope is not straightforward)
   },
   organized: {
     in: { networks: [] } as OrganizedResults, // filtered-in results, organized
     howManyResultsIn: 0,
     out: { networks: [] } as OrganizedResults, // filtered-out results, organized
-    howManyResultsOut: 0
-  }
+    howManyResultsOut: 0,
+  },
 }
 
-function hideResult (whichOne : ResultSuggestion) {
+function hideResult(whichOne: ResultSuggestion) {
   results.raw.stringifyiedList.delete((whichOne as ResultSuggestionInternal).stringifyiedRawResult)
   // now we update the list of result suggestions
   refreshOutputArea()
 }
 
-function closeDropdown () {
+function closeDropdown() {
   globalState.value.showDropdown = false
   textField.value?.blur()
 }
 
-function empty () {
+function empty() {
   lastKnownText = ''
   userInputNonce++
   userInputText.value = ''
@@ -136,7 +136,7 @@ function empty () {
   clearOrganizedResults()
 }
 
-function clearRawResults () {
+function clearRawResults() {
   results.raw.stringifyiedList.clear()
   for (const nw in results.raw.scopeMatrix) {
     const network = nw as unknown as ChainIDs
@@ -147,7 +147,7 @@ function clearRawResults () {
   }
 }
 
-function clearOrganizedResults () {
+function clearOrganizedResults() {
   results.organized.in = { networks: [] }
   results.organized.out = { networks: [] }
   results.organized.howManyResultsIn = 0
@@ -158,7 +158,7 @@ function clearOrganizedResults () {
  * @param state the new state that the search-bar enters
  * @returns old state, so you can read it after the call if you need
  */
-function resetGlobalState (state : States) : GlobalState {
+function resetGlobalState(state: States): GlobalState {
   const previousState = { ...globalState.value }
 
   globalState.value.functionToCallAfterResultsGetOrganized = null
@@ -167,17 +167,18 @@ function resetGlobalState (state : States) : GlobalState {
   return previousState
 }
 
-function updateGlobalState (state : States) {
+function updateGlobalState(state: States) {
   if (state === globalState.value.state && state !== States.UpdateIncoming) {
     // we make sure that Vue re-renders the drop-down although the state does not change
     globalState.value.state = States.UpdateIncoming
     nextTick(() => updateGlobalState(state))
-  } else {
+  }
+  else {
     globalState.value.state = state
   }
 }
 
-function reconfigureSearchbar () {
+function reconfigureSearchbar() {
   differentialRequests = SearchbarPurposeInfo[props.barPurpose].differentialRequests
   closeDropdown()
   empty()
@@ -215,7 +216,7 @@ watch(availableNetworks, reconfigureSearchbar)
 let resizingObserver: ResizeObserver
 if (isClient) {
   resizingObserver = new ResizeObserver((entries) => {
-    const newLayout : SearchbarDropdownLayout = (entries[0].borderBoxSize[0].inlineSize < LayoutThreshold) ? 'narrow-dropdown' : 'large-dropdown'
+    const newLayout: SearchbarDropdownLayout = (entries[0].borderBoxSize[0].inlineSize < LayoutThreshold) ? 'narrow-dropdown' : 'large-dropdown'
     if (newLayout !== dropdownLayout.value) { // reassigning 'narrow-dropdown' to 'narrow-dropdown' (for ex) is not guaranteed to preserve the pointer, so this trick makes sure that we do not trigger Vue watchers for nothing (draining the battery and slowing down the UI)
       dropdownLayout.value = newLayout
     }
@@ -235,22 +236,23 @@ onBeforeUnmount(() => {
 })
 
 // closes the drop-down if the user interacts with another part of the page
-function listenToClicks (event : Event) {
-  if (!globalState.value.showDropdown || !dropdown.value || !textFieldAndButton.value ||
-      dropdown.value.contains(event.target as Node) || textFieldAndButton.value.contains(event.target as Node)) {
+function listenToClicks(event: Event) {
+  if (!globalState.value.showDropdown || !dropdown.value || !textFieldAndButton.value
+    || dropdown.value.contains(event.target as Node) || textFieldAndButton.value.contains(event.target as Node)) {
     return
   }
   closeDropdown()
 }
 
-function textMightHaveChanged () {
+function textMightHaveChanged() {
   if (userInputText.value === lastKnownText) {
     return
   }
   userInputNonce++
   if (userInputText.value.length === 0) {
     empty()
-  } else {
+  }
+  else {
     resetGlobalState(States.WaitingForResults)
     clearRawResults()
     calculateNextSearchScope()
@@ -260,7 +262,7 @@ function textMightHaveChanged () {
   lastKnownText = userInputText.value
 }
 
-function handleKeyPressInTextField (key : string) {
+function handleKeyPressInTextField(key: string) {
   switch (key) {
     case 'Enter' :
       userPressedSearchButtonOrEnter()
@@ -274,7 +276,7 @@ function handleKeyPressInTextField (key : string) {
   }
 }
 
-function userFiltersChanged () {
+function userFiltersChanged() {
   userInputNonce++
   // determining whether no filter is selected
   userInputNoNetworkIsSelected = true
@@ -294,14 +296,15 @@ function userFiltersChanged () {
   // if the scope did not widen, we simply update the list of result suggestions shown to the user
   if ((!differentialRequests || nextSearchScope.networks.size + nextSearchScope.categories.size === 0) && globalState.value.state !== States.Error) {
     refreshOutputArea()
-  } else {
+  }
+  else {
     // the scope is larger so a new request will be sent to the API
     resetGlobalState(States.WaitingForResults)
     debouncer.bounce(userInputNonce, false, true)
   }
 }
 
-function userPressedSearchButtonOrEnter () {
+function userPressedSearchButtonOrEnter() {
   globalState.value.functionToCallAfterResultsGetOrganized = null
   switch (globalState.value.state) {
     case States.NoText : // the user enjoys the sound of clicks
@@ -321,16 +324,17 @@ function userPressedSearchButtonOrEnter () {
     return
   }
   // the priority is given to filtered-in results
-  let toConsider : OrganizedResults
+  let toConsider: OrganizedResults
   if (results.organized.howManyResultsIn > 0) {
     toConsider = results.organized.in
-  } else {
+  }
+  else {
     // we default to the filtered-out results if there are results but the drop down does not show them
     toConsider = results.organized.out
   }
   // Builds the list of matchings that the parent component will need when picking one by default (in callback function `props.pickByDefault()`).
   // We guarantee props.pickByDefault() that the list is ordered by network and type priority (the sorting is done in `filterAndOrganizeResults()`).
-  const possibilities : Matching[] = []
+  const possibilities: Matching[] = []
   for (const network of toConsider.networks) {
     for (const type of network.types) {
       // here we assume that the results in array `type.suggestions` are sorted by `closeness` values (see the sorting done in `filterAndOrganizeResults()`)
@@ -355,7 +359,7 @@ function userPressedSearchButtonOrEnter () {
   }
 }
 
-function userClickedSuggestion (suggestion : ResultSuggestionInternal) {
+function userClickedSuggestion(suggestion: ResultSuggestionInternal) {
   // calls back parent's function taking action with the result
   if (!props.keepDropdownOpen) {
     closeDropdown()
@@ -363,7 +367,7 @@ function userClickedSuggestion (suggestion : ResultSuggestionInternal) {
   emit('go', suggestion as ResultSuggestion)
 }
 
-function refreshOutputArea () {
+function refreshOutputArea() {
   // updates the result lists with the latest API response and user filters
   filterAndOrganizeResults()
   // refreshes the output area in the drop-down
@@ -377,22 +381,29 @@ function refreshOutputArea () {
  *  all networks currently selected are also needed and those are not necessarily all the networks in the scope due to the path followed by the user
  *  while clicking the filters).
  */
-function calculateNextSearchScope () {
+function calculateNextSearchScope() {
   nextSearchScope.networks.clear()
   nextSearchScope.categories.clear()
   if (differentialRequests) {
     for (const nw of userInputNetworks.value) {
-      if (!nw[1] && !userInputNoNetworkIsSelected) { continue }
+      if (!nw[1] && !userInputNoNetworkIsSelected) {
+        continue
+      }
       for (const cat of userInputCategories.value) {
-        if (!cat[1] && !userInputNoCategoryIsSelected) { continue }
-        if (results.raw.scopeMatrix[nw[0]][cat[0]]) { continue }
+        if (!cat[1] && !userInputNoCategoryIsSelected) {
+          continue
+        }
+        if (results.raw.scopeMatrix[nw[0]][cat[0]]) {
+          continue
+        }
         // The previous lines ensure that this network × category combination is not in the scope already.
         // The next two lines inventor the network and the category and the Set object ensures that they are inventored only once.
         nextSearchScope.networks.add(nw[0])
         nextSearchScope.categories.add(cat[0])
       }
     }
-  } else {
+  }
+  else {
     for (const nw of userInputNetworks.value) {
       nextSearchScope.networks.add(nw[0])
     }
@@ -406,7 +417,7 @@ function calculateNextSearchScope () {
  * Once new results are received and added to `results.raw.stringifyiedList`,
  * this function is called to add the newly selected filters to `results.raw.scopeMatrix`.
  */
-function saveNewSearchScope () {
+function saveNewSearchScope() {
   for (const nw of nextSearchScope.networks) {
     for (const cat of nextSearchScope.categories) {
       results.raw.scopeMatrix[nw][cat] = true
@@ -414,16 +425,16 @@ function saveNewSearchScope () {
   }
 }
 
-async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) {
-  let received : SearchAheadAPIresponse | undefined
+async function callAPIthenOrganizeResultsThenCallBack(nonceWhenCalled: number) {
+  let received: SearchAheadAPIresponse | undefined
 
   try {
     const networks = Array.from(nextSearchScope.networks)
     const types = generateTypesFromCategories(nextSearchScope.categories)
-    const body : SearchRequest = {
+    const body: SearchRequest = {
       input: userInputText.value,
       networks,
-      types
+      types,
     }
     if (areResultsCountable(types, true)) {
       body.count = true
@@ -431,9 +442,10 @@ async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) 
     received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body
+      body,
     })
-  } catch (error) {
+  }
+  catch (error) {
     received = undefined
   }
   if (userInputNonce !== nonceWhenCalled) { // Result outdated so we ignore it. If there is an error, we ignore it too because it is based on an outdated input.
@@ -456,11 +468,11 @@ async function callAPIthenOrganizeResultsThenCallBack (nonceWhenCalled: number) 
 }
 
 // Fills `results.organized` by categorizing, filtering and sorting the data of the API.
-function filterAndOrganizeResults () {
+function filterAndOrganizeResults() {
   clearOrganizedResults()
 
-  const resultsIn : ResultSuggestionInternal[] = []
-  const resultsOut : ResultSuggestionInternal[] = []
+  const resultsIn: ResultSuggestionInternal[] = []
+  const resultsOut: ResultSuggestionInternal[] = []
   // filling those two lists
   for (const finding of results.raw.stringifyiedList) {
     const toBeAdded = convertSingleAPIresultIntoResultSuggestion(finding)
@@ -477,7 +489,8 @@ function filterAndOrganizeResults () {
     const acceptTheCategory = userInputCategories.value.get(category) || userInputNoCategoryIsSelected
     if (acceptTheChainID && acceptTheCategory) {
       resultsIn.push(toBeAdded)
-    } else {
+    }
+    else {
       resultsOut.push(toBeAdded)
     }
   }
@@ -491,18 +504,18 @@ function filterAndOrganizeResults () {
 
   // This sorting orders the list of results in the drop down and is fundamental for userPressedSearchButtonOrEnter() as well as props.pickByDefault().
   // Do not alter this sorting without considering the needs of those functions and updating the comments guiding the developpers using the search-bar.
-  function sortResults (list : ResultSuggestionInternal[]) {
+  function sortResults(list: ResultSuggestionInternal[]) {
     list.sort((a, b) => ChainInfo[a.chainId].priority - ChainInfo[b.chainId].priority || TypeInfo[a.type].priority - TypeInfo[b.type].priority || a.closeness - b.closeness)
   }
 
-  function fillOrganizedResults (linearSource : ResultSuggestionInternal[], organizedDestination : OrganizedResults) {
+  function fillOrganizedResults(linearSource: ResultSuggestionInternal[], organizedDestination: OrganizedResults) {
     for (const toBeAdded of linearSource) {
       // Picking from the organized results the network that the finding belongs to. Creates the network if needed.
       let existingNetwork = organizedDestination.networks.findIndex(nwElem => nwElem.chainId === toBeAdded.chainId)
       if (existingNetwork < 0) {
         existingNetwork = -1 + organizedDestination.networks.push({
           chainId: toBeAdded.chainId,
-          types: []
+          types: [],
         })
       }
       // Picking from the network the type group that the finding belongs to. Creates the type group if needed.
@@ -510,7 +523,7 @@ function filterAndOrganizeResults () {
       if (existingType < 0) {
         existingType = -1 + organizedDestination.networks[existingNetwork].types.push({
           type: toBeAdded.type,
-          suggestions: []
+          suggestions: [],
         })
       }
       // now we can insert the finding at the right place in the organized results
@@ -524,7 +537,7 @@ function filterAndOrganizeResults () {
 // If the result JSON from the API is somehow unexpected, the function returns `undefined`.
 // The fields that the function reads in the API response as well as the place they are stored in our ResultSuggestionInternal.output
 // object are given by the filling information in TypeInfo[<result type>].howToFillresultSuggestionOutput in types/searchbar.ts
-function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : string) : ResultSuggestionInternal | undefined {
+function convertSingleAPIresultIntoResultSuggestion(stringifyiedRawResult: string): ResultSuggestionInternal | undefined {
   const apiResponseElement = JSON.parse(stringifyiedRawResult) as SingleAPIresult
   if (!(getListOfResultTypes(false) as string[]).includes(apiResponseElement.type)) {
     warn('The API returned an unexpected type of search-ahead result: ', apiResponseElement.type)
@@ -532,10 +545,11 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
   }
 
   const type = apiResponseElement.type as ResultType
-  let chainId : ChainIDs
+  let chainId: ChainIDs
   if (TypeInfo[type].belongsToAllNetworks) {
     chainId = ChainIDs.Any
-  } else {
+  }
+  else {
     chainId = apiResponseElement.chain_id as ChainIDs
   }
 
@@ -548,7 +562,8 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
     if (data === undefined) {
       warn('The API returned a search-ahead result of type ', type, ' with a missing field.')
       return undefined
-    } else {
+    }
+    else {
       output[key] = String(data)
     }
   }
@@ -570,7 +585,8 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
     const countSource = realizeData(apiResponseElement, TypeInfo[type].countSource, t)
     if (countSource === undefined) {
       count = NaN
-    } else {
+    }
+    else {
       count = (Array.isArray(countSource)) ? countSource.length : Number(countSource)
     }
     if ((SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults && isNaN(count)) || count <= 0) {
@@ -598,7 +614,7 @@ function convertSingleAPIresultIntoResultSuggestion (stringifyiedRawResult : str
   return { ...result, stringifyiedRawResult, nameWasUnknown, lacksPremiumSubscription }
 }
 
-function areResultsCountable (types: ResultType[], toTellTheAPI: boolean) : boolean {
+function areResultsCountable(types: ResultType[], toTellTheAPI: boolean): boolean {
   if (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults || !toTellTheAPI) {
     for (const type of types) {
       if (TypeInfo[type].countSource) {
@@ -609,8 +625,8 @@ function areResultsCountable (types: ResultType[], toTellTheAPI: boolean) : bool
   return false
 }
 
-function generateTypesFromCategories (categories : Set<Category> | Category[]) : ResultType[] {
-  let list : ResultType[] = []
+function generateTypesFromCategories(categories: Set<Category> | Category[]): ResultType[] {
+  let list: ResultType[] = []
 
   for (const cat of categories) {
     list = list.concat(getListOfResultTypesInCategory(cat))
@@ -618,11 +634,11 @@ function generateTypesFromCategories (categories : Set<Category> | Category[]) :
   return list.filter(type => !SearchbarPurposeInfo[props.barPurpose].unsearchable.includes(type))
 }
 
-function mustNetworkFilterBeShown () : boolean {
+function mustNetworkFilterBeShown(): boolean {
   return userInputNetworks.value.size >= 2 && !allTypesBelongToAllNetworks
 }
 
-function mustCategoryFiltersBeShown () : boolean {
+function mustCategoryFiltersBeShown(): boolean {
   return userInputCategories.value.size >= 2
 }
 
@@ -630,11 +646,11 @@ const classForDropdownOpenedOrClosed = computed(() => globalState.value.showDrop
 
 const dropdownContainsSomething = computed(() => mustNetworkFilterBeShown() || mustCategoryFiltersBeShown() || globalState.value.state !== States.NoText)
 
-function areThereResultsHiddenByUser () : boolean {
+function areThereResultsHiddenByUser(): boolean {
   return !differentialRequests && results.organized.howManyResultsOut > 0
 }
 
-function informationIfNoResult () : string {
+function informationIfNoResult(): string {
   let info = t('search_bar.no_result_matches') + ' '
 
   if (differentialRequests) {
@@ -642,22 +658,25 @@ function informationIfNoResult () : string {
     if (!userInputNoNetworkIsSelected || !userInputNoCategoryIsSelected) {
       info += t('search_bar.or') + t('search_bar.your_filters')
     }
-  } else if (areThereResultsHiddenByUser()) {
+  }
+  else if (areThereResultsHiddenByUser()) {
     info += t('search_bar.your_filters')
-  } else {
+  }
+  else {
     info += t('search_bar.your_input')
   }
   return info
 }
 
-function informationIfHiddenResults () : string {
+function informationIfHiddenResults(): string {
   let info = String(results.organized.howManyResultsOut) + ' '
 
   info += (results.organized.howManyResultsOut === 1 ? t('search_bar.one_result_hidden') : t('search_bar.several_results_hidden'))
 
   if (results.organized.howManyResultsIn !== 0) {
     info = '+' + info + ' ' + t('search_bar.by_your_filters')
-  } else {
+  }
+  else {
     info = '(' + info + ')'
   }
 
@@ -666,14 +685,26 @@ function informationIfHiddenResults () : string {
 </script>
 
 <template>
-  <div class="anchor" :class="[barShape, classForDropdownOpenedOrClosed]">
-    <div ref="wholeComponent" class="whole-component" :class="[barShape,colorTheme,classForDropdownOpenedOrClosed]" @keydown="(e) => e.stopImmediatePropagation()">
-      <div ref="textFieldAndButton" class="text-and-button" :class="barShape">
+  <div
+    class="anchor"
+    :class="[barShape, classForDropdownOpenedOrClosed]"
+  >
+    <div
+      ref="wholeComponent"
+      class="whole-component"
+      :class="[barShape, colorTheme, classForDropdownOpenedOrClosed]"
+      @keydown="(e) => e.stopImmediatePropagation()"
+    >
+      <div
+        ref="textFieldAndButton"
+        class="text-and-button"
+        :class="barShape"
+      >
         <input
           ref="textField"
           v-model="userInputText"
           class="p-inputtext text-field"
-          :class="[barShape,colorTheme]"
+          :class="[barShape, colorTheme]"
           type="text"
           :placeholder="t(SearchbarPurposeInfo[barPurpose].placeHolder)"
           @keyup="(e) => handleKeyPressInTextField(e.key)"
@@ -681,16 +712,28 @@ function informationIfHiddenResults () : string {
         >
         <BcSearchbarButton
           class="search-button"
-          :class="[barShape,classForDropdownOpenedOrClosed]"
+          :class="[barShape, classForDropdownOpenedOrClosed]"
           :bar-shape="barShape"
           :color-theme="colorTheme"
           :bar-purpose="barPurpose"
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
-      <div v-if="globalState.showDropdown" ref="dropdown" class="dropdown" :class="barShape">
-        <div v-if="dropdownContainsSomething" class="separation" :class="[barShape,colorTheme]" />
-        <div v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()" class="filter-area">
+      <div
+        v-if="globalState.showDropdown"
+        ref="dropdown"
+        class="dropdown"
+        :class="barShape"
+      >
+        <div
+          v-if="dropdownContainsSomething"
+          class="separation"
+          :class="[barShape, colorTheme]"
+        />
+        <div
+          v-if="mustNetworkFilterBeShown() || mustCategoryFiltersBeShown()"
+          class="filter-area"
+        >
           <BcSearchbarNetworkSelector
             v-if="mustNetworkFilterBeShown()"
             v-model="userInputNetworks"
@@ -710,11 +753,34 @@ function informationIfHiddenResults () : string {
             @change="userFiltersChanged"
           />
         </div>
-        <div v-if="globalState.state === States.ApiHasResponded" class="output-area" :class="[barShape,colorTheme]">
-          <div v-for="(network, k) of results.organized.in.networks" :key="network.chainId" class="network-container" :class="barShape">
-            <div v-for="(typ, j) of network.types" :key="typ.type" class="type-container" :class="barShape">
-              <div v-for="(suggestion, i) of typ.suggestions" :key="suggestion.queryParam" class="suggestionrow-container" :class="barShape">
-                <div v-if="i+j+k > 0" class="separation-between-suggestions" :class="[barShape, dropdownLayout]" />
+        <div
+          v-if="globalState.state === States.ApiHasResponded"
+          class="output-area"
+          :class="[barShape, colorTheme]"
+        >
+          <div
+            v-for="(network, k) of results.organized.in.networks"
+            :key="network.chainId"
+            class="network-container"
+            :class="barShape"
+          >
+            <div
+              v-for="(typ, j) of network.types"
+              :key="typ.type"
+              class="type-container"
+              :class="barShape"
+            >
+              <div
+                v-for="(suggestion, i) of typ.suggestions"
+                :key="suggestion.queryParam"
+                class="suggestionrow-container"
+                :class="barShape"
+              >
+                <div
+                  v-if="i+j+k > 0"
+                  class="separation-between-suggestions"
+                  :class="[barShape, dropdownLayout]"
+                />
                 <BcSearchbarSuggestionRow
                   :suggestion="suggestion"
                   :bar-shape="barShape"
@@ -722,24 +788,44 @@ function informationIfHiddenResults () : string {
                   :dropdown-layout="dropdownLayout"
                   :bar-purpose="barPurpose"
                   :screen-width-causing-sudden-change="screenWidthCausingSuddenChange"
-                  @click="(e : Event) => {e.stopPropagation(); /* stopping propagation prevents a bug when the search bar is asked to remove a result, making it smaller so the click appears to be outside */ userClickedSuggestion(suggestion)}"
+                  @click="(e : Event) => { e.stopPropagation(); /* stopping propagation prevents a bug when the search bar is asked to remove a result, making it smaller so the click appears to be outside */ userClickedSuggestion(suggestion) }"
                 />
               </div>
             </div>
           </div>
-          <div v-if="results.organized.howManyResultsIn == 0" class="info center">
+          <div
+            v-if="results.organized.howManyResultsIn == 0"
+            class="info center"
+          >
             {{ informationIfNoResult() }}
           </div>
-          <div v-if="areThereResultsHiddenByUser()" class="info bottom">
+          <div
+            v-if="areThereResultsHiddenByUser()"
+            class="info bottom"
+          >
             {{ informationIfHiddenResults() }}
           </div>
         </div>
-        <div v-else-if="globalState.state === States.WaitingForResults || globalState.state === States.Error" class="output-area" :class="[barShape,colorTheme]">
-          <div v-if="globalState.state === States.WaitingForResults" class="info center">
+        <div
+          v-else-if="globalState.state === States.WaitingForResults || globalState.state === States.Error"
+          class="output-area"
+          :class="[barShape, colorTheme]"
+        >
+          <div
+            v-if="globalState.state === States.WaitingForResults"
+            class="info center"
+          >
             {{ t('search_bar.searching') }}
-            <BcLoadingSpinner :loading="true" size="small" alignment="center" />
+            <BcLoadingSpinner
+              :loading="true"
+              size="small"
+              alignment="center"
+            />
           </div>
-          <div v-else-if="globalState.state === States.Error" class="info center">
+          <div
+            v-else-if="globalState.state === States.Error"
+            class="info center"
+          >
             <span>
               {{ t('search_bar.something_wrong') }}
               <IconErrorFace :inline="true" />

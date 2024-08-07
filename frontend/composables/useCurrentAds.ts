@@ -1,7 +1,7 @@
 import { useAdConfigurationStore } from '~/stores/useAdConfigurationStore'
 import type { AdConfiguration } from '~/types/adConfiguration'
 
-export function useCurrentAds () {
+export function useCurrentAds() {
   const { adConfigs, refreshAdConfigs } = useAdConfigurationStore()
   const { user } = useUserStore()
   const { path, name } = useRoute()

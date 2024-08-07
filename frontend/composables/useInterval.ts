@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 
-export function useInterval (seconds: number) {
+export function useInterval(seconds: number) {
   const { timestamp } = useDate()
   const tick = ref<number>(timestamp.value)
   const internalTick = ref<number>(timestamp.value)

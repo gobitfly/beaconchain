@@ -1,6 +1,6 @@
 import type { HashTabs } from '~/types/hashTabs'
 
-export function useHashTabs (tabs: HashTabs) {
+export function useHashTabs(tabs: HashTabs) {
   const activeIndex = ref(-1)
   const { hash: initialHash } = useRoute()
 

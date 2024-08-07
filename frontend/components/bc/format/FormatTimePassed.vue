@@ -7,10 +7,10 @@ import { formatGoTimestamp } from '~/utils/format'
 const { formatEpochToDateTime, formatSlotToDateTime } = useFormat()
 
 interface Props {
-  value?: number | string,
-  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
+  value?: number | string
+  type?: 'epoch' | 'go-timestamp' | 'slot' // we can add other types later when needed, we default to epoch
   format?: 'global-setting' | AgeFormat
-  noUpdate?: boolean,
+  noUpdate?: boolean
   unitLength?: StringUnitLength
 }
 const props = defineProps<Props>()
@@ -58,9 +58,15 @@ const label = computed(() => {
 </script>
 
 <template>
-  <span v-if="label" class="text">
+  <span
+    v-if="label"
+    class="text"
+  >
     <div>{{ label.text }}</div>
-    <div v-if="label.subtext" class="subtext">{{ label.subtext }}</div>
+    <div
+      v-if="label.subtext"
+      class="subtext"
+    >{{ label.subtext }}</div>
   </span>
 </template>
 

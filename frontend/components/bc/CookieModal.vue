@@ -23,13 +23,20 @@ const visible = computed(() => cookiePreference.value === undefined)
     <div class="dialog-container">
       <div class="text-container">
         {{ tOf($t, 'cookies.text', 0) }}
-        <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
+        <BcLink
+          to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
+          :target="Target.External"
+          class="link"
+        >
           {{ tOf($t, 'cookies.text', 1) }}
         </BcLink>
         {{ tOf($t, 'cookies.text', 2) }}
       </div>
       <div class="button-container">
-        <div class="necessary-button" @click="setCookiePreference('functional')">
+        <div
+          class="necessary-button"
+          @click="setCookiePreference('functional')"
+        >
           {{ $t('cookies.only_necessary') }}
         </div>
         <Button @click="setCookiePreference('all')">

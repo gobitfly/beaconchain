@@ -2,7 +2,7 @@ import type { ValidatorHistoryDuties } from '~/types/api/common'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 import type { ValidatorSubset, ValidatorSubsetCategory } from '~/types/validator'
 
-export function totalDutyRewards (duties?: ValidatorHistoryDuties) {
+export function totalDutyRewards(duties?: ValidatorHistoryDuties) {
   if (!duties) {
     return
   }
@@ -13,31 +13,32 @@ export function totalDutyRewards (duties?: ValidatorHistoryDuties) {
   }
 }
 
-export function sortValidatorIds (list?: number[]): number[] {
+export function sortValidatorIds(list?: number[]): number[] {
   if (!list) {
     return []
   }
   return [...list].sort((a, b) => a - b)
 }
 
-export function sortSummaryValidators (list?: VDBSummaryValidator[]): VDBSummaryValidator[] {
+export function sortSummaryValidators(list?: VDBSummaryValidator[]): VDBSummaryValidator[] {
   if (!list) {
     return []
   }
   return [...list].sort((a, b) => a.index - b.index)
 }
 
-export function countSubsetDuties (list: ValidatorSubset[], categories: ValidatorSubsetCategory[]): number {
+export function countSubsetDuties(list: ValidatorSubset[], categories: ValidatorSubsetCategory[]): number {
   return categories.reduce((sum, cat) => {
     const subset = list.find(sub => sub.category === cat)
     return sum + countSummaryValidatorDuties(subset?.validators || [], cat)
   }, 0)
 }
-export function countSummaryValidatorDuties (validators: VDBSummaryValidator[], category: ValidatorSubsetCategory): number {
+export function countSummaryValidatorDuties(validators: VDBSummaryValidator[], category: ValidatorSubsetCategory): number {
   let countBy: 'index' | 'duty-count' | 'duty-value' = 'index'
   if (category === 'sync_past') {
     countBy = 'duty-value'
-  } else if (['has_slashed', 'proposal_proposed', 'proposal_missed'].includes(category)) {
+  }
+  else if (['has_slashed', 'proposal_proposed', 'proposal_missed'].includes(category)) {
     countBy = 'duty-count'
   }
   if (countBy === 'index') {

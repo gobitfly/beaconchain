@@ -1,26 +1,26 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
-import type { SearchbarShape, SearchbarColors, SearchbarDropdownLayout, NetworkFilter } from '~/types/searchbar';
+import type { SearchbarShape, SearchbarColors, SearchbarDropdownLayout, NetworkFilter } from '~/types/searchbar'
 import { ChainInfo, ChainIDs } from '~/types/network'
 
-const emit = defineEmits<{(e: 'change') : void}>()
+const emit = defineEmits<{ (e: 'change'): void }>()
 defineProps<{
-  barShape: SearchbarShape,
-  colorTheme: SearchbarColors,
-  dropdownLayout : SearchbarDropdownLayout
+  barShape: SearchbarShape
+  colorTheme: SearchbarColors
+  dropdownLayout: SearchbarDropdownLayout
 }>()
 const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
 const { t } = useTranslation()
 
-const headState = ref<{look : 'on'|'off', network : string}>({
+const headState = ref<{ look: 'on' | 'off', network: string }>({
   look: 'off',
-  network: ''
+  network: '',
 })
 const listInDropdown = ref<{
-  chainId: ChainIDs,
-  label: string,
+  chainId: ChainIDs
+  label: string
   selected: boolean
 }[]>([])
 const dropdownIsOpen = ref<boolean>(false)
@@ -42,21 +42,21 @@ onUnmounted(() => {
   document.removeEventListener('keydown', listenToKeys)
 })
 
-function listenToClicks (event : Event) {
+function listenToClicks(event: Event) {
   if (!dropdownIsOpen.value || !dropdown.value || !head.value || dropdown.value.contains(event.target as Node) || head.value.contains(event.target as Node)) {
     return
   }
   dropdownIsOpen.value = false
 }
 
-function listenToKeys (event : KeyboardEvent) {
+function listenToKeys(event: KeyboardEvent) {
   if (event.key === 'Escape' && dropdownIsOpen.value) {
     dropdownIsOpen.value = false
     event.stopImmediatePropagation()
   }
 }
 
-function updateLocalState () {
+function updateLocalState() {
   // first we update the head
   let howManyAreSelected = 0
   for (const nw of liveState.value) {
@@ -67,7 +67,8 @@ function updateLocalState () {
   const allNetworksAreSelected = (howManyAreSelected === liveState.value.size)
   if (howManyAreSelected === 0 || allNetworksAreSelected) {
     headState.value.network = t('search_bar.all_networks')
-  } else {
+  }
+  else {
     headState.value.network = String(howManyAreSelected)
   }
   headState.value.look = (howManyAreSelected === 0) ? 'off' : 'on'
@@ -79,11 +80,12 @@ function updateLocalState () {
   }
 }
 
-function oneOptionChanged (index : number) {
+function oneOptionChanged(index: number) {
   const selected = listInDropdown.value[index].selected
   if (listInDropdown.value[index].chainId !== ChainIDs.Any) {
     liveState.value.set(listInDropdown.value[index].chainId, selected)
-  } else {
+  }
+  else {
     for (const filter of liveState.value) {
       liveState.value.set(filter[0], selected)
     }
@@ -104,23 +106,41 @@ function oneOptionChanged (index : number) {
       :state="dropdownIsOpen"
       @change="(open : boolean) => dropdownIsOpen = open"
     >
-      <div ref="head" class="content">
+      <div
+        ref="head"
+        class="content"
+      >
         <span class="label">
           {{ t('search_bar.network_filter_label') + ' ' + headState.network }}
         </span>
-        <fontAwesomeIcon class="arrow" :icon="faCaretDown" />
+        <fontAwesomeIcon
+          class="arrow"
+          :icon="faCaretDown"
+        />
       </div>
     </BcSearchbarFilterButton>
     <div
       v-if="dropdownIsOpen"
       ref="dropdown"
       class="dropdown"
-      :class="[barShape,colorTheme]"
-      @keydown="(e) => {if (e.key === 'Escape') dropdownIsOpen = false}"
+      :class="[barShape, colorTheme]"
+      @keydown="(e) => { if (e.key === 'Escape') dropdownIsOpen = false }"
     >
-      <div v-for="(line, i) of listInDropdown" :key="line.chainId" class="line" @click="oneOptionChanged(i)">
-        <Checkbox v-model="line.selected" :binary="true" :input-id="String(line.chainId)" />
-        <label :for="String(line.chainId)" class="label">
+      <div
+        v-for="(line, i) of listInDropdown"
+        :key="line.chainId"
+        class="line"
+        @click="oneOptionChanged(i)"
+      >
+        <Checkbox
+          v-model="line.selected"
+          :binary="true"
+          :input-id="String(line.chainId)"
+        />
+        <label
+          :for="String(line.chainId)"
+          class="label"
+        >
           {{ line.label }}
         </label>
         <IconNetwork

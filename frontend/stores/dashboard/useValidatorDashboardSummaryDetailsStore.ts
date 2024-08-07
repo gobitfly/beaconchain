@@ -10,15 +10,15 @@ const validatorDashboardSummaryDetailsStore = defineStore('validator_dashboard_s
   return { data, timeFrame }
 })
 
-export function useValidatorDashboardSummaryDetailsStore (dashboardKey: DashboardKey, groupId: number) {
+export function useValidatorDashboardSummaryDetailsStore(dashboardKey: DashboardKey, groupId: number) {
   const { fetch } = useCustomFetch()
   const { data, timeFrame: storeTimeFrame } = storeToRefs(validatorDashboardSummaryDetailsStore())
 
-  function getKey () {
+  function getKey() {
     return `${dashboardKey}_${groupId}`
   }
 
-  async function getDetails (timeFrame: SummaryTimeFrame) {
+  async function getDetails(timeFrame: SummaryTimeFrame) {
     // values might change so we reload whenever requested
     // values are cached in store to avoid loading spinner on expanding/collapsing rows though
     // except when the timeFrame changed, then we clear the cache

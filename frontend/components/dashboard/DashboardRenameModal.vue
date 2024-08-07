@@ -10,10 +10,10 @@ const name = defineModel<string>('name', { default: '' })
 const isLoading = ref(false)
 
 interface Props {
-  dashboard: ValidatorDashboard,
+  dashboard: ValidatorDashboard
   dashboardType: DashboardType
 }
-const { props, setHeader, dialogRef } = useBcDialog<Props>({pt:{header:{ class: 'dashboard-rename-modal-header'}}})
+const { props, setHeader, dialogRef } = useBcDialog<Props>({ pt: { header: { class: 'dashboard-rename-modal-header' } } })
 
 watch(props, (p) => {
   let title = $t('dashboard.rename.title')
@@ -43,14 +43,22 @@ const rename = async () => {
 
   dialogRef?.value.close(true)
 }
-
 </script>
 
 <template>
   <div class="dashboard_rename_modal_container">
-    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" :maxlength="50" class="input-field" @keypress.enter="rename" />
+    <InputText
+      v-model="name"
+      :placeholder="$t('dashboard.creation.type.placeholder')"
+      :maxlength="50"
+      class="input-field"
+      @keypress.enter="rename"
+    />
     <div class="footer">
-      <Button :disabled="renameDisabled" @click="rename">
+      <Button
+        :disabled="renameDisabled"
+        @click="rename"
+      >
         {{ $t('navigation.save') }}
       </Button>
     </div>

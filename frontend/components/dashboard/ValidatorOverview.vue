@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ClElValue } from '~/types/api/common'
 import { type OverviewTableData } from '~/types/dashboard/overview'
@@ -25,7 +24,7 @@ const createInfo = (key: string, value: ClElValue<number | string>, formatFuncti
   const elValue = formatFunction(value.el)
   return {
     label: $t(`statistics.${key}`),
-    value: `${clValue} (CL) ${elValue} (EL)`
+    value: `${clValue} (CL) ${elValue} (EL)`,
   }
 }
 
@@ -34,16 +33,16 @@ const dataList = computed(() => {
 
   const active: OverviewTableData = {
     label: $t(`${tPath}your_online_validators`),
-    addValidatorModal: true
+    addValidatorModal: true,
   }
   const efficiency: OverviewTableData = {
-    label: $t(`${tPath}24h_efficiency`)
+    label: $t(`${tPath}24h_efficiency`),
   }
   const rewards: OverviewTableData = {
-    label: $t(`${tPath}30d_rewards`)
+    label: $t(`${tPath}30d_rewards`),
   }
   const apr: OverviewTableData = {
-    label: $t(`${tPath}30d_apr`)
+    label: $t(`${tPath}30d_apr`),
   }
   const list: OverviewTableData[] = [active, efficiency, rewards, apr]
 
@@ -54,13 +53,13 @@ const dataList = computed(() => {
     [
       { label: v?.validators.pending ?? 0 },
       { label: v?.validators.exited ?? 0 },
-      { label: v?.validators.slashed ?? 0 }
+      { label: v?.validators.slashed ?? 0 },
     ],
     [
       { label: $t('validator_state.pending') },
       { label: $t('validator_state.exited') },
-      { label: $t('validator_state.slashed') }
-    ]
+      { label: $t('validator_state.slashed') },
+    ],
   ]
 
   efficiency.value = { label: formatPercent(v?.efficiency.last_24h ?? 0) }
@@ -73,11 +72,15 @@ const dataList = computed(() => {
   apr.infos = TimeFrames.map(k => createInfo(k, v?.apr[k] ?? { cl: 0, el: 0 }, formatValuePercent))
   return list
 })
-
 </script>
+
 <template>
   <div class="container">
-    <DashboardOverviewBox v-for="data in dataList" :key="data.label" :data="data" />
+    <DashboardOverviewBox
+      v-for="data in dataList"
+      :key="data.label"
+      :data="data"
+    />
   </div>
 </template>
 

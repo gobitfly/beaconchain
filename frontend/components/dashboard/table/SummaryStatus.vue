@@ -15,7 +15,7 @@ const mapped = computed(() => {
       icon,
       key,
       className: count > 0 ? `${key.replace('_', '-')} active` : '',
-      tooltip: $t(`dashboard.validator.summary.status.${key}`, {}, count)
+      tooltip: $t(`dashboard.validator.summary.status.${key}`, {}, count),
     }
   }
 
@@ -26,18 +26,28 @@ const mapped = computed(() => {
   return [
     mapCount(currentSyncCount, 'current_sync', 'sync'),
     mapCount(scheduledSyncCount, 'scheduled_sync', 'sync'),
-    mapCount(slashedCount, 'slashing', 'slashing')
+    mapCount(slashedCount, 'slashing', 'slashing'),
   ]
 })
-
 </script>
+
 <template>
   <div class="summary-status-container">
-    <BcTooltip v-for="item in mapped" :key="item.key" :text="item.tooltip" :fit-content="true" class="tooltip">
-      <SlotVizIcon :class="item.className" :icon="item.icon" />
+    <BcTooltip
+      v-for="item in mapped"
+      :key="item.key"
+      :text="item.tooltip"
+      :fit-content="true"
+      class="tooltip"
+    >
+      <SlotVizIcon
+        :class="item.className"
+        :icon="item.icon"
+      />
     </BcTooltip>
   </div>
 </template>
+
 <style lang="scss" scoped>
 @use "sass:color";
 @keyframes status-rotation {

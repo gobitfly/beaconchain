@@ -9,14 +9,14 @@ const validatorOverviewStore = defineStore('validator_overview_store', () => {
   return { data }
 })
 
-export function useValidatorDashboardOverviewStore () {
+export function useValidatorDashboardOverviewStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorOverviewStore())
   const { clearCache: clearRewardDetails } = useAllValidatorDashboardRewardsDetailsStore()
 
   const overview = computed(() => data.value)
 
-  async function refreshOverview (key: DashboardKey) {
+  async function refreshOverview(key: DashboardKey) {
     if (!key) {
       data.value = undefined
       return
@@ -28,7 +28,8 @@ export function useValidatorDashboardOverviewStore () {
       clearOverviewDependentCaches()
 
       return overview.value
-    } catch (e) {
+    }
+    catch (e) {
       data.value = undefined
       clearOverviewDependentCaches()
 
@@ -36,7 +37,7 @@ export function useValidatorDashboardOverviewStore () {
     }
   }
 
-  function clearOverviewDependentCaches () {
+  function clearOverviewDependentCaches() {
     clearRewardDetails()
   }
 

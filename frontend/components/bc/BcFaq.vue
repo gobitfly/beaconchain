@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faCaretRight
+  faCaretRight,
 } from '@fortawesome/pro-solid-svg-icons'
+
 interface Props {
   translationPath?: string
 }
@@ -17,35 +18,52 @@ const questions = computed(() => {
     const question = tD($t, `${path}.question`)
     if (!question) {
       break
-    } else {
+    }
+    else {
       list.push({
         path,
         question,
         answers: tAll($t, `${path}.answer`),
         linkPath: tD($t, `${path}.link.path`),
-        linkLabel: tD($t, `${path}.link.label`)
+        linkLabel: tD($t, `${path}.link.label`),
       })
     }
   }
   return list
 })
-
 </script>
 
 <template>
-  <div v-if="questions.length" class="faq-container">
+  <div
+    v-if="questions.length"
+    class="faq-container"
+  >
     <h1>FAQ</h1>
     <Accordion class="accordion">
-      <AccordionTab v-for="quest in questions" :key="quest.path" :header="quest.question">
+      <AccordionTab
+        v-for="quest in questions"
+        :key="quest.path"
+        :header="quest.question"
+      >
         <template #headericon>
           <FontAwesomeIcon :icon="faCaretRight" />
         </template>
         <div class="answer">
-          <p v-for="(answer, index) in quest.answers" :key="index">
+          <p
+            v-for="(answer, index) in quest.answers"
+            :key="index"
+          >
             {{ answer }}
           </p>
-          <div v-if="quest.linkPath" class="footer">
-            <BcLink :to="quest.linkPath" target="_blank" class="link">
+          <div
+            v-if="quest.linkPath"
+            class="footer"
+          >
+            <BcLink
+              :to="quest.linkPath"
+              target="_blank"
+              class="link"
+            >
               {{ quest.linkLabel }}
             </BcLink>
           </div>

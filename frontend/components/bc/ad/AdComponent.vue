@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AdConfiguration } from '~/types/adConfiguration'
+
 const reviveId = '5b200397ccf8a9353bf44ef99b45268c'
 interface Props {
   ad: AdConfiguration
@@ -56,17 +57,28 @@ onBeforeUnmount(() => {
   }
 })
 </script>
+
 <template>
   <div ref="adComponent">
     <div v-if="ad.banner_id">
       <div class="ad-banner">
-        <div :id="containerId" class="revive-container">
-          <ins ref="ins" :data-revive-zoneid="ad.banner_id" :data-revive-id="reviveId" />
+        <div
+          :id="containerId"
+          class="revive-container"
+        >
+          <ins
+            ref="ins"
+            :data-revive-zoneid="ad.banner_id"
+            :data-revive-id="reviveId"
+          />
         </div>
       </div>
     </div>
     <!-- eslint-disable vue/no-v-html -->
-    <div v-else v-html="ad.html_content" />
+    <div
+      v-else
+      v-html="ad.html_content"
+    />
   </div>
 </template>
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import { orderBy } from 'lodash-es'
 import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -44,7 +43,8 @@ const selectAll = () => {
 const toggleAll = () => {
   if (selectedGroups.value.length < groups.value.length) {
     selectAll()
-  } else {
+  }
+  else {
     selectedGroups.value = []
   }
 }
@@ -64,7 +64,6 @@ const selectedLabel = computed(() => {
   }
   return orderBy(selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)), [g => g.toLowerCase()], 'asc').join(', ')
 })
-
 </script>
 
 <template>
@@ -86,7 +85,10 @@ const selectedLabel = computed(() => {
         class="group-selection"
       >
         <template #header>
-          <span class="pointer" @click="toggleAll">
+          <span
+            class="pointer"
+            @click="toggleAll"
+          >
             {{ $t('dashboard.group.selection.all') }}
           </span>
         </template>

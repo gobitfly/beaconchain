@@ -27,84 +27,84 @@ const data = computed(() => {
   const proposer = [
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_att'),
-      value: details.value.proposal_cl_att_inc_reward
+      value: details.value.proposal_cl_att_inc_reward,
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_sync'),
-      value: details.value.proposal_cl_sync_inc_reward
+      value: details.value.proposal_cl_sync_inc_reward,
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_slash'),
-      value: details.value.proposal_cl_slashing_inc_reward
+      value: details.value.proposal_cl_slashing_inc_reward,
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_el'),
-      value: details.value.proposal_el_reward
+      value: details.value.proposal_el_reward,
     },
     {
       label: $t('dashboard.validator.rewards.proposer_rewards_total'),
-      value: details.value.proposal.income
-    }
+      value: details.value.proposal.income,
+    },
   ]
 
   const rewards = [
     {
       svg: IconSlotSourceAttestation,
       label: $t('dashboard.validator.rewards.attestation_source'),
-      value: details.value.attestations_source
+      value: details.value.attestations_source,
     },
     {
       svg: IconSlotTargetAttestation,
       label: $t('dashboard.validator.rewards.attestation_target'),
-      value: details.value.attestations_target
+      value: details.value.attestations_target,
     },
     {
       svg: IconSlotHeadAttestation,
       label: $t('dashboard.validator.rewards.attestation_head'),
-      value: details.value.attestations_head
+      value: details.value.attestations_head,
     },
     {
       svg: IconSlotBlockProposal,
       label: $t('dashboard.validator.rewards.block'),
-      value: details.value.proposal
+      value: details.value.proposal,
     },
     {
       svg: IconSlotSync,
       label: $t('dashboard.validator.rewards.sync'),
       value: details.value.sync,
-      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.sync', ['no-wrap'])
+      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.sync', ['no-wrap']),
     },
     {
       svg: IconSlotSlashing,
       label: $t('dashboard.validator.rewards.slashing'),
       value: details.value.slashing,
-      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.slashing', ['slash-after no-wrap', ' no-wrap'])
+      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.slashing', ['slash-after no-wrap', ' no-wrap']),
     },
     {
       icon: faSnooze,
       label: $t('dashboard.validator.rewards.inactivity'),
-      value: details.value.inactivity
+      value: details.value.inactivity,
     },
     {
       icon: faSigma,
       label: $t('dashboard.validator.rewards.total'),
       value: {
-        income: totalElCl(props.row.reward)?.toString() || '0'
+        income: totalElCl(props.row.reward)?.toString() || '0',
       } as Partial<VDBGroupRewardsDetails>,
-      isTotal: true
-    }
+      isTotal: true,
+    },
   ].map((reward) => {
     const hasNoReward = reward.isTotal ? reward.value.income === '0' : (!reward?.value?.status_count?.failed && !reward?.value?.status_count?.success)
     const className = hasNoReward ? 'text-disabled' : ''
     return {
       ...reward,
       hasNoReward,
-      className
+      className,
     }
   })
   return {
     proposer,
-    rewards
+    rewards,
   }
 })
 
@@ -114,15 +114,18 @@ const openDuties = () => {
       dashboardKey: dashboardKey.value,
       groupId: props.row.group_id,
       groupName: props.groupName,
-      epoch: props.row.epoch
-    }
+      epoch: props.row.epoch,
+    },
   })
 }
-
 </script>
+
 <template>
   <div class="background">
-    <div v-if="details" class="details-container">
+    <div
+      v-if="details"
+      class="details-container"
+    >
       <div>
         <div class="small-screen-value">
           <b><BcTableAgeHeader class="label" /></b>
@@ -135,20 +138,39 @@ const openDuties = () => {
             <b>{{ $t('dashboard.validator.col.duty') }}</b>
           </div>
           <div class="value">
-            <DashboardTableValueDuty :duty="row.duty" class="detail-duty" />
+            <DashboardTableValueDuty
+              :duty="row.duty"
+              class="detail-duty"
+            />
           </div>
         </div>
       </div>
       <div class="rewards-container">
         <div class="rewards-group">
           <div class="col icon">
-            <div v-for="item in data?.rewards" :key="item.label" class="row" :class="item.className">
-              <component :is="item.svg" v-if="item.svg" />
-              <FontAwesomeIcon v-if="item.icon" :icon="item.icon" />
+            <div
+              v-for="item in data?.rewards"
+              :key="item.label"
+              class="row"
+              :class="item.className"
+            >
+              <component
+                :is="item.svg"
+                v-if="item.svg"
+              />
+              <FontAwesomeIcon
+                v-if="item.icon"
+                :icon="item.icon"
+              />
             </div>
           </div>
           <div class="col label">
-            <div v-for="item in data?.rewards" :key="item.label" class="label" :class="item.className">
+            <div
+              v-for="item in data?.rewards"
+              :key="item.label"
+              class="label"
+              :class="item.className"
+            >
               {{ item.label }}
             </div>
           </div>
@@ -161,8 +183,15 @@ const openDuties = () => {
               :render-text-as-html="true"
               tooltip-class="text-align-left"
             >
-              <div v-if="item.isTotal" :class="item.className">
-                <FontAwesomeIcon class="link popout" :icon="faArrowUpRightFromSquare" @click="openDuties" />
+              <div
+                v-if="item.isTotal"
+                :class="item.className"
+              >
+                <FontAwesomeIcon
+                  class="link popout"
+                  :icon="faArrowUpRightFromSquare"
+                  @click="openDuties"
+                />
               </div>
               <DashboardTableEfficiency
                 v-else-if="!item.hasNoReward"
@@ -170,7 +199,10 @@ const openDuties = () => {
                 :failed="item.value?.status_count?.failed!"
                 :absolute="true"
               />
-              <div v-else class="text-disabled">
+              <div
+                v-else
+                class="text-disabled"
+              >
                 0 / 0
               </div>
             </BcTooltip>
@@ -187,17 +219,30 @@ const openDuties = () => {
           </div>
         </div>
         <div class="proposer-group">
-          <div v-for="item in data?.proposer" :key="item.label" class="row" :class="{'text-disabled': item.value === '0'}">
+          <div
+            v-for="item in data?.proposer"
+            :key="item.label"
+            class="row"
+            :class="{ 'text-disabled': item.value === '0' }"
+          >
             <div class="label">
               {{ item.label }}
             </div>
-            <BcFormatValue :value="item.value" :use-colors="item.value !== '0'" :options="formatRewardValueOption" />
+            <BcFormatValue
+              :value="item.value"
+              :use-colors="item.value !== '0'"
+              :options="formatRewardValueOption"
+            />
           </div>
         </div>
       </div>
     </div>
     <div v-else>
-      <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
+      <BcLoadingSpinner
+        class="spinner"
+        :loading="true"
+        alignment="center"
+      />
     </div>
   </div>
 </template>

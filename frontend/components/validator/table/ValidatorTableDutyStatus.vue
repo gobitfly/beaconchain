@@ -3,7 +3,7 @@ import type { ValidatorHistoryDuties } from '~/types/api/common'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 interface Props {
-  data?: ValidatorHistoryDuties,
+  data?: ValidatorHistoryDuties
   compact?: boolean
 }
 const props = defineProps<Props>()
@@ -34,7 +34,7 @@ const mapped = computed(() => {
       success,
       className,
       status,
-      tooltip: ''
+      tooltip: '',
     }
   }
   const head = mapSuccess(props?.data?.attestation_head?.status)
@@ -59,22 +59,25 @@ const mapped = computed(() => {
   return {
     total: {
       className: totalClassName,
-      tooltipTitle: totalTooltipTitle
+      tooltipTitle: totalTooltipTitle,
     },
     head,
     source,
     target,
     proposal,
     slashing,
-    sync
+    sync,
   }
 })
-
 </script>
+
 <template>
   <div class="duty-status-container">
     <BcTooltip :fit-content="true">
-      <template v-if="mapped.total.tooltipTitle" #tooltip>
+      <template
+        v-if="mapped.total.tooltipTitle"
+        #tooltip
+      >
         <div class="tooltip">
           <b>
             {{ mapped.total.tooltipTitle }}
@@ -86,25 +89,59 @@ const mapped = computed(() => {
           <div><b>{{ $t('validator.duty.target') }}:</b> {{ $t(`common.${mapped.target.success}`) }}</div>
         </div>
       </template>
-      <div class="attestations group" :class="mapped.total.className">
-        <SlotVizIcon :class="mapped.head.className" icon="head_attestation" />
-        <SlotVizIcon :class="mapped.source.className" icon="source_attestation" />
-        <SlotVizIcon :class="mapped.target.className" icon="target_attestation" />
+      <div
+        class="attestations group"
+        :class="mapped.total.className"
+      >
+        <SlotVizIcon
+          :class="mapped.head.className"
+          icon="head_attestation"
+        />
+        <SlotVizIcon
+          :class="mapped.source.className"
+          icon="source_attestation"
+        />
+        <SlotVizIcon
+          :class="mapped.target.className"
+          icon="target_attestation"
+        />
       </div>
     </BcTooltip>
-    <div v-if="!compact" class="group">
-      <BcTooltip :text="mapped.proposal.tooltip" :fit-content="true">
-        <SlotVizIcon :class="mapped.proposal.className" icon="proposal" />
+    <div
+      v-if="!compact"
+      class="group"
+    >
+      <BcTooltip
+        :text="mapped.proposal.tooltip"
+        :fit-content="true"
+      >
+        <SlotVizIcon
+          :class="mapped.proposal.className"
+          icon="proposal"
+        />
       </BcTooltip>
-      <BcTooltip :text="mapped.slashing.tooltip" :fit-content="true">
-        <SlotVizIcon :class="mapped.slashing.className" icon="slashing" />
+      <BcTooltip
+        :text="mapped.slashing.tooltip"
+        :fit-content="true"
+      >
+        <SlotVizIcon
+          :class="mapped.slashing.className"
+          icon="slashing"
+        />
       </BcTooltip>
-      <BcTooltip :text="mapped.sync.tooltip" :fit-content="true">
-        <SlotVizIcon :class="mapped.sync.className" icon="sync" />
+      <BcTooltip
+        :text="mapped.sync.tooltip"
+        :fit-content="true"
+      >
+        <SlotVizIcon
+          :class="mapped.sync.className"
+          icon="sync"
+        />
       </BcTooltip>
     </div>
   </div>
 </template>
+
 <style lang="scss" scoped>
 .tooltip{
   text-align: left;

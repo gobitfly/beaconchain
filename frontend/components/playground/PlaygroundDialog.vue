@@ -5,10 +5,10 @@ import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccoun
 const dialog = useDialog()
 const { currentNetwork } = useNetworkStore()
 
-function onClose (answer: boolean) {
+function onClose(answer: boolean) {
   setTimeout(() => {
     alert('response: ' + answer)
-  }, 100
+  }, 100,
   )
 }
 
@@ -18,9 +18,9 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
       title: 'My super question',
       question: 'Are you ready to rumble, or do you have second thoughts?',
       yesLabel,
-      noLabel
+      noLabel,
     },
-    onClose: response => onClose(response?.data)
+    onClose: response => onClose(response?.data),
   })
 }
 
@@ -35,7 +35,7 @@ const validatorSub: NotificationSettingsValidatorDashboard = {
   is_sync_subscribed: true,
   is_withdrawal_processed_subscribed: true,
   is_slashed_subscribed: false,
-  is_real_time_mode_enabled: false
+  is_real_time_mode_enabled: false,
 }
 
 const accountSub: NotificationSettingsAccountDashboard = {
@@ -48,13 +48,13 @@ const accountSub: NotificationSettingsAccountDashboard = {
   is_erc721_token_transfers_subscribed: true,
   is_erc1155_token_transfers_subscribed: false,
   subscribed_chain_ids: [17000],
-  is_ignore_spam_transactions_enabled: true
+  is_ignore_spam_transactions_enabled: true,
 }
 
-function openSubscriptions (props: any) {
+function openSubscriptions(props: any) {
   dialog.open(NotificationsManagementSubscriptionDialog, {
     data: props,
-    onClose: response => onClose(response?.data)
+    onClose: response => onClose(response?.data),
   })
 }
 

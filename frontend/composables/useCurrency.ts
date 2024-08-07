@@ -3,16 +3,16 @@ import { type EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
 import { type Currency } from '~/types/currencies'
 
-export function useCurrency () {
+export function useCurrency() {
   const { latestState } = useLatestStateStore()
   const { networkInfo } = useNetworkStore()
   const { t: $t } = useTranslation()
   const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
   const available = ref<Currency[]>([])
-  const withLabel = ref<{currency: Currency, label: string}[]>([])
+  const withLabel = ref<{ currency: Currency, label: string }[]>([])
 
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
-  function setCurrency (newCurrency: Currency) {
+  function setCurrency(newCurrency: Currency) {
     selectedCurrency.value = newCurrency
   }
 
@@ -24,7 +24,7 @@ export function useCurrency () {
         list[rate.code as Currency] = rate
         return list
       },
-      rec
+      rec,
     )
   })
 
@@ -43,7 +43,7 @@ export function useCurrency () {
 
       withLabel.value = list.map(currency => ({
         currency,
-        label: $t(`currency.label.${currency}`, {}, rates.value?.[currency]?.currency || currency)
+        label: $t(`currency.label.${currency}`, {}, rates.value?.[currency]?.currency || currency),
       }))
     }
   }, { immediate: true })

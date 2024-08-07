@@ -1,4 +1,4 @@
-export function isParent (parent:HTMLElement | null, child:HTMLElement | null): boolean {
+export function isParent(parent: HTMLElement | null, child: HTMLElement | null): boolean {
   if (!parent || !child) {
     return false
   }
@@ -14,14 +14,14 @@ export function isParent (parent:HTMLElement | null, child:HTMLElement | null): 
   return false
 }
 
-function isScrollable (element: HTMLElement): boolean {
+function isScrollable(element: HTMLElement): boolean {
   if (element.offsetWidth < element.scrollWidth || element.offsetHeight < element.scrollHeight) {
     return true
   }
   return false
 }
 
-export function isOrIsInIteractiveContainer (child:HTMLElement | null, stopSearchAtElement?: HTMLElement): boolean {
+export function isOrIsInIteractiveContainer(child: HTMLElement | null, stopSearchAtElement?: HTMLElement): boolean {
   if (!child || child === stopSearchAtElement) {
     return false
   }
@@ -35,7 +35,7 @@ export function isOrIsInIteractiveContainer (child:HTMLElement | null, stopSearc
   return isOrIsInIteractiveContainer(child.parentElement, stopSearchAtElement)
 }
 
-export function findAllScrollParents (child:HTMLElement | null, list?: HTMLElement[]): HTMLElement[] {
+export function findAllScrollParents(child: HTMLElement | null, list?: HTMLElement[]): HTMLElement[] {
   if (!list) {
     list = []
   }

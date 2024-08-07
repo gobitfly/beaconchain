@@ -13,12 +13,13 @@ const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
 const { dashboardKey, dashboardType, setDashboardKey, isShared } = useDashboardKey()
 
-const emit = defineEmits<{(e: 'showCreation'): void }>()
+const emit = defineEmits<{ (e: 'showCreation'): void }>()
 
 const getDashboardName = (db: Dashboard): string => {
   if (isLoggedIn.value) {
     return db.name || `${$t('dashboard.title')} ${db.id}` // Just to be sure, we should not have dashboards without a name in prod
-  } else {
+  }
+  else {
     return db.id === COOKIE_DASHBOARD_ID.ACCOUNT ? $t('dashboard.account_dashboard') : $t('dashboard.validator_dashboard')
   }
 }
@@ -45,7 +46,7 @@ const items = computed<MenuBarEntry[]>(() => {
         disabledTooltip: !hasMoreItems ? items[0].disabledTooltip : undefined,
         route: !hasMoreItems ? items[0].route : undefined,
         command: !hasMoreItems ? items[0].command : undefined,
-        items: hasMoreItems ? items : undefined
+        items: hasMoreItems ? items : undefined,
       })
     }
   }
@@ -77,14 +78,21 @@ const items = computed<MenuBarEntry[]>(() => {
 
 <template>
   <div class="header-container">
-    <BcMenuBar class="menu-bar" :buttons="items" />
+    <BcMenuBar
+      class="menu-bar"
+      :buttons="items"
+    />
     <Button
-      v-if="!isShared" 
-      data-secondary 
-      class="p-button-icon-only" 
+      v-if="!isShared"
+      data-secondary
+      class="p-button-icon-only"
       @click="emit('showCreation')"
     >
-      <IconPlus title="Add new dashboard" width="100%" height="100%" />
+      <IconPlus
+        title="Add new dashboard"
+        width="100%"
+        height="100%"
+      />
     </Button>
   </div>
 </template>

@@ -12,7 +12,6 @@ const props = defineProps<Props>()
 
 const notificationsToggle = ref(false)
 const accountAccessToggle = ref(false)
-
 </script>
 
 <template>
@@ -21,7 +20,10 @@ const accountAccessToggle = ref(false)
       <div class="device">
         {{ $t('notifications.general.paired_devices.device') }}: {{ props.device.name || $t('notifications.general.paired_devices.unknown') }}
       </div>
-      <Button data-secondary class="p-button-icon-only">
+      <Button
+        data-secondary
+        class="p-button-icon-only"
+      >
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
@@ -34,7 +36,7 @@ const accountAccessToggle = ref(false)
       {{ $t('notifications.general.paired_devices.grant_account_access') }}
     </div>
     <div class="paired-row">
-      {{ $t('notifications.general.paired_devices.paired_date', {date: formatGoTimestamp(device.paired_timestamp)}) }}
+      {{ $t('notifications.general.paired_devices.paired_date', { date: formatGoTimestamp(device.paired_timestamp) }) }}
     </div>
   </div>
 </template>
