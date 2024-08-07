@@ -183,6 +183,20 @@ type VDBProtocolModes struct {
 	RocketPool bool
 }
 
+type MobileSubscription struct {
+	ProductIDUnverified string                               `json:"id"`
+	PriceMicros         uint64                               `json:"priceMicros"`
+	Currency            string                               `json:"currency"`
+	Transaction         MobileSubscriptionTransactionGeneric `json:"transaction"`
+	ValidUnverified     bool                                 `json:"valid"`
+}
+
+type MobileSubscriptionTransactionGeneric struct {
+	Type    string `json:"type"`
+	Receipt string `json:"receipt"`
+	ID      string `json:"id"`
+}
+
 type VDBValidatorSummaryChartRow struct {
 	Timestamp              time.Time `db:"ts"`
 	GroupId                int64     `db:"group_id"`
