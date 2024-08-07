@@ -46,7 +46,7 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 const { latestState } = useLatestStateStore()
 const latestSlot = ref(latestState.value?.current_slot || 0)
-const { value: timeFrames, temp: tempTimeFrames, bounce: bounceTimeFrames, instant: instantTimeFrames } = useDebounceValue<{from:number, to:number}>({ from: 0, to: 0 }, 1000)
+const { value: timeFrames, temp: tempTimeFrames, bounce: bounceTimeFrames, instant: instantTimeFrames } = useDebounceValue<{from?:number, to:number}>({ from: undefined, to: 0 }, 1000)
 const currentZoom = { start: 80, end: 100 }
 const MAX_DATA_POINTS = 200
 
@@ -96,14 +96,17 @@ const categories = computed<number[]>(() => {
     return []
   }
   const minTs = Math.max(slotToTs(0) || 0, latestTs - maxSeconds)
-  while (latestTs >= minTs) {
+  while (latestTs > minTs) {
     list.splice(0, 0, latestTs)
 
     latestTs -= step
   }
-
   return list
 })
+
+const updateTimestamp = ()=>{
+  latestSlot.value = latestState.value?.current_slot || 0
+}
 
 watch([() => props.filter?.efficiency, () => props.filter?.groupIds], () => {
   if (!props.filter?.initialised || !props.filter?.efficiency) {
@@ -116,7 +119,7 @@ watch(() => props.filter?.aggregation, (agg) => {
   if (!agg) {
     return
   }
-  latestSlot.value = latestState.value?.current_slot || 0
+  updateTimestamp()
   aggregation.value = agg
 }, { immediate: true })
 
@@ -388,10 +391,19 @@ const validateDataZoom = (instant?: boolean) => {
       timestamps.fromTs = categories.value[timestamps.fromIndex]
     }
   }
+
+  let fromTs: number | undefined = timestamps.fromTs
+  const bufferSteps = aggregation.value === 'epoch' ? 0 : 5
+  // if we are on the far left of the time frame we omit the fromTs to avoid going to far and cause a webservice error
+  // in that case the backend will go back depending on the max secons of the dashboard settings
+  if(timestamps.fromIndex <= bufferSteps){
+    fromTs = undefined
+  }
   const newTimeFrames = {
-    from: timestamps.fromTs,
+    from: fromTs,
     to: timestamps.toTs
   }
+  console.log('timestamps', timestamps.fromIndex, newTimeFrames.from)
   // when the timeframes of the slider change we bounce the new timeframe for the chart
   if (tempTimeFrames.value.to !== newTimeFrames.to || tempTimeFrames.value.from !== newTimeFrames.from) {
     if (instant) {
@@ -424,11 +436,17 @@ const validateDataZoom = (instant?: boolean) => {
   }
 }
 
-watch([categories, option, chart], () => {
+watch([option], () => {
+  updateTimestamp()
+  validateDataZoom(true)
+}, { immediate: true })
+
+watch([categories, chart], () => {
   validateDataZoom(true)
 }, { immediate: true })
 
 const onDatazoom = () => {
+  updateTimestamp()
   validateDataZoom()
 }
 
@@ -470,6 +488,7 @@ const onMouseMove = (e: MouseEvent) => {
     bottom: 0;
     justify-content: center;
     align-items: center;
+    pointer-events: none;
   }
 }
 </style>
