@@ -1,34 +1,33 @@
 import { defineStore } from 'pinia'
-import type { InternalGetUserNotificationDashboardsResponse } from '~/types/api/notifications'
+import type { InternalGetUserNotificationNetworksResponse } from '~/types/api/notifications'
 import { API_PATH } from '~/types/customFetch'
 import type { TableQueryParams } from '~/types/datatable'
 
-const notificationsDashboardStore = defineStore('notifications-dashboard-store', () => {
-  const data = ref<InternalGetUserNotificationDashboardsResponse | undefined>()
+const notificationsNetworkStore = defineStore('notifications-network-store', () => {
+  const data = ref<InternalGetUserNotificationNetworksResponse | undefined>()
   return { data }
 })
 
-export function useNotificationsDashboardStore (networkId: globalThis.Ref<number>) {
+export function useNotificationsNetworkStore () {
   const { isLoggedIn } = useUserStore()
 
   const { fetch } = useCustomFetch()
-  const { data } = storeToRefs(notificationsDashboardStore())
+  const { data } = storeToRefs(notificationsNetworkStore())
   const { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery } = useTableQuery({ limit: 10, sort: 'timestamp:desc' }, 10)
   const isLoading = ref(false)
 
-  async function loadNotificationsDashboards (q: TableQueryParams) {
+  async function loadNetworkNotifications (q: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
     try{
-      const result = await fetch<InternalGetUserNotificationDashboardsResponse>(API_PATH.NOTIFICATIONS_DASHBOARDS, { query: { network: networkId.value }}, undefined, q)
+      const result = await fetch<InternalGetUserNotificationNetworksResponse>(API_PATH.NOTIFICATIONS_NETWORK, undefined, undefined, q)
 
       isLoading.value = false
       if (!isStoredQuery(q)) {
         return // in case some query params change while loading
       }
 
-      data.value = result
-      
+      data.value = result      
     } catch(e) {
       data.value = undefined
       isLoading.value = false
@@ -36,19 +35,19 @@ export function useNotificationsDashboardStore (networkId: globalThis.Ref<number
     return data.value
   }
 
-  const notificationsDashboards = computed(() => {
+  const networkNotifications = computed(() => {
     return data.value
   })
 
-  watch([query, networkId], ([q]) => {
+  watch(query, (q) => {
     if (q) {
-      isLoggedIn.value && loadNotificationsDashboards(q)
+      isLoggedIn.value && loadNetworkNotifications(q)
     }
   }, { immediate: true })
 
   return {
     cursor,
-    notificationsDashboards,
+    networkNotifications,
     isLoading,
     onSort,
     pageSize,

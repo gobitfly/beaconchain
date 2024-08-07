@@ -41,6 +41,7 @@ export enum API_PATH {
   NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   LATEST_STATE = '/latestState',
   NOTIFICATIONS_DASHBOARDS='/notifications/dashboards',
+  NOTIFICATIONS_NETWORK='/notifications/networks',
   REGISTER = '/register',
   LOGIN = '/login',
   LOGOUT = '/logout',
@@ -265,8 +266,10 @@ export const mapping: Record<string, MappingData> = {
     mock: false
   },
   [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
-    path: '/notifications/dashboards',
-    mock: true
+    path: '/users/me/notifications/dashboards',
+  },
+  [API_PATH.NOTIFICATIONS_NETWORK]: {
+    path: '/users/me/notifications/networks',
   },
   [API_PATH.LATEST_STATE]: {
     path: '/latest-state',

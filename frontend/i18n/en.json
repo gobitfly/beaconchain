@@ -310,6 +310,16 @@
       "rocketpool": "Rocket Pool",
       "network": "Network"
     },
+    "network": {
+      "event_type": {
+        "gas_above_threshold": "Gas price > {_value}",
+        "gas_below_threshold": "Gas price < {_value}",
+        "participation_rate_threshold": "Participation rate < {_value}"
+      },
+      "footer": {
+        "subscriptions": "Network ({count} Subscription) |Validators ({count} Subscriptions)"
+      }
+    },
     "subscriptions": {
       "dialog_title": "Edit Subscriptions",
       "validators" : {
@@ -408,7 +418,8 @@
       "group": "Group",
       "subscriptions": "Subscriptions",
       "webhook": "Webhook",
-      "networks": "Networks"
+      "networks": "Networks",
+      "notification": "Notification"
     },
     "general": {
       "do_not_disturb": "Do not disturb",

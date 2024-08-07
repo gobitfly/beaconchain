@@ -114,7 +114,7 @@ const openManageNotifications = () => {
           <template #header>
             <BcTabHeader :header="$t('notifications.tabs.network')" :icon="faNetworkWired" />
           </template>
-          Network coming soon!
+          <NotificationsNetworkTable />
         </TabPanel>
       </TabView>
     </BcPageWrapper>
