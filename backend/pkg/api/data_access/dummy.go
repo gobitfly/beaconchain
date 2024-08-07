@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand/v2"
 	"reflect"
@@ -10,7 +11,9 @@ import (
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
 )
 
@@ -58,6 +61,12 @@ func (d *DummyService) Close() {
 }
 
 func (d *DummyService) GetLatestSlot() (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetLatestFinalizedEpoch() (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
@@ -674,10 +683,38 @@ func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) er
 	return nil
 }
 
-func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
-	r := t.BlockSummary{}
+func (d *DummyService) GetUserIdByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
+	r := t.OAuthAppData{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+	return nil
+}
+
+func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails types.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
+	return nil
 }
 
 func (d *DummyService) GetBlockOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
@@ -690,6 +727,12 @@ func (d *DummyService) GetBlockTransactions(ctx context.Context, chainId, block 
 	r := []t.BlockTransactionTableRow{}
 	err := commonFakeData(&r)
 	return r, err
+}
+
+func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
+	r := t.BlockSummary{}
+	err := commonFakeData(&r)
+	return &r, err
 }
 
 func (d *DummyService) GetBlockVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {

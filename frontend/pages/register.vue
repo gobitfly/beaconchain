@@ -4,10 +4,12 @@ import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
+import { provideMobileAuthParams, handleMobileAuth } from '~/utils/mobileAuth'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
+const route = useRoute()
 
 useBcSeo('login_and_register.title_register')
 
@@ -37,6 +39,9 @@ const onSubmit = handleSubmit(async (values) => {
         password: values.password
       }
     })
+    if (handleMobileAuth(route.query)) {
+      return
+    }
     await navigateTo('/')
   } catch (error) {
     toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_register_group'), detail: $t('login_and_register.error_register_message') })
@@ -44,6 +49,11 @@ const onSubmit = handleSubmit(async (values) => {
 })
 
 const canSubmit = computed(() => email.value && password.value && confirmPassword.value && agreement.value && !Object.keys(errors.value).length)
+
+const loginLink = computed(() => {
+  return provideMobileAuthParams(route.query, '/login')
+})
+
 </script>
 
 <template>
@@ -55,7 +65,7 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
         </div>
         <div class="login-invitation">
           {{ $t('login_and_register.already_have_account') }}
-          <BcLink to="/login" :target="Target.Internal" class="link">
+          <BcLink :to="loginLink" :target="Target.Internal" class="link">
             {{ $t('login_and_register.login_here') }}
           </BcLink>
         </div>

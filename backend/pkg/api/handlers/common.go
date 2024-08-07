@@ -773,6 +773,8 @@ func errWithMsg(err error, format string, args ...interface{}) error {
 	return fmt.Errorf("%w: %s", err, fmt.Sprintf(format, args...))
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
 }
@@ -782,14 +784,19 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
 
+//nolint:unparam
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
 }

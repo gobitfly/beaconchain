@@ -39,14 +39,21 @@ func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	finalizedEpoch, err := h.dai.GetLatestFinalizedEpoch()
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
 	exchangeRates, err := h.dai.GetLatestExchangeRates()
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 	data := types.LatestStateData{
-		LatestSlot:    latestSlot,
-		ExchangeRates: exchangeRates,
+		LatestSlot:     latestSlot,
+		FinalizedEpoch: finalizedEpoch,
+		ExchangeRates:  exchangeRates,
 	}
 
 	response := types.InternalGetLatestStateResponse{
