@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChainFamily, type ChainIDs, ChainInfo } from '~/types/network'
+
 const colorMode = useColorMode()
 
 // Usage :
@@ -9,7 +10,7 @@ const props = defineProps({
   chainId: { type: Number, required: true }, // network whose icon must be displayed (L2s and tesnets can be given)
   colored: { type: Boolean, default: false }, // tells whether the icon must be in its official color or in the color of the font
   doNotAdaptToColorTheme: { type: Boolean, default: false }, // some icons in their original colors are hard to see on a dark background, so they are adapted automatically, but you can deactivate this behavior if your background is always light
-  harmonizePerceivedSize: { type: Boolean, default: false } // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
+  harmonizePerceivedSize: { type: Boolean, default: false }, // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
 })
 
 const family = computed(() => (props.chainId in ChainInfo) ? ChainInfo[props.chainId as ChainIDs].family : ChainFamily.Ethereum)
@@ -19,11 +20,31 @@ const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
 
 <template>
   <div class="frame">
-    <IconNetworkEthereum v-if="family === ChainFamily.Ethereum" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkArbitrum v-else-if="family === ChainFamily.Arbitrum" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkOptimism v-else-if="family === ChainFamily.Optimism" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkBase v-else-if="family === ChainFamily.Base" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkGnosis v-else-if="family === ChainFamily.Gnosis" class="icon" :class="[sizing,coloring]" />
+    <IconNetworkEthereum
+      v-if="family === ChainFamily.Ethereum"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkArbitrum
+      v-else-if="family === ChainFamily.Arbitrum"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkOptimism
+      v-else-if="family === ChainFamily.Optimism"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkBase
+      v-else-if="family === ChainFamily.Base"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkGnosis
+      v-else-if="family === ChainFamily.Gnosis"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
   </div>
 </template>
 

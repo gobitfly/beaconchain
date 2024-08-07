@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { faEye } from '@fortawesome/pro-solid-svg-icons'
 import {
-  faInfoCircle
+  faInfoCircle,
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { SlotVizEpoch } from '~/types/api/slot_viz'
@@ -14,8 +14,8 @@ import type { MultiBarItem } from '~/types/multiBar'
 import type { ChainInfoFields } from '~/types/network'
 
 interface Props {
-  data: SlotVizEpoch[],
-  initiallyHideVisible?: boolean,
+  data: SlotVizEpoch[]
+  initiallyHideVisible?: boolean
   timestamp?: number
   networkInfo?: ChainInfoFields
 }
@@ -30,25 +30,25 @@ const icons: MultiBarItem[] = [
   {
     component: IconSlotBlockProposal,
     value: 'proposal',
-    tooltip: $t('slotViz.filter.proposal')
+    tooltip: $t('slotViz.filter.proposal'),
   }, {
     component: IconSlotAttestation,
     value: 'attestation',
-    tooltip: $t('slotViz.filter.attestation')
+    tooltip: $t('slotViz.filter.attestation'),
   }, {
     component: IconSlotSync,
     value: 'sync',
-    tooltip: $t('slotViz.filter.sync')
+    tooltip: $t('slotViz.filter.sync'),
   }, {
     component: IconSlotSlashing,
     value: 'slashing',
-    tooltip: $t('slotViz.filter.slashing')
+    tooltip: $t('slotViz.filter.slashing'),
   }, {
     icon: faEye,
     value: 'visible',
     className: 'visible-icon',
-    tooltip: $t('slotViz.filter.visible')
-  }
+    tooltip: $t('slotViz.filter.visible'),
+  },
 ]
 
 const mostRecentScheduledSlotId = computed(() => {
@@ -65,7 +65,8 @@ const mostRecentScheduledSlotId = computed(() => {
     for (let j = row.slots.length - 1; j >= 0; j--) {
       if (row.slots[j].status === 'scheduled') {
         id = row.slots[j].slot
-      } else {
+      }
+      else {
         return id
       }
     }
@@ -91,25 +92,40 @@ watch(() => props, () => {
       if (visibleIndex >= 0) {
         categories.splice(visibleIndex, 1)
       }
-    } else {
+    }
+    else {
       categories.splice(initialIndex, 1, 'visible')
     }
 
     selectedCategories.value = categories
   }
 }, { immediate: true })
-
 </script>
+
 <template>
-  <div id="slot-viz" class="content">
+  <div
+    id="slot-viz"
+    class="content"
+  >
     <div class="header-row">
-      <BcTooltip class="info" :text="$t('slotViz.info_tootlip')" :dont-open-permanently="true">
-        <BcLink to="https://kb.beaconcha.in/v2beta/slot-visualization#how-does-it-work" target="_blank" class="link">
+      <BcTooltip
+        class="info"
+        :text="$t('slotViz.info_tootlip')"
+        :dont-open-permanently="true"
+      >
+        <BcLink
+          to="https://kb.beaconcha.in/v2beta/slot-visualization#how-does-it-work"
+          target="_blank"
+          class="link"
+        >
           <FontAwesomeIcon :icon="faInfoCircle" />
         </BcLink>
       </BCTooltip>
       <div class="filter-row">
-        <BcToggleMultiBar v-model="selectedCategories" :buttons="icons" />
+        <BcToggleMultiBar
+          v-model="selectedCategories"
+          :buttons="icons"
+        />
       </div>
       <h1 class="network">
         {{ networkInfo?.name }}
@@ -119,7 +135,10 @@ watch(() => props, () => {
       </div>
     </div>
     <div class="grid">
-      <template v-for="row in props.data" :key="row.epoch">
+      <template
+        v-for="row in props.data"
+        :key="row.epoch"
+      >
         <div class="epoch">
           <BcFormatNumber :text="row.state === 'head' ? $t('slotViz.head') : formatNumber(row.epoch)" />
         </div>
@@ -136,6 +155,7 @@ watch(() => props, () => {
     </div>
   </div>
 </template>
+
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
 @use '~/assets/css/fonts.scss';

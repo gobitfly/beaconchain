@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import {
   faEdit,
-  faTrash
+  faTrash,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
@@ -46,11 +46,11 @@ const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
 
 type ValidatorUpdateBody = {
-  validators?: string[],
-    deposit_address?: string,
-    withdrawal_address?: string,
-    graffiti?: string,
-    group_id?: number
+  validators?: string[]
+  deposit_address?: string
+  withdrawal_address?: string
+  graffiti?: string
+  group_id?: number
 }
 
 const size = computed(() => {
@@ -59,7 +59,7 @@ const size = computed(() => {
     showBalance: width.value >= 1060,
     showGroup: width.value >= 925,
     showWithdrawalCredentials: width.value >= 750,
-    showPublicKey: width.value >= 570
+    showPublicKey: width.value >= 570,
   }
 })
 
@@ -144,14 +144,15 @@ const addValidator = (result: ResultSuggestion) => {
     if (!isLoggedIn.value) {
       updateHash(dashboardType.value, dashboardKey.value)
     }
-  } else {
+  }
+  else {
     changeGroup(body, selectedGroup.value)
   }
   searchBar.value!.empty()
 }
 
 // called for each row in the drop-down of the search bar and returns `true` to deactivate the row
-function isSearchResultRestricted (result: ResultSuggestion) : boolean {
+function isSearchResultRestricted(result: ResultSuggestion): boolean {
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
@@ -173,8 +174,8 @@ const editSelected = () => {
     data: {
       groupId: selected.value?.[0]?.group_id ?? undefined,
       selectedValidators: selected.value?.length,
-      totalValidators: total?.value
-    }
+      totalValidators: total?.value,
+    },
   })
 }
 
@@ -210,7 +211,8 @@ const loadData = async () => {
       data.value = result
       selected.value = []
     }
-  } else {
+  }
+  else {
     data.value = { paging: {}, data: [] }
   }
 }
@@ -239,8 +241,8 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
     data: {
       title: $t('dashboard.validator.management.remove_title'),
-      question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length)
-    }
+      question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length),
+    },
   })
 }
 
@@ -249,7 +251,6 @@ const total = computed(() => addUpValues(overview.value?.validators))
 const maxValidatorsPerDashboard = computed(() => (isPublic.value || !user.value?.premium_perks?.validators_per_dashboard) ? 20 : user.value.premium_perks.validators_per_dashboard)
 
 const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
-
 </script>
 
 <template>
@@ -260,7 +261,10 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     class="validator-managment-modal-container"
     @update:visible="(visible: boolean) => !visible && resetData()"
   >
-    <template v-if="!size.showWithdrawalCredentials" #header>
+    <template
+      v-if="!size.showWithdrawalCredentials"
+      #header
+    >
       <span />
     </template>
     <BcTableControl
@@ -269,11 +273,18 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     >
       <template #header-left>
         <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
-        <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>
+        <span
+          v-else
+          class="small-title"
+        >{{ $t('dashboard.validator.manage_validators') }}</span>
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
+          <DashboardGroupSelection
+            v-model="selectedGroup"
+            :include-all="true"
+            class="small group-selection"
+          />
           <!-- TODO: below, "[currentNetwork]" is wrong! Replace it with an array containing the chain ID that the dashboard was created for (it is not necessarily the current network). -->
           <BcSearchbarMain
             ref="searchBar"
@@ -305,7 +316,11 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="index" :sortable="true" :header="$t('dashboard.validator.col.index')" />
+            <Column
+              field="index"
+              :sortable="true"
+              :header="$t('dashboard.validator.col.index')"
+            />
 
             <Column
               v-if="size.showPublicKey"
@@ -314,7 +329,11 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               :header="$t('dashboard.validator.col.public_key')"
             >
               <template #body="slotProps">
-                <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
+                <BcFormatHash
+                  :hash="slotProps.data.public_key"
+                  type="public_key"
+                  class="public-key"
+                />
               </template>
             </Column>
             <Column
@@ -365,20 +384,34 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             >
               <template #body="slotProps">
                 <div class="withdrawal-col">
-                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                  <BcFormatHash
+                    :hash="slotProps.data.withdrawal_credential"
+                    type="withdrawal_credentials"
+                  />
                 </div>
               </template>
             </Column>
             <Column field="action">
               <template #header>
-                <Button v-show="selected?.length" class="edit-button" @click.stop.prevent="editSelected()">
+                <Button
+                  v-show="selected?.length"
+                  class="edit-button"
+                  @click.stop.prevent="editSelected()"
+                >
                   <span class="edit-label">{{ $t('common.edit') }}</span>
-                  <FontAwesomeIcon class="edit-icon" :icon="faEdit" />
+                  <FontAwesomeIcon
+                    class="edit-icon"
+                    :icon="faEdit"
+                  />
                 </Button>
               </template>
               <template #body="slotProps">
                 <div class="action-col">
-                  <FontAwesomeIcon :icon="faTrash" class="link" @click="removeRow(slotProps.data)" />
+                  <FontAwesomeIcon
+                    :icon="faTrash"
+                    class="link"
+                    @click="removeRow(slotProps.data)"
+                  />
                 </div>
               </template>
             </Column>
@@ -388,7 +421,11 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                   <div class="label">
                     {{ $t('dashboard.validator.col.public_key') }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
+                  <BcFormatHash
+                    :hash="slotProps.data.public_key"
+                    type="public_key"
+                    class="public-key"
+                  />
                 </div>
                 <div class="info">
                   <div class="label">
@@ -410,17 +447,32 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                   <div class="label">
                     {{ $t('dashboard.validator.col.withdrawal_credential') }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                  <BcFormatHash
+                    :hash="slotProps.data.withdrawal_credential"
+                    type="withdrawal_credentials"
+                  />
                 </div>
               </div>
             </template>
 
             <template #bc-table-footer-left>
-              <div v-if="maxValidatorsPerDashboard" class="left">
-                <div class="labels" :class="{ premiumLimit }">
+              <div
+                v-if="maxValidatorsPerDashboard"
+                class="left"
+              >
+                <div
+                  class="labels"
+                  :class="{ premiumLimit }"
+                >
                   <span>
-                    <BcFormatNumber :value="total" default="0" /> /
-                    <BcFormatNumber :value="maxValidatorsPerDashboard" default="0" />
+                    <BcFormatNumber
+                      :value="total"
+                      default="0"
+                    /> /
+                    <BcFormatNumber
+                      :value="maxValidatorsPerDashboard"
+                      default="0"
+                    />
                   </span>
                 </div>
                 <BcPremiumGem />
@@ -428,7 +480,10 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             </template>
 
             <template #bc-table-footer-right>
-              <Button :label="$t('navigation.done')" @click="onClose" />
+              <Button
+                :label="$t('navigation.done')"
+                @click="onClose"
+              />
             </template>
           </BcTable>
         </ClientOnly>

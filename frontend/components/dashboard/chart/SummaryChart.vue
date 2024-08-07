@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-
 import { h, render } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -10,7 +9,7 @@ import {
   TooltipComponent,
   LegendComponent,
   GridComponent,
-  DataZoomComponent
+  DataZoomComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
@@ -27,7 +26,7 @@ use([
   TooltipComponent,
   LegendComponent,
   DataZoomComponent,
-  GridComponent
+  GridComponent,
 ])
 
 interface Props {
@@ -46,7 +45,7 @@ const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 const { latestState } = useLatestStateStore()
 const latestSlot = ref(latestState.value?.current_slot || 0)
-const { value: timeFrames, temp: tempTimeFrames, bounce: bounceTimeFrames, instant: instantTimeFrames } = useDebounceValue<{from?:number, to:number}>({ from: undefined, to: 0 }, 1000)
+const { value: timeFrames, temp: tempTimeFrames, bounce: bounceTimeFrames, instant: instantTimeFrames } = useDebounceValue<{ from?: number, to: number }>({ from: undefined, to: 0 }, 1000)
 const currentZoom = { start: 80, end: 100 }
 const MAX_DATA_POINTS = 200
 
@@ -56,12 +55,12 @@ const isLoading = ref(false)
 let reloadCounter = 0
 
 interface SeriesObject {
-    data: number[];
-    type: string;
-    smooth: boolean;
-    symbol: string,
-    name: string;
-  }
+  data: number[]
+  type: string
+  smooth: boolean
+  symbol: string
+  name: string
+}
 // we don't want the series to be responsive to not trigger an auto update of the option computed
 const series = ref<SeriesObject[]>([])
 const chartCategories = ref<number[]>([])
@@ -104,7 +103,7 @@ const categories = computed<number[]>(() => {
   return list
 })
 
-const updateTimestamp = ()=>{
+const updateTimestamp = () => {
   latestSlot.value = latestState.value?.current_slot || 0
 }
 
@@ -146,9 +145,11 @@ const loadData = async () => {
         let name: string
         if (element.id === SUMMARY_CHART_GROUP_TOTAL) {
           name = $t('dashboard.validator.summary.chart.total')
-        } else if (element.id === SUMMARY_CHART_GROUP_NETWORK_AVERAGE) {
+        }
+        else if (element.id === SUMMARY_CHART_GROUP_NETWORK_AVERAGE) {
           name = $t('dashboard.validator.summary.chart.average')
-        } else {
+        }
+        else {
           name = getGroupLabel($t, element.id, groups.value, allGroups)
         }
         const newObj: SeriesObject = {
@@ -156,12 +157,13 @@ const loadData = async () => {
           type: 'line',
           smooth: false,
           symbol: 'none',
-          name
+          name,
         }
         newSeries.push(newObj)
       })
     }
-  } catch (e) {
+  }
+  catch (e) {
     // TODO: Maybe we want to show an error here (either a toast or inline centred in the chart space)
   }
   isLoading.value = false
@@ -177,7 +179,7 @@ const colors = computed(() => {
   return {
     groups: getSummaryChartGroupColors(colorMode.value),
     label: getChartTextColor(colorMode.value),
-    background: getChartTooltipBackgroundColor(colorMode.value)
+    background: getChartTooltipBackgroundColor(colorMode.value),
   }
 })
 
@@ -220,7 +222,7 @@ const option = computed(() => {
       containLabel: true,
       top: 10,
       left: '5%',
-      right: '5%'
+      right: '5%',
     },
     xAxis: [
       { // xAxis of the chart
@@ -230,22 +232,22 @@ const option = computed(() => {
         axisLabel: {
           fontSize: textSize,
           lineHeight: 20,
-          formatter: formatTimestamp
-        }
+          formatter: formatTimestamp,
+        },
       },
       { // xAxis of the time frame selection
         type: 'category',
         data: categories.value,
         show: false,
-        boundaryGap: false
-      }
+        boundaryGap: false,
+      },
     ],
     series: series.value,
     yAxis: {
       name: $t(`dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`),
       nameLocation: 'center',
       nameTextStyle: {
-        padding: [0, 0, 30, 0]
+        padding: [0, 0, 30, 0],
       },
       type: 'value',
       minInterval: 10,
@@ -254,19 +256,19 @@ const option = computed(() => {
       silent: true,
       axisLabel: {
         formatter: '{value} %',
-        fontSize: textSize
+        fontSize: textSize,
       },
       splitLine: {
         lineStyle: {
-          color: colors.value.label
-        }
-      }
+          color: colors.value.label,
+        },
+      },
     },
     textStyle: {
       fontFamily,
       fontSize: textSize,
       fontWeight: fontWeightLight,
-      color: colors.value.label
+      color: colors.value.label,
     },
     color: colors.value.groups,
     legend: {
@@ -276,15 +278,15 @@ const option = computed(() => {
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
-        fontWeight: fontWeightMedium
-      }
+        fontWeight: fontWeightMedium,
+      },
     },
     tooltip: {
       order: 'seriesAsc',
       trigger: 'axis',
       padding: 0,
       borderColor: colors.value.background,
-      formatter (params: any): HTMLElement {
+      formatter(params: any): HTMLElement {
         const ts = parseInt(params[0].axisValue)
         let lastDif = 0
         let highlightGroup = ''
@@ -299,13 +301,13 @@ const option = computed(() => {
           return {
             name: param.seriesName,
             efficiency: param.value,
-            color: param.color
+            color: param.color,
           }
         })
         const d = document.createElement('div')
         render(h(SummaryChartTooltip, { t: $t, ts, efficiencyType: props.filter?.efficiency || 'all', aggregation: aggregation.value, groupInfos, highlightGroup }), d)
         return d
-      }
+      },
     },
     dataZoom: {
       type: 'slider',
@@ -316,14 +318,14 @@ const option = computed(() => {
       xAxisIndex: [1],
       dataBackground: {
         lineStyle: {
-          color: colors.value.label
+          color: colors.value.label,
         },
         areaStyle: {
-          color: colors.value.label
-        }
+          color: colors.value.label,
+        },
       },
-      borderColor: colors.value.label
-    }
+      borderColor: colors.value.label,
+    },
   }
 })
 
@@ -334,7 +336,7 @@ const getDataZoomValues = () => {
   const end: number = get(chartOptions, 'dataZoom[0].end', 100) as number
   return {
     start,
-    end
+    end,
   }
 }
 
@@ -352,7 +354,7 @@ const getZoomTimestamps = () => {
     toIndex,
     toTs: categories.value[toIndex],
     fromIndex,
-    fromTs: categories.value[fromIndex]
+    fromTs: categories.value[fromIndex],
   }
 }
 
@@ -373,7 +375,8 @@ const validateDataZoom = (instant?: boolean) => {
       timestamps.toIndex = Math.min(timestamps.fromIndex + MAX_DATA_POINTS, max)
       timestamps.end = timestamps.toIndex * 100 / max
       timestamps.toTs = categories.value[timestamps.toIndex]
-    } else {
+    }
+    else {
       timestamps.fromIndex = Math.max(0, timestamps.toIndex - MAX_DATA_POINTS)
       timestamps.start = timestamps.fromIndex * 100 / max
       timestamps.fromTs = categories.value[timestamps.fromIndex]
@@ -385,7 +388,8 @@ const validateDataZoom = (instant?: boolean) => {
       timestamps.toIndex = timestamps.fromIndex + 1
       timestamps.end = timestamps.toIndex * 100 / max
       timestamps.toTs = categories.value[timestamps.toIndex]
-    } else {
+    }
+    else {
       timestamps.fromIndex = timestamps.toIndex - 1
       timestamps.start = timestamps.fromIndex * 100 / max
       timestamps.fromTs = categories.value[timestamps.fromIndex]
@@ -396,18 +400,19 @@ const validateDataZoom = (instant?: boolean) => {
   const bufferSteps = aggregation.value === 'epoch' ? 0 : 5
   // if we are on the far left of the time frame we omit the fromTs to avoid going to far and cause a webservice error
   // in that case the backend will go back depending on the max secons of the dashboard settings
-  if(timestamps.fromIndex <= bufferSteps){
+  if (timestamps.fromIndex <= bufferSteps) {
     fromTs = undefined
   }
   const newTimeFrames = {
     from: fromTs,
-    to: timestamps.toTs
+    to: timestamps.toTs,
   }
   // when the timeframes of the slider change we bounce the new timeframe for the chart
   if (tempTimeFrames.value.to !== newTimeFrames.to || tempTimeFrames.value.from !== newTimeFrames.from) {
     if (instant) {
       instantTimeFrames(newTimeFrames)
-    } else {
+    }
+    else {
       bounceTimeFrames(newTimeFrames, false, true)
     }
   }
@@ -421,14 +426,15 @@ const validateDataZoom = (instant?: boolean) => {
       if (get(chart.value?.getOption(), 'dataZoom[0]')) {
         chart.value?.dispatchAction({
           type: 'dataZoom',
-          ...currentZoom
+          ...currentZoom,
         })
-      } else {
+      }
+      else {
         chart.value?.setOption({
           dataZoom: {
             ...(get(chart.value, 'xAxis[1]') || {}),
-            ...currentZoom
-          }
+            ...currentZoom,
+          },
         })
       }
     })
@@ -453,15 +459,32 @@ const onDatazoom = () => {
 const onMouseMove = (e: MouseEvent) => {
   lastMouseYPos = e.offsetY
 }
-
 </script>
 
 <template>
-  <div class="summary-chart-container" @mousemove="onMouseMove">
+  <div
+    class="summary-chart-container"
+    @mousemove="onMouseMove"
+  >
     <ClientOnly>
-      <VChart ref="chart" class="chart" :option="option" autoresize @datazoom="onDatazoom" />
-      <BcLoadingSpinner v-if="isLoading" class="loading-spinner" :loading="true" alignment="center" />
-      <div v-if="!isLoading && !series?.length" class="no-data" alignment="center">
+      <VChart
+        ref="chart"
+        class="chart"
+        :option="option"
+        autoresize
+        @datazoom="onDatazoom"
+      />
+      <BcLoadingSpinner
+        v-if="isLoading"
+        class="loading-spinner"
+        :loading="true"
+        alignment="center"
+      />
+      <div
+        v-if="!isLoading && !series?.length"
+        class="no-data"
+        alignment="center"
+      >
         {{ $t('dashboard.validator.summary.chart.no_data') }}
       </div>
     </ClientOnly>

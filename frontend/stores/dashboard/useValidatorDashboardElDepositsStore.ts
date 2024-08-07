@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type {
   InternalGetValidatorDashboardExecutionLayerDepositsResponse,
-  InternalGetValidatorDashboardTotalExecutionDepositsResponse
+  InternalGetValidatorDashboardTotalExecutionDepositsResponse,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
@@ -15,15 +15,15 @@ const validatorDashboardElDepositsStore = defineStore(
     const query = ref<TableQueryParams>()
 
     return { data, query, total }
-  }
+  },
 )
 
-export function useValidatorDashboardElDepositsStore () {
+export function useValidatorDashboardElDepositsStore() {
   const { fetch } = useCustomFetch()
   const {
     data,
     total,
-    query: storedQuery
+    query: storedQuery,
   } = storeToRefs(validatorDashboardElDepositsStore())
 
   const deposits = computed(() => data.value)
@@ -32,9 +32,9 @@ export function useValidatorDashboardElDepositsStore () {
   const isLoadingDeposits = ref(false)
   const isLoadingTotal = ref(false)
 
-  async function getDeposits (
+  async function getDeposits(
     dashboardKey: DashboardKey,
-    query?: TableQueryParams
+    query?: TableQueryParams,
   ) {
     if (!dashboardKey) {
       data.value = undefined
@@ -44,12 +44,12 @@ export function useValidatorDashboardElDepositsStore () {
     }
     storedQuery.value = query
     isLoadingDeposits.value = true
-    const res =
-      await fetch<InternalGetValidatorDashboardExecutionLayerDepositsResponse>(
+    const res
+      = await fetch<InternalGetValidatorDashboardExecutionLayerDepositsResponse>(
         API_PATH.DASHBOARD_EL_DEPOSITS,
         undefined,
         { dashboardKey },
-        query
+        query,
       )
 
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
@@ -61,18 +61,18 @@ export function useValidatorDashboardElDepositsStore () {
     return res
   }
 
-  async function getTotalAmount (dashboardKey: DashboardKey) {
+  async function getTotalAmount(dashboardKey: DashboardKey) {
     if (!dashboardKey) {
       total.value = undefined
       isLoadingTotal.value = false
       return undefined
     }
     isLoadingTotal.value = true
-    const res =
-      await fetch<InternalGetValidatorDashboardTotalExecutionDepositsResponse>(
+    const res
+      = await fetch<InternalGetValidatorDashboardTotalExecutionDepositsResponse>(
         API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL,
         undefined,
-        { dashboardKey }
+        { dashboardKey },
       )
     isLoadingTotal.value = false
     total.value = res?.data?.total_amount
@@ -86,6 +86,6 @@ export function useValidatorDashboardElDepositsStore () {
     query,
     getDeposits,
     isLoadingTotal,
-    isLoadingDeposits
+    isLoadingDeposits,
   }
 }

@@ -32,10 +32,16 @@ const text = computed(() => {
     <div class="dialog-container">
       {{ text.caption }}
       <div class="button-row">
-        <div class="dismiss" @click="dismissed=true">
+        <div
+          class="dismiss"
+          @click="dismissed=true"
+        >
           {{ $t('navigation.dismiss') }}
         </div>
-        <BcLink :to="`/dashboard`" :replace="route.path.startsWith('/dashboard')">
+        <BcLink
+          :to="`/dashboard`"
+          :replace="route.path.startsWith('/dashboard')"
+        >
           <Button>
             {{ text.button }}
           </Button>

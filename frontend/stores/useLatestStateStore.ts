@@ -7,13 +7,13 @@ const latestStateStore = defineStore('latest_state_store', () => {
   return { data }
 })
 
-export function useLatestStateStore () {
+export function useLatestStateStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(latestStateStore())
 
   const latestState = computed(() => data.value)
 
-  async function refreshLatestState () : Promise<LatestStateData|undefined> {
+  async function refreshLatestState(): Promise<LatestStateData | undefined> {
     try {
       const res = await fetch<InternalGetLatestStateResponse>(API_PATH.LATEST_STATE)
       if (!res.data) {
@@ -21,7 +21,8 @@ export function useLatestStateStore () {
       }
       data.value = res.data
       return data.value
-    } catch {
+    }
+    catch {
       return undefined
     }
   }

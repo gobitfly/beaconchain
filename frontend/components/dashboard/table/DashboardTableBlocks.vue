@@ -29,7 +29,7 @@ const colsVisible = computed(() => {
     status: width.value > 750,
     mobileStatus: width.value < 1060,
     rewards: width.value > 650,
-    groupSort: width.value > 450
+    groupSort: width.value > 450,
   }
 })
 
@@ -81,8 +81,8 @@ const getRowClass = (row: VDBBlocksTableRow) => {
 const isRowExpandable = (row: VDBBlocksTableRow) => {
   return row.status !== 'scheduled'
 }
-
 </script>
+
 <template>
   <div>
     <BcTableControl
@@ -137,29 +137,68 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </span>
               </template>
             </Column>
-            <Column v-if="colsVisible.epoch" field="epoch" :header="$t('common.epoch')">
+            <Column
+              v-if="colsVisible.epoch"
+              field="epoch"
+              :header="$t('common.epoch')"
+            >
               <template #body="slotProps">
-                <BcLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link">
-                  <BcFormatNumber :value="slotProps.data.epoch" default="-" />
+                <BcLink
+                  :to="`/epoch/${slotProps.data.epoch}`"
+                  target="_blank"
+                  class="link"
+                >
+                  <BcFormatNumber
+                    :value="slotProps.data.epoch"
+                    default="-"
+                  />
                 </BcLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.slot" field="slot" :sortable="true" :header="$t('common.slot')">
+            <Column
+              v-if="colsVisible.slot"
+              field="slot"
+              :sortable="true"
+              :header="$t('common.slot')"
+            >
               <template #body="slotProps">
-                <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link">
-                  <BcFormatNumber :value="slotProps.data.slot" default="-" />
+                <BcLink
+                  :to="`/slot/${slotProps.data.slot}`"
+                  target="_blank"
+                  class="link"
+                >
+                  <BcFormatNumber
+                    :value="slotProps.data.slot"
+                    default="-"
+                  />
                 </BcLink>
               </template>
             </Column>
-            <Column field="block" :sortable="true" :header="$t('common.block')">
+            <Column
+              field="block"
+              :sortable="true"
+              :header="$t('common.block')"
+            >
               <template #body="slotProps">
-                <BcLink v-if="slotProps.data.block || slotProps.data.slot === 0" :to="`/block/${slotProps.data.block}`" target="_blank" class="link">
-                  <BcFormatNumber :value="slotProps.data.block" default="0" />
+                <BcLink
+                  v-if="slotProps.data.block || slotProps.data.slot === 0"
+                  :to="`/block/${slotProps.data.block}`"
+                  target="_blank"
+                  class="link"
+                >
+                  <BcFormatNumber
+                    :value="slotProps.data.block"
+                    default="0"
+                  />
                 </BcLink>
                 <span v-else>-</span>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" field="age" body-class="age-field">
+            <Column
+              v-if="colsVisible.age"
+              field="age"
+              body-class="age-field"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -175,7 +214,12 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               :body-class="colsVisible.mobileStatus ? 'status-mobile status' : 'status'"
             >
               <template #body="slotProps">
-                <BlockTableStatus class="block-status" :block-slot="slotProps.data.slot" :status="slotProps.data.status" :mobile="colsVisible.mobileStatus" />
+                <BlockTableStatus
+                  class="block-status"
+                  :block-slot="slotProps.data.slot"
+                  :status="slotProps.data.status"
+                  :mobile="colsVisible.mobileStatus"
+                />
               </template>
             </Column>
             <Column
@@ -205,7 +249,10 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               :header="$t('dashboard.validator.col.proposer_rewards')"
             >
               <template #body="slotProps">
-                <BlockTableRewardItem :reward="slotProps.data.reward" :status="slotProps.data.status" />
+                <BlockTableRewardItem
+                  :reward="slotProps.data.reward"
+                  :status="slotProps.data.status"
+                />
               </template>
             </Column>
             <Column
@@ -225,30 +272,51 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <BcLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link">
-                    <BcFormatNumber :value="slotProps.data.epoch" default="-" />
+                  <BcLink
+                    :to="`/epoch/${slotProps.data.epoch}`"
+                    target="_blank"
+                    class="link"
+                  >
+                    <BcFormatNumber
+                      :value="slotProps.data.epoch"
+                      default="-"
+                    />
                   </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
-                  <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link">
-                    <BcFormatNumber :value="slotProps.data.slot" default="-" />
+                  <BcLink
+                    :to="`/slot/${slotProps.data.slot}`"
+                    target="_blank"
+                    class="link"
+                  >
+                    <BcFormatNumber
+                      :value="slotProps.data.slot"
+                      default="-"
+                    />
                   </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
                     <BcTableAgeHeader />
                   </div>
-                  <BcFormatTimePassed class="age-field" :value="slotProps.data.epoch" />
+                  <BcFormatTimePassed
+                    class="age-field"
+                    :value="slotProps.data.epoch"
+                  />
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('dashboard.validator.col.status') }}:
                   </div>
                   <div class="value">
-                    <BlockTableStatus :block-slot="slotProps.data.slot" :status="slotProps.data.status" :mobile="false" />
+                    <BlockTableStatus
+                      :block-slot="slotProps.data.slot"
+                      :status="slotProps.data.status"
+                      :mobile="false"
+                    />
                   </div>
                 </div>
                 <div class="row">
@@ -269,7 +337,10 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     {{ $t('dashboard.validator.col.proposer_rewards') }}:
                   </div>
-                  <BlockTableRewardItem :reward="slotProps.data.reward" :status="slotProps.data.status" />
+                  <BlockTableRewardItem
+                    :reward="slotProps.data.reward"
+                    :status="slotProps.data.status"
+                  />
                 </div>
                 <div class="row">
                   <div class="label">

@@ -1,9 +1,9 @@
 /**
  * Get all possible key paths of an object
  * without arrays
- * 
+ *
  * @example
- * 
+ *
  * type Person = {
  *  age: number
  *  address: {
@@ -13,11 +13,11 @@
  *    outdoor: string[]
  *  }
  * }
- * 
- * type Paths = KeyPaths<Person> // "age" | "address.street" 
- * 
- * @warning 
- * 
+ *
+ * type Paths = KeyPaths<Person> // "age" | "address.street"
+ *
+ * @warning
+ *
  * Arrays are removed
  */
 type KeyPaths<T> = {
@@ -28,6 +28,6 @@ type KeyPaths<T> = {
         : `${K}.${KeyPaths<T[K]>}`
       : K
     : never
-}[keyof T];
+}[keyof T]
 
-export type { KeyPaths };
+export type { KeyPaths }

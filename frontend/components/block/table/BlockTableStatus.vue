@@ -3,8 +3,8 @@ import { type BlockStatus } from '~/types/block'
 import type { TagSize, TagColor } from '~/types/tag'
 
 interface Props {
-  status?: BlockStatus,
-  blockSlot?: number,
+  status?: BlockStatus
+  blockSlot?: number
   mobile?: boolean
 }
 const props = defineProps<Props>()
@@ -49,11 +49,14 @@ const mapped = computed(() => {
     size,
     color,
     label,
-    tooltip
+    tooltip,
   }
 })
-
 </script>
+
 <template>
-  <BcTableTag v-if="mapped" v-bind="mapped" />
+  <BcTableTag
+    v-if="mapped"
+    v-bind="mapped"
+  />
 </template>

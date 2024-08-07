@@ -1,6 +1,6 @@
 import { SettingDefaults, type CookieValue, type GlobalSetting } from '~/types/settings'
 
-export function useGlobalSetting<T> (identifier: GlobalSetting) {
+export function useGlobalSetting<T>(identifier: GlobalSetting) {
   const cookie = useCookie(identifier)
   const config = SettingDefaults[identifier]
 

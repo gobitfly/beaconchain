@@ -6,12 +6,12 @@ import type { SummaryValidatorsIconRowInfo, ValidatorSubset, ValidatorSubsetCate
 import { countSubsetDuties } from '~/utils/dashboard/validator'
 
 interface Props {
-  context: DashboardValidatorContext,
-  subTitle?: string,
+  context: DashboardValidatorContext
+  subTitle?: string
   summary?: {
-    data?: VDBGroupSummaryData,
+    data?: VDBGroupSummaryData
     row: VDBSummaryTableRow
-  },
+  }
   subsets?: ValidatorSubset[]
 }
 const props = defineProps<Props>()
@@ -21,7 +21,7 @@ const infos = computed(() => {
   const list: { value: number | string, slotVizCategory?: SlotVizCategories, className?: string }[] = []
   const percent = {
     total: 0,
-    value: 0
+    value: 0,
   }
   const addSuccessFailed = (category: SlotVizCategories, success?: number, failed?: number, successCategories?: ValidatorSubsetCategory[], failedCategories?: ValidatorSubsetCategory[]) => {
     if (props.subsets?.length && successCategories) {
@@ -63,7 +63,8 @@ const infos = computed(() => {
         online = countSubsetDuties(props.subsets, ['online'])
         offline = countSubsetDuties(props.subsets, ['offline'])
         exited = countSubsetDuties(props.subsets, ['exited', 'slashed'])
-      } else if (props.summary?.row.validators) {
+      }
+      else if (props.summary?.row.validators) {
         online = props.summary.row.validators.online
         offline = props.summary.row.validators.offline
         exited = props.summary.row.validators.exited
@@ -85,7 +86,6 @@ const infos = computed(() => {
 
   return { list, percent, validatorIcons }
 })
-
 </script>
 
 <template>
@@ -95,8 +95,16 @@ const infos = computed(() => {
       :icons="infos.validatorIcons"
       :absolute="true"
     />
-    <div v-for="(info, index) in infos.list" :key="index" :class="info.className" class="info">
-      <SlotVizIcon v-if="info.slotVizCategory" :icon="info.slotVizCategory" />
+    <div
+      v-for="(info, index) in infos.list"
+      :key="index"
+      :class="info.className"
+      class="info"
+    >
+      <SlotVizIcon
+        v-if="info.slotVizCategory"
+        :icon="info.slotVizCategory"
+      />
       <BcFormatNumber :value="info.value" />
     </div>
     <BcFormatPercent

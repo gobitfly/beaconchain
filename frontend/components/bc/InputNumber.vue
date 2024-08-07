@@ -3,18 +3,19 @@ import type { Nullable } from 'primevue/ts-helpers'
 import InputNumber from 'primevue/inputnumber'
 
 const props = defineProps<{
-  min: number,
-  max: number,
+  min: number
+  max: number
   maxFractionDigits: number
 }>()
 
 const parentVmodel = defineModel<number>({ required: true })
 const bridgedVmodel = usePrimitiveRefBridge<number, Nullable<number>>(parentVmodel, n => (isNaN(n) ? null : n), n => (n ?? NaN))
 
-function sendValue (input: Nullable<number>) : void {
+function sendValue(input: Nullable<number>): void {
   if (input === undefined || input === null || isNaN(input) || input < props.min || input > props.max) {
     input = NaN
-  } else {
+  }
+  else {
     const stringifyied = String(input)
     const comma = stringifyied.indexOf('.')
     if (comma >= 0 && stringifyied.length - comma - 1 > props.maxFractionDigits) {

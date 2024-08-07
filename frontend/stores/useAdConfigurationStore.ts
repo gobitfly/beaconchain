@@ -7,16 +7,16 @@ const adConfigurationStore = defineStore('ad_configuration_store', () => {
   return { data }
 })
 
-export function useAdConfigurationStore () {
+export function useAdConfigurationStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(adConfigurationStore())
 
   const adConfigs = computed(() => data.value)
 
-  async function refreshAdConfigs (route:string) {
+  async function refreshAdConfigs(route: string) {
     const keys = ['global', route].join(',')
     const res = await fetch<AdConfiguration[]>(API_PATH.AD_CONFIGURATIONs, undefined, { keys })
-    const newConfigurations:Record<string, AdConfiguration[]> = {}
+    const newConfigurations: Record<string, AdConfiguration[]> = {}
     res.forEach((config) => {
       if (!newConfigurations[config.key]) {
         newConfigurations[config.key] = []

@@ -2,7 +2,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faBars,
-  faCircleUser
+  faCircleUser,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
@@ -11,7 +11,7 @@ import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
 import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
 defineProps<{
-  isHomePage: boolean,
+  isHomePage: boolean
   minimalist: boolean
 }>()
 const { latestState } = useLatestStateStore()
@@ -33,7 +33,8 @@ const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 const rate = computed(() => {
   if (isFiat(currency.value) && rates.value?.[currency.value]) {
     return rates.value[currency.value]
-  } else if (rates.value?.USD) {
+  }
+  else if (rates.value?.USD) {
     return rates.value.USD
   }
   const fiat = available.value?.find(c => isFiat(c))
@@ -55,44 +56,72 @@ const userMenu = computed(() => {
   return [
     {
       label: $t('header.settings'),
-      command: async () => { await navigateTo('../user/settings') }
+      command: async () => { await navigateTo('../user/settings') },
     },
     {
       label: $t('header.logout'),
-      command: () => doLogout()
-    }
+      command: () => doLogout(),
+    },
   ]
 })
 </script>
 
 <template>
-  <div v-if="minimalist" class="minimalist">
+  <div
+    v-if="minimalist"
+    class="minimalist"
+  >
     <div class="top-background" />
     <div class="rows">
       <BcHeaderLogo layout-adaptability="low" />
     </div>
   </div>
 
-  <div v-else class="complete" :class="hideInDevelopmentClass">
+  <div
+    v-else
+    class="complete"
+    :class="hideInDevelopmentClass"
+  >
     <div class="top-background" />
     <div class="rows">
       <div class="grid-cell blockchain-info">
         <span v-if="latestState?.current_slot"><span>{{ $t('header.current_slot') }}</span>:
-          <BcLink :to="`/slot/${latestState.current_slot}`" :disabled="!showInDevelopment || null">
-            <BcFormatNumber class="bold" :value="latestState.current_slot" />
+          <BcLink
+            :to="`/slot/${latestState.current_slot}`"
+            :disabled="!showInDevelopment || null"
+          >
+            <BcFormatNumber
+              class="bold"
+              :value="latestState.current_slot"
+            />
           </BcLink>
         </span>
         <span v-if="currentEpoch !== undefined"><span>{{ $t('header.current_epoch') }}</span>:
-          <BcLink :to="`/epoch/${currentEpoch}`" :disabled="!showInDevelopment || null">
-            <BcFormatNumber class="bold" :value="currentEpoch" />
+          <BcLink
+            :to="`/epoch/${currentEpoch}`"
+            :disabled="!showInDevelopment || null"
+          >
+            <BcFormatNumber
+              class="bold"
+              :value="currentEpoch"
+            />
           </BcLink>
         </span>
         <span v-if="rate">
           <span>
-            <IconNetwork :chain-id="currentNetwork" class="network-icon" :harmonize-perceived-size="true" :colored="false" />{{ networkInfo.elCurrency }}
+            <IconNetwork
+              :chain-id="currentNetwork"
+              class="network-icon"
+              :harmonize-perceived-size="true"
+              :colored="false"
+            />{{ networkInfo.elCurrency }}
           </span>:
           <span> {{ rate.symbol }}
-            <BcFormatNumber class="bold" :value="rate.rate" :max-decimals="2" />
+            <BcFormatNumber
+              class="bold"
+              :value="rate.rate"
+              :max-decimals="2"
+            />
           </span>
         </span>
       </div>
@@ -108,16 +137,36 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell controls">
-        <BcCurrencySelection class="currency" :show-currency-icon="!isMobileScreen" />
-        <div v-if="!isLoggedIn" class="logged-out">
+        <BcCurrencySelection
+          class="currency"
+          :show-currency-icon="!isMobileScreen"
+        />
+        <div
+          v-if="!isLoggedIn"
+          class="logged-out"
+        >
           <BcLink to="/login">
-            <Button class="login" :label="$t('header.login')" />
+            <Button
+              class="login"
+              :label="$t('header.login')"
+            />
           </BcLink>
         </div>
-        <div v-else-if="!isSmallScreen" class="user-menu">
-          <BcDropdown :options="userMenu" variant="header" option-label="label" class="menu-component">
+        <div
+          v-else-if="!isSmallScreen"
+          class="user-menu"
+        >
+          <BcDropdown
+            :options="userMenu"
+            variant="header"
+            option-label="label"
+            class="menu-component"
+          >
             <template #value>
-              <FontAwesomeIcon class="menu-icon" :icon="faCircleUser" />
+              <FontAwesomeIcon
+                class="menu-icon"
+                :icon="faCircleUser"
+              />
             </template>
             <template #option="slotProps">
               <span @click="slotProps.command?.()">
@@ -126,7 +175,11 @@ const userMenu = computed(() => {
             </template>
           </BcDropdown>
         </div>
-        <FontAwesomeIcon :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
+        <FontAwesomeIcon
+          :icon="faBars"
+          class="burger"
+          @click.stop.prevent="toggleMegaMenu"
+        />
       </div>
 
       <div class="grid-cell explorer-info">
@@ -140,7 +193,10 @@ const userMenu = computed(() => {
 
       <div class="grid-cell mega-menu">
         <BcHeaderMegaMenu ref="megaMenu" />
-        <div v-if="isMobileMegaMenuOpen" class="decoration" />
+        <div
+          v-if="isMobileMegaMenuOpen"
+          class="decoration"
+        />
       </div>
     </div>
   </div>

@@ -6,11 +6,19 @@ interface Props {
 }
 
 defineProps<Props>()
-
-
 </script>
+
 <template>
-  <IconFiat v-if="isFiat(currency)" :currency="currency as FiatCurrency" />
-  <IconCrypto v-else-if="isCrypto(currency)" :currency="currency as CryptoCurrency" />
-  <IconNetworkEthereum v-else class="monochromatic" />
+  <IconFiat
+    v-if="isFiat(currency)"
+    :currency="currency as FiatCurrency"
+  />
+  <IconCrypto
+    v-else-if="isCrypto(currency)"
+    :currency="currency as CryptoCurrency"
+  />
+  <IconNetworkEthereum
+    v-else
+    class="monochromatic"
+  />
 </template>

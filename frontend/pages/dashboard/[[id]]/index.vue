@@ -6,7 +6,7 @@ import {
   faCubes,
   faFire,
   faWallet,
-  faMoneyBill
+  faMoneyBill,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
@@ -19,24 +19,24 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const tabs: HashTabs = {
   summary: {
-    index: 0
+    index: 0,
   },
   rewards: {
-    index: 1
+    index: 1,
   },
   blocks: {
-    index: 2
+    index: 2,
   },
   heatmap: {
     index: 3,
-    disabled: !showInDevelopment
+    disabled: !showInDevelopment,
   },
   deposits: {
-    index: 4
+    index: 4,
   },
   withdrawals: {
-    index: 5
-  }
+    index: 5,
+  },
 }
 
 const { activeIndex, setActiveIndex } = useHashTabs(tabs)
@@ -67,7 +67,7 @@ watch(validatorOverviewError, (error) => {
 }, { immediate: true })
 
 const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
-function showDashboardCreationDialog () {
+function showDashboardCreationDialog() {
   dashboardCreationControllerModal.value?.show()
 }
 
@@ -91,13 +91,15 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
       if (cd && cd.hash === undefined) {
         setDashboardKeyIfNoError(cd.id.toString())
       }
-    } else if (!newLoggedIn && cd && isPublic && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
+    }
+    else if (!newLoggedIn && cd && isPublic && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))) {
       // we got a new public dashboard hash but the old hash matches the stored dashboard - so we update the stored dashboard
       if (!errorDashboardKeys.includes(newKey)) {
         updateHash('validator', newKey)
       }
       setDashboardKeyIfNoError(newKey ?? '')
-    } else if (!newKey || !isPublic) {
+    }
+    else if (!newKey || !isPublic) {
       // trying to view a private dashboad but not logged in
       cd = cookieDashboards.value?.validator_dashboards?.[0] as CookieDashboard
       setDashboardKeyIfNoError(cd?.hash ?? '')
@@ -109,7 +111,11 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
-      <DashboardCreationController class="panel-controller" :display-mode="'panel'" :initially-visible="true" />
+      <DashboardCreationController
+        class="panel-controller"
+        :display-mode="'panel'"
+        :initially-visible="true"
+      />
     </BcPageWrapper>
   </div>
   <div v-else>
@@ -128,44 +134,70 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
       <div>
         <DashboardValidatorSlotViz />
       </div>
-      <TabView lazy class="dashboard-tab-view" :active-index="activeIndex" @update:active-index="setActiveIndex">
+      <TabView
+        lazy
+        class="dashboard-tab-view"
+        :active-index="activeIndex"
+        @update:active-index="setActiveIndex"
+      >
         <TabPanel>
           <template #header>
-            <BcTabHeader :header="$t('dashboard.validator.tabs.summary')" :icon="faChartLineUp" />
+            <BcTabHeader
+              :header="$t('dashboard.validator.tabs.summary')"
+              :icon="faChartLineUp"
+            />
           </template>
           <DashboardTableSummary />
         </TabPanel>
         <TabPanel>
           <template #header>
-            <BcTabHeader :header="$t('dashboard.validator.tabs.rewards')" :icon="faCubes" />
+            <BcTabHeader
+              :header="$t('dashboard.validator.tabs.rewards')"
+              :icon="faCubes"
+            />
           </template>
           <DashboardTableRewards />
         </TabPanel>
         <TabPanel>
           <template #header>
-            <BcTabHeader :header="$t('dashboard.validator.tabs.blocks')" :icon="faCube" />
+            <BcTabHeader
+              :header="$t('dashboard.validator.tabs.blocks')"
+              :icon="faCube"
+            />
           </template>
           <DashboardTableBlocks />
         </TabPanel>
         <TabPanel :disabled="tabs.heatmap.disabled">
           <template #header>
-            <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
+            <BcTabHeader
+              :header="$t('dashboard.validator.tabs.heatmap')"
+              :icon="faFire"
+            />
           </template>
           Heatmap coming soon!
         </TabPanel>
         <TabPanel>
           <template #header>
-            <BcTabHeader :header="$t('dashboard.validator.tabs.deposits')" :icon="faWallet" />
+            <BcTabHeader
+              :header="$t('dashboard.validator.tabs.deposits')"
+              :icon="faWallet"
+            />
           </template>
           <div class="deposits">
             <DashboardTableElDeposits />
-            <FontAwesomeIcon :icon="faArrowDown" class="down_icon" />
+            <FontAwesomeIcon
+              :icon="faArrowDown"
+              class="down_icon"
+            />
             <DashboardTableClDeposits />
           </div>
         </TabPanel>
         <TabPanel>
           <template #header>
-            <BcTabHeader :header="$t('dashboard.validator.tabs.withdrawals')" :icon="faMoneyBill" />
+            <BcTabHeader
+              :header="$t('dashboard.validator.tabs.withdrawals')"
+              :icon="faMoneyBill"
+            />
           </template>
           <DashboardTableWithdrawals />
         </TabPanel>

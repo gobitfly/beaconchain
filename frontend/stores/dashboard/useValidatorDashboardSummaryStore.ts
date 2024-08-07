@@ -12,7 +12,7 @@ const validatorDashboardSummaryStore = defineStore('validator_dashboard_sumary_s
   return { data, query }
 })
 
-export function useValidatorDashboardSummaryStore () {
+export function useValidatorDashboardSummaryStore() {
   const { fetch } = useCustomFetch()
 
   const { data, query: storedQuery } = storeToRefs(validatorDashboardSummaryStore())
@@ -21,7 +21,7 @@ export function useValidatorDashboardSummaryStore () {
   const summary = computed(() => data.value)
   const query = computed(() => storedQuery.value)
 
-  async function getSummary (dashboardKey: DashboardKey, timeFrame: SummaryTimeFrame, query?: TableQueryParams) {
+  async function getSummary(dashboardKey: DashboardKey, timeFrame: SummaryTimeFrame, query?: TableQueryParams) {
     if (!dashboardKey) {
       data.value = undefined
       isLoading.value = false

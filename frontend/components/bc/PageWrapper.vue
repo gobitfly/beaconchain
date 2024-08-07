@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  isHomePage?: boolean,
+  isHomePage?: boolean
   minimalistHeader?: boolean
 }>()
 </script>
@@ -8,7 +8,10 @@ defineProps<{
 <template>
   <BcCookieModal />
   <div class="page">
-    <BcHeaderMainHeader :is-home-page="!!isHomePage" :minimalist="!!minimalistHeader" />
+    <BcHeaderMainHeader
+      :is-home-page="!!isHomePage"
+      :minimalist="!!minimalistHeader"
+    />
     <BcMaintenanceBanner />
     <div class="content">
       <slot name="top" />

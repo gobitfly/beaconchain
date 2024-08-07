@@ -12,7 +12,7 @@ const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards_
   return { data, query }
 })
 
-export function useValidatorDashboardRewardsStore () {
+export function useValidatorDashboardRewardsStore() {
   const { fetch } = useCustomFetch()
   const { data, query: storedQuery } = storeToRefs(validatorDashboardRewardsStore())
   const isLoading = ref(false)
@@ -22,7 +22,7 @@ export function useValidatorDashboardRewardsStore () {
   const rewards = computed(() => data.value)
   const query = computed(() => storedQuery.value)
 
-  async function getRewards (dashboardKey: DashboardKey, query?: TableQueryParams) {
+  async function getRewards(dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (!dashboardKey) {
       data.value = undefined
       isLoading.value = false

@@ -1,28 +1,42 @@
 <script setup lang="ts">
 import {
-  faEdit
+  faEdit,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-const emit = defineEmits<{(e: 'onEdit'): void }>()
+const emit = defineEmits<{ (e: 'onEdit'): void }>()
 
 interface Props {
-  label?: string,
-  noIcon?: boolean,
-  truncateText?: boolean,
+  label?: string
+  noIcon?: boolean
+  truncateText?: boolean
 }
 defineProps<Props>()
 </script>
 
 <template>
-  <div class="bc-poput-edit" :class="{ 'truncate-text': truncateText }">
+  <div
+    class="bc-poput-edit"
+    :class="{ 'truncate-text': truncateText }"
+  >
     <slot name="content">
-      <BcTooltip v-if="label" :hide="!truncateText" :fit-content="true" class="content" :text="label">
+      <BcTooltip
+        v-if="label"
+        :hide="!truncateText"
+        :fit-content="true"
+        class="content"
+        :text="label"
+      >
         {{ label }}
       </BcTooltip>
     </slot>
     <div class="icon">
-      <FontAwesomeIcon v-if="!noIcon" class="link" :icon="faEdit" @click="() => emit('onEdit')" />
+      <FontAwesomeIcon
+        v-if="!noIcon"
+        class="link"
+        :icon="faEdit"
+        @click="() => emit('onEdit')"
+      />
     </div>
   </div>
 </template>

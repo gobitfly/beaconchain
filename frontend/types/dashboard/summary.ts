@@ -19,16 +19,16 @@ export type SummaryDetailsEfficiencyCombinedProp = SummaryDetailsEfficiencySpeci
 
 export type DashboardValidatorContext = 'dashboard' | 'group' | 'attestation' | 'sync' | 'slashings' | 'proposal'
 
-export type SummaryRow = { prop?: SummaryDetailsEfficiencyCombinedProp, title: string}
+export type SummaryRow = { prop?: SummaryDetailsEfficiencyCombinedProp, title: string }
 
 export const SummaryTimeFrames = ['last_1h', 'last_24h', 'last_7d', 'last_30d', 'all_time'] as const
 export type SummaryTimeFrame = typeof SummaryTimeFrames[number]
 
 export type SummaryTableVisibility = {
-  proposals: boolean,
-  attestations: boolean,
-  reward: boolean,
-  efficiency: boolean,
+  proposals: boolean
+  attestations: boolean
+  reward: boolean
+  efficiency: boolean
   validatorsSortable: boolean
 }
 
@@ -42,8 +42,8 @@ export const EfficiencyTypes = ['all', 'attestation', 'sync', 'proposal']
 export type EfficiencyType = typeof EfficiencyTypes[number]
 
 export type SummaryChartFilter = {
-  groupIds: number[],
-  aggregation: AggregationTimeframe,
-  efficiency: EfficiencyType,
-  initialised?: boolean,
+  groupIds: number[]
+  aggregation: AggregationTimeframe
+  efficiency: EfficiencyType
+  initialised?: boolean
 }

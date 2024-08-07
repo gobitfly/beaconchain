@@ -14,8 +14,8 @@ const data: ValidatorHistoryDuties[] = [
       cl_sync_inclusion_income: '123450000',
       cl_slashing_inclusion_income: '123450000',
       el_income: '123450000',
-      status: 'success'
-    }
+      status: 'success',
+    },
   },
   {
     attestation_head: { income: '-123450000', status: 'failed' },
@@ -29,8 +29,8 @@ const data: ValidatorHistoryDuties[] = [
       cl_sync_inclusion_income: '123450000',
       cl_slashing_inclusion_income: '123450000',
       el_income: '123450000',
-      status: 'success'
-    }
+      status: 'success',
+    },
   },
   {
     attestation_head: { income: '123450000', status: 'success' },
@@ -44,8 +44,8 @@ const data: ValidatorHistoryDuties[] = [
       cl_sync_inclusion_income: '-133450000',
       cl_slashing_inclusion_income: '-133450000',
       el_income: '-133450000',
-      status: 'failed'
-    }
+      status: 'failed',
+    },
   },
   {
     attestation_head: { income: '123450000', status: 'success' },
@@ -59,8 +59,8 @@ const data: ValidatorHistoryDuties[] = [
       cl_sync_inclusion_income: '123450000',
       cl_slashing_inclusion_income: '123450000',
       el_income: '123450000',
-      status: 'success'
-    }
+      status: 'success',
+    },
   },
   {
     attestation_head: { income: '-123450000', status: 'failed' },
@@ -74,8 +74,8 @@ const data: ValidatorHistoryDuties[] = [
       cl_sync_inclusion_income: '-123450000',
       cl_slashing_inclusion_income: '-123450000',
       el_income: '-123450000',
-      status: 'failed'
-    }
+      status: 'failed',
+    },
   },
   {
     proposal: {
@@ -83,31 +83,38 @@ const data: ValidatorHistoryDuties[] = [
       cl_sync_inclusion_income: '0',
       cl_slashing_inclusion_income: '0',
       el_income: '0',
-      status: 'failed'
-    }
+      status: 'failed',
+    },
   },
-  {}
+  {},
 ]
-
 </script>
 
 <template>
   <div class="container">
     <div class="item">
-      <DashboardTableSummaryReward :reward="{el:'213129312312', cl:'18293791237'}" />
+      <DashboardTableSummaryReward :reward="{ el: '213129312312', cl: '18293791237' }" />
     </div>
     <div class="item">
-      <DashboardTableSummaryStatus :status="{next_sync_count: 123,current_sync_count:0, slashed_count: 1}" />
+      <DashboardTableSummaryStatus :status="{ next_sync_count: 123, current_sync_count: 0, slashed_count: 1 }" />
     </div>
     <div class="item">
-      <DashboardTableSummaryStatus :status="{next_sync_count: 0,current_sync_count:8, slashed_count: 0}" />
+      <DashboardTableSummaryStatus :status="{ next_sync_count: 0, current_sync_count: 8, slashed_count: 0 }" />
     </div>
-    <div v-for="(duty, index) in data" :key="index" class="item">
-      <ValidatorTableDutyStatus :data="duty" :compact="index === 1" />
+    <div
+      v-for="(duty, index) in data"
+      :key="index"
+      class="item"
+    >
+      <ValidatorTableDutyStatus
+        :data="duty"
+        :compact="index === 1"
+      />
       <ValidatorTableDutyRewards :data="duty" />
     </div>
   </div>
 </template>
+
 <style lang="scss" scoped>
 .container {
   display: flex;

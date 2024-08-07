@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { get } from 'lodash-es'
 import {
-  faInfoCircle
+  faInfoCircle,
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { PremiumPerks } from '~/types/api/user'
@@ -11,18 +11,18 @@ const { products } = useProductsStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 type CompareValue = {
-  value?: string | boolean,
-  tooltip?: string,
+  value?: string | boolean
+  tooltip?: string
   class?: string
 }
 
 type RowType = 'header' | 'group' | 'perc' | 'label'
 
 type CompareRow = {
-  type: RowType,
-  label?: string,
-  subText?: string,
-  values?: CompareValue[],
+  type: RowType
+  label?: string
+  subText?: string
+  values?: CompareValue[]
   className?: string
 }
 
@@ -31,7 +31,7 @@ const showContent = ref(false)
 const rows = computed(() => {
   const sorted = products.value?.premium_products?.toSorted((a, b) => a.price_per_month_eur - b.price_per_month_eur) ?? []
   const rows: CompareRow[] = []
-  const mapValue = (property: string, perks: PremiumPerks):CompareValue => {
+  const mapValue = (property: string, perks: PremiumPerks): CompareValue => {
     if (['support_us', 'bulk_adding'].includes(property)) {
       return { value: perks.ad_free }
     }
@@ -39,10 +39,12 @@ const rows = computed(() => {
 
     if (!value) {
       value = false
-    } else if (property.includes('_seconds')) {
+    }
+    else if (property.includes('_seconds')) {
       if (value === Number.MAX_SAFE_INTEGER) {
         value = $t('pricing.full_history')
-      } else {
+      }
+      else {
         value = $t('common.last_x', { duration: formatTimeDuration(value as number, $t) })
       }
     }
@@ -54,7 +56,7 @@ const rows = computed(() => {
 
     return {
       value,
-      tooltip
+      tooltip,
     }
   }
   const addRow = (type: RowType, property?: string, className?: string, subText?: string, hidePositiveValues = false, translationKey?: string) => {
@@ -127,34 +129,60 @@ const rows = computed(() => {
 
   return rows
 })
-
 </script>
 
 <template>
   <div class="compare-plans-container">
     <h1>{{ $t('pricing.compare') }}</h1>
-    <div class="content" :class="{ 'show-content': showContent }">
-      <div v-for="(row, index) in rows" :key="index" :class="[row.type, row.className]" class="row">
+    <div
+      class="content"
+      :class="{ 'show-content': showContent }"
+    >
+      <div
+        v-for="(row, index) in rows"
+        :key="index"
+        :class="[row.type, row.className]"
+        class="row"
+      >
         <div class="label">
           <span>{{ row.label }}</span>
-          <span v-if="row.subText" class="sub-text"> {{ row.subText }}</span>
+          <span
+            v-if="row.subText"
+            class="sub-text"
+          > {{ row.subText }}</span>
         </div>
-        <div v-for="(value, vIndex) in row.values" :key="vIndex" class="value" :class="value.class">
+        <div
+          v-for="(value, vIndex) in row.values"
+          :key="vIndex"
+          class="value"
+          :class="value.class"
+        >
           <span v-if="typeof value.value === 'boolean'">
             <BcFeatureCheck :available="value.value" />
           </span>
           <span v-else>
             {{ value.value }}
           </span>
-          <BcTooltip v-if="value.tooltip" :fit-content="true" :text="value.tooltip" class="info-icon">
+          <BcTooltip
+            v-if="value.tooltip"
+            :fit-content="true"
+            :text="value.tooltip"
+            class="info-icon"
+          >
             <FontAwesomeIcon :icon="faInfoCircle" />
           </BcTooltip>
         </div>
       </div>
       <BcBlurOverlay class="blur" />
     </div>
-    <div class="button-row" :class="{ 'show-content': showContent }">
-      <Button class="pricing_button" @click="() => showContent = !showContent">
+    <div
+      class="button-row"
+      :class="{ 'show-content': showContent }"
+    >
+      <Button
+        class="pricing_button"
+        @click="() => showContent = !showContent"
+      >
         {{ $t(showContent ? 'pricing.hide_feature' : 'pricing.show_feature') }}
       </Button>
     </div>

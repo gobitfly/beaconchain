@@ -3,8 +3,8 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
-  trueIcon?: IconDefinition,
-  falseIcon?: IconDefinition,
+  trueIcon?: IconDefinition
+  falseIcon?: IconDefinition
   disabled?: boolean
 }
 
@@ -21,19 +21,29 @@ const toggle = () => {
   }
   selected.value = !selected.value
 }
-
 </script>
 
 <template>
-  <div class="bc-toggle" :class="{ selected }" :disabled="disabled || null" @click="toggle">
+  <div
+    class="bc-toggle"
+    :class="{ selected }"
+    :disabled="disabled || null"
+    @click="toggle"
+  >
     <div class="icon true-icon">
       <slot name="trueIcon">
-        <FontAwesomeIcon v-if="trueIcon" :icon="trueIcon" />
+        <FontAwesomeIcon
+          v-if="trueIcon"
+          :icon="trueIcon"
+        />
       </slot>
     </div>
     <div class="icon false-icon">
       <slot name="falseIcon">
-        <FontAwesomeIcon v-if="falseIcon" :icon="falseIcon" />
+        <FontAwesomeIcon
+          v-if="falseIcon"
+          :icon="falseIcon"
+        />
       </slot>
     </div>
     <span class="slider" />

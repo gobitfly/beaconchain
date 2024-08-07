@@ -13,20 +13,25 @@ const maintenanceLabel = computed(() => {
   if (isNaN(parsed)) {
     warn('NUXT_PUBLIC_MAINTENANCE_TS is not convertible to an integer, a unix ts is expected')
     return undefined
-  } else if (parsed === 0) {
+  }
+  else if (parsed === 0) {
     return
   }
   const ts = new Date(parsed * 1000).getTime()
   if (ts > tick.value) {
     return $t('maintenance.planned', { date: formatTsToAbsolute(ts / 1000, $t('locales.date'), true) })
-  } else {
+  }
+  else {
     return $t('maintenance.ongoing')
   }
 })
-
 </script>
+
 <template>
-  <div v-if="maintenanceLabel" class="maintenance-banner">
+  <div
+    v-if="maintenanceLabel"
+    class="maintenance-banner"
+  >
     {{ maintenanceLabel }}
   </div>
 </template>

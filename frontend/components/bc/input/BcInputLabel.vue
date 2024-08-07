@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import {
   faCheck,
-  faEdit
+  faEdit,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
-  value?: string,
-  label?: string, // used if not in edit mode, defaults to value,
-  disabled?: boolean,
-  canBeEmpty?: boolean,
-  maxlength?: number,
-  pattern?: RegExp,
-  trimInput?: boolean,
+  value?: string
+  label?: string // used if not in edit mode, defaults to value,
+  disabled?: boolean
+  canBeEmpty?: boolean
+  maxlength?: number
+  pattern?: RegExp
+  trimInput?: boolean
 }
 
 const props = defineProps<Props>()
 const inputRef = ref<ComponentPublicInstance | null>(null)
 
-const emit = defineEmits<{(e: 'setValue', value: string): void }>()
+const emit = defineEmits<{ (e: 'setValue', value: string): void }>()
 
 const isEditing = ref(false)
 const editValue = ref<string>(props.value ?? '')
@@ -46,7 +46,7 @@ const iconClick = () => {
 
 const icon = computed(() => ({
   icon: isEditing.value ? faCheck : faEdit,
-  disabled: (props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty)) || (props.pattern && !props.pattern.test(editValue.value))) ? true : null
+  disabled: (props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty)) || (props.pattern && !props.pattern.test(editValue.value))) ? true : null,
 }))
 
 watch(() => props.value, (v) => {
@@ -58,18 +58,33 @@ watch([isEditing, inputRef], ([edit, input]) => {
     input?.$el?.focus()
   }
 })
-
 </script>
 
 <template>
   <div class="input-container">
-    <div v-if="isEditing" class="input-wrapper">
-      <InputText ref="inputRef" v-model="editValue" :maxlength="maxlength" @keypress.enter="iconClick" />
+    <div
+      v-if="isEditing"
+      class="input-wrapper"
+    >
+      <InputText
+        ref="inputRef"
+        v-model="editValue"
+        :maxlength="maxlength"
+        @keypress.enter="iconClick"
+      />
     </div>
-    <span v-if="!isEditing" class="label">
+    <span
+      v-if="!isEditing"
+      class="label"
+    >
       {{ label || value }}
     </span>
-    <FontAwesomeIcon class="link" :icon="icon.icon" :disabled="icon.disabled" @click="iconClick" />
+    <FontAwesomeIcon
+      class="link"
+      :icon="icon.icon"
+      :disabled="icon.disabled"
+      @click="iconClick"
+    />
   </div>
 </template>
 

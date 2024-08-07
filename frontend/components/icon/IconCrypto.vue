@@ -6,8 +6,18 @@ interface Props {
 }
 defineProps<Props>()
 </script>
+
 <template>
-  <IconNetworkEthereum v-if="currency==='ETH'" class="monochromatic" />
-  <IconNetworkGnosis v-else-if="currency==='GNO'" class="monochromatic" />
-  <IconCryptoDai v-else-if="currency==='DAI' || currency==='xDAI'" class="monochromatic" />
+  <IconNetworkEthereum
+    v-if="currency==='ETH'"
+    class="monochromatic"
+  />
+  <IconNetworkGnosis
+    v-else-if="currency==='GNO'"
+    class="monochromatic"
+  />
+  <IconCryptoDai
+    v-else-if="currency==='DAI' || currency==='xDAI'"
+    class="monochromatic"
+  />
 </template>

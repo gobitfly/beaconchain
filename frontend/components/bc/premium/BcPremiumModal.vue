@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 interface Props {
-  description?: string,
+  description?: string
   dismissLabel?: string
 }
 
@@ -14,7 +14,6 @@ const hide = () => {
 onMounted(() => {
   setHeader($t('premium.title'), true)
 })
-
 </script>
 
 <template>
@@ -22,10 +21,17 @@ onMounted(() => {
     {{ props?.description || $t('premium.description') }}
   </div>
   <div class="footer">
-    <div class="dismiss" @click="hide()">
+    <div
+      class="dismiss"
+      @click="hide()"
+    >
       {{ props?.dismissLabel || $t('navigation.dismiss') }}
     </div>
-    <BcLink to="/pricing" target="_blank" @click="hide()">
+    <BcLink
+      to="/pricing"
+      target="_blank"
+      @click="hide()"
+    >
       <Button :label="$t('premium.unlock')" />
     </BcLink>
   </div>

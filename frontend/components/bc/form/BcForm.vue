@@ -4,7 +4,7 @@
 
 <template>
   <form class="bc-form">
-    <slot/>
+    <slot />
   </form>
 </template>
 

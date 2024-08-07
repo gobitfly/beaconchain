@@ -2,14 +2,14 @@
 import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
-  text?: string,
-  title?: string,
+  text?: string
+  title?: string
   layout?: 'special' | 'default'
-  position?: 'top' | 'left' | 'right' | 'bottom',
-  hide?: boolean,
-  tooltipClass?: string,
-  fitContent?: boolean,
-  renderTextAsHtml?: boolean,
+  position?: 'top' | 'left' | 'right' | 'bottom'
+  hide?: boolean
+  tooltipClass?: string
+  fitContent?: boolean
+  renderTextAsHtml?: boolean
   scrollContainer?: string // query selector for scrollable parent container
   dontOpenPermanently?: boolean
   hoverDelay?: number
@@ -119,10 +119,12 @@ const setPosition = () => {
 const handleClick = () => {
   if (isSelected.value) {
     doSelect(null)
-  } else if (canBeOpened.value) {
+  }
+  else if (canBeOpened.value) {
     if (props.dontOpenPermanently) {
       instantHover(true)
-    } else {
+    }
+    else {
       doSelect(bcTooltipOwner.value)
     }
     setPosition()
@@ -133,7 +135,8 @@ const onHover = () => {
   if (canBeOpened.value && !selected.value) {
     if (props.hoverDelay) {
       bounceHover(true, false, false, props.hoverDelay)
-    } else {
+    }
+    else {
       instantHover(true)
       setPosition()
     }
@@ -160,7 +163,8 @@ const checkScrollListener = (add: boolean) => {
     if (container) {
       if (add) {
         container.addEventListener('scroll', doHide)
-      } else {
+      }
+      else {
         container.removeEventListener('scroll', doHide)
       }
     }
@@ -199,7 +203,7 @@ watch(isOpen, (value) => {
   }
 })
 
-function removeParentListeners () {
+function removeParentListeners() {
   document.removeEventListener('click', doHide)
   document.removeEventListener('scroll', doHide)
   window.removeEventListener('resize', onWindowResize)
@@ -213,8 +217,8 @@ onUnmounted(() => {
     doSelect(null)
   }
 })
-
 </script>
+
 <template>
   <div
     ref="bcTooltipOwner"
@@ -225,15 +229,22 @@ onUnmounted(() => {
     @blur="bounceHover(false, false, true)"
   >
     <slot />
-    <Teleport v-if="isOpen" to="body">
-      <div class="bc-tooltip-wrapper" :style="{...pos, ...{ width: tooltipWidth }}"  :class="tooltipClass">
+    <Teleport
+      v-if="isOpen"
+      to="body"
+    >
+      <div
+        class="bc-tooltip-wrapper"
+        :style="{ ...pos, ...{ width: tooltipWidth } }"
+        :class="tooltipClass"
+      >
         <div
-        ref="bcTooltip"
-        class="bc-tooltip"
-        :class="classList"
-        @click="$event.stopImmediatePropagation()"
-        @mouseover="instantHoverTooltip(true)"
-        @mouseleave="bounceHoverTooltip(false, false, true)"
+          ref="bcTooltip"
+          class="bc-tooltip"
+          :class="classList"
+          @click="$event.stopImmediatePropagation()"
+          @mouseover="instantHoverTooltip(true)"
+          @mouseleave="bounceHoverTooltip(false, false, true)"
         >
           <slot name="tooltip">
             <span>

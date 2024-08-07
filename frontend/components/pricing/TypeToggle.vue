@@ -9,7 +9,10 @@
         {{ $t('pricing.premium') }}
       </div>
     </div>
-    <div class="api-keys" disabled>
+    <div
+      class="api-keys"
+      disabled
+    >
       <div class="label">
         {{ $t('pricing.API_keys') }}
       </div>
