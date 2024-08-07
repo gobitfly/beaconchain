@@ -53,6 +53,7 @@ const handleClick = () => {
       ref="button"
       :disabled="disabledFilter"
       :aria-expanded="isFilterVisible"
+      data-secondary
       class="p-button-icon-only"
       :class="{ filter_visible: isFilterVisible }"
       @click="handleClick"

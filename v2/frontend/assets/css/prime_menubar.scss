@@ -1,4 +1,5 @@
 @use "~/assets/css/fonts.scss";
+@use "~/assets/css/utils.scss";
 
 .p-menubar {
   @include fonts.button_text;
@@ -9,41 +10,91 @@
   .p-menubar-root-list {
     flex-wrap: nowrap;
     gap: var(--padding);
+    min-width: 1px;
 
+    @media (max-width: 519px) {
+      gap: var(--padding-small);
+    }
     > .p-menuitem {
       background: var(--list-background);
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
       height: 30px;
+      min-width: 1px;
+      &:has([highlight]) {
+        color: var(--text-color-inverted);
+        background: var(--button-color-active);
+        border-color: var(--button-color-active);
+      }
       &:has(.router-link-active),
       &:has(.p-active) {
         color: var(--primary-color);
         border-color: var(--primary-color);
-      }     
+      }
       > .p-menuitem-content {
-        padding: var(--padding-small) var(--padding-large);
+        padding: var(--padding-small) var(--padding);
         border-radius: var(--border-radius);
-        height: 28px;
+        height: 27px;
+        margin-top: 1px;
+        justify-content: center;
 
-        .text {
-          // this hack is necessary to make the clickable area as big as the parent
-          &::before{
-            cursor: pointer;
-            content: "";
-            position: absolute;
-            inset: 0;
-          }
-        }
-        .button-content {
-          margin-top: 1px;
-          justify-content: center;
-          text-align: center;
+        &:not(:has(.text)) {
+          padding-left: 8px;
+          padding-right: 8px;
         }
       }
 
-      &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+      &:has(> .p-menuitem-content .text-disabled) {
+        cursor: default;
+
+        > .p-menuitem-content {
+          opacity: 0.5;
+        }
+      }
+
+      &:not(:has([highlight])):not(.p-disabled) > .p-menuitem-content:hover {
         background: var(--list-hover-background);
       }
+      &:has([highlight]):not(.p-disabled) > .p-menuitem-content:hover {
+        background: var(--button-color-hover);
+      }
+    }
+  }
+
+  .button-content {
+    margin-top: 1px;
+    display: flex;
+    white-space: nowrap;
+    text-align: center;
+    gap: var(--padding);
+
+    &:has(.icon):has(.text){
+      justify-content: flex-start;
+    }
+    &:has(.toggle) {
+      justify-content: space-between;
+    }
+
+    .text {
+      @include utils.truncate-text;
+
+      // this hack is necessary to make the clickable area as big as the parent
+      &::before {
+        cursor: pointer;
+        content: "";
+        position: absolute;
+        inset: 0;
+      }
+    }
+
+    .toggle {
+      flex-shrink: 0;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
+    .pointer {
+      cursor: pointer;
     }
   }
 
@@ -54,6 +105,7 @@
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
     cursor: default;
+    font-weight: var(--standard_text_font_weight);
 
     .p-menuitem {
       border-radius: var(--border-radius);
@@ -61,28 +113,21 @@
       white-space: nowrap;
       text-overflow: ellipsis;
       max-width: 200px;
-      
-      .text {
-        // this hack is necessary to make the clickable area as big as the parent
-        &::before{
-          cursor: pointer;
-          content: "";
-          position: absolute;
-          inset: 0;
-        }
-      }
 
       &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);
       }
 
-      &:not(.p-highlight):not(.p-disabled):hover {
+      &:not(:has([highlight])):not(.p-disabled):hover {
         background: var(--list-hover-background);
+      }
+      &:has([highlight]):not(.p-disabled):hover {
+        background: var(--button-color-hover);
       }
 
       &:not(:last-child) {
         margin-bottom: var(--padding);
-        :after{
+        :after {
           content: "";
           position: absolute;
           left: 0;
@@ -91,7 +136,7 @@
           border-bottom: 1px solid var(--container-border-color);
         }
         &.p-big-separator {
-          :after{
+          :after {
             border-bottom-width: 3px;
             bottom: -6px;
           }

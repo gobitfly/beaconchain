@@ -1,5 +1,9 @@
 <script lang="ts" setup>
 import {
+  faDesktop,
+  faEdit,
+  faGear,
+  faPeopleGroup,
   faShare,
   faUsers,
   faTrash
@@ -7,13 +11,21 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
+import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal, DashboardRenameModal, RocketpoolToggle } from '#components'
 import type { DashboardKey, Dashboard } from '~/types/dashboard'
-import type { MenuBarEntry } from '~/types/menuBar'
+import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
+interface Props {
+  dashboardTitle?: string,
+}
+const props = defineProps<Props>()
+
+const route = useRoute()
+const isValidatorDashboard = route.name === 'dashboard-id'
 const { isLoggedIn } = useUserStore()
 const { dashboardKey, isPublic, isPrivate, isShared, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
+const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
 
 const { t: $t } = useTranslation()
@@ -21,6 +33,7 @@ const { width } = useWindowSize()
 const dialog = useDialog()
 const { fetch } = useCustomFetch()
 
+const isMobile = computed(() => width.value < 520)
 const manageGroupsModalVisisble = ref(false)
 const manageValidatorsModalVisisble = ref(false)
 
@@ -33,6 +46,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
 
   buttons.push({
     dropdown: false,
+    faIcon: isMobile.value ? faPeopleGroup : undefined,
     label: $t('dashboard.validator.manage_groups'),
     command: () => { manageGroupsModalVisisble.value = true }
   })
@@ -41,17 +55,20 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
     buttons.push(
       {
         dropdown: false,
+        faIcon: isMobile.value ? faDesktop : undefined,
+        highlight: !isMobile.value,
         label: $t('dashboard.validator.manage_validators'),
         command: () => { manageValidatorsModalVisisble.value = true }
       }
     )
   }
 
-  if (width.value < 520 && buttons.length > 1) {
+  if (isMobile.value && buttons.length > 1) {
     return [
       {
-        label: 'Manage',
+        label: $t('dashboard.header.manage'),
         dropdown: true,
+        highlight: true,
         items: buttons
       }
     ]
@@ -69,10 +86,50 @@ const shareDashboard = computed(() => {
 const shareButtonOptions = computed(() => {
   const edit = isPrivate.value && !shareDashboard.value?.public_ids?.length
 
-  const label = !edit ? $t('dashboard.shared') : $t('dashboard.share')
+  const label = isMobile.value ? '' : !edit ? $t('dashboard.shared') : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
   const disabled = isShared.value || !dashboardKey.value
   return { label, icon, edit, disabled }
+})
+
+const editButtons = computed<MenuBarEntry[]>(() => {
+  const buttons: MenuBarButton[] = []
+
+  buttons.push({
+    component: RocketpoolToggle
+  })
+
+  if( isPrivate.value ){
+    buttons.push({
+      faIcon: faEdit,
+      label: $t('dashboard.rename_dashboard'),
+      command: editDashboard
+    })    
+  }
+
+  if(!shareButtonOptions.value.disabled) {
+    buttons.push({
+      faIcon: shareButtonOptions.value.icon,
+      label: shareButtonOptions.value.edit ? $t('dashboard.share_dashboard') : $t('dashboard.shared_dashboard'),
+      command: share
+    })
+  }
+
+  if(!isShared.value && dashboardKey.value) {
+    buttons.push({
+      faIcon: faTrash,
+      label: $t('dashboard.delete_dashboard'),
+      command: onDelete
+    })
+  }
+
+  return [
+    {
+      faIcon: faGear,
+      dropdown: true,
+      items: buttons
+    }
+  ]
 })
 
 const shareView = () => {
@@ -175,28 +232,53 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   // no private dashboard available, forward to creation screen
   setDashboardKey('')
 }
+
+const title = computed(() => {
+  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+})
+
+const editDashboard = () => {
+  const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
+  const dashboard = list?.find(d => `${d.id}` === dashboardKey.value)
+  if (!dashboard) {
+    return
+  }
+  dialog.open(DashboardRenameModal, {
+    data: {
+      dashboard,
+      dashboardType: dashboardType.value
+    },
+    onClose: (value?: DynamicDialogCloseOptions | undefined) => {
+      if (value?.data === true) {
+        refreshDashboards()
+        refreshOverview(dashboardKey.value)
+      }
+    }
+  })
+}
 </script>
 
 <template>
   <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
-  <DashboardValidatorManagementModal v-if="dashboardType=='validator'" v-model="manageValidatorsModalVisisble" />
+  <DashboardValidatorManagementModal v-if="dashboardType == 'validator'" v-model="manageValidatorsModalVisisble" />
   <div class="header-row">
-    <div class="action-button-container">
-      <Button class="share-button" :disabled="shareButtonOptions.disabled" @click="share()">
-        {{ shareButtonOptions.label }}<FontAwesomeIcon :icon="shareButtonOptions.icon" />
-      </Button>
-      <Button v-if="deleteButtonOptions.visible" class="p-button-icon-only" :disabled="deleteButtonOptions.disabled" @click="onDelete()">
-        <FontAwesomeIcon :icon="faTrash" />
-      </Button>
+    <div class="h1 dashboard-title">
+      {{ title }}
     </div>
-    <Menubar v-if="manageButtons" :model="manageButtons" breakpoint="0px" class="right-aligned-submenu">
-      <template #item="{ item }">
-        <span class="button-content pointer">
-          <span class="text">{{ item.label }}</span>
-          <IconChevron v-if="item.dropdown" class="toggle" direction="bottom" />
-        </span>
-      </template>
-    </Menubar>
+    <div class="action-button-container">
+      <Button
+        data-secondary
+        class="share-button"
+        :class="{ 'p-button-icon-only': !shareButtonOptions.label }"
+        :disabled="shareButtonOptions.disabled"
+        @click="share()"
+      >
+        {{ shareButtonOptions.label }}
+        <FontAwesomeIcon :icon="shareButtonOptions.icon" />
+      </Button>
+      <BcMenuBar :buttons="editButtons" :align-right="isMobile" />
+    </div>
+    <BcMenuBar :buttons="manageButtons" :align-right="true" />
   </div>
 </template>
 
@@ -207,42 +289,29 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 .header-row {
   height: 30px;
   display: flex;
-  justify-content: space-between;
   gap: var(--padding);
   margin-bottom: var(--padding-large);
-
-  .action-button-container{
-    display: flex;
-    gap: var(--padding);
-
-    .share-button{
-      display: flex;
-      gap: var(--padding-small);
-    }
+  @media (max-width: 519px) {
+    gap: var(--padding-small);
   }
 
-  :deep(.p-menubar .p-menubar-root-list) {
-    >.p-menuitem{
-      color: var(--text-color-inverted);
-      background: var(--button-color-active);
-      border-color: var(--button-color-active);
+  .dashboard-title {
+    @include utils.truncate-text;
+  }
 
-      >.p-menuitem-content {
-        margin-top: 1px;
-        .button-content{
-          .toggle {
-            margin-left: var(--padding);
-          }
-        }
-      }
+  .action-button-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: flex-start;
+    gap: var(--padding);
+    @media (max-width: 519px) {
+      justify-content: flex-end;
+      gap: var(--padding-small);
+    }
 
-      >.p-submenu-list {
-        font-weight: var(--standard_text_font_weight);
-      }
-
-      &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
-        background: var(--button-color-hover);
-      }
+    .share-button {
+      display: flex;
+      gap: var(--padding-small);
     }
   }
 }
