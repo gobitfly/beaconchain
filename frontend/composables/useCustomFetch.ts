@@ -14,10 +14,11 @@ export function useCustomFetch () {
   const xRealIp = useRequestHeader('x-real-ip')
   const { csrfHeader, setCsrfHeader } = useCsrfStore()
   const { showError } = useBcToast()
-  const { t: $t } = useI18n()
+  const { t: $t } = useTranslation()
   const { $bcLogger } = useNuxtApp()
   const uuid = inject<{value: string}>('app-uuid')
 
+  // eslint-disable-next-line @typescript-eslint/ban-types
   async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
     if (!map) {
@@ -40,7 +41,7 @@ export function useCustomFetch () {
     let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
     const ssrSecret = pConfig?.ssrSecret
 
-    if (process.server) {
+    if (isServer) {
       baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
     }
 
@@ -49,7 +50,7 @@ export function useCustomFetch () {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
 
-    if (process.server && ssrSecret) {
+    if (isServer && ssrSecret) {
       options.headers.append('x-ssr-secret', ssrSecret)
     }
 
@@ -57,7 +58,7 @@ export function useCustomFetch () {
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
 
-    if (process.server && logIp === 'LOG') {
+    if (isServer && logIp === 'LOG') {
       $bcLogger.warn(`${uuid?.value} | x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`, headers)
     }
 
@@ -93,5 +94,6 @@ export function useCustomFetch () {
       throw (e)
     }
   }
+
   return { fetch }
 }

@@ -9,7 +9,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { latestState } = useLatestStateStore()
 

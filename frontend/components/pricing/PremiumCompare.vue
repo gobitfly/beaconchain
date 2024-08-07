@@ -6,7 +6,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { PremiumPerks } from '~/types/api/user'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
@@ -29,7 +29,7 @@ type CompareRow = {
 const showContent = ref(false)
 
 const rows = computed(() => {
-  const sorted = products.value?.premium_products?.sort((a, b) => a.price_per_month_eur - b.price_per_month_eur) ?? []
+  const sorted = products.value?.premium_products?.toSorted((a, b) => a.price_per_month_eur - b.price_per_month_eur) ?? []
   const rows: CompareRow[] = []
   const mapValue = (property: string, perks: PremiumPerks):CompareValue => {
     if (['support_us', 'bulk_adding'].includes(property)) {

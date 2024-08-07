@@ -7,7 +7,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const mapped = computed(() => {
   const mapCount = (count: number, key: string, icon: SlotVizIcons) => {

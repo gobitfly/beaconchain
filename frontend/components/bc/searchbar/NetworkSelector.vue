@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
-import { SearchbarShape, type SearchbarColors, type SearchbarDropdownLayout, type NetworkFilter } from '~/types/searchbar'
+import type { SearchbarShape, SearchbarColors, SearchbarDropdownLayout, NetworkFilter } from '~/types/searchbar';
 import { ChainInfo, ChainIDs } from '~/types/network'
 
 const emit = defineEmits<{(e: 'change') : void}>()
@@ -12,7 +12,7 @@ defineProps<{
 }>()
 const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
 
-const { t } = useI18n()
+const { t } = useTranslation()
 
 const headState = ref<{look : 'on'|'off', network : string}>({
   look: 'off',
@@ -169,11 +169,11 @@ function oneOptionChanged (index : number) {
     border-radius: var(--padding);
     left: 0px;
     top: 24px;
+    padding: var(--padding);
+    @include fonts.small_text_bold;
     @media (pointer: coarse) {
       top: 32px;
     }
-    padding: var(--padding);
-    @include fonts.small_text_bold;
 
     &.default {
       background-color: var(--list-background);

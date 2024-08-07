@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -68,17 +69,18 @@ var (
 )
 
 const (
-	maxNameLength              = 50
-	maxValidatorsInList        = 20
-	maxQueryLimit       uint64 = 100
-	defaultReturnLimit  uint64 = 10
-	sortOrderAscending         = "asc"
-	sortOrderDescending        = "desc"
-	defaultSortOrder           = sortOrderAscending
-	ethereum                   = "ethereum"
-	gnosis                     = "gnosis"
-	allowEmpty                 = true
-	forbidEmpty                = false
+	maxNameLength                     = 50
+	maxValidatorsInList               = 20
+	maxQueryLimit              uint64 = 100
+	defaultReturnLimit         uint64 = 10
+	sortOrderAscending                = "asc"
+	sortOrderDescending               = "desc"
+	defaultSortOrder                  = sortOrderAscending
+	ethereum                          = "ethereum"
+	gnosis                            = "gnosis"
+	allowEmpty                        = true
+	forbidEmpty                       = false
+	maxArchivedDashboardsCount        = 10
 )
 
 var (
@@ -317,7 +319,8 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 }
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
-// it should be used as the last validation step for all internal dashboard handlers.
+// it should be used as the last validation step for all internal dashboard GET-handlers.
+// Modifying handlers (POST, PUT, DELETE) should only accept primary dashboard ids and just use checkPrimaryDashboardId.
 func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
@@ -329,6 +332,7 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	if err != nil {
 		return nil, err
 	}
+
 	return dashboardId, nil
 }
 
@@ -357,6 +361,32 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 	}
 
 	return &userInfo.PremiumPerks, nil
+}
+
+// helper function to unify handling of block detail request validation
+func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string) (uint64, uint64, error) {
+	var v validationError
+	var err error
+	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+	var value uint64
+	switch paramValue := mux.Vars(r)[paramName]; paramValue {
+	// possibly add other values like "genesis", "finalized", hardforks etc. later
+	case "latest":
+		if paramName == "block" {
+			value, err = h.dai.GetLatestBlock()
+		} else if paramName == "slot" {
+			value, err = h.dai.GetLatestSlot()
+		}
+		if err != nil {
+			return 0, 0, err
+		}
+	default:
+		value = v.checkUint(paramValue, paramName)
+	}
+	if v.hasErrors() {
+		return 0, 0, v
+	}
+	return chainId, value, nil
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
@@ -420,6 +450,10 @@ func (v *validationError) checkAddress(publicId string) string {
 	return v.checkRegex(reEthereumAddress, publicId, "address")
 }
 
+func (v *validationError) checkUintMinMax(param string, min uint64, max uint64, paramName string) uint64 {
+	return checkMinMax(v, v.checkUint(param, paramName), min, max, paramName)
+}
+
 func (v *validationError) checkPagingParams(q url.Values) Paging {
 	paging := Paging{
 		cursor: q.Get("cursor"),
@@ -428,13 +462,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	}
 
 	if limitStr := q.Get("limit"); limitStr != "" {
-		limit, err := strconv.ParseUint(limitStr, 10, 64)
-		if err != nil {
-			v.add("limit", fmt.Sprintf("given value '%s' is not a valid positive integer", limitStr))
-			return paging
-		}
-		checkMinMax(v, limit, 1, maxQueryLimit, "limit")
-		paging.limit = limit
+		paging.limit = v.checkUintMinMax(limitStr, 1, maxQueryLimit, "limit")
 	}
 
 	if paging.cursor != "" {
@@ -745,6 +773,8 @@ func errWithMsg(err error, format string, args ...interface{}) error {
 	return fmt.Errorf("%w: %s", err, fmt.Sprintf(format, args...))
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
 }
@@ -754,14 +784,19 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
 
+//nolint:unparam
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
 }
 
+//nolint:nolintlint
+//nolint:unparam
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
 }

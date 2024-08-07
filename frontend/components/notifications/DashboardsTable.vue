@@ -12,7 +12,7 @@ defineEmits<{(e: 'openDialog'): void }>()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { onSort, setCursor, setPageSize, setSearch, notificationsDashboards, query, isLoading } = useNotificationsDashboardStore()
 
@@ -259,12 +259,13 @@ $breakpoint-lg: 1024px;
   }
 }
 :deep(.col-group) {
+  @include utils.truncate-text;
   @media (max-width: $breakpoint-lg) {
     @include utils.set-all-width(80px);
   }
-  @include utils.truncate-text;
 }
 :deep(.col-entity) {
+  padding-right: 3px !important;
   @media (max-width: $breakpoint-lg) {
     @include utils.set-all-width(85px);
     padding-left: 0px !important;
@@ -272,7 +273,6 @@ $breakpoint-lg: 1024px;
   *:not([data-pc-section="sort"]) {
     @include utils.truncate-text;
   }
-  padding-right: 3px !important;
 }
 
 :deep(.bc-table-header) {

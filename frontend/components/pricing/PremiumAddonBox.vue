@@ -6,7 +6,7 @@ import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon 
 import { formatPremiumProductPrice } from '~/utils/format'
 import { Target } from '~/types/links'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { user, isLoggedIn } = useUserStore()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
@@ -303,6 +303,7 @@ const purchaseQuantityButtons = computed(() => {
         display: flex;
         justify-content: center;
         gap: 15px;
+        margin-bottom: 20px;
 
         .quantity-input {
           width: 45px;
@@ -317,14 +318,11 @@ const purchaseQuantityButtons = computed(() => {
           height: 100%;
         }
       }
-
-      margin-bottom: 20px;
     }
 
     .limit-reached-row {
       height: 16px;
       font-size: 13px;
-
       margin-bottom: 20px;
     }
 
@@ -386,6 +384,7 @@ const purchaseQuantityButtons = computed(() => {
 
       .quantity-row {
         height: 20px;
+        margin-bottom: 10px;
 
         .quantity-label {
           font-size: 12px;
@@ -407,13 +406,11 @@ const purchaseQuantityButtons = computed(() => {
           }
         }
 
-        margin-bottom: 10px;
       }
 
       .limit-reached-row {
         height: 10px;
         font-size: 8px;
-
         margin-bottom: 20px;
       }
 

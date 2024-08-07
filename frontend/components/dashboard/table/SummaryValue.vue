@@ -32,7 +32,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { tm: $tm, t: $t } = useI18n()
+const { tm: $tm, t: $t } = useTranslation()
 const { dashboardKey } = useDashboardKey()
 const dialog = useDialog()
 const { groups } = useValidatorDashboardGroups()
@@ -121,6 +121,7 @@ const data = computed(() => {
       missedRewards: col.missed_rewards
     }
   }
+  return undefined
 })
 
 const groupName = computed(() => {

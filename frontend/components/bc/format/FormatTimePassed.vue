@@ -14,7 +14,7 @@ interface Props {
   unitLength?: StringUnitLength
 }
 const props = defineProps<Props>()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { timestamp } = useDate()
 const { setting } = useGlobalSetting<AgeFormat>('age-format')
 

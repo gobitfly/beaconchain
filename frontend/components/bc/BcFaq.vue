@@ -7,10 +7,11 @@ interface Props {
   translationPath?: string
 }
 const props = defineProps<Props>()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const questions = computed(() => {
   const list = []
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const path: string = `${props.translationPath}.${(list.length)}`
     const question = tD($t, `${path}.question`)

@@ -6,7 +6,7 @@ import { type OverviewTableData } from '~/types/dashboard/overview'
 import { TimeFrames, type NumberOrString } from '~/types/value'
 import { totalElClNumbers } from '~/utils/bigMath'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { converter } = useValue()
 
 const tPath = 'dashboard.validator.overview.'

@@ -22,7 +22,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { tsToSlot } = useNetworkStore()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const selectedCategories = useCookie<SlotVizCategories[]>(COOKIE_KEY.SLOT_VIZ_SELECTED_CATEGORIES, { default: () => ['attestation', 'proposal', 'slashing', 'sync', 'visible', 'initial'] })
 
@@ -70,6 +70,7 @@ const mostRecentScheduledSlotId = computed(() => {
       }
     }
   }
+  return id
 })
 
 const currentSlotId = computed(() => {
@@ -108,10 +109,10 @@ watch(() => props, () => {
         </BcLink>
       </BCTooltip>
       <div class="filter-row">
-        <BcToggleMultiBar v-model="selectedCategories" :icons="icons" />
+        <BcToggleMultiBar v-model="selectedCategories" :buttons="icons" />
       </div>
       <h1 class="network">
-        {{ networkInfo?.family }} {{ networkInfo?.name }}
+        {{ networkInfo?.name }}
       </h1>
       <div class="header-right">
         <slot name="header-right" />

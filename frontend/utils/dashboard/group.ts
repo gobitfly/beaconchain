@@ -1,4 +1,4 @@
-import type { ComposerTranslation } from '@nuxtjs/i18n/dist/runtime/composables'
+import type { ComposerTranslation } from 'vue-i18n'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 

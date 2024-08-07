@@ -3,7 +3,7 @@ import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
 import { Target } from '~/types/links'
 
 const cookiePreference = useCookie<CookiesPreference>(COOKIE_KEY.COOKIES_PREFERENCE, { default: () => undefined })
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const setCookiePreference = (value: CookiesPreference) => {
   cookiePreference.value = value

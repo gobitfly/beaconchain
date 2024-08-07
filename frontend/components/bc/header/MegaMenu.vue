@@ -56,10 +56,9 @@ import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 import { Target } from '~/types/links'
 import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
-const { withLabel, currency, setCurrency } = useCurrency()
 const route = useRoute()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const megaMenu = ref<{toggle:(evt:Event)=>void, mobileActive: boolean} | null>(null)
@@ -938,15 +937,6 @@ const items = computed(() => {
         label: $t('header.settings'),
         command: async () => { await navigateTo('../user/settings') }
       })
-    } else {
-      list.push({
-        label: currency.value,
-        currency: currency.value,
-        items: [[{
-          label: $t('header.megamenu.select_currency'),
-          items: withLabel.value.map(m => ({ ...m, command: () => setCurrency(m.currency) }))
-        }]]
-      })
     }
   }
   if (isSmallScreen.value && isLoggedIn.value) {
@@ -976,10 +966,9 @@ defineExpose({
     <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint">
       <template #item="{item, hasSubmenu}">
         <span class="p-menuitem-link">
-          <span v-if="item.svg || item.icon || item.currency" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
+          <span v-if="item.svg || item.icon" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
             <component :is="item.svg" v-if="item.svg" class="monochromatic" />
             <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
-            <IconCurrency v-else-if="item.currency" :currency="item.currency" />
           </span>
           <BcLink v-if="item.url" :to="item.url" :replace="route.path.startsWith(item.url)">
             <span :class="[item.class]" class="p-menuitem-text">

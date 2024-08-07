@@ -6,7 +6,7 @@ import { type Currency } from '~/types/currencies'
 export function useCurrency () {
   const { latestState } = useLatestStateStore()
   const { networkInfo } = useNetworkStore()
-  const { t: $t } = useI18n()
+  const { t: $t } = useTranslation()
   const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
   const available = ref<Currency[]>([])
   const withLabel = ref<{currency: Currency, label: string}[]>([])

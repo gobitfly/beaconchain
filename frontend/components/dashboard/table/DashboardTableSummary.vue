@@ -10,14 +10,12 @@ import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValida
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { SummaryTimeFrames, type SummaryChartFilter, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
-import type { DashboardTableSummaryValidators } from '#build/components'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const { t: $t } = useI18n()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const { t: $t } = useTranslation()
 const chartFilter = ref<SummaryChartFilter>({ aggregation: 'hourly', efficiency: 'all', groupIds: [] })
 
 const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
@@ -28,7 +26,7 @@ const showAbsoluteValues = ref<boolean | null>(null)
 const { overview, hasValidators, validatorCount } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
-const timeFrames = computed(() => SummaryTimeFrames.filter(t => showInDevelopment || t !== 'last_1h').map(t => ({ name: $t(`time_frames.${t}`), id: t })))
+const timeFrames = computed(() => SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })))
 const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
 
 const { width } = useWindowSize()
@@ -100,7 +98,6 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
     <BcTableControl
       v-model:="showAbsoluteValues"
       :search-placeholder="searchPlaceholder"
-      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #header-center="{tableIsShown}">
@@ -271,7 +268,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartSummaryChart v-if="showInDevelopment" :filter="chartFilter" />
+          <DashboardChartSummaryChart :filter="chartFilter" />
         </div>
       </template>
     </BcTableControl>

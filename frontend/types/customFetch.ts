@@ -1,4 +1,4 @@
-import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList } from '~/utils/mock'
+import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList, mockManageNotificationsGeneral } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
@@ -35,7 +35,10 @@ export enum API_PATH {
   DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
-  NOTIFICATIONS_MANAGEMENT_DASHBOARD = '/notifications/managementDashboard',
+  GET_NOTIFICATIONS_SETTINGS_DASHBOARD = '/notifications/managementDashboard',
+  NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
+  NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
+  NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   LATEST_STATE = '/latestState',
   NOTIFICATIONS_DASHBOARDS='/notifications/dashboards',
   REGISTER = '/register',
@@ -45,7 +48,9 @@ export enum API_PATH {
   AVAILABLE_NETWORKS = '/availableNetworks',
   PRODUCT_SUMMARY = '/productSummary',
   STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
-  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session'
+  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
+  SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards',
+  NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test-webhook'
 }
 
 export type PathValues = Record<string, string | number>
@@ -230,8 +235,23 @@ export const mapping: Record<string, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false
   },
-  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD]: {
-    path: '/notifications/management/dashboard',
+  [API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD]: {
+    path: '/users/me/notifications/settings/dashboards',
+    mock: false
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
+    path: '/users/me/notifications/settings/general',
+    mockFunction: mockManageNotificationsGeneral,
+    mock: true
+  },
+  [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
+    path: '/users/me/notifications/test-push',
+    method: 'POST',
+    mock: true
+  },
+  [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
+    path: '/users/me/notifications/test-emails',
+    method: 'POST',
     mock: true
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
@@ -291,6 +311,17 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.STRIPE_CHECKOUT_SESSION]: {
     path: '/user/stripe/create-checkout-session',
+    method: 'POST',
+    mock: false
+  },
+  [API_PATH.SAVE_DASHBOARDS_SETTINGS]: {
+    path: '/users/me/notifications/settings/{for}-dashboards/{dashboard_key}/groups/{group_id}',
+    getPath: values => `/users/me/notifications/settings/${values?.for}-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
+    method: 'POST',
+    mock: false
+  },
+  [API_PATH.NOTIFICATIONS_TEST_WEBHOOK]: {
+    path: '/users/me/notifications/test-webhook',
     method: 'POST',
     mock: false
   }

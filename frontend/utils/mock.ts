@@ -1,6 +1,8 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import type { ApiDataResponse } from '~/types/api/common'
+import { isMainNet } from '~/types/network'
 import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
+import { type InternalGetUserNotificationSettingsResponse } from '~/types/api/notifications'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -353,13 +355,51 @@ interface ApiChainInfo {
 
 export function simulateAPIresponseAboutNetworkList () : ApiDataResponse<ApiChainInfo[]> {
   const result = { data: [] } as ApiDataResponse<ApiChainInfo[]>
-
-  result.data.push(
-    { chain_id: 1, name: 'ethereum' },
-    { chain_id: 17000, name: 'holesky' },
-    { chain_id: 100, name: 'gnosis' },
-    { chain_id: 10200, name: 'chiado' }
-  )
-
+  if (isMainNet(Number(useRuntimeConfig().public.chainIdByDefault))) {
+    result.data.push({ chain_id: 1, name: 'ethereum' }, { chain_id: 100, name: 'gnosis' })
+    if (useRuntimeConfig().public.showInDevelopment) {
+      result.data.push({ chain_id: 42161, name: 'arbitrum' }, { chain_id: 8453, name: 'base' })
+    }
+  } else {
+    result.data.push({ chain_id: 17000, name: 'holesky' }, { chain_id: 10200, name: 'chiado' })
+    if (useRuntimeConfig().public.showInDevelopment) {
+      result.data.push({ chain_id: 421614, name: 'arbitrum testnet' }, { chain_id: 84532, name: 'base testnet' })
+    }
+  }
   return result
+}
+
+export function mockManageNotificationsGeneral (): InternalGetUserNotificationSettingsResponse {
+  return {
+    data: {
+      general_settings: {
+        do_not_disturb_timestamp: 9000,
+        is_email_notifications_enabled: false,
+        is_push_notifications_enabled: true,
+        is_machine_offline_subscribed: true,
+        machine_storage_usage_threshold: 80,
+        machine_cpu_usage_threshold: 40,
+        machine_memory_usage_threshold: 50,
+        subscribed_clients: [],
+        is_rocket_pool_new_reward_round_subscribed: true,
+        rocket_pool_max_collateral_threshold: 29823,
+        rocket_pool_min_collateral_threshold: 123
+      },
+      networks: [],
+      paired_devices: [
+        {
+          id: 'ABC-test',
+          name: 'My device',
+          is_notifications_enabled: true,
+          paired_timestamp: 1620000000
+        },
+        {
+          id: 'DEF-test',
+          name: 'My other device',
+          is_notifications_enabled: false,
+          paired_timestamp: 1700000000
+        }
+      ]
+    }
+  }
 }

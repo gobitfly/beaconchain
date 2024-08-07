@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {
+import type {
   SearchbarShape,
-  type SearchbarColors,
-  type SearchbarDropdownLayout
-} from '~/types/searchbar'
+  SearchbarColors,
+  SearchbarDropdownLayout
+} from '~/types/searchbar';
 
 defineProps<{
   barShape: SearchbarShape,
@@ -43,20 +43,20 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   user-select: none;
   border-radius: 10px;
   height: 22px;
-  @media (pointer: coarse) {
-    border-radius: 15px;
-    height: 30px;
-  }
   padding-left: 8px;
   padding-right: 8px;
   text-align: center;
   transition: 0.2s;
+  white-space: nowrap;
+  overflow: clip;
   @include fonts.small_text_bold;
+  @media (pointer: coarse) {
+    border-radius: 15px;
+    height: 30px;
+  }
   &.narrow-dropdown {
     letter-spacing: -0.02em;
   }
-  white-space: nowrap;
-  overflow: clip;
   &.default {
     border: 1px solid var(--container-border-color);
   }
@@ -70,10 +70,10 @@ const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
   &:not(.off) {
     &.on,
     &:has(.hidden-checkbox:checked) {
+      background-color: var(--button-color-active);
       &.default {
         border: 1px solid var(--button-color-active);
       }
-      background-color: var(--button-color-active);
       &:hover {
         @media (hover: hover) {
           background-color: var(--button-color-hover);

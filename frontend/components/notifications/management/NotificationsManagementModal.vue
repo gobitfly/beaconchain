@@ -6,12 +6,16 @@ import {
   faBolt,
   faNetworkWired
 } from '@fortawesome/pro-solid-svg-icons'
+import { useUseNotificationsManagementSettingsProvider } from '~/composables/notifications/useNotificationsManagementSettingsProvider'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+
+const { refreshSettings, isLoading } = useUseNotificationsManagementSettingsProvider()
+refreshSettings()
 
 </script>
 
@@ -27,7 +31,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
         <template #header>
           <BcTabHeader :header="$t('notifications.tabs.general')" :icon="faCog" />
         </template>
-        General coming soon!
+
+        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <NotificationsManagementGeneralTab v-else />
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
@@ -39,13 +45,19 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
         <template #header>
           <BcTabHeader :header="$t('notifications.tabs.machines')" :icon="faMonitorWaveform" />
         </template>
-        Machines coming soon!
+        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <div v-else>
+          Machines coming soon!
+        </div>
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
           <BcTabHeader :header="$t('notifications.tabs.clients')" :icon="faBolt" />
         </template>
-        Clients coming soon!
+        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <div v-else>
+          Clients coming soon!
+        </div>
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
@@ -55,13 +67,19 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
             </template>
           </BcTabHeader>
         </template>
-        Rocket Pool coming soon!
+        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <div v-else>
+          Rocket Pool coming soon!
+        </div>
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
           <BcTabHeader :header="$t('notifications.tabs.network')" :icon="faNetworkWired" />
         </template>
-        Network coming soon!
+        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <div v-else>
+          Network coming soon!
+        </div>
       </TabPanel>
     </TabView>
     <Button class="done-button" :label="$t('navigation.done')" @click="visible = false" />

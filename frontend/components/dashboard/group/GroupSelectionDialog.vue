@@ -7,7 +7,7 @@ interface Props {
   totalValidators?: number
 }
 const { props, setHeader, dialogRef } = useBcDialog<Props>()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const selectedGroupId = ref<number>()
 

@@ -6,10 +6,10 @@
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
 import {
-  MinimumTimeBetweenAPIcalls,
   LayoutThreshold,
-  Category,
-  ResultType,
+  MinimumTimeBetweenAPIcalls,
+  type Category,
+  type ResultType,
   type HowToFillresultSuggestionOutput,
   type ResultSuggestionOutput,
   TypeInfo,
@@ -23,10 +23,10 @@ import {
   type ResultSuggestion,
   type ResultSuggestionInternal,
   type OrganizedResults,
-  SearchbarShape,
+  type SearchbarShape,
   type SearchbarColors,
   type SearchbarDropdownLayout,
-  SearchbarPurpose,
+  type SearchbarPurpose,
   SearchbarPurposeInfo,
   type Matching,
   type PickingCallBackFunction,
@@ -37,13 +37,12 @@ import {
 } from '~/types/searchbar'
 import { ChainIDs, ChainInfo } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
 defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
 
-const { t } = useI18n()
+const { t } = useTranslation()
 const { fetch } = useCustomFetch()
 const { availableNetworks } = useNetworkStore()
 
@@ -69,7 +68,7 @@ enum States {
 
 interface GlobalState {
   state: States,
-  functionToCallAfterResultsGetOrganized: Function | null
+  functionToCallAfterResultsGetOrganized: (() => void) | null
   showDropdown: boolean
 }
 
@@ -214,7 +213,7 @@ watch(() => props, reconfigureSearchbar, { immediate: true })
 watch(availableNetworks, reconfigureSearchbar)
 
 let resizingObserver: ResizeObserver
-if (process.client) {
+if (isClient) {
   resizingObserver = new ResizeObserver((entries) => {
     const newLayout : SearchbarDropdownLayout = (entries[0].borderBoxSize[0].inlineSize < LayoutThreshold) ? 'narrow-dropdown' : 'large-dropdown'
     if (newLayout !== dropdownLayout.value) { // reassigning 'narrow-dropdown' to 'narrow-dropdown' (for ex) is not guaranteed to preserve the pointer, so this trick makes sure that we do not trigger Vue watchers for nothing (draining the battery and slowing down the UI)
@@ -953,11 +952,11 @@ function informationIfHiddenResults () : string {
               margin-right: 8px;
               height: 1px;
               display: none;
+              background-color: var(--input-border-color);
               &.small {
                 &.narrow-dropdown {
                   display: block;
                 }
-                background-color: var(--input-border-color);
               }
             }
           }
@@ -973,6 +972,8 @@ function informationIfHiddenResults () : string {
         justify-content: center;
         text-align: center;
         align-items: center;
+        padding-left: 6px;
+        padding-right: 6px;
         &.bottom {
           padding-top: 6px;
           margin-top: auto;
@@ -982,8 +983,6 @@ function informationIfHiddenResults () : string {
           margin-top: auto;
           height: 60px;
         }
-        padding-left: 6px;
-        padding-right: 6px;
       }
     }
   }

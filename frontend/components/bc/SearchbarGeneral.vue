@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
-import { ChainInfo } from '~/types/network'
+import { type SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 
 defineProps<{
   barShape: SearchbarShape,
@@ -11,7 +10,7 @@ defineProps<{
 async function redirectToRelevantPage (result : ResultSuggestion) {
   let path : string
   let q = ''
-  const networkPath = '/networks' + ChainInfo[result.chainId].path
+  const networkPath = '/networks/' + result.chainId
 
   switch (result.type) {
     case ResultType.Tokens :

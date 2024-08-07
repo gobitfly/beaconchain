@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal } from '#components'
-import type { DashboardKey } from '~/types/dashboard'
+import type { DashboardKey, Dashboard } from '~/types/dashboard'
 import type { MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
@@ -16,7 +16,7 @@ const { isLoggedIn } = useUserStore()
 const { dashboardKey, isPublic, isPrivate, isShared, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
 const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const dialog = useDialog()
 const { fetch } = useCustomFetch()
@@ -152,8 +152,8 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 
   if (forward) {
     // try to forward the user to a private dashboard
-    let preferedDashboards = dashboards.value?.validator_dashboards ?? []
-    let fallbackDashboards = dashboards.value?.account_dashboards ?? []
+    let preferedDashboards: Dashboard[] = dashboards.value?.validator_dashboards ?? []
+    let fallbackDashboards: Dashboard[] = dashboards.value?.account_dashboards ?? []
     let fallbackUrl = '/account-dashboard/'
     if (dashboardType.value === 'account') {
       preferedDashboards = dashboards.value?.account_dashboards ?? []

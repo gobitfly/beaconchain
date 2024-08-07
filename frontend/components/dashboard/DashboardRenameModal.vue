@@ -3,7 +3,7 @@ import type { DashboardType } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 
 const name = defineModel<string>('name', { default: '' })
@@ -13,13 +13,15 @@ interface Props {
   dashboard: ValidatorDashboard,
   dashboardType: DashboardType
 }
-const { props, setHeader, dialogRef } = useBcDialog<Props>()
+const { props, setHeader, dialogRef } = useBcDialog<Props>({pt:{header:{ class: 'dashboard-rename-modal-header'}}})
 
 watch(props, (p) => {
-  setHeader($t('dashboard.rename.title'))
+  let title = $t('dashboard.rename.title')
   if (p) {
     name.value = p.dashboard.name
+    title += ' - ' + p.dashboard.name
   }
+  setHeader(title)
 }, { immediate: true })
 
 const renameDisabled = computed(() => {
@@ -46,7 +48,7 @@ const rename = async () => {
 
 <template>
   <div class="dashboard_rename_modal_container">
-    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="rename" />
+    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" :maxlength="50" class="input-field" @keypress.enter="rename" />
     <div class="footer">
       <Button :disabled="renameDisabled" @click="rename">
         {{ $t('navigation.save') }}
@@ -56,6 +58,12 @@ const rename = async () => {
 </template>
 
 <style lang="scss" scoped>
+@use "~/assets/css/utils.scss";
+
+:global(.dashboard-rename-modal-header .p-dialog-title) {
+  @include utils.truncate-text;
+  max-width: 600px;
+}
 .dashboard_rename_modal_container {
   width: 620px;
   display: flex;

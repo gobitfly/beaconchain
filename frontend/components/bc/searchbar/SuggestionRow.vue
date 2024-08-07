@@ -11,10 +11,10 @@ import {
   ResultType,
   wasOutputDataGivenByTheAPI,
   type ResultSuggestionInternal,
-  SearchbarShape,
+  type SearchbarShape,
   type SearchbarColors,
   type SearchbarDropdownLayout,
-  SearchbarPurpose,
+  type SearchbarPurpose,
   SearchbarPurposeInfo,
   SuggestionrowCells,
   getI18nPathOfTranslatableLitteral
@@ -29,7 +29,7 @@ const props = defineProps<{
   screenWidthCausingSuddenChange: number
 }>()
 
-const { t } = useI18n()
+const { t } = useTranslation()
 
 function formatSubcategoryCell () : string {
   const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title)
@@ -208,16 +208,18 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
     position: relative;
     grid-column: 1;
     grid-row: 1;
-    &.narrow-dropdown {
-      grid-row-end: span 2;
-    }
     display: flex;
     margin-top: auto;
     margin-bottom: auto;
     width: 30px;
     height: 36px;
 
+    &.narrow-dropdown {
+      grid-row-end: span 2;
+    }
     .type-icon {
+      width: 20px;
+      max-height: 20px;
       &.not-alone {
         display: inline;
         position: relative;
@@ -228,8 +230,6 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
         margin-top: auto;
         margin-bottom: auto;
       }
-      width: 20px;
-      max-height: 20px;
     }
     .network-icon {
       position: absolute;
@@ -255,11 +255,11 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
     margin-top: auto;
     margin-bottom: auto;
     justify-content: right;
+    pointer-events: auto;
     .gem {
       margin-left: 10px;
       margin-right: 10px;
     }
-    pointer-events: auto;
   }
 }
 
@@ -284,15 +284,15 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
     grid-column: 3;
     grid-row: 1;
     display: flex;
-    &.narrow-dropdown {
-      grid-row-end: span 2;
-      flex-direction: column;
-    }
     position: relative;
     margin-top: auto;
     margin-bottom: auto;
     font-weight: var(--standard_text_medium_font_weight);
     white-space: nowrap;  // makes sure that the two spans (description + lowleveldata) stay on the same line
+    &.narrow-dropdown {
+      grid-row-end: span 2;
+      flex-direction: column;
+    }
 
     .cell_bi_description {
       position: relative;
@@ -373,6 +373,9 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
   }
 
   .cell-subcategory {
+    box-sizing: border-box;
+    margin-right: auto;
+    white-space: nowrap;
     &.large-dropdown {
       font-weight: var(--standard_text_medium_font_weight);
       padding-right: 16px;
@@ -380,9 +383,6 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
     &.narrow-dropdown {
       font-weight: var(--standard_text_font_weight);
     }
-    box-sizing: border-box;
-    margin-right: auto;
-    white-space: nowrap;
   }
 
   @mixin cells_blockchain-info_common {
@@ -419,6 +419,10 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
   .cell_bi_description {
     @include cells_blockchain-info_common;
 
+    box-sizing: border-box;
+    margin-left: auto;
+    justify-content: right;
+    white-space: nowrap;
     &.large-dropdown {
       grid-column: 5;
       width: 128px;
@@ -429,10 +433,6 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
       grid-column: 4;
       color: var(--searchbar-text-detail-default);
     }
-    box-sizing: border-box;
-    margin-left: auto;
-    justify-content: right;
-    white-space: nowrap;
   }
 }
 </style>

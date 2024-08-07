@@ -63,7 +63,7 @@ await useAsyncData('validator_dashboard_rewards_chart', async () => {
 
 const { groups } = useValidatorDashboardGroups()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const colorMode = useColorMode()
 
 const { converter } = useValue()

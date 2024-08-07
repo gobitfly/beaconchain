@@ -10,13 +10,16 @@ import { useNetworkStore } from '~/stores/useNetworkStore'
 import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
 import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
-const props = defineProps({ isHomePage: { type: Boolean } })
+defineProps<{
+  isHomePage: boolean,
+  minimalist: boolean
+}>()
 const { latestState } = useLatestStateStore()
 const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
 const { doLogout, isLoggedIn } = useUserStore()
 const { currency, available, rates } = useCurrency()
 const { width } = useWindowSize()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
@@ -37,6 +40,7 @@ const rate = computed(() => {
   if (fiat && rates.value?.[fiat]) {
     return rates.value[fiat]
   }
+  return undefined
 })
 
 const currentEpoch = computed(() => latestState.value?.current_slot !== undefined ? slotToEpoch(latestState.value.current_slot) : undefined)
@@ -62,7 +66,14 @@ const userMenu = computed(() => {
 </script>
 
 <template>
-  <div class="anchor" :class="hideInDevelopmentClass">
+  <div v-if="minimalist" class="minimalist">
+    <div class="top-background" />
+    <div class="rows">
+      <BcHeaderLogo layout-adaptability="low" />
+    </div>
+  </div>
+
+  <div v-else class="complete" :class="hideInDevelopmentClass">
     <div class="top-background" />
     <div class="rows">
       <div class="grid-cell blockchain-info">
@@ -88,7 +99,7 @@ const userMenu = computed(() => {
 
       <div class="grid-cell search-bar">
         <BcSearchbarGeneral
-          v-if="showInDevelopment && !props.isHomePage"
+          v-if="showInDevelopment && !isHomePage"
           class="bar"
           :bar-shape="SearchbarShape.Medium"
           :color-theme="isSmallScreen && colorMode.value != 'dark' ? SearchbarColors.LightBlue : SearchbarColors.DarkBlue"
@@ -97,14 +108,10 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell controls">
-        <BcCurrencySelection v-if="!isMobileScreen || isLoggedIn" class="currency" />
+        <BcCurrencySelection class="currency" :show-currency-icon="!isMobileScreen" />
         <div v-if="!isLoggedIn" class="logged-out">
-          <BcLink to="/login" class="login">
-            {{ $t('header.login') }}
-          </BcLink>
-          |
-          <BcLink to="/register">
-            <Button class="register" :label="$t('header.register')" />
+          <BcLink to="/login">
+            <Button class="login" :label="$t('header.login')" />
           </BcLink>
         </div>
         <div v-else-if="!isSmallScreen" class="user-menu">
@@ -123,12 +130,11 @@ const userMenu = computed(() => {
       </div>
 
       <div class="grid-cell explorer-info">
-        <BcLink to="/" class="logo">
-          <IconBeaconchainLogo alt="Beaconcha.in logo" />
-          <span class="name">beaconcha.in</span>
-        </BcLink>
+        <BcHeaderLogo layout-adaptability="high" />
         <span class="variant">
-          v2 beta | {{ networkInfo.name }}
+          v2 beta |
+          <span class="mobile">{{ networkInfo.shortName }}</span>
+          <span class="large-screen">{{ networkInfo.name }}</span>
         </span>
       </div>
 
@@ -143,28 +149,45 @@ const userMenu = computed(() => {
 <style lang="scss" scoped>
 @use "~/assets/css/fonts.scss";
 
-// do not change these two values without changing the values in types/header.ts accordingly
+// do not change these two values without changing the values in HeaderLogo.vue and in types/header.ts accordingly
 $mobileHeaderThreshold: 600px;
 $smallHeaderThreshold: 1024px;
 
-.anchor {
-  top: -1px;
+@mixin common {
   position: relative;
   display: flex;
   width: 100%;
   justify-content: center;
-  border-bottom: 1px solid var(--container-border-color);
-  &.hide-because-it-is-unfinished {  // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
-    @media (max-width: $smallHeaderThreshold) {
-      border-bottom: none;
-    }
-  }
-  background-color: var(--container-background);
   .top-background {
     position: absolute;
     width: 100%;
     height: var(--navbar-height);
     background-color: var(--dark-blue);
+  }
+  .rows {
+    width: var(--content-width);
+  }
+}
+
+.minimalist {
+  color: var(--header-top-font-color);
+  @include common();
+  @media (max-width: $mobileHeaderThreshold) {
+    .top-background {
+      height: 36px;
+    }
+  }
+}
+
+.complete {
+  top: -1px; // needed for some reason to perfectly match Figma
+  border-bottom: 1px solid var(--container-border-color);
+  background-color: var(--container-background);
+  @include common();
+  &.hide-because-it-is-unfinished {  // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
+    @media (max-width: $smallHeaderThreshold) {
+      border-bottom: none;
+    }
   }
 
   .rows {
@@ -172,19 +195,20 @@ $smallHeaderThreshold: 1024px;
     display: grid;
     grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
     grid-template-rows: var(--navbar-height) minmax(var(--navbar2-height), min-content);
+    width: var(--content-width);
+    color: var(--header-top-font-color);
+    font-family: var(--main_header_font_family);
+    font-size: var(--main_header_font_size);
+    font-weight: var(--main_header_font_weight);
+    color: var(--header-top-font-color);
     @media (max-width: $smallHeaderThreshold) {
       grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
     }
-    width: var(--content-width);
-    color: var(--header-top-font-color);
     @mixin bottom-cell($row) {
       color: var(--container-color);
       grid-row: $row;
     }
-    font-family: var(--main_header_font_family);
-    font-size: var(--main_header_font_size);
-    font-weight: var(--main_header_font_weight);
     .bold {
       font-weight: var(--main_header_bold_font_weight);
     }
@@ -202,6 +226,7 @@ $smallHeaderThreshold: 1024px;
     }
 
     .blockchain-info {
+      margin-right: var(--padding-large);
       @media (min-width: $smallHeaderThreshold) {
         grid-row: 1;
         grid-column: 2;
@@ -210,7 +235,6 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         display: none;
       }
-      margin-right: var(--padding-large);
       .network-icon {
         vertical-align: middle;
         height: 18px;
@@ -230,11 +254,11 @@ $smallHeaderThreshold: 1024px;
       .bar {
         position: relative;
         width: 100%;
+        margin-top: var(--content-margin);
+        margin-bottom: var(--content-margin);
         @media (min-width: $smallHeaderThreshold) {
           max-width: 460px;
         }
-        margin-top: var(--content-margin);
-        margin-bottom: var(--content-margin);
       }
     }
 
@@ -242,10 +266,10 @@ $smallHeaderThreshold: 1024px;
       user-select: none;
       grid-row: 1;
       grid-column: 5;
+      justify-content: right;
       @media (max-width: $smallHeaderThreshold) {
         grid-column: 4;
       }
-      justify-content: right;
 
       .currency {
         color: var(--header-top-font-color);
@@ -256,9 +280,6 @@ $smallHeaderThreshold: 1024px;
         align-items: center;
         gap: var(--padding-small);
         .login {
-          font-weight: var(--main_header_bold_font_weight);
-        }
-        .register {
           padding: 8px;
         }
       }
@@ -277,75 +298,40 @@ $smallHeaderThreshold: 1024px;
         }
       }
       .burger {
+        height: 24px;
+        cursor: pointer;
         @media (min-width: $smallHeaderThreshold) {
           display: none;
         }
-        height: 24px;
-        cursor: pointer;
       }
     }
 
     .explorer-info {
       grid-column: 2;
+      height: unset;
       @media (min-width: $smallHeaderThreshold) {
         @include bottom-cell(2);
       }
       @media (max-width: $smallHeaderThreshold) {
         grid-row: 1;
       }
-      height: unset;
-
-      .logo {
-        display: flex;
-        position: relative;
-        margin-top: auto;
-        gap: var(--padding);
-        font-family: var(--logo_font_family);
-        font-size: var(--logo_font_size);
-        font-weight: var(--logo_font_weight);
-        letter-spacing: var(--logo_letter_spacing);
-        svg {
-          margin-top: auto;
-        }
-        .name {
-          display: inline-flex;
-          position: relative;
-          margin-top: auto;
-          line-height: 22px;
-          @media (max-width: $mobileHeaderThreshold) {
-            display: none;
-          }
-        }
-        @media (max-width: 1360px) {
-          font-size: var(--logo_small_font_size);
-          letter-spacing: var(--logo_small_letter_spacing);
-          gap: 6px;
-          .name {
-            line-height: 14px;
-          }
-          svg {
-            height: 18px;
-            @media (max-width: $mobileHeaderThreshold) {
-              height: 30px;
-            }
-          }
-        }
-      }
-
       .variant {
         position: relative;
         margin-top: auto;
         font-size: var(--tiny_text_font_size);
+        color: var(--megamenu-text-color);
+        line-height: 10px;
+        .large-screen { display: inline }
+        .mobile { display: none }
+        @media (max-width: $smallHeaderThreshold) {
+          color: var(--grey);
+        }
         @media (max-width: $mobileHeaderThreshold) {
           margin-bottom: auto;
           font-size: var(--button_font_size);
+          .large-screen { display: none }
+          .mobile { display: inline }
         }
-        color: var(--megamenu-text-color);
-        @media (max-width: $smallHeaderThreshold) { // when it is in the upper header...
-          // ... the background is always dark blue (no matter the theme (dark/light)), so we need a light grey:
-          color: var(--grey);
-        }
-        line-height: 10px;
       }
     }
 

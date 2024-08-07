@@ -2,7 +2,7 @@ import { commify } from '@ethersproject/units'
 import { DateTime, type StringUnitLength } from 'luxon'
 import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
-import { ChainIDs, epochToTs, slotToTs } from '~/types/network'
+import { type ChainIDs, epochToTs, slotToTs } from '~/types/network'
 
 export const ONE_MINUTE = 60
 export const ONE_HOUR = ONE_MINUTE * 60
@@ -122,6 +122,15 @@ export function formatTsToAbsolute (ts: number, locales: string, includeTime?: b
   }
   const date = new Date(ts * 1000)
   return includeTime ? date.toLocaleString(locales, options) : date.toLocaleDateString(locales, options)
+}
+
+export function formatTsToTime (ts: number, locales: string): string {
+  const options: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: 'numeric'
+  }
+  const date = new Date(ts * 1000)
+  return date.toLocaleTimeString(locales, options)
 }
 
 function formatTsToRelative (targetTimestamp?: number, baseTimestamp?: number, style: StringUnitLength = 'narrow', locales: string = 'en-US') : string | null | undefined {
