@@ -492,6 +492,10 @@
       } 
     }
   },
+  "rocketpool": {
+    "mode": "RP Mode",
+    "tooltip": "Enables Rocket Pool stats for this dashboard"
+  },
   "dashboard": {
     "title": "Dashboard",
     "validator_dashboard": "Validator Dashboard",
@@ -501,7 +505,14 @@
     "share": "Share",
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
+    "shared_dashboard": "Shared Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "rename_dashboard": "Rename Dashboard",
+    "header": {
+      "manage": "Manage",
+      "validator": "Validator",
+      "account": "Account"
+    },
     "rename": {
       "title": "Rename Dashboard"
     },
