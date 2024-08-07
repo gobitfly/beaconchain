@@ -412,7 +412,7 @@ let errors2D: number[]
 const temp = new RGB(CS.RGBlinear)
 const tabuQueue = new Array<number>(tabuLength) // queue of color indices that we do not want to touch for some time
 
-/** @param original must be in the CS.RGBgamma format.
+/** @param input must be in the CS.RGBgamma format.
  * @returns enchanced colors in the CS.RGBgamma format
  */
 function search (input : RGB[], colorBlindness: ColorBlindness) : RGB[] {
@@ -513,11 +513,11 @@ function projectOnto2D (rgb: number[]) : Eye {
   return cbSight
 }
 
-/** for a given color `k` stored in `cbSight`, this function calculates a value continuously increasing with respect to
+/** for a given color `k` stored in `wipColor2D`, this function calculates a value continuously increasing with respect to
  *    the sum over all colors `l` of
  *      the difference between:
  *        the distance between the original colors k and l
- *        the distance between the projected colors `cbSight` and l */
+ *        the distance between the projected colors `wipColor2D` and l */
 function distError (k: number, wipColor2D: Eye) : number {
   let result = 0
   for (let l = 0; l < distancesOrig.length; l++) {
