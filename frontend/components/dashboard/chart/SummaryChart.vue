@@ -403,7 +403,6 @@ const validateDataZoom = (instant?: boolean) => {
     from: fromTs,
     to: timestamps.toTs
   }
-  console.log('timestamps', timestamps.fromIndex, newTimeFrames.from)
   // when the timeframes of the slider change we bounce the new timeframe for the chart
   if (tempTimeFrames.value.to !== newTimeFrames.to || tempTimeFrames.value.from !== newTimeFrames.from) {
     if (instant) {
