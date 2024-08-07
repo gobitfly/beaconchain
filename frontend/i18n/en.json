@@ -312,9 +312,9 @@
     },
     "network": {
       "event_type": {
-        "gas_above_threshold": "Gas price > {_value}",
-        "gas_below_threshold": "Gas price < {_value}",
-        "participation_rate_threshold": "Participation rate < {_value}"
+        "gas_above": "Gas price > {_value}",
+        "gas_below": "Gas price < {_value}",
+        "participation_rate": "Participation rate < {_value}"
       },
       "footer": {
         "subscriptions": "Network ({count} Subscription) |Validators ({count} Subscriptions)"
