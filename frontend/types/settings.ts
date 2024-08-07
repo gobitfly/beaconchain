@@ -1,4 +1,4 @@
-export type GlobalSetting = 'age-format' | 'rpl'
+export type GlobalSetting = 'age-format' | 'rpl' | 'color-blind-mode'
 
 export type AgeFormat = 'absolute' | 'relative'
 
@@ -24,6 +24,9 @@ const valueToStringBoolean = (value: boolean) => value ? 'true' : 'false'
 export const SettingDefaults:Record<GlobalSetting, SettingsConfig> = {
   'age-format': {
     default: 'absolute'
+  },
+  'color-blind-mode': {
+    default: 'blue-yellow'
   },
   rpl: {
     parseValue: parseValueBoolean as SettingsGetter,

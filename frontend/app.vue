@@ -15,6 +15,7 @@ useHead({
 useWindowSizeProvider()
 useBcToastProvider()
 useDateProvider()
+useColorBlindModeProvider()
 </script>
 
 <template>
