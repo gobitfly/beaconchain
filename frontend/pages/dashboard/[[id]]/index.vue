@@ -151,7 +151,7 @@ watch([dashboardKey, isLoggedIn], ([newKey, newLoggedIn], [oldKey]) => {
           <template #header>
             <BcTabHeader :header="$t('dashboard.validator.tabs.heatmap')" :icon="faFire" />
           </template>
-          Heatmap coming soon!
+          <DashboardTableEmpty />
         </TabPanel>
         <TabPanel>
           <template #header>
