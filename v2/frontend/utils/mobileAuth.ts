@@ -4,7 +4,7 @@ import type { LocationQuery } from 'vue-router'
 // Reasoning is that a mobile login request must be handled by mobile, if a user clicks on register or forgot password
 // during mobile login, they still must be forwarded to the app in the end.
 // This must be implemented on authentication pages like login, register, forgot password
-export function provideMobileAuthParams (queryParams: LocationQuery, path: string) {
+export function provideMobileAuthParams(queryParams: LocationQuery, path: string) {
   if (queryParams.redirect_uri && queryParams.client_id) {
     const redirectURI = queryParams.redirect_uri
     const state = queryParams.state || '' // optional
@@ -15,18 +15,18 @@ export function provideMobileAuthParams (queryParams: LocationQuery, path: strin
       query: {
         redirect_uri: redirectURI,
         state,
-        client_id: deviceID
-      }
+        client_id: deviceID,
+      },
     }
   }
   return {
-    path
+    path,
   }
 }
 
 // Call after a successfull authenticatio to check whethr the request originated from
 // the mobile app and if so handle the request accordingly. Otherwise the method does nothing and returns false
-export function handleMobileAuth (queryParams: LocationQuery): boolean {
+export function handleMobileAuth(queryParams: LocationQuery): boolean {
   if (queryParams.redirect_uri && queryParams.client_id) {
     const state = queryParams.state ? '&state=' + queryParams.state! : ''
 

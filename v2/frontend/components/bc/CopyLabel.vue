@@ -1,15 +1,24 @@
 <script setup lang="ts">
 interface Props {
-  value?: string,
+  value?: string
   label?: string // will default to value
 }
 defineProps<Props>()
-
 </script>
+
 <template>
-  <div v-if="value" class="copy-label">
-    <input :disabled="true" :value="label || value">
-    <BcCopyToClipboard :value="value" class="copy-icon" />
+  <div
+    v-if="value"
+    class="copy-label"
+  >
+    <input
+      :disabled="true"
+      :value="label || value"
+    >
+    <BcCopyToClipboard
+      :value="value"
+      class="copy-icon"
+    />
   </div>
 </template>
 

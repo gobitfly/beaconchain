@@ -12,11 +12,11 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorDashboardRewardsDetailsStore())
 
-  function getKey () {
+  function getKey() {
     return `${dashboardKey}_${groupId}_${epoch}`
   }
 
-  async function getDetails () {
+  async function getDetails() {
     // Rewards of an epoch will only change when validators changed (see useValidatorDashboardOverviewStore), so we can cache data
     if (data.value[getKey()]) {
       return data.value[getKey()]
@@ -39,7 +39,7 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
 export const useAllValidatorDashboardRewardsDetailsStore = () => {
   const { data } = storeToRefs(validatorDashboardRewardsDetailsStore())
 
-  function clearCache () {
+  function clearCache() {
     data.value = {}
   }
 

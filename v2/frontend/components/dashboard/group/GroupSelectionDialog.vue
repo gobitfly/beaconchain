@@ -24,19 +24,21 @@ watch(() => props.value?.groupId, (groupId) => {
     selectedGroupId.value = groupId
   }
 })
-
 </script>
 
 <template>
   <div class="content">
     <div class="form">
       {{ $t('dashboard.group.selection.dialog.assign_group') }}
-      <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
+      <DashboardGroupSelection
+        v-model="selectedGroupId"
+        class="group-selection"
+      />
     </div>
     <div class="footer">
       <b v-if="props?.totalValidators"> {{ $t('dashboard.group.selection.dialog.validators_selected', {
-        total: props.totalValidators
-      }, props.selectedValidators ?? 0 ) }}</b>
+        total: props.totalValidators,
+      }, props.selectedValidators ?? 0) }}</b>
       <Button
         :disabled="selectedGroupId === undefined"
         type="button"

@@ -13,7 +13,7 @@ const { fetch } = useCustomFetch()
 const { width } = useWindowSize()
 const size = computed(() => {
   return {
-    expandable: width.value <= 1000
+    expandable: width.value <= 1000,
   }
 })
 
@@ -101,20 +101,31 @@ const title = computed(() => {
 watch([title, size], () => {
   setHeader(title.value, size.value.expandable)
 }, { immediate: true })
-
 </script>
 
 <template>
-  <BcTableControl :search-placeholder="$t('dashboard.validator.duties.search_placeholder')" @set-search="setSearch">
-    <template v-if="size.expandable" #header-left>
+  <BcTableControl
+    :search-placeholder="$t('dashboard.validator.duties.search_placeholder')"
+    @set-search="setSearch"
+  >
+    <template
+      v-if="size.expandable"
+      #header-left
+    >
       <div class="small-title">
         {{ props?.groupName }}
       </div>
     </template>
-    <template v-else #header-center>
+    <template
+      v-else
+      #header-center
+    >
       <div>
         <span class="h1">{{ title }}</span>
-        <BcFormatTimePassed :value="props?.epoch" class="time-passed" />
+        <BcFormatTimePassed
+          :value="props?.epoch"
+          class="time-passed"
+        />
       </div>
     </template>
     <template #table>
@@ -132,7 +143,11 @@ watch([title, size], () => {
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column field="validator" :sortable="true" :header="$t('dashboard.validator.duties.col.validator')">
+          <Column
+            field="validator"
+            :sortable="true"
+            :header="$t('dashboard.validator.duties.col.validator')"
+          >
             <template #body="slotProps">
               <BcLink
                 :to="`/validator/${slotProps.data.validator}`"
@@ -143,19 +158,30 @@ watch([title, size], () => {
               </BcLink>
             </template>
           </Column>
-          <Column field="duties" :header="$t('dashboard.validator.duties.col.duties')">
+          <Column
+            field="duties"
+            :header="$t('dashboard.validator.duties.col.duties')"
+          >
             <template #body="slotProps">
               <div class="col-duties">
                 {{ mapDuties(slotProps.data.duties) }}
               </div>
             </template>
           </Column>
-          <Column v-if="!size.expandable" field="result" :header="$t('dashboard.validator.duties.col.result')">
+          <Column
+            v-if="!size.expandable"
+            field="result"
+            :header="$t('dashboard.validator.duties.col.result')"
+          >
             <template #body="slotProps">
               <ValidatorTableDutyStatus :data="slotProps.data.duties" />
             </template>
           </Column>
-          <Column field="reward" :sortable="!size.expandable" :header="$t('dashboard.validator.duties.col.rewards')">
+          <Column
+            field="reward"
+            :sortable="!size.expandable"
+            :header="$t('dashboard.validator.duties.col.rewards')"
+          >
             <template #body="slotProps">
               <ValidatorTableDutyRewards :data="slotProps.data.duties" />
             </template>

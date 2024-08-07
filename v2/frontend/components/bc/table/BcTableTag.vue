@@ -6,19 +6,29 @@ import type { TagColor, TagSize } from '~/types/tag'
 interface Props {
   color?: TagColor
   size?: TagSize
-  label?: string,
+  label?: string
   tooltip?: string
-  icon?: IconDefinition,
+  icon?: IconDefinition
 }
 defineProps<Props>()
-
 </script>
+
 <template>
-  <BcTooltip v-if="label || icon" class="tag" :class="[color, size]" :text="tooltip" :fit-content="true">
+  <BcTooltip
+    v-if="label || icon"
+    class="tag"
+    :class="[color, size]"
+    :text="tooltip"
+    :fit-content="true"
+  >
     {{ label }}
-    <FontAwesomeIcon v-if="icon" :icon="icon" />
+    <FontAwesomeIcon
+      v-if="icon"
+      :icon="icon"
+    />
   </BcTooltip>
 </template>
+
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
 @use "~/assets/css/fonts.scss";

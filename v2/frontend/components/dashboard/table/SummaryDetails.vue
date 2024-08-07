@@ -5,7 +5,7 @@ import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type Summar
 interface Props {
   row: VDBSummaryTableRow
   timeFrame: SummaryTimeFrame
-  absolute: boolean,
+  absolute: boolean
   tableVisibility: SummaryTableVisibility
 }
 const props = defineProps<Props>()
@@ -56,16 +56,28 @@ const rowClass = (data: SummaryRow) => {
     slashings: 'bold spacing-top',
     apr: props.tableVisibility.attestations ? '' : 'spacing-top',
     luck: 'spacing-top',
-    attestations_head: 'spacing-top'
+    attestations_head: 'spacing-top',
   }
   return classNames[data.prop]
 }
-
 </script>
+
 <template>
-  <div v-if="summary" class="details-container">
-    <div v-for="(list, index) in data" :key="index" class="group">
-      <div v-for="(prop, pIndex) in list" :key="pIndex" :class="rowClass(prop)" class="row">
+  <div
+    v-if="summary"
+    class="details-container"
+  >
+    <div
+      v-for="(list, index) in data"
+      :key="index"
+      class="group"
+    >
+      <div
+        v-for="(prop, pIndex) in list"
+        :key="pIndex"
+        :class="rowClass(prop)"
+        class="row"
+      >
         <div class="label">
           {{ prop.title }}
         </div>
@@ -83,7 +95,11 @@ const rowClass = (data: SummaryRow) => {
     </div>
   </div>
   <div v-else>
-    <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
+    <BcLoadingSpinner
+      class="spinner"
+      :loading="true"
+      alignment="center"
+    />
   </div>
 </template>
 

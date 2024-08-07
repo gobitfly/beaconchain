@@ -5,8 +5,8 @@ import { API_PATH } from '~/types/customFetch'
 import { isSharedKey } from '~/utils/dashboard/key'
 
 interface Props {
-  dashboardKey: string;
-  dashboard?: ValidatorDashboard; // Currently only validator dashboards are supported. For public dashboards this will be undefined
+  dashboardKey: string
+  dashboard?: ValidatorDashboard // Currently only validator dashboards are supported. For public dashboards this will be undefined
 }
 const { props, dialogRef } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
@@ -52,23 +52,47 @@ const unpublish = async () => {
   dialogRef?.value?.close('DELETE')
   isUpdating.value = false
 }
-
 </script>
 
 <template>
   <div class="share-dashboard-code-modal-container">
     <div class="content">
-      <qrcode-vue class="qr-code" :value="path" :size="330" />
+      <qrcode-vue
+        class="qr-code"
+        :value="path"
+        :size="330"
+      />
       <label class="title">{{ $t('dashboard.share_dialog.public_dashboard_url') }}</label>
-      <BcCopyLabel :value="path" class="copy_label" />
-      <label v-if="isShared" class="disclaimer">{{ $t('dashboard.share_dialog.only_viewing_permission') }}</label>
-      <label v-else class="disclaimer">{{ $t('dashboard.share_dialog.share_public_disclaimer') }}</label>
-      <label v-if="!user?.premium_perks?.share_custom_dashboards" class="disclaimer">{{ $t('dashboard.share_dialog.upgrade') }}<BcPremiumGem class="gem" /></label>
-      <div v-if="!isReadonly" class="footer">
-        <Button :disabled="isUpdating" @click="unpublish">
+      <BcCopyLabel
+        :value="path"
+        class="copy_label"
+      />
+      <label
+        v-if="isShared"
+        class="disclaimer"
+      >{{ $t('dashboard.share_dialog.only_viewing_permission') }}</label>
+      <label
+        v-else
+        class="disclaimer"
+      >{{ $t('dashboard.share_dialog.share_public_disclaimer') }}</label>
+      <label
+        v-if="!user?.premium_perks?.share_custom_dashboards"
+        class="disclaimer"
+      >{{ $t('dashboard.share_dialog.upgrade') }}<BcPremiumGem class="gem" /></label>
+      <div
+        v-if="!isReadonly"
+        class="footer"
+      >
+        <Button
+          :disabled="isUpdating"
+          @click="unpublish"
+        >
           {{ $t('navigation.unpublish') }}
         </Button>
-        <Button :disabled="isUpdating" @click="edit">
+        <Button
+          :disabled="isUpdating"
+          @click="edit"
+        >
           {{ $t('dashboard.share_dialog.edit') }}
         </Button>
       </div>

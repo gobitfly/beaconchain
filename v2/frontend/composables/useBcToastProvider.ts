@@ -3,7 +3,7 @@ import type { BcToastProvider, ToastData } from '~/types/toast'
 
 const TOAST_TIME = 3000
 
-export function useBcToastProvider () {
+export function useBcToastProvider() {
   const toast = useToast()
   const { t: $t } = useTranslation()
 
@@ -25,13 +25,14 @@ export function useBcToastProvider () {
     if (toasts.length) {
       if (toasts.length === 1) {
         const hasGroup = toasts[0].group
-        toast.add({ 
+        toast.add({
           summary: toasts[0].summary,
           detail: hasGroup ? `${toasts[0].group}: ${toasts[0].detail}` : toasts[0].detail,
           severity: 'error',
-          life: TOAST_TIME 
+          life: TOAST_TIME,
         })
-      } else{
+      }
+      else {
         const groups: Record<string, ToastData[]> = {}
         const mapped = toasts.reduce((m, t) => {
           const group = t.group ?? ''

@@ -6,7 +6,6 @@ const props = defineProps<{
 }>()
 
 const subCategory = computed(() => TypeInfo[props.type].subCategory)
-
 </script>
 
 <template>

@@ -5,25 +5,25 @@ import type { RewardChartGroupData, RewardChartSeries } from '~/types/dashboard/
 import type { WeiToValue } from '~/types/value'
 
 interface Props {
-  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
-  weiToValue: WeiToValue,
-  startEpoch: number,
-  dataIndex: number,
+  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context,
+  weiToValue: WeiToValue
+  startEpoch: number
+  dataIndex: number
   series: RewardChartSeries[]
 }
 
 const props = defineProps<Props>()
 
 interface GroupValue {
-  id: number,
-  name: string,
+  id: number
+  name: string
   value: string
 }
 
 interface Series {
-  name: string,
-  value: string,
-  className?: string,
+  name: string
+  value: string
+  className?: string
   groups: GroupValue[]
 }
 
@@ -36,7 +36,7 @@ const mapData = (groups: RewardChartGroupData[]): GroupValue[] => {
   return sort.map(g => ({
     name: g.name,
     id: g.id,
-    value: `${props.weiToValue(g.bigData[props.dataIndex]).label}`
+    value: `${props.weiToValue(g.bigData[props.dataIndex]).label}`,
   }))
 }
 
@@ -45,13 +45,13 @@ const data = computed<Series[]>(() => {
     name: props.series[1].name,
     className: 'cl',
     value: props.series[1].formatedData[props.dataIndex].label as string,
-    groups: mapData(props.series[1].groups)
+    groups: mapData(props.series[1].groups),
   }
   const cl: Series = {
     name: props.series[0].name,
     className: 'el',
     value: props.series[0].formatedData[props.dataIndex].label as string,
-    groups: mapData(props.series[0].groups)
+    groups: mapData(props.series[0].groups),
   }
 
   const totalGroups = props.series[0].groups.map((g) => {
@@ -60,7 +60,7 @@ const data = computed<Series[]>(() => {
     bigData[props.dataIndex] = bigData[props.dataIndex].add(elValue)
     return {
       ...g,
-      bigData
+      bigData,
     }
   })
   props.series[1].groups.forEach((g) => {
@@ -72,22 +72,33 @@ const data = computed<Series[]>(() => {
   const total: Series = {
     name: props.t('dashboard.validator.rewards.chart.total'),
     value: `${props.weiToValue(props.series[1].bigData[props.dataIndex].add(props.series[0].bigData[props.dataIndex])).label}`,
-    groups: mapData(totalGroups)
+    groups: mapData(totalGroups),
   }
   return [el, cl, total]
 })
-
 </script>
 
 <template>
   <div class="tooltip-container">
-    <DashboardChartTooltipHeader :t="t" :start-epoch="startEpoch" />
-    <div v-for="(entry, index) in data" :key="index">
+    <DashboardChartTooltipHeader
+      :t="t"
+      :start-epoch="startEpoch"
+    />
+    <div
+      v-for="(entry, index) in data"
+      :key="index"
+    >
       <div class="header">
-        <span class="circle" :class="entry.className" /><b>{{ entry.name }}: {{ entry.value }}</b>
+        <span
+          class="circle"
+          :class="entry.className"
+        /><b>{{ entry.name }}: {{ entry.value }}</b>
       </div>
       <ol>
-        <li v-for="group in entry.groups" :key="group.id">
+        <li
+          v-for="group in entry.groups"
+          :key="group.id"
+        >
           {{ group.name }}: {{ group.value }}
         </li>
       </ol>

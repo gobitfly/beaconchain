@@ -10,7 +10,7 @@ const { user, isLoggedIn } = useUserStore()
 const { currentNetwork } = useNetworkStore()
 
 interface Props {
-  displayMode: DashboardCreationDisplayMode,
+  displayMode: DashboardCreationDisplayMode
   initiallyVisible?: boolean
 }
 const props = defineProps<Props>()
@@ -42,14 +42,15 @@ const validatorsDisabled = computed(() => {
   return (dashboards.value?.validator_dashboards?.length ?? 0) >= maxDashboards.value || (!!forcedDashboardType.value && forcedDashboardType.value !== 'validator')
 })
 
-function show (forcedType : DashboardType|'' = '', forcedNetwork: ChainIDs = 0) {
+function show(forcedType: DashboardType | '' = '', forcedNetwork: ChainIDs = 0) {
   visible.value = true
   forcedNetworkIfValidatorDashboard = forcedNetwork
   type.value = forcedDashboardType.value = forcedType
   if (!type.value) {
     if (!validatorsDisabled.value) {
       type.value = 'validator'
-    } else if (!accountsDisabled.value) {
+    }
+    else if (!accountsDisabled.value) {
       type.value = 'account'
     }
   }
@@ -59,34 +60,37 @@ function show (forcedType : DashboardType|'' = '', forcedNetwork: ChainIDs = 0) 
 }
 
 defineExpose({
-  show
+  show,
 })
 if (props.initiallyVisible) {
   show()
 }
 
-function onNext () {
+function onNext() {
   if (state.value === 'type') {
     if (type.value === 'account') {
       createDashboard()
-    } else
+    }
+    else
       if (forcedNetworkIfValidatorDashboard) {
         createDashboard()
-      } else {
+      }
+      else {
         state.value = 'network'
       }
-  } else if (state.value === 'network') {
+  }
+  else if (state.value === 'network') {
     createDashboard()
   }
 }
 
-function onBack () {
+function onBack() {
   if (state.value === 'network') {
     state.value = 'type'
   }
 }
 
-async function createDashboard () {
+async function createDashboard() {
   visible.value = false
   const matchingType = route.name === 'dashboard-id' && type.value === 'validator'
 
@@ -98,7 +102,8 @@ async function createDashboard () {
     const response = await createAccountDashboard(name.value, publicKey)
 
     await navigateTo(`/account-dashboard/${response?.hash ?? response?.id ?? 1}`)
-  } else if (type.value === 'validator') {
+  }
+  else if (type.value === 'validator') {
     if (!name.value || !network.value) {
       return
     }
@@ -113,7 +118,10 @@ async function createDashboard () {
 </script>
 
 <template>
-  <BcDialog v-if="visible && props.displayMode === 'modal'" v-model="visible">
+  <BcDialog
+    v-if="visible && props.displayMode === 'modal'"
+    v-model="visible"
+  >
     <DashboardCreationTypeMask
       v-if="state === 'type'"
       v-model:state="state"

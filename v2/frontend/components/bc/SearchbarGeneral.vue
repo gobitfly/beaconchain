@@ -2,13 +2,13 @@
 import { type SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape,
-  colorTheme: SearchbarColors,
+  barShape: SearchbarShape
+  colorTheme: SearchbarColors
   screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
 }>()
 
-async function redirectToRelevantPage (result : ResultSuggestion) {
-  let path : string
+async function redirectToRelevantPage(result: ResultSuggestion) {
+  let path: string
   let q = ''
   const networkPath = '/networks/' + result.chainId
 
@@ -70,7 +70,8 @@ async function redirectToRelevantPage (result : ResultSuggestion) {
 
   if (q !== '') {
     await navigateTo({ path, query: { q } })
-  } else {
+  }
+  else {
     await navigateTo({ path })
   }
 }

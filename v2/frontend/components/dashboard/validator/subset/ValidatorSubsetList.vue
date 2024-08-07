@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { warn } from 'vue'
 import {
-  faCopy
+  faCopy,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Paging } from '~/types/api/common'
@@ -10,8 +10,8 @@ import type { ValidatorSubsetCategory } from '~/types/validator'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 
 interface Props {
-  category: ValidatorSubsetCategory,
-  validators: VDBSummaryValidator[],
+  category: ValidatorSubsetCategory
+  validators: VDBSummaryValidator[]
 }
 const props = defineProps<Props>()
 
@@ -26,12 +26,14 @@ watch(props, (p) => {
   if (p?.validators?.length) {
     if (p.validators.length > VALIDATORS_PER_PAGE) {
       paging.value = {
-        total_count: p.validators.length
+        total_count: p.validators.length,
       }
-    } else {
+    }
+    else {
       paging.value = null
     }
-  } else {
+  }
+  else {
     paging.value = null
   }
 }, { immediate: true })
@@ -44,7 +46,7 @@ const currentPage = computed<VDBSummaryValidator[]>(() => {
   return props.validators.slice(start, start + VALIDATORS_PER_PAGE)
 })
 
-function copyValidatorsToClipboard (): void {
+function copyValidatorsToClipboard(): void {
   if (!props.validators?.length) {
     return
   }
@@ -54,7 +56,7 @@ function copyValidatorsToClipboard (): void {
     })
 }
 
-function mapDutyLabel (dutyObjects?: number[]) {
+function mapDutyLabel(dutyObjects?: number[]) {
   if (!dutyObjects) {
     return
   }
@@ -71,7 +73,7 @@ function mapDutyLabel (dutyObjects?: number[]) {
       return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
   }
 }
-function mapDutyLinks (dutyObjects?: number[]): { to?: string, label: string }[] {
+function mapDutyLinks(dutyObjects?: number[]): { to?: string, label: string }[] {
   if (!dutyObjects) {
     return []
   }
@@ -93,32 +95,50 @@ function mapDutyLinks (dutyObjects?: number[]): { to?: string, label: string }[]
   if (path) {
     return dutyObjects.map(o => ({
       to: `${path}${o}`,
-      label: `${formatValue ? formatNumber(o) : o}`
+      label: `${formatValue ? formatNumber(o) : o}`,
     }))
-  } else {
+  }
+  else {
     return dutyObjects.map(o => ({
-      label: `${formatValue ? formatNumber(o) : o}`
+      label: `${formatValue ? formatNumber(o) : o}`,
     }))
   }
 }
-
 </script>
 
 <template>
   <div class="validator-list">
     <div class="list">
-      <div class="copy_button" @click="copyValidatorsToClipboard">
+      <div
+        class="copy_button"
+        @click="copyValidatorsToClipboard"
+      >
         <FontAwesomeIcon :icon="faCopy" />
       </div>
-      <template v-for="v in currentPage" :key="v.index">
-        <BcLink :to="`/validator/${v.index}`" target="_blank" class="link">
+      <template
+        v-for="v in currentPage"
+        :key="v.index"
+      >
+        <BcLink
+          :to="`/validator/${v.index}`"
+          target="_blank"
+          class="link"
+        >
           {{ v.index }}
         </BcLink>
         <template v-if="v.duty_objects?.length">
           <span class="round-brackets">
             <span class="label">{{ mapDutyLabel(v.duty_objects) }}</span>
-            <template v-for="link in mapDutyLinks(v.duty_objects)" :key="link.label">
-              <BcLink v-if="link.to" :to="link.to" target="_blank" class="link">
+            <template
+              v-for="link in mapDutyLinks(v.duty_objects)"
+              :key="link.label"
+            >
+              <BcLink
+                v-if="link.to"
+                :to="link.to"
+                target="_blank"
+                class="link"
+              >
                 {{ link.label }}
               </BcLink>
               <span v-else>{{ link.label }}</span>
@@ -130,7 +150,10 @@ function mapDutyLinks (dutyObjects?: number[]): { to?: string, label: string }[]
         <span>, </span>
       </template>
     </div>
-    <div v-if="paging" class="page-row">
+    <div
+      v-if="paging"
+      class="page-row"
+    >
       <BcTablePager
         class="pager"
         :cursor="cursor"

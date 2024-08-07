@@ -35,12 +35,21 @@ const scrollToAddons = () => {
         <PricingPeriodToggle v-model="isYearly" />
         <PricingPremiumViaAppBanner />
         <PricingPremiumProducts :is-yearly="isYearly" />
-        <Button class="view-addons-button" @click="scrollToAddons()">
+        <Button
+          class="view-addons-button"
+          @click="scrollToAddons()"
+        >
           {{ $t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
         </Button>
         <PricingPremiumCompare />
-        <PricingPremiumAddons id="addons" :is-yearly="isYearly" />
-        <BcFaq class="faq" translation-path="faq.pricing" />
+        <PricingPremiumAddons
+          id="addons"
+          :is-yearly="isYearly"
+        />
+        <BcFaq
+          class="faq"
+          translation-path="faq.pricing"
+        />
       </div>
     </div>
   </BcPageWrapper>

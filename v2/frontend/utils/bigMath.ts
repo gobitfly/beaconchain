@@ -12,7 +12,7 @@ const split = (num: number) => {
   const factor = getFactor(split[1])
   return {
     factor,
-    combined: split.join('')
+    combined: split.join(''),
   }
 }
 
@@ -32,7 +32,7 @@ export const bigDiv = (big: BigNumber, num: number): BigNumber => {
   return big.mul(factor).div(combined)
 }
 
-export const convertSum = (...values:string[]):BigNumber | undefined => {
+export const convertSum = (...values: string[]): BigNumber | undefined => {
   return values?.reduce((sum, newValue) => sum.add(BigNumber.from(newValue)), BigNumber.from('0'))
 }
 

@@ -14,14 +14,16 @@ const { availableNetworks, isNetworkDisabled } = useNetworkStore()
  *  Otherwise, give a v-model. If the v-model is
  *   a ChainIDs: only one network can be selected by the user,
  *   an array of ChainIDs: several networks can be selected by the user */
-const selection = defineModel<ChainIDs|ChainIDs[]>({ required: false })
+const selection = defineModel<ChainIDs | ChainIDs[]>({ required: false })
 
 let barSelection: Ref<string> | Ref<string[]>
 if (props.readonlyNetworks) {
   barSelection = ref<string[]>([])
-} else if (Array.isArray(selection.value)) {
+}
+else if (Array.isArray(selection.value)) {
   barSelection = useArrayRefBridge<ChainIDs, string>(selection as Ref<ChainIDs[]>)
-} else {
+}
+else {
   barSelection = usePrimitiveRefBridge<ChainIDs, string>(selection as Ref<ChainIDs>)
 }
 
@@ -35,7 +37,7 @@ const buttons = computed(() => {
       componentClass: 'maximum',
       value: String(chainId),
       disabled: isNetworkDisabled(chainId),
-      tooltip: ChainInfo[chainId].name
+      tooltip: ChainInfo[chainId].name,
     })
   }
   return list
@@ -43,8 +45,18 @@ const buttons = computed(() => {
 </script>
 
 <template>
-  <BcToggleMultiBar v-if="Array.isArray(barSelection)" v-model="barSelection" :buttons="buttons" :readonly-mode="!!readonlyNetworks" />
-  <BcToggleSingleBar v-else v-model="barSelection" :buttons="buttons" layout="minimal" />
+  <BcToggleMultiBar
+    v-if="Array.isArray(barSelection)"
+    v-model="barSelection"
+    :buttons="buttons"
+    :readonly-mode="!!readonlyNetworks"
+  />
+  <BcToggleSingleBar
+    v-else
+    v-model="barSelection"
+    :buttons="buttons"
+    layout="minimal"
+  />
 </template>
 
 <style lang="scss">

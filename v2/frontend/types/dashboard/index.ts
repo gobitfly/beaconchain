@@ -12,23 +12,23 @@ export const DAHSHBOARDS_ALL_GROUPS_ID = -1
 export const DAHSHBOARDS_NEXT_EPOCH_ID = -2
 
 export type DashboardKeyData = {
-  dashboardType:globalThis.Ref<DashboardType>,
-  dashboardKey:globalThis.Ref<string>,
-  isPublic:globalThis.Ref<boolean>,
-  isShared:globalThis.Ref<boolean>,
-  publicEntities:globalThis.Ref<string[]>,
-  addEntities:(list:string[]) =>void,
-  removeEntities:(list:string[]) =>void,
-  setDashboardKey:(key:string) =>void,
+  dashboardType: globalThis.Ref<DashboardType>
+  dashboardKey: globalThis.Ref<string>
+  isPublic: globalThis.Ref<boolean>
+  isShared: globalThis.Ref<boolean>
+  publicEntities: globalThis.Ref<string[]>
+  addEntities: (list: string[]) => void
+  removeEntities: (list: string[]) => void
+  setDashboardKey: (key: string) => void
 }
 
 // smallest similarites of AccountDashboard and ValidatorDashboard
 export interface Dashboard {
-  id: number;
-  name: string;
+  id: number
+  name: string
 }
 
 // For not logged in Users we store the Dashboard in Cookies
-export interface CookieDashboard extends Dashboard{
-  hash?: string;
+export interface CookieDashboard extends Dashboard {
+  hash?: string
 }

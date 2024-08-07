@@ -6,6 +6,7 @@ interface Props {
 }
 defineProps<Props>()
 </script>
+
 <template>
   <img :src="`../img/flags/${currency}.svg`">
 </template>

@@ -1,7 +1,7 @@
 import type { DialogProps } from 'primevue/dialog'
 import type { DynamicDialogInstance } from 'primevue/dynamicdialogoptions'
 
-export function useBcDialog <T> (dialogProps?: DialogProps) {
+export function useBcDialog<T>(dialogProps?: DialogProps) {
   const { width } = useWindowSize()
   const { setTouchableElement } = useSwipe()
 
@@ -16,7 +16,8 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
       if (show) {
         dialogRef.value.options.props.showHeader = true
         dialogRef.value.options.props!.header = header
-      } else {
+      }
+      else {
         dialogRef.value.options.props.showHeader = false
       }
     }
@@ -38,11 +39,11 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
     }
     props.value = dialogRef?.value?.data
   }
-  
+
   // is executed onSetup and onBeforeMount as in different cases the data was not available
   setDialogDefaults()
   onBeforeMount(() => {
-   setDialogDefaults()
+    setDialogDefaults()
   })
 
   onMounted(() => {
@@ -70,5 +71,5 @@ export function useBcDialog <T> (dialogProps?: DialogProps) {
     }
   }
 
-  return { close, props, dialogRef, setHeader}
+  return { close, props, dialogRef, setHeader }
 }

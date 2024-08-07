@@ -1,7 +1,8 @@
-<script lang="ts" setup>import {
+<script lang="ts" setup>
+import {
   faTrash,
   faDesktop,
-  faUser
+  faUser,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
@@ -18,24 +19,24 @@ import type { WebhookForm } from '~/components/notifications/management/modal/No
 type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
 
 interface WrappedRow extends NotificationSettingsDashboardsTableRow {
-  dashboard_type: DashboardType,
-  dashboard_name: string,
-  subscriptions: string[],
+  dashboard_type: DashboardType
+  dashboard_name: string
+  subscriptions: string[]
   identifier: string
 }
 
 interface SettingsWithContext {
-  row: WrappedRow,
+  row: WrappedRow
   settings: Partial<AllOptions>
 }
 
 // #### CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
 
-const KeysIndicatingASubscription : Array<keyof AllOptions> = [
+const KeysIndicatingASubscription: Array<keyof AllOptions> = [
   'is_validator_offline_subscribed', 'group_offline_threshold', 'is_attestations_missed_subscribed', 'is_block_proposal_subscribed',
   'is_upcoming_block_proposal_subscribed', 'is_sync_subscribed', 'is_withdrawal_processed_subscribed', 'is_slashed_subscribed', 'is_real_time_mode_enabled',
   'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'is_erc20_token_transfers_subscribed', 'is_erc721_token_transfers_subscribed',
-  'is_erc1155_token_transfers_subscribed', 'is_ignore_spam_transactions_enabled'
+  'is_erc1155_token_transfers_subscribed', 'is_ignore_spam_transactions_enabled',
 ]
 const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
 const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
@@ -52,10 +53,11 @@ const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
 
 const debouncer = useDebounceValue<SettingsWithContext>({} as SettingsWithContext, MinimumTimeBetweenAPIcalls)
-watch(debouncer.value as Ref<SettingsWithContext>, async(value) => {
+watch(debouncer.value as Ref<SettingsWithContext>, async (value) => {
   try {
     await saveUserSettings(value)
-  } catch (error) {
+  }
+  catch (error) {
     toast.showError({ summary: $t('notifications.subscriptions.error_title'), group: $t('notifications.subscriptions.error_group'), detail: $t('notifications.subscriptions.error_message') })
   }
 })
@@ -64,7 +66,7 @@ const colsVisible = computed(() => {
   return {
     networks: width.value > 1101,
     webhook: width.value >= 945,
-    subscriptions: width.value >= 725
+    subscriptions: width.value >= 725,
   }
 })
 
@@ -72,7 +74,7 @@ const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
-const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow>|undefined> = computed(() => {
+const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow> | undefined> = computed(() => {
   if (!dashboardGroups.value) {
     return
   }
@@ -83,15 +85,15 @@ const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow>|undefine
       dashboard_type: dashboardType(d),
       dashboard_name: getDashboardLabel(String(d.dashboard_id), dashboardType(d)),
       subscriptions: subscriptionList(d),
-      identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`
-    }))
+      identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`,
+    })),
   }
 
-  function dashboardType (row: NotificationSettingsDashboardsTableRow) : DashboardType {
+  function dashboardType(row: NotificationSettingsDashboardsTableRow): DashboardType {
     return row.is_account_dashboard ? 'account' : 'validator'
   }
 
-  function subscriptionList (row: NotificationSettingsDashboardsTableRow) : string[] {
+  function subscriptionList(row: NotificationSettingsDashboardsTableRow): string[] {
     const result: string[] = []
     for (const key of KeysIndicatingASubscription) {
       if ((row.settings as AllOptions)[key]) {
@@ -107,7 +109,7 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
   const dialogProps = {
     dashboardType: row.dashboard_type,
     initialSettings: row.settings,
-    saveUserSettings: (settings: AllOptions) => debouncer.bounce({ row, settings }, true, true)
+    saveUserSettings: (settings: AllOptions) => debouncer.bounce({ row, settings }, true, true),
   }
   switch (col) {
     case 'subscriptions':
@@ -124,14 +126,15 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
             try {
               await saveUserSettings({
                 row,
-                settings: webhookData
+                settings: webhookData,
               })
               closeCallback()
-            } catch (error) {
+            }
+            catch (error) {
               toast.showError({ summary: $t('notifications.subscriptions.error_title'), group: $t('notifications.subscriptions.error_group'), detail: $t('notifications.subscriptions.error_message') })
             }
-          }
-        }
+          },
+        },
       })
       break
     case 'networks':
@@ -143,31 +146,34 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
   }
 }
 
-async function saveUserSettings (settingsAndContext: SettingsWithContext) {
+async function saveUserSettings(settingsAndContext: SettingsWithContext) {
   await fetch<ApiErrorResponse>(API_PATH.SAVE_DASHBOARDS_SETTINGS, {
-      method: 'PUT',
-      signal: AbortSignal.timeout(TimeoutForSavingFailures),
-      body: { ...settingsAndContext.row.settings, ...settingsAndContext.settings }
-    }, {
-      for: settingsAndContext.row.dashboard_type,
-      dashboardKey: String(settingsAndContext.row.dashboard_id),
-      groupId: String(settingsAndContext.row.group_id)
-    })
+    method: 'PUT',
+    signal: AbortSignal.timeout(TimeoutForSavingFailures),
+    body: { ...settingsAndContext.row.settings, ...settingsAndContext.settings },
+  }, {
+    for: settingsAndContext.row.dashboard_type,
+    dashboardKey: String(settingsAndContext.row.dashboard_id),
+    groupId: String(settingsAndContext.row.group_id),
+  })
 }
 
-function getTypeIcon (type: DashboardType) {
+function getTypeIcon(type: DashboardType) {
   if (type === 'validator') {
     return faDesktop
   }
   return faUser
 }
-
 </script>
 
 <template>
   <div>
     <Teleport to="#notifications-management-search-placholder">
-      <BcContentFilter :search-placeholder="$t('notifications.dashboards.search_placeholder')" class="search" @filter-changed="setSearch" />
+      <BcContentFilter
+        :search-placeholder="$t('notifications.dashboards.search_placeholder')"
+        class="search"
+        @filter-changed="setSearch"
+      />
     </Teleport>
 
     <ClientOnly fallback-tag="span">
@@ -193,7 +199,10 @@ function getTypeIcon (type: DashboardType) {
         >
           <template #body="slotProps">
             <span>
-              <FontAwesomeIcon :icon="getTypeIcon(slotProps.data.dashboard_type)" class="type-icon" />
+              <FontAwesomeIcon
+                :icon="getTypeIcon(slotProps.data.dashboard_type)"
+                class="type-icon"
+              />
               {{ slotProps.data.dashboard_name }}
             </span>
           </template>
@@ -261,9 +270,13 @@ function getTypeIcon (type: DashboardType) {
             </BcTablePopoutEdit>
           </template>
         </Column>
-        <Column field="action" body-class="action-col" header-class="action-col">
+        <Column
+          field="action"
+          body-class="action-col"
+          header-class="action-col"
+        >
           <template #body="slotProps">
-            <!--TODO: once we have our api check how to identify 'deleted' rows-->
+            <!-- TODO: once we have our api check how to identify 'deleted' rows -->
             <div class="action-row">
               <FontAwesomeIcon
                 :disabled="!slotProps.data.subscriptions?.length ? true : null"

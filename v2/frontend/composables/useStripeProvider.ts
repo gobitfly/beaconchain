@@ -4,7 +4,7 @@ import type { StripeProvider } from '~/types/stripe'
 import type { StripeCustomerPortal, StripeCreateCheckoutSession } from '~/types/api/user'
 import { API_PATH } from '~/types/customFetch'
 
-export function useStripeProvider () {
+export function useStripeProvider() {
   const { fetch } = useCustomFetch()
   const { public: { stripeBaseUrl } } = useRuntimeConfig()
 
@@ -33,7 +33,7 @@ export function useStripeProvider () {
 
     const res = await fetch<StripeCustomerPortal>(API_PATH.STRIPE_CUSTOMER_PORTAL, {
       body: JSON.stringify({ returnURL: window.location.href }),
-      baseURL: stripeBaseUrl
+      baseURL: stripeBaseUrl,
     })
 
     window.open(res?.url, '_blank')
@@ -50,12 +50,13 @@ export function useStripeProvider () {
 
     const res = await fetch<StripeCreateCheckoutSession>(API_PATH.STRIPE_CHECKOUT_SESSION, {
       body: JSON.stringify({ priceId, addonQuantity: amount }),
-      baseURL: stripeBaseUrl
+      baseURL: stripeBaseUrl,
     })
 
     if (res.sessionId) {
       stripe.value!.redirectToCheckout({ sessionId: res.sessionId }) // stripe.value! checked via isStripeDisabled.value
-    } else {
+    }
+    else {
       warn('StripeCreateCheckoutSession error', res)
     }
 

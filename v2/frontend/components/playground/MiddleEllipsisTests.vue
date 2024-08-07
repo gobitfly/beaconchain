@@ -4,13 +4,13 @@ const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567
 const randomTexts = ref<string[]>([])
 
 // custom rnd because we need to start with the same seed during SSR and at the first client rendering
-function rand (max: number) : number {
+function rand(max: number): number {
   randomInt = (214013 * randomInt + 2531011) & 0xFFFFFFFF
   const normalized = ((randomInt >> 16) & 0xFFFF) / 65535
   return Math.round(normalized * max)
 }
 
-function getRandomText () : string {
+function getRandomText(): string {
   let result = ''
   for (let l = 20 + rand(100); l > 0; l--) {
     result += characters[rand(characters.length - 1)]
@@ -18,7 +18,7 @@ function getRandomText () : string {
   return result
 }
 
-function reGenerateTextList () {
+function reGenerateTextList() {
   randomTexts.value.length = 0
   for (let i = 0; i < 100; i++) {
     randomTexts.value.push(getRandomText())
@@ -45,13 +45,30 @@ const showAllCSSclipped = ref<boolean>(false)
   </p>
   <div style="position: relative;">
     <p><b>With 1 ellipsis:</b></p>
-    <BcSearchbarMiddleEllipsis class="frame medium standalone" :text="randomTexts[0]" />
+    <BcSearchbarMiddleEllipsis
+      class="frame medium standalone"
+      :text="randomTexts[0]"
+    />
     <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
-      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :initial-flex-grow="1" />
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" />
+      <BcSearchbarMiddleEllipsis
+        class="flexible loose"
+        :text="randomTexts[1]"
+        :initial-flex-grow="1"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible medium"
+        :text="randomTexts[2]"
+      />
       <span>Hello I am not a MiddleEllipsis*</span>
-      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
-      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :initial-flex-grow="1" />
+      <BcSearchbarMiddleEllipsis
+        class="flexible big"
+        :text="randomTexts[3]"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible loose"
+        :text="randomTexts[4]"
+        :initial-flex-grow="1"
+      />
     </BcSearchbarMiddleEllipsis>
     <p>* you can put anything in a parent MiddleEllipsis, he will control its children and leave the rest as it is.</p>
   </div>
@@ -66,12 +83,34 @@ const showAllCSSclipped = ref<boolean>(false)
       <br>
       * If the text looks short when it happens: with 2 ellipses, there would be 1 visible character ony, for example "…C…" or "A……" which is a loss of information without any advantage, therefore "A…D" is shown.
     </p>
-    <BcSearchbarMiddleEllipsis class="frame medium standalone" :text="randomTexts[0]" :ellipses="2" />
+    <BcSearchbarMiddleEllipsis
+      class="frame medium standalone"
+      :text="randomTexts[0]"
+      :ellipses="2"
+    />
     <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
-      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[1]" :ellipses="2" :initial-flex-grow="1" />
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[2]" :ellipses="2" />
-      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" :ellipses="2" />
-      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :ellipses="2" :initial-flex-grow="1" />
+      <BcSearchbarMiddleEllipsis
+        class="flexible loose"
+        :text="randomTexts[1]"
+        :ellipses="2"
+        :initial-flex-grow="1"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible medium"
+        :text="randomTexts[2]"
+        :ellipses="2"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible big"
+        :text="randomTexts[3]"
+        :ellipses="2"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible loose"
+        :text="randomTexts[4]"
+        :ellipses="2"
+        :initial-flex-grow="1"
+      />
     </BcSearchbarMiddleEllipsis>
   </div>
 
@@ -85,12 +124,34 @@ const showAllCSSclipped = ref<boolean>(false)
       * up to 3 ellipses if there is room for up to 64 characters,<br>
       * up to 4 ellipses if there is room for more than 64 characters.<br>
     </p>
-    <BcSearchbarMiddleEllipsis class="frame medium standalone" :text="randomTexts[0]" :ellipses="[16,32,64]" />
+    <BcSearchbarMiddleEllipsis
+      class="frame medium standalone"
+      :text="randomTexts[0]"
+      :ellipses="[16, 32, 64]"
+    />
     <BcSearchbarMiddleEllipsis class="frame big nocolor parent">
-      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[2]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[1]" :ellipses="[16,32,64]" />
-      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[5]" :ellipses="[16,32,64]" />
-      <BcSearchbarMiddleEllipsis class="flexible loose" :text="randomTexts[4]" :ellipses="[16,32,64]" :initial-flex-grow="1" />
+      <BcSearchbarMiddleEllipsis
+        class="flexible loose"
+        :text="randomTexts[2]"
+        :ellipses="[16, 32, 64]"
+        :initial-flex-grow="1"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible medium"
+        :text="randomTexts[1]"
+        :ellipses="[16, 32, 64]"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible big"
+        :text="randomTexts[5]"
+        :ellipses="[16, 32, 64]"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible loose"
+        :text="randomTexts[4]"
+        :ellipses="[16, 32, 64]"
+        :initial-flex-grow="1"
+      />
     </BcSearchbarMiddleEllipsis>
   </div>
 
@@ -100,10 +161,22 @@ const showAllCSSclipped = ref<boolean>(false)
     (enlarge your window or change the texts to see it)
     <br>
     <BcSearchbarMiddleEllipsis class="frame all nocolor parent">
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[0]" />
-      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[5]" />
-      <BcSearchbarMiddleEllipsis class="flexible medium" :text="randomTexts[1]" />
-      <BcSearchbarMiddleEllipsis class="flexible big" :text="randomTexts[3]" />
+      <BcSearchbarMiddleEllipsis
+        class="flexible medium"
+        :text="randomTexts[0]"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible big"
+        :text="randomTexts[5]"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible medium"
+        :text="randomTexts[1]"
+      />
+      <BcSearchbarMiddleEllipsis
+        class="flexible big"
+        :text="randomTexts[3]"
+      />
     </BcSearchbarMiddleEllipsis>
   </div>
 

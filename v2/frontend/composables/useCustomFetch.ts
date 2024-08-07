@@ -8,7 +8,7 @@ const APIcallTimeout = 30 * 1000 // 30 seconds
 const pathNames = Object.values(API_PATH)
 type PathName = typeof pathNames[number]
 
-export function useCustomFetch () {
+export function useCustomFetch() {
   const headers = useRequestHeaders(['cookie'])
   const xForwardedFor = useRequestHeader('x-forwarded-for')
   const xRealIp = useRequestHeader('x-real-ip')
@@ -16,10 +16,10 @@ export function useCustomFetch () {
   const { showError } = useBcToast()
   const { t: $t } = useTranslation()
   const { $bcLogger } = useNuxtApp()
-  const uuid = inject<{value: string}>('app-uuid')
+  const uuid = inject<{ value: string }>('app-uuid')
 
   // eslint-disable-next-line @typescript-eslint/ban-types
-  async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
+  async function fetch<T>(pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
     const map = mapping[pathName]
     if (!map) {
       throw new Error(`path ${pathName} not found`)
@@ -66,7 +66,8 @@ export function useCustomFetch () {
     if (method !== 'GET') {
       if (csrfHeader.value) {
         options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
-      } else {
+      }
+      else {
         $bcLogger.warn(`${uuid?.value} | missing csrf header!`)
       }
     }
@@ -75,7 +76,7 @@ export function useCustomFetch () {
       const res = await $fetch<LoginResponse>(path, {
         method,
         baseURL,
-        ...options
+        ...options,
       })
       return res as T
     }
@@ -87,7 +88,8 @@ export function useCustomFetch () {
         setCsrfHeader(res.headers)
       }
       return res._data as T
-    } catch (e: any) {
+    }
+    catch (e: any) {
       if (!dontShowError && showInDevelopment) {
         showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
       }

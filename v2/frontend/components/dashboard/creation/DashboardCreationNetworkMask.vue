@@ -6,13 +6,15 @@ import { useNetworkStore } from '~/stores/useNetworkStore'
 const { currentNetwork, availableNetworks, isNetworkDisabled } = useNetworkStore()
 const { t: $t } = useTranslation()
 
-const emit = defineEmits<{(e: 'next' | 'back'): void }>()
+const emit = defineEmits<{ (e: 'next' | 'back'): void }>()
 const network = defineModel<ChainIDs>('network', { required: true })
-const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}`|''>(network, net => `${net || ''}`, sel => Number(sel || 0))
+const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}` | ''>(network, net => `${net || ''}`, sel => Number(sel || 0))
 
 const buttonList = shallowRef<any[]>([])
 
-watch(currentNetwork, (id) => { network.value = id })
+watch(currentNetwork, (id) => {
+  network.value = id
+})
 
 watch(availableNetworks, () => {
   buttonList.value = [] as any[]
@@ -25,7 +27,7 @@ watch(availableNetworks, () => {
         disabled: isNetworkDisabled(chainId),
         component: IconNetwork,
         componentProps: { chainId, colored: false, harmonizePerceivedSize: true },
-        componentClass: 'dashboard-creation-button-network-icon'
+        componentClass: 'dashboard-creation-button-network-icon',
       })
     }
   })
@@ -56,7 +58,10 @@ const continueDisabled = computed(() => {
         <Button @click="emit('back')">
           {{ $t('navigation.back') }}
         </Button>
-        <Button :disabled="continueDisabled" @click="emit('next')">
+        <Button
+          :disabled="continueDisabled"
+          @click="emit('next')"
+        >
           {{ $t('navigation.continue') }}
         </Button>
       </div>

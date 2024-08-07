@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import {
-  faInfoCircle
+  faInfoCircle,
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  dashboard: ValidatorDashboard; // Currently only validator dashboards are supported
+  dashboard: ValidatorDashboard // Currently only validator dashboards are supported
 }
 const { props, dialogRef } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
@@ -29,7 +29,8 @@ watch(props, (p) => {
     isNew.value = !p.dashboard.public_ids?.[0]
     if (isNew.value) {
       dashboardName.value = props.value?.dashboard?.name ?? ''
-    } else {
+    }
+    else {
       dashboardName.value = p.dashboard.public_ids?.[0]?.name ?? ''
     }
   }
@@ -64,7 +65,8 @@ const share = () => {
 
   if (props.value?.dashboard.public_ids?.[0]?.public_id) {
     edit()
-  } else {
+  }
+  else {
     add()
   }
 }
@@ -72,13 +74,15 @@ const share = () => {
 const shareGroupTooltip = computed(() => {
   return formatMultiPartSpan($t, 'dashboard.share_dialog.setting.group.tooltip', [undefined, 'bold', undefined])
 })
-
 </script>
 
 <template>
   <div class="share-dashboard-modal-container">
     <div class="content">
-      <label for="dashboardName" class="medium">{{ $t('dashboard.share_dialog.setting.name.label') }}</label>
+      <label
+        for="dashboardName"
+        class="medium"
+      >{{ $t('dashboard.share_dialog.setting.name.label') }}</label>
       <InputText
         id="dashboardName"
         v-model="dashboardName"
@@ -87,8 +91,16 @@ const shareGroupTooltip = computed(() => {
         @keypress.enter="share"
       />
       <div class="share-setting">
-        <Checkbox id="shareGroup" v-model="shareGroups" :binary="true" :disabled="!isPremiumUser" />
-        <label for="shareGroup" :class="{'text-disabled':!isPremiumUser}">{{ $t('dashboard.share_dialog.setting.group.label') }}</label>
+        <Checkbox
+          id="shareGroup"
+          v-model="shareGroups"
+          :binary="true"
+          :disabled="!isPremiumUser"
+        />
+        <label
+          for="shareGroup"
+          :class="{ 'text-disabled': !isPremiumUser }"
+        >{{ $t('dashboard.share_dialog.setting.group.label') }}</label>
 
         <BcTooltip
           position="top"
@@ -102,7 +114,10 @@ const shareGroupTooltip = computed(() => {
       </div>
     </div>
     <div class="footer">
-      <Button :disabled="publishDisabled" @click="share">
+      <Button
+        :disabled="publishDisabled"
+        @click="share"
+      >
         {{ isNew ? $t('navigation.publish') : $t('navigation.update') }}
       </Button>
     </div>

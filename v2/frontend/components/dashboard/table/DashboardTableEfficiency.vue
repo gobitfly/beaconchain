@@ -2,9 +2,9 @@
 import BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
-  success: number,
-  failed: number,
-  absolute?: boolean,
+  success: number
+  failed: number
+  absolute?: boolean
   isTooltip?: boolean
 }
 const props = defineProps<Props>()
@@ -15,19 +15,35 @@ const data = computed(() => {
 
   return { failedClass, sum }
 })
-
 </script>
+
 <template>
-  <BcTooltip class="efficiency" :fit-content="true">
-    <template v-if="!isTooltip" #tooltip>
+  <BcTooltip
+    class="efficiency"
+    :fit-content="true"
+  >
+    <template
+      v-if="!isTooltip"
+      #tooltip
+    >
       <slot name="tooltip">
-        <DashboardTableEfficiency v-bind="props" :absolute="!absolute" :is-tooltip="true" />
+        <DashboardTableEfficiency
+          v-bind="props"
+          :absolute="!absolute"
+          :is-tooltip="true"
+        />
       </slot>
     </template>
     <span v-if="absolute">
-      <BcFormatNumber class="positive" :value="props.success" />
+      <BcFormatNumber
+        class="positive"
+        :value="props.success"
+      />
       <span class="slash"> / </span>
-      <BcFormatNumber :class="data.failedClass" :value="props.failed" />
+      <BcFormatNumber
+        :class="data.failedClass"
+        :value="props.failed"
+      />
     </span>
     <BcFormatPercent
       v-else

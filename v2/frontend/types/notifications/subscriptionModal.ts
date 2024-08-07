@@ -3,7 +3,7 @@ import type { ChainIDs } from '../network'
 export interface InternalEntry {
   type: 'binary' | 'amount' | 'percent' | 'networks'
   networks?: ChainIDs[]
-  check?: boolean,
+  check?: boolean
   num?: number
 }
 

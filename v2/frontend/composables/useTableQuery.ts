@@ -1,7 +1,7 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 
-export function useTableQuery (initialQuery?: TableQueryParams, initialPageSize = 10) {
+export function useTableQuery(initialQuery?: TableQueryParams, initialPageSize = 10) {
   const cursor = ref<Cursor>()
   const pageSize = ref<number>(initialPageSize)
   const storedQuery = ref<TableQueryParams | undefined>()

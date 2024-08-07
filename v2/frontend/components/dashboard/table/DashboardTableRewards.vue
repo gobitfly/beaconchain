@@ -29,7 +29,7 @@ const colsVisible = computed(() => {
     duty: width.value > 1180,
     clRewards: width.value >= 900,
     elRewards: width.value >= 780,
-    age: width.value >= 660
+    age: width.value >= 660,
   }
 })
 
@@ -75,7 +75,8 @@ const setSearch = (value?: string) => {
 const getRowClass = (row: VDBRewardsTableRow) => {
   if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
-  } else if (row.group_id === DAHSHBOARDS_NEXT_EPOCH_ID) {
+  }
+  else if (row.group_id === DAHSHBOARDS_NEXT_EPOCH_ID) {
     return 'future-row'
   }
 }
@@ -112,11 +113,11 @@ const wrappedRewards = computed(() => {
   }
   return {
     paging: rewards.value.paging,
-    data: rewards.value.data.map(d => ({ ...d, identifier: `${d.epoch}-${d.group_id}` }))
+    data: rewards.value.data.map(d => ({ ...d, identifier: `${d.epoch}-${d.group_id}` })),
   }
 })
-
 </script>
+
 <template>
   <div>
     <BcTableControl
@@ -143,14 +144,28 @@ const wrappedRewards = computed(() => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="epoch" :sortable="true" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
+            <Column
+              field="epoch"
+              :sortable="true"
+              body-class="epoch"
+              header-class="epoch"
+              :header="$t('common.epoch')"
+            >
               <template #body="slotProps">
-                <BcLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank">
+                <BcLink
+                  :to="`/epoch/${slotProps.data.epoch}`"
+                  class="link"
+                  target="_blank"
+                >
                   <BcFormatNumber :value="slotProps.data.epoch" />
                 </BcLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" field="age" body-class="age-field">
+            <Column
+              v-if="colsVisible.age"
+              field="age"
+              body-class="age-field"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -169,7 +184,10 @@ const wrappedRewards = computed(() => {
                 <span v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
                   {{ findNextEpochDuties(slotProps.data.epoch) }}
                 </span>
-                <DashboardTableValueDuty v-else :duty="slotProps.data.duty" />
+                <DashboardTableValueDuty
+                  v-else
+                  :duty="slotProps.data.duty"
+                />
               </template>
             </Column>
             <Column

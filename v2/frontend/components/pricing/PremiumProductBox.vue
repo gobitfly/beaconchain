@@ -14,7 +14,7 @@ const { t: $t } = useTranslation()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {
-  product: PremiumProduct,
+  product: PremiumProduct
   isYearly: boolean
 }
 const props = defineProps<Props>()
@@ -31,7 +31,7 @@ const prices = computed(() => {
     monthly_based_on_yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur / 12),
     yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
     saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard / props.product.premium_perks.validator_dashboards, 6)
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard / props.product.premium_perks.validator_dashboards, 6),
   }
 })
 
@@ -41,7 +41,7 @@ const percentages = computed(() => {
       validatorDashboards: 100,
       validatorsPerDashboard: 100,
       summaryChart: 100,
-      heatmapChart: 100
+      heatmapChart: 100,
     }
   }
 
@@ -55,11 +55,11 @@ const percentages = computed(() => {
     validatorDashboards: props.product.premium_perks.validator_dashboards / (bestProduct.premium_perks.validator_dashboards) * 100,
     validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (bestProduct.premium_perks.validators_per_dashboard) * 100,
     summaryChart: chartPercent,
-    heatmapChart: chartPercent
+    heatmapChart: chartPercent,
   }
 })
 
-async function buttonCallback () {
+async function buttonCallback() {
   if (planButton.value.disabled) {
     return
   }
@@ -67,10 +67,12 @@ async function buttonCallback () {
   if (isLoggedIn.value) {
     if (currentPremiumSubscription.value) {
       await stripeCustomerPortal()
-    } else {
+    }
+    else {
       await stripePurchase(props.isYearly ? props.product.stripe_price_id_yearly : props.product.stripe_price_id_monthly, 1)
     }
-  } else {
+  }
+  else {
     await navigateTo('/login')
   }
 }
@@ -85,14 +87,17 @@ const planButton = computed(() => {
       if ((currentPremiumSubscription.value.product_id === props.product.product_id_monthly || currentPremiumSubscription.value.product_id === props.product.product_id_yearly) || subscribedProduct === undefined) {
         // (this box is either for the subscribed product) || (the user has an unknown product, possible from V1 or maybe a custom plan)
         text = $t('pricing.premium_product.button.manage_plan')
-      } else if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+      }
+      else if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
         text = $t('pricing.premium_product.button.upgrade')
-      } else {
+      }
+      else {
         isDowngrade = true
         text = $t('pricing.premium_product.button.downgrade')
       }
     }
-  } else {
+  }
+  else {
     text = $t('pricing.get_started')
   }
 
@@ -107,7 +112,7 @@ const mainFeatures = computed<Feature[]>(() => {
     {
       name: $t('pricing.premium_product.validator_dashboards', { amount: formatNumber(props.product?.premium_perks.validator_dashboards) }, (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2),
       available: true,
-      percentage: percentages.value.validatorDashboards
+      percentage: percentages.value.validatorDashboards,
     },
     {
       name: props.product.premium_perks.validator_dashboards === 1
@@ -116,20 +121,20 @@ const mainFeatures = computed<Feature[]>(() => {
       subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       available: true,
       tooltip: $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
-      percentage: percentages.value.validatorsPerDashboard
+      percentage: percentages.value.validatorsPerDashboard,
     },
     {
       name: $t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe'),
       subtext: $t('pricing.premium_product.coming_soon'),
       available: true,
-      percentage: percentages.value.summaryChart
+      percentage: percentages.value.summaryChart,
     },
     {
       name: $t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe'),
       subtext: $t('pricing.premium_product.coming_soon'),
       available: true,
-      percentage: percentages.value.heatmapChart
-    }
+      percentage: percentages.value.heatmapChart,
+    },
   ]
 })
 
@@ -137,34 +142,39 @@ const minorFeatures = computed<Feature[]>(() => {
   return [
     {
       name: $t('pricing.premium_product.no_ads'),
-      available: props.product?.premium_perks.ad_free
+      available: props.product?.premium_perks.ad_free,
     },
     {
       name: $t('pricing.premium_product.share_dashboard'),
-      available: props.product?.premium_perks.share_custom_dashboards
+      available: props.product?.premium_perks.share_custom_dashboards,
     },
     {
       name: $t('pricing.premium_product.mobile_app_widget'),
       link: '/mobile',
-      available: props.product?.premium_perks.mobile_app_widget
+      available: props.product?.premium_perks.mobile_app_widget,
     },
     {
       name: $t('pricing.premium_product.manage_dashboard_via_api'),
       subtext: $t('pricing.premium_product.coming_soon'),
-      available: props.product?.premium_perks.manage_dashboard_via_api
-    }
+      available: props.product?.premium_perks.manage_dashboard_via_api,
+    },
   ]
 })
-
 </script>
 
 <template>
-  <div class="box-container" :popular="product.is_popular || null">
+  <div
+    class="box-container"
+    :popular="product.is_popular || null"
+  >
     <div class="name-container">
       <div class="name">
         {{ props.product?.product_name }}
       </div>
-      <div v-if="product.is_popular" class="popular">
+      <div
+        v-if="product.is_popular"
+        class="popular"
+      >
         {{ $t('pricing.premium_product.popular') }}
       </div>
     </div>
@@ -177,18 +187,24 @@ const minorFeatures = computed<Feature[]>(() => {
           <span>{{ $t('pricing.per_month') }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
+          {{ $t('pricing.amount_per_year', { amount: prices.yearly }) }}*
         </div>
       </div>
-      <div v-if="isYearly" class="saving-info">
+      <div
+        v-if="isYearly"
+        class="saving-info"
+      >
         <div>
-          {{ $t('pricing.savings', {amount: prices.saving}) }}
+          {{ $t('pricing.savings', { amount: prices.saving }) }}
         </div>
-        <BcTooltip position="top" :fit-content="true">
+        <BcTooltip
+          position="top"
+          :fit-content="true"
+        >
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ $t('pricing.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+              {{ $t('pricing.savings_tooltip', { monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly }) }}
             </div>
           </template>
         </BcTooltip>
@@ -208,10 +224,21 @@ const minorFeatures = computed<Feature[]>(() => {
           :link="feature.link"
         />
       </div>
-      <div v-if="planButton.isDowngrade" :disabled="planButton.disabled" class="plan-button dismiss" @click="buttonCallback()">
+      <div
+        v-if="planButton.isDowngrade"
+        :disabled="planButton.disabled"
+        class="plan-button dismiss"
+        @click="buttonCallback()"
+      >
         {{ planButton.text }}
       </div>
-      <Button v-else :label="planButton.text" :disabled="planButton.disabled" class="plan-button" @click="buttonCallback()" />
+      <Button
+        v-else
+        :label="planButton.text"
+        :disabled="planButton.disabled"
+        class="plan-button"
+        @click="buttonCallback()"
+      />
     </div>
   </div>
 </template>

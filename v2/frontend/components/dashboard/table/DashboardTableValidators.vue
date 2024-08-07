@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faArrowUpRightFromSquare
+  faArrowUpRightFromSquare,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
@@ -11,13 +11,13 @@ import type { DashboardKey } from '~/types/dashboard'
 import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 
 interface Props {
-  validators: number[],
-  groupId?: number,
+  validators: number[]
+  groupId?: number
   timeFrame?: SummaryTimeFrame
-  context: DashboardValidatorContext,
-  dashboardKey?: DashboardKey,
-  data?: VDBGroupSummaryData,
-  row: VDBSummaryTableRow,
+  context: DashboardValidatorContext
+  dashboardKey?: DashboardKey
+  data?: VDBGroupSummaryData
+  row: VDBSummaryTableRow
 }
 const props = defineProps<Props>()
 
@@ -37,9 +37,9 @@ const openValidatorModal = () => {
       dashboardKey: props.dashboardKey,
       summary: {
         row: props.row,
-        data: props.data
-      }
-    }
+        data: props.data,
+      },
+    },
   })
 }
 
@@ -48,13 +48,20 @@ const groupName = computed(() => {
 })
 
 const cappedValidators = computed(() => sortValidatorIds(props.validators).slice(0, 10))
-
 </script>
+
 <template>
   <div class="validator_column">
     <div class="validators">
-      <template v-for="v in cappedValidators" :key="v">
-        <BcLink :to="`/validator/${v}`" target="_blank" class="link validator_link">
+      <template
+        v-for="v in cappedValidators"
+        :key="v"
+      >
+        <BcLink
+          :to="`/validator/${v}`"
+          target="_blank"
+          class="link validator_link"
+        >
           {{ v }}
         </BcLink>
         <span>, </span>

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faArrowUpRightFromSquare
+  faArrowUpRightFromSquare,
 } from '@fortawesome/pro-solid-svg-icons'
 import IconValidator from '../icon/IconValidator.vue'
 import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-defineEmits<{(e: 'openDialog'): void }>()
+defineEmits<{ (e: 'openDialog'): void }>()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -23,7 +23,7 @@ const colsVisible = computed(() => {
   return {
     notifications: width.value > 1024,
     dashboard: width.value >= 640,
-    groups: width.value >= 640
+    groups: width.value >= 640,
   }
 })
 
@@ -44,8 +44,8 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
     paging: notificationsDashboards.value.paging,
     // TODO: set unique identifier after backend is ready
     data: notificationsDashboards.value.data
-      .map((item, index) => ({ ...item, identifier: index }))
-      // .filter(() => false) // comment in to test empty table
+      .map((item, index) => ({ ...item, identifier: index })),
+    // .filter(() => false) // comment in to test empty table
   }
 })
 </script>
@@ -82,7 +82,11 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
             >
               <template #body="slotProps">
                 <div class="icon-wrapper">
-                  <IconNetwork colored :chain-id="slotProps.data.dashboardNetwork" class="icon-network" />
+                  <IconNetwork
+                    colored
+                    :chain-id="slotProps.data.dashboardNetwork"
+                    class="icon-network"
+                  />
                 </div>
               </template>
             </Column>
@@ -96,7 +100,10 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed :value="slotProps.data.timestamp" type="go-timestamp" />
+                <BcFormatTimePassed
+                  :value="slotProps.data.timestamp"
+                  type="go-timestamp"
+                />
               </template>
             </Column>
             <Column
@@ -204,11 +211,11 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
             <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width < 1024">
-                {{ $t('notifications.dashboards.footer.subscriptions.validators_shortened', { count: 1}) }} | {{ $t('notifications.dashboards.footer.subscriptions.accounts_shortened', { count: 1}) }}
+                {{ $t('notifications.dashboards.footer.subscriptions.validators_shortened', { count: 1 }) }} | {{ $t('notifications.dashboards.footer.subscriptions.accounts_shortened', { count: 1 }) }}
               </template>
               <template v-else>
-                <div>{{ $t('notifications.dashboards.footer.subscriptions.validators', { count: 1}) }}</div>
-                <div>{{ $t('notifications.dashboards.footer.subscriptions.accounts', { count: 1}) }}</div>
+                <div>{{ $t('notifications.dashboards.footer.subscriptions.validators', { count: 1 }) }}</div>
+                <div>{{ $t('notifications.dashboards.footer.subscriptions.accounts', { count: 1 }) }}</div>
               </template>
             </template>
           </BcTable>

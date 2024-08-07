@@ -6,11 +6,11 @@ import { isNative, isFiat } from '~/utils/currency'
 import { OneEther, OneGwei, lessThanGwei, lessThanEth } from '~/utils/ether'
 import { commmifyLeft, trim, withCurrency } from '~/utils/format'
 
-export function useValue () {
+export function useValue() {
   const { currency, rates } = useCurrency()
 
   const converter = computed(() => {
-    const weiToValue:WeiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions): ExtendedLabel => {
+    const weiToValue: WeiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions): ExtendedLabel => {
       if (!wei) {
         return { label: '' }
       }
@@ -21,18 +21,19 @@ export function useValue () {
       if (value.isZero()) {
         if (options?.fixedDecimalCount) {
           return {
-            label: withCurrency(`0.${nZeros(options?.fixedDecimalCount)}`, target)
+            label: withCurrency(`0.${nZeros(options?.fixedDecimalCount)}`, target),
           }
         }
         return {
-          label: withCurrency('0', target)
+          label: withCurrency('0', target),
         }
       }
 
       // If a different sourceUnit is defined we multiply accordingly. We usually get gwei, but you never know.
       if (options?.sourceUnit === 'GWEI') {
         value = value.mul(OneGwei)
-      } else if (options?.sourceUnit === 'MAIN') {
+      }
+      else if (options?.sourceUnit === 'MAIN') {
         value = value.mul(OneEther)
       }
 
@@ -56,7 +57,8 @@ export function useValue () {
           value = value.mul(OneEther)
           maxDecimalCount = 0
           currencyLabel = 'WEI'
-        } else if (options?.fixedUnit === 'GWEI' || ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThanEth(value.abs(), options?.minUnitDecimalCount ?? maxDecimalCount))) {
+        }
+        else if (options?.fixedUnit === 'GWEI' || ((!options?.minUnit || options?.minUnit === 'GWEI') && lessThanEth(value.abs(), options?.minUnitDecimalCount ?? maxDecimalCount))) {
           value = value.mul(OneGwei)
           currencyLabel = 'GWEI'
         }
@@ -69,7 +71,7 @@ export function useValue () {
 
       return {
         label: withCurrency(addPlusSign(label, options?.addPlus === true), currencyLabel),
-        fullLabel: fullRequired ? withCurrency(addPlusSign(fullLabel, options?.addPlus === true), currencyLabel) : undefined
+        fullLabel: fullRequired ? withCurrency(addPlusSign(fullLabel, options?.addPlus === true), currencyLabel) : undefined,
       }
     }
     return { weiToValue }

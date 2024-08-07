@@ -1,15 +1,22 @@
 <script lang="ts" setup>
 import {
-  faGem
+  faGem,
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 </script>
 
 <template>
   <BcTooltip :text="$t('premium.subscribe')">
-    <BcLink :to="`/pricing`" target="_blank" class="link">
+    <BcLink
+      :to="`/pricing`"
+      target="_blank"
+      class="link"
+    >
       <div>
-        <FontAwesomeIcon :icon="faGem" class="gem" />
+        <FontAwesomeIcon
+          :icon="faGem"
+          class="gem"
+        />
       </div>
     </BcLink>
   </BcTooltip>

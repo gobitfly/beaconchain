@@ -4,7 +4,7 @@ import { faCirclePlus, faRightFromBracket } from '@fortawesome/pro-regular-svg-i
 
 const { t: $t } = useTranslation()
 
-const emit = defineEmits<{(e: 'openDialog'): void }>()
+const emit = defineEmits<{ (e: 'openDialog'): void }>()
 
 const handleClick = () => {
   if (!isLoggedIn.value) {
@@ -30,13 +30,22 @@ const text = computed(() => {
   }
   return $t('notifications.dashboards.empty.with_dashboards')
 })
-
 </script>
+
 <template>
-  <div class="empty delayed-fadein-animation" @click="handleClick">
+  <div
+    class="empty delayed-fadein-animation"
+    @click="handleClick"
+  >
     <span class="big_text">{{ text }}</span>
-    <FontAwesomeIcon v-if="isLoggedIn" :icon="faCirclePlus" />
-    <FontAwesomeIcon v-else :icon="faRightFromBracket" />
+    <FontAwesomeIcon
+      v-if="isLoggedIn"
+      :icon="faCirclePlus"
+    />
+    <FontAwesomeIcon
+      v-else
+      :icon="faRightFromBracket"
+    />
   </div>
 </template>
 

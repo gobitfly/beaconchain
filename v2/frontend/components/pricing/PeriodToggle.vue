@@ -24,8 +24,11 @@ const savingPercentage = computed(() => {
       :true-option="$t('pricing.yearly')"
       :false-option="$t('pricing.monthly')"
     />
-    <div v-if="savingPercentage > 0" class="save-up-text">
-      {{ $t('pricing.save_up_to', {percentage: savingPercentage}) }}
+    <div
+      v-if="savingPercentage > 0"
+      class="save-up-text"
+    >
+      {{ $t('pricing.save_up_to', { percentage: savingPercentage }) }}
     </div>
   </div>
 </template>

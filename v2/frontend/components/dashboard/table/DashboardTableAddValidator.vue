@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCirclePlus } from '@fortawesome/pro-regular-svg-icons'
+
 const manageValidatorsModalVisisble = ref(false)
 
 const addValidator = () => {
   manageValidatorsModalVisisble.value = true
 }
 </script>
+
 <template>
-  <div class="empty delayed-fadein-animation" @click="addValidator">
+  <div
+    class="empty delayed-fadein-animation"
+    @click="addValidator"
+  >
     <span class="big_text">{{ $t('dashboard.validator.summary.add_validator') }}</span>
     <FontAwesomeIcon :icon="faCirclePlus" />
     <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />

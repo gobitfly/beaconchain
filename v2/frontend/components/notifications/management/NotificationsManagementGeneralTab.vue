@@ -1,8 +1,7 @@
 <script lang="ts" setup>
-
 import {
   faArrowUpRightFromSquare,
-  faPaperPlane
+  faPaperPlane,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { API_PATH } from '~/types/customFetch'
@@ -44,12 +43,13 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   setTestButton(true)
   try {
     await fetch(type === 'email' ? API_PATH.NOTIFICATIONS_TEST_EMAIL : API_PATH.NOTIFICATIONS_TEST_PUSH)
-  } catch (error) {
+  }
+  catch (error) {
     toast.showError(
       {
         summary: $t('notifications.general.test_notification_error.toast_title'),
         group: $t('notifications.general.test_notification_error.toast_group'),
-        detail: $t('notifications.general.test_notification_error.toast_message')
+        detail: $t('notifications.general.test_notification_error.toast_message'),
       })
   }
   bounceTestButton(false)
@@ -60,7 +60,7 @@ const pairedDevicesCount = computed(() => pairedDevices.value?.length || 0)
 const buttonStates = computed(() => {
   return {
     isEmailDisabled: areTestButtonsDisabled.value || !isEmailToggleOn.value,
-    isPushDisabled: areTestButtonsDisabled.value || !isPushToggleOn.value || pairedDevicesCount.value === 0
+    isPushDisabled: areTestButtonsDisabled.value || !isPushToggleOn.value || pairedDevicesCount.value === 0,
   }
 })
 
@@ -95,7 +95,6 @@ const textMutedUntil = computed(() => {
 
   return undefined
 })
-
 </script>
 
 <template>
@@ -106,8 +105,14 @@ const textMutedUntil = computed(() => {
         <span>{{ $t('notifications.general.do_not_disturb') }}</span>
         <span class="explanation">{{ $t('notifications.general.mute.all') }}</span>
       </div>
-      <div v-if="generalSettings?.do_not_disturb_timestamp" class="unmute-container">
-        <Button :label="$t('notifications.general.mute.unmute')" @click="unmuteNotifications" />
+      <div
+        v-if="generalSettings?.do_not_disturb_timestamp"
+        class="unmute-container"
+      >
+        <Button
+          :label="$t('notifications.general.mute.unmute')"
+          @click="unmuteNotifications"
+        />
         <div class="muted-until">
           {{ textMutedUntil }}
         </div>
@@ -146,10 +151,17 @@ const textMutedUntil = computed(() => {
           />
         </span>
       </div>
-      <BcToggle v-if="pairedDevicesCount > 0" v-model="isPushToggleOn" />
+      <BcToggle
+        v-if="pairedDevicesCount > 0"
+        v-model="isPushToggleOn"
+      />
       <div v-else>
         {{ tOf($t, 'notifications.general.download_app', 0) }}
-        <BcLink to="/mobile" :target="Target.External" class="link">
+        <BcLink
+          to="/mobile"
+          :target="Target.External"
+          class="link"
+        >
           {{ tOf($t, 'notifications.general.download_app', 1) }}
         </BcLink>
         {{ tOf($t, 'notifications.general.download_app', 2) }}
@@ -159,7 +171,11 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_email') }}
       </div>
-      <Button class="button-send" :disabled="buttonStates.isEmailDisabled" @click="sendTestNotification('email')">
+      <Button
+        class="button-send"
+        :disabled="buttonStates.isEmailDisabled"
+        @click="sendTestNotification('email')"
+      >
         {{ $t('common.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>
@@ -168,7 +184,11 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t('notifications.general.send_test_push') }}
       </div>
-      <Button class="button-send" :disabled="buttonStates.isPushDisabled" @click="sendTestNotification('push')">
+      <Button
+        class="button-send"
+        :disabled="buttonStates.isPushDisabled"
+        @click="sendTestNotification('push')"
+      >
         {{ $t('common.send') }}
         <FontAwesomeIcon :icon="faPaperPlane" />
       </Button>

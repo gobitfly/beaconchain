@@ -1,21 +1,21 @@
 <script lang="ts" setup>
-import type { MessageSchema } from '~/i18n.config';
-import type { KeyPaths } from '~/types/helper';
+import type { MessageSchema } from '~/i18n.config'
+import type { KeyPaths } from '~/types/helper'
 
 defineProps<{
   /**
    * The path to the key in the translation file (e.g. en.json)
    */
-  keypath: KeyPaths<MessageSchema>,
-  linkpath?: KeyPaths<MessageSchema>,
+  keypath: KeyPaths<MessageSchema>
+  linkpath?: KeyPaths<MessageSchema>
   tag?: keyof HTMLElementTagNameMap
-   /**
+  /**
    * URL to link to
-   * 
+   *
    * @example
-   * 
+   *
    * Translation key has to be under `${keypath}._link`
-   * 
+   *
    *  // en.json
    * {
    *  "notifications": {
@@ -23,13 +23,12 @@ defineProps<{
    *   "_link": "Click here"
    * }
    */
-  to?: string,
+  to?: string
 }>()
-
 </script>
 
 <template>
-  <I18nT 
+  <I18nT
     :keypath
     scope="global"
     :tag="tag || 'span'"

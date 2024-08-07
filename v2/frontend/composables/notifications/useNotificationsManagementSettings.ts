@@ -2,7 +2,7 @@ import { inject, warn } from 'vue'
 import type { NotificationPairedDevice } from '~/types/api/notifications'
 import type { NotificationsManagementSettingsGeneralTab, NotificationsManagementSettingsProvider } from '~/types/notifications/settings'
 
-export function useNotificationsManagementSettings () {
+export function useNotificationsManagementSettings() {
   const provider = inject<NotificationsManagementSettingsProvider>('notificationsManagementSettings')
 
   const updateGeneralSettings = (newSettings: NotificationsManagementSettingsGeneralTab) => {

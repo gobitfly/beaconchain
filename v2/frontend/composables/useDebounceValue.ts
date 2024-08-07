@@ -1,4 +1,4 @@
-export function useDebounceValue<T> (initialValue: T, bounceMs: number = 100) {
+export function useDebounceValue<T>(initialValue: T, bounceMs: number = 100) {
   const valueRef = shallowRef<T>(initialValue)
   const value = readonly(valueRef)
   const tempRef = shallowRef<T>(initialValue)

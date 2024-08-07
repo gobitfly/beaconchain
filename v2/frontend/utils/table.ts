@@ -25,17 +25,19 @@ export const setQuerySort = (sort?: DataTableSortEvent, query?: TableQueryParams
       ...query,
       sort: sort?.multiSortMeta.map((obj) => {
         return `${obj.field}:${getSortOrder(obj.order)}`
-      }).join(',')
+      }).join(','),
     }
-  } else if (sort?.sortField && sort?.sortOrder) {
+  }
+  else if (sort?.sortField && sort?.sortOrder) {
     if (!query) {
       query = {}
     }
     query = {
       ...query,
-      sort: `${sort.sortField}:${getSortOrder(sort?.sortOrder)}`
+      sort: `${sort.sortField}:${getSortOrder(sort?.sortOrder)}`,
     }
-  } else if (query) {
+  }
+  else if (query) {
     delete query.sort
     delete query.order
   }

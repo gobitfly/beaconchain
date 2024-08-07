@@ -2,7 +2,7 @@ import type { TableQueryParams } from '~/types/datatable'
 import { API_PATH } from '~/types/customFetch'
 import type { InternalGetUserNotificationSettingsDashboardsResponse } from '~/types/api/notifications'
 
-export function useNotificationsManagementDashboards () {
+export function useNotificationsManagementDashboards() {
   const { fetch } = useCustomFetch()
 
   const data = ref < InternalGetUserNotificationSettingsDashboardsResponse>()
@@ -11,7 +11,7 @@ export function useNotificationsManagementDashboards () {
 
   const dashboardGroups = computed(() => data.value)
 
-  async function getDashboardGroups (q?: TableQueryParams) {
+  async function getDashboardGroups(q?: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
     const res = await fetch<InternalGetUserNotificationSettingsDashboardsResponse>(API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD, undefined, undefined, q)

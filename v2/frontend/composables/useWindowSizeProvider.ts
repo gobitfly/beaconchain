@@ -1,7 +1,7 @@
 import { ref, provide } from 'vue'
 import type { WindowSize } from '~/types/window'
 
-export function useWindowSizeProvider () {
+export function useWindowSizeProvider() {
   const width = ref(2000)
   const height = ref(2000)
 

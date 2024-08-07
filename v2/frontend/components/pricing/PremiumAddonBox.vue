@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle, faMinus, faPlus } from '@fortawesome/pro-regular-svg-icons'
 import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon } from '~/types/api/user'
@@ -11,8 +10,8 @@ const { user, isLoggedIn } = useUserStore()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
 
 interface Props {
-  addon: ExtraDashboardValidatorsPremiumAddon,
-  isYearly: boolean,
+  addon: ExtraDashboardValidatorsPremiumAddon
+  isYearly: boolean
   maximumValidatorLimit?: number
 }
 const props = defineProps<Props>()
@@ -31,14 +30,14 @@ const prices = computed(() => {
     monthly_based_on_yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur / 12 * quantity),
     yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur * quantity),
     saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice($t, mainPrice / props.addon.extra_dashboard_validators, 5)
+    perValidator: formatPremiumProductPrice($t, mainPrice / props.addon.extra_dashboard_validators, 5),
   }
 })
 
 const boxText = computed(() => {
   return {
     validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
-    perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator })
+    perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator }),
   }
 })
 
@@ -52,7 +51,7 @@ const addonButton = computed(() => {
     text = addonSubscriptionCount.value > 0 ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon')
   }
 
-  async function callback () {
+  async function callback() {
     if (isStripeDisabled.value) {
       return
     }
@@ -60,10 +59,12 @@ const addonButton = computed(() => {
     if (isLoggedIn.value) {
       if (addonSubscriptionCount.value > 0) {
         await stripeCustomerPortal()
-      } else {
+      }
+      else {
         await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, quantityForPurchase.value)
       }
-    } else {
+    }
+    else {
       await navigateTo('/login')
     }
   }
@@ -71,7 +72,7 @@ const addonButton = computed(() => {
   return {
     text,
     disabled: isStripeDisabled.value,
-    callback
+    callback,
   }
 })
 
@@ -91,7 +92,7 @@ const purchaseQuantityButtons = computed(() => {
         if (quantityForPurchase.value > 1) {
           quantityForPurchase.value--
         }
-      }
+      },
     },
     plus: {
       disabled: limitReached.value,
@@ -99,11 +100,10 @@ const purchaseQuantityButtons = computed(() => {
         if (quantityForPurchase.value < maximumQuantity.value) {
           quantityForPurchase.value++
         }
-      }
-    }
+      },
+    },
   }
 })
-
 </script>
 
 <template>
@@ -113,8 +113,14 @@ const purchaseQuantityButtons = computed(() => {
         {{ boxText.validatorCount }}
         <div class="subtext">
           {{ $t('pricing.addons.per_dashboard') }}
-          <BcTooltip position="top" :fit-content="true">
-            <FontAwesomeIcon :icon="faInfoCircle" class="tooltip-icon" />
+          <BcTooltip
+            position="top"
+            :fit-content="true"
+          >
+            <FontAwesomeIcon
+              :icon="faInfoCircle"
+              class="tooltip-icon"
+            />
             <template #tooltip>
               <div class="saving-tooltip-container">
                 {{ $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.addon?.extra_dashboard_validators * 32) }) }}
@@ -133,11 +139,14 @@ const purchaseQuantityButtons = computed(() => {
           <div>
             {{ prices.monthly_based_on_yearly }}
           </div>
-          <div class="month" yearly>
+          <div
+            class="month"
+            yearly
+          >
             {{ $t('pricing.per_month') }}
           </div>
           <div class="year">
-            {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
+            {{ $t('pricing.amount_per_year', { amount: prices.yearly }) }}*
           </div>
         </template>
         <template v-else>
@@ -149,24 +158,36 @@ const purchaseQuantityButtons = computed(() => {
           </div>
         </template>
       </div>
-      <div v-if="isYearly" class="saving-info">
+      <div
+        v-if="isYearly"
+        class="saving-info"
+      >
         <div>
-          {{ $t('pricing.savings', {amount: prices.saving}) }}
+          {{ $t('pricing.savings', { amount: prices.saving }) }}
         </div>
-        <BcTooltip position="top" :fit-content="true">
+        <BcTooltip
+          position="top"
+          :fit-content="true"
+        >
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ $t('pricing.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+              {{ $t('pricing.savings_tooltip', { monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly }) }}
             </div>
           </template>
         </BcTooltip>
       </div>
       <div class="quantity-row">
-        <div v-if="addonSubscriptionCount" class="quantity-label">
+        <div
+          v-if="addonSubscriptionCount"
+          class="quantity-label"
+        >
           {{ $t('pricing.addons.currently_active', { amount: addonSubscriptionCount }) }}
         </div>
-        <div v-else class="quantity-setter">
+        <div
+          v-else
+          class="quantity-setter"
+        >
           <Button
             class="p-button-icon-only"
             :disabled="purchaseQuantityButtons.minus.disabled"
@@ -193,13 +214,22 @@ const purchaseQuantityButtons = computed(() => {
       <div class="limit-reached-row">
         <div v-if="limitReached">
           {{ tOf($t, 'pricing.addons.contact_support', 0) }}
-          <BcLink to="https://dsc.gg/beaconchain  " :target="Target.External" class="link">
+          <BcLink
+            to="https://dsc.gg/beaconchain  "
+            :target="Target.External"
+            class="link"
+          >
             {{ tOf($t, 'pricing.addons.contact_support', 1) }}
           </BcLink>
           {{ tOf($t, 'pricing.addons.contact_support', 2) }}
         </div>
       </div>
-      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="addonButton.callback" />
+      <Button
+        :label="addonButton.text"
+        :disabled="addonButton.disabled"
+        class="select-button"
+        @click="addonButton.callback"
+      />
     </div>
   </div>
 </template>

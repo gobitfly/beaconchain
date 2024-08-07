@@ -8,9 +8,9 @@ useHead({
     {
       key: 'revive',
       src: '../js/revive.min.js',
-      async: false
-    }
-  ]
+      async: false,
+    },
+  ],
 }, { mode: 'client' })
 useWindowSizeProvider()
 useBcToastProvider()

@@ -9,7 +9,7 @@ import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {identifier: string}
+type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & { identifier: string }
 
 const { dashboardKey } = useDashboardKey()
 
@@ -33,7 +33,7 @@ const colsVisible = computed(() => {
     slot: width.value > 875,
     epoch: width.value > 805,
     recipient: width.value > 695,
-    age: width.value > 500
+    age: width.value > 500,
   }
 })
 
@@ -65,13 +65,13 @@ const tableData = computed(() => {
     data: [
       {
         amount: totalAmount.value,
-        identifier: totalIdentifier
+        identifier: totalIdentifier,
       },
       ...withdrawals.value.data.map(w => ({
         ...w,
-        identifier: `${w.slot}-${w.index}`
-      }))
-    ]
+        identifier: `${w.slot}-${w.index}`,
+      })),
+    ],
   }
 })
 
@@ -124,8 +124,8 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
 
   return false
 }
-
 </script>
+
 <template>
   <div>
     <BcTableControl
@@ -159,7 +159,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               header-class="index"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.is_missing_estimate" class="value-with-tooltip-container">
+                <div
+                  v-if="slotProps.data.is_missing_estimate"
+                  class="value-with-tooltip-container"
+                >
                   {{ $t('dashboard.validator.withdrawals.pending') }}
                   <BcTooltip>
                     <FontAwesomeIcon :icon="faInfoCircle" />
@@ -176,7 +179,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 >
                   {{ slotProps.data.index || "-" }}
                 </BcLink>
-                <div v-else class="all-time-total">
+                <div
+                  v-else
+                  class="all-time-total"
+                >
                   Σ
                 </div>
               </template>
@@ -207,7 +213,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.epoch" default="-" />
+                  <BcFormatNumber
+                    :value="slotProps.data.epoch"
+                    default="-"
+                  />
                 </BcLink>
               </template>
             </Column>
@@ -224,7 +233,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.slot" default="-" />
+                  <BcFormatNumber
+                    :value="slotProps.data.slot"
+                    default="-"
+                  />
                 </BcLink>
               </template>
             </Column>
@@ -272,12 +284,18 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <div v-if="slotProps.data.identifier === totalIdentifier && isLoadingTotal">
-                  <BcLoadingSpinner :loading="true" size="small" />
+                  <BcLoadingSpinner
+                    :loading="true"
+                    size="small"
+                  />
                 </div>
-                <div v-else-if="!slotProps.data.is_missing_estimate" class="value-with-tooltip-container">
+                <div
+                  v-else-if="!slotProps.data.is_missing_estimate"
+                  class="value-with-tooltip-container"
+                >
                   <BcFormatValue
                     :value="slotProps.data.amount"
-                    :class="{'all-time-total':slotProps.data.identifier === totalIdentifier}"
+                    :class="{ 'all-time-total': slotProps.data.identifier === totalIdentifier }"
                   />
                   <BcTooltip v-if="isRowInFuture(slotProps.data)">
                     <FontAwesomeIcon :icon="faInfoCircle" />
@@ -302,21 +320,40 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   <div class="label">
                     {{ $t('common.epoch') }}:
                   </div>
-                  <BcLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)">
-                    <BcFormatNumber :value="slotProps.data.epoch" default="-" />
+                  <BcLink
+                    :to="`/epoch/${slotProps.data.epoch}`"
+                    target="_blank"
+                    class="link"
+                    :class="getExpansionValueClass(slotProps.data)"
+                  >
+                    <BcFormatNumber
+                      :value="slotProps.data.epoch"
+                      default="-"
+                    />
                   </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
                     {{ $t('common.slot') }}:
                   </div>
-                  <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)">
-                    <BcFormatNumber :value="slotProps.data.slot" default="-" />
+                  <BcLink
+                    :to="`/slot/${slotProps.data.slot}`"
+                    target="_blank"
+                    class="link"
+                    :class="getExpansionValueClass(slotProps.data)"
+                  >
+                    <BcFormatNumber
+                      :value="slotProps.data.slot"
+                      default="-"
+                    />
                   </BcLink>
                 </div>
                 <div class="row">
                   <BcTableAgeHeader class="label" />
-                  <BcFormatTimePassed type="slot" :value="slotProps.data.slot" />
+                  <BcFormatTimePassed
+                    type="slot"
+                    :value="slotProps.data.slot"
+                  />
                 </div>
                 <div class="row">
                   <div class="label">

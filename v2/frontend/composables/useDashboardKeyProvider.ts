@@ -3,7 +3,8 @@ import { provide, warn } from 'vue'
 import { COOKIE_KEY } from '~/types/cookie'
 import type { DashboardKey, DashboardKeyData, DashboardType } from '~/types/dashboard'
 import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
-export function useDashboardKeyProvider (type: DashboardType = 'validator', mockKey: DashboardKey = '') {
+
+export function useDashboardKeyProvider(type: DashboardType = 'validator', mockKey: DashboardKey = '') {
   const route = useRoute()
   const router = useRouter()
   const dashboardType = ref(type)
@@ -40,7 +41,8 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
     }
     if (Array.isArray(route.params.id)) {
       setDashboardKey(toBase64Url(route.params.id.join(',')))
-    } else {
+    }
+    else {
       setDashboardKey(route.params.id)
     }
   }
@@ -62,17 +64,17 @@ export function useDashboardKeyProvider (type: DashboardType = 'validator', mock
     return fromBase64Url(dashboardKey.value)?.split(',') ?? []
   })
 
-  const updateEntities = (list:string[]) => {
+  const updateEntities = (list: string[]) => {
     const filtered = list.filter(s => !!s).join(',')
     const key = toBase64Url(filtered)
     setDashboardKey(key)
   }
 
-  const addEntities = (list:string[]) => {
+  const addEntities = (list: string[]) => {
     updateEntities(union(publicEntities.value, list))
   }
 
-  const removeEntities = (list:string[]) => {
+  const removeEntities = (list: string[]) => {
     updateEntities(pullAll(publicEntities.value, list))
   }
 

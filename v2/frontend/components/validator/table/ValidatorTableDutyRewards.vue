@@ -4,7 +4,7 @@ import { formatRewardValueOption } from '~/utils/dashboard/table'
 import { totalDutyRewards } from '~/utils/dashboard/validator'
 
 interface Props {
-  data?: ValidatorHistoryDuties,
+  data?: ValidatorHistoryDuties
 }
 const props = defineProps<Props>()
 
@@ -12,11 +12,11 @@ const { t: $t } = useTranslation()
 
 const mapped = computed(() => {
   const total = totalDutyRewards(props.data)
-  const details: {label: string, value?: string}[] = []
+  const details: { label: string, value?: string }[] = []
   if (!total || total.isZero()) {
     return {
       total,
-      details
+      details,
     }
   }
 
@@ -26,7 +26,7 @@ const mapped = computed(() => {
     }
     details.push({
       label: $t(`validator.rewards.${key}`),
-      value
+      value,
     })
   }
 
@@ -40,20 +40,26 @@ const mapped = computed(() => {
   addDetail('total', total.toString())
   return {
     total,
-    details
+    details,
   }
 })
-
 </script>
+
 <template>
   <BcFormatValue
     :value="mapped.total"
     :use-colors="true"
     :options="formatRewardValueOption"
   >
-    <template v-if="mapped.details?.length" #tooltip>
+    <template
+      v-if="mapped.details?.length"
+      #tooltip
+    >
       <div class="tooltip">
-        <div v-for="detail in mapped.details" :key="detail.label">
+        <div
+          v-for="detail in mapped.details"
+          :key="detail.label"
+        >
           <b>{{ detail.label }}: </b>
           <BcFormatValue
             :value="detail.value"
@@ -65,6 +71,7 @@ const mapped = computed(() => {
     </template>
   </BcFormatValue>
 </template>
+
 <style lang="scss" scoped>
 .tooltip{
   text-align: left;

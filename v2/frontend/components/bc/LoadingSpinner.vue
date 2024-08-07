@@ -5,11 +5,18 @@ interface Props {
   alignment?: 'center' | 'default'
 }
 defineProps<Props>()
-
 </script>
+
 <template>
-  <div v-if="loading !== false" class="spinning-container" :class="[alignment]">
-    <div class="spinner" :class="[size]">
+  <div
+    v-if="loading !== false"
+    class="spinning-container"
+    :class="[alignment]"
+  >
+    <div
+      class="spinner"
+      :class="[size]"
+    >
       <span />
     </div>
   </div>
@@ -68,4 +75,5 @@ defineProps<Props>()
 
   }
 
-}</style>
+}
+</style>

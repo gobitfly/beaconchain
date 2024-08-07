@@ -16,9 +16,9 @@ const onDelete = () => {
       question: $t('user_settings.delete_account.dialog.warning', { email: user.value?.email || $t('common.unavailable') }),
       noLabel: $t('user_settings.delete_account.dialog.no_label'),
       yesLabel: $t('user_settings.delete_account.dialog.yes_label'),
-      severity: 'danger'
+      severity: 'danger',
     },
-    onClose: response => response?.data && deleteAction()
+    onClose: response => response?.data && deleteAction(),
   })
 }
 
@@ -31,7 +31,6 @@ const deleteAction = async () => {
   await fetch(API_PATH.USER_DELETE)
   await navigateTo('/')
 }
-
 </script>
 
 <template>
@@ -44,7 +43,13 @@ const deleteAction = async () => {
         {{ $t('user_settings.delete_account.warning') }}
       </div>
       <div class="button-container">
-        <Button :label="$t('user_settings.delete_account.button')" :disabled="buttonsDisabled" severity="danger" class="delete-button" @click="onDelete" />
+        <Button
+          :label="$t('user_settings.delete_account.button')"
+          :disabled="buttonsDisabled"
+          severity="danger"
+          class="delete-button"
+          @click="onDelete"
+        />
       </div>
     </div>
   </div>

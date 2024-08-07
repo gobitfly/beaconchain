@@ -18,8 +18,8 @@ const { handleSubmit, errors, defineField } = useForm({
     email: emailValidation($t),
     password: passwordValidation($t),
     confirmPassword: confirmPasswordValidation($t, 'password'),
-    agreement: checkboxValidation('')
-  })
+    agreement: checkboxValidation(''),
+  }),
 })
 
 const [email, emailAttrs] = defineField('email')
@@ -36,14 +36,15 @@ const onSubmit = handleSubmit(async (values) => {
       method: 'POST',
       body: {
         email: values.email,
-        password: values.password
-      }
+        password: values.password,
+      },
     })
     if (handleMobileAuth(route.query)) {
       return
     }
     await navigateTo('/')
-  } catch (error) {
+  }
+  catch (error) {
     toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_register_group'), detail: $t('login_and_register.error_register_message') })
   }
 })
@@ -53,7 +54,6 @@ const canSubmit = computed(() => email.value && password.value && confirmPasswor
 const loginLink = computed(() => {
   return provideMobileAuthParams(route.query, '/login')
 })
-
 </script>
 
 <template>
@@ -65,13 +65,20 @@ const loginLink = computed(() => {
         </div>
         <div class="login-invitation">
           {{ $t('login_and_register.already_have_account') }}
-          <BcLink :to="loginLink" :target="Target.Internal" class="link">
+          <BcLink
+            :to="loginLink"
+            :target="Target.Internal"
+            class="link"
+          >
             {{ $t('login_and_register.login_here') }}
           </BcLink>
         </div>
         <form @submit="onSubmit">
           <div class="input-row">
-            <label for="email" class="label">{{ $t('login_and_register.email') }}</label>
+            <label
+              for="email"
+              class="label"
+            >{{ $t('login_and_register.email') }}</label>
             <InputText
               id="email"
               v-model="email"
@@ -85,7 +92,10 @@ const loginLink = computed(() => {
             </div>
           </div>
           <div class="input-row">
-            <label for="password" class="label">{{ $t('login_and_register.choose_password') }}</label>
+            <label
+              for="password"
+              class="label"
+            >{{ $t('login_and_register.choose_password') }}</label>
             <InputText
               id="password"
               v-model="password"
@@ -99,7 +109,10 @@ const loginLink = computed(() => {
             </div>
           </div>
           <div class="input-row">
-            <label for="confirmPassword" class="label">{{ $t('login_and_register.confirm_password') }}</label>
+            <label
+              for="confirmPassword"
+              class="label"
+            >{{ $t('login_and_register.confirm_password') }}</label>
             <InputText
               id="confirmPassword"
               v-model="confirmPassword"
@@ -125,16 +138,29 @@ const loginLink = computed(() => {
               />
               <div class="text">
                 <label for="agreement">{{ tOf($t, 'login_and_register.please_agree', 0) + ' ' }}</label>
-                <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/tos.pdf" :target="Target.External" class="link">
+                <BcLink
+                  to="https://storage.googleapis.com/legal.beaconcha.in/tos.pdf"
+                  :target="Target.External"
+                  class="link"
+                >
                   {{ tOf($t, 'login_and_register.please_agree', 1) }}
                 </BcLink>
                 {{ tOf($t, 'login_and_register.please_agree', 2) }}
-                <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
+                <BcLink
+                  to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
+                  :target="Target.External"
+                  class="link"
+                >
                   {{ tOf($t, 'login_and_register.please_agree', 3) }}
                 </BcLink>
               </div>
             </div>
-            <Button class="button" type="submit" :label="$t('login_and_register.submit_register')" :disabled="!canSubmit" />
+            <Button
+              class="button"
+              type="submit"
+              :label="$t('login_and_register.submit_register')"
+              :disabled="!canSubmit"
+            />
           </div>
         </form>
       </div>

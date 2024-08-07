@@ -11,8 +11,8 @@ const { handleSubmit, errors, defineField } = useForm({
   validationSchema: yupObject({
     oldPassword: passwordValidation($t),
     newPassword: newPasswordValidation($t, 'oldPassword'),
-    confirmPassword: confirmPasswordValidation($t, 'newPassword')
-  })
+    confirmPassword: confirmPasswordValidation($t, 'newPassword'),
+  }),
 })
 
 const [oldPassword, oldPasswordAttrs] = defineField('oldPassword')
@@ -30,33 +30,36 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
   try {
     await fetch(API_PATH.USER_CHANGE_PASSWORD, {
       body: {
-        password: values.newPassword
-      }
+        password: values.newPassword,
+      },
     })
     toast.showSuccess(
       {
         summary: $t('user_settings.password.success.toast_title'),
         group: $t('user_settings.password.success.toast_group'),
-        detail: $t('user_settings.password.success.toast_message')
+        detail: $t('user_settings.password.success.toast_message'),
       })
     resetForm()
-  } catch (error) {
+  }
+  catch (error) {
     toast.showError(
       {
         summary: $t('user_settings.password.error.toast_title'),
         group: $t('user_settings.password.error.toast_group'),
-        detail: $t('user_settings.password.error.toast_message')
+        detail: $t('user_settings.password.error.toast_message'),
       })
   }
   buttonsDisabled.value = false
 })
 
 const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value && !Object.keys(errors.value).length)
-
 </script>
 
 <template>
-  <form class="password-container" @submit="onSubmit">
+  <form
+    class="password-container"
+    @submit="onSubmit"
+  >
     <div class="title">
       {{ $t('user_settings.password.title') }}
     </div>
@@ -109,7 +112,11 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       </div>
     </div>
     <div class="button-row">
-      <Button type="submit" :disabled="!canSubmit" :label="$t('navigation.save')" />
+      <Button
+        type="submit"
+        :disabled="!canSubmit"
+        :label="$t('navigation.save')"
+      />
     </div>
   </form>
 </template>

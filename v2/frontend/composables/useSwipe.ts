@@ -5,7 +5,7 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
   const options = {
     directional_threshold: 100,
     directions: ['all'],
-    ...swipeOptions
+    ...swipeOptions,
   }
   const touchStartX = ref(0)
   const touchEndX = ref(0)
@@ -59,18 +59,21 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     const directions = options.directions
     if (!intersection(directions, ['all', 'left']).length && divX < 0) {
       divX = 0
-    } else if (!intersection(directions, ['all', 'right']).length && divX > 0) {
+    }
+    else if (!intersection(directions, ['all', 'right']).length && divX > 0) {
       divX = 0
     }
     if (!intersection(directions, ['all', 'top']).length && divY < 0) {
       divY = 0
-    } else if (!intersection(directions, ['all', 'bottom']).length && divY > 0) {
+    }
+    else if (!intersection(directions, ['all', 'bottom']).length && divY > 0) {
       divY = 0
     }
     // Only move horizontally or vertically
     if (Math.abs(divX) > Math.abs(divY)) {
       divY = 0
-    } else {
+    }
+    else {
       divX = 0
     }
 
@@ -86,14 +89,16 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (divX > threshold) {
       if (touchEndX.value < touchStartX.value) {
         gDirections.push('left')
-      } else {
+      }
+      else {
         gDirections.push('right')
       }
     }
     if (divY > threshold) {
       if (touchEndY.value < touchStartY.value) {
         gDirections.push('top')
-      } else {
+      }
+      else {
         gDirections.push('bottom')
       }
     }
@@ -139,6 +144,6 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
   })
 
   return {
-    setTouchableElement: (elem: HTMLElement, callback: SwipeCallback) => setElement(elem, callback)
+    setTouchableElement: (elem: HTMLElement, callback: SwipeCallback) => setElement(elem, callback),
   }
 }

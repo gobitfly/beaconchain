@@ -3,7 +3,7 @@ import {
   faGaugeSimpleMax,
   faMonitorWaveform,
   faBolt,
-  faNetworkWired
+  faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
@@ -22,24 +22,24 @@ const manageNotificationsModalVisisble = ref(false)
 
 const tabs: HashTabs = {
   dashboards: {
-    index: 0
+    index: 0,
   },
   machines: {
     index: 1,
-    disabled: !showInDevelopment
+    disabled: !showInDevelopment,
   },
   clients: {
     index: 2,
-    disabled: !showInDevelopment
+    disabled: !showInDevelopment,
   },
   rocketpool: {
     index: 3,
-    disabled: !showInDevelopment
+    disabled: !showInDevelopment,
   },
   network: {
     index: 4,
-    disabled: !showInDevelopment
-  }
+    disabled: !showInDevelopment,
+  },
 }
 
 const { activeIndex, setActiveIndex } = useHashTabs(tabs)
@@ -50,7 +50,7 @@ const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
       props: {
-        header: $t('notifications.title')
+        header: $t('notifications.title'),
       },
       onClose: async (response) => {
         if (response?.data) {
@@ -58,14 +58,14 @@ const openManageNotifications = () => {
         }
       },
       data: {
-        question: $t('notifications.login_question')
-      }
+        question: $t('notifications.login_question'),
+      },
     })
-  } else {
+  }
+  else {
     manageNotificationsModalVisisble.value = true
   }
 }
-
 </script>
 
 <template>
@@ -79,24 +79,41 @@ const openManageNotifications = () => {
       </template>
       <NotificationsManagementModal v-model="manageNotificationsModalVisisble" />
       <div class="button-row">
-        <Button :label="$t('notifications.manage')" @click="openManageNotifications" />
+        <Button
+          :label="$t('notifications.manage')"
+          @click="openManageNotifications"
+        />
       </div>
-      <TabView lazy class="notifications-tab-view" :active-index="activeIndex" @update:active-index="setActiveIndex">
+      <TabView
+        lazy
+        class="notifications-tab-view"
+        :active-index="activeIndex"
+        @update:active-index="setActiveIndex"
+      >
         <TabPanel>
           <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faGaugeSimpleMax" />
+            <BcTabHeader
+              :header="$t('notifications.tabs.dashboards')"
+              :icon="faGaugeSimpleMax"
+            />
           </template>
           <NotificationsDashboardsTable @open-dialog="openManageNotifications" />
         </TabPanel>
         <TabPanel :disabled="tabs.machines.disabled">
           <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.machines')" :icon="faMonitorWaveform" />
+            <BcTabHeader
+              :header="$t('notifications.tabs.machines')"
+              :icon="faMonitorWaveform"
+            />
           </template>
           Machines coming soon!
         </TabPanel>
         <TabPanel :disabled="tabs.clients.disabled">
           <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.clients')" :icon="faBolt" />
+            <BcTabHeader
+              :header="$t('notifications.tabs.clients')"
+              :icon="faBolt"
+            />
           </template>
           Clients coming soon!
         </TabPanel>
@@ -112,7 +129,10 @@ const openManageNotifications = () => {
         </TabPanel>
         <TabPanel :disabled="tabs.network.disabled">
           <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.network')" :icon="faNetworkWired" />
+            <BcTabHeader
+              :header="$t('notifications.tabs.network')"
+              :icon="faNetworkWired"
+            />
           </template>
           Network coming soon!
         </TabPanel>
@@ -122,7 +142,6 @@ const openManageNotifications = () => {
 </template>
 
 <style lang="scss" scoped>
-
 :global(.notifications-tab-view >.p-tabview-panels) {
   min-height: 699px;
 }

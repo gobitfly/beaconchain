@@ -6,7 +6,7 @@ import {
   faPeopleGroup,
   faShare,
   faUsers,
-  faTrash
+  faTrash,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
@@ -17,7 +17,7 @@ import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  dashboardTitle?: string,
+  dashboardTitle?: string
 }
 const props = defineProps<Props>()
 
@@ -48,7 +48,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
     dropdown: false,
     faIcon: isMobile.value ? faPeopleGroup : undefined,
     label: $t('dashboard.validator.manage_groups'),
-    command: () => { manageGroupsModalVisisble.value = true }
+    command: () => { manageGroupsModalVisisble.value = true },
   })
 
   if (dashboardType.value === 'validator') {
@@ -58,8 +58,8 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
         faIcon: isMobile.value ? faDesktop : undefined,
         highlight: !isMobile.value,
         label: $t('dashboard.validator.manage_validators'),
-        command: () => { manageValidatorsModalVisisble.value = true }
-      }
+        command: () => { manageValidatorsModalVisisble.value = true },
+      },
     )
   }
 
@@ -69,8 +69,8 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
         label: $t('dashboard.header.manage'),
         dropdown: true,
         highlight: true,
-        items: buttons
-      }
+        items: buttons,
+      },
     ]
   }
 
@@ -96,30 +96,30 @@ const editButtons = computed<MenuBarEntry[]>(() => {
   const buttons: MenuBarButton[] = []
 
   buttons.push({
-    component: RocketpoolToggle
+    component: RocketpoolToggle,
   })
 
-  if( isPrivate.value ){
+  if (isPrivate.value) {
     buttons.push({
       faIcon: faEdit,
       label: $t('dashboard.rename_dashboard'),
-      command: editDashboard
-    })    
-  }
-
-  if(!shareButtonOptions.value.disabled) {
-    buttons.push({
-      faIcon: shareButtonOptions.value.icon,
-      label: shareButtonOptions.value.edit ? $t('dashboard.share_dashboard') : $t('dashboard.shared_dashboard'),
-      command: share
+      command: editDashboard,
     })
   }
 
-  if(!isShared.value && dashboardKey.value) {
+  if (!shareButtonOptions.value.disabled) {
+    buttons.push({
+      faIcon: shareButtonOptions.value.icon,
+      label: shareButtonOptions.value.edit ? $t('dashboard.share_dashboard') : $t('dashboard.shared_dashboard'),
+      command: share,
+    })
+  }
+
+  if (!isShared.value && dashboardKey.value) {
     buttons.push({
       faIcon: faTrash,
       label: $t('dashboard.delete_dashboard'),
-      command: onDelete
+      command: onDelete,
     })
   }
 
@@ -127,8 +127,8 @@ const editButtons = computed<MenuBarEntry[]>(() => {
     {
       faIcon: faGear,
       dropdown: true,
-      items: buttons
-    }
+      items: buttons,
+    },
   ]
 })
 
@@ -141,21 +141,25 @@ const shareView = () => {
         if (isShared.value && dashboardId) {
           setDashboardKey(`${dashboardId}`)
         }
-      } else if (options?.data) {
+      }
+      else if (options?.data) {
         shareEdit()
       }
-    }
+    },
   })
 }
 
 const shareEdit = () => {
-  dialog.open(DashboardShareModal, { data: { dashboard: shareDashboard.value }, onClose: (options?: DynamicDialogCloseOptions) => { options?.data && shareView() } })
+  dialog.open(DashboardShareModal, { data: { dashboard: shareDashboard.value }, onClose: (options?: DynamicDialogCloseOptions) => {
+    options?.data && shareView()
+  } })
 }
 
 const share = () => {
   if (shareButtonOptions.value.edit) {
     shareEdit()
-  } else {
+  }
+  else {
     shareView()
   }
 }
@@ -182,12 +186,12 @@ const onDelete = () => {
     question: $t(isDelete ? 'dashboard.deletion.delete.text' : 'dashboard.deletion.clear.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) }),
     noLabel: isDelete ? $t('dashboard.deletion.delete.no_label') : undefined,
     yesLabel: isDelete ? $t('dashboard.deletion.delete.yes_label') : undefined,
-    severity: isDelete ? 'danger' : undefined
+    severity: isDelete ? 'danger' : undefined,
   }
 
   dialog.open(BcDialogConfirm, {
     data: dialogData,
-    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward)
+    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
   })
 }
 
@@ -195,12 +199,14 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
   if (deleteDashboard) {
     if (dashboardType.value === 'validator') {
       await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
-    } else {
+    }
+    else {
       await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
     }
 
     await refreshDashboards()
-  } else if (!isLoggedIn.value) {
+  }
+  else if (!isLoggedIn.value) {
     // simply clear the public dashboard by emptying the hash
     updateHash(dashboardType.value, '')
     setDashboardKey('')
@@ -246,21 +252,24 @@ const editDashboard = () => {
   dialog.open(DashboardRenameModal, {
     data: {
       dashboard,
-      dashboardType: dashboardType.value
+      dashboardType: dashboardType.value,
     },
     onClose: (value?: DynamicDialogCloseOptions | undefined) => {
       if (value?.data === true) {
         refreshDashboards()
         refreshOverview(dashboardKey.value)
       }
-    }
+    },
   })
 }
 </script>
 
 <template>
   <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
-  <DashboardValidatorManagementModal v-if="dashboardType == 'validator'" v-model="manageValidatorsModalVisisble" />
+  <DashboardValidatorManagementModal
+    v-if="dashboardType == 'validator'"
+    v-model="manageValidatorsModalVisisble"
+  />
   <div class="header-row">
     <div class="h1 dashboard-title">
       {{ title }}
@@ -276,9 +285,15 @@ const editDashboard = () => {
         {{ shareButtonOptions.label }}
         <FontAwesomeIcon :icon="shareButtonOptions.icon" />
       </Button>
-      <BcMenuBar :buttons="editButtons" :align-right="isMobile" />
+      <BcMenuBar
+        :buttons="editButtons"
+        :align-right="isMobile"
+      />
     </div>
-    <BcMenuBar :buttons="manageButtons" :align-right="true" />
+    <BcMenuBar
+      :buttons="manageButtons"
+      :align-right="true"
+    />
   </div>
 </template>
 

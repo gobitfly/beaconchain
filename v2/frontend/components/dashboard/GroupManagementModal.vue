@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import {
   faAdd,
-  faTrash
+  faTrash,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
@@ -47,7 +47,8 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
     if (sortField.value === 'name') {
       // lodash needs some help when sorting strings alphabetically
       processedGroups = orderBy(processedGroups, [g => g.name.toLowerCase()], getSortOrder(sortOrder.value))
-    } else {
+    }
+    else {
       processedGroups = orderBy(processedGroups, sortField.value, getSortOrder(sortOrder.value))
     }
   }
@@ -55,15 +56,15 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
   const index = cursor.value as number
   return {
     paging: {
-      total_count: totalCount
+      total_count: totalCount,
     },
-    data: processedGroups.slice(index, index + pageSize.value)
+    data: processedGroups.slice(index, index + pageSize.value),
   }
 })
 
 const size = computed(() => {
   return {
-    showSubTitle: width.value >= 760
+    showSubTitle: width.value >= 760,
   }
 })
 
@@ -115,8 +116,8 @@ const removeGroup = (row: VDBOverviewGroup) => {
     },
     data: {
       title: $t('dashboard.validator.group_management.remove_title'),
-      question: $t('dashboard.validator.group_management.remove_text', { group: row.name })
-    }
+      question: $t('dashboard.validator.group_management.remove_text', { group: row.name }),
+    },
   })
 }
 
@@ -145,7 +146,6 @@ const maxGroupsPerDashboard = computed(() => (isPublic.value || !user.value?.pre
 const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value)
 
 const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getSortOrder(sortOrder.value)}` : undefined)
-
 </script>
 
 <template>
@@ -156,7 +156,10 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
     class="validator-group-managment-modal-container"
     @update:visible="(visible: boolean) => !visible && resetData()"
   >
-    <template v-if="!size.showSubTitle" #header>
+    <template
+      v-if="!size.showSubTitle"
+      #header
+    >
       <span />
     </template>
     <BcTableControl
@@ -167,7 +170,10 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
       <template #header-left>
         <span v-if="size.showSubTitle"> {{ $t('dashboard.validator.group_management.sub_title', { dashboardName })
         }}</span>
-        <span v-else class="small-title">{{ $t('dashboard.validator.group_management.title') }}</span>
+        <span
+          v-else
+          class="small-title"
+        >{{ $t('dashboard.validator.group_management.title') }}</span>
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
@@ -178,7 +184,11 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
             :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
             @keypress.enter="addGroup"
           />
-          <Button style="display: inline;" :disabled="newGroupDisabled" @click="addGroup">
+          <Button
+            style="display: inline;"
+            :disabled="newGroupDisabled"
+            @click="addGroup"
+          >
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
         </div>
@@ -215,16 +225,27 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
                 />
               </template>
             </Column>
-            <Column field="id" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.id')">
+            <Column
+              field="id"
+              :sortable="!isMobile"
+              :header="$t('dashboard.validator.group_management.col.id')"
+            >
               <template #body="slotProps">
                 <div class="id-cell">
                   {{ slotProps.data.id }}
                 </div>
               </template>
             </Column>
-            <Column field="count" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.count')">
+            <Column
+              field="count"
+              :sortable="!isMobile"
+              :header="$t('dashboard.validator.group_management.col.count')"
+            >
               <template #body="slotProps">
-                <BcFormatNumber :value="slotProps.data.count" default="0" />
+                <BcFormatNumber
+                  :value="slotProps.data.count"
+                  default="0"
+                />
               </template>
             </Column>
             <Column field="action">
@@ -242,9 +263,15 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
 
             <template #bc-table-footer-left>
               <div class="left">
-                <div class="labels" :class="{ premiumLimit }">
+                <div
+                  class="labels"
+                  :class="{ premiumLimit }"
+                >
                   <span>
-                    <BcFormatNumber :value="data.paging.total_count" default="0" /> /
+                    <BcFormatNumber
+                      :value="data.paging.total_count"
+                      default="0"
+                    /> /
                     <BcFormatNumber :value="maxGroupsPerDashboard" />
                   </span>
                 </div>
@@ -253,7 +280,10 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
             </template>
 
             <template #bc-table-footer-right>
-              <Button :label="$t('navigation.done')" @click="onClose" />
+              <Button
+                :label="$t('navigation.done')"
+                @click="onClose"
+              />
             </template>
           </BcTable>
         </ClientOnly>

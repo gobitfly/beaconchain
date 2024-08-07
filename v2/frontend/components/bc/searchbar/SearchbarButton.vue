@@ -5,21 +5,28 @@ import {
   type SearchbarShape,
   type SearchbarColors,
   type SearchbarPurpose,
-  SearchbarPurposeInfo
+  SearchbarPurposeInfo,
 } from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape,
-  colorTheme: SearchbarColors,
+  barShape: SearchbarShape
+  colorTheme: SearchbarColors
   barPurpose: SearchbarPurpose
 }>()
 </script>
 
 <template>
-  <Button v-if="SearchbarPurposeInfo[barPurpose].button === 'add'" class="p-button-icon-only plus">
+  <Button
+    v-if="SearchbarPurposeInfo[barPurpose].button === 'add'"
+    class="p-button-icon-only plus"
+  >
     <FontAwesomeIcon :icon="faPlus" />
   </Button>
-  <span v-else-if="SearchbarPurposeInfo[barPurpose].button === 'search'" class="magnifier-button" :class="[barShape,colorTheme]">
+  <span
+    v-else-if="SearchbarPurposeInfo[barPurpose].button === 'search'"
+    class="magnifier-button"
+    :class="[barShape, colorTheme]"
+  >
     <FontAwesomeIcon :icon="faMagnifyingGlass" />
   </span>
 </template>

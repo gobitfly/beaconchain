@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faInfoCircle
+  faInfoCircle,
 } from '@fortawesome/pro-regular-svg-icons'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
@@ -36,7 +36,7 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
     attestations: width.value >= 1015,
     reward: width.value >= 933,
     efficiency: width.value >= 730,
-    validatorsSortable: width.value >= 571
+    validatorsSortable: width.value >= 571,
   }
 })
 const loadData = (q?: TableQueryParams) => {
@@ -91,8 +91,8 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 }
 
 const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.length ?? 0) <= 1 ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder'))
-
 </script>
+
 <template>
   <div>
     <BcTableControl
@@ -100,7 +100,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
       :search-placeholder="searchPlaceholder"
       @set-search="setSearch"
     >
-      <template #header-center="{tableIsShown}">
+      <template #header-center="{ tableIsShown }">
         <h1 class="summary_title">
           {{ $t('dashboard.validator.summary.title') }}
         </h1>
@@ -113,7 +113,10 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
           class="small"
           :placeholder="$t('dashboard.group.selection.placeholder')"
         />
-        <DashboardChartSummaryChartFilter v-else v-model="chartFilter" />
+        <DashboardChartSummaryChartFilter
+          v-else
+          v-model="chartFilter"
+        />
       </template>
       <template #table>
         <ClientOnly fallback-tag="span">
@@ -150,7 +153,10 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               :header="$t('dashboard.validator.col.status')"
             >
               <template #body="slotProps">
-                <DashboardTableSummaryStatus :class="slotProps.data.className" :status="slotProps.data.status" />
+                <DashboardTableSummaryStatus
+                  :class="slotProps.data.className"
+                  :status="slotProps.data.status"
+                />
               </template>
             </Column>
             <Column

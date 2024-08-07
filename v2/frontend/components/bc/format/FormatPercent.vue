@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faArrowUp,
   faArrowDown,
-  faArrowsLeftRight
+  faArrowsLeftRight,
 } from '@fortawesome/pro-solid-svg-icons'
 import { type CompareResult } from '~/types/value'
 
@@ -30,7 +30,7 @@ const data = computed(() => {
   if (props.base === 0 && props.fullOnEmptyBase) {
     return {
       label: '100%',
-      className: 'text-positive'
+      className: 'text-positive',
     }
   }
   let leadingIcon: IconDefinition | undefined
@@ -48,35 +48,51 @@ const data = computed(() => {
       className = 'text-equal'
       leadingIcon = faArrowsLeftRight
       compareResult = 'equal'
-    } else if (percent > props.comparePercent) {
+    }
+    else if (percent > props.comparePercent) {
       className = 'text-positive'
       leadingIcon = faArrowUp
       compareResult = 'higher'
-    } else {
+    }
+    else {
       className = 'text-negative'
       leadingIcon = faArrowDown
       compareResult = 'lower'
     }
-  } else if (props.colorBreakPoint) {
+  }
+  else if (props.colorBreakPoint) {
     if ((props.base === 0 && percent === 0) || percent >= props.colorBreakPoint) {
       className = 'text-positive'
-    } else {
+    }
+    else {
       className = 'text-negative'
     }
   }
   return { label, className, leadingIcon, compareResult }
 })
-
 </script>
+
 <template>
-  <span :class="data.className" class="format-percent">
-    <BcTooltip v-if="data.leadingIcon" class="direction-icon">
+  <span
+    :class="data.className"
+    class="format-percent"
+  >
+    <BcTooltip
+      v-if="data.leadingIcon"
+      class="direction-icon"
+    >
       <template #tooltip>
-        <slot name="leading-tooltip" v-bind="{compare: data.compareResult}" />
+        <slot
+          name="leading-tooltip"
+          v-bind="{ compare: data.compareResult }"
+        />
       </template>
       <FontAwesomeIcon :icon="data.leadingIcon" />
     </BcTooltip>
-    <BcFormatNumber v-if="data.label" :text="data.label" />
+    <BcFormatNumber
+      v-if="data.label"
+      :text="data.label"
+    />
   </span>
 </template>
 

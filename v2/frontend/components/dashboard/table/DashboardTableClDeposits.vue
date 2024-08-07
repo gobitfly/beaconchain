@@ -29,7 +29,7 @@ const colsVisible = computed(() => {
     epoch: width.value >= 1000,
     slot: width.value >= 900,
     withdrawalCredentials: width.value >= 800,
-    publicKey: width.value >= 700
+    publicKey: width.value >= 700,
   }
 })
 
@@ -59,10 +59,10 @@ const tableData = computed(() => {
     paging: deposits.value.paging,
     data: [
       {
-        amount: totalAmount.value
+        amount: totalAmount.value,
       },
-      ...deposits.value.data
-    ]
+      ...deposits.value.data,
+    ],
   }
 })
 
@@ -93,8 +93,8 @@ const getRowClass = (row: VDBConsensusDepositsTableRow) => {
 const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   return row.index !== undefined
 }
-
 </script>
+
 <template>
   <div>
     <BcTableControl :title="$t('dashboard.validator.cl_deposits.title')">
@@ -128,7 +128,10 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 <span v-else>Σ</span>
               </template>
             </Column>
-            <Column field="index" :header="$t('common.index')">
+            <Column
+              field="index"
+              :header="$t('common.index')"
+            >
               <template #body="slotProps">
                 <BcLink
                   v-if="slotProps.data.index !== undefined"
@@ -186,7 +189,10 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </BcLink>
               </template>
             </Column>
-            <Column field="age" body-class="age-field">
+            <Column
+              field="age"
+              body-class="age-field"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -213,12 +219,22 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 />
               </template>
             </Column>
-            <Column field="amount" :header="$t('table.amount')">
+            <Column
+              field="amount"
+              :header="$t('table.amount')"
+            >
               <template #body="slotProps">
                 <div v-if="slotProps.data.index === undefined && isLoadingTotal">
-                  <BcLoadingSpinner :loading="true" size="small" />
+                  <BcLoadingSpinner
+                    :loading="true"
+                    size="small"
+                  />
                 </div>
-                <BcFormatValue v-else :value="slotProps.data.amount" :options="{ fixedDecimalCount: 0 }" />
+                <BcFormatValue
+                  v-else
+                  :value="slotProps.data.amount"
+                  :options="{ fixedDecimalCount: 0 }"
+                />
               </template>
             </Column>
             <Column

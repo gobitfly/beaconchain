@@ -4,7 +4,10 @@ const { isPremiumSubscribedViaApp } = useProductsStore()
 </script>
 
 <template>
-  <div v-if="isPremiumSubscribedViaApp" class="banner">
+  <div
+    v-if="isPremiumSubscribedViaApp"
+    class="banner"
+  >
     {{ $t('pricing.premium_via_app_banner') }}
   </div>
 </template>

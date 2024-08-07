@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 interface Props {
   title?: string
   question?: string
@@ -20,18 +19,38 @@ const closeDialog = (response: boolean) => {
 
 <template>
   <div class="content">
-    <div v-if="props?.title" class="title">
+    <div
+      v-if="props?.title"
+      class="title"
+    >
       {{ props?.title }}
     </div>
-    <div v-if="props?.question" class="question">
+    <div
+      v-if="props?.question"
+      class="question"
+    >
       {{ props?.question }}
     </div>
     <div class="footer">
-      <Button v-if="props?.severity !== 'danger'" type="button" :label="noLabel" @click="closeDialog(false)" />
-      <div v-else class="discreet-button" @click="closeDialog(false)">
+      <Button
+        v-if="props?.severity !== 'danger'"
+        type="button"
+        :label="noLabel"
+        @click="closeDialog(false)"
+      />
+      <div
+        v-else
+        class="discreet-button"
+        @click="closeDialog(false)"
+      >
         {{ noLabel }}
       </div>
-      <Button type="button" :severity="props?.severity === 'danger' ? `danger` : undefined" :label="yesLabel" @click="closeDialog(true)" />
+      <Button
+        type="button"
+        :severity="props?.severity === 'danger' ? `danger` : undefined"
+        :label="yesLabel"
+        @click="closeDialog(true)"
+      />
     </div>
   </div>
 </template>

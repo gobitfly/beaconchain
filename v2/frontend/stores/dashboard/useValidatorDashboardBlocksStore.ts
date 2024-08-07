@@ -11,7 +11,7 @@ const validatorDashboardBlocksStore = defineStore('validator_dashboard_blocks_st
   return { data, query }
 })
 
-export function useValidatorDashboardBlocksStore () {
+export function useValidatorDashboardBlocksStore() {
   const { fetch } = useCustomFetch()
   const { data, query: storedQuery } = storeToRefs(validatorDashboardBlocksStore())
   const isLoading = ref(false)
@@ -19,7 +19,7 @@ export function useValidatorDashboardBlocksStore () {
   const blocks = computed(() => data.value)
   const query = computed(() => storedQuery.value)
 
-  async function getBlocks (dashboardKey: DashboardKey, query?: TableQueryParams) {
+  async function getBlocks(dashboardKey: DashboardKey, query?: TableQueryParams) {
     if (!dashboardKey) {
       data.value = undefined
       isLoading.value = false

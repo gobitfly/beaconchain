@@ -9,7 +9,7 @@ const productsStore = defineStore('products_store', () => {
   return { data }
 })
 
-export function useProductsStore () {
+export function useProductsStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(productsStore())
   const { user } = useUserStore()
@@ -29,7 +29,7 @@ export function useProductsStore () {
     return (store === ProductStoreAndroidPlaystore || store === ProductStoreIosAppstore)
   })
 
-  async function getProducts () {
+  async function getProducts() {
     if (data.value) {
       return data.value
     }
