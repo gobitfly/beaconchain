@@ -37,7 +37,7 @@ const iconColor = computed(() => {
 .wrapper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--padding-small);
   .status {
     text-transform: capitalize;
