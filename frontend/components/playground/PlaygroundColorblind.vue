@@ -364,28 +364,25 @@ function distance (eye1: Eye, eye2: Eye) : number {
 type ColorDefinition = { color: string, identifier: string }
 enum ColorBlindness { Red, Green }
 
-const timeAllowed = 200 // ms
+const timeAllowed = 2000 // ms
 /** If `privilege``is between 0 and 1,
  *   the shorter distances are better reproduced, but the long distances can change noticeably, which is a problem for those getting too short.
  *  If `privilege` is above 1,
  *   the long distances are better reproduced, but the short distances can get shorter or longer than they were. */
-const privilege = 1
+const privilege = 2
 /** maximum number of colors that we do not want to touch temporarily */
 const tabuLength = 7
+const debug = true
 
 function enhanceColors (colors: ColorDefinition[], colorBlindness: ColorBlindness) : ColorDefinition[] {
   const original = []
   for (const def of colors) {
-    const i = def.color.indexOf('#')
-    if (i < 0) {
-      warn('Color', def.color, 'is given in an unknown format.')
+    if (!def.color.includes('#')) {
+      warn('Color {', def.color, def.identifier, '} is given in an unknown format.')
       return colors
     }
-    const col = parseInt(def.color.slice(i + 1), 16)
     const rgb = new RGB(CS.RGBgamma)
-    rgb.chan[B] = col & 0xFF
-    rgb.chan[G] = (col >> 8) & 0xFF
-    rgb.chan[R] = (col >> 16) & 0xFF
+    rgb.import(CSStoRGBarray(def.color))
     original.push(rgb)
   }
 
@@ -393,14 +390,28 @@ function enhanceColors (colors: ColorDefinition[], colorBlindness: ColorBlindnes
 
   const result: ColorDefinition[] = []
   for (let c = 0; c < colors.length; c++) {
-    let hex = (enhanced[c].chan[B] | enhanced[c].chan[G] << 8 | enhanced[c].chan[R] << 16).toString(16)
-    hex = ('000000' + hex).slice(-6)
     result.push({
-      color: '#' + hex,
+      color: RGBarrayToCSS(enhanced[c].chan),
       identifier: colors[c].identifier
     })
   }
   return result
+}
+
+function CSStoRGBarray (CSS: string) : number[] {
+  const i = CSS.indexOf('#')
+  const col = parseInt(CSS.slice(i + 1), 16)
+  const arr: number[] = []
+  arr[B] = col & 0xFF
+  arr[G] = (col >> 8) & 0xFF
+  arr[R] = (col >> 16) & 0xFF
+  return arr
+}
+
+function RGBarrayToCSS (RGB : number[]) : string {
+  let hex = (RGB[B] | RGB[G] << 8 | RGB[R] << 16).toString(16)
+  hex = ('000000' + hex).slice(-6)
+  return '#' + hex
 }
 
 let blindness: ColorBlindness
@@ -409,8 +420,7 @@ let distancesOrig: number[][]
 let wip3D: RGB[] // CS.RGBlinear
 let wip2D: Eye[] // CS.EyePercI
 let errors2D: number[]
-const temp = new RGB(CS.RGBlinear)
-const tabuQueue = new Array<number>(tabuLength) // queue of color indices that we do not want to touch for some time
+const tabuQueue = new Array<number>(tabuLength) // queue of color positions (hashed) that we do not want to go back to for some time
 
 /** @param input must be in the CS.RGBgamma format.
  * @returns enchanced colors in the CS.RGBgamma format
@@ -428,7 +438,7 @@ function search (input : RGB[], colorBlindness: ColorBlindness) : RGB[] {
     for (const colB of originalEye) {
       line.push(distance(colA, colB))
     }
-    distancesOrig.push(line)
+    distancesOrig.push([...line])
   }
   // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way that they get more and more distinguishable when viewed by a color blind person
   wip3D = original.map(col => col.export(CS.RGBlinear))
@@ -436,56 +446,73 @@ function search (input : RGB[], colorBlindness: ColorBlindness) : RGB[] {
   wip2D = wip3D.map(col => projectOnto2D(col.chan).export(CS.EyePercI))
   errors2D = wip2D.map((col, k) => distError(k, col))
 
+  if (debug) {
+    cons.log('Original distances:', distancesOrig)
+  }
+
   // search phase
   tabuQueue.fill(-1)
+  let iterations = 0
+  let bestTotalError = Number.MAX_SAFE_INTEGER
+  let bestWip3D: Array<RGB> = [] // CS.RGBgamma
   while (performance.now() < endTime) {
     optimizeOneStepFurther()
+    const error = totalError()
+    if (error < bestTotalError) {
+      bestTotalError = error
+      bestWip3D = wip3D.map(col => col.export(CS.RGBgamma))
+      if (debug) {
+        cons.log('Better color set found at iteration', iterations, bestWip3D.map(col => col.chan))
+      }
+    }
+    iterations++
+  }
+  if (debug) {
+    cons.log('Iterated', iterations, 'times.')
   }
   // 🪄✨
-  return wip3D.map(col => col.export(CS.RGBgamma))
+  return bestWip3D
 }
+
+const hashColor = (k: number, rgb: number[]) => k + Math.floor(256 * rgb[R]) + Math.floor((256 * 128) * rgb[G]) + Math.floor((256 * 128 * 128) * rgb[B])
 
 function optimizeOneStepFurther () {
   let bestK: number = 0
   let bestError: number = 0
   let bestErrorGain: number = Number.MAX_SAFE_INTEGER
   let bestColor: number[] = []
-  const step = 2 /// /////////////////////////////  TODO: change the step dynamically
+  const triedColor = new RGB(CS.RGBlinear)
+  const step = 2 / 256 /// /////////////////////////////  TODO: change the step dynamically
   for (let k = 0; k < wip3D.length; k++) {
-    if (tabuQueue.includes(k)) { continue }
-    temp.import(wip3D[k])
+    triedColor.import(wip3D[k])
     for (const c of [R, G, B]) {
       for (const s of [-step, +step]) {
-        const restoredValue = temp.chan[c]
-        temp.chan[c] += s
-        const error = distError(k, projectOnto2D(temp.chan))
-        if (error - errors2D[k] < bestErrorGain) {
-          bestErrorGain = error - errors2D[k]
-          bestError = error
-          bestK = k
-          bestColor = [...temp.chan]
+        const restoredValue = triedColor.chan[c]
+        triedColor.chan[c] += s
+        if (triedColor.chan[c] < 0) { triedColor.chan[c] = 0 }
+        if (triedColor.chan[c] > 1) { triedColor.chan[c] = 1 }
+        if (!tabuQueue.includes(hashColor(k, triedColor.chan))) {
+          const error = distError(k, projectOnto2D(triedColor.chan))
+          if (error - errors2D[k] < bestErrorGain) {
+            bestErrorGain = error - errors2D[k]
+            bestError = error
+            bestK = k
+            bestColor = [...triedColor.chan]
+          }
         }
-        temp.chan[c] = restoredValue
+        triedColor.chan[c] = restoredValue
       }
     }
   }
-  if (bestErrorGain < Number.MAX_SAFE_INTEGER) {
-    wip3D[bestK].import(bestColor)
-    wip2D[bestK].import(projectOnto2D(bestColor))
-    errors2D[bestK] = bestError
-    tabuQueue.shift()
-    if (bestErrorGain < 0) {
-      tabuQueue.push(-1)
-    } else {
-      // to avoid oscillating back and forth on the same color until the time limit expires, we add it to the tabu FIFO
-      tabuQueue.push(bestK)
-    }
-  } else {
-    tabuQueue.fill(-1)
-  }
+  wip3D[bestK].import(bestColor)
+  wip2D[bestK].import(projectOnto2D(bestColor))
+  errors2D[bestK] = bestError
+  tabuQueue.shift()
+  tabuQueue.push(hashColor(bestK, bestColor))
 }
 
-const cbSight = new Eye(CS.EyePercI)
+const cbSightPO2D = new Eye(CS.EyePercI)
+const rgbP02D = new RGB(CS.RGBlinear)
 
 /** @returns the projection of `rgb` into the Eye color-space of the color-blind person */
 function projectOnto2D (rgb: number[]) : Eye {
@@ -493,24 +520,24 @@ function projectOnto2D (rgb: number[]) : Eye {
     // The matrices have been calculated by following the prodedure of
     // Viénot, F., Brettel, H., & Mollon, J. D. (1999) "Digital video colourmaps for checking the legibility of displays by dichromats". Color Research and Application, 24, 4, 243-251.
     case ColorBlindness.Red :
-      temp.chan[R] = 0.1123822674257492 * rgb[R] + 0.8876119706946073 * rgb[G]
-      temp.chan[G] = temp.chan[R]
-      temp.chan[B] = 0.00400576009958313 * rgb[R] - 0.004005734096601488 * rgb[G] + rgb[B]
+      rgbP02D.chan[R] = 0.1123822674257492 * rgb[R] + 0.8876119706946073 * rgb[G]
+      rgbP02D.chan[G] = rgbP02D.chan[R]
+      rgbP02D.chan[B] = 0.00400576009958313 * rgb[R] - 0.004005734096601488 * rgb[G] + rgb[B]
       break
     case ColorBlindness.Green :
-      for (const k of [R, G, B]) { temp.chan[k] = 0.99 * rgb[k] + 0.005 }
-      temp.chan[R] = 0.292750775976202 * temp.chan[R] + 0.7072518589062524 * temp.chan[G]
-      temp.chan[G] = temp.chan[R]
-      temp.chan[B] = -0.02233647741916585 * temp.chan[R] + 0.02233656063451689 * temp.chan[G] + temp.chan[B]
-      for (const k of [R, G, B]) { temp.chan[k] = 0.99 * temp.chan[k] + 0.005 }
+      for (const k of [R, G, B]) { rgbP02D.chan[k] = 0.99 * rgb[k] + 0.005 }
+      rgbP02D.chan[R] = 0.292750775976202 * rgbP02D.chan[R] + 0.7072518589062524 * rgbP02D.chan[G]
+      rgbP02D.chan[G] = rgbP02D.chan[R]
+      rgbP02D.chan[B] = -0.02233647741916585 * rgbP02D.chan[R] + 0.02233656063451689 * rgbP02D.chan[G] + rgbP02D.chan[B]
+      for (const k of [R, G, B]) { rgbP02D.chan[k] = 0.99 * rgbP02D.chan[k] + 0.005 }
       break
     default :
-      temp.import(rgb)
+      rgbP02D.import(rgb)
       break
   }
-  temp.limit() // in rare cases, a value can happen to be slightly below 0 or slightly above 1 (the 0—255 range would become approximately -3—258).
-  cbSight.import(temp)
-  return cbSight
+  rgbP02D.limit() // in rare cases, a value can happen to be slightly below 0 or slightly above 1 (the 0—255 range would become approximately -3—258).
+  cbSightPO2D.import(rgbP02D)
+  return cbSightPO2D
 }
 
 /** for a given color `k` stored in `wipColor2D`, this function calculates a value continuously increasing with respect to
@@ -522,9 +549,13 @@ function distError (k: number, wipColor2D: Eye) : number {
   let result = 0
   for (let l = 0; l < distancesOrig.length; l++) {
     if (k === l) { continue }
-    result += Math.abs(distancesOrig[k][l] - distance(wipColor2D, wip2D[l])) ** privilege
+    result += Math.abs(distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1) ** privilege
   }
   return result
+}
+
+function totalError () : number {
+  return errors2D.reduce((prev, curr) => prev + curr, 0)
 }
 
 //
@@ -533,18 +564,34 @@ function distError (k: number, wipColor2D: Eye) : number {
 
 const cons = console
 
+const randColors: string[] = []
+const RGBgamma = new RGB(CS.RGBgamma)
+for (let i = 0; i < 16; i++) {
+  // from Alexander:
+  const letters = '0123456789ABCDEF'
+  let color = '#'
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)]
+  }
+  randColors.push(color)
+}
+blindness = ColorBlindness.Green
+const randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), blindness).map(obj => obj.color)
+const randColorsCB = randColors.map(col => RGBarrayToCSS(projectOnto2D(RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
+const randColorsEnhancedCB = randColorsEnhanced.map(col => RGBarrayToCSS(projectOnto2D(RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
+
 const colorI = new Eye(CS.EyePercI)
 const colorJ = new Eye(CS.EyeNormJ)
 
-const colors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
+const allColors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
 const numR = 6
 const numP = 21
 const numI = 40
 let maxIntensityMinIndex = 1000
 for (let r = 0; r <= numR; r++) {
-  colors.push([])
+  allColors.push([])
   for (let p = 0; p <= numP; p++) {
-    colors[r].push([])
+    allColors[r].push([])
     for (let i = 0; i <= numI; i++) {
       if (i > 0 && (i / numI) > colorI.iMax) {
         if (i - 1 < maxIntensityMinIndex) { maxIntensityMinIndex = i - 1 }
@@ -553,54 +600,54 @@ for (let r = 0; r <= numR; r++) {
       colorI.r = r / numR
       colorI.p = p / numP
       colorI.i = i / numI
-      colors[r][p].push({ rgb: colorI.export(CS.RGBgamma), eye: colorI.export(CS.EyePercI) })
-      if (colors[r][p][i].rgb.chan[R] > 255 || colors[r][p][i].rgb.chan[G] > 255 || colors[r][p][i].rgb.chan[B] > 255 || colors[r][p][i].rgb.chan[R] < 0 || colors[r][p][i].rgb.chan[G] < 0 || colors[r][p][i].rgb.chan[B] < 0) {
+      allColors[r][p].push({ rgb: colorI.export(CS.RGBgamma), eye: colorI.export(CS.EyePercI) })
+      if (allColors[r][p][i].rgb.chan[R] > 255 || allColors[r][p][i].rgb.chan[G] > 255 || allColors[r][p][i].rgb.chan[B] > 255 || allColors[r][p][i].rgb.chan[R] < 0 || allColors[r][p][i].rgb.chan[G] < 0 || allColors[r][p][i].rgb.chan[B] < 0) {
         cons.log('#### PercI -> RGB  out of bounds')
-        cons.log(colors[r][p][i].rgb)
+        cons.log(allColors[r][p][i].rgb)
       }
-      let rgb2 = ((new Eye(CS.EyePercI)).import(colors[r][p][i].rgb)).export(CS.RGBgamma).chan
+      let rgb2 = ((new Eye(CS.EyePercI)).import(allColors[r][p][i].rgb)).export(CS.RGBgamma).chan
       if (rgb2[R] > 255 || rgb2[G] > 255 || rgb2[B] > 255 || rgb2[R] < 0 || rgb2[G] < 0 || rgb2[B] < 0) {
         cons.log('#### PercI -> RGB -> PercI -> RGB  out of bounds')
         cons.log(rgb2)
       }
-      if (colors[r][p][i].rgb.chan[0] !== rgb2[0] || colors[r][p][i].rgb.chan[1] !== rgb2[1] || colors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> RGB -> PercI -> RGB.')
-        cons.log('PercI:', colors[r][p][i].eye)
-        cons.log('PercI -> RGB -> PercI :', (new Eye(CS.EyePercI)).import(colors[r][p][i].rgb))
-        cons.log('PercI -> RGB :', colors[r][p][i].rgb.chan)
+        cons.log('PercI:', allColors[r][p][i].eye)
+        cons.log('PercI -> RGB -> PercI :', (new Eye(CS.EyePercI)).import(allColors[r][p][i].rgb))
+        cons.log('PercI -> RGB :', allColors[r][p][i].rgb.chan)
         cons.log('PercI -> RGB -> PercI -> RGB :', rgb2)
       }
-      rgb2 = colors[r][p][i].eye.export(CS.RGBlinear).export(CS.EyeNormJ).export(CS.RGBgamma).chan
+      rgb2 = allColors[r][p][i].eye.export(CS.RGBlinear).export(CS.EyeNormJ).export(CS.RGBgamma).chan
       if (rgb2[R] > 255 || rgb2[G] > 255 || rgb2[B] > 255 || rgb2[R] < 0 || rgb2[G] < 0 || rgb2[B] < 0) {
         cons.log('#### PercI -> RGB -> NormJ -> RGB  out of bounds')
         cons.log(rgb2)
       }
-      if (colors[r][p][i].rgb.chan[0] !== rgb2[0] || colors[r][p][i].rgb.chan[1] !== rgb2[1] || colors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> RGB -> NormJ -> RGB.')
-        cons.log('PercI -> RGB :', colors[r][p][i].rgb.chan)
+        cons.log('PercI -> RGB :', allColors[r][p][i].rgb.chan)
         cons.log('PercI -> RGB -> NormJ -> RGB :', rgb2)
-        cons.log('PercI:', colors[r][p][i].eye)
-        cons.log('PercI -> RGB -> NormJ :', colors[r][p][i].eye.export(CS.RGBlinear).export(CS.EyeNormJ))
+        cons.log('PercI:', allColors[r][p][i].eye)
+        cons.log('PercI -> RGB -> NormJ :', allColors[r][p][i].eye.export(CS.RGBlinear).export(CS.EyeNormJ))
       }
-      rgb2 = colors[r][p][i].eye.export(CS.EyeNormJ).export(CS.RGBgamma).chan
+      rgb2 = allColors[r][p][i].eye.export(CS.EyeNormJ).export(CS.RGBgamma).chan
       if (rgb2[R] > 255 || rgb2[G] > 255 || rgb2[B] > 255 || rgb2[R] < 0 || rgb2[G] < 0 || rgb2[B] < 0) {
         cons.log('#### PercI -> NormJ -> RGB  out of bounds')
         cons.log(rgb2)
       }
-      if (colors[r][p][i].rgb.chan[0] !== rgb2[0] || colors[r][p][i].rgb.chan[1] !== rgb2[1] || colors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> NormJ -> RGB.')
-        cons.log('PercI -> RGB :', colors[r][p][i].rgb.chan)
+        cons.log('PercI -> RGB :', allColors[r][p][i].rgb.chan)
         cons.log('PercI -> NormJ -> RGB :', rgb2)
-        cons.log('PercI:', colors[r][p][i].eye)
-        cons.log('PercI -> NormJ :', colors[r][p][i].eye.export(CS.EyeNormJ))
+        cons.log('PercI:', allColors[r][p][i].eye)
+        cons.log('PercI -> NormJ :', allColors[r][p][i].eye.export(CS.EyeNormJ))
       }
-      rgb2 = colors[r][p][i].eye.export(CS.EyeNormJ).export(CS.EyePercI).export(CS.RGBgamma).chan
-      if (colors[r][p][i].rgb.chan[0] !== rgb2[0] || colors[r][p][i].rgb.chan[1] !== rgb2[1] || colors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      rgb2 = allColors[r][p][i].eye.export(CS.EyeNormJ).export(CS.EyePercI).export(CS.RGBgamma).chan
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> NormJ -> PercI -> RGB.')
-        cons.log('PercI -> RGB :', colors[r][p][i].rgb.chan)
+        cons.log('PercI -> RGB :', allColors[r][p][i].rgb.chan)
         cons.log('PercI -> NormJ -> PercI -> RGB :', rgb2)
-        cons.log('PercI:', colors[r][p][i].eye)
-        cons.log('PercI -> NormJ -> PercI :', colors[r][p][i].eye.export(CS.EyeNormJ).export(CS.EyePercI))
+        cons.log('PercI:', allColors[r][p][i].eye)
+        cons.log('PercI -> NormJ -> PercI :', allColors[r][p][i].eye.export(CS.EyeNormJ).export(CS.EyePercI))
       }
     }
   }
@@ -676,7 +723,7 @@ const distanceBetweenLastTwoColors = ref<number>(0)
 function showDistanceTo (kr: number, kp: number, ki: number) {
   krkpki1 = krkpki2
   krkpki2 = [kr, kp, ki]
-  distanceBetweenLastTwoColors.value = distance(colors[krkpki1[0]][krkpki1[1]][krkpki1[2]].eye, colors[kr][kp][ki].eye)
+  distanceBetweenLastTwoColors.value = distance(allColors[krkpki1[0]][krkpki1[1]][krkpki1[2]].eye, allColors[kr][kp][ki].eye)
   distanceBetweenLastTwoColors.value = Math.round(1000 * distanceBetweenLastTwoColors.value) / 1000
 }
 </script>
@@ -685,7 +732,51 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
   <div style="background-color: rgb(128,128,128); padding: 20px">
     <TabView>
       <TabPanel header="Demo">
-        {{ enhanceColors([{color: ' #1200FF', identifier: 'hey'}, {color: '#000A00', identifier: 'hi'}], ColorBlindness.Red) }}
+        <div style="display: flex; gap: 50px; margin:30px; margin-bottom: 10px;">
+          <div>
+            <div style="text-align: center; width:240px;">
+              seen with normal vision <br><br>
+            </div>
+            <div v-for="(_,m) of 4" :key="m">
+              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColors[4*m+n]" />
+            </div>
+            <div style="text-align: center; width:240px; font-size: 50px; margin-top: 10px;">
+              ⬇
+            </div>
+          </div>
+          <div style="margin-top: 130px; font-size: 30px;">
+            →
+          </div>
+          <div>
+            <div style="text-align: center; width:240px;">
+              seen by a color-blind person <br><br>
+            </div>
+            <div v-for="(_,m) of 4" :key="m">
+              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColorsCB[4*m+n]" />
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 50px; margin:30px; margin-top: 10px;">
+          <div>
+            <div style="text-align: center; width:240px;">
+              enhanced by Bitfly's technology <br><br>
+            </div>
+            <div v-for="(_,m) of 4" :key="m">
+              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColorsEnhanced[4*m+n]" />
+            </div>
+          </div>
+          <div style="margin-top: 130px; font-size: 30px;">
+            →
+          </div>
+          <div>
+            <div style="text-align: center; width:240px;">
+              seen by a color-blind person <br><br>
+            </div>
+            <div v-for="(_,m) of 4" :key="m">
+              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColorsEnhancedCB[4*m+n]" />
+            </div>
+          </div>
+        </div>
       </TabPanel>
       <TabPanel header="Screen calibration">
         <div style="background-color: black; height: 1000px; display: flex; flex-direction: column; padding: 5px">
@@ -921,7 +1012,7 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
           Here we flatten the color space. r, p and i progress linearly. <br>
           Click two colors to see their distance. <br>
           <br>
-          <div v-for="(rRow,r) of colors" :key="r">
+          <div v-for="(rRow,r) of allColors" :key="r">
             <div v-for="(pRow,p) of rRow" :key="p">
               <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'" @click="showDistanceTo(r,p,i)" />
             </div>
@@ -930,8 +1021,8 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
           <div v-if="distanceBetweenLastTwoColors" class="meter">
             Distance between the last two colors <br>
             that you clicked: {{ distanceBetweenLastTwoColors }} <br><br>
-            {{ colors[krkpki1[0]][krkpki1[1]][krkpki1[2]].eye }} <br>
-            {{ colors[krkpki2[0]][krkpki2[1]][krkpki2[2]].eye }}
+            {{ allColors[krkpki1[0]][krkpki1[1]][krkpki1[2]].eye }} <br>
+            {{ allColors[krkpki2[0]][krkpki2[1]][krkpki2[2]].eye }}
           </div>
         </div>
       </TabPanel>
