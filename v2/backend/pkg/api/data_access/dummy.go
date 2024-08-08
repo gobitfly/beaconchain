@@ -381,25 +381,13 @@ func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboar
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
+func (d *DummyService) GetValidatorDashboardHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.VDBHeatmap, error) {
 	r := t.VDBHeatmap{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
-	r := t.VDBHeatmap{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
-	r := t.VDBHeatmapTooltipData{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, day time.Time, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
+func (d *DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, timestamp uint64) (*t.VDBHeatmapTooltipData, error) {
 	r := t.VDBHeatmapTooltipData{}
 	err := commonFakeData(&r)
 	return &r, err

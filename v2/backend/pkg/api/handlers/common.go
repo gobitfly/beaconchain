@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -334,6 +333,35 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	return dashboardId, nil
 }
 
+const chartDatapointLimit uint64 = 200
+
+// helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
+// if no aggregation is passed, it's enforced to be present in the user request
+func (h *HandlerService) getCurrentChartTimeLimitsForUser(v *validationError, ctx context.Context, r *http.Request, dashboardId *types.VDBId, aggregation *enums.ChartAggregation) (uint64, uint64, uint64, error) {
+	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	if aggregation == nil || enums.IsInvalidEnum(aggregation) {
+		tmp := checkEnum[enums.ChartAggregation](v, r.URL.Query().Get("aggregation"), "aggregation")
+		aggregation = &tmp
+	}
+	maxAge := getMaxChartAge(*aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
+	if maxAge == 0 {
+		return 0, 0, 0, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
+	}
+	latestExportedTs, err := h.dai.GetLatestExportedChartTs(ctx, *aggregation)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	minAllowedTs := latestExportedTs - min(maxAge, latestExportedTs)                                      // min to prevent underflow
+	secondsPerEpoch := uint64(12 * 32)                                                                    // TODO: fetch dashboards chain id and use correct value for network once available
+	maxAllowedInterval := chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
+
+	return minAllowedTs, latestExportedTs, maxAllowedInterval, nil
+}
+
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
 }
@@ -483,8 +511,6 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
 // precondition: the enum is the same type as the allowed enums.
-//
-//nolint:unparam
 func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
@@ -595,15 +621,6 @@ func (v *validationError) checkValidators(validators []intOrString, allowEmpty b
 	return indexes, publicKeys
 }
 
-func (v *validationError) checkDate(dateString string) time.Time {
-	// expecting date in format "YYYY-MM-DD"
-	date, err := time.Parse("2006-01-02", dateString)
-	if err != nil {
-		v.add("date", fmt.Sprintf("given value '%s' is not a valid date", dateString))
-	}
-	return date
-}
-
 func (v *validationError) checkNetwork(network intOrString) uint64 {
 	chainId, ok := isValidNetwork(network)
 	if !ok {
@@ -635,7 +652,9 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
-func (v *validationError) checkTimestamps(afterParam string, beforeParam string, latestExportedTs uint64, minAllowedTs uint64, maxAllowedInterval uint64) (after uint64, before uint64) {
+func (v *validationError) checkTimestamps(r *http.Request, latestExportedTs uint64, minAllowedTs uint64, maxAllowedInterval uint64) (after uint64, before uint64) {
+	afterParam := r.URL.Query().Get("after_ts")
+	beforeParam := r.URL.Query().Get("before_ts")
 	switch {
 	// If both parameters are empty, return the latest data
 	case afterParam == "" && beforeParam == "":
@@ -803,6 +822,7 @@ func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
+//nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
 }
