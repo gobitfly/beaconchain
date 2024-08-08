@@ -282,7 +282,6 @@ export interface VDBNodeRocketPoolData {
   timezone: string;
   refund_balance: string /* decimal.Decimal */;
   deposit_credit: string /* decimal.Decimal */;
-  penalties: number /* uint64 */;
   rpl_stake: {
     min: string /* decimal.Decimal */;
     max: string /* decimal.Decimal */;
@@ -298,6 +297,7 @@ export interface VDBRocketPoolMinipoolsTableRow {
   deposit: string /* decimal.Decimal */;
   commission: number /* float64 */;
   created_timestamp: number /* int64 */;
+  penalties: number /* uint64 */;
 }
 export type InternalGetValidatorDashboardRocketPoolMinipoolsResponse = ApiPagingResponse<VDBRocketPoolMinipoolsTableRow>;
 /**
