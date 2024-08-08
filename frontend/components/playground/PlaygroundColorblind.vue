@@ -365,11 +365,6 @@ type ColorDefinition = { color: string, identifier: string }
 enum ColorBlindness { Red, Green }
 
 const timeAllowed = 2000 // ms
-/** If `privilege``is between 0 and 1,
- *   the shorter distances are better reproduced, but the long distances can change noticeably, which is a problem for those getting too short.
- *  If `privilege` is above 1,
- *   the long distances are better reproduced, but the short distances can get shorter or longer than they were. */
-const privilege = 2
 /** maximum number of colors that we do not want to touch temporarily */
 const tabuLength = 7
 const debug = true
@@ -549,7 +544,8 @@ function distError (k: number, wipColor2D: Eye) : number {
   let result = 0
   for (let l = 0; l < distancesOrig.length; l++) {
     if (k === l) { continue }
-    result += Math.abs(distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1) ** privilege
+    const diff = distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1
+    result += (diff < 0 ? (-diff) ** 2 : Math.sqrt(diff))
   }
   return result
 }
