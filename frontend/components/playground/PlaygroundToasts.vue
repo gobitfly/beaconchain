@@ -2,20 +2,20 @@
 const toast = useBcToast()
 
 const openToast = (
-  severity: 'info' | 'success' | 'error',
+  severity: 'error' | 'info' | 'success',
   summary: string,
   detail: string,
   group?: string,
 ) => {
   switch (severity) {
+    case 'error':
+      toast.showError({ detail, group, summary })
+      break
     case 'info':
-      toast.showInfo({ summary, detail, group })
+      toast.showInfo({ detail, group, summary })
       break
     case 'success':
-      toast.showSuccess({ summary, detail, group })
-      break
-    case 'error':
-      toast.showError({ summary, detail, group })
+      toast.showSuccess({ detail, group, summary })
       break
   }
 }

@@ -1,7 +1,7 @@
 export type ToastData = {
-  summary: string
   detail?: string
   group?: string
+  summary: string
 }
 type ToastFunction = (data: ToastData) => void
 

@@ -11,7 +11,7 @@ const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
 useBcSeo()
 
 const { latestState, refreshLatestState } = useLatestStateStore()
-const slotVizData = ref<SlotVizEpoch[] | null>(null)
+const slotVizData = ref<null | SlotVizEpoch[]>(null)
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 
 await Promise.all([

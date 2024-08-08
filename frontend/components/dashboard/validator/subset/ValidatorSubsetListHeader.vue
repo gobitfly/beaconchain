@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import {
   faDesktop,
-  faPowerOff,
   faMoneyBill,
+  faPowerOff,
 } from '@fortawesome/pro-solid-svg-icons'
 import {
   faClock,
@@ -74,7 +74,7 @@ const icon = computed(() => {
       break
   }
 
-  return { icon, className, slotVizCategory }
+  return { className, icon, slotVizCategory }
 })
 
 const count = computed(() =>

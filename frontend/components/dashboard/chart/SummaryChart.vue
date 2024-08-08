@@ -6,26 +6,26 @@ import { LineChart } from 'echarts/charts'
 import { type ECharts } from 'echarts'
 import { get } from 'lodash-es'
 import {
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
   DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import {
-  getSummaryChartGroupColors,
   getChartTextColor,
   getChartTooltipBackgroundColor,
+  getSummaryChartGroupColors,
 } from '~/utils/colors'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatTsToTime } from '~/utils/format'
 import { API_PATH } from '~/types/customFetch'
 import {
+  type AggregationTimeframe,
   SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
   SUMMARY_CHART_GROUP_TOTAL,
-  type AggregationTimeframe,
   type SummaryChartFilter,
 } from '~/types/dashboard/summary'
 
@@ -48,22 +48,22 @@ const chart = ref<ECharts | undefined>()
 const { t: $t } = useTranslation()
 const colorMode = useColorMode()
 const { fetch } = useCustomFetch()
-const { tsToEpoch, slotToTs, secondsPerEpoch } = useNetworkStore()
+const { secondsPerEpoch, slotToTs, tsToEpoch } = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
 const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 const { latestState } = useLatestStateStore()
 const latestSlot = ref(latestState.value?.current_slot || 0)
 const {
-  value: timeFrames,
-  temp: tempTimeFrames,
   bounce: bounceTimeFrames,
   instant: instantTimeFrames,
+  temp: tempTimeFrames,
+  value: timeFrames,
 } = useDebounceValue<{ from?: number, to: number }>({ from: undefined, to: 0 }, 1000)
-const currentZoom = { start: 80, end: 100 }
+const currentZoom = { end: 100, start: 80 }
 const MAX_DATA_POINTS = 200
 
-const { value: filter, bounce: bounceFilter } = useDebounceValue(
+const { bounce: bounceFilter, value: filter } = useDebounceValue(
   props.filter,
   1000,
 )
@@ -73,10 +73,10 @@ let reloadCounter = 0
 
 interface SeriesObject {
   data: number[]
-  type: string
+  name: string
   smooth: boolean
   symbol: string
-  name: string
+  type: string
 }
 // we don't want the series to be responsive to not trigger an auto update of the option computed
 const series = ref<SeriesObject[]>([])
@@ -130,7 +130,7 @@ watch([() => props.filter?.efficiency, () => props.filter?.groupIds], () => {
     return
   }
   bounceFilter({ ...props.filter, groupIds: [...props.filter.groupIds] }, true, true)
-}, { immediate: true, deep: true })
+}, { deep: true, immediate: true })
 
 watch(() => props.filter?.aggregation, (agg) => {
   if (!agg) {
@@ -156,10 +156,10 @@ const loadData = async () => {
       {
         query: {
           after_ts: timeFrames.value.from,
-          before_ts: timeFrames.value.to,
-          group_ids: props.filter?.groupIds.join(','),
-          efficiency_type: props.filter?.efficiency,
           aggregation: aggregation.value,
+          before_ts: timeFrames.value.to,
+          efficiency_type: props.filter?.efficiency,
+          group_ids: props.filter?.groupIds.join(','),
         },
       },
       { dashboardKey: dashboardKey.value },
@@ -184,10 +184,10 @@ const loadData = async () => {
         }
         const newObj: SeriesObject = {
           data: element.data,
-          type: 'line',
+          name,
           smooth: false,
           symbol: 'none',
-          name,
+          type: 'line',
         }
         newSeries.push(newObj)
       })
@@ -211,9 +211,9 @@ watch(
 
 const colors = computed(() => {
   return {
+    background: getChartTooltipBackgroundColor(colorMode.value),
     groups: getSummaryChartGroupColors(colorMode.value),
     label: getChartTextColor(colorMode.value),
-    background: getChartTooltipBackgroundColor(colorMode.value),
   }
 })
 
@@ -259,80 +259,48 @@ const formatTimestamp = (value: string) => {
 // chart options
 const option = computed(() => {
   return {
-    grid: {
-      containLabel: true,
-      top: 10,
-      left: '5%',
-      right: '5%',
-    },
-    xAxis: [
-      {
-        // xAxis of the chart
-        type: 'category',
-        data: chartCategories.value,
-        boundaryGap: false,
-        axisLabel: {
-          fontSize: textSize,
-          lineHeight: 20,
-          formatter: formatTimestamp,
+    color: colors.value.groups,
+    dataZoom: {
+      type: 'slider',
+      ...currentZoom,
+      borderColor: colors.value.label,
+      dataBackground: {
+        areaStyle: {
+          color: colors.value.label,
         },
-      },
-      {
-        // xAxis of the time frame selection
-        type: 'category',
-        data: categories.value,
-        show: false,
-        boundaryGap: false,
-      },
-    ],
-    series: series.value,
-    yAxis: {
-      name: $t(
-        `dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`,
-      ),
-      nameLocation: 'center',
-      nameTextStyle: {
-        padding: [0, 0, 30, 0],
-      },
-      type: 'value',
-      minInterval: 10,
-      maxInterval: 20,
-      min: (range: any) =>
-        range.min >= 0
-          ? Math.max(0, 10 * Math.ceil(range.min / 10 - 1))
-          : 10 * Math.ceil(range.min / 10 - 1),
-      silent: true,
-      axisLabel: {
-        formatter: '{value} %',
-        fontSize: textSize,
-      },
-      splitLine: {
         lineStyle: {
           color: colors.value.label,
         },
       },
+      labelFormatter: (_value: number, valueStr: string) => {
+        return formatToDateOrEpoch(valueStr)
+      },
+      xAxisIndex: [1],
     },
-    textStyle: {
-      fontFamily,
-      fontSize: textSize,
-      fontWeight: fontWeightLight,
-      color: colors.value.label,
+    grid: {
+      containLabel: true,
+      left: '5%',
+      right: '5%',
+      top: 10,
     },
-    color: colors.value.groups,
     legend: {
-      type: 'scroll',
-      orient: 'horizontal',
       bottom: 40,
+      orient: 'horizontal',
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
         fontWeight: fontWeightMedium,
       },
+      type: 'scroll',
+    },
+    series: series.value,
+    textStyle: {
+      color: colors.value.label,
+      fontFamily,
+      fontSize: textSize,
+      fontWeight: fontWeightLight,
     },
     tooltip: {
-      order: 'seriesAsc',
-      trigger: 'axis',
-      padding: 0,
       borderColor: colors.value.background,
       formatter(params: any): HTMLElement {
         const ts = parseInt(params[0].axisValue)
@@ -350,42 +318,74 @@ const option = computed(() => {
             }
           }
           return {
-            name: param.seriesName,
-            efficiency: param.value,
             color: param.color,
+            efficiency: param.value,
+            name: param.seriesName,
           }
         })
         const d = document.createElement('div')
         render(
           h(SummaryChartTooltip, {
-            t: $t,
-            ts,
-            efficiencyType: props.filter?.efficiency || 'all',
             aggregation: aggregation.value,
+            efficiencyType: props.filter?.efficiency || 'all',
             groupInfos,
             highlightGroup,
+            t: $t,
+            ts,
           }),
           d,
         )
         return d
       },
+      order: 'seriesAsc',
+      padding: 0,
+      trigger: 'axis',
     },
-    dataZoom: {
-      type: 'slider',
-      ...currentZoom,
-      labelFormatter: (_value: number, valueStr: string) => {
-        return formatToDateOrEpoch(valueStr)
+    xAxis: [
+      {
+        axisLabel: {
+          fontSize: textSize,
+          formatter: formatTimestamp,
+          lineHeight: 20,
+        },
+        boundaryGap: false,
+        data: chartCategories.value,
+        // xAxis of the chart
+        type: 'category',
       },
-      xAxisIndex: [1],
-      dataBackground: {
+      {
+        boundaryGap: false,
+        data: categories.value,
+        show: false,
+        // xAxis of the time frame selection
+        type: 'category',
+      },
+    ],
+    yAxis: {
+      axisLabel: {
+        fontSize: textSize,
+        formatter: '{value} %',
+      },
+      maxInterval: 20,
+      min: (range: any) =>
+        range.min >= 0
+          ? Math.max(0, 10 * Math.ceil(range.min / 10 - 1))
+          : 10 * Math.ceil(range.min / 10 - 1),
+      minInterval: 10,
+      name: $t(
+        `dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`,
+      ),
+      nameLocation: 'center',
+      nameTextStyle: {
+        padding: [0, 0, 30, 0],
+      },
+      silent: true,
+      splitLine: {
         lineStyle: {
           color: colors.value.label,
         },
-        areaStyle: {
-          color: colors.value.label,
-        },
       },
-      borderColor: colors.value.label,
+      type: 'value',
     },
   }
 })
@@ -396,8 +396,8 @@ const getDataZoomValues = () => {
   const start: number = get(chartOptions, 'dataZoom[0].start', 80) as number
   const end: number = get(chartOptions, 'dataZoom[0].end', 100) as number
   return {
-    start,
     end,
+    start,
   }
 }
 
@@ -412,10 +412,10 @@ const getZoomTimestamps = () => {
   const fromIndex = Math.floor((max / 100) * zoomValues.start)
   return {
     ...zoomValues,
-    toIndex,
-    toTs: categories.value[toIndex],
     fromIndex,
     fromTs: categories.value[fromIndex],
+    toIndex,
+    toTs: categories.value[toIndex],
   }
 }
 

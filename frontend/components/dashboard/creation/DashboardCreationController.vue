@@ -7,10 +7,10 @@ import {
 import { type ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
-const { createValidatorDashboard, createAccountDashboard }
+const { createAccountDashboard, createValidatorDashboard }
   = useUserDashboardStore()
 const { dashboards } = useUserDashboardStore()
-const { user, isLoggedIn } = useUserStore()
+const { isLoggedIn, user } = useUserStore()
 const { currentNetwork } = useNetworkStore()
 
 interface Props {
@@ -23,10 +23,10 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
-const type = ref<DashboardType | ''>('')
+const type = ref<'' | DashboardType>('')
 const name = ref<string>('')
 const network = ref<ChainIDs>(0)
-const forcedDashboardType = ref<DashboardType | ''>('')
+const forcedDashboardType = ref<'' | DashboardType>('')
 let forcedNetworkIfValidatorDashboard = 0
 const { dashboardKey, publicEntities } = useDashboardKey()
 const { fetch } = useCustomFetch()
@@ -56,7 +56,7 @@ const validatorsDisabled = computed(() => {
 })
 
 function show(
-  forcedType: DashboardType | '' = '',
+  forcedType: '' | DashboardType = '',
   forcedNetwork: ChainIDs = 0,
 ) {
   visible.value = true
@@ -141,8 +141,8 @@ async function createDashboard() {
       await fetch(
         API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
         {
+          body: { group_id: '0', validators: publicEntities.value },
           method: 'POST',
-          body: { validators: publicEntities.value, group_id: '0' },
         },
         { dashboardKey: response.id },
       )

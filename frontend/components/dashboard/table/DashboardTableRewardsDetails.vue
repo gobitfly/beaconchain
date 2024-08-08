@@ -22,8 +22,8 @@ import type BcTooltip from '~/components/bc/BcTooltip.vue'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
 
 interface Props {
-  row: VDBRewardsTableRow
   groupName?: string
+  row: VDBRewardsTableRow
 }
 const props = defineProps<Props>()
 
@@ -68,44 +68,44 @@ const data = computed(() => {
 
   const rewards = [
     {
-      svg: IconSlotSourceAttestation,
       label: $t('dashboard.validator.rewards.attestation_source'),
+      svg: IconSlotSourceAttestation,
       value: details.value.attestations_source,
     },
     {
-      svg: IconSlotTargetAttestation,
       label: $t('dashboard.validator.rewards.attestation_target'),
+      svg: IconSlotTargetAttestation,
       value: details.value.attestations_target,
     },
     {
-      svg: IconSlotHeadAttestation,
       label: $t('dashboard.validator.rewards.attestation_head'),
+      svg: IconSlotHeadAttestation,
       value: details.value.attestations_head,
     },
     {
-      svg: IconSlotBlockProposal,
       label: $t('dashboard.validator.rewards.block'),
+      svg: IconSlotBlockProposal,
       value: details.value.proposal,
     },
     {
-      svg: IconSlotSync,
       label: $t('dashboard.validator.rewards.sync'),
-      value: details.value.sync,
+      svg: IconSlotSync,
       tooltip: formatMultiPartSpan(
         $t,
         'dashboard.validator.rewards.tooltip.sync',
         ['no-wrap'],
       ),
+      value: details.value.sync,
     },
     {
-      svg: IconSlotSlashing,
       label: $t('dashboard.validator.rewards.slashing'),
-      value: details.value.slashing,
+      svg: IconSlotSlashing,
       tooltip: formatMultiPartSpan(
         $t,
         'dashboard.validator.rewards.tooltip.slashing',
         ['slash-after no-wrap', ' no-wrap'],
       ),
+      value: details.value.slashing,
     },
     {
       icon: faSnooze,
@@ -114,11 +114,11 @@ const data = computed(() => {
     },
     {
       icon: faSigma,
+      isTotal: true,
       label: $t('dashboard.validator.rewards.total'),
       value: {
         income: totalElCl(props.row.reward)?.toString() || '0',
       } as Partial<VDBGroupRewardsDetails>,
-      isTotal: true,
     },
   ].map((reward) => {
     const hasNoReward = reward.isTotal
@@ -128,8 +128,8 @@ const data = computed(() => {
     const className = hasNoReward ? 'text-disabled' : ''
     return {
       ...reward,
-      hasNoReward,
       className,
+      hasNoReward,
     }
   })
   return {
@@ -142,9 +142,9 @@ const openDuties = () => {
   dialog.open(DashboardValidatorEpochDutiesModal, {
     data: {
       dashboardKey: dashboardKey.value,
+      epoch: props.row.epoch,
       groupId: props.row.group_id,
       groupName: props.groupName,
-      epoch: props.row.epoch,
     },
   })
 }

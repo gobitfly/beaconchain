@@ -2,19 +2,19 @@
 import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
-  text?: string
-  title?: string
-  layout?: 'special' | 'default'
-  position?: 'top' | 'left' | 'right' | 'bottom'
-  hide?: boolean
-  tooltipClass?: string
+  dontOpenPermanently?: boolean
   fitContent?: boolean
+  hide?: boolean
+  hoverDelay?: number
+  layout?: 'default' | 'special'
+  position?: 'bottom' | 'left' | 'right' | 'top'
   renderTextAsHtml?: boolean
   scrollContainer?: string // query selector for scrollable parent container
-  dontOpenPermanently?: boolean
-  hoverDelay?: number
-  tooltipWidth?: `${number}px` | `${number}%`
-  tooltipTextAlign?: 'left' | 'center' | 'right'
+  text?: string
+  title?: string
+  tooltipClass?: string
+  tooltipTextAlign?: 'center' | 'left' | 'right'
+  tooltipWidth?: `${number}%` | `${number}px`
 }
 
 const toolTipTextAlignWithDefault = computed(
@@ -26,8 +26,8 @@ const bcTooltipOwner = ref<HTMLElement | null>(null)
 const bcTooltip = ref<HTMLElement | null>(null)
 let scrollParents: HTMLElement[] = []
 const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
-const { selected, doSelect } = useTooltipStore()
-const { width, height } = useWindowSize()
+const { doSelect, selected } = useTooltipStore()
+const { height, width } = useWindowSize()
 
 // this const will be avaiable on template
 const slots = useSlots()
@@ -36,14 +36,14 @@ const hasContent = computed(() => !!slots.tooltip || !!props.text)
 const canBeOpened = computed(() => !props.hide && hasContent.value)
 
 const {
-  value: hover,
   bounce: bounceHover,
   instant: instantHover,
+  value: hover,
 } = useDebounceValue<boolean>(false, 50)
 const {
-  value: hoverTooltip,
   bounce: bounceHoverTooltip,
   instant: instantHoverTooltip,
+  value: hoverTooltip,
 } = useDebounceValue<boolean>(false, 50)
 const isSelected = computed(
   () => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value,
@@ -52,7 +52,7 @@ const isOpen = computed(
   () => isSelected.value || hover.value || hoverTooltip.value,
 )
 
-const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })
+const pos = ref<{ left: string, top: string }>({ left: '0', top: '0' })
 
 const classList = computed(() => {
   return [
@@ -102,7 +102,7 @@ const setPosition = () => {
   }
   left = Math.max(0, Math.min(left, width.value - ttWidth))
   top = Math.max(0, Math.min(top, height.value - ttHeight))
-  pos.value = { top: `${top}px`, left: `${left}px` }
+  pos.value = { left: `${left}px`, top: `${top}px` }
   if (bcTooltip.value) {
     let centerX = -5 + Math.abs(left - rect.left) + rect.width / 2
     if (rect.width > ttWidth) {

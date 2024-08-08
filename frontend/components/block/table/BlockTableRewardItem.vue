@@ -3,7 +3,7 @@ import type { ClElValue } from '~/types/api/common'
 
 interface Props {
   reward?: ClElValue<string>
-  status?: 'success' | 'missed' | 'orphaned' | 'scheduled'
+  status?: 'missed' | 'orphaned' | 'scheduled' | 'success'
 }
 defineProps<Props>()
 </script>

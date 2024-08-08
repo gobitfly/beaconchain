@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import {
+  faBolt,
   faCog,
   faGaugeSimpleMax,
   faMonitorWaveform,
-  faBolt,
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import { useUseNotificationsManagementSettingsProvider } from '~/composables/notifications/useNotificationsManagementSettingsProvider'
@@ -14,7 +14,7 @@ const visible = defineModel<boolean>()
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { refreshSettings, isLoading }
+const { isLoading, refreshSettings }
   = useUseNotificationsManagementSettingsProvider()
 refreshSettings()
 </script>

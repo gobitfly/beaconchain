@@ -52,5 +52,5 @@ export function useValidatorDashboardBlocksStore() {
     return res
   }
 
-  return { blocks, query, isLoading, getBlocks }
+  return { blocks, getBlocks, isLoading, query }
 }

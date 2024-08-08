@@ -28,7 +28,7 @@ const text = computed(() => {
   const caption = $t(textRoot + '.text')
   const button = $t(textRoot + '.button')
 
-  return { caption, button }
+  return { button, caption }
 })
 </script>
 

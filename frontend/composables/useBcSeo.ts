@@ -1,8 +1,8 @@
 export function useBcSeo(
   pageTitle?:
-    | string
-    | Ref<string | number | undefined>
-    | ComputedRef<string | number | undefined>,
+    | ComputedRef<number | string | undefined>
+    | Ref<number | string | undefined>
+    | string,
   removeDynamicUrlValue = false,
 ) {
   const { t: $t } = useTranslation()
@@ -50,21 +50,21 @@ export function useBcSeo(
   }
 
   useSeoMeta({
-    title: dynamicTitle,
     description,
     keywords,
-    ogTitle: dynamicTitle,
-    ogType: 'website',
+    ogDescription: description,
     ogImage: logo,
     ogImageAlt: imageAlt,
-    ogDescription: description,
-    ogUrl,
     ogSiteName: 'beaconcha.in',
+    ogTitle: dynamicTitle,
+    ogType: 'website',
+    ogUrl,
+    title: dynamicTitle,
     twitterCard: 'summary',
-    twitterSite: '@etherchain_org',
-    twitterTitle: dynamicTitle,
     twitterDescription: description,
     twitterImage: logo,
     twitterImageAlt: imageAlt,
+    twitterSite: '@etherchain_org',
+    twitterTitle: dynamicTitle,
   })
 }

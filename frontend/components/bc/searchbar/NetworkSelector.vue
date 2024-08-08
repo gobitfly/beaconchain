@@ -2,12 +2,12 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
 import type {
-  SearchbarShape,
+  NetworkFilter,
   SearchbarColors,
   SearchbarDropdownLayout,
-  NetworkFilter,
+  SearchbarShape,
 } from '~/types/searchbar'
-import { ChainInfo, ChainIDs } from '~/types/network'
+import { ChainIDs, ChainInfo } from '~/types/network'
 
 const emit = defineEmits<{ (e: 'change'): void }>()
 defineProps<{
@@ -21,7 +21,7 @@ const liveState = defineModel<NetworkFilter>({ required: true })
 
 const { t } = useTranslation()
 
-const headState = ref<{ look: 'on' | 'off', network: string }>({
+const headState = ref<{ look: 'off' | 'on', network: string }>({
   look: 'off',
   network: '',
 })

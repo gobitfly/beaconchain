@@ -14,31 +14,31 @@ const { t: $t } = useTranslation()
 
 const {
   deposits,
-  query: lastQuery,
   getDeposits,
   getTotalAmount,
-  totalAmount,
   isLoadingDeposits,
   isLoadingTotal,
+  query: lastQuery,
+  totalAmount,
 } = useValidatorDashboardElDepositsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<
+const { bounce: setQuery, value: query } = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
 
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 1200,
     block: width.value >= 1100,
-    withdrawalCredentials: width.value >= 1060,
-    from: width.value >= 960,
     depositer: width.value >= 860,
+    from: width.value >= 960,
+    group: width.value > 1200,
+    publicKey: width.value >= 560,
     txHash: width.value >= 760,
     valid: width.value >= 660,
-    publicKey: width.value >= 560,
+    withdrawalCredentials: width.value >= 1060,
   }
 })
 
@@ -73,13 +73,13 @@ const tableData = computed(() => {
     return
   }
   return {
-    paging: deposits.value.paging,
     data: [
       {
         amount: totalAmount.value,
       },
       ...deposits.value.data,
     ],
+    paging: deposits.value.paging,
   }
 })
 

@@ -15,13 +15,13 @@ import type {
 } from '~/types/validator'
 
 interface Props {
-  row: VDBSummaryTableRow
   absolute: boolean
-  groupId?: number
-  timeFrame?: SummaryTimeFrame
   context: DashboardValidatorContext
   dashboardKey?: DashboardKey
+  groupId?: number
   isTooltip?: boolean
+  row: VDBSummaryTableRow
+  timeFrame?: SummaryTimeFrame
 }
 const props = defineProps<Props>()
 
@@ -34,13 +34,13 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: props.context,
-      timeFrame: props.timeFrame,
-      groupName: groupName.value,
-      groupId: props.groupId,
       dashboardKey: props.dashboardKey,
+      groupId: props.groupId,
+      groupName: groupName.value,
       summary: {
         row: props.row,
       },
+      timeFrame: props.timeFrame,
     },
   })
 }

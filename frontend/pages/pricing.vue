@@ -7,7 +7,7 @@ const { t: $t } = useTranslation()
 useBcSeo('pricing.seo_title')
 const { stripeInit } = useStripeProvider()
 
-const { products, getProducts } = useProductsStore()
+const { getProducts, products } = useProductsStore()
 
 await useAsyncData('get_products', () => getProducts())
 watch(

@@ -54,5 +54,5 @@ export function useValidatorDashboardSummaryStore() {
     return res
   }
 
-  return { summary, query, isLoading, getSummary }
+  return { getSummary, isLoading, query, summary }
 }

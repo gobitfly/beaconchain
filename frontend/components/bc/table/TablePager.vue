@@ -30,8 +30,8 @@ const data = computed(() => {
   if (props.paging.total_count === undefined) {
     return {
       mode: 'cursor',
-      prev_cursor: props.paging.prev_cursor,
       next_cursor: props.paging.next_cursor,
+      prev_cursor: props.paging.prev_cursor,
     }
   }
   const page
@@ -45,7 +45,7 @@ const data = computed(() => {
   )
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
-  return { mode: 'offset', page, from, to, lastPage }
+  return { from, lastPage, mode: 'offset', page, to }
 })
 
 const next = () => {

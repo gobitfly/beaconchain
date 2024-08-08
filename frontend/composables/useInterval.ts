@@ -25,5 +25,5 @@ export function useInterval(seconds: number) {
     internalTick.value = timestamp.value
   }
 
-  return { tick, resetTick }
+  return { resetTick, tick }
 }

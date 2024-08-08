@@ -10,9 +10,9 @@ export function useTableQuery(
   const storedQuery = ref<TableQueryParams | undefined>()
 
   const {
-    value: query,
-    temp: pendingQuery,
     bounce: setQuery,
+    temp: pendingQuery,
+    value: query,
   } = useDebounceValue<TableQueryParams | undefined>(initialQuery, 500)
 
   const onSort = (sort: DataTableSortEvent) => {
@@ -42,15 +42,15 @@ export function useTableQuery(
   }
 
   return {
-    query,
-    pendingQuery,
     cursor,
-    pageSize,
+    isStoredQuery,
     onSort,
+    pageSize,
+    pendingQuery,
+    query,
     setCursor,
     setPageSize,
     setSearch,
     setStoredQuery,
-    isStoredQuery,
   }
 }
