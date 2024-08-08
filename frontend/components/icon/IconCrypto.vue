@@ -9,15 +9,15 @@ defineProps<Props>()
 
 <template>
   <IconNetworkEthereum
-    v-if="currency==='ETH'"
+    v-if="currency === 'ETH'"
     class="monochromatic"
   />
   <IconNetworkGnosis
-    v-else-if="currency==='GNO'"
+    v-else-if="currency === 'GNO'"
     class="monochromatic"
   />
   <IconCryptoDai
-    v-else-if="currency==='DAI' || currency==='xDAI'"
+    v-else-if="currency === 'DAI' || currency === 'xDAI'"
     class="monochromatic"
   />
 </template>

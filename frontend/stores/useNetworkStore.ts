@@ -14,7 +14,9 @@ const store = defineStore('network-store', () => {
     currentNetwork: networkTs.ChainIDs
   }>({
     availableNetworks: [networkTs.ChainIDs.Ethereum],
-    currentNetwork: networkTs.ChainIDs.Any, // this impossible value by defaut must be kept, it ensures that the `computed` of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
+    // this impossible value by defaut must be kept, it ensures that the `computed`
+    // of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
+    currentNetwork: networkTs.ChainIDs.Any,
   })
   return { data }
 })
@@ -28,11 +30,15 @@ export function useNetworkStore() {
   async function loadAvailableNetworks(): Promise<boolean> {
     try {
       const { fetch } = useCustomFetch()
-      const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(API_PATH.AVAILABLE_NETWORKS)
+      const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(
+        API_PATH.AVAILABLE_NETWORKS,
+      )
       if (!response.data || !response.data.length) {
         return false
       }
-      data.value.availableNetworks = networkTs.sortChainIDsByPriority(response.data.map(apiInfo => apiInfo.chain_id))
+      data.value.availableNetworks = networkTs.sortChainIDsByPriority(
+        response.data.map(apiInfo => apiInfo.chain_id),
+      )
       return true
     }
     catch {
@@ -41,12 +47,19 @@ export function useNetworkStore() {
   }
 
   const availableNetworks = computed(() => data.value.availableNetworks)
-  const currentNetwork = computed(() => availableNetworks.value.includes(data.value.currentNetwork) ? data.value.currentNetwork : availableNetworks.value[0])
+  const currentNetwork = computed(() =>
+    availableNetworks.value.includes(data.value.currentNetwork)
+      ? data.value.currentNetwork
+      : availableNetworks.value[0],
+  )
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
   function isNetworkDisabled(chainId: networkTs.ChainIDs): boolean {
     // TODO: return `false` for everything once we are ready
-    return !useRuntimeConfig().public.showInDevelopment && chainId !== currentNetwork.value
+    return (
+      !useRuntimeConfig().public.showInDevelopment
+      && chainId !== currentNetwork.value
+    )
   }
 
   function setCurrentNetwork(chainId: networkTs.ChainIDs) {

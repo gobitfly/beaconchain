@@ -35,21 +35,21 @@
 
 <style lang="scss" scoped>
 .color1 {
-  fill: #2C374B;
+  fill: #2c374b;
 }
 .color2 {
-  fill: #24A2EE;
+  fill: #24a2ee;
 }
 .color3 {
-  fill: #98BCDC;
+  fill: #98bcdc;
 }
 .color4 {
-  fill: #F0F0F0;
+  fill: #f0f0f0;
 }
 
 .pastel {
   .color1 {
-    fill: #2A262C;
+    fill: #2a262c;
   }
 }
 </style>

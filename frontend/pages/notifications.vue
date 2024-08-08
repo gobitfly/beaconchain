@@ -14,7 +14,9 @@ const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
 const { t: $t } = useTranslation()
 
-await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] })
+await useAsyncData('user_dashboards', () => refreshDashboards(), {
+  watch: [isLoggedIn],
+})
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
@@ -77,7 +79,9 @@ const openManageNotifications = () => {
           TODO: Overview
         </div>
       </template>
-      <NotificationsManagementModal v-model="manageNotificationsModalVisisble" />
+      <NotificationsManagementModal
+        v-model="manageNotificationsModalVisisble"
+      />
       <div class="button-row">
         <Button
           :label="$t('notifications.manage')"
@@ -97,7 +101,9 @@ const openManageNotifications = () => {
               :icon="faGaugeSimpleMax"
             />
           </template>
-          <NotificationsDashboardsTable @open-dialog="openManageNotifications" />
+          <NotificationsDashboardsTable
+            @open-dialog="openManageNotifications"
+          />
         </TabPanel>
         <TabPanel :disabled="tabs.machines.disabled">
           <template #header>
@@ -142,7 +148,7 @@ const openManageNotifications = () => {
 </template>
 
 <style lang="scss" scoped>
-:global(.notifications-tab-view >.p-tabview-panels) {
+:global(.notifications-tab-view > .p-tabview-panels) {
   min-height: 699px;
 }
 
@@ -154,7 +160,7 @@ const openManageNotifications = () => {
   margin-top: var(--padding-large);
 }
 
-.button-row{
+.button-row {
   display: flex;
   justify-content: flex-end;
 }

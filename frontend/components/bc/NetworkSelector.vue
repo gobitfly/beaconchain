@@ -21,10 +21,14 @@ if (props.readonlyNetworks) {
   barSelection = ref<string[]>([])
 }
 else if (Array.isArray(selection.value)) {
-  barSelection = useArrayRefBridge<ChainIDs, string>(selection as Ref<ChainIDs[]>)
+  barSelection = useArrayRefBridge<ChainIDs, string>(
+    selection as Ref<ChainIDs[]>,
+  )
 }
 else {
-  barSelection = usePrimitiveRefBridge<ChainIDs, string>(selection as Ref<ChainIDs>)
+  barSelection = usePrimitiveRefBridge<ChainIDs, string>(
+    selection as Ref<ChainIDs>,
+  )
 }
 
 const buttons = computed(() => {

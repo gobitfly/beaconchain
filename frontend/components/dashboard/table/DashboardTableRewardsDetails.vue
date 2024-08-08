@@ -1,8 +1,23 @@
 <script setup lang="ts">
-import { faArrowUpRightFromSquare, faSigma, faSnooze } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faArrowUpRightFromSquare,
+  faSigma,
+  faSnooze,
+} from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { DashboardValidatorEpochDutiesModal, IconSlotBlockProposal, IconSlotHeadAttestation, IconSlotSlashing, IconSlotSourceAttestation, IconSlotSync, IconSlotTargetAttestation } from '#components'
-import type { VDBGroupRewardsDetails, VDBRewardsTableRow } from '~/types/api/validator_dashboard'
+import {
+  DashboardValidatorEpochDutiesModal,
+  IconSlotBlockProposal,
+  IconSlotHeadAttestation,
+  IconSlotSlashing,
+  IconSlotSourceAttestation,
+  IconSlotSync,
+  IconSlotTargetAttestation,
+} from '#components'
+import type {
+  VDBGroupRewardsDetails,
+  VDBRewardsTableRow,
+} from '~/types/api/validator_dashboard'
 import type BcTooltip from '~/components/bc/BcTooltip.vue'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
 
@@ -15,7 +30,11 @@ const props = defineProps<Props>()
 const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useTranslation()
-const { details } = useValidatorDashboardRewardsDetailsStore(dashboardKey.value, props.row.group_id, props.row.epoch)
+const { details } = useValidatorDashboardRewardsDetailsStore(
+  dashboardKey.value,
+  props.row.group_id,
+  props.row.epoch,
+)
 
 const dialog = useDialog()
 
@@ -72,13 +91,21 @@ const data = computed(() => {
       svg: IconSlotSync,
       label: $t('dashboard.validator.rewards.sync'),
       value: details.value.sync,
-      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.sync', ['no-wrap']),
+      tooltip: formatMultiPartSpan(
+        $t,
+        'dashboard.validator.rewards.tooltip.sync',
+        ['no-wrap'],
+      ),
     },
     {
       svg: IconSlotSlashing,
       label: $t('dashboard.validator.rewards.slashing'),
       value: details.value.slashing,
-      tooltip: formatMultiPartSpan($t, 'dashboard.validator.rewards.tooltip.slashing', ['slash-after no-wrap', ' no-wrap']),
+      tooltip: formatMultiPartSpan(
+        $t,
+        'dashboard.validator.rewards.tooltip.slashing',
+        ['slash-after no-wrap', ' no-wrap'],
+      ),
     },
     {
       icon: faSnooze,
@@ -94,7 +121,10 @@ const data = computed(() => {
       isTotal: true,
     },
   ].map((reward) => {
-    const hasNoReward = reward.isTotal ? reward.value.income === '0' : (!reward?.value?.status_count?.failed && !reward?.value?.status_count?.success)
+    const hasNoReward = reward.isTotal
+      ? reward.value.income === '0'
+      : !reward?.value?.status_count?.failed
+      && !reward?.value?.status_count?.success
     const className = hasNoReward ? 'text-disabled' : ''
     return {
       ...reward,
@@ -135,7 +165,7 @@ const openDuties = () => {
         </div>
         <div class="small-screen-value">
           <div class="label">
-            <b>{{ $t('dashboard.validator.col.duty') }}</b>
+            <b>{{ $t("dashboard.validator.col.duty") }}</b>
           </div>
           <div class="value">
             <DashboardTableValueDuty
@@ -253,7 +283,7 @@ const openDuties = () => {
   background-color: var(--container-background);
 }
 
-.spinner{
+.spinner {
   padding: var(--padding-large);
 }
 
@@ -300,8 +330,8 @@ const openDuties = () => {
       width: 360px;
 
       .col {
-        >div,
-        >span {
+        > div,
+        > span {
           height: 32px;
           padding: var(--padding-small);
           text-wrap: nowrap;
@@ -312,8 +342,8 @@ const openDuties = () => {
           }
         }
 
-        &.icon{
-          svg{
+        &.icon {
+          svg {
             height: 14px;
             width: 18px;
           }
@@ -330,7 +360,7 @@ const openDuties = () => {
           flex-grow: 1;
           align-items: flex-end;
 
-          >div {
+          > div {
             width: 100%;
             text-align: end;
           }

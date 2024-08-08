@@ -2,9 +2,16 @@
 interface Props {
   hash?: string
   ens?: string
-  type?: 'address' | 'withdrawal_credentials' | 'public_key' | 'tx' | 'block_hash' | 'root' // if none is provided the default format will be applied
+  type?:
+    | 'address'
+    | 'withdrawal_credentials'
+    | 'public_key'
+    | 'tx'
+    | 'block_hash'
+    | 'root' // if none is provided the default format will be applied
   full?: boolean // if true the hash will not be truncated
-  noLink?: boolean // most of the time we want to render it as a link (if possible), but there might be cases where we don't
+  // most of the time we want to render it as a link (if possible), but there might be cases where we don't
+  noLink?: boolean
   noCopy?: boolean // same as for the link
   noWrap?: boolean // don't wrap elements
 }
@@ -15,11 +22,20 @@ const data = computed(() => {
     return
   }
   const hash = props.hash
-  const className = props.full ? 'full' : props.ens ? 'truncate-text' : props.noWrap ? 'no-wrap' : ''
+  const className = props.full
+    ? 'full'
+    : props.ens
+      ? 'truncate-text'
+      : props.noWrap
+        ? 'no-wrap'
+        : ''
   let parts: { value: string, className?: string }[] = []
   let link: string = ''
   if (props.ens) {
-    parts.push({ value: props.ens, className: !props.full ? 'truncate-text' : '' })
+    parts.push({
+      value: props.ens,
+      className: !props.full ? 'truncate-text' : '',
+    })
   }
   else if (props.type === 'withdrawal_credentials') {
     const isSet = hash.startsWith('0x01')
@@ -29,7 +45,10 @@ const data = computed(() => {
       parts.push({ value: hash.substring(4) })
     }
     else {
-      parts = parts.concat([{ value: hash.substring(26, 30), className: 'dots-before' }, { value: hash.substring(hash.length - 4), className: 'dots-before' }])
+      parts = parts.concat([
+        { value: hash.substring(26, 30), className: 'dots-before' },
+        { value: hash.substring(hash.length - 4), className: 'dots-before' },
+      ])
     }
     if (isSet && !props.noLink) {
       link = `/address/0x${props.hash.substring(26)}`
@@ -37,8 +56,15 @@ const data = computed(() => {
   }
   else {
     const color = props.full ? 'prime' : undefined
-    const middle = props.full ? { value: hash.substring(6, hash.length - 4) } : { value: '', className: 'dots-before' }
-    parts = [{ value: '0x' }, { value: hash.substring(2, 6), className: color }, middle, { value: hash.substring(hash.length - 4), className: color }]
+    const middle = props.full
+      ? { value: hash.substring(6, hash.length - 4) }
+      : { value: '', className: 'dots-before' }
+    parts = [
+      { value: '0x' },
+      { value: hash.substring(2, 6), className: color },
+      middle,
+      { value: hash.substring(hash.length - 4), className: color },
+    ]
   }
   if (!props.noLink) {
     switch (props.type) {
@@ -175,7 +201,6 @@ const data = computed(() => {
     margin-left: var(--padding);
     line-height: 100%;
   }
-
 }
 
 .full {

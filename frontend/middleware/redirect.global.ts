@@ -1,6 +1,10 @@
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
-export default function ({ name, params, query }: RouteLocationNormalizedLoaded) {
+export default function ({
+  name,
+  params,
+  query,
+}: RouteLocationNormalizedLoaded) {
   const config = useRuntimeConfig()
   const showInDevelopment = Boolean(config.public.showInDevelopment)
   const v1Domain = config.public.v1Domain || 'https://beaconcha.in'
@@ -39,9 +43,13 @@ export default function ({ name, params, query }: RouteLocationNormalizedLoaded)
     case 'dashboard':
     case 'dashboard-id':
       if (query.validators && typeof query.validators === 'string') {
-        const list = query.validators.split(',').filter((v) => {
-          return isInt(v) || isPublicKey(v)
-        }).slice(0, 20).join(',')
+        const list = query.validators
+          .split(',')
+          .filter((v) => {
+            return isInt(v) || isPublicKey(v)
+          })
+          .slice(0, 20)
+          .join(',')
         if (list.length) {
           const hash = toBase64Url(list)
           return navigateTo(`/dashboard/${hash}`)

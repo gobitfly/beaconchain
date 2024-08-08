@@ -14,7 +14,9 @@ const onCurrencyChange = (event: Event) => {
   }
 }
 
-const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
+const currentEpoch = computed(
+  () => (latestState.value?.current_slot || 0) * 32,
+)
 </script>
 
 <template>
@@ -37,9 +39,7 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
         Gnosis
       </option>
     </select>
-    <div>
-      1Eth exact :<BcFormatValue value="1000000000000000000" />
-    </div>
+    <div>1Eth exact :<BcFormatValue value="1000000000000000000" /></div>
     <div>
       1Eth+ (custom tooltip):<BcFormatValue value="1000000010000000000">
         <template #tooltip="{ data: { label, tooltip } }">
@@ -47,12 +47,8 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
         </template>
       </BcFormatValue>
     </div>
-    <div>
-      less than 1Eth+ :<BcFormatValue value="0000000010002000001" />
-    </div>
-    <div>
-      less than Wei+ :<BcFormatValue value="0000000000000001000" />
-    </div>
+    <div>less than 1Eth+ :<BcFormatValue value="0000000010002000001" /></div>
+    <div>less than Wei+ :<BcFormatValue value="0000000000000001000" /></div>
     <div>
       less than 1Eth in ETH :<BcFormatValue
         value="0000000010002000001"
@@ -62,7 +58,12 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
     <div>
       less than 1Wei in ETH, min 0 decimals, max: 6:<BcFormatValue
         value="0000000000000000001"
-        :options="{ minUnit: 'MAIN', addPlus: true, maxDecimalCount: 6, minDecimalCount: 0 }"
+        :options="{
+          minUnit: 'MAIN',
+          addPlus: true,
+          maxDecimalCount: 6,
+          minDecimalCount: 0,
+        }"
       />
     </div>
 
@@ -142,33 +143,35 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
       />
     </div>
     <div>
-      Input in  gwei [1001000]: <BcFormatValue
+      Input in gwei [1001000]:
+      <BcFormatValue
         value="1001000"
         :options="{ sourceUnit: 'GWEI' }"
       />
     </div>
     <div>
-      Input in eth [2]: <BcFormatValue
+      Input in eth [2]:
+      <BcFormatValue
         value="2"
         :options="{ sourceUnit: 'MAIN' }"
       />
     </div>
     <div>
-      Input in eth [2] fixed out in GWEI: <BcFormatValue
+      Input in eth [2] fixed out in GWEI:
+      <BcFormatValue
         value="2"
         :options="{ sourceUnit: 'MAIN', fixedUnit: 'GWEI' }"
       />
     </div>
     <div>
-      Input in eth [2] fixed out in WEI: <BcFormatValue
+      Input in eth [2] fixed out in WEI:
+      <BcFormatValue
         value="2"
         :options="{ sourceUnit: 'MAIN', fixedUnit: 'WEI' }"
       />
     </div>
   </div>
-  <b>
-    Format numbers
-  </b>
+  <b> Format numbers </b>
   <div>100000, no settings: <BcFormatNumber :value="100000" /></div>
   <div>100000.1234, no settings: <BcFormatNumber :value="100000.1234" /></div>
   <div>
@@ -178,7 +181,8 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
     />
   </div>
   <div>
-    100000.1234, min/max 3: <BcFormatNumber
+    100000.1234, min/max 3:
+    <BcFormatNumber
       :value="100000.1234"
       :min-decimals="3"
       :max-decimals="3"
@@ -191,9 +195,7 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
   <div>no value, default '-': <BcFormatNumber default="-" /></div>
   <div>-100000, no settings: <BcFormatNumber :value="-100000" /></div>
 
-  <b>
-    Format percent
-  </b>
+  <b> Format percent </b>
 
   <div>
     1234567.89123, color, +:
@@ -234,12 +236,10 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
     percent lower
     <BcFormatPercent
       :percent="85.123"
-      :compare-percent="84.50"
+      :compare-percent="84.5"
     />
   </div>
-  <b>
-    Format Epochs time {{ setting }} <BcTableAgeHeader />
-  </b>
+  <b> Format Epochs time {{ setting }} <BcTableAgeHeader /> </b>
   <div>
     Epoch 1 ->
     <BcFormatTimePassed :value="1" />
@@ -307,7 +307,7 @@ const currentEpoch = computed(() => (latestState.value?.current_slot || 0) * 32)
 </template>
 
 <style lang="scss" scoped>
-:deep(.bad-color){
-  color: pink
+:deep(.bad-color) {
+  color: pink;
 }
 </style>

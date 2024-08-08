@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/max-len -- TODO:   plz fix this -->
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type MultiBarItem } from '~/types/multiBar'
@@ -12,7 +13,11 @@ const props = defineProps<Props>()
 type ButtonStates = Record<string, boolean>
 
 const selection = defineModel<string[]>({ required: true })
-const buttonStates = useObjectRefBridge<string[], ButtonStates>(selection, receiveFromVModel, sendToVModel)
+const buttonStates = useObjectRefBridge<string[], ButtonStates>(
+  selection,
+  receiveFromVModel,
+  sendToVModel,
+)
 
 function receiveFromVModel(data: string[]): ButtonStates {
   const states = props.buttons.reduce((map, { value }) => {
@@ -32,12 +37,16 @@ function sendToVModel(data: ButtonStates): string[] {
   return selection
 }
 
-// this line is independent of the bridge above (that addresses the on/off states), this line updates the component if the list of buttons comes late
-watch(() => props.buttons, () => {
-  buttonStates.value = receiveFromVModel(selection.value)
-})
+// this line is independent of the bridge above (that addresses the on/off states), this line updates the component
+// if the list of buttons comes late
+watch(
+  () => props.buttons,
+  () => {
+    buttonStates.value = receiveFromVModel(selection.value)
+  },
+)
 
-const readonlyClass = computed(() => props.readonlyMode ? 'read-only' : '')
+const readonlyClass = computed(() => (props.readonlyMode ? 'read-only' : ''))
 </script>
 
 <template>

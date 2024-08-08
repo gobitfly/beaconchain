@@ -1,7 +1,8 @@
 import { ref, provide } from 'vue'
 import type { DateInfo } from '~/types/date'
 
-// useDateProvider provides a global reactive timestamp, which should be more performant than every component ticking their own time.
+// useDateProvider provides a global reactive timestamp, which should be more
+// performant than every component ticking their own time.
 // -> a global heartbeat
 export function useDateProvider() {
   const date = ref(new Date())

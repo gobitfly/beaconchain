@@ -13,12 +13,12 @@
 
 <style lang="scss" scoped>
 .color1 {
-  fill: #0052FF;
+  fill: #0052ff;
 }
 
 .pastel {
   .color1 {
-    fill: #6697FF;
+    fill: #6697ff;
   }
 }
 </style>

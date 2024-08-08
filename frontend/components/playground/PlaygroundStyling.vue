@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import {
-  faTable,
-} from '@fortawesome/pro-solid-svg-icons'
-import {
-  faChartColumn,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faTable } from '@fortawesome/pro-solid-svg-icons'
+import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
 import { IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
 
 const emptyModalVisibility = ref(false)
@@ -21,14 +17,26 @@ const toggleLoading = () => {
 
 const selected = ref(true)
 
-const completeList = [{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }]
+const completeList = [
+  { value: 'attestation' },
+  { value: 'proposal', component: IconSlotBlockProposal },
+  { value: 'sync' },
+  { value: 'chart', icon: faChartColumn },
+]
 const selectedList = ref<string[]>(['attestation', 'proposal'])
 
 const selectedType = ref<string>('Validators')
-const allTypes = [{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }]
+const allTypes = [
+  { text: 'Accounts', value: 'Accounts', component: IconAccount },
+  { text: 'Validators', value: 'Validators', component: IconValidator },
+]
 
 const dropodownSelection = ref<string | undefined>()
-const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
+const dropdownList = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+  { value: 'maybe', label: 'Maybe we need a bigger label' },
+]
 </script>
 
 <template>
@@ -75,9 +83,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   <TabView lazy>
     <TabPanel header="Buttons">
       <div class="element_container">
-        <Button>
-          Text Button
-        </Button>
+        <Button> Text Button </Button>
         <Button
           label="Empty Modal"
           @click="emptyModalVisibility = true"
@@ -126,11 +132,12 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
     </TabPanel>
     <TabPanel header="Checkbox">
       <div class="element_container">
-        default checkbox: <Checkbox
+        default checkbox:
+        <Checkbox
           v-model="selected"
           :binary="true"
-        />
-        disabled: <Checkbox disabled />
+        /> disabled:
+        <Checkbox disabled />
       </div>
     </TabPanel>
     <TabPanel header="Toggle">
@@ -169,7 +176,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           <BcToggleMultiBar
             v-model="selectedList"
             :buttons="completeList"
-            style="margin-right: 10px;"
+            style="margin-right: 10px"
           >
             <template #attestation>
               <IconSlotAttestation />
@@ -179,7 +186,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
               <IconSlotSync />
             </template>
           </BcToggleMultiBar>
-          Selected: {{ selectedList.join(', ') }}
+          Selected: {{ selectedList.join(", ") }}
         </div>
       </div>
       <h1>Single Toggle</h1>
@@ -197,7 +204,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
     <TabPanel header="Dropdown">
       <div
         class="element_container"
-        style="background-color: darkred; padding: 5px;"
+        style="background-color: darkred; padding: 5px"
       >
         <BcDropdown
           v-model="dropodownSelection"
@@ -206,7 +213,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           option-label="label"
           placeholder="for rock wtf this is a long placeholder"
           panel-style="max-width: 100px"
-          style="max-width: 100px;"
+          style="max-width: 100px"
         />
         <BcDropdown
           v-model="dropodownSelection"
@@ -215,7 +222,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           option-label="label"
           variant="table"
           placeholder="and roll"
-          style="width: 200px;"
+          style="width: 200px"
         />
         Selected: {{ dropodownSelection }}
       </div>
@@ -229,7 +236,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
         <BcLoadingSpinner
           :loading="loading"
           size="small"
-          style="color: lightblue;"
+          style="color: lightblue"
         />
         <BcLoadingSpinner
           :loading="loading"
@@ -270,11 +277,11 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   background-color: antiquewhite;
 }
 
-.scroll-box{
+.scroll-box {
   width: 100px;
   height: 100px;
   overflow: auto;
-  div{
+  div {
     background-color: grey;
     width: 200px;
     height: 200px;
@@ -282,6 +289,6 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
 }
 
 .single_bar_container {
-  width: 600px
+  width: 600px;
 }
 </style>

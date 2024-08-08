@@ -11,7 +11,12 @@ interface Props {
   noTooltip?: boolean
   fullValue?: boolean
 }
-const props = withDefaults(defineProps<Props>(), { value: undefined, options: undefined, positiveClass: 'positive', negativeClass: 'negative' })
+const props = withDefaults(defineProps<Props>(), {
+  value: undefined,
+  options: undefined,
+  positiveClass: 'positive',
+  negativeClass: 'negative',
+})
 
 const { converter } = useValue()
 
@@ -24,7 +29,8 @@ const data = computed(() => {
   }
   const res = converter.value.weiToValue(props.value, props.options)
   let labelClass = ''
-  const label = props.fullValue && res.fullLabel ? res.fullLabel : `${res.label}`
+  const label
+    = props.fullValue && res.fullLabel ? res.fullLabel : `${res.label}`
   if (props.useColors) {
     if (label.startsWith('-')) {
       labelClass = props.negativeClass

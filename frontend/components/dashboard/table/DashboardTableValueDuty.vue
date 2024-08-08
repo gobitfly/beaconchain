@@ -16,7 +16,7 @@ defineProps<Props>()
       v-if="duty.attestation !== undefined"
       class="group"
     >
-      {{ $t('dashboard.validator.rewards.attestation') }}
+      {{ $t("dashboard.validator.rewards.attestation") }}
       <BcFormatPercent
         class="round-brackets"
         :percent="duty.attestation"
@@ -28,7 +28,7 @@ defineProps<Props>()
       v-if="duty.proposal !== undefined"
       class="group"
     >
-      {{ $t('dashboard.validator.rewards.proposal') }}
+      {{ $t("dashboard.validator.rewards.proposal") }}
       <BcFormatPercent
         class="round-brackets"
         :percent="duty.proposal"
@@ -40,7 +40,7 @@ defineProps<Props>()
       v-if="duty.sync !== undefined"
       class="group"
     >
-      {{ $t('dashboard.validator.rewards.sync_committee') }}
+      {{ $t("dashboard.validator.rewards.sync_committee") }}
       <BcFormatPercent
         class="round-brackets"
         :percent="duty.sync"
@@ -52,7 +52,7 @@ defineProps<Props>()
       v-if="duty.slashing !== undefined"
       class="group"
     >
-      {{ $t('dashboard.validator.rewards.slashing') }}
+      {{ $t("dashboard.validator.rewards.slashing") }}
       <BcFormatNumber
         class="round-brackets"
         :value="duty.slashing"
@@ -62,7 +62,7 @@ defineProps<Props>()
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .duty {
   display: inline-flex;

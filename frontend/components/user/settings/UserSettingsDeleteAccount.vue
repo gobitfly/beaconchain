@@ -13,7 +13,9 @@ const onDelete = () => {
   dialog.open(BcDialogConfirm, {
     data: {
       title: $t('user_settings.delete_account.dialog.title'),
-      question: $t('user_settings.delete_account.dialog.warning', { email: user.value?.email || $t('common.unavailable') }),
+      question: $t('user_settings.delete_account.dialog.warning', {
+        email: user.value?.email || $t('common.unavailable'),
+      }),
       noLabel: $t('user_settings.delete_account.dialog.no_label'),
       yesLabel: $t('user_settings.delete_account.dialog.yes_label'),
       severity: 'danger',
@@ -36,11 +38,11 @@ const deleteAction = async () => {
 <template>
   <div class="subscriptions-container">
     <div class="title">
-      {{ $t('user_settings.delete_account.title') }}
+      {{ $t("user_settings.delete_account.title") }}
     </div>
     <div class="content-container">
       <div class="warning">
-        {{ $t('user_settings.delete_account.warning') }}
+        {{ $t("user_settings.delete_account.warning") }}
       </div>
       <div class="button-container">
         <Button
@@ -56,8 +58,8 @@ const deleteAction = async () => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/fonts.scss";
 
 .subscriptions-container {
   display: flex;

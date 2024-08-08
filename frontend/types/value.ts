@@ -8,7 +8,7 @@ export type ValueConvertOptions = {
   fixedDecimalCount?: number // can override the usual settings, but can't go over 2 for fiat
   maxDecimalCount?: number // max decimal count
   minDecimalCount?: number // min decimal count
-  minUnit?: CryptoUnits // if output should only be in higher units (for example GWEI -> then it will never go down to WEI)
+  minUnit?: CryptoUnits // if output should only be in higher units (e.g. GWEI -> then it will never go down to WEI)
   minUnitDecimalCount?: number // decimal count to check for value while unit conversion - defaults to max decimal count
   fixedUnit?: CryptoUnits // fixed output unit - overrides min unit
   addPlus?: boolean // add + sign if value is positive
@@ -21,9 +21,17 @@ export type ExtendedLabel = {
   fullLabel?: string
 }
 
-export const TimeFrames = ['last_24h', 'last_7d', 'last_30d', 'all_time'] as const
-export type TimeFrame = typeof TimeFrames[number]
+export const TimeFrames = [
+  'last_24h',
+  'last_7d',
+  'last_30d',
+  'all_time',
+] as const
+export type TimeFrame = (typeof TimeFrames)[number]
 
-export type WeiToValue = (wei?: string | BigNumber, options?: ValueConvertOptions) => ExtendedLabel
+export type WeiToValue = (
+  wei?: string | BigNumber,
+  options?: ValueConvertOptions,
+) => ExtendedLabel
 
 export type CompareResult = 'higher' | 'equal' | 'lower'

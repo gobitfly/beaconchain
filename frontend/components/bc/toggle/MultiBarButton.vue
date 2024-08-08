@@ -37,7 +37,13 @@ const icon = computed(() => {
           {{ tooltip }}
         </div>
         <div v-if="readonlyClass !== 'read-only'">
-          {{ disabled ? $t('common.unavailable') : (selected ? $t('filter.enabled'): $t('filter.disabled')) }}
+          {{
+            disabled
+              ? $t("common.unavailable")
+              : selected
+                ? $t("filter.enabled")
+                : $t("filter.disabled")
+          }}
         </div>
       </div>
     </template>

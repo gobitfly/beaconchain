@@ -4,18 +4,36 @@ import { ChainFamily, type ChainIDs, ChainInfo } from '~/types/network'
 const colorMode = useColorMode()
 
 // Usage :
-// Both properties width and height must be set by the parent component. The icon will fill this frame as much as possible without deformation.
+// Both properties width and height must be set by the parent component.
+// The icon will fill this frame as much as possible without deformation.
 // Additional properties are the following:
 const props = defineProps({
   chainId: { type: Number, required: true }, // network whose icon must be displayed (L2s and tesnets can be given)
-  colored: { type: Boolean, default: false }, // tells whether the icon must be in its official color or in the color of the font
-  doNotAdaptToColorTheme: { type: Boolean, default: false }, // some icons in their original colors are hard to see on a dark background, so they are adapted automatically, but you can deactivate this behavior if your background is always light
-  harmonizePerceivedSize: { type: Boolean, default: false }, // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
+  // tells whether the icon must be in its official color or in the color of the font
+  colored: { type: Boolean, default: false },
+  // some icons in their original colors are hard to see on a dark background,
+  //  so they are adapted automatically, but you can deactivate this behavior
+  // if your background is always light
+  doNotAdaptToColorTheme: { type: Boolean, default: false },
+  // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
+  harmonizePerceivedSize: { type: Boolean, default: false },
 })
 
-const family = computed(() => (props.chainId in ChainInfo) ? ChainInfo[props.chainId as ChainIDs].family : ChainFamily.Ethereum)
-const coloring = computed(() => !props.colored ? 'monochromatic' : (colorMode.value !== 'dark' || props.doNotAdaptToColorTheme ? '' : 'pastel'))
-const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
+const family = computed(() =>
+  props.chainId in ChainInfo
+    ? ChainInfo[props.chainId as ChainIDs].family
+    : ChainFamily.Ethereum,
+)
+const coloring = computed(() =>
+  !props.colored
+    ? 'monochromatic'
+    : colorMode.value !== 'dark' || props.doNotAdaptToColorTheme
+      ? ''
+      : 'pastel',
+)
+const sizing = computed(() =>
+  props.harmonizePerceivedSize ? family.value : '',
+)
 </script>
 
 <template>
@@ -58,7 +76,7 @@ const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
     width: 100%;
     top: 50%;
     left: 50%;
-    transform: translate(-50%,-50%);
+    transform: translate(-50%, -50%);
   }
 
   // The following classes are used only if props `harmonize-perceived-size` has been set to true.

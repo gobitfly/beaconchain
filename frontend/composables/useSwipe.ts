@@ -1,5 +1,9 @@
 import { intersection } from 'lodash-es'
-import type { SwipeCallback, SwipeDirection, SwipeOptions } from '~/types/swipe'
+import type {
+  SwipeCallback,
+  SwipeDirection,
+  SwipeOptions,
+} from '~/types/swipe'
 
 export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
   const options = {
@@ -20,7 +24,10 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (event.target === touchableElement.value) {
       return true
     }
-    return !isOrIsInIteractiveContainer(event.target as HTMLElement, touchableElement.value)
+    return !isOrIsInIteractiveContainer(
+      event.target as HTMLElement,
+      touchableElement.value,
+    )
   }
 
   const onTouchStart = (event: TouchEvent) => {
@@ -66,7 +73,10 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (!intersection(directions, ['all', 'top']).length && divY < 0) {
       divY = 0
     }
-    else if (!intersection(directions, ['all', 'bottom']).length && divY > 0) {
+    else if (
+      !intersection(directions, ['all', 'bottom']).length
+      && divY > 0
+    ) {
       divY = 0
     }
     // Only move horizontally or vertically
@@ -106,7 +116,10 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
       gDirections.push('all')
     }
 
-    if (intersection(gDirections, options.directions).length && onSwipe.value?.(event, gDirections)) {
+    if (
+      intersection(gDirections, options.directions).length
+      && onSwipe.value?.(event, gDirections)
+    ) {
       return true
     }
   }
@@ -120,11 +133,19 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     touchableElement.value = elem
     onSwipe.value = callback
     if (touchableElement.value) {
-      touchableElement.value.addEventListener('touchstart', onTouchStart, false)
+      touchableElement.value.addEventListener(
+        'touchstart',
+        onTouchStart,
+        false,
+      )
       touchableElement.value.addEventListener('touchend', onTouchEnd, false)
       touchableElement.value.addEventListener('touchcancel', onTouchEnd, false)
       touchableElement.value.addEventListener('touchmove', onTouchMove, false)
-      touchableElement.value.addEventListener('pointerdown', onPointerDown, false)
+      touchableElement.value.addEventListener(
+        'pointerdown',
+        onPointerDown,
+        false,
+      )
     }
   }
 
@@ -144,6 +165,7 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
   })
 
   return {
-    setTouchableElement: (elem: HTMLElement, callback: SwipeCallback) => setElement(elem, callback),
+    setTouchableElement: (elem: HTMLElement, callback: SwipeCallback) =>
+      setElement(elem, callback),
   }
 }

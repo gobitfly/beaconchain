@@ -5,8 +5,19 @@ import type { InternalGetUserNotificationSettingsDashboardsResponse } from '~/ty
 export function useNotificationsManagementDashboards() {
   const { fetch } = useCustomFetch()
 
-  const data = ref < InternalGetUserNotificationSettingsDashboardsResponse>()
-  const { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery } = useTableQuery({ limit: 10, sort: 'dashboard_id:desc' }, 10)
+  const data = ref<InternalGetUserNotificationSettingsDashboardsResponse>()
+  const {
+    query,
+    pendingQuery,
+    cursor,
+    pageSize,
+    onSort,
+    setCursor,
+    setPageSize,
+    setSearch,
+    setStoredQuery,
+    isStoredQuery,
+  } = useTableQuery({ limit: 10, sort: 'dashboard_id:desc' }, 10)
   const isLoading = ref(false)
 
   const dashboardGroups = computed(() => data.value)
@@ -14,7 +25,13 @@ export function useNotificationsManagementDashboards() {
   async function getDashboardGroups(q?: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
-    const res = await fetch<InternalGetUserNotificationSettingsDashboardsResponse>(API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD, undefined, undefined, q)
+    const res
+      = await fetch<InternalGetUserNotificationSettingsDashboardsResponse>(
+        API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD,
+        undefined,
+        undefined,
+        q,
+      )
 
     isLoading.value = false
     if (!isStoredQuery(q)) {
@@ -25,9 +42,23 @@ export function useNotificationsManagementDashboards() {
     return res
   }
 
-  watch(query, (q) => {
-    getDashboardGroups(q)
-  }, { immediate: true })
+  watch(
+    query,
+    (q) => {
+      getDashboardGroups(q)
+    },
+    { immediate: true },
+  )
 
-  return { dashboardGroups, query: pendingQuery, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch }
+  return {
+    dashboardGroups,
+    query: pendingQuery,
+    cursor,
+    pageSize,
+    isLoading,
+    onSort,
+    setCursor,
+    setPageSize,
+    setSearch,
+  }
 }

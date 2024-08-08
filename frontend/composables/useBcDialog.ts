@@ -9,7 +9,7 @@ export function useBcDialog<T>(dialogProps?: DialogProps) {
   const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
   const uuid = ref(generateUUID())
 
-  const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
+  const position = computed(() => (width.value <= 430 ? 'bottom' : 'center'))
 
   const setHeader = (header: string, show: boolean = true) => {
     if (dialogRef?.value?.options?.props) {
@@ -26,16 +26,22 @@ export function useBcDialog<T>(dialogProps?: DialogProps) {
   const setDialogDefaults = () => {
     if (dialogRef?.value?.options) {
       if (!dialogRef.value.options.props) {
-        dialogRef.value.options.props = { }
+        dialogRef.value.options.props = {}
       }
       if (dialogProps) {
-        dialogRef.value.options.props = { ...dialogRef.value.options.props, ...dialogProps }
+        dialogRef.value.options.props = {
+          ...dialogRef.value.options.props,
+          ...dialogProps,
+        }
       }
       dialogRef.value.options.props.dismissableMask = true
       dialogRef.value.options.props.modal = true
       dialogRef.value.options.props.draggable = false
       dialogRef.value.options.props.position = position.value
-      dialogRef.value.options.props.pt = { ...dialogRef.value.options.props.pt, root: { uuid: uuid.value } }
+      dialogRef.value.options.props.pt = {
+        ...dialogRef.value.options.props.pt,
+        root: { uuid: uuid.value },
+      }
     }
     props.value = dialogRef?.value?.data
   }
@@ -59,11 +65,15 @@ export function useBcDialog<T>(dialogProps?: DialogProps) {
     })
   })
 
-  watch(position, (pos) => {
-    if (dialogRef?.value?.options?.props) {
-      dialogRef.value.options.props.position = pos
-    }
-  }, { immediate: true })
+  watch(
+    position,
+    (pos) => {
+      if (dialogRef?.value?.options?.props) {
+        dialogRef.value.options.props.position = pos
+      }
+    },
+    { immediate: true },
+  )
 
   const close = () => {
     if (dialogRef?.value) {

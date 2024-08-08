@@ -35,9 +35,13 @@ const data = {
 
 const selected = ref()
 
-watch(selected, () => {
-  warn('selected', selected)
-}, { deep: true })
+watch(
+  selected,
+  () => {
+    warn('selected', selected)
+  },
+  { deep: true },
+)
 </script>
 
 <template>

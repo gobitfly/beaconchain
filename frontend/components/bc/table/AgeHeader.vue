@@ -12,7 +12,9 @@ const toggleAgeSetting = () => {
   <span
     class="age-header"
     @click="toggleAgeSetting"
-  >{{ $t('table.age') }}</span>
+  >{{
+    $t("table.age")
+  }}</span>
 </template>
 
 <style lang="scss" scoped>

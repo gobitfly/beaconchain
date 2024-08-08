@@ -27,7 +27,11 @@ const emit = defineEmits<{ (e: 'change', activated: boolean): void }>()
       :true-value="true"
       :false-value="false"
       :checked="state"
-      :onchange="(e:any) => { emit('change', e.target.checked) }"
+      :onchange="
+        (e: any) => {
+          emit('change', e.target.checked);
+        }
+      "
     >
     <div class="content">
       <slot />

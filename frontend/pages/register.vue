@@ -45,11 +45,22 @@ const onSubmit = handleSubmit(async (values) => {
     await navigateTo('/')
   }
   catch (error) {
-    toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_register_group'), detail: $t('login_and_register.error_register_message') })
+    toast.showError({
+      summary: $t('login_and_register.error_title'),
+      group: $t('login_and_register.error_register_group'),
+      detail: $t('login_and_register.error_register_message'),
+    })
   }
 })
 
-const canSubmit = computed(() => email.value && password.value && confirmPassword.value && agreement.value && !Object.keys(errors.value).length)
+const canSubmit = computed(
+  () =>
+    email.value
+    && password.value
+    && confirmPassword.value
+    && agreement.value
+    && !Object.keys(errors.value).length,
+)
 
 const loginLink = computed(() => {
   return provideMobileAuthParams(route.query, '/login')
@@ -61,16 +72,16 @@ const loginLink = computed(() => {
     <div class="page">
       <div class="container">
         <div class="title">
-          {{ $t('login_and_register.title_register') }}
+          {{ $t("login_and_register.title_register") }}
         </div>
         <div class="login-invitation">
-          {{ $t('login_and_register.already_have_account') }}
+          {{ $t("login_and_register.already_have_account") }}
           <BcLink
             :to="loginLink"
             :target="Target.Internal"
             class="link"
           >
-            {{ $t('login_and_register.login_here') }}
+            {{ $t("login_and_register.login_here") }}
           </BcLink>
         </div>
         <form @submit="onSubmit">
@@ -78,7 +89,9 @@ const loginLink = computed(() => {
             <label
               for="email"
               class="label"
-            >{{ $t('login_and_register.email') }}</label>
+            >{{
+              $t("login_and_register.email")
+            }}</label>
             <InputText
               id="email"
               v-model="email"
@@ -95,7 +108,9 @@ const loginLink = computed(() => {
             <label
               for="password"
               class="label"
-            >{{ $t('login_and_register.choose_password') }}</label>
+            >{{
+              $t("login_and_register.choose_password")
+            }}</label>
             <InputText
               id="password"
               v-model="password"
@@ -112,7 +127,9 @@ const loginLink = computed(() => {
             <label
               for="confirmPassword"
               class="label"
-            >{{ $t('login_and_register.confirm_password') }}</label>
+            >{{
+              $t("login_and_register.confirm_password")
+            }}</label>
             <InputText
               id="confirmPassword"
               v-model="confirmPassword"
@@ -137,21 +154,23 @@ const loginLink = computed(() => {
                 aria-describedby="text-error"
               />
               <div class="text">
-                <label for="agreement">{{ tOf($t, 'login_and_register.please_agree', 0) + ' ' }}</label>
+                <label for="agreement">{{
+                  tOf($t, "login_and_register.please_agree", 0) + " "
+                }}</label>
                 <BcLink
                   to="https://storage.googleapis.com/legal.beaconcha.in/tos.pdf"
                   :target="Target.External"
                   class="link"
                 >
-                  {{ tOf($t, 'login_and_register.please_agree', 1) }}
+                  {{ tOf($t, "login_and_register.please_agree", 1) }}
                 </BcLink>
-                {{ tOf($t, 'login_and_register.please_agree', 2) }}
+                {{ tOf($t, "login_and_register.please_agree", 2) }}
                 <BcLink
                   to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
                   :target="Target.External"
                   class="link"
                 >
-                  {{ tOf($t, 'login_and_register.please_agree', 3) }}
+                  {{ tOf($t, "login_and_register.please_agree", 3) }}
                 </BcLink>
               </div>
             </div>
@@ -180,7 +199,8 @@ const loginLink = computed(() => {
     padding: var(--padding-large);
     box-sizing: border-box;
     width: min(530px, 100%);
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 600px) {
+      // mobile
       margin-top: 0px;
     }
 
@@ -229,7 +249,8 @@ const loginLink = computed(() => {
             margin-bottom: auto;
           }
           .text {
-            @media (max-width: 600px) { // mobile
+            @media (max-width: 600px) {
+              // mobile
               font-size: var(--small_text_font_size);
               line-height: 20px;
             }
@@ -238,7 +259,8 @@ const loginLink = computed(() => {
         .button {
           margin: auto;
           margin-right: 0;
-          @media (max-width: 600px) { // mobile
+          @media (max-width: 600px) {
+            // mobile
             width: 70px;
             padding: 0;
           }

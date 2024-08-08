@@ -14,9 +14,13 @@ const addValidator = () => {
     class="empty delayed-fadein-animation"
     @click="addValidator"
   >
-    <span class="big_text">{{ $t('dashboard.validator.summary.add_validator') }}</span>
+    <span class="big_text">{{
+      $t("dashboard.validator.summary.add_validator")
+    }}</span>
     <FontAwesomeIcon :icon="faCirclePlus" />
-    <DashboardValidatorManagementModal v-model="manageValidatorsModalVisisble" />
+    <DashboardValidatorManagementModal
+      v-model="manageValidatorsModalVisisble"
+    />
   </div>
 </template>
 

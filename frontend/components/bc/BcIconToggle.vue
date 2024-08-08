@@ -58,7 +58,7 @@ const toggle = () => {
   height: 23px;
   cursor: pointer;
 
-  &[disabled]{
+  &[disabled] {
     cursor: unset;
     pointer-events: none;
     opacity: 0.5;

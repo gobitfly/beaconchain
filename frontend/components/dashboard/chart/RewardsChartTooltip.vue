@@ -1,7 +1,10 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
 import { BigNumber } from '@ethersproject/bignumber'
-import type { RewardChartGroupData, RewardChartSeries } from '~/types/dashboard/rewards'
+import type {
+  RewardChartGroupData,
+  RewardChartSeries,
+} from '~/types/dashboard/rewards'
 import type { WeiToValue } from '~/types/value'
 
 interface Props {
@@ -55,7 +58,10 @@ const data = computed<Series[]>(() => {
   }
 
   const totalGroups = props.series[0].groups.map((g) => {
-    const elValue = props.series[1].groups.find(elG => elG.id === g.id)?.bigData?.[props.dataIndex] ?? BigNumber.from(0)
+    const elValue
+      = props.series[1].groups.find(elG => elG.id === g.id)?.bigData?.[
+        props.dataIndex
+      ] ?? BigNumber.from(0)
     const bigData = [...g.bigData]
     bigData[props.dataIndex] = bigData[props.dataIndex].add(elValue)
     return {
@@ -71,7 +77,11 @@ const data = computed<Series[]>(() => {
 
   const total: Series = {
     name: props.t('dashboard.validator.rewards.chart.total'),
-    value: `${props.weiToValue(props.series[1].bigData[props.dataIndex].add(props.series[0].bigData[props.dataIndex])).label}`,
+    value: `${
+      props
+        .weiToValue(props.series[1].bigData[props.dataIndex]
+        .add(props.series[0].bigData[props.dataIndex])).label
+    }`,
     groups: mapData(totalGroups),
   }
   return [el, cl, total]
@@ -107,7 +117,7 @@ const data = computed<Series[]>(() => {
 </template>
 
 <style lang="scss">
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .tooltip-container {
   @include fonts.tooltip_text_bold;

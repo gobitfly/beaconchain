@@ -32,7 +32,7 @@ defineProps<{
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 
 .plus {
   font-size: 18px;

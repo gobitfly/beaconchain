@@ -12,7 +12,9 @@ const { t: $t } = useTranslation()
 const { networkInfo } = useNetworkStore()
 
 const mapped = computed(() => {
-  const mapSuccess = (status?: 'success' | 'partial' | 'failed' | 'orphaned') => {
+  const mapSuccess = (
+    status?: 'success' | 'partial' | 'failed' | 'orphaned',
+  ) => {
     const success = status === 'success'
 
     let className = ''
@@ -54,8 +56,16 @@ const mapped = computed(() => {
     const failed = networkInfo.value.slotsPerEpoch - success
     sync.tooltip = `${success} / ${failed}`
   }
-  const totalClassName = !(head.status && source.status && target.status) ? '' : (head.success || source.success || target.success) ? 'positive' : 'negative'
-  const totalTooltipTitle = totalClassName ? totalClassName === 'positive' ? $t('validator.duty.attestation_included') : $t('validator.duty.attestation_missed') : ''
+  const totalClassName = !(head.status && source.status && target.status)
+    ? ''
+    : head.success || source.success || target.success
+      ? 'positive'
+      : 'negative'
+  const totalTooltipTitle = totalClassName
+    ? totalClassName === 'positive'
+      ? $t('validator.duty.attestation_included')
+      : $t('validator.duty.attestation_missed')
+    : ''
   return {
     total: {
       className: totalClassName,
@@ -83,10 +93,17 @@ const mapped = computed(() => {
             {{ mapped.total.tooltipTitle }}
           </b>
           <div class="head">
-            <b>{{ $t('validator.duty.head') }}:</b> {{ $t(`common.${mapped.head.success}`) }}
+            <b>{{ $t("validator.duty.head") }}:</b>
+            {{ $t(`common.${mapped.head.success}`) }}
           </div>
-          <div><b>{{ $t('validator.duty.source') }}:</b> {{ $t(`common.${mapped.source.success}`) }}</div>
-          <div><b>{{ $t('validator.duty.target') }}:</b> {{ $t(`common.${mapped.target.success}`) }}</div>
+          <div>
+            <b>{{ $t("validator.duty.source") }}:</b>
+            {{ $t(`common.${mapped.source.success}`) }}
+          </div>
+          <div>
+            <b>{{ $t("validator.duty.target") }}:</b>
+            {{ $t(`common.${mapped.target.success}`) }}
+          </div>
         </div>
       </template>
       <div
@@ -143,9 +160,9 @@ const mapped = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.tooltip{
+.tooltip {
   text-align: left;
-  .head{
+  .head {
     margin-top: var(--padding);
   }
 }
@@ -163,7 +180,7 @@ const mapped = computed(() => {
     border-radius: var(--border-radius);
     border: solid 1px transparent;
 
-    svg{
+    svg {
       margin: 3px 4px;
       height: 12px;
       width: auto;
@@ -175,9 +192,8 @@ const mapped = computed(() => {
       &.negative {
         border-color: var(--negative-color);
       }
-      &.positive{
+      &.positive {
         border-color: var(--positive-color);
-
       }
     }
   }

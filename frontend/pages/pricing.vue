@@ -10,11 +10,15 @@ const { stripeInit } = useStripeProvider()
 const { products, getProducts } = useProductsStore()
 
 await useAsyncData('get_products', () => getProducts())
-watch(products, () => {
-  if (products.value?.stripe_public_key) {
-    stripeInit(products.value.stripe_public_key)
-  }
-}, { immediate: true })
+watch(
+  products,
+  () => {
+    if (products.value?.stripe_public_key) {
+      stripeInit(products.value.stripe_public_key)
+    }
+  },
+  { immediate: true },
+)
 
 const isYearly = ref(true)
 
@@ -39,7 +43,7 @@ const scrollToAddons = () => {
           class="view-addons-button"
           @click="scrollToAddons()"
         >
-          {{ $t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
+          {{ $t("pricing.view_addons") }}<FontAwesomeIcon :icon="faArrowDown" />
         </Button>
         <PricingPremiumCompare />
         <PricingPremiumAddons
@@ -60,7 +64,7 @@ const scrollToAddons = () => {
 </style>
 
 <style lang="scss" scoped>
-@use '~/assets/css/pricing.scss';
+@use "~/assets/css/pricing.scss";
 
 .page-container {
   position: relative;
@@ -116,7 +120,7 @@ const scrollToAddons = () => {
       }
     }
   }
-  .faq{
+  .faq {
     width: 100%;
     margin-top: 51px;
   }

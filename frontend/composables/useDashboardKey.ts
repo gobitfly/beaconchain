@@ -6,7 +6,9 @@ export function useDashboardKey() {
   const { isLoggedIn } = useUserStore()
 
   if (!data) {
-    throw new Error('useDashboardKey must be in a child of useDashboardKeyProvider')
+    throw new Error(
+      'useDashboardKey must be in a child of useDashboardKeyProvider',
+    )
   }
 
   const dashboardKey = computed(() => data.dashboardKey.value ?? '')
@@ -17,5 +19,14 @@ export function useDashboardKey() {
   const setDashboardKey = (key: string) => data.setDashboardKey(key)
   const dashboardType = computed(() => data.dashboardType.value)
 
-  return { ...data, dashboardKey, isPublic, isShared, isPrivate, publicEntities, setDashboardKey, dashboardType }
+  return {
+    ...data,
+    dashboardKey,
+    isPublic,
+    isShared,
+    isPrivate,
+    publicEntities,
+    setDashboardKey,
+    dashboardType,
+  }
 }

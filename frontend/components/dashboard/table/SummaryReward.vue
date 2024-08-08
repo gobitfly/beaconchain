@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { ClElValue } from '~/types/api/common'
 
 interface Props {
@@ -10,7 +8,9 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const total = computed(() => props.reward ? totalElCl(props.reward) : undefined)
+const total = computed(() =>
+  props.reward ? totalElCl(props.reward) : undefined,
+)
 </script>
 
 <template>
@@ -28,7 +28,8 @@ const total = computed(() => props.reward ? totalElCl(props.reward) : undefined)
       <template #tooltip>
         <div>
           <div class="tt-row">
-            <span class="bold">{{ $t('dashboard.validator.blocks.el_rewards') }}: </span>
+            <span class="bold">{{ $t("dashboard.validator.blocks.el_rewards") }}:
+            </span>
             <BcFormatValue
               :value="reward?.el"
               :no-tooltip="true"
@@ -36,7 +37,8 @@ const total = computed(() => props.reward ? totalElCl(props.reward) : undefined)
             />
           </div>
           <div class="tt-row">
-            <span class="bold">{{ $t('dashboard.validator.blocks.cl_rewards') }}: </span>
+            <span class="bold">{{ $t("dashboard.validator.blocks.cl_rewards") }}:
+            </span>
             <BcFormatValue
               :value="reward?.cl"
               :no-tooltip="true"

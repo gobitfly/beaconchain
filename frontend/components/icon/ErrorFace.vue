@@ -22,8 +22,8 @@ const look = props.inline ? 'inline' : ''
 
 <style lang="scss" scoped>
 .inline {
-  position:relative;
-  top:2px;
-  height:14px;
+  position: relative;
+  top: 2px;
+  height: 14px;
 }
 </style>
