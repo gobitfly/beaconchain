@@ -1,23 +1,25 @@
 <script lang="ts" setup>
-import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faMagnifyingGlass,
+} from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type InputText from 'primevue/inputtext'
 
 interface Props {
-  searchPlaceholder?: string;
-  disabledFilter?: boolean;
+  searchPlaceholder?: string
+  disabledFilter?: boolean
 }
 const props = defineProps<Props>()
 
-defineEmits<{(e: 'filter-changed', value: string): void }>()
+defineEmits<{ (e: 'filter-changed', value: string): void }>()
 
 const isFilterVisible = ref(false)
 const filter = ref('')
 
-const button = ref<{$el: HTMLButtonElement} | null>(null)
+const button = ref<{ $el: HTMLButtonElement } | null>(null)
 
-const input = ref<{$el: HTMLInputElement} | null>(null)
-const focusAndSelect = (inputElement: {$el: HTMLInputElement}) => {
+const input = ref<{ $el: HTMLInputElement } | null>(null)
+const focusAndSelect = (inputElement: { $el: HTMLInputElement }) => {
   if (inputElement?.$el) {
     // make sure the input is not disabled anymore
     nextTick(() => {

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /*
- * If you want to change the behavior of the component or the information it displays, it is possible that you simply need to change a few parameters
- * in searchbar.ts rather than altering the code of the component. The possibilities offered by this configuration file are explanined in readme.md
+ * If you want to change the behavior of the component or the information it displays,
+ it is possible that you simply need to change a few parameters
+ * in searchbar.ts rather than altering the code of the component.
+ The possibilities offered by this configuration file are explanined in readme.md
  */
 import { ChainIDs } from '~/types/network'
 import {
@@ -17,22 +19,24 @@ import {
   type SearchbarPurpose,
   SearchbarPurposeInfo,
   SuggestionrowCells,
-  getI18nPathOfTranslatableLitteral
+  getI18nPathOfTranslatableLitteral,
 } from '~/types/searchbar'
 
 const props = defineProps<{
-  suggestion: ResultSuggestionInternal,
-  barShape: SearchbarShape,
-  colorTheme: SearchbarColors,
-  dropdownLayout : SearchbarDropdownLayout,
-  barPurpose: SearchbarPurpose,
+  suggestion: ResultSuggestionInternal
+  barShape: SearchbarShape
+  colorTheme: SearchbarColors
+  dropdownLayout: SearchbarDropdownLayout
+  barPurpose: SearchbarPurpose
   screenWidthCausingSuddenChange: number
 }>()
 
 const { t } = useTranslation()
 
-function formatSubcategoryCell () : string {
-  const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title)
+function formatSubcategoryCell(): string {
+  const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(
+    SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title,
+  )
   let label = t(i18nPathOfSubcategoryTitle, props.suggestion.count)
 
   if (props.suggestion.count >= 2) {
@@ -41,19 +45,22 @@ function formatSubcategoryCell () : string {
   return label
 }
 
-function formatIdentificationCell () : string {
-  if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'name') && !props.suggestion.nameWasUnknown) {
+function formatIdentificationCell(): string {
+  if (
+    wasOutputDataGivenByTheAPI(props.suggestion.type, 'name')
+    && !props.suggestion.nameWasUnknown
+  ) {
     return props.suggestion.output.name
   }
   return props.suggestion.output.lowLevelData
 }
 
-function formatDescriptionCell () : string {
+function formatDescriptionCell(): string {
   if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'description')) {
     // we tell the user what is the data that they see (ex: "Index" for a validator index)
     switch (props.suggestion.type) {
-      case ResultType.ValidatorsByIndex :
-      case ResultType.ValidatorsByPubkey :
+      case ResultType.ValidatorsByIndex:
+      case ResultType.ValidatorsByPubkey:
         return t('common.index') + ' ' + props.suggestion.output.description
       // more cases might arise in the future
     }
@@ -61,18 +68,30 @@ function formatDescriptionCell () : string {
   return props.suggestion.output.description
 }
 
-const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivated' : ''
+const deactivationClass = props.suggestion.lacksPremiumSubscription
+  ? 'deactivated'
+  : ''
 </script>
 
 <template>
   <div
-    v-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.NameDescriptionLowlevelCategory"
+    v-if="
+      SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows
+        === SuggestionrowCells.NameDescriptionLowlevelCategory
+    "
     class="rowstyle_name-description-low-level-category"
-    :class="[barShape,colorTheme,dropdownLayout,deactivationClass]"
+    :class="[barShape, colorTheme, dropdownLayout, deactivationClass]"
   >
     <!-- In this mode, all possible cells are shown (this was the very first design on Figma) -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,dropdownLayout,deactivationClass]">
-      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
+    <div
+      v-if="props.suggestion.chainId !== ChainIDs.Any"
+      class="cell-icons"
+      :class="[barShape, dropdownLayout, deactivationClass]"
+    >
+      <BcSearchbarTypeIcons
+        :type="props.suggestion.type"
+        class="type-icon not-alone"
+      />
       <IconNetwork
         :chain-id="props.suggestion.chainId"
         :colored="true"
@@ -81,48 +100,88 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
         class="network-icon"
       />
     </div>
-    <div v-else class="cell-icons" :class="[barShape,dropdownLayout,deactivationClass]">
-      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
+    <div
+      v-else
+      class="cell-icons"
+      :class="[barShape, dropdownLayout, deactivationClass]"
+    >
+      <BcSearchbarTypeIcons
+        :type="props.suggestion.type"
+        class="type-icon alone"
+      />
     </div>
     <BcSearchbarMiddleEllipsis
       class="cell_name"
-      :class="[barShape,dropdownLayout,deactivationClass]"
+      :class="[barShape, dropdownLayout, deactivationClass]"
       :text="suggestion.output.name"
       :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
-    <BcSearchbarMiddleEllipsis class="group_blockchain-info" :class="[barShape,dropdownLayout,deactivationClass]" :width-mediaquery-threshold="screenWidthCausingSuddenChange">
+    <BcSearchbarMiddleEllipsis
+      class="group_blockchain-info"
+      :class="[barShape, dropdownLayout, deactivationClass]"
+      :width-mediaquery-threshold="screenWidthCausingSuddenChange"
+    >
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.description !== ''"
         :text="suggestion.output.description"
         :initial-flex-grow="1"
         class="cell_bi_description"
-        :class="[barShape,colorTheme,dropdownLayout]"
+        :class="[barShape, colorTheme, dropdownLayout]"
       />
       <BcSearchbarMiddleEllipsis
         v-if="suggestion.output.lowLevelData !== ''"
         :text="suggestion.output.lowLevelData"
         class="cell_bi_low-level-data"
-        :class="[barShape, colorTheme, dropdownLayout, suggestion.output.description?'greyish':'']"
+        :class="[
+          barShape,
+          colorTheme,
+          dropdownLayout,
+          suggestion.output.description ? 'greyish' : '',
+        ]"
       />
     </BcSearchbarMiddleEllipsis>
-    <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
-      <BcPremiumGem v-if="suggestion.lacksPremiumSubscription" class="gem" />
+    <div
+      class="premium-invitation"
+      :class="dropdownLayout"
+      @click="(e: Event) => e.stopPropagation()"
+    >
+      <BcPremiumGem
+        v-if="suggestion.lacksPremiumSubscription"
+        class="gem"
+      />
     </div>
-    <div class="cell-category" :class="[barShape,dropdownLayout,deactivationClass]">
-      <span class="category-label" :class="[barShape,colorTheme,dropdownLayout]">
+    <div
+      class="cell-category"
+      :class="[barShape, dropdownLayout, deactivationClass]"
+    >
+      <span
+        class="category-label"
+        :class="[barShape, colorTheme, dropdownLayout]"
+      >
         {{ t(...CategoryInfo[TypeInfo[props.suggestion.type].category].title) }}
       </span>
     </div>
   </div>
 
   <div
-    v-else-if="SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows === SuggestionrowCells.SubcategoryIdentificationDescription"
+    v-else-if="
+      SearchbarPurposeInfo[barPurpose].cellsInSuggestionRows
+        === SuggestionrowCells.SubcategoryIdentificationDescription
+    "
     class="rowstyle_subcategory-identification-description"
-    :class="[barShape,colorTheme,dropdownLayout,deactivationClass]"
+    :class="[barShape, colorTheme, dropdownLayout, deactivationClass]"
   >
-    <!-- In this mode, we show less cells and their content comes from dedicated functions instead of a pure copy of `props.suggestion.output` -->
-    <div v-if="props.suggestion.chainId !== ChainIDs.Any" class="cell-icons" :class="[barShape,deactivationClass]">
-      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon not-alone" />
+    <!-- In this mode, we show less cells and their content comes from dedicated functions instead of a pure copy of
+     `props.suggestion.output` -->
+    <div
+      v-if="props.suggestion.chainId !== ChainIDs.Any"
+      class="cell-icons"
+      :class="[barShape, deactivationClass]"
+    >
+      <BcSearchbarTypeIcons
+        :type="props.suggestion.type"
+        class="type-icon not-alone"
+      />
       <IconNetwork
         :chain-id="props.suggestion.chainId"
         :colored="true"
@@ -131,32 +190,55 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
         class="network-icon"
       />
     </div>
-    <div v-else class="cell-icons" :class="[barShape,deactivationClass]">
-      <BcSearchbarTypeIcons :type="props.suggestion.type" class="type-icon alone" />
+    <div
+      v-else
+      class="cell-icons"
+      :class="[barShape, deactivationClass]"
+    >
+      <BcSearchbarTypeIcons
+        :type="props.suggestion.type"
+        class="type-icon alone"
+      />
     </div>
-    <div class="cell-subcategory" :class="[barShape,dropdownLayout,deactivationClass]">
+    <div
+      class="cell-subcategory"
+      :class="[barShape, dropdownLayout, deactivationClass]"
+    >
       {{ formatSubcategoryCell() }}
     </div>
     <BcSearchbarMiddleEllipsis
       class="cell_bi_identification"
-      :class="[barShape,dropdownLayout,deactivationClass]"
+      :class="[barShape, dropdownLayout, deactivationClass]"
       :text="formatIdentificationCell()"
       :width-mediaquery-threshold="screenWidthCausingSuddenChange"
     />
-    <div class="premium-invitation" :class="dropdownLayout" @click="(e : Event) => e.stopPropagation()">
-      <BcPremiumGem v-if="suggestion.lacksPremiumSubscription" class="gem" />
+    <div
+      class="premium-invitation"
+      :class="dropdownLayout"
+      @click="(e: Event) => e.stopPropagation()"
+    >
+      <BcPremiumGem
+        v-if="suggestion.lacksPremiumSubscription"
+        class="gem"
+      />
     </div>
-    <div v-if="suggestion.output.description !== ''" class="cell_bi_description" :class="[barShape,colorTheme,dropdownLayout,deactivationClass]">
+    <div
+      v-if="suggestion.output.description !== ''"
+      class="cell_bi_description"
+      :class="[barShape, colorTheme, dropdownLayout, deactivationClass]"
+    >
       {{ formatDescriptionCell() }}
     </div>
   </div>
 
-  <!-- If you want to show other cells or change their format, it might be good to implement a new mode here instead of modiying the modes above.
-       To make the bar use your new mode, add its name into the `SuggestionrowCells` enum in `searchbar.ts`, and update the `SearchbarPurposeInfo` record there. -->
+  <!-- If you want to show other cells or change their format, it might be good to implement a new mode here instead of
+   modiying the modes above.
+   To make the bar use your new mode, add its name into the `SuggestionrowCells` enum in `searchbar.ts`,
+   and update the `SearchbarPurposeInfo` record there. -->
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 @use "~/assets/css/fonts.scss";
 
 .deactivated {
@@ -288,7 +370,7 @@ const deactivationClass = props.suggestion.lacksPremiumSubscription ? 'deactivat
     margin-top: auto;
     margin-bottom: auto;
     font-weight: var(--standard_text_medium_font_weight);
-    white-space: nowrap;  // makes sure that the two spans (description + lowleveldata) stay on the same line
+    white-space: nowrap; // makes sure that the two spans (description + lowleveldata) stay on the same line
     &.narrow-dropdown {
       grid-row-end: span 2;
       flex-direction: column;

@@ -5,16 +5,21 @@ import type { TableQueryParams } from '~/types/datatable'
 import { DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
-const validatorDashboardRewardsStore = defineStore('validator_dashboard_rewards_store', () => {
-  const data = ref < InternalGetValidatorDashboardRewardsResponse>()
-  const query = ref < TableQueryParams>()
+const validatorDashboardRewardsStore = defineStore(
+  'validator_dashboard_rewards_store',
+  () => {
+    const data = ref<InternalGetValidatorDashboardRewardsResponse>()
+    const query = ref<TableQueryParams>()
 
-  return { data, query }
-})
+    return { data, query }
+  },
+)
 
-export function useValidatorDashboardRewardsStore () {
+export function useValidatorDashboardRewardsStore() {
   const { fetch } = useCustomFetch()
-  const { data, query: storedQuery } = storeToRefs(validatorDashboardRewardsStore())
+  const { data, query: storedQuery } = storeToRefs(
+    validatorDashboardRewardsStore(),
+  )
   const isLoading = ref(false)
 
   const { slotViz } = useValidatorSlotVizStore()
@@ -22,7 +27,10 @@ export function useValidatorDashboardRewardsStore () {
   const rewards = computed(() => data.value)
   const query = computed(() => storedQuery.value)
 
-  async function getRewards (dashboardKey: DashboardKey, query?: TableQueryParams) {
+  async function getRewards(
+    dashboardKey: DashboardKey,
+    query?: TableQueryParams,
+  ) {
     if (!dashboardKey) {
       data.value = undefined
       isLoading.value = false
@@ -31,7 +39,12 @@ export function useValidatorDashboardRewardsStore () {
     }
     isLoading.value = true
     storedQuery.value = query
-    const res = await fetch<InternalGetValidatorDashboardRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS, undefined, { dashboardKey }, query)
+    const res = await fetch<InternalGetValidatorDashboardRewardsResponse>(
+      API_PATH.DASHBOARD_VALIDATOR_REWARDS,
+      undefined,
+      { dashboardKey },
+      query,
+    )
 
     isLoading.value = false
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {
@@ -44,7 +57,15 @@ export function useValidatorDashboardRewardsStore () {
       const nextEpoch = slotViz.value?.findLast(e => e.epoch > searchEpoch)
 
       if (nextEpoch) {
-        res.data = [{ epoch: nextEpoch.epoch, group_id: DAHSHBOARDS_NEXT_EPOCH_ID, duty: { attestation: 0, proposal: 0, slashing: 0, sync: 0 }, reward: { cl: '0', el: '0' } }, ...res.data]
+        res.data = [
+          {
+            epoch: nextEpoch.epoch,
+            group_id: DAHSHBOARDS_NEXT_EPOCH_ID,
+            duty: { attestation: 0, proposal: 0, slashing: 0, sync: 0 },
+            reward: { cl: '0', el: '0' },
+          },
+          ...res.data,
+        ]
       }
     }
 

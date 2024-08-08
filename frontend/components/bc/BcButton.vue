@@ -1,23 +1,24 @@
 <script lang="ts" setup>
-
-const props =defineProps<{
+const props = defineProps<{
   /**
    * ℹ️ should only be used rarely, e.g. in cases where the action should not be triggerd twice
    */
-  isDisabled?: boolean,
+  isDisabled?: boolean
   /**
    * ♿️ buttons that are aria-disabled are still perceivable by screen readers
-   * as they can still be focused on 
+   * as they can still be focused on
    */
-  isAriaDisabled?: boolean,
+  isAriaDisabled?: boolean
   variant?: 'secondary' // | 'red'
 }>()
 
-const shouldAppearDisabled = computed(() => props.isDisabled || props.isAriaDisabled)
+const shouldAppearDisabled = computed(
+  () => props.isDisabled || props.isAriaDisabled,
+)
 </script>
 
-<template> 
-  <Button 
+<template>
+  <Button
     type="button"
     :disabled="isDisabled"
     :aria-disabled="isAriaDisabled"
@@ -27,42 +28,41 @@ const shouldAppearDisabled = computed(() => props.isDisabled || props.isAriaDisa
       // 'bc-button--red': variant === 'red'
     }"
   >
-    <slot/>
+    <slot />
     <span
       v-if="$slots.icon"
       class="bc-button__icon"
     >
-      <slot name="icon"/>
+      <slot name="icon" />
     </span>
   </Button>
-
- </template>
+</template>
 
 <style lang="scss" scoped>
-  .bc-button--secondary {
+.bc-button--secondary {
+  border-color: var(--button-secondary-border-color);
+  background-color: var(--button-secondary-background-color);
+  color: var(--button-secondary-color);
+  &:hover {
+    background-color: var(--button-secondary-background-color--hover);
     border-color: var(--button-secondary-border-color);
+  }
+  &:active {
     background-color: var(--button-secondary-background-color);
-    color: var(--button-secondary-color);
-    &:hover {
-      background-color: var(--button-secondary-background-color--hover);
-      border-color: var(--button-secondary-border-color);
-    }
-    &:active {
-      background-color: var(--button-secondary-background-color);
-      border-color: var(--button-secondary-border-color);
-    }
+    border-color: var(--button-secondary-border-color);
   }
-  .bc-button--disabled {
-    &,
-    &:hover,
-    &:focus {
-      background-color: var(--button-color-disabled);
-      border-color: var(--button-color-disabled);
-      color: var(--button-text-color-disabled);
-      cursor: not-allowed;
-    }
+}
+.bc-button--disabled {
+  &,
+  &:hover,
+  &:focus {
+    background-color: var(--button-color-disabled);
+    border-color: var(--button-color-disabled);
+    color: var(--button-text-color-disabled);
+    cursor: not-allowed;
   }
-  .bc-button__icon {
-    margin-left: var(--padding-small);
-  }
+}
+.bc-button__icon {
+  margin-left: var(--padding-small);
+}
 </style>

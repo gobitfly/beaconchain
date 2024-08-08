@@ -18,12 +18,12 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-  &:hover:not([disabled])  {
+  &:hover:not([disabled]) {
     opacity: 0.8;
   }
 
-  &[disabled]{
-    cursor: unset;    
+  &[disabled] {
+    cursor: unset;
     pointer-events: none;
   }
 }
@@ -34,7 +34,7 @@ a {
   &:hover:not([disabled]) {
     opacity: 0.8;
   }
-  &[disabled]{
+  &[disabled] {
     color: var(--disabled-color);
   }
 }
@@ -60,7 +60,7 @@ a {
   scrollbar-width: thin;
 
   /* Chrome: we must remove the styles above otherwise the styles below will not work correctly */
-  @supports (-webkit-appearance:none){
+  @supports (-webkit-appearance: none) {
     scrollbar-color: unset;
     scrollbar-width: unset;
   }
@@ -86,7 +86,7 @@ a {
 /** To make a SVG monochromatic, assign it to the class `monochromatic`.
  *  It will work if you replace every `fill="#..."` in the SVG with `class="colorX shape"` or `class="colorX background"` (with X depending on the color and as high as the number of colors)
  *  and, in the <style> section of the SVG, you define every `.colorX {fill: #...}` accordingly. */
-svg{
+svg {
   &.monochromatic {
     .shape {
       fill: currentColor;

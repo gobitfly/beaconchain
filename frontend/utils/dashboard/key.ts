@@ -1,4 +1,4 @@
-export function isPublicDashboardKey (value?: string): boolean {
+export function isPublicDashboardKey(value?: string): boolean {
   if (!value) {
     return true
   }
@@ -7,6 +7,6 @@ export function isPublicDashboardKey (value?: string): boolean {
   return isNaN(id)
 }
 
-export function isSharedKey (value?: string): boolean {
+export function isSharedKey(value?: string): boolean {
   return !!value?.startsWith('v-')
 }

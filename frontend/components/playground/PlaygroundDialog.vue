@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { BcDialogConfirm, NotificationsManagementSubscriptionDialog, DashboardCreationController } from '#components'
-import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
+import {
+  BcDialogConfirm,
+  NotificationsManagementSubscriptionDialog,
+  DashboardCreationController,
+} from '#components'
+import type {
+  NotificationSettingsValidatorDashboard,
+  NotificationSettingsAccountDashboard,
+} from '~/types/api/notifications'
 
 const dialog = useDialog()
 const { currentNetwork } = useNetworkStore()
 
-function onClose (answer: boolean) {
+function onClose(answer: boolean) {
   setTimeout(() => {
     alert('response: ' + answer)
-  }, 100
-  )
+  }, 100)
 }
 
 const openQuestion = (yesLabel?: string, noLabel?: string) => {
@@ -18,9 +24,9 @@ const openQuestion = (yesLabel?: string, noLabel?: string) => {
       title: 'My super question',
       question: 'Are you ready to rumble, or do you have second thoughts?',
       yesLabel,
-      noLabel
+      noLabel,
     },
-    onClose: response => onClose(response?.data)
+    onClose: response => onClose(response?.data),
   })
 }
 
@@ -35,7 +41,7 @@ const validatorSub: NotificationSettingsValidatorDashboard = {
   is_sync_subscribed: true,
   is_withdrawal_processed_subscribed: true,
   is_slashed_subscribed: false,
-  is_real_time_mode_enabled: false
+  is_real_time_mode_enabled: false,
 }
 
 const accountSub: NotificationSettingsAccountDashboard = {
@@ -48,17 +54,18 @@ const accountSub: NotificationSettingsAccountDashboard = {
   is_erc721_token_transfers_subscribed: true,
   is_erc1155_token_transfers_subscribed: false,
   subscribed_chain_ids: [17000],
-  is_ignore_spam_transactions_enabled: true
+  is_ignore_spam_transactions_enabled: true,
 }
 
-function openSubscriptions (props: any) {
+function openSubscriptions(props: any) {
   dialog.open(NotificationsManagementSubscriptionDialog, {
     data: props,
-    onClose: response => onClose(response?.data)
+    onClose: response => onClose(response?.data),
   })
 }
 
-const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
+const dashboardCreationControllerModal
+  = ref<typeof DashboardCreationController>()
 </script>
 
 <template>
@@ -66,17 +73,39 @@ const dashboardCreationControllerModal = ref<typeof DashboardCreationController>
     <Button @click="dashboardCreationControllerModal?.show()">
       Create dashboard with free will!
     </Button>
-    <Button @click="dashboardCreationControllerModal?.show('validator', currentNetwork)">
+    <Button
+      @click="
+        dashboardCreationControllerModal?.show('validator', currentNetwork)
+      "
+    >
       Create validator dashboard with currentNetwork.value forced
     </Button>
     <Button @click="dashboardCreationControllerModal?.show('account')">
       Create account dashboard with account mode forced
     </Button>
-    Note: to test the saving of the options to the API, open the dialogs from the notification dashboard.<br>The communication with the API is implemented there.
-    <Button @click="openSubscriptions({ dashboardType: 'validator', initialSettings: validatorSub, saveUserSettings: () => {} })">
+    Note: to test the saving of the options to the API, open the dialogs from
+    the notification dashboard.<br>The communication with the API is
+    implemented there.
+    <Button
+      @click="
+        openSubscriptions({
+          dashboardType: 'validator',
+          initialSettings: validatorSub,
+          saveUserSettings: () => {},
+        })
+      "
+    >
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({ dashboardType: 'account', initialSettings: accountSub, saveUserSettings: () => {} })">
+    <Button
+      @click="
+        openSubscriptions({
+          dashboardType: 'account',
+          initialSettings: accountSub,
+          saveUserSettings: () => {},
+        })
+      "
+    >
       Subscribe to notifications for your accounts
     </Button>
     <br>
@@ -99,7 +128,7 @@ const dashboardCreationControllerModal = ref<typeof DashboardCreationController>
 </template>
 
 <style lang="scss" scoped>
-.container{
+.container {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
