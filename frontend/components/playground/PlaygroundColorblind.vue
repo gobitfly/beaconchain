@@ -101,8 +101,12 @@ class RGB {
   limit(): void {
     const max = (this.space === CS.RGBlinear) ? 1 : 255
     for (const k of [R, G, B]) {
-      if (this.chan[k] < 0) { this.chan[k] = 0 }
-      if (this.chan[k] > max) { this.chan[k] = max }
+      if (this.chan[k] < 0) {
+        this.chan[k] = 0
+      }
+      if (this.chan[k] > max) {
+        this.chan[k] = max
+      }
     }
   }
 }
