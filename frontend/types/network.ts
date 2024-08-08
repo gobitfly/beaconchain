@@ -265,10 +265,11 @@ export function getAllExistingChainIDs(sortByPriority: boolean): ChainIDs[] {
 
 /**
  * Should be used only when you test a network different from the current one.
- * Whereever you would write `isMainNet(currentNetwork.value)` you should rather use `isMainNet()` from `useNetworkStore.ts`.
+ * Whereever you would write `isMainNet(currentNetwork.value)` you should
+ * rather use `isMainNet()` from `useNetworkStore.ts`.
  */
 export function isMainNet(network: ChainIDs): boolean {
-  return (ChainInfo[network].mainNet === network)
+  return ChainInfo[network].mainNet === network
 }
 
 /**
@@ -276,37 +277,43 @@ export function isMainNet(network: ChainIDs): boolean {
  * Wherever you would write `isL1(currentNetwork.value)` you should rather use `isL1()` from `useNetworkStore.ts`.
  */
 export function isL1(network: ChainIDs): boolean {
-  return (ChainInfo[network].L1 === network)
+  return ChainInfo[network].L1 === network
 }
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Wherever you would write `epochsPerDay(currentNetwork.value)` you should rather use `epochsPerDay()` from `useNetworkStore.ts`.
+ * Wherever you would write `epochsPerDay(currentNetwork.value)` you should
+ * rather use `epochsPerDay()` from `useNetworkStore.ts`.
  */
 export function epochsPerDay(chainId: ChainIDs): number {
   const info = ChainInfo[chainId]
   if (info.timeStampSlot0 === undefined) {
     return 0
   }
-  return 24 * 60 * 60 / (info.slotsPerEpoch * info.secondsPerSlot)
+  return (24 * 60 * 60) / (info.slotsPerEpoch * info.secondsPerSlot)
 }
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Wherever you would write `epochToTs(currentNetwork.value, epoch)` you should rather use `epochToTs(epoch)` from `useNetworkStore.ts`.
+ * Wherever you would write `epochToTs(currentNetwork.value, epoch)` you should
+ *  rather use `epochToTs(epoch)` from `useNetworkStore.ts`.
  */
-export function epochToTs(chainId: ChainIDs, epoch: number): number | undefined {
+export function epochToTs(
+  chainId: ChainIDs,
+  epoch: number,
+): number | undefined {
   const info = ChainInfo[chainId]
   if (info.timeStampSlot0 === undefined || epoch < 0) {
     return undefined
   }
 
-  return info.timeStampSlot0 + ((epoch * info.slotsPerEpoch) * info.secondsPerSlot)
+  return info.timeStampSlot0 + epoch * info.slotsPerEpoch * info.secondsPerSlot
 }
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Wherever you would write `slotToTs(currentNetwork.value, slot)` you should rather use `slotToTs(slot)` from `useNetworkStore.ts`.
+ * Wherever you would write `slotToTs(currentNetwork.value, slot)` you should
+ *  rather use `slotToTs(slot)` from `useNetworkStore.ts`.
  */
 export function slotToTs(chainId: ChainIDs, slot: number): number | undefined {
   const info = ChainInfo[chainId]
@@ -314,12 +321,13 @@ export function slotToTs(chainId: ChainIDs, slot: number): number | undefined {
     return undefined
   }
 
-  return info.timeStampSlot0 + (slot * info.secondsPerSlot)
+  return info.timeStampSlot0 + slot * info.secondsPerSlot
 }
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Wherever you would write `tsToSlot(currentNetwork.value, ts)` you should rather use `tsToSlot(ts)` from `useNetworkStore.ts`.
+ * Wherever you would write `tsToSlot(currentNetwork.value, ts)` you should
+ * rather use `tsToSlot(ts)` from `useNetworkStore.ts`.
  */
 export function tsToSlot(chainId: ChainIDs, ts: number): number {
   const info = ChainInfo[chainId]
@@ -331,7 +339,8 @@ export function tsToSlot(chainId: ChainIDs, ts: number): number {
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Wherever you would write `slotToEpoch(currentNetwork.value, slot)` you should rather use `slotToEpoch(slot)` from `useNetworkStore.ts`.
+ * Wherever you would write `slotToEpoch(currentNetwork.value, slot)` you should
+ *  rather use `slotToEpoch(slot)` from `useNetworkStore.ts`.
  */
 export function slotToEpoch(chainId: ChainIDs, slot: number): number {
   const info = ChainInfo[chainId]
@@ -343,7 +352,8 @@ export function slotToEpoch(chainId: ChainIDs, slot: number): number {
 
 /**
  * Should be used only when you work with a network different from the current one.
- * Wherever you would write `secondsPerEpoch(currentNetwork.value)` you should rather use `secondsPerEpoch()` from `useNetworkStore.ts`.
+ * Wherever you would write `secondsPerEpoch(currentNetwork.value)` you should
+ * rather use `secondsPerEpoch()` from `useNetworkStore.ts`.
  */
 export function secondsPerEpoch(chainId: ChainIDs): number {
   const info = ChainInfo[chainId]

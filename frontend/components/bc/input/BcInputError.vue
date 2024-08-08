@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 const idError = useId()
 /**
-   * Spacing of error message will be removed by explicitly passing `false`.
-   * This should encourage to always think about the error message.
-   */
+ * Spacing of error message will be removed by explicitly passing `false`.
+ * This should encourage to always think about the error message.
+ */
 export type BcInputError = false | string
 defineProps<{
   error?: BcInputError

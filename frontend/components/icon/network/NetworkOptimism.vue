@@ -23,6 +23,6 @@
 
 <style lang="scss" scoped>
 .color1 {
-  fill: #F3454A;
+  fill: #f3454a;
 }
 </style>

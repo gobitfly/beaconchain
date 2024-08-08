@@ -8,7 +8,12 @@ import type { Feature } from '~/types/pricing'
 /// ///////////////
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
-const { products, bestPremiumProduct, currentPremiumSubscription, isPremiumSubscribedViaApp } = useProductsStore()
+const {
+  products,
+  bestPremiumProduct,
+  currentPremiumSubscription,
+  isPremiumSubscribedViaApp,
+} = useProductsStore()
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
 const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
@@ -20,18 +25,30 @@ interface Props {
 const props = defineProps<Props>()
 
 const prices = computed(() => {
-  const mainPrice = props.isYearly ? props.product.price_per_year_eur / 12 : props.product.price_per_month_eur
+  const mainPrice = props.isYearly
+    ? props.product.price_per_year_eur / 12
+    : props.product.price_per_month_eur
 
-  const savingAmount = props.product.price_per_month_eur * 12 - props.product.price_per_year_eur
+  const savingAmount
+    = props.product.price_per_month_eur * 12 - props.product.price_per_year_eur
   const savingDigits = savingAmount % 100 === 0 ? 0 : 2
 
   return {
     main: formatPremiumProductPrice($t, mainPrice),
     monthly: formatPremiumProductPrice($t, props.product.price_per_month_eur),
-    monthly_based_on_yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur / 12),
+    monthly_based_on_yearly: formatPremiumProductPrice(
+      $t,
+      props.product.price_per_year_eur / 12,
+    ),
     yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
     saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice($t, mainPrice / props.product.premium_perks.validators_per_dashboard / props.product.premium_perks.validator_dashboards, 6),
+    perValidator: formatPremiumProductPrice(
+      $t,
+      mainPrice
+      / props.product.premium_perks.validators_per_dashboard
+      / props.product.premium_perks.validator_dashboards,
+      6,
+    ),
   }
 })
 
@@ -49,11 +66,20 @@ const percentages = computed(() => {
   let chartPercent = 1
   // TODO: remove check for chart_history_seconds once the API is live
   if (props.product.premium_perks.chart_history_seconds) {
-    chartPercent = props.product.premium_perks.chart_history_seconds.hourly / (bestProduct.premium_perks.chart_history_seconds.hourly) * 100
+    chartPercent
+      = (props.product.premium_perks.chart_history_seconds.hourly
+      / bestProduct.premium_perks.chart_history_seconds.hourly)
+      * 100
   }
   return {
-    validatorDashboards: props.product.premium_perks.validator_dashboards / (bestProduct.premium_perks.validator_dashboards) * 100,
-    validatorsPerDashboard: props.product.premium_perks.validators_per_dashboard / (bestProduct.premium_perks.validators_per_dashboard) * 100,
+    validatorDashboards:
+      (props.product.premium_perks.validator_dashboards
+      / bestProduct.premium_perks.validator_dashboards)
+      * 100,
+    validatorsPerDashboard:
+      (props.product.premium_perks.validators_per_dashboard
+      / bestProduct.premium_perks.validators_per_dashboard)
+      * 100,
     summaryChart: chartPercent,
     heatmapChart: chartPercent,
   }
@@ -69,7 +95,12 @@ async function buttonCallback() {
       await stripeCustomerPortal()
     }
     else {
-      await stripePurchase(props.isYearly ? props.product.stripe_price_id_yearly : props.product.stripe_price_id_monthly, 1)
+      await stripePurchase(
+        props.isYearly
+          ? props.product.stripe_price_id_yearly
+          : props.product.stripe_price_id_monthly,
+        1,
+      )
     }
   }
   else {
@@ -83,12 +114,28 @@ const planButton = computed(() => {
 
   if (isLoggedIn.value) {
     if (currentPremiumSubscription.value) {
-      const subscribedProduct = products.value?.premium_products.find(product => product.product_id_monthly === currentPremiumSubscription.value!.product_id || product.product_id_yearly === currentPremiumSubscription.value!.product_id)
-      if ((currentPremiumSubscription.value.product_id === props.product.product_id_monthly || currentPremiumSubscription.value.product_id === props.product.product_id_yearly) || subscribedProduct === undefined) {
-        // (this box is either for the subscribed product) || (the user has an unknown product, possible from V1 or maybe a custom plan)
+      const subscribedProduct = products.value?.premium_products.find(
+        product =>
+          product.product_id_monthly
+          === currentPremiumSubscription.value!.product_id
+          || product.product_id_yearly
+          === currentPremiumSubscription.value!.product_id,
+      )
+      if (
+        currentPremiumSubscription.value.product_id
+        === props.product.product_id_monthly
+        || currentPremiumSubscription.value.product_id
+        === props.product.product_id_yearly
+        || subscribedProduct === undefined
+      ) {
+        // (this box is either for the subscribed product)
+        // || (the user has an unknown product, possible from V1 or maybe a custom plan)
         text = $t('pricing.premium_product.button.manage_plan')
       }
-      else if (subscribedProduct.price_per_month_eur < props.product.price_per_month_eur) {
+      else if (
+        subscribedProduct.price_per_month_eur
+        < props.product.price_per_month_eur
+      ) {
         text = $t('pricing.premium_product.button.upgrade')
       }
       else {
@@ -101,30 +148,54 @@ const planButton = computed(() => {
     text = $t('pricing.get_started')
   }
 
-  const disabled = isStripeDisabled.value || isPremiumSubscribedViaApp.value || undefined
+  const disabled
+    = isStripeDisabled.value || isPremiumSubscribedViaApp.value || undefined
 
   return { text, isDowngrade, disabled }
 })
 
 const mainFeatures = computed<Feature[]>(() => {
-  const validatorPerDashboardAmount = formatNumber(props.product?.premium_perks.validators_per_dashboard)
+  const validatorPerDashboardAmount = formatNumber(
+    props.product?.premium_perks.validators_per_dashboard,
+  )
   return [
     {
-      name: $t('pricing.premium_product.validator_dashboards', { amount: formatNumber(props.product?.premium_perks.validator_dashboards) }, (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2),
+      name: $t(
+        'pricing.premium_product.validator_dashboards',
+        {
+          amount: formatNumber(
+            props.product?.premium_perks.validator_dashboards,
+          ),
+        },
+        (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2,
+      ),
       available: true,
       percentage: percentages.value.validatorDashboards,
     },
     {
-      name: props.product.premium_perks.validator_dashboards === 1
-        ? $t('pricing.premium_product.validators', { amount: validatorPerDashboardAmount })
-        : $t('pricing.premium_product.validators_per_dashboard', { amount: validatorPerDashboardAmount }),
-      subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
+      name:
+        props.product.premium_perks.validator_dashboards === 1
+          ? $t('pricing.premium_product.validators', {
+            amount: validatorPerDashboardAmount,
+          })
+          : $t('pricing.premium_product.validators_per_dashboard', {
+            amount: validatorPerDashboardAmount,
+          }),
+      subtext: $t('pricing.per_validator', {
+        amount: prices.value.perValidator,
+      }),
       available: true,
-      tooltip: $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.product?.premium_perks.validators_per_dashboard * 32) }),
+      tooltip: $t('pricing.pectra_tooltip', {
+        effectiveBalance: formatNumber(
+          props.product?.premium_perks.validators_per_dashboard * 32,
+        ),
+      }),
       percentage: percentages.value.validatorsPerDashboard,
     },
     {
-      name: $t('pricing.premium_product.timeframe_dashboard_chart_no_timeframe'),
+      name: $t(
+        'pricing.premium_product.timeframe_dashboard_chart_no_timeframe',
+      ),
       subtext: $t('pricing.premium_product.coming_soon'),
       available: true,
       percentage: percentages.value.summaryChart,
@@ -175,7 +246,7 @@ const minorFeatures = computed<Feature[]>(() => {
         v-if="product.is_popular"
         class="popular"
       >
-        {{ $t('pricing.premium_product.popular') }}
+        {{ $t("pricing.premium_product.popular") }}
       </div>
     </div>
     <div class="features-container">
@@ -184,10 +255,10 @@ const minorFeatures = computed<Feature[]>(() => {
       </div>
       <div class="prize-subtext">
         <div>
-          <span>{{ $t('pricing.per_month') }}</span><span v-if="!isYearly">*</span>
+          <span>{{ $t("pricing.per_month") }}</span><span v-if="!isYearly">*</span>
         </div>
         <div v-if="isYearly">
-          {{ $t('pricing.amount_per_year', { amount: prices.yearly }) }}*
+          {{ $t("pricing.amount_per_year", { amount: prices.yearly }) }}*
         </div>
       </div>
       <div
@@ -195,7 +266,7 @@ const minorFeatures = computed<Feature[]>(() => {
         class="saving-info"
       >
         <div>
-          {{ $t('pricing.savings', { amount: prices.saving }) }}
+          {{ $t("pricing.savings", { amount: prices.saving }) }}
         </div>
         <BcTooltip
           position="top"
@@ -204,7 +275,12 @@ const minorFeatures = computed<Feature[]>(() => {
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ $t('pricing.savings_tooltip', { monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly }) }}
+              {{
+                $t("pricing.savings_tooltip", {
+                  monthly: prices.monthly,
+                  monthly_yearly: prices.monthly_based_on_yearly,
+                })
+              }}
             </div>
           </template>
         </BcTooltip>
@@ -244,7 +320,7 @@ const minorFeatures = computed<Feature[]>(() => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/pricing.scss';
+@use "~/assets/css/pricing.scss";
 
 .box-container {
   box-sizing: border-box;
@@ -328,7 +404,7 @@ const minorFeatures = computed<Feature[]>(() => {
       margin-bottom: 35px;
     }
 
-    .minor-features-container{
+    .minor-features-container {
       display: flex;
       flex-direction: column;
       gap: 9px;

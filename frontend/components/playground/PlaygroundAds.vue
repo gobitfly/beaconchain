@@ -49,13 +49,13 @@
 </template>
 
 <style lang="scss">
-.ad_test_container{
+.ad_test_container {
   color: red;
   border: 1px solid red;
   background-color: aqua;
   padding: 10px;
 }
-.ad_test{
+.ad_test {
   color: pink;
   border: 1px solid pink;
   background-color: darkblue;

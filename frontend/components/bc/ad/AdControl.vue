@@ -2,7 +2,9 @@
 const { ads } = useCurrentAds()
 
 const top = computed(() => ads.value?.find(c => c.jquery_selector === 'top'))
-const rest = computed(() => ads.value?.filter(c => c.jquery_selector !== 'top'))
+const rest = computed(() =>
+  ads.value?.filter(c => c.jquery_selector !== 'top'),
+)
 </script>
 
 <template>
@@ -22,5 +24,4 @@ const rest = computed(() => ads.value?.filter(c => c.jquery_selector !== 'top'))
   </ClientOnly>
 </template>
 
-<style lang="scss" scoped>
-</style>
+<style lang="scss" scoped></style>

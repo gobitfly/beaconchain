@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faArrowUpRightFromSquare,
-} from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
+import type {
+  DashboardValidatorContext,
+  SummaryTimeFrame,
+} from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import type { DashboardKey } from '~/types/dashboard'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { SummaryValidatorsIconRowInfo, ValidatorSummaryIconRowKey } from '~/types/validator'
+import type {
+  SummaryValidatorsIconRowInfo,
+  ValidatorSummaryIconRowKey,
+} from '~/types/validator'
 
 interface Props {
   row: VDBSummaryTableRow
@@ -105,7 +109,7 @@ const mapped = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .validator-status-column {
   display: flex;

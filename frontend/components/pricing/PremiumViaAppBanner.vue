@@ -8,7 +8,7 @@ const { isPremiumSubscribedViaApp } = useProductsStore()
     v-if="isPremiumSubscribedViaApp"
     class="banner"
   >
-    {{ $t('pricing.premium_via_app_banner') }}
+    {{ $t("pricing.premium_via_app_banner") }}
   </div>
 </template>
 

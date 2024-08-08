@@ -107,7 +107,10 @@ import { getAllExistingChainIDs, type ChainIDs } from '~/types/network'
       :harmonize-perceived-size="false"
       class="icon-size"
     />
-    <div>Harmonized sizes (for example Ethereum looks less skinny compared to the others):</div>
+    <div>
+      Harmonized sizes (for example Ethereum looks less skinny compared to the
+      others):
+    </div>
     <IconNetwork
       v-for="id of getAllExistingChainIDs(false)"
       :key="id"
@@ -119,7 +122,8 @@ import { getAllExistingChainIDs, type ChainIDs } from '~/types/network'
   </div>
   <div>
     <h2>Loading issues:</h2>
-    Example when props `inline` is true: "Something went wrong <IconErrorFace :inline="true" /> Please try again later."
+    Example when props `inline` is true: "Something went wrong
+    <IconErrorFace :inline="true" /> Please try again later."
     <br>
     Example for a 404 page (not inline):
     <div class="container">
@@ -141,11 +145,11 @@ import { getAllExistingChainIDs, type ChainIDs } from '~/types/network'
     <IconDatatypeAccountIcon class="icon-size" />
     <IconDatatypeEnsIcon
       class="icon-size"
-      style="color:red"
+      style="color: red"
     />
     <IconDatatypeEnsIcon
       class="icon-size"
-      style="color:blue"
+      style="color: blue"
     />
     <IconDatatypeGraffitiIcon class="icon-size" />
     <IconDatatypeValidatorIcon class="icon-size" />

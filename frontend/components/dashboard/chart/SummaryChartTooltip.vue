@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
-import { type AggregationTimeframe, type EfficiencyType } from '~/types/dashboard/summary'
+import {
+  type AggregationTimeframe,
+  type EfficiencyType,
+} from '~/types/dashboard/summary'
 
 interface Props {
   t: ComposerTranslation // required as dynamically created components via render do not have the proper app context
@@ -48,7 +51,7 @@ defineProps<Props>()
 </template>
 
 <style lang="scss">
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .tooltip-container {
   background-color: var(--tooltip-background);
@@ -74,7 +77,6 @@ defineProps<Props>()
     }
 
     &:not(.highlight) {
-
       .efficiency,
       .name {
         opacity: 0.5;
@@ -82,7 +84,6 @@ defineProps<Props>()
     }
 
     &.highlight {
-
       .efficiency,
       .name {
         font-weight: var(--tooltip_text_bold_font_weight);

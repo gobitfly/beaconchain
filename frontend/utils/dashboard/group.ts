@@ -1,8 +1,16 @@
 import type { ComposerTranslation } from 'vue-i18n'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
-import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
+import {
+  DAHSHBOARDS_ALL_GROUPS_ID,
+  DAHSHBOARDS_NEXT_EPOCH_ID,
+} from '~/types/dashboard'
 
-export function getGroupLabel(t: ComposerTranslation, groupId?: number, groups?: VDBOverviewGroup[], allGroupLabel?: string): string {
+export function getGroupLabel(
+  t: ComposerTranslation,
+  groupId?: number,
+  groups?: VDBOverviewGroup[],
+  allGroupLabel?: string,
+): string {
   if (groupId === undefined) {
     return ''
   }

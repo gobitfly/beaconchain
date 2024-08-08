@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import {
-  faPowerOff,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faPowerOff } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorStatus } from '~/types/validator'
 
@@ -41,18 +39,18 @@ const iconColor = computed(() => {
   align-items: center;
   justify-content: space-between;
   gap: var(--padding-small);
-  .status{
+  .status {
     text-transform: capitalize;
     text-wrap: nowrap;
   }
 
-  .green{
+  .green {
     color: var(--positive-color);
   }
-  .red{
+  .red {
     color: var(--negative-color);
   }
-  .orange{
+  .orange {
     color: var(--orange-color);
   }
 }

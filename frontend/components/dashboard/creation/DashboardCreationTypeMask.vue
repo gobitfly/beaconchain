@@ -34,7 +34,12 @@ const name = defineModel<string>('name', { required: true })
 const emit = defineEmits<{ (e: 'next'): void }>()
 
 const continueDisabled = computed(() => {
-  return type.value === '' || name.value === '' || name.value.length > 32 || !REGEXP_VALID_NAME.test(name.value)
+  return (
+    type.value === ''
+    || name.value === ''
+    || name.value.length > 32
+    || !REGEXP_VALID_NAME.test(name.value)
+  )
 })
 
 const next = () => {
@@ -51,10 +56,10 @@ const next = () => {
   <div class="mask-container">
     <div class="element-container">
       <div class="big_text">
-        {{ $t('dashboard.creation.title') }}
+        {{ $t("dashboard.creation.title") }}
       </div>
       <div class="subtitle_text">
-        {{ $t('dashboard.creation.type.subtitle') }}
+        {{ $t("dashboard.creation.type.subtitle") }}
       </div>
       <BcToggleSingleBar
         v-model="type"
@@ -75,7 +80,7 @@ const next = () => {
           :disabled="continueDisabled"
           @click="next"
         >
-          {{ $t('navigation.continue') }}
+          {{ $t("navigation.continue") }}
         </Button>
       </div>
     </div>
@@ -83,32 +88,32 @@ const next = () => {
 </template>
 
 <style lang="scss" scoped>
-  .mask-container{
-    width: 100%;
-    .element-container{
+.mask-container {
+  width: 100%;
+  .element-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding);
+
+    .single-bar {
+      height: 100px;
+    }
+
+    .row-container {
       display: flex;
-      flex-direction: column;
+      justify-content: flex-end;
       gap: var(--padding);
 
-      .single-bar{
-        height: 100px;
+      input {
+        min-width: 250px;
+        max-width: 320px;
+        width: 100%;
       }
 
-      .row-container{
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--padding);
-
-        input {
-            min-width: 250px;
-            max-width: 320px;
-            width: 100%;
-        }
-
-        button {
-            width: 90px;
-        }
+      button {
+        width: 90px;
       }
     }
   }
+}
 </style>

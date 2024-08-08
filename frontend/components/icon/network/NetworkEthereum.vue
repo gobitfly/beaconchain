@@ -36,13 +36,13 @@
   fill: #343434;
 }
 .color2 {
-  fill: #8C8C8C;
+  fill: #8c8c8c;
 }
 .color3 {
-  fill: #3C3C3B;
+  fill: #3c3c3b;
 }
 .color4 {
-  fill: #2A262C;
+  fill: #2a262c;
 }
 .color5 {
   fill: #393939;
@@ -50,19 +50,19 @@
 
 .pastel {
   .color1 {
-  fill: #9A9A9A;
+    fill: #9a9a9a;
   }
   .color2 {
-    fill: #C6C6C6;
+    fill: #c6c6c6;
   }
   .color3 {
-    fill: #9E9E9D;
+    fill: #9e9e9d;
   }
   .color4 {
-    fill: #8A8A8A;
+    fill: #8a8a8a;
   }
   .color5 {
-    fill: #9C9C9C;
+    fill: #9c9c9c;
   }
 }
 </style>

@@ -93,13 +93,27 @@ const data: ValidatorHistoryDuties[] = [
 <template>
   <div class="container">
     <div class="item">
-      <DashboardTableSummaryReward :reward="{ el: '213129312312', cl: '18293791237' }" />
+      <DashboardTableSummaryReward
+        :reward="{ el: '213129312312', cl: '18293791237' }"
+      />
     </div>
     <div class="item">
-      <DashboardTableSummaryStatus :status="{ next_sync_count: 123, current_sync_count: 0, slashed_count: 1 }" />
+      <DashboardTableSummaryStatus
+        :status="{
+          next_sync_count: 123,
+          current_sync_count: 0,
+          slashed_count: 1,
+        }"
+      />
     </div>
     <div class="item">
-      <DashboardTableSummaryStatus :status="{ next_sync_count: 0, current_sync_count: 8, slashed_count: 0 }" />
+      <DashboardTableSummaryStatus
+        :status="{
+          next_sync_count: 0,
+          current_sync_count: 8,
+          slashed_count: 0,
+        }"
+      />
     </div>
     <div
       v-for="(duty, index) in data"
@@ -128,7 +142,6 @@ const data: ValidatorHistoryDuties[] = [
     margin: 10px;
     border: solid 1px beige;
     width: fit-content;
-    ;
   }
 }
 </style>

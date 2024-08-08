@@ -14,7 +14,8 @@ const visible = defineModel<boolean>()
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { refreshSettings, isLoading } = useUseNotificationsManagementSettingsProvider()
+const { refreshSettings, isLoading }
+  = useUseNotificationsManagementSettingsProvider()
 refreshSettings()
 </script>
 
@@ -154,7 +155,7 @@ refreshSettings()
   margin-right: 40px;
 }
 
-:global(.notifications-management-tab-view >.p-tabview-panels) {
+:global(.notifications-management-tab-view > .p-tabview-panels) {
   min-height: 652px;
 }
 

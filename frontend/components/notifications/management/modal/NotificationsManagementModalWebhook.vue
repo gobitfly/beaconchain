@@ -1,8 +1,6 @@
 <script lang="ts" setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faPaperPlane,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faPaperPlane } from '@fortawesome/pro-solid-svg-icons'
 import { useForm } from 'vee-validate'
 import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
@@ -20,21 +18,24 @@ const validationSchema = createSchemaObject({
   is_discord_webhook_enabled: validation.boolean(),
 })
 
-const { defineField, errors, handleSubmit, setFieldError, meta, values } = useForm({
-  validationSchema,
-  initialValues: {
-    webhook_url: props.value?.webhook_url || '',
-    is_discord_webhook_enabled: props.value?.is_discord_webhook_enabled || false,
-  },
-})
+const { defineField, errors, handleSubmit, setFieldError, meta, values }
+  = useForm({
+    validationSchema,
+    initialValues: {
+      webhook_url: props.value?.webhook_url || '',
+      is_discord_webhook_enabled:
+        props.value?.is_discord_webhook_enabled || false,
+    },
+  })
 
 const [webhook_url, webhook_url_attrs] = defineField('webhook_url', {
   validateOnModelUpdate: false,
 })
 
-const [is_discord_webhook_enabled, is_discord_webhook_enabled_attrs] = defineField('is_discord_webhook_enabled', {
-  validateOnModelUpdate: false,
-})
+const [is_discord_webhook_enabled, is_discord_webhook_enabled_attrs]
+  = defineField('is_discord_webhook_enabled', {
+    validateOnModelUpdate: false,
+  })
 
 const isFormDirty = computed(() => meta.value.dirty)
 const isFormValid = computed(() => meta.value.valid)
@@ -44,11 +45,13 @@ const { fetch } = useCustomFetch()
 const handleTestNotification = async () => {
   // 1. could not be implemented as a custom validation rule,
   // as they are always triggerd onMounted (at cast time)
-  if (!webhook_url.value && is_discord_webhook_enabled.value) { // 1.
+  if (!webhook_url.value && is_discord_webhook_enabled.value) {
+    // 1.
     setFieldError('webhook_url', $t('validation.webhook.discord_empty'))
     return
   }
-  if (!webhook_url.value && !is_discord_webhook_enabled.value) { // 1.
+  if (!webhook_url.value && !is_discord_webhook_enabled.value) {
+    // 1.
     setFieldError('webhook_url', $t('validation.webhook.empty'))
     return
   }
@@ -64,7 +67,9 @@ const handleTestNotification = async () => {
           is_discord_webhook_enabled: is_discord_webhook_enabled.value,
         },
       })
-      toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_discord') })
+      toast.showSuccess({
+        summary: $t('notifications.dashboards.toast.success.test_discord'),
+      })
       return
     }
     await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
@@ -73,7 +78,9 @@ const handleTestNotification = async () => {
         webhook_url: webhook_url.value,
       },
     })
-    toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
+    toast.showSuccess({
+      summary: $t('notifications.dashboards.toast.success.test_webhook_url'),
+    })
   }
   catch (error) {
     const summary = is_discord_webhook_enabled.value
@@ -103,7 +110,7 @@ const id = useId()
     :id
     class="notifications-management-dialog-webhook__header"
   >
-    {{ $t('notifications.dashboards.dialog.heading_webhook') }}
+    {{ $t("notifications.dashboards.dialog.heading_webhook") }}
   </h2>
   <BcForm
     v-focustrap
@@ -148,7 +155,7 @@ const id = useId()
         :is-aria-disabled="!isFormValid || !webhook_url"
         @click="handleTestNotification()"
       >
-        {{ $t('notifications.dashboards.dialog.button_webhook_test') }}
+        {{ $t("notifications.dashboards.dialog.button_webhook_test") }}
         <template #icon>
           <FontAwesomeIcon :icon="faPaperPlane" />
         </template>
@@ -157,7 +164,7 @@ const id = useId()
         class="notifications-management-dialog-webhook__primary-button"
         @click="onSubmit"
       >
-        {{ isFormDirty ? $t('navigation.save') : $t('navigation.done') }}
+        {{ isFormDirty ? $t("navigation.save") : $t("navigation.done") }}
       </BcButton>
     </div>
   </BcForm>

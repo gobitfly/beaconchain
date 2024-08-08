@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faPowerOff,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faPowerOff } from '@fortawesome/pro-solid-svg-icons'
 import type { SummaryValidatorsIconRowInfo } from '~/types/validator'
 
 interface Props {
@@ -12,7 +10,10 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const combinedTotal = computed<number>(() => props.total ?? props.icons?.reduce((sum, icon) => sum + icon.count, 0) ?? 0)
+const combinedTotal = computed<number>(
+  () =>
+    props.total ?? props.icons?.reduce((sum, icon) => sum + icon.count, 0) ?? 0,
+)
 </script>
 
 <template>
@@ -38,7 +39,7 @@ const combinedTotal = computed<number>(() => props.total ?? props.icons?.reduce(
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .status {
   display: flex;
@@ -78,7 +79,6 @@ const combinedTotal = computed<number>(() => props.total ?? props.icons?.reduce(
     }
 
     span {
-
       color: var(--negative-color);
     }
   }

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { VDBSlotVizSlot } from '~/types/api/slot_viz'
-import { type SlotVizCategories, type SlotVizIcons } from '~/types/dashboard/slotViz'
+import {
+  type SlotVizCategories,
+  type SlotVizIcons,
+} from '~/types/dashboard/slotViz'
 
 interface Props {
   data: VDBSlotVizSlot
@@ -12,10 +15,18 @@ const props = defineProps<Props>()
 const data = computed(() => {
   const slot: VDBSlotVizSlot = {
     ...props.data,
-    attestations: props.selectedCategories.includes('attestation') ? props.data.attestations : undefined,
-    proposal: props.selectedCategories.includes('proposal') ? props.data.proposal : undefined,
-    slashing: props.selectedCategories.includes('slashing') ? props.data.slashing : undefined,
-    sync: props.selectedCategories.includes('sync') ? props.data.sync : undefined,
+    attestations: props.selectedCategories.includes('attestation')
+      ? props.data.attestations
+      : undefined,
+    proposal: props.selectedCategories.includes('proposal')
+      ? props.data.proposal
+      : undefined,
+    slashing: props.selectedCategories.includes('slashing')
+      ? props.data.slashing
+      : undefined,
+    sync: props.selectedCategories.includes('sync')
+      ? props.data.sync
+      : undefined,
   }
   const showIcons = props.selectedCategories.includes('visible')
   let outer = ''
@@ -46,8 +57,16 @@ const data = computed(() => {
     inner = 'pending'
   }
   else {
-    const hasFailed = !!slot.attestations?.failed || !!slot.sync?.failed || !!slot.slashing?.failed || (!!slot.proposal && slot.status === 'missed')
-    const hasSuccess = !!slot.attestations?.success || !!slot.sync?.success || !!slot.slashing?.success || (!!slot.proposal && slot.status === 'proposed')
+    const hasFailed
+      = !!slot.attestations?.failed
+      || !!slot.sync?.failed
+      || !!slot.slashing?.failed
+      || (!!slot.proposal && slot.status === 'missed')
+    const hasSuccess
+      = !!slot.attestations?.success
+      || !!slot.sync?.success
+      || !!slot.slashing?.success
+      || (!!slot.proposal && slot.status === 'proposed')
     const hasPending = !!slot.attestations?.scheduled || !!slot.sync?.scheduled
     if (!hasFailed && !hasSuccess && !hasPending) {
       inner = 'proposed'
@@ -180,14 +199,14 @@ const data = computed(() => {
     height: 10px;
   }
 }
-.scheduled-current{
+.scheduled-current {
   box-shadow: 0px 0px 2px var(--text-color);
 }
-.scheduled-past{
+.scheduled-past {
   opacity: 0.5;
-  background-color: rgb(100,100,100);
+  background-color: rgb(100, 100, 100);
   .inner {
-    background-color: rgb(100,100,100);
+    background-color: rgb(100, 100, 100);
   }
 }
 

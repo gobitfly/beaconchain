@@ -1,7 +1,5 @@
 <script lang="ts" setup>
-import {
-  faInfoCircle,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
 
@@ -48,7 +46,7 @@ const input = defineModel<boolean>()
 </template>
 
 <style lang="scss">
-.label{
+.label {
   cursor: pointer;
 }
 .bc-input-checkbox__info {

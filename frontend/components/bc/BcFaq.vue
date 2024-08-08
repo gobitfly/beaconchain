@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faCaretRight,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faCaretRight } from '@fortawesome/pro-solid-svg-icons'
 
 interface Props {
   translationPath?: string
@@ -14,7 +12,7 @@ const questions = computed(() => {
   const list = []
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const path: string = `${props.translationPath}.${(list.length)}`
+    const path: string = `${props.translationPath}.${list.length}`
     const question = tD($t, `${path}.question`)
     if (!question) {
       break

@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle,
-} from '@fortawesome/pro-regular-svg-icons'
-import {
-  faArrowUpRightFromSquare,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import { type OverviewTableData } from '~/types/dashboard/overview'
 import { DashboardValidatorSubsetModal } from '#components'
 
@@ -82,7 +78,9 @@ const openValidatorModal = () => {
               v-for="info in props.data.infos"
               :key="info.label"
             >
-              <div><b>{{ info.label }}:</b> {{ info.value }}</div>
+              <div>
+                <b>{{ info.label }}:</b> {{ info.value }}
+              </div>
             </div>
           </div>
         </template>
@@ -121,7 +119,6 @@ const openValidatorModal = () => {
       margin-left: var(--padding);
     }
   }
-
 }
 
 .info-label-list {

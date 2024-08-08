@@ -12,8 +12,17 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const { blocks, query: lastQuery, isLoading, getBlocks } = useValidatorDashboardBlocksStore()
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const {
+  blocks,
+  query: lastQuery,
+  isLoading,
+  getBlocks,
+} = useValidatorDashboardBlocksStore()
+const {
+  value: query,
+  temp: tempQuery,
+  bounce: setQuery,
+} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
 const { hasValidators, overview } = useValidatorDashboardOverviewStore()
@@ -40,15 +49,23 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch([dashboardKey, overview], () => {
-  loadData()
-}, { immediate: true })
+watch(
+  [dashboardKey, overview],
+  () => {
+    loadData()
+  },
+  { immediate: true },
+)
 
-watch(query, (q) => {
-  if (q) {
-    getBlocks(dashboardKey.value, q)
-  }
-}, { immediate: true })
+watch(
+  query,
+  (q) => {
+    if (q) {
+      getBlocks(dashboardKey.value, q)
+    }
+  },
+  { immediate: true },
+)
 
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
@@ -87,7 +104,13 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.blocks.title')"
-      :search-placeholder="$t(isPublic ? 'dashboard.validator.blocks.search_placeholder_public' : 'dashboard.validator.blocks.search_placeholder')"
+      :search-placeholder="
+        $t(
+          isPublic
+            ? 'dashboard.validator.blocks.search_placeholder_public'
+            : 'dashboard.validator.blocks.search_placeholder',
+        )
+      "
       @set-search="setSearch"
     >
       <template #table>
@@ -121,7 +144,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   target="_blank"
                   class="link"
                 >
-                  {{ slotProps.data.proposer || '-' }}
+                  {{ slotProps.data.proposer || "-" }}
                 </BcLink>
               </template>
             </Column>
@@ -211,7 +234,9 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               field="status"
               :sortable="!colsVisible.mobileStatus"
               :header="$t('dashboard.validator.col.status')"
-              :body-class="colsVisible.mobileStatus ? 'status-mobile status' : 'status'"
+              :body-class="
+                colsVisible.mobileStatus ? 'status-mobile status' : 'status'
+              "
             >
               <template #body="slotProps">
                 <BlockTableStatus
@@ -270,7 +295,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
               <div class="expansion">
                 <div class="row">
                   <div class="label">
-                    {{ $t('common.epoch') }}:
+                    {{ $t("common.epoch") }}:
                   </div>
                   <BcLink
                     :to="`/epoch/${slotProps.data.epoch}`"
@@ -285,7 +310,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('common.slot') }}:
+                    {{ $t("common.slot") }}:
                   </div>
                   <BcLink
                     :to="`/slot/${slotProps.data.slot}`"
@@ -309,7 +334,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.status') }}:
+                    {{ $t("dashboard.validator.col.status") }}:
                   </div>
                   <div class="value">
                     <BlockTableStatus
@@ -321,7 +346,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.reward_recipient') }}:
+                    {{ $t("dashboard.validator.col.reward_recipient") }}:
                   </div>
                   <BcFormatHash
                     v-if="slotProps.data.reward_recipient?.hash"
@@ -335,7 +360,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.proposer_rewards') }}:
+                    {{ $t("dashboard.validator.col.proposer_rewards") }}:
                   </div>
                   <BlockTableRewardItem
                     :reward="slotProps.data.reward"
@@ -344,7 +369,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('block.col.graffiti') }}:
+                    {{ $t("block.col.graffiti") }}:
                   </div>
                   <BcFormatGraffiti :graffiti="slotProps.data.graffiti" />
                 </div>
@@ -364,7 +389,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.block-table) {
-  >.p-datatable-wrapper {
+  > .p-datatable-wrapper {
     min-height: 529px;
   }
 
@@ -392,7 +417,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   .age-field {
     white-space: nowrap;
   }
-  tr>td.age-field {
+  tr > td.age-field {
     padding: 0 7px;
     @include utils.set-all-width(142px);
   }
@@ -417,9 +442,8 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
 
   .future-row {
     td {
-
-      >div:not(.block-status),
-      >span {
+      > div:not(.block-status),
+      > span {
         opacity: 0.5;
       }
     }

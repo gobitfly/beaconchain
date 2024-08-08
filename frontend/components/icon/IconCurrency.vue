@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import type { CryptoCurrency, Currency, FiatCurrency } from '~/types/currencies'
+import type {
+  CryptoCurrency,
+  Currency,
+  FiatCurrency,
+} from '~/types/currencies'
 
 interface Props {
   currency?: Currency

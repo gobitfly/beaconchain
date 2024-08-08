@@ -34,9 +34,15 @@ const mapped = computed(() => {
   addDetail('attestation_source', props?.data?.attestation_source?.income)
   addDetail('attestation_target', props?.data?.attestation_target?.income)
   addDetail('proposer_el', props?.data?.proposal?.el_income)
-  addDetail('proposer_attestation', props?.data?.proposal?.cl_attestation_inclusion_income)
+  addDetail(
+    'proposer_attestation',
+    props?.data?.proposal?.cl_attestation_inclusion_income,
+  )
   addDetail('proposer_sync', props?.data?.proposal?.cl_sync_inclusion_income)
-  addDetail('proposer_slashing', props?.data?.proposal?.cl_slashing_inclusion_income)
+  addDetail(
+    'proposer_slashing',
+    props?.data?.proposal?.cl_slashing_inclusion_income,
+  )
   addDetail('total', total.toString())
   return {
     total,
@@ -73,9 +79,9 @@ const mapped = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.tooltip{
+.tooltip {
   text-align: left;
-  .head{
+  .head {
     margin-top: var(--padding);
   }
 }

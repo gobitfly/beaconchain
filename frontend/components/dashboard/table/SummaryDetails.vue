@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
+import {
+  type SummaryDetailsEfficiencyCombinedProp,
+  type SummaryRow,
+  type SummaryTableVisibility,
+  type SummaryTimeFrame,
+} from '~/types/dashboard/summary'
 
 interface Props {
   row: VDBSummaryTableRow
@@ -13,30 +18,67 @@ const props = defineProps<Props>()
 const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useTranslation()
-const { details: summary, getDetails } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
+const { details: summary, getDetails }
+  = useValidatorDashboardSummaryDetailsStore(
+    dashboardKey.value,
+    props.row.group_id,
+  )
 
-watch(() => props.timeFrame, () => {
-  getDetails(props.timeFrame)
-}, { deep: true, immediate: true })
+watch(
+  () => props.timeFrame,
+  () => {
+    getDetails(props.timeFrame)
+  },
+  { deep: true, immediate: true },
+)
 
 const data = computed<SummaryRow[][]>(() => {
   const list: SummaryRow[][] = [[], [], []]
 
-  const addToList = (index: number, prop?: SummaryDetailsEfficiencyCombinedProp, titleKey?: string) => {
+  const addToList = (
+    index: number,
+    prop?: SummaryDetailsEfficiencyCombinedProp,
+    titleKey?: string,
+  ) => {
     const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
     const row = { title, prop }
     list[index].push(row)
   }
 
-  const addPropsTolist = (index: number, props: SummaryDetailsEfficiencyCombinedProp[]) => {
+  const addPropsTolist = (
+    index: number,
+    props: SummaryDetailsEfficiencyCombinedProp[],
+  ) => {
     props.forEach(p => addToList(index, p))
   }
 
-  const rewardCols: SummaryDetailsEfficiencyCombinedProp[] = ['reward', 'missed_rewards']
-  let addCols: SummaryDetailsEfficiencyCombinedProp[] = props.tableVisibility.attestations ? [] : rewardCols
-  addPropsTolist(0, ['efficiency', ...addCols, 'attestations', 'attestations_source', 'attestations_target', 'attestations_head', 'attestation_efficiency', 'attestation_avg_incl_dist'])
+  const rewardCols: SummaryDetailsEfficiencyCombinedProp[] = [
+    'reward',
+    'missed_rewards',
+  ]
+  let addCols: SummaryDetailsEfficiencyCombinedProp[] = props.tableVisibility
+    .attestations
+    ? []
+    : rewardCols
+  addPropsTolist(0, [
+    'efficiency',
+    ...addCols,
+    'attestations',
+    'attestations_source',
+    'attestations_target',
+    'attestations_head',
+    'attestation_efficiency',
+    'attestation_avg_incl_dist',
+  ])
 
-  addPropsTolist(1, ['sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings'])
+  addPropsTolist(1, [
+    'sync',
+    'validators_sync',
+    'proposals',
+    'validators_proposal',
+    'slashings',
+    'validators_slashings',
+  ])
 
   addCols = !props.tableVisibility.attestations ? [] : rewardCols
   addPropsTolist(2, ['apr', 'luck', ...addCols])
@@ -48,7 +90,9 @@ const rowClass = (data: SummaryRow) => {
   if (!data.prop) {
     return 'bold' // headline without prop
   }
-  const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
+  const classNames: Partial<
+    Record<SummaryDetailsEfficiencyCombinedProp, string>
+  > = {
     efficiency: 'bold',
     attestations: 'bold',
     sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
@@ -104,7 +148,7 @@ const rowClass = (data: SummaryRow) => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .details-container {
   display: flex;
@@ -131,7 +175,7 @@ const rowClass = (data: SummaryRow) => {
       border-left: var(--container-border);
     }
 
-    .spacing-top{
+    .spacing-top {
       margin-top: var(--padding-small);
     }
 
@@ -170,7 +214,6 @@ const rowClass = (data: SummaryRow) => {
         @media (max-width: 729px) {
           width: 151px;
         }
-
       }
 
       .value {

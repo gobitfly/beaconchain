@@ -6,7 +6,9 @@ const isYearly = defineModel<boolean>({ required: true })
 const savingPercentage = computed(() => {
   let highestSaving = 0
   products.value?.premium_products.forEach((product) => {
-    const savingPercentage = (1 - (product.price_per_year_eur / (product.price_per_month_eur * 12))) * 100
+    const savingPercentage
+      = (1 - product.price_per_year_eur / (product.price_per_month_eur * 12))
+      * 100
     if (savingPercentage > highestSaving) {
       highestSaving = savingPercentage
     }
@@ -28,7 +30,7 @@ const savingPercentage = computed(() => {
       v-if="savingPercentage > 0"
       class="save-up-text"
     >
-      {{ $t('pricing.save_up_to', { percentage: savingPercentage }) }}
+      {{ $t("pricing.save_up_to", { percentage: savingPercentage }) }}
     </div>
   </div>
 </template>
@@ -40,7 +42,7 @@ const savingPercentage = computed(() => {
   gap: var(--padding);
   margin-bottom: 55px;
 
-  .toggle{
+  .toggle {
     font-size: 18px;
     font-weight: var(--montserrat-light);
     margin-bottom: 0;
