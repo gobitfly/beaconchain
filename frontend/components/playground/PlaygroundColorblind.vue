@@ -6,10 +6,16 @@ enum CS {
   RGBlinear,
   /** RGB values between 0-255 and including a gamma exponent of 2.2 (the standard way to store images) */
   RGBgamma,
-  /** RPI values (rainbow color, purity, intensity) whose `i` follows the intensity of the light that a human eye perceive (for a given `i`, all colors that you get with various `r` and `p` produce the same intensity for the human eye). Caution: some values of `i` are out-of-range for certain `r` and `p` values (meaning that they would correspond to RGB values greater than 255). */
+  /** RPI values (rainbow color, purity, intensity) whose `i` follows the intensity of the light that a human eye
+   * perceive (for a given `i`, all colors that you get with various `r` and `p` produce the same intensity for the
+   * human eye). Caution: some values of `i` are out-of-range for certain `r` and `p` values (meaning that they would
+   * correspond to RGB values greater than 255). */
   EyePercI,
-  /** RPJ values (rainbow color, purity, intensity) whose `j` is equivalent to `i/iMax` in the `CS.EyePercI` variant, so `j` is free to take any value between 0 and 1 (so, for a given `j`, the colors that you get with various `r` and `p` produce different intensities for the human eye, whereas the `CS.EyePercI` variant ensures that `i` represents a constant perceived intensity whatever the color is) */
-  EyeNormJ
+  /** RPJ values (rainbow color, purity, intensity) whose `j` is equivalent to `i/iMax` in the `CS.EyePercI` variant, so
+   * `j` is free to take any value between 0 and 1 (so, for a given `j`, the colors that you get with various `r` and
+   * `p` produce different intensities for the human eye, whereas the `CS.EyePercI` variant ensures that `i` represents
+   * a constant perceived intensity whatever the color is) */
+  EyeNormJ,
 }
 type Channel = 0 | 1 | 2
 const R: Channel = 0
@@ -24,12 +30,15 @@ const SmallestValue = 0.95 * (1 / 255) ** gamma
  *  - or the values are between 0-255 and include a gamma exponent of 2.2 (the standard way to store images). */
 class RGB {
   readonly space: CS
-  /** Read and write individually the values of the primary channels here. You cannot assign an array directly. To assign a whole array, use method `import()`. */
+  /** Read and write individually the values of the primary channels here. You cannot assign an array directly.
+   * To assign a whole array, use method `import()`. */
   readonly chan: number[]
 
-  /** @param space if `CS.RGBlinear` is given, the values will be between 0-1 and linear with respect to light intensity;
-   *  if `CS.RGBgamma` is given, the values will be between 0-255 and include a gamma exponent of 2.2 (the standard way to store images). */
-  constructor (space: CS) {
+  /** @param space if `CS.RGBlinear` is given, the values will be between 0-1 and linear with respect to light
+   * intensity;
+   * if `CS.RGBgamma` is given, the values will be between 0-255 and include a gamma exponent of 2.2 (the standard way
+   * to store images). */
+  constructor(space: CS) {
     if (space !== CS.RGBlinear && space !== CS.RGBgamma) {
       throw new Error('a RGB object can carry RGB information only')
     }
@@ -37,11 +46,14 @@ class RGB {
     this.chan = [0, 0, 0]
   }
 
-  /** Copies a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this order: R,G,B).
-   * For RGB and Eye objects, color spaces are automatically converted into the color space of the current RGB instance if they differ.
-   * If a regular array of numbers is given, its values are expected to be compatible with the color space of the current instance (either linear RGB or gamma-shaped RGB).
+  /** Copies a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this
+   * order: R,G,B).
+   * For RGB and Eye objects, color spaces are automatically converted into the color space of the current RGB instance
+   * if they differ.
+   * If a regular array of numbers is given, its values are expected to be compatible with the color space of the
+   * current instance (either linear RGB or gamma-shaped RGB).
    * @returns the instance that you import into (so not the parameter) */
-  import (from: number[] | RGB | Eye) : RGB {
+  import(from: number[] | RGB | Eye): RGB {
     if (Array.isArray(from) || from.space === this.space) {
       if (!Array.isArray(from)) {
         from = (from as RGB).chan
@@ -49,7 +61,8 @@ class RGB {
       for (const k of [R, G, B]) {
         this.chan[k] = from[k]
       }
-    } else {
+    }
+    else {
       switch (from.space) {
         case CS.RGBlinear :
           for (const k of [R, G, B]) {
@@ -71,10 +84,12 @@ class RGB {
   }
 
   /** Copies this RGB instance into another RGB or Eye instance.
-   * The color space of the current instance is automatically converted into the color space of the target instance if needed.
-   * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
+   * The color space of the current instance is automatically converted into the color space of the target instance if
+   * needed.
+   * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export`
+   * creates an instance for you, fills it and returns it.
    * @returns target instance (same as `to` if `to` was an instance) */
-  export (to: RGB | Eye | CS) : RGB & Eye {
+  export(to: RGB | Eye | CS): RGB & Eye {
     if (typeof to !== 'object') {
       to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
     }
@@ -83,7 +98,7 @@ class RGB {
   }
 
   /** corrects channel values that are not within the limits of the format (0-1 or 0-255) */
-  limit () : void {
+  limit(): void {
     const max = (this.space === CS.RGBlinear) ? 1 : 255
     for (const k of [R, G, B]) {
       if (this.chan[k] < 0) { this.chan[k] = 0 }
@@ -93,7 +108,8 @@ class RGB {
 }
 
 /** Color space close to human perception, in two variants (depending on the parameter given to the constructor) :
- * - either the intensity of the light is stored in `i` and follows what a human eye perceives (so a blue and a green having the same `i` will feel as luminous as each other),
+ * - either the intensity of the light is stored in `i` and follows what a human eye perceives (so a blue and a green
+ * having the same `i` will feel as luminous as each other),
  * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
 class Eye {
   readonly space: CS
@@ -101,19 +117,26 @@ class Eye {
   r: number
   /** Read and write the perceived purity here. It indicates how much of the pure color `r` is added to white. */
   p: number
-  /** Read and write the perceived intensity of the light here. It is not normalized because `r` and `p` determine the maximum intensity that can be perceived and it is often less than 1.
+  /** Read and write the perceived intensity of the light here. It is not normalized because `r` and `p` determine the
+   * maximum intensity that can be perceived and it is often less than 1.
    * If needed, property `iMax` tells the maximum value that `i` can hold for the current values of `r` and `p`.
-   * `i` makes sense only if `CS.EyePercI` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
+   * `i` makes sense only if `CS.EyePercI` has been passed to the constructor, otherwise its value is undefined and
+   * setting a value has no effect. */
   i: number
   /** Read and write the normalized intensity of the light here. Any value between 0 and 1 is possible.
-   * `j` makes sense only if `CS.EyeNormJ` has been passed to the constructor, otherwise its value is undefined and setting a value has no effect. */
+   * `j` makes sense only if `CS.EyeNormJ` has been passed to the constructor, otherwise its value is undefined and
+   * setting a value has no effect. */
   j: number
-  /** Maximum value that `i` can have for the current values of `r` and `p`. The intensity that a human perceives depends on the color. For example, in RGB (so on all monitors) a 255 blue looks less bright than a 255 green so the `iMax` of blue is lower than the `iMax` of green.
+  /** Maximum value that `i` can have for the current values of `r` and `p`. The intensity that a human perceives
+   *  depends on the color. For example, in RGB (so on all monitors) a 255 blue looks less bright than a 255 green so
+   *  the `iMax` of blue is lower than the `iMax` of green.
    *  If you set `i` to a value higher than `iMax`, the color will correspond to RGB values greater than 255.
    * `iMax` is kept up-to-date automatically when you change `r` or `p`. */
-  get iMax () : number {
+  get iMax(): number {
     if (this.Imax.rOfValue !== this.r || this.Imax.pOfValue !== this.p) {
-      this.convertToRGB(Eye.rgbLinear, Eye.lowestImax) // calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax possible) so the RGB cannot be black
+      /* calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax
+       * possible) so the RGB cannot be black */
+      this.convertToRGB(Eye.rgbLinear, Eye.lowestImax)
       const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
       this.Imax.value = Eye.lowestImax / (Eye.rgbLinear.chan[h] ** gammaInv)
       this.Imax.rOfValue = this.r
@@ -123,23 +146,34 @@ class Eye {
   }
 
   // constants of our perception model, all obtained empirically
-  protected static readonly sensicol = [15, 20, 5] // sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add
-  protected static readonly rPowers = [1.2, 1.6, 0.9] // controls the linearity of the perceived color with respect to r when primaries mix together to form a pure intermediary
-  protected static readonly overwhite = [0.6, 1, 0.6] // perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part in a row where the purity goes from 0 to 1)
-  protected static readonly iotaM = 0.15 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the second perceived dimmest contribute to the perceived intensity of the mix of the three
-  protected static readonly iotaD = 0.15 // when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how much the perceived dimmest contribute to the perceived intensity of the mix of the three
+  /** sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add */
+  protected static readonly sensicol = [15, 20, 5]
+  /* controls the linearity of the perceived color with respect to r when primaries mix together to form a pure
+  intermediary */
+  protected static readonly rPowers = [1.2, 1.6, 0.9]
+  /* perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part
+  in a row where the purity goes from 0 to 1) */
+  protected static readonly overwhite = [0.6, 1, 0.6]
+  /*  when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how
+  much the second perceived dimmest contribute to the perceived intensity of the mix of the three */
+  protected static readonly iotaM = 0.15
+  /** when the primaries of a given color are ordered by perceived intensities(so by `value * sensicol`), tells how much
+   * the perceived dimmest contribute to the perceived intensity of the mix of the three */
+  protected static readonly iotaD = 0.15
   // the next 2 constants will be filled by the constructor
   protected static readonly sensicolNorm = [0, 0, 0]
   protected static readonly rPowersInv = [0, 0, 0]
   protected static readonly Idivider = Eye.sensicol[R] * Eye.iotaM + Eye.sensicol[G] + Eye.sensicol[B] * Eye.iotaD
 
-  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
+  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set
+   * to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
   static readonly lowestImax = (Eye.sensicol[B] / Eye.Idivider) ** gammaInv
 
   /**
-   * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human eye perceives;
-   * if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any value between 0 and 1. */
-  constructor (space: CS) {
+   * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human
+   * eye perceives; if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any
+   * value between 0 and 1. */
+  constructor(space: CS) {
     if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
       throw new Error('an Eye object can carry RPI/J information only')
     }
@@ -156,7 +190,7 @@ class Eye {
   private Imax = {
     value: 0,
     rOfValue: -1,
-    pOfValue: -1
+    pOfValue: -1,
   }
 
   protected static rgbLinear = new RGB(CS.RGBlinear)
@@ -166,7 +200,7 @@ class Eye {
    * Color spaces are automatically converted into the color space of the current Eye instance if they differ.
    * If an array of values is given, it is assumed to contain gamma-shaped RGB.
    * @returns the instance that you import into (so not the parameter) */
-  import (from: RGB | Eye | number[]) : Eye {
+  import(from: RGB | Eye | number[]): Eye {
     if (Array.isArray(from)) {
       from = Eye.rgbGamma.import(from)
     }
@@ -183,11 +217,13 @@ class Eye {
       if (anchors12Contributions < SmallestValue) { // the 3 channels are equal, so we have black, grey or white
         this.r = 0.5
         this.p = 0
-      } else {
+      }
+      else {
         let d = anchor2Contribution / anchors12Contributions
         if (d < 1 / 2) {
           d = (2 * d) ** Eye.rPowers[h1] / 2
-        } else {
+        }
+        else {
           d = (2 * d - 1) ** Eye.rPowersInv[h2] / 2 + 1 / 2
         }
         this.r = (h1 + d) / 3
@@ -195,7 +231,8 @@ class Eye {
         this.p = w / (rgb[l] + w)
       }
       this.fillIntensityFromRGB(rgb)
-    } else {
+    }
+    else {
       from = from as Eye // for the static checker
       this.r = from.r
       this.p = from.p
@@ -207,7 +244,8 @@ class Eye {
       if (from.space !== this.space) {
         if (this.space === CS.EyePercI) {
           this.i = this.j * this.iMax
-        } else {
+        }
+        else {
           this.j = this.i / from.iMax
         }
       }
@@ -216,34 +254,39 @@ class Eye {
   }
 
   /** Copies this Eye instance into another RGB or Eye instance, or in a gamma-shaped RGB array.
-   * The color space of the current instance is automatically converted into the color space of the target instance if needed.
-   * @param to existing instance or array to fill, or if the identifier of a color space is given instead of an object, `export` creates an instance for you, fills it and returns it.
+   * The color space of the current instance is automatically converted into the color space of the target instance if
+   * needed.
+   * @param to existing instance or array to fill, or if the identifier of a color space is given instead of an object,
+   * `export` creates an instance for you, fills it and returns it.
    * @returns target instance or array (same as `to` if `to` was an instance or an array) */
-  export (to: RGB | Eye | CS | number[]) : RGB & Eye & number[] {
+  export(to: RGB | Eye | CS | number[]): RGB & Eye & number[] {
     if (Array.isArray(to)) {
       this.convertToRGB(Eye.rgbLinear, this.i)
       Eye.rgbGamma.import(Eye.rgbLinear)
       for (const k of [R, G, B]) {
         to[k] = Eye.rgbGamma.chan[k]
       }
-    } else {
+    }
+    else {
       if (typeof to !== 'object') {
         to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
       }
       if (to.space === CS.EyePercI || to.space === CS.EyeNormJ) {
         to.import(this)
-      } else
+      }
+      else
         if (to.space === CS.RGBgamma) {
           this.convertToRGB(Eye.rgbLinear, this.i)
           to.import(Eye.rgbLinear)
-        } else {
+        }
+        else {
           this.convertToRGB(to as RGB, this.i)
         }
     }
     return to as RGB & Eye & number[]
   }
 
-  protected convertToRGB (to: RGB, i: number) : void {
+  protected convertToRGB(to: RGB, i: number): void {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
     const ratio = [0, 0, 0]
@@ -251,14 +294,17 @@ class Eye {
     let d = 3 * this.r - h1
     if (d < 1 / 2) {
       d = (2 * d) ** Eye.rPowersInv[h1] / 2
-    } else {
+    }
+    else {
       d = (2 * d - 1) ** Eye.rPowers[h2] / 2 + 1 / 2
     }
-    if ((d < SmallestValue && p > (1 - SmallestValue)) || (this.space === CS.EyePercI && i < SmallestValue) || (this.space === CS.EyeNormJ && this.j < SmallestValue)) {
+    if ((d < SmallestValue && p > (1 - SmallestValue)) || (this.space === CS.EyePercI && i < SmallestValue)
+      || (this.space === CS.EyeNormJ && this.j < SmallestValue)) {
       to.chan[l] = 0
       to.chan[h1] = (this.space === CS.EyePercI) ? i ** gamma / Eye.sensicolNorm[h1] : this.j ** gamma
       to.chan[h2] = 0
-    } else {
+    }
+    else {
       const S = (1 - p) * (d * Eye.overwhite[h2] + (1 - d) * Eye.overwhite[h1])
       const T = p * d
       const U = S + T
@@ -270,11 +316,13 @@ class Eye {
         const [x, y, z] = Eye.RGBtoChannelOrder(Ir)
         to.chan[h2] = i ** gamma / (Ir[x] * Eye.iotaD + Ir[y] * Eye.iotaM + Ir[z])
         to.chan[h1] = to.chan[h2] * ratio[h1]
-      } else {
+      }
+      else {
         to.chan[h] = this.j ** gamma
         if (h === h2) {
           to.chan[h1] = to.chan[h2] * ratio[h1]
-        } else {
+        }
+        else {
           to.chan[h2] = to.chan[h1] / ratio[h1] // if h ≠ h2 then h1 is the highest channel so ratio[h1] > 0
         }
       }
@@ -282,48 +330,68 @@ class Eye {
     }
   }
 
-  protected fillIntensityFromRGB (rgb : number[]) : void {
+  protected fillIntensityFromRGB(rgb: number[]): void {
     if (this.space === CS.EyePercI) {
       const I = [Eye.sensicolNorm[R] * rgb[R], Eye.sensicolNorm[G] * rgb[G], Eye.sensicolNorm[B] * rgb[B]]
       const [x, y, z] = Eye.RGBtoChannelOrder(I)
       this.i = (I[x] * Eye.iotaD + I[y] * Eye.iotaM + I[z]) ** gammaInv
-    } else {
+    }
+    else {
       const h = Eye.RGBtoHighestChannel(rgb)
-      // due to our definitions of r and p, rgb[h] turns out to be the ratio between i (no matter how i is calculated) and the maximum i that could be reached with r and p constant
+      // due to our definitions of r and p, rgb[h] turns out to be the ratio between i (no matter how i is calculated)
+      // and the maximum i that could be reached with r and p constant
       this.j = rgb[h] ** gammaInv
     }
   }
 
-  /** @returns the channel carrying the lowest value. In case of equality(ies), B is preferred over R and R is preferred over G. */
-  protected static RGBtoLowestChannel (rgb : number[]) : Channel {
+  /** @returns the channel carrying the lowest value. In case of equality(ies), B is preferred over R and R is preferred
+   * over G. */
+  protected static RGBtoLowestChannel(rgb: number[]): Channel {
     if (rgb[R] <= rgb[G]) {
-      if (rgb[R] < rgb[B]) { return R }
-    } else
-      if (rgb[G] < rgb[B]) { return G }
+      if (rgb[R] < rgb[B]) {
+        return R
+      }
+    }
+    else
+      if (rgb[G] < rgb[B]) {
+        return G
+      }
     return B
   }
 
-  /** @returns the channel carrying the highest value. In case of equality(ies), G is preferred over R and R is preferred over B. */
-  protected static RGBtoHighestChannel (rgb : number[]) : Channel {
+  /** @returns the channel carrying the highest value. In case of equality(ies), G is preferred over R and R is
+   * preferred over B. */
+  protected static RGBtoHighestChannel(rgb: number[]): Channel {
     if (rgb[R] > rgb[G]) {
-      if (rgb[R] >= rgb[B]) { return R }
-    } else
-      if (rgb[G] >= rgb[B]) { return G }
+      if (rgb[R] >= rgb[B]) {
+        return R
+      }
+    }
+    else
+      if (rgb[G] >= rgb[B]) {
+        return G
+      }
     return B
   }
 
-  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is placed before R and R is placed before G. */
-  protected static RGBtoChannelOrder (rgb : number[]) : Channel[] {
+  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is
+   * placed before R and R is placed before G. */
+  protected static RGBtoChannelOrder(rgb: number[]): Channel[] {
     if (rgb[R] <= rgb[G]) {
-      if (rgb[G] < rgb[B]) { return [R, G, B] }
+      if (rgb[G] < rgb[B]) {
+        return [R, G, B]
+      }
       return (rgb[R] < rgb[B]) ? [R, B, G] : [B, R, G]
     }
-    if (rgb[R] < rgb[B]) { return [G, R, B] }
+    if (rgb[R] < rgb[B]) {
+      return [G, R, B]
+    }
     return (rgb[G] < rgb[B]) ? [G, B, R] : [B, G, R]
   }
 
-  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is placed before R and R is placed before G. */
-  protected static rToChannelOrder (r : number) : Channel[] {
+  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is
+   * placed before R and R is placed before G. */
+  protected static rToChannelOrder(r: number): Channel[] {
     if (r <= 2 / 6) {
       return (r < 1 / 6) ? [B, G, R] : [B, R, G]
     }
@@ -334,7 +402,7 @@ class Eye {
   }
 
   /** @returns the anchors in the same order as on the rainbow (note that R is both before G and after B) */
-  protected static lowestChanToAnchors (lowestChan: Channel) : Channel[] {
+  protected static lowestChanToAnchors(lowestChan: Channel): Channel[] {
     switch (lowestChan) {
       case R : return [G, B]
       case G : return [B, R]
@@ -344,14 +412,17 @@ class Eye {
   }
 }
 
-function distance (eye1: Eye, eye2: Eye) : number {
-  function colorOnSlice (e: Eye) : number[] {
+function distance(eye1: Eye, eye2: Eye): number {
+  function colorOnSlice(e: Eye): number[] {
     const i = (e.space === CS.EyePercI) ? e.i : e.j * e.iMax
     const pPi3 = Math.PI / 3 * e.p
     return [i * Math.sin(pPi3), i * Math.cos(pPi3), 0]
   }
   const [r1, r2] = (eye1.r < eye2.r) ? [eye1.r, eye2.r] : [eye2.r, eye1.r]
-  const rDist = Math.min(6 * Math.min(r2 - r1, 1 + r1 - r2), 1) // arbitrary / subjective: a distance of 1/6 on r (so the distance between a primary and its closest secondary) is how much two colors can feel different at most. This results in a distance of 1. Change 6 for 3 to get a value evolving linerarly between a twice larger range (so the distance primary-secondary would be 0.5).
+  // arbitrary / subjective: a distance of 1/6 on r (sothe distance between a primary and its closest secondary) is how
+  // much two colors can feel different at most. This results in a distance of 1. Change 6 for 3 to get a value evolving
+  // linerarly between a twice larger range (so the distance primary-secondary would be 0.5).
+  const rDist = Math.min(6 * Math.min(r2 - r1, 1 + r1 - r2), 1)
   const cosSlices = (2 - rDist * rDist) / 2
   const slice1 = colorOnSlice(eye1)
   const slice2 = colorOnSlice(eye2)
@@ -366,10 +437,10 @@ enum ColorBlindness { Red, Green }
 
 const timeAllowed = 2000 // ms
 /** maximum number of colors that we do not want to touch temporarily */
-const tabuLength = 7
+const tabuLength = 10
 const debug = true
 
-function enhanceColors (colors: ColorDefinition[], colorBlindness: ColorBlindness) : ColorDefinition[] {
+function enhanceColors(colors: ColorDefinition[], colorBlindness: ColorBlindness): ColorDefinition[] {
   const original = []
   for (const def of colors) {
     if (!def.color.includes('#')) {
@@ -387,13 +458,13 @@ function enhanceColors (colors: ColorDefinition[], colorBlindness: ColorBlindnes
   for (let c = 0; c < colors.length; c++) {
     result.push({
       color: RGBarrayToCSS(enhanced[c].chan),
-      identifier: colors[c].identifier
+      identifier: colors[c].identifier,
     })
   }
   return result
 }
 
-function CSStoRGBarray (CSS: string) : number[] {
+function CSStoRGBarray(CSS: string): number[] {
   const i = CSS.indexOf('#')
   const col = parseInt(CSS.slice(i + 1), 16)
   const arr: number[] = []
@@ -403,7 +474,7 @@ function CSStoRGBarray (CSS: string) : number[] {
   return arr
 }
 
-function RGBarrayToCSS (RGB : number[]) : string {
+function RGBarrayToCSS(RGB: number[]): string {
   let hex = (RGB[B] | RGB[G] << 8 | RGB[R] << 16).toString(16)
   hex = ('000000' + hex).slice(-6)
   return '#' + hex
@@ -415,16 +486,17 @@ let distancesOrig: number[][]
 let wip3D: RGB[] // CS.RGBlinear
 let wip2D: Eye[] // CS.EyePercI
 let errors2D: number[]
-const tabuQueue = new Array<number>(tabuLength) // queue of color positions (hashed) that we do not want to go back to for some time
+const tabuQueue = new Array<number>(tabuLength)
 
 /** @param input must be in the CS.RGBgamma format.
  * @returns enchanced colors in the CS.RGBgamma format
  */
-function search (input : RGB[], colorBlindness: ColorBlindness) : RGB[] {
+function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
   const endTime = performance.now() + timeAllowed
   blindness = colorBlindness
   original = input.map(col => col.export(CS.RGBlinear))
-  // storing in distancesOrig the distances between the original colors: the algorithm will try to reproduce them on the 2D plane
+  // storing in distancesOrig the distances between the original colors: the algorithm will try to reproduce them on the
+  // 2D plane
   distancesOrig = []
   const originalEye = original.map(col => col.export(CS.EyePercI))
   const line: number[] = []
@@ -435,9 +507,11 @@ function search (input : RGB[], colorBlindness: ColorBlindness) : RGB[] {
     }
     distancesOrig.push([...line])
   }
-  // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way that they get more and more distinguishable when viewed by a color blind person
+  // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way that
+  // they get more and more distinguishable when viewed by a color blind person
   wip3D = original.map(col => col.export(CS.RGBlinear))
-  // projecting the original colors into wip2D: they are the starting point and the search phase will make them more and more distinguishable at each iteration
+  // projecting the original colors into wip2D: they are the starting point and the search phase will make them more and
+  // more distinguishable at each iteration
   wip2D = wip3D.map(col => projectOnto2D(col.chan).export(CS.EyePercI))
   errors2D = wip2D.map((col, k) => distError(k, col))
 
@@ -469,9 +543,10 @@ function search (input : RGB[], colorBlindness: ColorBlindness) : RGB[] {
   return bestWip3D
 }
 
-const hashColor = (k: number, rgb: number[]) => k + Math.floor(256 * rgb[R]) + Math.floor((256 * 128) * rgb[G]) + Math.floor((256 * 128 * 128) * rgb[B])
+const hashColor = (k: number, rgb: number[]) => k + Math.floor(256 * rgb[R]) + Math.floor((256 * 128) * rgb[G])
+  + Math.floor((256 * 128 * 128) * rgb[B])
 
-function optimizeOneStepFurther () {
+function optimizeOneStepFurther() {
   let bestK: number = 0
   let bestError: number = 0
   let bestErrorGain: number = Number.MAX_SAFE_INTEGER
@@ -484,8 +559,12 @@ function optimizeOneStepFurther () {
       for (const s of [-step, +step]) {
         const restoredValue = triedColor.chan[c]
         triedColor.chan[c] += s
-        if (triedColor.chan[c] < 0) { triedColor.chan[c] = 0 }
-        if (triedColor.chan[c] > 1) { triedColor.chan[c] = 1 }
+        if (triedColor.chan[c] < 0) {
+          triedColor.chan[c] = 0
+        }
+        if (triedColor.chan[c] > 1) {
+          triedColor.chan[c] = 1
+        }
         if (!tabuQueue.includes(hashColor(k, triedColor.chan))) {
           const error = distError(k, projectOnto2D(triedColor.chan))
           if (error - errors2D[k] < bestErrorGain) {
@@ -507,52 +586,63 @@ function optimizeOneStepFurther () {
 }
 
 const cbSightPO2D = new Eye(CS.EyePercI)
-const rgbP02D = new RGB(CS.RGBlinear)
+const rgbPO2D = new RGB(CS.RGBlinear)
 
 /** @returns the projection of `rgb` into the Eye color-space of the color-blind person */
-function projectOnto2D (rgb: number[]) : Eye {
+function projectOnto2D(rgb: number[]): Eye {
   switch (blindness) {
-    // The matrices have been calculated by following the prodedure of
-    // Viénot, F., Brettel, H., & Mollon, J. D. (1999) "Digital video colourmaps for checking the legibility of displays by dichromats". Color Research and Application, 24, 4, 243-251.
+    /* The matrices have been calculated by following the prodedure of
+     * Viénot, F., Brettel, H., & Mollon, J. D. (1999) "Digital video colourmaps for checking the legibility of displays
+     * by dichromats". Color Research and Application, 24, 4, 243-251. */
     case ColorBlindness.Red :
-      rgbP02D.chan[R] = 0.1123822674257492 * rgb[R] + 0.8876119706946073 * rgb[G]
-      rgbP02D.chan[G] = rgbP02D.chan[R]
-      rgbP02D.chan[B] = 0.00400576009958313 * rgb[R] - 0.004005734096601488 * rgb[G] + rgb[B]
+      rgbPO2D.chan[R] = 0.1123822674257492 * rgb[R] + 0.8876119706946073 * rgb[G]
+      rgbPO2D.chan[G] = rgbPO2D.chan[R]
+      rgbPO2D.chan[B] = 0.00400576009958313 * rgb[R] - 0.004005734096601488 * rgb[G] + rgb[B]
       break
     case ColorBlindness.Green :
-      for (const k of [R, G, B]) { rgbP02D.chan[k] = 0.99 * rgb[k] + 0.005 }
-      rgbP02D.chan[R] = 0.292750775976202 * rgbP02D.chan[R] + 0.7072518589062524 * rgbP02D.chan[G]
-      rgbP02D.chan[G] = rgbP02D.chan[R]
-      rgbP02D.chan[B] = -0.02233647741916585 * rgbP02D.chan[R] + 0.02233656063451689 * rgbP02D.chan[G] + rgbP02D.chan[B]
-      for (const k of [R, G, B]) { rgbP02D.chan[k] = 0.99 * rgbP02D.chan[k] + 0.005 }
+      for (const k of [R, G, B]) {
+        rgbPO2D.chan[k] = 0.99 * rgb[k] + 0.005
+      }
+      rgbPO2D.chan[R] = 0.292750775976202 * rgbPO2D.chan[R] + 0.7072518589062524 * rgbPO2D.chan[G]
+      rgbPO2D.chan[G] = rgbPO2D.chan[R]
+      rgbPO2D.chan[B] = -0.02233647741916585 * rgbPO2D.chan[R] + 0.02233656063451689 * rgbPO2D.chan[G] + rgbPO2D.chan[B]
+      for (const k of [R, G, B]) {
+        rgbPO2D.chan[k] = 0.99 * rgbPO2D.chan[k] + 0.005
+      }
       break
     default :
-      rgbP02D.import(rgb)
+      rgbPO2D.import(rgb)
       break
   }
-  rgbP02D.limit() // in rare cases, a value can happen to be slightly below 0 or slightly above 1 (the 0—255 range would become approximately -3—258).
-  cbSightPO2D.import(rgbP02D)
+  // in rare cases, a value can happen to be slightly below 0 or slightly above 1 (the 0—255 range would become
+  // approximately -3—258).
+  rgbPO2D.limit()
+  cbSightPO2D.import(rgbPO2D)
   return cbSightPO2D
 }
 
-/** for a given color `k` stored in `wipColor2D`, this function calculates a value continuously increasing with respect to
- *    the sum over all colors `l` of
+/** for a given color `k` stored in `wipColor2D`, this function calculates a value continuously increasing with respect
+ *    to the sum over all colors `l` of
  *      the difference between:
  *        the distance between the original colors k and l
  *        the distance between the projected colors `wipColor2D` and l */
-function distError (k: number, wipColor2D: Eye) : number {
+function distError(k: number, wipColor2D: Eye): number {
   let result = 0
   for (let l = 0; l < distancesOrig.length; l++) {
-    if (k === l) { continue }
+    if (k === l) {
+      continue
+    }
     const diff = distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1
-    // first case below: the shorter the distance for the CB person than for the normal person, the higher the error, and the error grows fast w.r.t the difference
-    // second case: the longer the distance for the CB person than for the normal person, the higher the error, but the error does not grow fast as this means higher contrast
-    result += (diff < 0 ? (-diff) * 2 : diff / 2)
+    /* First case below: the shorter the distance for the CB person than for the normal person, the higher the error,
+     * and the error grows fast w.r.t the difference.
+     * Second case: the longer the distance for the CB person than for the normal person, the higher the error, but the
+     * error does not grow fast because this case brings higher contrast. */
+    result += (diff < 0 ? (-diff) ** 2 : diff / 2)
   }
   return result
 }
 
-function totalError () : number {
+function totalError(): number {
   return errors2D.reduce((prev, curr) => prev + curr, 0)
 }
 
@@ -574,14 +664,17 @@ for (let i = 0; i < 16; i++) {
   randColors.push(color)
 }
 blindness = ColorBlindness.Green
-const randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), blindness).map(obj => obj.color)
-const randColorsCB = randColors.map(col => RGBarrayToCSS(projectOnto2D(RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
-const randColorsEnhancedCB = randColorsEnhanced.map(col => RGBarrayToCSS(projectOnto2D(RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
+const randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), blindness)
+  .map(obj => obj.color)
+const randColorsCB = randColors.map(col => RGBarrayToCSS(projectOnto2D(RGBgamma.import(
+  CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
+const randColorsEnhancedCB = randColorsEnhanced.map(col => RGBarrayToCSS(projectOnto2D(
+  RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
 
 const colorI = new Eye(CS.EyePercI)
 const colorJ = new Eye(CS.EyeNormJ)
 
-const allColors : Array<Array<Array<{rgb: RGB, eye: Eye}>>> = []
+const allColors: Array<Array<Array<{ rgb: RGB, eye: Eye }>>> = []
 const numR = 6
 const numP = 21
 const numI = 40
@@ -592,14 +685,18 @@ for (let r = 0; r <= numR; r++) {
     allColors[r].push([])
     for (let i = 0; i <= numI; i++) {
       if (i > 0 && (i / numI) > colorI.iMax) {
-        if (i - 1 < maxIntensityMinIndex) { maxIntensityMinIndex = i - 1 }
+        if (i - 1 < maxIntensityMinIndex) {
+          maxIntensityMinIndex = i - 1
+        }
         break
       }
       colorI.r = r / numR
       colorI.p = p / numP
       colorI.i = i / numI
       allColors[r][p].push({ rgb: colorI.export(CS.RGBgamma), eye: colorI.export(CS.EyePercI) })
-      if (allColors[r][p][i].rgb.chan[R] > 255 || allColors[r][p][i].rgb.chan[G] > 255 || allColors[r][p][i].rgb.chan[B] > 255 || allColors[r][p][i].rgb.chan[R] < 0 || allColors[r][p][i].rgb.chan[G] < 0 || allColors[r][p][i].rgb.chan[B] < 0) {
+      if (allColors[r][p][i].rgb.chan[R] > 255 || allColors[r][p][i].rgb.chan[G] > 255
+        || allColors[r][p][i].rgb.chan[B] > 255 || allColors[r][p][i].rgb.chan[R] < 0
+        || allColors[r][p][i].rgb.chan[G] < 0 || allColors[r][p][i].rgb.chan[B] < 0) {
         cons.log('#### PercI -> RGB  out of bounds')
         cons.log(allColors[r][p][i].rgb)
       }
@@ -608,7 +705,8 @@ for (let r = 0; r <= numR; r++) {
         cons.log('#### PercI -> RGB -> PercI -> RGB  out of bounds')
         cons.log(rgb2)
       }
-      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1]
+        || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> RGB -> PercI -> RGB.')
         cons.log('PercI:', allColors[r][p][i].eye)
         cons.log('PercI -> RGB -> PercI :', (new Eye(CS.EyePercI)).import(allColors[r][p][i].rgb))
@@ -620,7 +718,8 @@ for (let r = 0; r <= numR; r++) {
         cons.log('#### PercI -> RGB -> NormJ -> RGB  out of bounds')
         cons.log(rgb2)
       }
-      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1]
+        || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> RGB -> NormJ -> RGB.')
         cons.log('PercI -> RGB :', allColors[r][p][i].rgb.chan)
         cons.log('PercI -> RGB -> NormJ -> RGB :', rgb2)
@@ -632,7 +731,8 @@ for (let r = 0; r <= numR; r++) {
         cons.log('#### PercI -> NormJ -> RGB  out of bounds')
         cons.log(rgb2)
       }
-      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1]
+        || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> NormJ -> RGB.')
         cons.log('PercI -> RGB :', allColors[r][p][i].rgb.chan)
         cons.log('PercI -> NormJ -> RGB :', rgb2)
@@ -640,7 +740,8 @@ for (let r = 0; r <= numR; r++) {
         cons.log('PercI -> NormJ :', allColors[r][p][i].eye.export(CS.EyeNormJ))
       }
       rgb2 = allColors[r][p][i].eye.export(CS.EyeNormJ).export(CS.EyePercI).export(CS.RGBgamma).chan
-      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1] || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
+      if (allColors[r][p][i].rgb.chan[0] !== rgb2[0] || allColors[r][p][i].rgb.chan[1] !== rgb2[1]
+        || allColors[r][p][i].rgb.chan[2] !== rgb2[2]) {
         cons.log('#### PercI -> RGB  different from  PercI -> NormJ -> PercI -> RGB.')
         cons.log('PercI -> RGB :', allColors[r][p][i].rgb.chan)
         cons.log('PercI -> NormJ -> PercI -> RGB :', rgb2)
@@ -670,7 +771,7 @@ for (let r = 0; r <= 48; r++) {
   granularRainbow48.push(colorJ.export(CS.RGBgamma))
 }
 
-const purityGradientJ : Array<Array<number[]>> = []
+const purityGradientJ: Array<Array<number[]>> = []
 colorJ.j = 0.7
 for (let r = 0; r < 1; r += 1 / 3) {
   const rowJ: Array<number[]> = []
@@ -718,10 +819,11 @@ for (let k = 0; k <= 16; k++) {
 let krkpki1 = [0, 0, 0]
 let krkpki2 = [0, 0, 0]
 const distanceBetweenLastTwoColors = ref<number>(0)
-function showDistanceTo (kr: number, kp: number, ki: number) {
+function showDistanceTo(kr: number, kp: number, ki: number) {
   krkpki1 = krkpki2
   krkpki2 = [kr, kp, ki]
-  distanceBetweenLastTwoColors.value = distance(allColors[krkpki1[0]][krkpki1[1]][krkpki1[2]].eye, allColors[kr][kp][ki].eye)
+  distanceBetweenLastTwoColors.value = distance(
+    allColors[krkpki1[0]][krkpki1[1]][krkpki1[2]].eye, allColors[kr][kp][ki].eye)
   distanceBetweenLastTwoColors.value = Math.round(1000 * distanceBetweenLastTwoColors.value) / 1000
 }
 </script>
@@ -735,8 +837,16 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
             <div style="text-align: center; width:240px;">
               seen with normal vision <br><br>
             </div>
-            <div v-for="(_,m) of 4" :key="m">
-              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColors[4*m+n]" />
+            <div
+              v-for="(_, m) of 4"
+              :key="m"
+            >
+              <div
+                v-for="(__, n) of 4"
+                :key="n"
+                style="display: inline-block; width: 60px; height: 60px;"
+                :style="'background-color:'+randColors[4*m+n]"
+              />
             </div>
             <div style="text-align: center; width:240px; font-size: 50px; margin-top: 10px;">
               ⬇
@@ -749,8 +859,16 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
             <div style="text-align: center; width:240px;">
               seen by a color-blind person <br><br>
             </div>
-            <div v-for="(_,m) of 4" :key="m">
-              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColorsCB[4*m+n]" />
+            <div
+              v-for="(_, m) of 4"
+              :key="m"
+            >
+              <div
+                v-for="(__, n) of 4"
+                :key="n"
+                style="display: inline-block; width: 60px; height: 60px;"
+                :style="'background-color:'+randColorsCB[4*m+n]"
+              />
             </div>
           </div>
         </div>
@@ -759,8 +877,16 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
             <div style="text-align: center; width:240px;">
               enhanced by Bitfly's technology <br><br>
             </div>
-            <div v-for="(_,m) of 4" :key="m">
-              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColorsEnhanced[4*m+n]" />
+            <div
+              v-for="(_, m) of 4"
+              :key="m"
+            >
+              <div
+                v-for="(__, n) of 4"
+                :key="n"
+                style="display: inline-block; width: 60px; height: 60px;"
+                :style="'background-color:'+randColorsEnhanced[4*m+n]"
+              />
             </div>
           </div>
           <div style="margin-top: 130px; font-size: 30px;">
@@ -770,8 +896,16 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
             <div style="text-align: center; width:240px;">
               seen by a color-blind person <br><br>
             </div>
-            <div v-for="(_,m) of 4" :key="m">
-              <div v-for="(__,n) of 4" :key="n" style="display: inline-block; width: 60px; height: 60px;" :style="'background-color:'+randColorsEnhancedCB[4*m+n]" />
+            <div
+              v-for="(_, m) of 4"
+              :key="m"
+            >
+              <div
+                v-for="(__, n) of 4"
+                :key="n"
+                style="display: inline-block; width: 60px; height: 60px;"
+                :style="'background-color:'+randColorsEnhancedCB[4*m+n]"
+              />
             </div>
           </div>
         </div>
@@ -779,11 +913,15 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
       <TabPanel header="Screen calibration">
         <div style="background-color: black; height: 1000px; display: flex; flex-direction: column; padding: 5px">
           <h1>Screen quality check: wavelenghts of the primaries</h1>
-          This test tells you whether the primaries of your screen are far enough from each other or if a primary activates too much two cones on your retina. This cannot be improved with the settings of your screen.<br>
+          This test tells you whether the primaries of your screen are far enough from each other or if a primary
+          activates too much two cones on your retina. This cannot be improved with the settings of your screen.<br>
           Watch this square with a spectroscope (or measure it with a spectrometer). <br>
-          The center of the blue band must be below 467 nm¹² and the bright part of the band should remain below 470 nm³.<br>
-          The center of the green band must be between 532 nm² and 549 nm¹ and the bright part of the band should stay above 510 nm³ and below 560 nm³.<br>
-          The center of the red band must above 612 nm¹ (ideally at least 630 nm²) and the bright part of the band should remain above 600 nm³.<br>
+          The center of the blue band must be below 467 nm¹² and the bright part of the band should remain below
+          470 nm³.<br>
+          The center of the green band must be between 532 nm² and 549 nm¹ and the bright part of the band should stay
+          above 510 nm³ and below 560 nm³.<br>
+          The center of the red band must above 612 nm¹ (ideally at least 630 nm²) and the bright part of the band
+          should remain above 600 nm³.<br>
           <span style="width: 300px; height: 300px; background-color: #E0E0E0; margin: auto;" />
           1. according to the recommendation Rec.709 of the ITU-R<br>
           2. according to the recommendation BT.2020 of the ITU-R<br>
@@ -793,81 +931,177 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
         <h1>Screen calibration: color balance</h1>
         The secondaries must stand between the black lines.
         <br><br>
-        <div v-for="(m,n) of 3" :key="m">
-          <span v-for="(c,i) of 17" :key="i" style="display: inline-block; width: 24px; height: 40px;" :style="'background-color: rgb(' + granularRainbow48[16*n+i].chan[R] + ',' + granularRainbow48[16*n+i].chan[G] + ',' + granularRainbow48[16*n+i].chan[B] + ')'">
-            <span v-if="(i/8-1)%2 == 0" style="display: inline-block; height: 100%; width: 100%; border: 1px solid black; border-bottom: 0; border-top: 0;" />
+        <div
+          v-for="(m, n) of 3"
+          :key="m"
+        >
+          <span
+            v-for="(c, i) of 17"
+            :key="i"
+            style="display: inline-block; width: 24px; height: 40px;"
+            :style="'background-color: rgb(' + granularRainbow48[16*n+i].chan[R] + ',' + granularRainbow48[16*n+i].chan[G] + ',' + granularRainbow48[16*n+i].chan[B] + ')'"
+          >
+            <span
+              v-if="(i/8-1)%2 == 0"
+              style="display: inline-block; height: 100%; width: 100%; border: 1px solid black; border-bottom: 0; border-top: 0;"
+            />
           </span>
           <br><br>
         </div>
 
         <h1>Screen calibration: gamma in medium brightness.</h1>
-        Your screen gamma is 2.2 on the three channels if the following squares look plain (the center parts must not look brighter or dimmer).<br>
-        For the test to work properly: the zoom of your browser must be 100% and you should look from far enough (or without glasses)
+        Your screen gamma is 2.2 on the three channels if the following squares look plain (the center parts must not
+        look brighter or dimmer).<br>
+        For the test to work properly: the zoom of your browser must be 100% and you should look from far enough
+        (or without glasses)
         <br><br>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,135,135)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + (k%2)*186 + ',' + (k%2)*186 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + (k%2)*186 + ',' + (k%2)*186 + ',' + (k%2)*186 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(186,186,186)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + (k%2)*255 + ',' + (k%2)*255 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + (k%2)*255 + ',' + (k%2)*255 + ',' + (k%2)*255 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(223,223,223)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ',' + (255-(k%2)*69) + ')'"
+          /><br>
         </div>
         <br><br>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,0,0)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*186 + ',' + 0 + ',' + 0 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + (k%2)*186 + ',' + 0 + ',' + 0 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(186,0,0)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (k%2)*255 + ',' + 0 + ',' + 0 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + (k%2)*255 + ',' + 0 + ',' + 0 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(223,0,0)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + 0 + ',' + 0 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + (255-(k%2)*69) + ',' + 0 + ',' + 0 + ')'"
+          /><br>
         </div>
         <br><br>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,135,0)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*186 + ',' + 0 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + 0 + ',' + (k%2)*186 + ',' + 0 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,186,0)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + (k%2)*255 + ',' + 0 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + 0 + ',' + (k%2)*255 + ',' + 0 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,223,0)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + (255-(k%2)*69) + ',' + 0 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + 0 + ',' + (255-(k%2)*69) + ',' + 0 + ')'"
+          /><br>
         </div>
         <br><br>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,135)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*186 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*186 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,186)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*255 + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (k%2)*255 + ')'"
+          /><br>
         </div>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(0,0,223)">
-          <div v-for="(i,k) of 80" :key="k" style="display: inline-block; width: 1px; height: 60px;" :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'" /><br>
+          <div
+            v-for="(i, k) of 80"
+            :key="k"
+            style="display: inline-block; width: 1px; height: 60px;"
+            :style="'background-color: rgb(' + 0 + ',' + 0 + ',' + (255-(k%2)*69) + ')'"
+          /><br>
         </div>
         <br><br>
 
         <h1>Screen calibration: perceived linearity of extremes greys</h1>
-        The perceived linearity of your screen in extreme greys (near black and white) is good if each middle square feels as different from its left square as from its right square.
+        The perceived linearity of your screen in extreme greys (near black and white) is good if each middle square
+        feels as different from its left square as from its right square.
         <br><br>
-        <div v-for="(i,k) of 15" :key="k" style="text-align: center; background-color: #7030f0">
+        <div
+          v-for="(i, k) of 15"
+          :key="k"
+          style="text-align: center; background-color: #7030f0"
+        >
           <span v-if="k == 0 || k==1 || k==2 || k==12 || k==13 || k==14">
             <br>
-            <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysI[0+k].chan[R] + ',' + extremeGeysI[0+k].chan[G] + ',' + extremeGeysI[0+k].chan[B] + ')'">
+            <div
+              style="display: inline-block; width: 60px; height: 60px;"
+              :style="'background-color: rgb(' + extremeGeysI[0+k].chan[R] + ',' + extremeGeysI[0+k].chan[G] + ',' + extremeGeysI[0+k].chan[B] + ')'"
+            >
               I
             </div>
-            <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysI[1+k].chan[R] + ',' + extremeGeysI[1+k].chan[G] + ',' + extremeGeysI[1+k].chan[B] + ')'">
+            <div
+              style="display: inline-block; width: 60px; height: 60px;"
+              :style="'background-color: rgb(' + extremeGeysI[1+k].chan[R] + ',' + extremeGeysI[1+k].chan[G] + ',' + extremeGeysI[1+k].chan[B] + ')'"
+            >
               I
             </div>
-            <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysI[2+k].chan[R] + ',' + extremeGeysI[2+k].chan[G] + ',' + extremeGeysI[2+k].chan[B] + ')'">
+            <div
+              style="display: inline-block; width: 60px; height: 60px;"
+              :style="'background-color: rgb(' + extremeGeysI[2+k].chan[R] + ',' + extremeGeysI[2+k].chan[G] + ',' + extremeGeysI[2+k].chan[B] + ')'"
+            >
               I
             </div>
             <br>
-            <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysJ[0+k].chan[R] + ',' + extremeGeysJ[0+k].chan[G] + ',' + extremeGeysJ[0+k].chan[B] + ')'">
+            <div
+              style="display: inline-block; width: 60px; height: 60px;"
+              :style="'background-color: rgb(' + extremeGeysJ[0+k].chan[R] + ',' + extremeGeysJ[0+k].chan[G] + ',' + extremeGeysJ[0+k].chan[B] + ')'"
+            >
               J
             </div>
-            <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysJ[1+k].chan[R] + ',' + extremeGeysJ[1+k].chan[G] + ',' + extremeGeysJ[1+k].chan[B] + ')'">
+            <div
+              style="display: inline-block; width: 60px; height: 60px;"
+              :style="'background-color: rgb(' + extremeGeysJ[1+k].chan[R] + ',' + extremeGeysJ[1+k].chan[G] + ',' + extremeGeysJ[1+k].chan[B] + ')'"
+            >
               J
             </div>
-            <div style="display: inline-block; width: 60px; height: 60px;" :style="'background-color: rgb(' + extremeGeysJ[2+k].chan[R] + ',' + extremeGeysJ[2+k].chan[G] + ',' + extremeGeysJ[2+k].chan[B] + ')'">
+            <div
+              style="display: inline-block; width: 60px; height: 60px;"
+              :style="'background-color: rgb(' + extremeGeysJ[2+k].chan[R] + ',' + extremeGeysJ[2+k].chan[G] + ',' + extremeGeysJ[2+k].chan[B] + ')'"
+            >
               J
             </div>
             <br>
@@ -880,18 +1114,48 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
         In the first column, the framed primary must feel dimmer than its neighbors. <br>
         In the middle column, the framed primary must feel as bright as its neighbors. <br>
         In the last column, the framed primary must feel brighter than its neighbors. <br><br>
-        <div v-for="(perm,k) of primaryPermutInPures" :key="k">
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[1]][R] + ',' + puresDimmed[perm[1]][G] + ',' + puresDimmed[perm[1]][B] + '); border: 1px solid black'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+        <div
+          v-for="(perm, k) of primaryPermutInPures"
+          :key="k"
+        >
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + puresDimmed[perm[1]][R] + ',' + puresDimmed[perm[1]][G] + ',' + puresDimmed[perm[1]][B] + '); border: 1px solid black'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'"
+          />
           <span style="margin-left: 60px;">&nbsp;</span>
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'"
+          />
           <span style="margin-left: 60px;">&nbsp;</span>
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[0]][R] + ',' + puresDimmed[perm[0]][G] + ',' + puresDimmed[perm[0]][B] + ')'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[2]][R] + ',' + puresDimmed[perm[2]][G] + ',' + puresDimmed[perm[2]][B] + ')'" />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + puresDimmed[perm[0]][R] + ',' + puresDimmed[perm[0]][G] + ',' + puresDimmed[perm[0]][B] + ')'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + puresDimmed[perm[2]][R] + ',' + puresDimmed[perm[2]][G] + ',' + puresDimmed[perm[2]][B] + ')'"
+          />
           <span style="margin-left: 60px;">&nbsp;</span>sensicol[{{ k }}]
           <br>
         </div>
@@ -900,37 +1164,91 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
         In the first column, the framed secondary must feel dimmer than its neighbors. <br>
         In the middle column, the framed secondary must feel as bright as its neighbors. <br>
         In the last column, the framed secondary must feel brighter than its neighbors. <br><br>
-        <div v-for="(perm,k) of secondaryPermutInPures" :key="k">
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[1]][R] + ',' + puresDimmed[perm[1]][G] + ',' + puresDimmed[perm[1]][B] + '); border: 1px solid black'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+        <div
+          v-for="(perm, k) of secondaryPermutInPures"
+          :key="k"
+        >
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + puresDimmed[perm[1]][R] + ',' + puresDimmed[perm[1]][G] + ',' + puresDimmed[perm[1]][B] + '); border: 1px solid black'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'"
+          />
           <span style="margin-left: 60px;">&nbsp;</span>
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'" />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[0]][R] + ',' + pures[perm[0]][G] + ',' + pures[perm[0]][B] + ')'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[2]][R] + ',' + pures[perm[2]][G] + ',' + pures[perm[2]][B] + ')'"
+          />
           <span style="margin-left: 60px;">&nbsp;</span>
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[0]][R] + ',' + puresDimmed[perm[0]][G] + ',' + puresDimmed[perm[0]][B] + ')'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'" />
-          <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[perm[2]][R] + ',' + puresDimmed[perm[2]][G] + ',' + puresDimmed[perm[2]][B] + ')'" />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + puresDimmed[perm[0]][R] + ',' + puresDimmed[perm[0]][G] + ',' + puresDimmed[perm[0]][B] + ')'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + pures[perm[1]][R] + ',' + pures[perm[1]][G] + ',' + pures[perm[1]][B] + '); border: 1px solid black'"
+          />
+          <span
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + puresDimmed[perm[2]][R] + ',' + puresDimmed[perm[2]][G] + ',' + puresDimmed[perm[2]][B] + ')'"
+          />
           <br>
         </div>
 
         <h2>control</h2>
         All colors in this rainbow must have the same perceived brightness: <br><br>
-        <span v-for="(c,i) of rainbowSameI" :key="i" style="display: inline-block; width: 4px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
+        <span
+          v-for="(c, i) of rainbowSameI"
+          :key="i"
+          style="display: inline-block; width: 4px; height: 40px;"
+          :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'"
+        />
         <br><br>
 
         <h1>Adjustement of overwhite</h1>
         The three rows must transition from grey to pure at the same speed.<br>
         On the right, the middle square must feel as different from its left square as from its right square. <br><br>
-        <div v-for="(row,k) of purityGradientJ" :key="k" style="border: 0px;">
-          <span v-for="(col,m) of row" :key="m">
-            <div style="display: inline-block; width: 2px; height: 40px;" :style="'background-color: rgb(' + col[R] + ',' + col[G] + ',' + col[B] + ')'" />
+        <div
+          v-for="(row, k) of purityGradientJ"
+          :key="k"
+          style="border: 0px;"
+        >
+          <span
+            v-for="(col, m) of row"
+            :key="m"
+          >
+            <div
+              style="display: inline-block; width: 2px; height: 40px;"
+              :style="'background-color: rgb(' + col[R] + ',' + col[G] + ',' + col[B] + ')'"
+            />
           </span>
           <span style="margin-left: 60px;">&nbsp;</span>
-          <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[10][R] + ',' + row[10][G] + ',' + row[10][B] + ')'" />
-          <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[row.length/2][R] + ',' + row[row.length/2][G] + ',' + row[row.length/2][B] + ')'" />
-          <div style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + row[row.length-11][R] + ',' + row[row.length-11][G] + ',' + row[row.length-11][B] + ')'" />
+          <div
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + row[10][R] + ',' + row[10][G] + ',' + row[10][B] + ')'"
+          />
+          <div
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + row[row.length/2][R] + ',' + row[row.length/2][G] + ',' + row[row.length/2][B] + ')'"
+          />
+          <div
+            style="display: inline-block; width: 40px; height: 40px;"
+            :style="'background-color: rgb(' + row[row.length-11][R] + ',' + row[row.length-11][G] + ',' + row[row.length-11][B] + ')'"
+          />
           <span style="margin-left: 60px;">&nbsp;</span>overwhite[{{ k }}]
           <br>
         </div>
@@ -940,23 +1258,55 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
           In the first column, the framed color must feel dimmer than its neighbors.<br>
           In the middle column, the framed color must feel as bright as its neighbors.<br>
           In the last column, the framed color must feel brighter than its neighbors.<br><br>
-          <div v-for="(prim,k) of primariesInPures" :key="k">
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + greyishDimmed[prim][R] + ',' + greyishDimmed[prim][G] + ',' + greyishDimmed[prim][B] + '); border: 1px solid black'" />
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
+          <div
+            v-for="(prim, k) of primariesInPures"
+            :key="k"
+          >
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'"
+            />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + greyishDimmed[prim][R] + ',' + greyishDimmed[prim][G] + ',' + greyishDimmed[prim][B] + '); border: 1px solid black'"
+            />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'"
+            />
             <span style="margin-left: 60px;">&nbsp;</span>
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + greyish[prim][R] + ',' + greyish[prim][G] + ',' + greyish[prim][B] + '); border: 1px solid black'" />
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'" />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'"
+            />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + greyish[prim][R] + ',' + greyish[prim][G] + ',' + greyish[prim][B] + '); border: 1px solid black'"
+            />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + pures[prim][R] + ',' + pures[prim][G] + ',' + pures[prim][B] + ')'"
+            />
             <span style="margin-left: 60px;">&nbsp;</span>
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[prim][R] + ',' + puresDimmed[prim][G] + ',' + puresDimmed[prim][B] + ')'" />
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + greyish[prim][R] + ',' + greyish[prim][G] + ',' + greyish[prim][B] + '); border: 1px solid black'" />
-            <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + puresDimmed[prim][R] + ',' + puresDimmed[prim][G] + ',' + puresDimmed[prim][B] + ')'" />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + puresDimmed[prim][R] + ',' + puresDimmed[prim][G] + ',' + puresDimmed[prim][B] + ')'"
+            />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + greyish[prim][R] + ',' + greyish[prim][G] + ',' + greyish[prim][B] + '); border: 1px solid black'"
+            />
+            <span
+              style="display: inline-block; width: 40px; height: 40px;"
+              :style="'background-color: rgb(' + puresDimmed[prim][R] + ',' + puresDimmed[prim][G] + ',' + puresDimmed[prim][B] + ')'"
+            />
             <br>
           </div>
           <br>
-          All of the previous parameters have an influence here and are supposed to have been properly adjusted. Therefore, this step acts indirectly as a control of the previous steps. <br>
-          If a row here shows a discrepancy, that might indicate that a previous parameter was imperfectly set. Try to readjust the sensicol value or the overwhite value corresponding to the test that fails here.
+          All of the previous parameters have an influence here and are supposed to have been properly adjusted.
+          Therefore, this step acts indirectly as a control of the previous steps. <br>
+          If a row here shows a discrepancy, that might indicate that a previous parameter was imperfectly set.
+          Try to readjust the sensicol value or the overwhite value corresponding to the test that fails here.
           <br>
         </div>
 
@@ -966,42 +1316,136 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
         - on the left side, try to make each row progress at the same speed, <br>
         - on the right side, try to make the middle square as different from its left square as from its right square.
         <br><br>
-        <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[180-i].chan[R] + ',' + rainbowSameJ[180-i].chan[G] + ',' + rainbowSameJ[180-i].chan[B] + ')'" />
-        <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[180].chan[R] + ',' + rainbowSameJ[180].chan[G] + ',' + rainbowSameJ[180].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[165].chan[R] + ',' + rainbowSameJ[165].chan[G] + ',' + rainbowSameJ[165].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[150].chan[R] + ',' + rainbowSameJ[150].chan[G] + ',' + rainbowSameJ[150].chan[B] + ')'" />
+        <span
+          v-for="(c, i) of 31"
+          :key="i"
+          style="display: inline-block; width: 6px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[180-i].chan[R] + ',' + rainbowSameJ[180-i].chan[G] + ',' + rainbowSameJ[180-i].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[180].chan[R] + ',' + rainbowSameJ[180].chan[G] + ',' + rainbowSameJ[180].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[165].chan[R] + ',' + rainbowSameJ[165].chan[G] + ',' + rainbowSameJ[165].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[150].chan[R] + ',' + rainbowSameJ[150].chan[G] + ',' + rainbowSameJ[150].chan[B] + ')'"
+        />
         <span style="margin-left: 60px;">&nbsp;</span>rPowers[0]
         <br>
-        <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'" />
-        <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[0].chan[R] + ',' + rainbowSameJ[0].chan[G] + ',' + rainbowSameJ[0].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[15].chan[R] + ',' + rainbowSameJ[15].chan[G] + ',' + rainbowSameJ[15].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[30].chan[R] + ',' + rainbowSameJ[30].chan[G] + ',' + rainbowSameJ[30].chan[B] + ')'" />
+        <span
+          v-for="(c, i) of 31"
+          :key="i"
+          style="display: inline-block; width: 6px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[0].chan[R] + ',' + rainbowSameJ[0].chan[G] + ',' + rainbowSameJ[0].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[15].chan[R] + ',' + rainbowSameJ[15].chan[G] + ',' + rainbowSameJ[15].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[30].chan[R] + ',' + rainbowSameJ[30].chan[G] + ',' + rainbowSameJ[30].chan[B] + ')'"
+        />
         <br>
-        <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[60-i].chan[R] + ',' + rainbowSameJ[60-i].chan[G] + ',' + rainbowSameJ[60-i].chan[B] + ')'" />
-        <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[60].chan[R] + ',' + rainbowSameJ[60].chan[G] + ',' + rainbowSameJ[60].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[45].chan[R] + ',' + rainbowSameJ[45].chan[G] + ',' + rainbowSameJ[45].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[30].chan[R] + ',' + rainbowSameJ[30].chan[G] + ',' + rainbowSameJ[30].chan[B] + ')'" />
+        <span
+          v-for="(c, i) of 31"
+          :key="i"
+          style="display: inline-block; width: 6px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[60-i].chan[R] + ',' + rainbowSameJ[60-i].chan[G] + ',' + rainbowSameJ[60-i].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[60].chan[R] + ',' + rainbowSameJ[60].chan[G] + ',' + rainbowSameJ[60].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[45].chan[R] + ',' + rainbowSameJ[45].chan[G] + ',' + rainbowSameJ[45].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[30].chan[R] + ',' + rainbowSameJ[30].chan[G] + ',' + rainbowSameJ[30].chan[B] + ')'"
+        />
         <span style="margin-left: 60px;">&nbsp;</span>rPowers[1]
         <br>
-        <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[60+i].chan[R] + ',' + rainbowSameJ[60+i].chan[G] + ',' + rainbowSameJ[60+i].chan[B] + ')'" />
-        <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[60].chan[R] + ',' + rainbowSameJ[60].chan[G] + ',' + rainbowSameJ[60].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[75].chan[R] + ',' + rainbowSameJ[75].chan[G] + ',' + rainbowSameJ[75].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[90].chan[R] + ',' + rainbowSameJ[90].chan[G] + ',' + rainbowSameJ[90].chan[B] + ')'" />
+        <span
+          v-for="(c, i) of 31"
+          :key="i"
+          style="display: inline-block; width: 6px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[60+i].chan[R] + ',' + rainbowSameJ[60+i].chan[G] + ',' + rainbowSameJ[60+i].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[60].chan[R] + ',' + rainbowSameJ[60].chan[G] + ',' + rainbowSameJ[60].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[75].chan[R] + ',' + rainbowSameJ[75].chan[G] + ',' + rainbowSameJ[75].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[90].chan[R] + ',' + rainbowSameJ[90].chan[G] + ',' + rainbowSameJ[90].chan[B] + ')'"
+        />
         <br>
-        <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[120-i].chan[R] + ',' + rainbowSameJ[120-i].chan[G] + ',' + rainbowSameJ[120-i].chan[B] + ')'" />
-        <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[120].chan[R] + ',' + rainbowSameJ[120].chan[G] + ',' + rainbowSameJ[120].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[105].chan[R] + ',' + rainbowSameJ[105].chan[G] + ',' + rainbowSameJ[105].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[90].chan[R] + ',' + rainbowSameJ[90].chan[G] + ',' + rainbowSameJ[90].chan[B] + ')'" />
+        <span
+          v-for="(c, i) of 31"
+          :key="i"
+          style="display: inline-block; width: 6px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[120-i].chan[R] + ',' + rainbowSameJ[120-i].chan[G] + ',' + rainbowSameJ[120-i].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[120].chan[R] + ',' + rainbowSameJ[120].chan[G] + ',' + rainbowSameJ[120].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[105].chan[R] + ',' + rainbowSameJ[105].chan[G] + ',' + rainbowSameJ[105].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[90].chan[R] + ',' + rainbowSameJ[90].chan[G] + ',' + rainbowSameJ[90].chan[B] + ')'"
+        />
         <span style="margin-left: 60px;">&nbsp;</span>rPowers[2]
         <br>
-        <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 6px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[120+i].chan[R] + ',' + rainbowSameJ[120+i].chan[G] + ',' + rainbowSameJ[120+i].chan[B] + ')'" />
-        <span style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[120].chan[R] + ',' + rainbowSameJ[120].chan[G] + ',' + rainbowSameJ[120].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[135].chan[R] + ',' + rainbowSameJ[135].chan[G] + ',' + rainbowSameJ[135].chan[B] + ')'" />
-        <span style="display: inline-block; width: 40px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[150].chan[R] + ',' + rainbowSameJ[150].chan[G] + ',' + rainbowSameJ[150].chan[B] + ')'" />
+        <span
+          v-for="(c, i) of 31"
+          :key="i"
+          style="display: inline-block; width: 6px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[120+i].chan[R] + ',' + rainbowSameJ[120+i].chan[G] + ',' + rainbowSameJ[120+i].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; margin-left: 80px; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[120].chan[R] + ',' + rainbowSameJ[120].chan[G] + ',' + rainbowSameJ[120].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[135].chan[R] + ',' + rainbowSameJ[135].chan[G] + ',' + rainbowSameJ[135].chan[B] + ')'"
+        />
+        <span
+          style="display: inline-block; width: 40px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[150].chan[R] + ',' + rainbowSameJ[150].chan[G] + ',' + rainbowSameJ[150].chan[B] + ')'"
+        />
         <br><br>
         Control: in the rainbow, the widths of the primary and secondary smudges must all look equal.<br><br>
-        <span v-for="(c,i) of rainbowSameJ" :key="i" style="display: inline-block; width: 3px; height: 40px;" :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'" />
-        <span v-for="(c,i) of 31" :key="i" style="display: inline-block; width: 3px; height: 40px;" :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'" />
+        <span
+          v-for="(c, i) of rainbowSameJ"
+          :key="i"
+          style="display: inline-block; width: 3px; height: 40px;"
+          :style="'background-color: rgb(' + c.chan[R] + ',' + c.chan[G] + ',' + c.chan[B] + ')'"
+        />
+        <span
+          v-for="(c, i) of 31"
+          :key="i"
+          style="display: inline-block; width: 3px; height: 40px;"
+          :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'"
+        />
         <br><br>
 
         <br><br>
@@ -1010,13 +1454,28 @@ function showDistanceTo (kr: number, kp: number, ki: number) {
           Here we flatten the color space. r, p and i progress linearly. <br>
           Click two colors to see their distance. <br>
           <br>
-          <div v-for="(rRow,r) of allColors" :key="r">
-            <div v-for="(pRow,p) of rRow" :key="p">
-              <div v-for="(c,i) of pRow" :key="i" style="display: inline-block; width: 20px; height: 20px;" :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'" @click="showDistanceTo(r,p,i)" />
+          <div
+            v-for="(rRow, r) of allColors"
+            :key="r"
+          >
+            <div
+              v-for="(pRow, p) of rRow"
+              :key="p"
+            >
+              <div
+                v-for="(c, i) of pRow"
+                :key="i"
+                style="display: inline-block; width: 20px; height: 20px;"
+                :style="'background-color: rgb(' + c.rgb.chan[R] + ',' + c.rgb.chan[G] + ',' + c.rgb.chan[B] + ')'"
+                @click="showDistanceTo(r, p, i)"
+              />
             </div>
             <br>
           </div>
-          <div v-if="distanceBetweenLastTwoColors" class="meter">
+          <div
+            v-if="distanceBetweenLastTwoColors"
+            class="meter"
+          >
             Distance between the last two colors <br>
             that you clicked: {{ distanceBetweenLastTwoColors }} <br><br>
             {{ allColors[krkpki1[0]][krkpki1[1]][krkpki1[2]].eye }} <br>
