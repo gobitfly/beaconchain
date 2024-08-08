@@ -561,7 +561,7 @@ function optimizeOneStepFurther() {
 
   for (let k = 0; k < wip3D.length; k++) {
     triedRGB.import(wip3D[k])
-    const step = Math.min(2, 16 * confusion(triedRGB)) / 256
+    const step = Math.min(2, 16 * (confusion(triedRGB) ** 2)) / 256
     for (const c of [R, G, B]) {
       for (const s of [-step, +step]) {
         const restoredValue = triedRGB.chan[c]
@@ -596,7 +596,7 @@ const confuEye = new Eye(CS.EyePercI)
 /** calculates roughly how close to pure red or pure green the color is, independently of the intensity */
 function confusion(rgb: RGB): number {
   confuEye.import(rgb)
-  return (3 * confuEye.p * (1 / 3 - Math.min(confuEye.r, 1 - confuEye.r, Math.abs(confuEye.r - 1 / 3)))) ** 2
+  return 3 * confuEye.p * (1 / 3 - Math.min(confuEye.r, 1 - confuEye.r, Math.abs(confuEye.r - 1 / 3)))
 }
 
 const cbSightPO2D = new Eye(CS.EyePercI)
