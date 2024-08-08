@@ -11,9 +11,9 @@ export const ONE_WEEK = ONE_DAY * 7
 export const ONE_YEAR = ONE_DAY * 365
 
 export interface NumberFormatConfig {
-  precision?: number
-  fixed?: number
   addPositiveSign?: boolean
+  fixed?: number
+  precision?: number
 }
 
 export function formatPercent(
@@ -23,8 +23,8 @@ export function formatPercent(
   if (percent === undefined) {
     return ''
   }
-  const { precision, fixed, addPositiveSign } = {
-    ...{ precision: 2, fixed: 2, addPositiveSign: false },
+  const { addPositiveSign, fixed, precision } = {
+    ...{ addPositiveSign: false, fixed: 2, precision: 2 },
     ...config,
   }
   let result = trim(percent, precision, fixed)
@@ -85,7 +85,7 @@ export function commmifyLeft(value: string): string {
 }
 
 export function trim(
-  value: string | number,
+  value: number | string,
   maxDecimalCount: number,
   minDecimalCount?: number,
 ): string {
@@ -148,8 +148,8 @@ export function formatTsToAbsolute(
       }
     : {}
   const options: Intl.DateTimeFormatOptions = {
-    month: 'short',
     day: 'numeric',
+    month: 'short',
     year: 'numeric',
     ...timeOptions,
   }
@@ -173,7 +173,7 @@ function formatTsToRelative(
   baseTimestamp?: number,
   style: StringUnitLength = 'narrow',
   locales: string = 'en-US',
-): string | null | undefined {
+): null | string | undefined {
   if (!targetTimestamp) {
     return undefined
   }
@@ -187,7 +187,7 @@ function formatTsToRelative(
 }
 
 export function formatGoTimestamp(
-  timestamp: string | number,
+  timestamp: number | string,
   compareTimestamp?: number,
   format?: AgeFormat,
   style?: StringUnitLength,
@@ -221,7 +221,7 @@ export function formatEpochToDateTime(
   style?: StringUnitLength,
   locales?: string,
   withTime?: boolean,
-): string | null | undefined {
+): null | string | undefined {
   return formatTs(
     epochToTs(chainId, epoch),
     timestamp,
@@ -245,7 +245,7 @@ export function formatSlotToDateTime(
   style?: StringUnitLength,
   locales?: string,
   withTime?: boolean,
-): string | null | undefined {
+): null | string | undefined {
   return formatTs(
     slotToTs(chainId, slot),
     timestamp,
@@ -265,7 +265,7 @@ export function formatEpochToDate(
   chainId: ChainIDs,
   epoch: number,
   locales: string,
-): string | null | undefined {
+): null | string | undefined {
   return formatEpochToDateTime(
     chainId,
     epoch,
@@ -333,10 +333,10 @@ export function formatFiat(
   maximumFractionDigits?: number,
 ) {
   const formatter = new Intl.NumberFormat(locales, {
-    style: 'currency',
     currency,
-    minimumFractionDigits,
     maximumFractionDigits,
+    minimumFractionDigits,
+    style: 'currency',
   })
 
   return formatter.format(value)

@@ -3,18 +3,18 @@ import type { ApiPagingResponse } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
+  addSpacer?: boolean
   cursor?: Cursor
-  dataKey?: string // Unique identifier for a data row
-  pageSize?: number
   data?: ApiPagingResponse<any>
-  selectedSort?: string
+  dataKey?: string // Unique identifier for a data row
   expandable?: boolean
+  hidePager?: boolean
   isRowExpandable?: (item: any) => boolean
+  loading?: boolean
+  pageSize?: number
+  selectedSort?: string
   selectionMode?: 'multiple' | 'single'
   tableClass?: string
-  addSpacer?: boolean
-  loading?: boolean
-  hidePager?: boolean
 }
 const props = defineProps<Props>()
 

@@ -102,7 +102,7 @@ export function getRewardsChartLineColor(theme: string) {
 
 export function getRewardChartColors() {
   return {
-    el: '#ffaa31',
     cl: '#7DB5EC',
+    el: '#ffaa31',
   }
 }

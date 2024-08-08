@@ -6,7 +6,7 @@ import type {
 import { API_PATH } from '~/types/customFetch'
 
 const latestStateStore = defineStore('latest_state_store', () => {
-  const data = ref<LatestStateData | undefined | null>()
+  const data = ref<LatestStateData | null | undefined>()
   return { data }
 })
 

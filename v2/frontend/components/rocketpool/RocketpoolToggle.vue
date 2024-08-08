@@ -6,7 +6,7 @@ import {
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { setting, changeSetting } = useGlobalSetting<boolean>('rpl')
+const { changeSetting, setting } = useGlobalSetting<boolean>('rpl')
 
 const rpActive = {
   get value(): boolean {

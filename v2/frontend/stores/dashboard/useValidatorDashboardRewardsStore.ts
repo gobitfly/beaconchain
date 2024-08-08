@@ -59,9 +59,9 @@ export function useValidatorDashboardRewardsStore() {
       if (nextEpoch) {
         res.data = [
           {
+            duty: { attestation: 0, proposal: 0, slashing: 0, sync: 0 },
             epoch: nextEpoch.epoch,
             group_id: DAHSHBOARDS_NEXT_EPOCH_ID,
-            duty: { attestation: 0, proposal: 0, slashing: 0, sync: 0 },
             reward: { cl: '0', el: '0' },
           },
           ...res.data,
@@ -73,5 +73,5 @@ export function useValidatorDashboardRewardsStore() {
     return res
   }
 
-  return { rewards, query, isLoading, getRewards }
+  return { getRewards, isLoading, query, rewards }
 }

@@ -3,19 +3,19 @@ import type { BigNumber } from '@ethersproject/bignumber'
 import type { ValueConvertOptions } from '~/types/value'
 
 interface Props {
-  value?: string | BigNumber
-  options?: ValueConvertOptions
-  useColors?: boolean
-  positiveClass?: string
+  fullValue?: boolean
   negativeClass?: string
   noTooltip?: boolean
-  fullValue?: boolean
+  options?: ValueConvertOptions
+  positiveClass?: string
+  useColors?: boolean
+  value?: BigNumber | string
 }
 const props = withDefaults(defineProps<Props>(), {
-  value: undefined,
+  negativeClass: 'negative',
   options: undefined,
   positiveClass: 'positive',
-  negativeClass: 'negative',
+  value: undefined,
 })
 
 const { converter } = useValue()
@@ -40,9 +40,9 @@ const data = computed(() => {
     }
   }
   return {
-    labelClass,
-    label,
     fullLabel: res.fullLabel,
+    label,
+    labelClass,
     tooltip: props.noTooltip ? '' : res.fullLabel,
   }
 })

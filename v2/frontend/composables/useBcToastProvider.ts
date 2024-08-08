@@ -18,19 +18,19 @@ export function useBcToastProvider() {
 
   const showInfo = (data: ToastData) => {
     toast.add({
-      summary: data.summary,
       detail: data.detail,
-      severity: 'info',
       life: TOAST_TIME,
+      severity: 'info',
+      summary: data.summary,
     })
   }
 
   const showSuccess = (data: ToastData) => {
     toast.add({
-      summary: data.summary,
       detail: data.detail,
-      severity: 'success',
       life: TOAST_TIME,
+      severity: 'success',
+      summary: data.summary,
     })
   }
 
@@ -39,12 +39,12 @@ export function useBcToastProvider() {
       if (toasts.length === 1) {
         const hasGroup = toasts[0].group
         toast.add({
-          summary: toasts[0].summary,
           detail: hasGroup
             ? `${toasts[0].group}: ${toasts[0].detail}`
             : toasts[0].detail,
-          severity: 'error',
           life: TOAST_TIME,
+          severity: 'error',
+          summary: toasts[0].summary,
         })
       }
       else {
@@ -65,7 +65,7 @@ export function useBcToastProvider() {
               ? `${key}: ${list[0].detail}`
               : $t('error.multiple_times', { error: key }, list.length)
 
-          toast.add({ summary, detail, severity: 'error', life: TOAST_TIME })
+          toast.add({ detail, life: TOAST_TIME, severity: 'error', summary })
         }
       }
       instant([])

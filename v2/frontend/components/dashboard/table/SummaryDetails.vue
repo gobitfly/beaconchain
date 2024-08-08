@@ -8,10 +8,10 @@ import {
 } from '~/types/dashboard/summary'
 
 interface Props {
-  row: VDBSummaryTableRow
-  timeFrame: SummaryTimeFrame
   absolute: boolean
+  row: VDBSummaryTableRow
   tableVisibility: SummaryTableVisibility
+  timeFrame: SummaryTimeFrame
 }
 const props = defineProps<Props>()
 
@@ -41,7 +41,7 @@ const data = computed<SummaryRow[][]>(() => {
     titleKey?: string,
   ) => {
     const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
-    const row = { title, prop }
+    const row = { prop, title }
     list[index].push(row)
   }
 
@@ -93,14 +93,14 @@ const rowClass = (data: SummaryRow) => {
   const classNames: Partial<
     Record<SummaryDetailsEfficiencyCombinedProp, string>
   > = {
-    efficiency: 'bold',
+    apr: props.tableVisibility.attestations ? '' : 'spacing-top',
     attestations: 'bold',
-    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
+    attestations_head: 'spacing-top',
+    efficiency: 'bold',
+    luck: 'spacing-top',
     proposals: 'bold spacing-top',
     slashings: 'bold spacing-top',
-    apr: props.tableVisibility.attestations ? '' : 'spacing-top',
-    luck: 'spacing-top',
-    attestations_head: 'spacing-top',
+    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
   }
   return classNames[data.prop]
 }

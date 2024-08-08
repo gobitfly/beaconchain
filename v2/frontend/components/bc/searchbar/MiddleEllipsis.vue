@@ -7,24 +7,24 @@ const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with b
 const ResizeObserverLagMargin = 1 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
 
 const props = defineProps<{
-  text?: string
-  initialFlexGrow?: number // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
+  class?: string | string[] // to make the list of classes reactive
   ellipses?: number | number[] // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
-  widthMediaqueryThreshold?: number // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
+  initialFlexGrow?: number // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
   // !! The props below are for internal use only !!
   meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
-  class?: string | string[] // to make the list of classes reactive
+  text?: string
+  widthMediaqueryThreshold?: number // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
 }>()
 
 interface ExposedMembers {
   amIofDefinedWidth: ComputedRef<boolean>
-  whatIsMyFlexGrow: typeof whatIsMyFlexGrow
-  howMuchCanIshrinkOrGrow: typeof howMuchCanIshrinkOrGrow
-  getReadyForUpdate: typeof getReadyForUpdate
-  updateContent: typeof updateContent
-  settleAfterUpdate: typeof settleAfterUpdate
-  saveFinalState: typeof saveFinalState
   enterUpdateCycleAsAparent: typeof enterUpdateCycleAsAparent
+  getReadyForUpdate: typeof getReadyForUpdate
+  howMuchCanIshrinkOrGrow: typeof howMuchCanIshrinkOrGrow
+  saveFinalState: typeof saveFinalState
+  settleAfterUpdate: typeof settleAfterUpdate
+  updateContent: typeof updateContent
+  whatIsMyFlexGrow: typeof whatIsMyFlexGrow
 }
 
 interface MiddleEllipsis extends ComponentPublicInstance, ExposedMembers {}
@@ -65,11 +65,11 @@ const innerElements = {
   allInstanciatedElements: ref<(ComponentPublicInstance | MiddleEllipsis)[]>(
     [],
   ), // Instanciated elements from our slot. This array is filled by Vue in the <template>.
+  isAnUpdateOrdered: true,
+  slotNonce: 0,
   // The following arrays are filled by us, each time the slot is modified:
   widthDefinedChildren: [] as MiddleEllipsis[], // List of instanciated elements from our slot that are MiddleEllipsis children with a defined width.
   widthUndefinedChildren: [] as MiddleEllipsis[], // List of instanciated elements from our slot that are MiddleEllipsis children with an undefined width.
-  isAnUpdateOrdered: true,
-  slotNonce: 0,
 }
 const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle: CSSStyleDeclaration
@@ -139,19 +139,19 @@ const whatIam = computed(() => {
 
 const exposedMembers: ExposedMembers = {
   amIofDefinedWidth,
-  whatIsMyFlexGrow,
-  howMuchCanIshrinkOrGrow,
-  getReadyForUpdate,
-  updateContent,
-  settleAfterUpdate,
-  saveFinalState,
   enterUpdateCycleAsAparent,
+  getReadyForUpdate,
+  howMuchCanIshrinkOrGrow,
+  saveFinalState,
+  settleAfterUpdate,
+  updateContent,
+  whatIsMyFlexGrow,
 }
 
 defineExpose<ExposedMembers>(exposedMembers)
 
 function isObjectMiddleEllipsis(
-  obj: MiddleEllipsis | ComponentPublicInstance,
+  obj: ComponentPublicInstance | MiddleEllipsis,
 ): MiddleEllipsis | undefined {
   for (const exposedMEsymbol in exposedMembers) {
     if (!(exposedMEsymbol in obj)) {
@@ -511,8 +511,8 @@ function enterUpdateCycleAsAparent(
     The following lines detect this case and distribute the room to the children before clipping and writing, so they can clip their text longer. */
     const canUseMoreRoom: {
       child: MiddleEllipsis
-      growth: number
       flexGrow: number
+      growth: number
     }[] = []
     const hasEnoughRoom: MiddleEllipsis[] = []
     let totalAdditionalRoom = 0
@@ -523,7 +523,7 @@ function enterUpdateCycleAsAparent(
       if (growth > 0) {
         const flexGrow = child.whatIsMyFlexGrow()
         totalFlexGrow += flexGrow
-        canUseMoreRoom.push({ child, growth, flexGrow }) // For now, field `growth` represents the maximal growth of the child (due to a max-width constraint) or possibly what would allow its text not to get clipped. We will overwrite this value when we distribute the total additional room later.
+        canUseMoreRoom.push({ child, flexGrow, growth }) // For now, field `growth` represents the maximal growth of the child (due to a max-width constraint) or possibly what would allow its text not to get clipped. We will overwrite this value when we distribute the total additional room later.
       }
       else {
         totalAdditionalRoom -= growth
@@ -849,7 +849,7 @@ function saveFinalState() {
 }
 
 function logStep(
-  color: 'neutral' | 'attention' | 'event' | 'signal' | 'good' | 'completed',
+  color: 'attention' | 'completed' | 'event' | 'good' | 'neutral' | 'signal',
   msg: string,
   ...others: any[]
 ) {
@@ -878,17 +878,17 @@ function logStep(
     case 'attention':
       msg = '\u001B[31m' + msg
       break
+    case 'completed':
+      msg = '\u001B[35m' + msg
+      break
     case 'event':
       msg = '\u001B[33m' + msg
-      break
-    case 'signal':
-      msg = '\u001B[32m' + msg
       break
     case 'good':
       msg = '\u001B[34m' + msg
       break
-    case 'completed':
-      msg = '\u001B[35m' + msg
+    case 'signal':
+      msg = '\u001B[32m' + msg
       break
     default:
       msg = '\u001B[0m' + msg

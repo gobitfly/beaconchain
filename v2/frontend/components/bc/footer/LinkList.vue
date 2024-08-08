@@ -2,26 +2,25 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faDiscord,
-  faTwitter,
   faGithub,
+  faTwitter,
 } from '@fortawesome/free-brands-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import {
   faBuilding,
-  faFileContract,
-  faUserSecret,
-  faUserAstronaut,
-  faShoppingCart,
   faCheckCircle,
+  faFileContract,
+  faShoppingCart,
+  faUserAstronaut,
+  faUserSecret,
 } from '@fortawesome/pro-solid-svg-icons'
 
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
-type Row = { title: string, links: [string, IconDefinition, string, Target][] }
+type Row = { links: [string, IconDefinition, string, Target][], title: string }
 const columns: Row[] = [
   {
-    title: $t('footer.legal_notices'),
     links: [
       [
         $t('footer.imprint'),
@@ -42,9 +41,9 @@ const columns: Row[] = [
         Target.External,
       ],
     ],
+    title: $t('footer.legal_notices'),
   },
   {
-    title: $t('footer.resources'),
     links: [
       // TODO: Add link once API prices are available
       // [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal],
@@ -64,9 +63,9 @@ const columns: Row[] = [
         Target.External,
       ],
     ],
+    title: $t('footer.resources'),
   },
   {
-    title: $t('footer.links'),
     links: [
       ['Discord', faDiscord, 'https://dsc.gg/beaconchain', Target.External],
       [
@@ -90,6 +89,7 @@ const columns: Row[] = [
       // TODO: Add link once press kit is available
       // [$t('footer.press_kit'), faNewspaper, '/presskit', Target.Internal]
     ],
+    title: $t('footer.links'),
   },
 ]
 </script>

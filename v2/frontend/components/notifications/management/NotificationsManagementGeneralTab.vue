@@ -12,39 +12,39 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const { generalSettings, updateGeneralSettings, pairedDevices }
+const { generalSettings, pairedDevices, updateGeneralSettings }
   = useNotificationsManagementSettings()
 
 const isVisible = ref(false)
 const isEmailToggleOn = ref(false)
 const isPushToggleOn = ref(false)
 const {
-  value: areTestButtonsDisabled,
   bounce: bounceTestButton,
   instant: setTestButton,
+  value: areTestButtonsDisabled,
 } = useDebounceValue<boolean>(false, 5000)
 
 const timestampMute = ref<number | undefined>()
 const muteDropdownList = [
   {
-    value: 1 * 60 * 60,
     label: $t('notifications.general.mute.hours', { count: 1 }),
+    value: 1 * 60 * 60,
   },
   {
-    value: 2 * 60 * 60,
     label: $t('notifications.general.mute.hours', { count: 2 }),
+    value: 2 * 60 * 60,
   },
   {
-    value: 4 * 60 * 60,
     label: $t('notifications.general.mute.hours', { count: 4 }),
+    value: 4 * 60 * 60,
   },
   {
-    value: 8 * 60 * 60,
     label: $t('notifications.general.mute.hours', { count: 8 }),
+    value: 8 * 60 * 60,
   },
   {
-    value: Number.MAX_SAFE_INTEGER,
     label: $t('notifications.general.mute.until_i_turn_on'),
+    value: Number.MAX_SAFE_INTEGER,
   },
 ]
 
@@ -71,9 +71,9 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   }
   catch (error) {
     toast.showError({
-      summary: $t('notifications.general.test_notification_error.toast_title'),
-      group: $t('notifications.general.test_notification_error.toast_group'),
       detail: $t('notifications.general.test_notification_error.toast_message'),
+      group: $t('notifications.general.test_notification_error.toast_group'),
+      summary: $t('notifications.general.test_notification_error.toast_title'),
     })
   }
   bounceTestButton(false)
@@ -123,9 +123,9 @@ watch(
     ) {
       updateGeneralSettings({
         ...generalSettings.value,
+        do_not_disturb_timestamp: muteTs!,
         is_email_notifications_enabled: enableEmail,
         is_push_notifications_enabled: enablePush,
-        do_not_disturb_timestamp: muteTs!,
       })
     }
   },

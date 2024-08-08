@@ -1,8 +1,8 @@
 <script setup lang="ts">
 interface Props {
-  trueOption?: string
-  falseOption?: string
   disabled?: boolean
+  falseOption?: string
+  trueOption?: string
 }
 defineProps<Props>()
 

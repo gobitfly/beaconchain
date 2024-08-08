@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type {
-  VDBGroupSummaryData,
   InternalGetValidatorDashboardGroupSummaryResponse,
+  VDBGroupSummaryData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
@@ -46,7 +46,7 @@ export function useValidatorDashboardSummaryDetailsStore(
     return res.data
   }
 
-  const details = computed<VDBGroupSummaryData | undefined>(() => {
+  const details = computed<undefined | VDBGroupSummaryData>(() => {
     return data.value[getKey()]
   })
 

@@ -11,21 +11,21 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const type = defineModel<DashboardType | ''>('type', { required: true })
+const type = defineModel<'' | DashboardType>('type', { required: true })
 
 const typeButtons = [
   {
-    text: $t('dashboard.creation.type.validators'),
-    value: 'validator',
     component: IconValidator,
     disabled: props.validatorsDisabled,
+    text: $t('dashboard.creation.type.validators'),
+    value: 'validator',
   },
   {
-    text: $t('dashboard.creation.type.accounts'),
-    subText: $t('common.coming_soon'),
-    value: 'account',
     component: IconAccount,
     disabled: props.accountsDisabled,
+    subText: $t('common.coming_soon'),
+    text: $t('dashboard.creation.type.accounts'),
+    value: 'account',
   },
 ]
 

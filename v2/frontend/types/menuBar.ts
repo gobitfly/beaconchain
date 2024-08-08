@@ -1,15 +1,15 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
 export interface MenuBarButton {
-  label?: string
-  command?: () => void
-  route?: string
-  class?: string
-  highlight?: boolean
-  faIcon?: IconDefinition
-  component?: Component
   active?: boolean
+  class?: string
+  command?: () => void
+  component?: Component
   disabledTooltip?: string
+  faIcon?: IconDefinition
+  highlight?: boolean
+  label?: string
+  route?: string
 }
 
 export interface MenuBarEntry extends MenuBarButton {

@@ -103,20 +103,20 @@ export function useNetworkStore() {
   }
 
   return {
-    loadAvailableNetworks,
     availableNetworks,
-    isNetworkDisabled,
     currentNetwork,
-    networkInfo,
-    setCurrentNetwork,
-    isMainNet,
-    isL1,
     epochsPerDay,
     epochToTs,
+    isL1,
+    isMainNet,
+    isNetworkDisabled,
+    loadAvailableNetworks,
+    networkInfo,
     secondsPerEpoch,
-    slotToTs,
-    tsToSlot,
-    tsToEpoch,
+    setCurrentNetwork,
     slotToEpoch,
+    slotToTs,
+    tsToEpoch,
+    tsToSlot,
   }
 }

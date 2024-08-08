@@ -3,16 +3,16 @@ import type { ApiPagingResponse } from '~/types/api/common'
 
 // TODO: when backend ready replace with generated types
 export type NotifcationDashboardRow = {
-  timestamp: number
   dashboardId: number
   dashboardName: string
   dashboardNetwork: number
-  group_id: number
   entity: {
-    type: DashboardType
     count: number
+    type: DashboardType
   }
+  group_id: number
   nofitication: string[]
+  timestamp: number
 }
 
 export type NotifcationDashboardResponse =

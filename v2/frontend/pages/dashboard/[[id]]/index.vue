@@ -5,8 +5,8 @@ import {
   faCube,
   faCubes,
   faFire,
-  faWallet,
   faMoneyBill,
+  faWallet,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
@@ -18,21 +18,21 @@ const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const tabs: HashTabs = {
-  summary: {
-    index: 0,
+  blocks: {
+    index: 2,
+  },
+  deposits: {
+    index: 4,
+  },
+  heatmap: {
+    disabled: !showInDevelopment,
+    index: 3,
   },
   rewards: {
     index: 1,
   },
-  blocks: {
-    index: 2,
-  },
-  heatmap: {
-    index: 3,
-    disabled: !showInDevelopment,
-  },
-  deposits: {
-    index: 4,
+  summary: {
+    index: 0,
   },
   withdrawals: {
     index: 5,
@@ -43,11 +43,11 @@ const { activeIndex, setActiveIndex } = useHashTabs(tabs)
 
 const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
 const {
+  cookieDashboards,
+  dashboards,
+  getDashboardLabel,
   refreshDashboards,
   updateHash,
-  dashboards,
-  cookieDashboards,
-  getDashboardLabel,
 } = useUserDashboardStore()
 // when we run into an error loading a dashboard keep it here to prevent an infinity loop
 const errorDashboardKeys: string[] = []
@@ -58,7 +58,7 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
-const { refreshOverview, overview } = useValidatorDashboardOverviewStore()
+const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
 await useAsyncData('user_dashboards', () => refreshDashboards(), {
   watch: [isLoggedIn],
 })

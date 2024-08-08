@@ -7,25 +7,25 @@ import type {
 import { type SlotVizIcons } from '~/types/dashboard/slotViz'
 
 type RowDuty = {
-  validator?: number
-  dutySubText?: string
-  dutySubLink?: string
   duty_object?: number
+  dutySubLink?: string
+  dutySubText?: string
+  validator?: number
 }
 type Row = {
-  count?: number
-  icon: SlotVizIcons
-  class?: string
-  change?: string
-  dutyText?: string
-  validators?: number[]
-  duties?: RowDuty[]
   andMore?: number
+  change?: string
+  class?: string
+  count?: number
+  duties?: RowDuty[]
+  dutyText?: string
+  icon: SlotVizIcons
+  validators?: number[]
 }
 interface Props {
-  id: string
-  data: VDBSlotVizSlot
   currentSlotId?: number
+  data: VDBSlotVizSlot
+  id: string
 }
 const props = defineProps<Props>()
 const { t: $t } = useTranslation()
@@ -73,19 +73,19 @@ const data = computed(() => {
       rows.push([
         {
           class: className,
-          icon: 'proposal',
-          dutyText,
           count: 1,
           duties: [
             {
               ...slot.proposal,
-              dutySubText,
               dutySubLink:
                 slot.status === 'proposed'
                   ? `/block/${slot.proposal.duty_object}`
                   : `/slot/${slot.proposal.duty_object}`,
+              dutySubText,
             },
           ],
+          dutyText,
+          icon: 'proposal',
         },
       ])
     }
@@ -95,20 +95,20 @@ const data = computed(() => {
       const dutySubText = $t('slotViz.tooltip.slashing.failed.sub')
       rows.push([
         {
-          class: 'failed',
-          icon: 'slashing',
-          dutyText,
-          count: slot.slashing.failed.total_count,
-          duties: slot.slashing.failed.slashings?.map(slash => ({
-            ...slash,
-            dutySubText,
-            dutySubLink: `/validator/${slash.duty_object}`,
-          })),
           andMore: Math.max(
             0,
             slot.slashing.failed.total_count
             - slot.slashing.failed.slashings?.length,
           ),
+          class: 'failed',
+          count: slot.slashing.failed.total_count,
+          duties: slot.slashing.failed.slashings?.map(slash => ({
+            ...slash,
+            dutySubLink: `/validator/${slash.duty_object}`,
+            dutySubText,
+          })),
+          dutyText,
+          icon: 'slashing',
         },
       ])
     }
@@ -118,9 +118,9 @@ const data = computed(() => {
       rows.push([
         {
           class: 'success',
-          icon: 'slashing',
-          dutyText,
           count: slot.slashing.success.total_count,
+          dutyText,
+          icon: 'slashing',
         },
       ])
     }
@@ -140,15 +140,15 @@ const data = computed(() => {
         hasScheduledDuty = true
         maxCount = Math.max(maxCount, duty.scheduled.total_count)
         subRows.push({
-          class: 'scheduled',
-          icon: type,
-          count: duty.scheduled.total_count,
-          dutyText,
-          validators: duty.scheduled.validators,
           andMore: Math.max(
             0,
             duty.scheduled.total_count - duty.scheduled.validators?.length,
           ),
+          class: 'scheduled',
+          count: duty.scheduled.total_count,
+          dutyText,
+          icon: type,
+          validators: duty.scheduled.validators,
         })
       }
       if (duty.success) {
@@ -156,24 +156,24 @@ const data = computed(() => {
         maxCount = Math.max(maxCount, duty.success.total_count)
         subRows.push({
           class: 'success',
-          icon: type,
           count: duty.success.total_count,
           dutyText,
+          icon: type,
         })
       }
       if (duty.failed) {
         hasFailedDuties = true
         maxCount = Math.max(maxCount, duty.failed.total_count)
         subRows.push({
-          class: 'failed',
-          icon: type,
-          count: duty.failed.total_count,
-          dutyText,
-          validators: duty.failed.validators,
           andMore: Math.max(
             0,
             duty.failed.total_count - duty.failed.validators?.length,
           ),
+          class: 'failed',
+          count: duty.failed.total_count,
+          dutyText,
+          icon: type,
+          validators: duty.failed.validators,
         })
       }
     }
@@ -224,11 +224,11 @@ const data = computed(() => {
   }
 
   return {
-    stateLabel,
-    networkLabelPath,
-    rows,
     hasDuties,
     minWidth: 1 + `${maxCount}`.length * 11 + 'px',
+    networkLabelPath,
+    rows,
+    stateLabel,
   }
 })
 </script>

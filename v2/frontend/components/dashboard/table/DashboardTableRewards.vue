@@ -20,28 +20,28 @@ const { t: $t } = useTranslation()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const {
-  rewards,
-  query: lastQuery,
-  isLoading,
   getRewards,
+  isLoading,
+  query: lastQuery,
+  rewards,
 } = useValidatorDashboardRewardsStore()
 const {
-  value: query,
-  temp: tempQuery,
   bounce: setQuery,
+  temp: tempQuery,
+  value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    duty: width.value > 1180,
-    clRewards: width.value >= 900,
-    elRewards: width.value >= 780,
     age: width.value >= 660,
+    clRewards: width.value >= 900,
+    duty: width.value > 1180,
+    elRewards: width.value >= 780,
   }
 })
 
@@ -132,11 +132,11 @@ const wrappedRewards = computed(() => {
     return
   }
   return {
-    paging: rewards.value.paging,
     data: rewards.value.data.map(d => ({
       ...d,
       identifier: `${d.epoch}-${d.group_id}`,
     })),
+    paging: rewards.value.paging,
   }
 })
 </script>

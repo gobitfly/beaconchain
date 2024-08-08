@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
-import { ChainInfo, type ChainIDs } from '~/types/network'
+import { type ChainIDs, ChainInfo } from '~/types/network'
 
 const props = defineProps<{
   readonlyNetworks?: ChainIDs[]
@@ -37,11 +37,11 @@ const buttons = computed(() => {
   for (const chainId of source) {
     list.push({
       component: IconNetwork,
-      componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
       componentClass: 'maximum',
-      value: String(chainId),
+      componentProps: { chainId, colored: true, harmonizePerceivedSize: true },
       disabled: isNetworkDisabled(chainId),
       tooltip: ChainInfo[chainId].name,
+      value: String(chainId),
     })
   }
   return list

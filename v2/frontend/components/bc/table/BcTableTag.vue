@@ -5,10 +5,10 @@ import type { TagColor, TagSize } from '~/types/tag'
 
 interface Props {
   color?: TagColor
-  size?: TagSize
-  label?: string
-  tooltip?: string
   icon?: IconDefinition
+  label?: string
+  size?: TagSize
+  tooltip?: string
 }
 defineProps<Props>()
 </script>

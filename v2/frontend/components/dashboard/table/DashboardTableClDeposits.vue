@@ -17,29 +17,29 @@ const { slotToEpoch } = useNetworkStore()
 
 const {
   deposits,
-  query: lastQuery,
   getDeposits,
   getTotalAmount,
-  totalAmount,
   isLoadingDeposits,
   isLoadingTotal,
+  query: lastQuery,
+  totalAmount,
 } = useValidatorDashboardClDepositsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<
+const { bounce: setQuery, value: query } = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
 
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 1200,
-    signature: width.value >= 1100,
     epoch: width.value >= 1000,
+    group: width.value > 1200,
+    publicKey: width.value >= 700,
+    signature: width.value >= 1100,
     slot: width.value >= 900,
     withdrawalCredentials: width.value >= 800,
-    publicKey: width.value >= 700,
   }
 })
 
@@ -74,13 +74,13 @@ const tableData = computed(() => {
     return
   }
   return {
-    paging: deposits.value.paging,
     data: [
       {
         amount: totalAmount.value,
       },
       ...deposits.value.data,
     ],
+    paging: deposits.value.paging,
   }
 })
 

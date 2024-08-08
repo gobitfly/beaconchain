@@ -13,8 +13,8 @@ import { formatPremiumProductPrice } from '~/utils/format'
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
-const { user, isLoggedIn } = useUserStore()
-const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
+const { isLoggedIn, user } = useUserStore()
+const { isStripeDisabled, stripeCustomerPortal, stripePurchase } = useStripe()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon
@@ -45,26 +45,26 @@ const prices = computed(() => {
       $t,
       (props.addon.price_per_year_eur / 12) * quantity,
     ),
-    yearly: formatPremiumProductPrice(
-      $t,
-      props.addon.price_per_year_eur * quantity,
-    ),
-    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
     perValidator: formatPremiumProductPrice(
       $t,
       mainPrice / props.addon.extra_dashboard_validators,
       5,
+    ),
+    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
+    yearly: formatPremiumProductPrice(
+      $t,
+      props.addon.price_per_year_eur * quantity,
     ),
   }
 })
 
 const boxText = computed(() => {
   return {
-    validatorCount: $t('pricing.addons.validator_amount', {
-      amount: formatNumber(props.addon.extra_dashboard_validators),
-    }),
     perValidator: $t('pricing.per_validator', {
       amount: prices.value.perValidator,
+    }),
+    validatorCount: $t('pricing.addons.validator_amount', {
+      amount: formatNumber(props.addon.extra_dashboard_validators),
     }),
   }
 })
@@ -113,9 +113,9 @@ const addonButton = computed(() => {
   }
 
   return {
-    text,
-    disabled: isStripeDisabled.value,
     callback,
+    disabled: isStripeDisabled.value,
+    text,
   }
 })
 
@@ -134,20 +134,20 @@ const limitReached = computed(() => {
 const purchaseQuantityButtons = computed(() => {
   return {
     minus: {
-      disabled: quantityForPurchase.value <= 1,
       callback: () => {
         if (quantityForPurchase.value > 1) {
           quantityForPurchase.value--
         }
       },
+      disabled: quantityForPurchase.value <= 1,
     },
     plus: {
-      disabled: limitReached.value,
       callback: () => {
         if (quantityForPurchase.value < maximumQuantity.value) {
           quantityForPurchase.value++
         }
       },
+      disabled: limitReached.value,
     },
   }
 })

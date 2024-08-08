@@ -2,9 +2,6 @@
 import { warn } from 'vue'
 
 const data = {
-  paging: {
-    total_count: 4,
-  },
   data: [
     {
       id: 1,
@@ -31,6 +28,9 @@ const data = {
       value2: 'value 2 4',
     },
   ],
+  paging: {
+    total_count: 4,
+  },
 }
 
 const selected = ref()

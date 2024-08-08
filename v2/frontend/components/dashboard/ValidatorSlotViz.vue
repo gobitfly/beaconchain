@@ -5,13 +5,13 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
 const { dashboardKey } = useDashboardKey()
-const { validatorCount, overview } = useValidatorDashboardOverviewStore()
+const { overview, validatorCount } = useValidatorDashboardOverviewStore()
 const { networkInfo } = useNetworkStore()
 const selectedGroups = ref<number[]>([])
 
-const { tick, resetTick } = useInterval(12)
+const { resetTick, tick } = useInterval(12)
 
-const { slotViz, refreshSlotViz } = useValidatorSlotVizStore()
+const { refreshSlotViz, slotViz } = useValidatorSlotVizStore()
 
 await useAsyncData('validator_dashboard_slot_viz', () =>
   refreshSlotViz(dashboardKey.value),

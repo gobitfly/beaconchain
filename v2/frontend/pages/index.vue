@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
+import { SearchbarColors, SearchbarShape } from '~/types/searchbar'
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 

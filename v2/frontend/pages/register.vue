@@ -4,7 +4,7 @@ import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
-import { provideMobileAuthParams, handleMobileAuth } from '~/utils/mobileAuth'
+import { handleMobileAuth, provideMobileAuthParams } from '~/utils/mobileAuth'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -13,12 +13,12 @@ const route = useRoute()
 
 useBcSeo('login_and_register.title_register')
 
-const { handleSubmit, errors, defineField } = useForm({
+const { defineField, errors, handleSubmit } = useForm({
   validationSchema: yupObject({
+    agreement: checkboxValidation(''),
+    confirmPassword: confirmPasswordValidation($t, 'password'),
     email: emailValidation($t),
     password: passwordValidation($t),
-    confirmPassword: confirmPasswordValidation($t, 'password'),
-    agreement: checkboxValidation(''),
   }),
 })
 
@@ -33,11 +33,11 @@ const onSubmit = handleSubmit(async (values) => {
   }
   try {
     await fetch(API_PATH.REGISTER, {
-      method: 'POST',
       body: {
         email: values.email,
         password: values.password,
       },
+      method: 'POST',
     })
     if (handleMobileAuth(route.query)) {
       return
@@ -46,9 +46,9 @@ const onSubmit = handleSubmit(async (values) => {
   }
   catch (error) {
     toast.showError({
-      summary: $t('login_and_register.error_title'),
-      group: $t('login_and_register.error_register_group'),
       detail: $t('login_and_register.error_register_message'),
+      group: $t('login_and_register.error_register_group'),
+      summary: $t('login_and_register.error_title'),
     })
   }
 })

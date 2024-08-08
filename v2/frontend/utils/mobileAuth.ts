@@ -13,9 +13,9 @@ export function provideMobileAuthParams(queryParams: LocationQuery, path: string
     return {
       path,
       query: {
+        client_id: deviceID,
         redirect_uri: redirectURI,
         state,
-        client_id: deviceID,
       },
     }
   }

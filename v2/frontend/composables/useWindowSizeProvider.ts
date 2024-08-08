@@ -1,4 +1,4 @@
-import { ref, provide } from 'vue'
+import { provide, ref } from 'vue'
 import type { WindowSize } from '~/types/window'
 
 export function useWindowSizeProvider() {
@@ -21,5 +21,5 @@ export function useWindowSizeProvider() {
     window.removeEventListener('resize', validatePageSize)
   })
 
-  provide<WindowSize>('windowSize', { width, height })
+  provide<WindowSize>('windowSize', { height, width })
 }

@@ -17,7 +17,7 @@ const dialog = useDialog()
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
-const { width, isMobile } = useWindowSize()
+const { isMobile, width } = useWindowSize()
 
 const visible = defineModel<boolean>()
 
@@ -62,10 +62,10 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
   const totalCount = processedGroups.length
   const index = cursor.value as number
   return {
+    data: processedGroups.slice(index, index + pageSize.value),
     paging: {
       total_count: totalCount,
     },
-    data: processedGroups.slice(index, index + pageSize.value),
   }
 })
 
@@ -103,7 +103,7 @@ const addGroup = async () => {
 
   await fetch(
     API_PATH.DASHBOARD_VALIDATOR_GROUPS,
-    { method: 'POST', body: { name: newGroupName.value } },
+    { body: { name: newGroupName.value }, method: 'POST' },
     { dashboardKey: dashboardKey.value },
   )
   await refreshOverview(dashboardKey.value)
@@ -113,7 +113,7 @@ const addGroup = async () => {
 const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
   await fetch(
     API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY,
-    { method: 'PUT', body: { name: newName } },
+    { body: { name: newName }, method: 'PUT' },
     { dashboardKey: dashboardKey.value, groupId: row.id },
   )
   refreshOverview(dashboardKey.value)
@@ -131,15 +131,15 @@ const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
 const removeGroup = (row: VDBOverviewGroup) => {
   hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
-    onClose: (response) => {
-      hasNoOpenDialogs.value = true
-      response?.data && removeGroupConfirmed(row)
-    },
     data: {
-      title: $t('dashboard.validator.group_management.remove_title'),
       question: $t('dashboard.validator.group_management.remove_text', {
         group: row.name,
       }),
+      title: $t('dashboard.validator.group_management.remove_title'),
+    },
+    onClose: (response) => {
+      hasNoOpenDialogs.value = true
+      response?.data && removeGroupConfirmed(row)
     },
   })
 }

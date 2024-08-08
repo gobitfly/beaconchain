@@ -14,14 +14,14 @@ const { t: $t } = useTranslation()
 
 const {
   blocks,
-  query: lastQuery,
-  isLoading,
   getBlocks,
+  isLoading,
+  query: lastQuery,
 } = useValidatorDashboardBlocksStore()
 const {
-  value: query,
-  temp: tempQuery,
   bounce: setQuery,
+  temp: tempQuery,
+  value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
@@ -30,15 +30,15 @@ const { hasValidators, overview } = useValidatorDashboardOverviewStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    graffiti: width.value > 1370,
-    epoch: width.value > 1260,
-    slot: width.value > 1120,
     age: width.value > 1005,
-    rewardsRecipient: width.value > 850,
-    status: width.value > 750,
+    epoch: width.value > 1260,
+    graffiti: width.value > 1370,
+    groupSort: width.value > 450,
     mobileStatus: width.value < 1060,
     rewards: width.value > 650,
-    groupSort: width.value > 450,
+    rewardsRecipient: width.value > 850,
+    slot: width.value > 1120,
+    status: width.value > 750,
   }
 })
 

@@ -15,8 +15,8 @@ const mapped = computed(() => {
   const details: { label: string, value?: string }[] = []
   if (!total || total.isZero()) {
     return {
-      total,
       details,
+      total,
     }
   }
 
@@ -45,8 +45,8 @@ const mapped = computed(() => {
   )
   addDetail('total', total.toString())
   return {
-    total,
     details,
+    total,
   }
 })
 </script>

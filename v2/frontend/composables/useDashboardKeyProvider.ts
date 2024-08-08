@@ -28,9 +28,9 @@ export function useDashboardKeyProvider(
       warn('route name missing', route)
     }
     const newRoute = router.resolve({
+      hash: document?.location?.hash,
       name: route.name!,
       params: { id: key },
-      hash: document?.location?.hash,
     })
     dashboardKey.value = key
     if (isClient) {
@@ -98,14 +98,14 @@ export function useDashboardKeyProvider(
   }
 
   const api = {
+    addEntities,
     dashboardKey,
+    dashboardType,
     isPublic,
     isShared,
     publicEntities,
-    addEntities,
     removeEntities,
     setDashboardKey,
-    dashboardType,
   }
 
   watch(isLoggedIn, (newValue, oldValue) => {

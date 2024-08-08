@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
+  faBolt,
   faGaugeSimpleMax,
   faMonitorWaveform,
-  faBolt,
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import { BcDialogConfirm } from '#components'
@@ -23,24 +23,24 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const manageNotificationsModalVisisble = ref(false)
 
 const tabs: HashTabs = {
+  clients: {
+    disabled: !showInDevelopment,
+    index: 2,
+  },
   dashboards: {
     index: 0,
   },
   machines: {
+    disabled: !showInDevelopment,
     index: 1,
-    disabled: !showInDevelopment,
-  },
-  clients: {
-    index: 2,
-    disabled: !showInDevelopment,
-  },
-  rocketpool: {
-    index: 3,
-    disabled: !showInDevelopment,
   },
   network: {
-    index: 4,
     disabled: !showInDevelopment,
+    index: 4,
+  },
+  rocketpool: {
+    disabled: !showInDevelopment,
+    index: 3,
   },
 }
 
@@ -51,16 +51,16 @@ useBcSeo('notifications.title')
 const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
-      props: {
-        header: $t('notifications.title'),
+      data: {
+        question: $t('notifications.login_question'),
       },
       onClose: async (response) => {
         if (response?.data) {
           await navigateTo('/login')
         }
       },
-      data: {
-        question: $t('notifications.login_question'),
+      props: {
+        header: $t('notifications.title'),
       },
     })
   }

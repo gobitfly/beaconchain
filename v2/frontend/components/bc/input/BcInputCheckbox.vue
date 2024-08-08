@@ -5,8 +5,8 @@ import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
 
 const props = defineProps<{
   error?: BcInputError
-  label?: string
   infoText?: string
+  label?: string
 }>()
 
 const id = props.label ? useId() : undefined

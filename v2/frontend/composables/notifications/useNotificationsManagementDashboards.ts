@@ -7,16 +7,16 @@ export function useNotificationsManagementDashboards() {
 
   const data = ref<InternalGetUserNotificationSettingsDashboardsResponse>()
   const {
-    query,
-    pendingQuery,
     cursor,
-    pageSize,
+    isStoredQuery,
     onSort,
+    pageSize,
+    pendingQuery,
+    query,
     setCursor,
     setPageSize,
     setSearch,
     setStoredQuery,
-    isStoredQuery,
   } = useTableQuery({ limit: 10, sort: 'dashboard_id:desc' }, 10)
   const isLoading = ref(false)
 
@@ -51,12 +51,12 @@ export function useNotificationsManagementDashboards() {
   )
 
   return {
-    dashboardGroups,
-    query: pendingQuery,
     cursor,
-    pageSize,
+    dashboardGroups,
     isLoading,
     onSort,
+    pageSize,
+    query: pendingQuery,
     setCursor,
     setPageSize,
     setSearch,

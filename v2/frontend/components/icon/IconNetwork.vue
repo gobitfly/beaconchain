@@ -8,15 +8,15 @@ const colorMode = useColorMode()
 // The icon will fill this frame as much as possible without deformation.
 // Additional properties are the following:
 const props = defineProps({
-  chainId: { type: Number, required: true }, // network whose icon must be displayed (L2s and tesnets can be given)
+  chainId: { required: true, type: Number }, // network whose icon must be displayed (L2s and tesnets can be given)
   // tells whether the icon must be in its official color or in the color of the font
-  colored: { type: Boolean, default: false },
+  colored: { default: false, type: Boolean },
   // some icons in their original colors are hard to see on a dark background,
   //  so they are adapted automatically, but you can deactivate this behavior
   // if your background is always light
-  doNotAdaptToColorTheme: { type: Boolean, default: false },
+  doNotAdaptToColorTheme: { default: false, type: Boolean },
   // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
-  harmonizePerceivedSize: { type: Boolean, default: false },
+  harmonizePerceivedSize: { default: false, type: Boolean },
 })
 
 const family = computed(() =>

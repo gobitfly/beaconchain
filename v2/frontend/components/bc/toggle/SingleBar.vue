@@ -3,21 +3,21 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { Component } from 'vue'
 
 interface Props {
-  layout: 'minimal' | 'gaudy'
-  buttons: {
-    className?: string
-    icon?: IconDefinition
-    text?: string
-    subText?: string
-    component?: Component
-    componentProps?: any
-    componentClass?: string
-    value: string
-    tooltip?: string
-    disabled?: boolean
-  }[]
   // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
   allowDeselect?: boolean
+  buttons: {
+    className?: string
+    component?: Component
+    componentClass?: string
+    componentProps?: any
+    disabled?: boolean
+    icon?: IconDefinition
+    subText?: string
+    text?: string
+    tooltip?: string
+    value: string
+  }[]
+  layout: 'gaudy' | 'minimal'
 }
 const props = defineProps<Props>()
 

@@ -1,32 +1,32 @@
 <script lang="ts" setup>
-import { faTrash, faDesktop, faUser } from '@fortawesome/pro-solid-svg-icons'
+import { faDesktop, faTrash, faUser } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { API_PATH } from '~/types/customFetch'
-import type { ApiPagingResponse, ApiErrorResponse } from '~/types/api/common'
+import type { ApiErrorResponse, ApiPagingResponse } from '~/types/api/common'
 import type {
+  NotificationSettingsAccountDashboard,
   NotificationSettingsDashboardsTableRow,
   NotificationSettingsValidatorDashboard,
-  NotificationSettingsAccountDashboard,
 } from '~/types/api/notifications'
 import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import {
-  NotificationsManagementSubscriptionDialog,
   NotificationsManagementModalWebhook,
+  NotificationsManagementSubscriptionDialog,
 } from '#components'
 import type { WebhookForm } from '~/components/notifications/management/modal/NotificationsManagementModalWebhook.vue'
 
-type AllOptions = NotificationSettingsValidatorDashboard &
-  NotificationSettingsAccountDashboard
+type AllOptions = NotificationSettingsAccountDashboard &
+  NotificationSettingsValidatorDashboard
 
 interface WrappedRow extends NotificationSettingsDashboardsTableRow {
-  dashboard_type: DashboardType
   dashboard_name: string
-  subscriptions: string[]
+  dashboard_type: DashboardType
   identifier: string
+  subscriptions: string[]
 }
 
 interface SettingsWithContext {
@@ -67,12 +67,12 @@ const toast = useBcToast()
 const { t: $t } = useTranslation()
 const dialog = useDialog()
 const {
-  dashboardGroups,
-  query,
   cursor,
-  pageSize,
+  dashboardGroups,
   isLoading,
   onSort,
+  pageSize,
+  query,
   setCursor,
   setPageSize,
   setSearch,
@@ -91,9 +91,9 @@ watch(debouncer.value as Ref<SettingsWithContext>, async (value) => {
   }
   catch (error) {
     toast.showError({
-      summary: $t('notifications.subscriptions.error_title'),
-      group: $t('notifications.subscriptions.error_group'),
       detail: $t('notifications.subscriptions.error_message'),
+      group: $t('notifications.subscriptions.error_group'),
+      summary: $t('notifications.subscriptions.error_title'),
     })
   }
 })
@@ -101,8 +101,8 @@ watch(debouncer.value as Ref<SettingsWithContext>, async (value) => {
 const colsVisible = computed(() => {
   return {
     networks: width.value > 1101,
-    webhook: width.value >= 945,
     subscriptions: width.value >= 725,
+    webhook: width.value >= 945,
   }
 })
 
@@ -117,17 +117,17 @@ const wrappedDashboardGroups: ComputedRef<
     return
   }
   return {
-    paging: dashboardGroups.value.paging,
     data: dashboardGroups.value.data.map(d => ({
       ...d,
-      dashboard_type: dashboardType(d),
       dashboard_name: getDashboardLabel(
         String(d.dashboard_id),
         dashboardType(d),
       ),
-      subscriptions: subscriptionList(d),
+      dashboard_type: dashboardType(d),
       identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`,
+      subscriptions: subscriptionList(d),
     })),
+    paging: dashboardGroups.value.paging,
   }
 
   function dashboardType(
@@ -157,7 +157,7 @@ const wrappedDashboardGroups: ComputedRef<
   }
 })
 
-type Dialog = 'delete' | 'subscriptions' | 'webhook' | 'networks'
+type Dialog = 'delete' | 'networks' | 'subscriptions' | 'webhook'
 const onEdit = (col: Dialog, row: WrappedRow) => {
   const dialogProps = {
     dashboardType: row.dashboard_type,
@@ -166,6 +166,12 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
       debouncer.bounce({ row, settings }, true, true),
   }
   switch (col) {
+    case 'delete':
+      alert('TODO: delete' + row.group_id)
+      break
+    case 'networks':
+      alert('TODO: edit networks' + row.group_id)
+      break
     case 'subscriptions':
       dialog.open(NotificationsManagementSubscriptionDialog, {
         data: dialogProps,
@@ -174,8 +180,8 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
     case 'webhook':
       dialog.open(NotificationsManagementModalWebhook, {
         data: {
-          webhook_url: row.settings.webhook_url,
           is_discord_webhook_enabled: row.settings.is_webhook_discord_enabled,
+          webhook_url: row.settings.webhook_url,
         },
         emits: {
           onSave: async (
@@ -191,20 +197,14 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
             }
             catch (error) {
               toast.showError({
-                summary: $t('notifications.subscriptions.error_title'),
-                group: $t('notifications.subscriptions.error_group'),
                 detail: $t('notifications.subscriptions.error_message'),
+                group: $t('notifications.subscriptions.error_group'),
+                summary: $t('notifications.subscriptions.error_title'),
               })
             }
           },
         },
       })
-      break
-    case 'networks':
-      alert('TODO: edit networks' + row.group_id)
-      break
-    case 'delete':
-      alert('TODO: delete' + row.group_id)
       break
   }
 }
@@ -213,16 +213,16 @@ async function saveUserSettings(settingsAndContext: SettingsWithContext) {
   await fetch<ApiErrorResponse>(
     API_PATH.SAVE_DASHBOARDS_SETTINGS,
     {
-      method: 'PUT',
-      signal: AbortSignal.timeout(TimeoutForSavingFailures),
       body: {
         ...settingsAndContext.row.settings,
         ...settingsAndContext.settings,
       },
+      method: 'PUT',
+      signal: AbortSignal.timeout(TimeoutForSavingFailures),
     },
     {
-      for: settingsAndContext.row.dashboard_type,
       dashboardKey: String(settingsAndContext.row.dashboard_id),
+      for: settingsAndContext.row.dashboard_type,
       groupId: String(settingsAndContext.row.group_id),
     },
   )

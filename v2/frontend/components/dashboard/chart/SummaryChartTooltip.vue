@@ -6,16 +6,16 @@ import {
 } from '~/types/dashboard/summary'
 
 interface Props {
-  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context
-  ts: number
   aggregation: AggregationTimeframe
   efficiencyType: EfficiencyType
   groupInfos: {
-    name: string
-    efficiency: number
     color: string
+    efficiency: number
+    name: string
   }[]
   highlightGroup?: string
+  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context
+  ts: number
 }
 
 defineProps<Props>()

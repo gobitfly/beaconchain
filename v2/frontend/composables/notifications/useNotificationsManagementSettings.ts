@@ -58,10 +58,10 @@ export function useNotificationsManagementSettings() {
   })
 
   return {
-    isLoading,
     generalSettings,
-    updateGeneralSettings,
+    isLoading,
     pairedDevices,
+    updateGeneralSettings,
     updatePairedDevices,
   }
 }

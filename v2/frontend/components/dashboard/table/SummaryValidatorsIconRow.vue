@@ -4,9 +4,9 @@ import { faPowerOff } from '@fortawesome/pro-solid-svg-icons'
 import type { SummaryValidatorsIconRowInfo } from '~/types/validator'
 
 interface Props {
+  absolute: boolean
   icons: SummaryValidatorsIconRowInfo[]
   total?: number
-  absolute: boolean
 }
 const props = defineProps<Props>()
 

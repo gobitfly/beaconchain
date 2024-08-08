@@ -4,8 +4,8 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { InternalEntry } from '~/types/notifications/subscriptionModal'
 
 const props = defineProps<{
-  tPath: string
   lacksPremiumSubscription: boolean
+  tPath: string
   valueInText?: number
 }>()
 
@@ -24,8 +24,8 @@ const tooltipLines = computed(() => {
   }
   else if (Array.isArray(parentVmodel.value)) {
     options = {
-      plural: parentVmodel.value.length,
       list: parentVmodel.value.join(', '),
+      plural: parentVmodel.value.length,
     }
   }
   else {

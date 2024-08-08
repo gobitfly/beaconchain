@@ -23,8 +23,8 @@ export function useValidatorDashboardElDepositsStore() {
   const { fetch } = useCustomFetch()
   const {
     data,
-    total,
     query: storedQuery,
+    total,
   } = storeToRefs(validatorDashboardElDepositsStore())
 
   const deposits = computed(() => data.value)
@@ -81,12 +81,12 @@ export function useValidatorDashboardElDepositsStore() {
   }
 
   return {
-    totalAmount,
-    getTotalAmount,
     deposits,
-    query,
     getDeposits,
-    isLoadingTotal,
+    getTotalAmount,
     isLoadingDeposits,
+    isLoadingTotal,
+    query,
+    totalAmount,
   }
 }

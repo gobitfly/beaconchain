@@ -3,8 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { MenuBarEntry } from '~/types/menuBar'
 
 interface Props {
-  buttons?: MenuBarEntry[]
   alignRight?: boolean
+  buttons?: MenuBarEntry[]
 }
 defineProps<Props>()
 </script>

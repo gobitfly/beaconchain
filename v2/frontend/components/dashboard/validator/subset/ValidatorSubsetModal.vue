@@ -26,15 +26,15 @@ const { fetch } = useCustomFetch()
 
 interface Props {
   context: DashboardValidatorContext
-  timeFrame?: SummaryTimeFrame
   dashboardKey?: DashboardKey
   dashboardName?: string
-  groupName?: string
   groupId?: number
+  groupName?: string
   summary?: {
     data?: VDBGroupSummaryData
     row: VDBSummaryTableRow
   }
+  timeFrame?: SummaryTimeFrame
 }
 const { props, setHeader } = useBcDialog<Props>(undefined)
 
@@ -84,7 +84,7 @@ watch(
       const res
         = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(
           API_PATH.DASHBOARD_VALIDATOR_INDICES,
-          { query: { period: p?.timeFrame, duty, group_id: p?.groupId } },
+          { query: { duty, group_id: p?.groupId, period: p?.timeFrame } },
           { dashboardKey: `${p?.dashboardKey}` },
         )
       data.value = res.data
@@ -137,8 +137,8 @@ const subsets = computed<ValidatorSubset[]>(() => {
             (list, sub) =>
               list.concat(
                 sub.validators.map(v => ({
-                  index: v.index,
                   duty_objects: [],
+                  index: v.index,
                 })),
               ),
             all.validators,

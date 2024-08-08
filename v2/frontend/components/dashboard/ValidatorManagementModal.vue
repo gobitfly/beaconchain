@@ -18,13 +18,13 @@ import type {
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 import {
-  type SearchBar,
-  SearchbarShape,
-  SearchbarColors,
-  SearchbarPurpose,
+  pickHighestPriorityAmongBestMatchings,
   type ResultSuggestion,
   ResultType,
-  pickHighestPriorityAmongBestMatchings,
+  type SearchBar,
+  SearchbarColors,
+  SearchbarPurpose,
+  SearchbarShape,
 } from '~/types/searchbar'
 import { API_PATH, type PathValues } from '~/types/customFetch'
 import { useNetworkStore } from '~/stores/useNetworkStore'
@@ -45,7 +45,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, dashboardType }
+const { addEntities, dashboardKey, dashboardType, isPublic, removeEntities }
   = useDashboardKey()
 const { updateHash } = useUserDashboardStore()
 const { isLoggedIn, user } = useUserStore()
@@ -53,10 +53,10 @@ const { isLoggedIn, user } = useUserStore()
 const initialQuery = { limit: pageSize.value, sort: 'index:asc' }
 
 const {
-  value: query,
-  temp: tempQuery,
   bounce: setQuery,
   instant: instantQuery,
+  temp: tempQuery,
+  value: query,
 } = useDebounceValue<PathValues | undefined>(initialQuery, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
@@ -65,11 +65,11 @@ const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
 
 type ValidatorUpdateBody = {
-  validators?: string[]
   deposit_address?: string
-  withdrawal_address?: string
   graffiti?: string
   group_id?: number
+  validators?: string[]
+  withdrawal_address?: string
 }
 
 const size = computed(() => {
@@ -77,8 +77,8 @@ const size = computed(() => {
     expandable: width.value < 1060,
     showBalance: width.value >= 1060,
     showGroup: width.value >= 925,
-    showWithdrawalCredentials: width.value >= 750,
     showPublicKey: width.value >= 570,
+    showWithdrawalCredentials: width.value >= 750,
   }
 })
 
@@ -117,7 +117,7 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
 
   await fetch<VDBPostValidatorsData>(
     API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
-    { method: 'POST', body },
+    { body, method: 'POST' },
     { dashboardKey: dashboardKey.value },
   )
 
@@ -201,6 +201,11 @@ function isSearchResultRestricted(result: ResultSuggestion): boolean {
 const editSelected = () => {
   hasNoOpenDialogs.value = false
   dialog.open(DashboardGroupSelectionDialog, {
+    data: {
+      groupId: selected.value?.[0]?.group_id ?? undefined,
+      selectedValidators: selected.value?.length,
+      totalValidators: total?.value,
+    },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
       if (response?.data !== undefined) {
@@ -209,11 +214,6 @@ const editSelected = () => {
           response?.data,
         )
       }
-    },
-    data: {
-      groupId: selected.value?.[0]?.group_id ?? undefined,
-      selectedValidators: selected.value?.length,
-      totalValidators: total?.value,
     },
   })
 }
@@ -257,7 +257,7 @@ const loadData = async () => {
     }
   }
   else {
-    data.value = { paging: {}, data: [] }
+    data.value = { data: [], paging: {} }
   }
 }
 
@@ -289,17 +289,17 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 
   hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
-    onClose: (response) => {
-      hasNoOpenDialogs.value = true
-      response?.data && removeValidators(list)
-    },
     data: {
-      title: $t('dashboard.validator.management.remove_title'),
       question: $t(
         'dashboard.validator.management.remove_text',
         { validator: list[0] },
         list.length,
       ),
+      title: $t('dashboard.validator.management.remove_title'),
+    },
+    onClose: (response) => {
+      hasNoOpenDialogs.value = true
+      response?.data && removeValidators(list)
     },
   })
 }
