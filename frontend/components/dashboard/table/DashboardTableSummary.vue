@@ -1,32 +1,51 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { SummaryTimeFrames, type SummaryChartFilter, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
+import {
+  SummaryTimeFrames,
+  type SummaryChartFilter,
+  type SummaryTableVisibility,
+  type SummaryTimeFrame,
+} from '~/types/dashboard/summary'
 
 const { dashboardKey, isPublic } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
-const chartFilter = ref<SummaryChartFilter>({ aggregation: 'hourly', efficiency: 'all', groupIds: [] })
+const chartFilter = ref<SummaryChartFilter>({
+  aggregation: 'hourly',
+  efficiency: 'all',
+  groupIds: [],
+})
 
-const { summary, query: lastQuery, isLoading, getSummary } = useValidatorDashboardSummaryStore()
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const {
+  summary,
+  query: lastQuery,
+  isLoading,
+  getSummary,
+} = useValidatorDashboardSummaryStore()
+const {
+  value: query,
+  temp: tempQuery,
+  bounce: setQuery,
+} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const showAbsoluteValues = ref<boolean | null>(null)
 
-const { overview, hasValidators, validatorCount } = useValidatorDashboardOverviewStore()
+const { overview, hasValidators, validatorCount }
+  = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
-const timeFrames = computed(() => SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })))
+const timeFrames = computed(() =>
+  SummaryTimeFrames.map(t => ({ name: $t(`time_frames.${t}`), id: t })),
+)
 const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
 
 const { width } = useWindowSize()
@@ -36,31 +55,45 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
     attestations: width.value >= 1015,
     reward: width.value >= 933,
     efficiency: width.value >= 730,
-    validatorsSortable: width.value >= 571
+    validatorsSortable: width.value >= 571,
   }
 })
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
-    q = query.value ? { ...query.value } : { limit: pageSize.value, sort: 'efficiency:desc' }
+    q = query.value
+      ? { ...query.value }
+      : { limit: pageSize.value, sort: 'efficiency:desc' }
   }
   setQuery(q, true, true)
 }
 
-watch(validatorCount, (count) => {
-  if (count !== undefined && showAbsoluteValues.value === null) {
-    showAbsoluteValues.value = count < 100_000
-  }
-}, { immediate: true })
+watch(
+  validatorCount,
+  (count) => {
+    if (count !== undefined && showAbsoluteValues.value === null) {
+      showAbsoluteValues.value = count < 100_000
+    }
+  },
+  { immediate: true },
+)
 
-watch([dashboardKey, overview], () => {
-  loadData()
-}, { immediate: true })
+watch(
+  [dashboardKey, overview],
+  () => {
+    loadData()
+  },
+  { immediate: true },
+)
 
-watch([query, selectedTimeFrame], ([q, timeFrame]) => {
-  if (q) {
-    getSummary(dashboardKey.value, timeFrame, q)
-  }
-}, { immediate: true })
+watch(
+  [query, selectedTimeFrame],
+  ([q, timeFrame]) => {
+    if (q) {
+      getSummary(dashboardKey.value, timeFrame, q)
+    }
+  },
+  { immediate: true },
+)
 
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
@@ -90,9 +123,15 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   }
 }
 
-const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.length ?? 0) <= 1 ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder'))
-
+const searchPlaceholder = computed(() =>
+  $t(
+    isPublic.value && (groups.value?.length ?? 0) <= 1
+      ? 'dashboard.validator.summary.search_placeholder_public'
+      : 'dashboard.validator.summary.search_placeholder',
+  ),
+)
 </script>
+
 <template>
   <div>
     <BcTableControl
@@ -100,9 +139,9 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
       :search-placeholder="searchPlaceholder"
       @set-search="setSearch"
     >
-      <template #header-center="{tableIsShown}">
+      <template #header-center="{ tableIsShown }">
         <h1 class="summary_title">
-          {{ $t('dashboard.validator.summary.title') }}
+          {{ $t("dashboard.validator.summary.title") }}
         </h1>
         <BcDropdown
           v-if="tableIsShown"
@@ -113,7 +152,10 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
           class="small"
           :placeholder="$t('dashboard.group.selection.placeholder')"
         />
-        <DashboardChartSummaryChartFilter v-else v-model="chartFilter" />
+        <DashboardChartSummaryChartFilter
+          v-else
+          v-model="chartFilter"
+        />
       </template>
       <template #table>
         <ClientOnly fallback-tag="span">
@@ -150,7 +192,10 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
               :header="$t('dashboard.validator.col.status')"
             >
               <template #body="slotProps">
-                <DashboardTableSummaryStatus :class="slotProps.data.className" :status="slotProps.data.status" />
+                <DashboardTableSummaryStatus
+                  :class="slotProps.data.className"
+                  :status="slotProps.data.status"
+                />
               </template>
             </Column>
             <Column
@@ -161,15 +206,15 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
             >
               <template #header>
                 <div class="validators-header">
-                  <div>{{ $t('dashboard.validator.col.validators') }}</div>
+                  <div>{{ $t("dashboard.validator.col.validators") }}</div>
                   <div class="sub-header">
-                    {{ $t('common.live') }}
+                    {{ $t("common.live") }}
                   </div>
                   <BcTooltip
                     class="info"
                     tooltip-class="summary-info-tooltip"
                     :text="$t('dashboard.validator.summary.tooltip.live')"
-                    @click.stop.prevent="() => { }"
+                    @click.stop.prevent="() => {}"
                   >
                     <FontAwesomeIcon :icon="faInfoCircle" />
                   </BcTooltip>
@@ -321,8 +366,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
 }
 
 :deep(.summary_table) {
-
-  >.p-datatable-wrapper {
+  > .p-datatable-wrapper {
     min-height: 529px;
   }
 
@@ -361,7 +405,7 @@ const searchPlaceholder = computed(() => $t(isPublic.value && (groups.value?.len
     }
   }
 
-  .total-row+.p-datatable-row-expansion {
+  .total-row + .p-datatable-row-expansion {
     td {
       border-bottom-color: var(--primary-color);
     }

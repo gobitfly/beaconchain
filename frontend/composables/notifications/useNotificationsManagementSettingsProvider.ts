@@ -1,18 +1,32 @@
 import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
-import type { InternalGetUserNotificationSettingsResponse, NotificationSettings, NotificationPairedDevice } from '~/types/api/notifications'
-import type { NotificationsManagementSettingsGeneralTab, NotificationsManagementSettingsProvider } from '~/types/notifications/settings'
+import type {
+  InternalGetUserNotificationSettingsResponse,
+  NotificationSettings,
+  NotificationPairedDevice,
+} from '~/types/api/notifications'
+import type {
+  NotificationsManagementSettingsGeneralTab,
+  NotificationsManagementSettingsProvider,
+} from '~/types/notifications/settings'
 
-export function useUseNotificationsManagementSettingsProvider () {
+export function useUseNotificationsManagementSettingsProvider() {
   const { fetch } = useCustomFetch()
 
-  const { value, temp: tempSettings, bounce, instant } = useDebounceValue<NotificationSettings | undefined>(undefined, 1000)
+  const {
+    value,
+    temp: tempSettings,
+    bounce,
+    instant,
+  } = useDebounceValue<NotificationSettings | undefined>(undefined, 1000)
   const isLoading = ref(false)
   let updateRequested = false
 
-  async function refreshSettings () {
+  async function refreshSettings() {
     isLoading.value = true
-    const res = await fetch<InternalGetUserNotificationSettingsResponse>(API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL)
+    const res = await fetch<InternalGetUserNotificationSettingsResponse>(
+      API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL,
+    )
 
     isLoading.value = false
 
@@ -21,21 +35,36 @@ export function useUseNotificationsManagementSettingsProvider () {
   }
 
   const settings = computed(() => tempSettings.value as NotificationSettings)
-  const generalSettings = computed(() => settings.value.general_settings as NotificationsManagementSettingsGeneralTab)
+  const generalSettings = computed(
+    () =>
+      settings.value
+        .general_settings as NotificationsManagementSettingsGeneralTab,
+  )
   const pairedDevices = computed(() => settings.value.paired_devices)
 
-  function updateGeneralSettings (newSettings:NotificationsManagementSettingsGeneralTab) {
+  function updateGeneralSettings(
+    newSettings: NotificationsManagementSettingsGeneralTab,
+  ) {
     if (tempSettings.value && newSettings) {
       updateRequested = true
-      const original: NotificationSettings = tempSettings.value as NotificationSettings
-      bounce({ ...original, general_settings: { ...original.general_settings, ...newSettings } }, true, true)
+      const original: NotificationSettings
+        = tempSettings.value as NotificationSettings
+      bounce(
+        {
+          ...original,
+          general_settings: { ...original.general_settings, ...newSettings },
+        },
+        true,
+        true,
+      )
     }
   }
 
-  function updatePairedDevices (newDevices: NotificationPairedDevice[]) {
+  function updatePairedDevices(newDevices: NotificationPairedDevice[]) {
     if (tempSettings.value && newDevices) {
       updateRequested = true
-      const original: NotificationSettings = tempSettings.value as NotificationSettings
+      const original: NotificationSettings
+        = tempSettings.value as NotificationSettings
       bounce({ ...original, paired_devices: newDevices }, true, true)
     }
   }
@@ -44,14 +73,25 @@ export function useUseNotificationsManagementSettingsProvider () {
     if (updateRequested) {
       updateRequested = false
       try {
-        warn(`TODO: implement saving of new settings ${newSettings}`) // adding newSettings here so the parameter is used :)
-      } catch (e) {
+        // adding newSettings here so the parameter is used :)
+        warn(`TODO: implement saving of new settings ${newSettings}`)
+      }
+      catch (e) {
         refreshSettings()
       }
     }
   })
 
-  provide<NotificationsManagementSettingsProvider>('notificationsManagementSettings', { isLoading, generalSettings, updateGeneralSettings, pairedDevices, updatePairedDevices })
+  provide<NotificationsManagementSettingsProvider>(
+    'notificationsManagementSettings',
+    {
+      isLoading,
+      generalSettings,
+      updateGeneralSettings,
+      pairedDevices,
+      updatePairedDevices,
+    },
+  )
 
   return { refreshSettings, isLoading }
 }

@@ -3,15 +3,18 @@ import { generateUUID } from '~/utils/misc'
 
 // Used for debugging purposes, might be removed or moved later
 provide('app-uuid', { value: generateUUID() })
-useHead({
-  script: [
-    {
-      key: 'revive',
-      src: '../js/revive.min.js',
-      async: false
-    }
-  ]
-}, { mode: 'client' })
+useHead(
+  {
+    script: [
+      {
+        key: 'revive',
+        src: '../js/revive.min.js',
+        async: false,
+      },
+    ],
+  },
+  { mode: 'client' },
+)
 useWindowSizeProvider()
 useBcToastProvider()
 useDateProvider()
@@ -28,5 +31,4 @@ useColorBlindModeProvider()
   </div>
 </template>
 
-<style lang="scss">
-</style>
+<style lang="scss"></style>

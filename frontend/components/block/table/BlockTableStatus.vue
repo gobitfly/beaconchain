@@ -3,8 +3,8 @@ import { type BlockStatus } from '~/types/block'
 import type { TagSize, TagColor } from '~/types/tag'
 
 interface Props {
-  status?: BlockStatus,
-  blockSlot?: number,
+  status?: BlockStatus
+  blockSlot?: number
   mobile?: boolean
 }
 const props = defineProps<Props>()
@@ -22,10 +22,20 @@ const mapped = computed(() => {
   }
   const size: TagSize = props.mobile ? 'circle' : 'default'
   let color: TagColor
-  const status = props.status === 'scheduled' && (props.blockSlot && (props.blockSlot < currentSlot)) ? 'probably_missed' : props.status
+  const status
+    = props.status === 'scheduled'
+    && props.blockSlot
+    && props.blockSlot < currentSlot
+      ? 'probably_missed'
+      : props.status
   const tStatus = $t(`block.status.${status}`)
   const label = props.mobile ? tStatus.substring(0, 1) : tStatus
-  const tooltip = status === 'probably_missed' ? $t('block.status_might_change_on_reorg') : props.mobile ? tStatus : undefined
+  const tooltip
+    = status === 'probably_missed'
+      ? $t('block.status_might_change_on_reorg')
+      : props.mobile
+        ? tStatus
+        : undefined
   switch (status) {
     case 'probably_missed':
       color = 'partial'
@@ -49,11 +59,14 @@ const mapped = computed(() => {
     size,
     color,
     label,
-    tooltip
+    tooltip,
   }
 })
-
 </script>
+
 <template>
-  <BcTableTag v-if="mapped" v-bind="mapped" />
+  <BcTableTag
+    v-if="mapped"
+    v-bind="mapped"
+  />
 </template>

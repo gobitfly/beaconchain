@@ -6,9 +6,9 @@ import { mapping, type PathValues, API_PATH } from '~/types/customFetch'
 const APIcallTimeout = 30 * 1000 // 30 seconds
 
 const pathNames = Object.values(API_PATH)
-type PathName = typeof pathNames[number]
+type PathName = (typeof pathNames)[number]
 
-export function useCustomFetch () {
+export function useCustomFetch() {
   const headers = useRequestHeaders(['cookie'])
   const xForwardedFor = useRequestHeader('x-forwarded-for')
   const xRealIp = useRequestHeader('x-real-ip')
@@ -16,10 +16,16 @@ export function useCustomFetch () {
   const { showError } = useBcToast()
   const { t: $t } = useTranslation()
   const { $bcLogger } = useNuxtApp()
-  const uuid = inject<{value: string}>('app-uuid')
+  const uuid = inject<{ value: string }>('app-uuid')
 
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  async function fetch<T> (pathName: PathName, options: NitroFetchOptions<string & {}> = { }, pathValues?: PathValues, query?: PathValues, dontShowError = false): Promise<T> {
+  async function fetch<T>(
+    pathName: PathName,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    options: NitroFetchOptions<string & {}> = {},
+    pathValues?: PathValues,
+    query?: PathValues,
+    dontShowError = false,
+  ): Promise<T> {
     const map = mapping[pathName]
     if (!map) {
       throw new Error(`path ${pathName} not found`)
@@ -36,13 +42,26 @@ export function useCustomFetch () {
     const url = useRequestURL()
     const runtimeConfig = useRuntimeConfig()
     const showInDevelopment = Boolean(runtimeConfig.showInDevelopment)
-    const { public: { apiClient, legacyApiClient, apiKey, domain, logIp }, private: pConfig } = runtimeConfig
-    const path = map.mock ? `${pathName}.json` : map.getPath?.(pathValues) || map.path
-    let baseURL = map.mock ? '../mock' : map.legacy ? legacyApiClient : apiClient
+    const {
+      public: { apiClient, legacyApiClient, apiKey, domain, logIp },
+      private: pConfig,
+    } = runtimeConfig
+    const path = map.mock
+      ? `${pathName}.json`
+      : map.getPath?.(pathValues) || map.path
+    let baseURL = map.mock
+      ? '../mock'
+      : map.legacy
+        ? legacyApiClient
+        : apiClient
     const ssrSecret = pConfig?.ssrSecret
 
     if (isServer) {
-      baseURL = map.mock ? `${domain || url.origin.replace('http:', 'https:')}/mock` : map.legacy ? pConfig?.legacyApiServer : pConfig?.apiServer
+      baseURL = map.mock
+        ? `${domain || url.origin.replace('http:', 'https:')}/mock`
+        : map.legacy
+          ? pConfig?.legacyApiServer
+          : pConfig?.apiServer
     }
 
     options.headers = new Headers({ ...options.headers, ...headers })
@@ -59,14 +78,20 @@ export function useCustomFetch () {
     const method = options.method || map.method || 'GET'
 
     if (isServer && logIp === 'LOG') {
-      $bcLogger.warn(`${uuid?.value} | x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`, headers)
+      $bcLogger.warn(
+        `${
+          uuid?.value
+        } | x-forwarded-for: ${xForwardedFor}, x-real-ip: ${xRealIp} | ${method} -> ${pathName}, hasAuth: ${!!apiKey}`,
+        headers,
+      )
     }
 
     // For non GET method's we need to set the csrf header for security
     if (method !== 'GET') {
       if (csrfHeader.value) {
         options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
-      } else {
+      }
+      else {
         $bcLogger.warn(`${uuid?.value} | missing csrf header!`)
       }
     }
@@ -75,7 +100,7 @@ export function useCustomFetch () {
       const res = await $fetch<LoginResponse>(path, {
         method,
         baseURL,
-        ...options
+        ...options,
       })
       return res as T
     }
@@ -87,11 +112,16 @@ export function useCustomFetch () {
         setCsrfHeader(res.headers)
       }
       return res._data as T
-    } catch (e: any) {
+    }
+    catch (e: any) {
       if (!dontShowError && showInDevelopment) {
-        showError({ group: e.statusCode, summary: $t('error.ws_error'), detail: `${options.method}: ${baseURL}${path}` })
+        showError({
+          group: e.statusCode,
+          summary: $t('error.ws_error'),
+          detail: `${options.method}: ${baseURL}${path}`,
+        })
       }
-      throw (e)
+      throw e
     }
   }
 

@@ -5,7 +5,7 @@ const { stripeCustomerPortal, isStripeDisabled } = useStripe()
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
-async function goToStripeCustomerPortal () {
+async function goToStripeCustomerPortal() {
   if (planButton.value.disabled) {
     return
   }
@@ -16,34 +16,39 @@ async function goToStripeCustomerPortal () {
 }
 
 const planButton = computed(() => {
-  const text = currentPremiumSubscription.value ? $t('pricing.premium_product.button.manage_plan') : $t('pricing.premium_product.button.select_plan')
+  const text = currentPremiumSubscription.value
+    ? $t('pricing.premium_product.button.manage_plan')
+    : $t('pricing.premium_product.button.select_plan')
   const disabled = isStripeDisabled.value || buttonsDisabled.value || undefined
 
   return { text, disabled }
 })
-
 </script>
 
 <template>
   <div class="subscriptions-container">
     <div class="title">
-      {{ $t('user_settings.subscriptions.title') }}
+      {{ $t("user_settings.subscriptions.title") }}
     </div>
     <div class="subtitle">
-      {{ $t('premium.title') }} | {{ currentPremiumSubscription?.product_name }}
+      {{ $t("premium.title") }} | {{ currentPremiumSubscription?.product_name }}
     </div>
     <div class="explanation">
-      {{ $t('user_settings.subscriptions.explanation') }}
+      {{ $t("user_settings.subscriptions.explanation") }}
     </div>
     <div class="button-row">
-      <Button :label="planButton.text" :disabled="planButton.disabled" @click="goToStripeCustomerPortal()" />
+      <Button
+        :label="planButton.text"
+        :disabled="planButton.disabled"
+        @click="goToStripeCustomerPortal()"
+      />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/fonts.scss";
 
 .subscriptions-container {
   display: flex;

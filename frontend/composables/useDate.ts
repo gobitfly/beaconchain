@@ -1,7 +1,7 @@
 import { inject } from 'vue'
 import type { DateInfo } from '~/types/date'
 
-export function useDate () {
+export function useDate() {
   const date = inject<DateInfo>('date-info')
 
   if (!date) {

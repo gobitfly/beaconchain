@@ -11,7 +11,10 @@ defineProps<Props>()
 <template>
   <div class="premium-products-container">
     <div class="premium-products-row">
-      <template v-for="product in products?.premium_products" :key="product.product_id_yearly">
+      <template
+        v-for="product in products?.premium_products"
+        :key="product.product_id_yearly"
+      >
         <PricingPremiumProductBox
           v-if="product.price_per_year_eur > 0"
           :product
@@ -20,7 +23,7 @@ defineProps<Props>()
       </template>
     </div>
     <div class="footnote">
-      {{ $t('pricing.excluding_vat') }}
+      {{ $t("pricing.excluding_vat") }}
     </div>
   </div>
 </template>
@@ -51,7 +54,7 @@ defineProps<Props>()
 }
 
 @media (max-width: 1360px) {
-  .premium-products-container{
+  .premium-products-container {
     margin-bottom: 36px;
     .premium-products-row {
       gap: 10px;

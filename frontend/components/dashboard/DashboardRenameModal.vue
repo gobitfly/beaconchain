@@ -10,10 +10,10 @@ const name = defineModel<string>('name', { default: '' })
 const isLoading = ref(false)
 
 interface Props {
-  dashboard: ValidatorDashboard,
+  dashboard: ValidatorDashboard
   dashboardType: DashboardType
 }
-const { props, setHeader, dialogRef } = useBcDialog<Props>({pt:{header:{ class: 'dashboard-rename-modal-header'}}})
+const { props, setHeader, dialogRef } = useBcDialog<Props>({ pt: { header: { class: 'dashboard-rename-modal-header' } } })
 
 watch(props, (p) => {
   let title = $t('dashboard.rename.title')
@@ -25,7 +25,11 @@ watch(props, (p) => {
 }, { immediate: true })
 
 const renameDisabled = computed(() => {
-  return !name.value?.length || isLoading.value || !REGEXP_VALID_NAME.test(name.value)
+  return (
+    !name.value?.length
+    || isLoading.value
+    || !REGEXP_VALID_NAME.test(name.value)
+  )
 })
 
 const rename = async () => {
@@ -36,22 +40,37 @@ const rename = async () => {
   }
 
   isLoading.value = true
-  const path = props.value?.dashboardType === 'validator' ? API_PATH.DASHBOARD_RENAME_VALIDATOR : API_PATH.DASHBOARD_RENAME_ACCOUNT
-  await fetch(path, { body: { name: name.value } }, { dashboardKey: `${props.value?.dashboard.id}` })
+  const path
+    = props.value?.dashboardType === 'validator'
+      ? API_PATH.DASHBOARD_RENAME_VALIDATOR
+      : API_PATH.DASHBOARD_RENAME_ACCOUNT
+  await fetch(
+    path,
+    { body: { name: name.value } },
+    { dashboardKey: `${props.value?.dashboard.id}` },
+  )
 
   isLoading.value = false
 
   dialogRef?.value.close(true)
 }
-
 </script>
 
 <template>
   <div class="dashboard_rename_modal_container">
-    <InputText v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" :maxlength="50" class="input-field" @keypress.enter="rename" />
+    <InputText
+      v-model="name"
+      :placeholder="$t('dashboard.creation.type.placeholder')"
+      :maxlength="50"
+      class="input-field"
+      @keypress.enter="rename"
+    />
     <div class="footer">
-      <Button :disabled="renameDisabled" @click="rename">
-        {{ $t('navigation.save') }}
+      <Button
+        :disabled="renameDisabled"
+        @click="rename"
+      >
+        {{ $t("navigation.save") }}
       </Button>
     </div>
   </div>
@@ -75,7 +94,7 @@ const rename = async () => {
     width: unset;
   }
 
-  .input-field{
+  .input-field {
     width: 100%;
   }
 

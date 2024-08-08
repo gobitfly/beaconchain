@@ -1,10 +1,8 @@
-<script lang="ts" setup>
-
-</script>
+<script lang="ts" setup></script>
 
 <template>
   <div class="bc-form-row">
-    <slot/>
+    <slot />
   </div>
 </template>
 
@@ -15,8 +13,8 @@
   align-items: center;
   grid-template-columns: 1fr auto;
   row-gap: var(--padding-small);
-  
-  grid-template-areas: 
+
+  grid-template-areas:
     "label input"
     "error error";
 }
