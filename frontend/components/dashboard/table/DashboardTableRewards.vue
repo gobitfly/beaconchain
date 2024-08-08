@@ -2,7 +2,10 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type { Cursor, TableQueryParams } from '~/types/datatable'
-import { DAHSHBOARDS_ALL_GROUPS_ID, DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
+import {
+  DAHSHBOARDS_ALL_GROUPS_ID,
+  DAHSHBOARDS_NEXT_EPOCH_ID,
+} from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -16,8 +19,17 @@ const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { rewards, query: lastQuery, isLoading, getRewards } = useValidatorDashboardRewardsStore()
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const {
+  rewards,
+  query: lastQuery,
+  isLoading,
+  getRewards,
+} = useValidatorDashboardRewardsStore()
+const {
+  value: query,
+  temp: tempQuery,
+  bounce: setQuery,
+} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
@@ -29,7 +41,7 @@ const colsVisible = computed(() => {
     duty: width.value > 1180,
     clRewards: width.value >= 900,
     elRewards: width.value >= 780,
-    age: width.value >= 660
+    age: width.value >= 660,
   }
 })
 
@@ -40,15 +52,23 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch([dashboardKey, overview], () => {
-  loadData()
-}, { immediate: true })
+watch(
+  [dashboardKey, overview],
+  () => {
+    loadData()
+  },
+  { immediate: true },
+)
 
-watch(query, (q) => {
-  if (q) {
-    getRewards(dashboardKey.value, q)
-  }
-}, { immediate: true })
+watch(
+  query,
+  (q) => {
+    if (q) {
+      getRewards(dashboardKey.value, q)
+    }
+  },
+  { immediate: true },
+)
 
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
@@ -75,7 +95,8 @@ const setSearch = (value?: string) => {
 const getRowClass = (row: VDBRewardsTableRow) => {
   if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
-  } else if (row.group_id === DAHSHBOARDS_NEXT_EPOCH_ID) {
+  }
+  else if (row.group_id === DAHSHBOARDS_NEXT_EPOCH_ID) {
     return 'future-row'
   }
 }
@@ -112,16 +133,25 @@ const wrappedRewards = computed(() => {
   }
   return {
     paging: rewards.value.paging,
-    data: rewards.value.data.map(d => ({ ...d, identifier: `${d.epoch}-${d.group_id}` }))
+    data: rewards.value.data.map(d => ({
+      ...d,
+      identifier: `${d.epoch}-${d.group_id}`,
+    })),
   }
 })
-
 </script>
+
 <template>
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.rewards.title')"
-      :search-placeholder="$t(isPublic ? 'dashboard.validator.rewards.search_placeholder_public' : 'dashboard.validator.rewards.search_placeholder')"
+      :search-placeholder="
+        $t(
+          isPublic
+            ? 'dashboard.validator.rewards.search_placeholder_public'
+            : 'dashboard.validator.rewards.search_placeholder',
+        )
+      "
       :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
@@ -143,14 +173,28 @@ const wrappedRewards = computed(() => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="epoch" :sortable="true" body-class="epoch" header-class="epoch" :header="$t('common.epoch')">
+            <Column
+              field="epoch"
+              :sortable="true"
+              body-class="epoch"
+              header-class="epoch"
+              :header="$t('common.epoch')"
+            >
               <template #body="slotProps">
-                <BcLink :to="`/epoch/${slotProps.data.epoch}`" class="link" target="_blank">
+                <BcLink
+                  :to="`/epoch/${slotProps.data.epoch}`"
+                  class="link"
+                  target="_blank"
+                >
                   <BcFormatNumber :value="slotProps.data.epoch" />
                 </BcLink>
               </template>
             </Column>
-            <Column v-if="colsVisible.age" field="age" body-class="age-field">
+            <Column
+              v-if="colsVisible.age"
+              field="age"
+              body-class="age-field"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -166,10 +210,15 @@ const wrappedRewards = computed(() => {
               :header="$t('dashboard.validator.col.duty')"
             >
               <template #body="slotProps">
-                <span v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                <span
+                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+                >
                   {{ findNextEpochDuties(slotProps.data.epoch) }}
                 </span>
-                <DashboardTableValueDuty v-else :duty="slotProps.data.duty" />
+                <DashboardTableValueDuty
+                  v-else
+                  :duty="slotProps.data.duty"
+                />
               </template>
             </Column>
             <Column
@@ -191,7 +240,9 @@ const wrappedRewards = computed(() => {
               :header="$t('dashboard.validator.summary.row.reward')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                <div
+                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+                >
                   -
                 </div>
                 <BcFormatValue
@@ -210,7 +261,9 @@ const wrappedRewards = computed(() => {
               :header="$t('dashboard.validator.col.el_rewards')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                <div
+                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+                >
                   -
                 </div>
                 <BcFormatValue
@@ -229,7 +282,9 @@ const wrappedRewards = computed(() => {
               :header="$t('dashboard.validator.col.cl_rewards')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID">
+                <div
+                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+                >
                   -
                 </div>
                 <BcFormatValue
@@ -265,7 +320,7 @@ const wrappedRewards = computed(() => {
 @use "~/assets/css/utils.scss";
 
 :deep(.rewards-table) {
-  >.p-datatable-wrapper {
+  > .p-datatable-wrapper {
     min-height: 577px;
   }
 
@@ -289,7 +344,7 @@ const wrappedRewards = computed(() => {
   .age-field {
     white-space: nowrap;
   }
-  tr>td.age-field {
+  tr > td.age-field {
     padding: 0 7px;
     @include utils.set-all-width(205px);
   }
@@ -302,7 +357,7 @@ const wrappedRewards = computed(() => {
     }
   }
 
-  tr:has(+.total-row) {
+  tr:has(+ .total-row) {
     td {
       border-bottom-color: var(--primary-color);
     }
@@ -310,9 +365,8 @@ const wrappedRewards = computed(() => {
 
   .future-row {
     td {
-
-      >div,
-      >span {
+      > div,
+      > span {
         opacity: 0.5;
       }
     }

@@ -5,8 +5,8 @@ interface Props {
   icon: SlotVizIcons
 }
 const props = defineProps<Props>()
-
 </script>
+
 <template>
   <IconSlotAttestation v-if="props.icon === 'attestation'" />
   <IconSlotHeadAttestation v-else-if="props.icon === 'head_attestation'" />

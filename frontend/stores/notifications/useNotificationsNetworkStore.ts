@@ -8,7 +8,7 @@ const notificationsNetworkStore = defineStore('notifications-network-store', () 
   return { data }
 })
 
-export function useNotificationsNetworkStore () {
+export function useNotificationsNetworkStore() {
   const { isLoggedIn } = useUserStore()
 
   const { fetch } = useCustomFetch()
@@ -16,19 +16,25 @@ export function useNotificationsNetworkStore () {
   const { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery } = useTableQuery({ limit: 10, sort: 'timestamp:desc' }, 10)
   const isLoading = ref(false)
 
-  async function loadNetworkNotifications (q: TableQueryParams) {
+  async function loadNetworkNotifications(q: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
-    try{
-      const result = await fetch<InternalGetUserNotificationNetworksResponse>(API_PATH.NOTIFICATIONS_NETWORK, undefined, undefined, q)
+    try {
+      const result = await fetch<InternalGetUserNotificationNetworksResponse>(
+        API_PATH.NOTIFICATIONS_NETWORK,
+        undefined,
+        undefined,
+        q,
+      )
 
       isLoading.value = false
       if (!isStoredQuery(q)) {
         return // in case some query params change while loading
       }
 
-      data.value = result      
-    } catch(e) {
+      data.value = result
+    }
+    catch (e) {
       data.value = undefined
       isLoading.value = false
     }
@@ -54,6 +60,6 @@ export function useNotificationsNetworkStore () {
     query: pendingQuery,
     setCursor,
     setPageSize,
-    setSearch
+    setSearch,
   }
 }

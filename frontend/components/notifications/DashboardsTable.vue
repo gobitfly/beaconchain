@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faArrowUpRightFromSquare
-} from '@fortawesome/pro-solid-svg-icons'
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import IconValidator from '../icon/IconValidator.vue'
 import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 
-defineEmits<{(e: 'openDialog'): void }>()
+defineEmits<{ (e: 'openDialog'): void }>()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -19,7 +17,15 @@ const { t: $t } = useTranslation()
 const { currentNetwork } = useNetworkStore()
 const networkId = ref<number>(currentNetwork.value ?? 1)
 
-const { onSort, setCursor, setPageSize, setSearch, notificationsDashboards, query, isLoading } = useNotificationsDashboardStore(networkId)
+const {
+  onSort,
+  setCursor,
+  setPageSize,
+  setSearch,
+  notificationsDashboards,
+  query,
+  isLoading,
+} = useNotificationsDashboardStore(networkId)
 
 const { getDashboardLabel } = useUserDashboardStore()
 
@@ -28,7 +34,7 @@ const colsVisible = computed(() => {
   return {
     notifications: width.value > 1024,
     dashboard: width.value >= 640,
-    groups: width.value >= 640
+    groups: width.value >= 640,
   }
 })
 
@@ -37,8 +43,7 @@ const openDialog = () => {
   alert('not implemented yet 😪')
 }
 
-const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'account' : 'validator'
-
+const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'account' : 'validator'
 </script>
 
 <template>
@@ -73,7 +78,11 @@ const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'acco
             >
               <template #body="slotProps">
                 <div class="icon-wrapper">
-                  <IconNetwork colored :chain-id="slotProps.data.chain_id" class="icon-network" />
+                  <IconNetwork
+                    colored
+                    :chain-id="slotProps.data.chain_id"
+                    class="icon-network"
+                  />
                 </div>
               </template>
             </Column>
@@ -87,7 +96,10 @@ const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'acco
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed :value="slotProps.data.timestamp" type="go-timestamp" />
+                <BcFormatTimePassed
+                  :value="slotProps.data.timestamp"
+                  type="go-timestamp"
+                />
               </template>
             </Column>
             <Column
@@ -102,7 +114,10 @@ const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'acco
                 <NotificationsDashboardsTableItemDashboard
                   :type="getDashboardType(slotProps.data.is_account_dashboard)"
                   :dashboard-id="slotProps.data.dashboard_id"
-                  :dashboard-name="getDashboardLabel(`${slotProps.data.dashboard_id}`, getDashboardType(slotProps.data.is_account_dashboard))"
+                  :dashboard-name="getDashboardLabel(
+                    `${slotProps.data.dashboard_id}`,
+                    getDashboardType(slotProps.data.is_account_dashboard),
+                  )"
                 />
               </template>
             </Column>
@@ -131,14 +146,24 @@ const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'acco
                     <IconValidator class="icon-dashboard-type" />
                     {{ slotProps.data.entity_count }}
                     <span>
-                      {{ $t('notifications.dashboards.entity.validators', slotProps.data.entity_count) }}
+                      {{
+                        $t(
+                          "notifications.dashboards.entity.validators",
+                          slotProps.data.entity_count,
+                        )
+                      }}
                     </span>
                   </template>
                   <template v-else>
                     <IconAccount class="icon-dashboard-type" />
                     {{ slotProps.data.entity_count }}
                     <span>
-                      {{ $t('notifications.dashboards.entity.accounts', slotProps.data.entity_count) }}
+                      {{
+                        $t(
+                          "notifications.dashboards.entity.accounts",
+                          slotProps.data.entity_count,
+                        )
+                      }}
                     </span>
                   </template>
                   <FontAwesomeIcon
@@ -158,30 +183,35 @@ const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'acco
               :header="$t('notifications.dashboards.col.notification')"
             >
               <template #body="slotProps">
-                {{ slotProps.data.event_types.join(', ') }}
+                {{ slotProps.data.event_types.join(", ") }}
               </template>
             </Column>
             <template #expansion="slotProps">
               <div class="expansion">
                 <div class="label-dashboard">
-                  {{ $t('notifications.dashboards.expansion.label-dashboard') }}
+                  {{ $t("notifications.dashboards.expansion.label-dashboard") }}
                 </div>
                 <NotificationsDashboardsTableItemDashboard
                   :type="getDashboardType(slotProps.data.is_account_dashboard)"
                   :dashboard-id="slotProps.data.dashboard_id"
-                  :dashboard-name="getDashboardLabel(`${slotProps.data.dashboard_id}`, getDashboardType(slotProps.data.is_account_dashboard))"
+                  :dashboard-name="getDashboardLabel(
+                    `${slotProps.data.dashboard_id}`,
+                    getDashboardType(slotProps.data.is_account_dashboard),
+                  )"
                 />
                 <div class="label-group">
-                  {{ $t('notifications.dashboards.expansion.label-group') }}
+                  {{ $t("notifications.dashboards.expansion.label-group") }}
                 </div>
                 <div class="group">
                   {{ slotProps.data.group_name }}
                 </div>
                 <div class="label-notification">
-                  {{ $t('notifications.dashboards.expansion.label-notification') }}
+                  {{
+                    $t("notifications.dashboards.expansion.label-notification")
+                  }}
                 </div>
                 <div class="notification">
-                  {{ slotProps.data.event_types.join(', ') }}
+                  {{ slotProps.data.event_types.join(", ") }}
                 </div>
               </div>
             </template>
@@ -194,11 +224,37 @@ const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'acco
             <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width < 1024">
-                {{ $t('notifications.dashboards.footer.subscriptions.validators_shortened', { count: 1}) }} | {{ $t('notifications.dashboards.footer.subscriptions.accounts_shortened', { count: 1}) }}
+                {{
+                  $t(
+                    "notifications.dashboards.footer.subscriptions.validators_shortened",
+                    { count: 1 },
+                  )
+                }}
+                |
+                {{
+                  $t(
+                    "notifications.dashboards.footer.subscriptions.accounts_shortened",
+                    { count: 1 },
+                  )
+                }}
               </template>
               <template v-else>
-                <div>{{ $t('notifications.dashboards.footer.subscriptions.validators', { count: 1}) }}</div>
-                <div>{{ $t('notifications.dashboards.footer.subscriptions.accounts', { count: 1}) }}</div>
+                <div>
+                  {{
+                    $t(
+                      "notifications.dashboards.footer.subscriptions.validators",
+                      { count: 1 },
+                    )
+                  }}
+                </div>
+                <div>
+                  {{
+                    $t(
+                      "notifications.dashboards.footer.subscriptions.accounts",
+                      { count: 1 },
+                    )
+                  }}
+                </div>
               </template>
             </template>
           </BcTable>
@@ -214,7 +270,7 @@ const getDashboardType = (isAccount: boolean):DashboardType => isAccount ? 'acco
 $breakpoint-sm: 640px;
 $breakpoint-lg: 1024px;
 
-:deep(.col-header-network .p-column-header-content){
+:deep(.col-header-network .p-column-header-content) {
   justify-content: center;
 }
 
@@ -280,7 +336,7 @@ $breakpoint-lg: 1024px;
     }
   }
 }
-:deep(.right-info){
+:deep(.right-info) {
   flex-direction: column;
   justify-content: center;
 }
@@ -315,7 +371,8 @@ svg {
     padding-left: 14px !important;
   }
 }
-.label-group, .label-notification {
+.label-group,
+.label-notification {
   font-weight: var(--standard_text_medium_font_weight);
 }
 </style>

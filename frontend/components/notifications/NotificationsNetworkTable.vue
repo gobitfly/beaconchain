@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import type { Cursor } from '~/types/datatable'
 
-defineEmits<{(e: 'openDialog'): void }>()
+defineEmits<{ (e: 'openDialog'): void }>()
 
 const { width } = useWindowSize()
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const { onSort, setCursor, setPageSize, setSearch, networkNotifications, query, isLoading } = useNotificationsNetworkStore()
-
+const {
+  onSort,
+  setCursor,
+  setPageSize,
+  setSearch,
+  networkNotifications,
+  query,
+  isLoading,
+} = useNotificationsNetworkStore()
 </script>
 
 <template>
@@ -40,7 +47,11 @@ const { onSort, setCursor, setPageSize, setSearch, networkNotifications, query, 
             >
               <template #body="slotProps">
                 <div class="icon-wrapper">
-                  <IconNetwork colored :chain-id="slotProps.data.chain_id" class="icon-network" />
+                  <IconNetwork
+                    colored
+                    :chain-id="slotProps.data.chain_id"
+                    class="icon-network"
+                  />
                 </div>
               </template>
             </Column>
@@ -54,7 +65,10 @@ const { onSort, setCursor, setPageSize, setSearch, networkNotifications, query, 
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed :value="slotProps.data.timestamp" type="go-timestamp" />
+                <BcFormatTimePassed
+                  :value="slotProps.data.timestamp"
+                  type="go-timestamp"
+                />
               </template>
             </Column>
             <Column
@@ -65,14 +79,20 @@ const { onSort, setCursor, setPageSize, setSearch, networkNotifications, query, 
               :header="$t('notifications.col.notification')"
             >
               <template #body="slotProps">
-                <I18nT 
+                <I18nT
                   :keypath="`notifications.network.event_type.${slotProps.data.event_type}`"
                   scope="global"
                   tag="span"
                 >
                   <template #_link>
-                    <BcFormatValue v-if="slotProps.data.event_type.includes('gas')" :value="slotProps.data.alert_value" />
-                    <BcFormatPercent v-else :percent="Number(slotProps.data.alert_value) * 100" />
+                    <BcFormatValue
+                      v-if="slotProps.data.event_type.includes('gas')"
+                      :value="slotProps.data.alert_value"
+                    />
+                    <BcFormatPercent
+                      v-else
+                      :percent="Number(slotProps.data.alert_value) * 100"
+                    />
                   </template>
                 </I18nT>
               </template>
@@ -86,7 +106,7 @@ const { onSort, setCursor, setPageSize, setSearch, networkNotifications, query, 
             <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width > 1024">
-                {{ $t('notifications.network.footer.subscriptions', { count: 1}) }}
+                {{ $t('notifications.network.footer.subscriptions', { count: 1 }) }}
               </template>
             </template>
           </BcTable>
@@ -130,7 +150,7 @@ $breakpoint-lg: 1024px;
     @include utils.set-all-width(400px);
   }
   @media (max-width: $breakpoint-sm) {
-    @include utils.set-all-width(200px); 
+    @include utils.set-all-width(200px);
   }
 }
 

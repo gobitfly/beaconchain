@@ -7,10 +7,10 @@ import { formatGoTimestamp } from '~/utils/format'
 const { formatEpochToDateTime, formatSlotToDateTime } = useFormat()
 
 interface Props {
-  value?: number | string,
-  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
+  value?: number | string
+  type?: 'epoch' | 'go-timestamp' | 'slot' // we can add other types later when needed, we default to epoch
   format?: 'global-setting' | AgeFormat
-  noUpdate?: boolean,
+  noUpdate?: boolean
   unitLength?: StringUnitLength
 }
 const props = defineProps<Props>()
@@ -36,20 +36,41 @@ const label = computed(() => {
   let text: string | null | undefined = ''
   switch (props.type) {
     case 'go-timestamp':
-      text = formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatGoTimestamp(
+        props.value,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
       break
     case 'slot':
-      text = formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatSlotToDateTime(
+        props.value as number,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
       break
     case 'epoch':
     default:
-      text = formatEpochToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatEpochToDateTime(
+        props.value as number,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
   }
 
   if (text && mappedSetting.value === 'absolute') {
     const lastComma = text.lastIndexOf(',')
     if (lastComma > 0) {
-      return { text: text.slice(0, lastComma), subtext: text.slice(lastComma + 1) }
+      return {
+        text: text.slice(0, lastComma),
+        subtext: text.slice(lastComma + 1),
+      }
     }
   }
 
@@ -58,14 +79,20 @@ const label = computed(() => {
 </script>
 
 <template>
-  <span v-if="label" class="text">
+  <span
+    v-if="label"
+    class="text"
+  >
     <div>{{ label.text }}</div>
-    <div v-if="label.subtext" class="subtext">{{ label.subtext }}</div>
+    <div
+      v-if="label.subtext"
+      class="subtext"
+    >{{ label.subtext }}</div>
   </span>
 </template>
 
 <style lang="scss" scoped>
-.text{
+.text {
   display: flex;
   flex-direction: column;
 

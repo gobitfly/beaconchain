@@ -1,44 +1,57 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
-import { type AggregationTimeframe, type EfficiencyType } from '~/types/dashboard/summary'
+import {
+  type AggregationTimeframe,
+  type EfficiencyType,
+} from '~/types/dashboard/summary'
 
 interface Props {
-  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context
-  ts: number,
-  aggregation: AggregationTimeframe,
-  efficiencyType: EfficiencyType,
+  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context
+  ts: number
+  aggregation: AggregationTimeframe
+  efficiencyType: EfficiencyType
   groupInfos: {
-    name: string,
-    efficiency: number,
+    name: string
+    efficiency: number
     color: string
-  }[],
+  }[]
   highlightGroup?: string
 }
 
 defineProps<Props>()
-
 </script>
 
 <template>
   <div class="tooltip-container">
-    <DashboardChartTooltipHeader :t="t" :ts="ts" :aggregation="aggregation" :efficiency-type="efficiencyType" />
+    <DashboardChartTooltipHeader
+      :t="t"
+      :ts="ts"
+      :aggregation="aggregation"
+      :efficiency-type="efficiencyType"
+    />
     <div
       v-for="(entry, index) in groupInfos"
       :key="index"
       class="line-container"
       :class="{ highlight: entry.name === highlightGroup }"
     >
-      <div class="circle" :style="{ 'background-color': entry.color }" />
+      <div
+        class="circle"
+        :style="{ 'background-color': entry.color }"
+      />
       <div class="name">
         {{ entry.name }}:
       </div>
-      <BcFormatPercent class="efficiency" :percent="entry.efficiency" />
+      <BcFormatPercent
+        class="efficiency"
+        :percent="entry.efficiency"
+      />
     </div>
   </div>
 </template>
 
 <style lang="scss">
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .tooltip-container {
   background-color: var(--tooltip-background);
@@ -64,7 +77,6 @@ defineProps<Props>()
     }
 
     &:not(.highlight) {
-
       .efficiency,
       .name {
         opacity: 0.5;
@@ -72,7 +84,6 @@ defineProps<Props>()
     }
 
     &.highlight {
-
       .efficiency,
       .name {
         font-weight: var(--tooltip_text_bold_font_weight);

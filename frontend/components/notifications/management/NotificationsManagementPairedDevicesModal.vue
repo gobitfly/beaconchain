@@ -5,7 +5,6 @@ const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
 const { pairedDevices } = useNotificationsManagementSettings()
-
 </script>
 
 <template>
@@ -14,13 +13,20 @@ const { pairedDevices } = useNotificationsManagementSettings()
     class="paired-devices-modal-container"
   >
     <div class="container">
-      <h1>{{ $t('notifications.general.paired_devices.title') }}</h1>
+      <h1>{{ $t("notifications.general.paired_devices.title") }}</h1>
       <div class="paired-devices">
-        <NotificationsManagementPairedDeviceModalContent v-for="device in pairedDevices" :key="device.id" :device="device" />
+        <NotificationsManagementPairedDeviceModalContent
+          v-for="device in pairedDevices"
+          :key="device.id"
+          :device="device"
+        />
       </div>
     </div>
     <div class="button-row">
-      <Button :label="$t('navigation.done')" @click="visible = false" />
+      <Button
+        :label="$t('navigation.done')"
+        @click="visible = false"
+      />
     </div>
   </BcDialog>
 </template>
@@ -42,7 +48,7 @@ const { pairedDevices } = useNotificationsManagementSettings()
     flex-direction: column;
     gap: var(--padding-large);
 
-    >:not(:last-child) {
+    > :not(:last-child) {
       padding-bottom: var(--padding-large);
       border-bottom: 1px solid var(--container-border-color);
     }

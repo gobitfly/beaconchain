@@ -6,7 +6,6 @@ defineProps<{
 }>()
 
 const { currency, withLabel, setCurrency } = useCurrency()
-
 </script>
 
 <template>
@@ -19,10 +18,15 @@ const { currency, withLabel, setCurrency } = useCurrency()
     @update:model-value="(currency: Currency) => setCurrency(currency)"
   >
     <template #value>
-      <span class="item in-header ">
-        <span v-if="showCurrencyIcon" class="icon">
-          <IconCurrency v-if="currency" :currency="currency" />
-        </span>{{ currency }}
+      <span class="item in-header">
+        <span
+          v-if="showCurrencyIcon"
+          class="icon"
+        >
+          <IconCurrency
+            v-if="currency"
+            :currency="currency"
+          /> </span>{{ currency }}
       </span>
     </template>
     <template #option="slotProps">

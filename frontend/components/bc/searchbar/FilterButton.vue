@@ -2,29 +2,36 @@
 import type {
   SearchbarShape,
   SearchbarColors,
-  SearchbarDropdownLayout
-} from '~/types/searchbar';
+  SearchbarDropdownLayout,
+} from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape,
-  colorTheme: SearchbarColors,
-  dropdownLayout: SearchbarDropdownLayout,
-  state?: boolean,
-  look?: 'on'|'off' // forces the look of the button statically instead of having the color changing with its state
+  barShape: SearchbarShape
+  colorTheme: SearchbarColors
+  dropdownLayout: SearchbarDropdownLayout
+  state?: boolean
+  look?: 'on' | 'off' // forces the look of the button statically instead of having the color changing with its state
 }>()
 
-const emit = defineEmits<{(e: 'change', activated : boolean) : void}>()
+const emit = defineEmits<{ (e: 'change', activated: boolean): void }>()
 </script>
 
 <template>
-  <label class="frame" :class="[barShape,colorTheme,dropdownLayout,look]">
+  <label
+    class="frame"
+    :class="[barShape, colorTheme, dropdownLayout, look]"
+  >
     <input
       type="checkbox"
       class="hidden-checkbox"
       :true-value="true"
       :false-value="false"
       :checked="state"
-      :onchange="(e:any) => {emit('change', e.target.checked)}"
+      :onchange="
+        (e: any) => {
+          emit('change', e.target.checked);
+        }
+      "
     >
     <div class="content">
       <slot />

@@ -7,11 +7,16 @@ interface Props {
   options?: ValueConvertOptions
   useColors?: boolean
   positiveClass?: string
-  negativeClass?: string,
-  noTooltip?: boolean,
-  fullValue?: boolean,
+  negativeClass?: string
+  noTooltip?: boolean
+  fullValue?: boolean
 }
-const props = withDefaults(defineProps<Props>(), { value: undefined, options: undefined, positiveClass: 'positive', negativeClass: 'negative' })
+const props = withDefaults(defineProps<Props>(), {
+  value: undefined,
+  options: undefined,
+  positiveClass: 'positive',
+  negativeClass: 'negative',
+})
 
 const { converter } = useValue()
 
@@ -19,16 +24,18 @@ const data = computed(() => {
   if (!props.value) {
     return {
       label: '',
-      tooltip: ''
+      tooltip: '',
     }
   }
   const res = converter.value.weiToValue(props.value, props.options)
   let labelClass = ''
-  const label = props.fullValue && res.fullLabel ? res.fullLabel : `${res.label}`
+  const label
+    = props.fullValue && res.fullLabel ? res.fullLabel : `${res.label}`
   if (props.useColors) {
     if (label.startsWith('-')) {
       labelClass = props.negativeClass
-    } else if (res.label !== '0') {
+    }
+    else if (res.label !== '0') {
       labelClass = props.positiveClass
     }
   }
@@ -36,20 +43,29 @@ const data = computed(() => {
     labelClass,
     label,
     fullLabel: res.fullLabel,
-    tooltip: props.noTooltip ? '' : res.fullLabel
+    tooltip: props.noTooltip ? '' : res.fullLabel,
   }
 })
-
 </script>
+
 <template>
   <BcTooltip>
-    <template v-if="!!$slots.tooltip || data.tooltip" #tooltip>
-      <slot name="tooltip" :data="data">
+    <template
+      v-if="!!$slots.tooltip || data.tooltip"
+      #tooltip
+    >
+      <slot
+        name="tooltip"
+        :data="data"
+      >
         <BcFormatNumber :text="data.tooltip" />
       </slot>
     </template>
     <span>
-      <BcFormatNumber :class="data.labelClass" :text="data.label" />
+      <BcFormatNumber
+        :class="data.labelClass"
+        :text="data.label"
+      />
     </span>
   </BcTooltip>
 </template>

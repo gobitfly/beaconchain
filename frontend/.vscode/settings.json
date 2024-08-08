@@ -1,0 +1,12 @@
+{
+  "conventionalCommits.scopes": [
+    "i18n",
+    "vscode",
+    "eslint"
+  ],
+  "editor.rulers": [
+    80,
+    120
+],
+
+}
