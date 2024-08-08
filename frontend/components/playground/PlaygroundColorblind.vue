@@ -520,6 +520,7 @@ function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
   errors2D = wip2D.map((col, k) => distError(k, col))
 
   if (debug) {
+    cons.log('confusion levels:', original.map(col => confusion(col)))
     cons.log('Original distances:', distancesOrig)
   }
 
@@ -550,35 +551,37 @@ function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
 const hashColor = (k: number, rgb: number[]) => k + Math.floor(256 * rgb[R]) + Math.floor((256 * 128) * rgb[G])
   + Math.floor((256 * 128 * 128) * rgb[B])
 
+const triedRGB = new RGB(CS.RGBlinear)
+
 function optimizeOneStepFurther() {
   let bestK: number = 0
   let bestError: number = 0
   let bestErrorGain: number = Number.MAX_SAFE_INTEGER
   let bestColor: number[] = []
-  const triedColor = new RGB(CS.RGBlinear)
-  const step = 2 / 256 /// /////////////////////////////  TODO: change the step dynamically
+
   for (let k = 0; k < wip3D.length; k++) {
-    triedColor.import(wip3D[k])
+    triedRGB.import(wip3D[k])
+    const step = Math.min(2, 16 * confusion(triedRGB)) / 256
     for (const c of [R, G, B]) {
       for (const s of [-step, +step]) {
-        const restoredValue = triedColor.chan[c]
-        triedColor.chan[c] += s
-        if (triedColor.chan[c] < 0) {
-          triedColor.chan[c] = 0
+        const restoredValue = triedRGB.chan[c]
+        triedRGB.chan[c] += s
+        if (triedRGB.chan[c] < 0) {
+          triedRGB.chan[c] = 0
         }
-        if (triedColor.chan[c] > 1) {
-          triedColor.chan[c] = 1
+        if (triedRGB.chan[c] > 1) {
+          triedRGB.chan[c] = 1
         }
-        if (!tabuQueue.includes(hashColor(k, triedColor.chan))) {
-          const error = distError(k, projectOnto2D(triedColor.chan))
+        if (!tabuQueue.includes(hashColor(k, triedRGB.chan))) {
+          const error = distError(k, projectOnto2D(triedRGB.chan))
           if (error - errors2D[k] < bestErrorGain) {
             bestErrorGain = error - errors2D[k]
             bestError = error
             bestK = k
-            bestColor = [...triedColor.chan]
+            bestColor = [...triedRGB.chan]
           }
         }
-        triedColor.chan[c] = restoredValue
+        triedRGB.chan[c] = restoredValue
       }
     }
   }
@@ -587,6 +590,13 @@ function optimizeOneStepFurther() {
   errors2D[bestK] = bestError
   tabuQueue.shift()
   tabuQueue.push(hashColor(bestK, bestColor))
+}
+
+const confuEye = new Eye(CS.EyePercI)
+/** calculates roughly how close to pure red or pure green the color is, independently of the intensity */
+function confusion(rgb: RGB): number {
+  confuEye.import(rgb)
+  return (3 * confuEye.p * (1 / 3 - Math.min(confuEye.r, 1 - confuEye.r, Math.abs(confuEye.r - 1 / 3)))) ** 2
 }
 
 const cbSightPO2D = new Eye(CS.EyePercI)
@@ -642,6 +652,10 @@ function distError(k: number, wipColor2D: Eye): number {
      * Second case: the longer the distance for the CB person than for the normal person, the higher the error, but the
      * error does not grow fast because this case brings higher contrast. */
     result += (diff < 0 ? (-diff) ** 2 : diff / 2)
+    /* const res = (diff < 0 ? (-diff) ** 2 : diff / 2)
+    if (res > result) {
+      result = res
+    } */
   }
   return result
 }
