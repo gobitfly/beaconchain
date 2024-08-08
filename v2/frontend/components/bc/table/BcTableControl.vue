@@ -4,9 +4,7 @@ import {
   faHashtag,
   faPercent,
 } from '@fortawesome/pro-solid-svg-icons'
-import {
-  faChartColumn,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
 
 interface Props {
   title?: string
@@ -97,18 +95,18 @@ const onInput = (value: string) => {
   .side {
     flex-grow: 1;
     flex-basis: 0;
-      display: flex;
-    &+h1 {
+    display: flex;
+    & + h1 {
       width: 180px;
     }
 
-    &.left{
+    &.left {
       gap: var(--padding);
     }
 
     &.right {
       justify-content: flex-end;
-      .search{
+      .search {
         z-index: 3;
       }
     }

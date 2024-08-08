@@ -1,7 +1,5 @@
 <script lang="ts" setup>
-import {
-  faGem,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faGem } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 </script>
 

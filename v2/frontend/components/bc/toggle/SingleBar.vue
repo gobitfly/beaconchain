@@ -16,16 +16,22 @@ interface Props {
     tooltip?: string
     disabled?: boolean
   }[]
-  allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
+  // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
+  allowDeselect?: boolean
 }
 const props = defineProps<Props>()
 
 const selected = defineModel<string>()
 
-const values = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
-  map[value] = value === selected.value
-  return map
-}, {} as Record<string, boolean>))
+const values = ref<Record<string, boolean>>(
+  props.buttons.reduce(
+    (map, { value }) => {
+      map[value] = value === selected.value
+      return map
+    },
+    {} as Record<string, boolean>,
+  ),
+)
 
 function onButtonClicked(value: string) {
   for (const key in values.value) {

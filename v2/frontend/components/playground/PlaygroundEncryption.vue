@@ -11,27 +11,15 @@ const encrypted2 = computed(() => toBase64Url(decrypted2.value))
 <template>
   <div class="container">
     <h>Encoding</h>
-    <div>
-      Input <InputText v-model="input" />
-    </div>
-    <div>
-      Base64Url encoded: {{ encrypted }}
-    </div>
-    <div>
-      Base64Url decoded: {{ decrypted }}
-    </div>
+    <div>Input <InputText v-model="input" /></div>
+    <div>Base64Url encoded: {{ encrypted }}</div>
+    <div>Base64Url decoded: {{ decrypted }}</div>
   </div>
   <div class="container">
     <h>Reverse Encoding</h>
-    <div>
-      Base64Url Input <InputText v-model="input2" />
-    </div>
-    <div>
-      Decrypted: {{ decrypted2 }}
-    </div>
-    <div>
-      Base64Url decoded: {{ encrypted2 }}
-    </div>
+    <div>Base64Url Input <InputText v-model="input2" /></div>
+    <div>Decrypted: {{ decrypted2 }}</div>
+    <div>Base64Url decoded: {{ encrypted2 }}</div>
   </div>
 </template>
 

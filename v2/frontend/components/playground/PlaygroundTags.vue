@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import {
-  faAnchor,
-  faTrophy,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faAnchor, faTrophy } from '@fortawesome/pro-solid-svg-icons'
 import type { BlockStatus } from '~/types/block'
 import { TagColors } from '~/types/tag'
 
-const blockStati: BlockStatus[] = ['missed', 'orphaned', 'scheduled', 'success']
+const blockStati: BlockStatus[] = [
+  'missed',
+  'orphaned',
+  'scheduled',
+  'success',
+]
 </script>
 
 <template>
@@ -84,11 +86,11 @@ const blockStati: BlockStatus[] = ['missed', 'orphaned', 'scheduled', 'success']
 </template>
 
 <style lang="scss" scoped>
-.container{
+.container {
   display: flex;
   flex-wrap: wrap;
 
-  .item{
+  .item {
     flex-grow: 0;
     margin: 10px;
     display: flex;

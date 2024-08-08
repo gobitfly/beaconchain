@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import {
   faCube,
   faSync,
@@ -18,7 +16,11 @@ import {
   type SummaryTimeFrame,
 } from '~/types/dashboard/summary'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import type { VDBGroupSummaryColumnItem, VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type {
+  VDBGroupSummaryColumnItem,
+  VDBGroupSummaryData,
+  VDBSummaryTableRow,
+} from '~/types/api/validator_dashboard'
 import type { StatusCount } from '~/types/api/common'
 import { DashboardValidatorSubsetModal } from '#components'
 
@@ -55,19 +57,33 @@ const data = computed(() => {
       context: !props.inDetailView ? 'proposal' : undefined,
     }
   }
-  else if (col && SummaryDetailsEfficiencyProps.includes(props.property as SummaryDetailsEfficiencyProp)) {
-    const tooltip: { title: string, text: string } | undefined = $tm(`dashboard.validator.tooltip.${props.property}`)
+  else if (
+    col
+    && SummaryDetailsEfficiencyProps.includes(
+      props.property as SummaryDetailsEfficiencyProp,
+    )
+  ) {
+    const tooltip: { title: string, text: string } | undefined = $tm(
+      `dashboard.validator.tooltip.${props.property}`,
+    )
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
 
     return {
       efficiency: {
-        status_count: (prop as VDBGroupSummaryColumnItem).status_count || prop as StatusCount,
+        status_count:
+          (prop as VDBGroupSummaryColumnItem).status_count
+          || (prop as StatusCount),
         sync_count: props.property === 'sync' ? col.sync_count : undefined,
       },
       tooltip,
     }
   }
-  else if (col && SummaryDetailsEfficiencyValidatorProps.includes(props.property as SummaryDetailsEfficiencyValidatorProp)) {
+  else if (
+    col
+    && SummaryDetailsEfficiencyValidatorProps.includes(
+      props.property as SummaryDetailsEfficiencyValidatorProp,
+    )
+  ) {
     let validators: number[] = []
     let context: DashboardValidatorContext = 'attestation'
     if (props.property === 'validators_proposal') {
@@ -88,7 +104,9 @@ const data = computed(() => {
     }
   }
   else if (col && props.property === 'attestation_efficiency') {
-    const tooltip: { title: string, text: string } | undefined = $tm('dashboard.validator.tooltip.attestation_efficiency')
+    const tooltip: { title: string, text: string } | undefined = $tm(
+      'dashboard.validator.tooltip.attestation_efficiency',
+    )
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip,
@@ -137,7 +155,12 @@ const data = computed(() => {
 })
 
 const groupName = computed(() => {
-  return getGroupLabel($t, props.row.group_id, groups.value, $t('common.total'))
+  return getGroupLabel(
+    $t,
+    props.row.group_id,
+    groups.value,
+    $t('common.total'),
+  )
 })
 
 const openValidatorModal = () => {
@@ -181,7 +204,7 @@ const openValidatorModal = () => {
       >
         <div>
           <div class="row">
-            <b>{{ $t('dashboard.validator.summary.row.sync_committee') }}: </b>
+            <b>{{ $t("dashboard.validator.summary.row.sync_committee") }}: </b>
             <DashboardTableEfficiency
               :absolute="true"
               :is-tooltip="true"
@@ -198,16 +221,25 @@ const openValidatorModal = () => {
             )
           </div>
           <div class="row next_chapter">
-            <b>{{ $t('common.current') }}: </b>
-            <span>{{ data.efficiency.sync_count.current_validators }} {{ $t('dashboard.validator.summary.tooltip.amount_of_validators') }}</span>
+            <b>{{ $t("common.current") }}: </b>
+            <span>{{ data.efficiency.sync_count.current_validators }}
+              {{
+                $t("dashboard.validator.summary.tooltip.amount_of_validators")
+              }}</span>
           </div>
           <div class="row">
-            <b>{{ $t('common.upcoming') }}: </b>
-            <span>{{ data.efficiency.sync_count.upcoming_validators }} {{ $t('dashboard.validator.summary.tooltip.amount_of_validators') }}</span>
+            <b>{{ $t("common.upcoming") }}: </b>
+            <span>{{ data.efficiency.sync_count.upcoming_validators }}
+              {{
+                $t("dashboard.validator.summary.tooltip.amount_of_validators")
+              }}</span>
           </div>
           <div class="row">
-            <b>{{ $t('common.past') }}: </b>
-            <span>{{ data.efficiency.sync_count.past_periods }} {{ $t('dashboard.validator.summary.tooltip.amount_of_rounds') }}</span>
+            <b>{{ $t("common.past") }}: </b>
+            <span>{{ data.efficiency.sync_count.past_periods }}
+              {{
+                $t("dashboard.validator.summary.tooltip.amount_of_rounds")
+              }}</span>
           </div>
         </div>
       </template>
@@ -264,7 +296,7 @@ const openValidatorModal = () => {
       <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         <div class="row">
-          <b>{{ $t('common.execution_layer') }}:</b>
+          <b>{{ $t("common.execution_layer") }}:</b>
           <BcFormatValue
             class="space_before"
             :value="data.apr.income.el"
@@ -272,7 +304,7 @@ const openValidatorModal = () => {
           <BcFormatPercent :percent="data.apr.apr.el" />)
         </div>
         <div class="row">
-          <b>{{ $t('common.consensus_layer') }}:</b>
+          <b>{{ $t("common.consensus_layer") }}:</b>
           <BcFormatValue
             class="space_before"
             :value="data.apr.income.cl"
@@ -310,38 +342,41 @@ const openValidatorModal = () => {
       <template #tooltip>
         <div class="row">
           <b>
-            {{ $t('dashboard.validator.tooltip.block_proposal') }}
+            {{ $t("dashboard.validator.tooltip.block_proposal") }}
           </b>
         </div>
         <div class="row">
-          <b>
-            {{ $t('common.luck') }}:
-          </b>
+          <b> {{ $t("common.luck") }}: </b>
           <BcFormatPercent :percent="data.luck.proposal.percent" />
         </div>
         <div class="row">
-          <b>
-            {{ $t('common.average') }}:
-          </b>
-          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.proposal.average, $t) }) }}
+          <b> {{ $t("common.average") }}: </b>
+          {{
+            $t("common.every_x", {
+              duration: formatNanoSecondDuration(
+                data.luck.proposal.average,
+                $t,
+              ),
+            })
+          }}
         </div>
         <br>
         <div class="row next_chapter">
           <b class="part">
-            {{ $t('dashboard.validator.tooltip.sync_committee') }}
+            {{ $t("dashboard.validator.tooltip.sync_committee") }}
           </b>
         </div>
         <div class="row">
-          <b>
-            {{ $t('common.luck') }}:
-          </b>
+          <b> {{ $t("common.luck") }}: </b>
           <BcFormatPercent :percent="data.luck.sync.percent" />
         </div>
         <div class="row">
-          <b>
-            {{ $t('common.average') }}:
-          </b>
-          {{ $t('common.every_x', { duration: formatNanoSecondDuration(data.luck.sync.average, $t) }) }}
+          <b> {{ $t("common.average") }}: </b>
+          {{
+            $t("common.every_x", {
+              duration: formatNanoSecondDuration(data.luck.sync.average, $t),
+            })
+          }}
         </div>
       </template>
     </BcTooltip>
@@ -355,7 +390,12 @@ const openValidatorModal = () => {
   >
     <template #leading-tooltip="{ compare }">
       <span class="efficiency-total-tooltip">
-        {{ $t(`dashboard.validator.summary.tooltip.${compare}`, { name: groupName, average: formatPercent(row.average_network_efficiency) }) }}
+        {{
+          $t(`dashboard.validator.summary.tooltip.${compare}`, {
+            name: groupName,
+            average: formatPercent(row.average_network_efficiency),
+          })
+        }}
       </span>
     </template>
   </BcFormatPercent>
@@ -387,7 +427,7 @@ const openValidatorModal = () => {
   align-items: center;
 }
 
-.efficiency-total-tooltip{
+.efficiency-total-tooltip {
   width: 155px;
 }
 </style>

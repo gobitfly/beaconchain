@@ -3,7 +3,7 @@ import type { AdConfiguration } from '~/types/adConfiguration'
 import { API_PATH } from '~/types/customFetch'
 
 const adConfigurationStore = defineStore('ad_configuration_store', () => {
-  const data = ref< Record<string, AdConfiguration[]>>({})
+  const data = ref<Record<string, AdConfiguration[]>>({})
   return { data }
 })
 
@@ -15,7 +15,11 @@ export function useAdConfigurationStore() {
 
   async function refreshAdConfigs(route: string) {
     const keys = ['global', route].join(',')
-    const res = await fetch<AdConfiguration[]>(API_PATH.AD_CONFIGURATIONs, undefined, { keys })
+    const res = await fetch<AdConfiguration[]>(
+      API_PATH.AD_CONFIGURATIONs,
+      undefined,
+      { keys },
+    )
     const newConfigurations: Record<string, AdConfiguration[]> = {}
     res.forEach((config) => {
       if (!newConfigurations[config.key]) {

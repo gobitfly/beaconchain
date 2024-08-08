@@ -1,4 +1,8 @@
-import { simulateAPIresponseForTheSearchBar, simulateAPIresponseAboutNetworkList, mockManageNotificationsGeneral } from '~/utils/mock'
+import {
+  simulateAPIresponseForTheSearchBar,
+  simulateAPIresponseAboutNetworkList,
+  mockManageNotificationsGeneral,
+} from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
@@ -71,7 +75,8 @@ type MappingData = {
 export const mapping: Record<string, MappingData> = {
   [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT]: {
     path: 'validator-dashboards/{dashboard_id}/validators',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/validators`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/validators`,
     mock: false,
   },
   [API_PATH.DASHBOARD_VALIDATOR_BLOCKS]: {
@@ -81,12 +86,14 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS]: {
     path: 'validator-dashboards/{dashboard_id}/withdrawals',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/withdrawals`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/withdrawals`,
     mock: false,
   },
   [API_PATH.DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS]: {
     path: 'validator-dashboards/{dashboard_id}/total-withdrawals',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-withdrawals`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/total-withdrawals`,
     mock: false,
   },
   [API_PATH.DASHBOARD_VALIDATOR_GROUPS]: {
@@ -97,7 +104,8 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY]: {
     path: 'validator-dashboards/{dashboard_id}/groups/{group_id}',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
     mock: false,
     method: 'PUT', // can be 'DELETE' = delete group or 'PUT' = modify group
   },
@@ -165,64 +173,76 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID]: {
     path: '/validator-dashboards/{dashboardKey}/public-ids',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/public-ids`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/public-ids`,
     mock: false,
     method: 'POST',
   },
   [API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID]: {
     path: '/validator-dashboards/{dashboardKey}/public-ids/{publicId}',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/public-ids/${values?.publicId}`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/public-ids/${values?.publicId}`,
     mock: false,
     method: 'PUT',
   },
   [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
     mock: false,
   },
   [API_PATH.DASHBOARD_SUMMARY]: {
     path: '/validator-dashboards/{dashboardKey}/summary',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/summary`,
     mock: false,
   },
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART]: {
     path: '/validator-dashboards/{dashboardKey}/rewards-chart',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards-chart`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/rewards-chart`,
     mock: false,
   },
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS]: {
     path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/rewards',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/rewards/${values?.epoch}`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/rewards/${values?.epoch}`,
     mock: false,
   },
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
     path: '/validator-dashboards/{dashboardKey}/rewards',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/rewards`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/rewards`,
     mock: false,
   },
   [API_PATH.DASHBOARD_EL_DEPOSITS]: {
     path: '/validator-dashboards/{dashboard_id}/execution-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/execution-layer-deposits`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/execution-layer-deposits`,
     mock: false,
   },
   [API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL]: {
     path: '/validator-dashboards/{dashboard_id}/total-execution-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
     mock: false,
   },
   [API_PATH.DASHBOARD_CL_DEPOSITS]: {
     path: '/validator-dashboards/{dashboard_id}/consensus-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/consensus-layer-deposits`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/consensus-layer-deposits`,
     mock: false,
   },
   [API_PATH.DASHBOARD_CL_DEPOSITS_TOTAL]: {
     path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-deposits`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-deposits`,
     mock: false,
   },
   [API_PATH.DASHBOARD_SUMMARY_CHART]: {
     path: '/validator-dashboards/{dashboardKey}/summary-chart?',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
     mock: false,
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
@@ -232,7 +252,8 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
     path: '/validator-dashboards/{dashboardKey}/slot-viz',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false,
   },
   [API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD]: {
@@ -256,12 +277,14 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
     path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
     mock: false,
   },
   [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
     path: '/validator-dashboards/{dashboard_id}/summary/validators',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false,
   },
   [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
@@ -316,7 +339,8 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.SAVE_DASHBOARDS_SETTINGS]: {
     path: '/users/me/notifications/settings/{for}-dashboards/{dashboard_key}/groups/{group_id}',
-    getPath: values => `/users/me/notifications/settings/${values?.for}-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
+    getPath: values =>
+      `/users/me/notifications/settings/${values?.for}-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
     method: 'POST',
     mock: false,
   },

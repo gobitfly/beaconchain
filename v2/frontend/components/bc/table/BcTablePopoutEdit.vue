@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import {
-  faEdit,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faEdit } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const emit = defineEmits<{ (e: 'onEdit'): void }>()

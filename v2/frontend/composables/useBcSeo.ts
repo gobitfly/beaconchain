@@ -1,4 +1,10 @@
-export function useBcSeo(pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>, removeDynamicUrlValue = false) {
+export function useBcSeo(
+  pageTitle?:
+    | string
+    | Ref<string | number | undefined>
+    | ComputedRef<string | number | undefined>,
+  removeDynamicUrlValue = false,
+) {
   const { t: $t } = useTranslation()
   const route = useRoute()
   const { networkInfo } = useNetworkStore()
@@ -8,8 +14,17 @@ export function useBcSeo(pageTitle?: string | Ref<string | number | undefined> |
   const url = 'https://beaconcha.in'
   const logo = `${url}/img/logo.png`
   const ogUrl = () => {
-    const value = removeDynamicUrlValue && Object.values(route.params).find(v => !!v && typeof v === 'string' && route.fullPath.endsWith(v))
-    const path = value ? route.fullPath.substring(0, route.fullPath.lastIndexOf(value as string) - 1) : route.fullPath
+    const value
+      = removeDynamicUrlValue
+      && Object.values(route.params).find(
+        v => !!v && typeof v === 'string' && route.fullPath.endsWith(v),
+      )
+    const path = value
+      ? route.fullPath.substring(
+        0,
+        route.fullPath.lastIndexOf(value as string) - 1,
+      )
+      : route.fullPath
     return `${url}${path}`
   }
   // Maybe we want to have page specific description and keywords in the future, but for now we keep it simple
@@ -25,7 +40,13 @@ export function useBcSeo(pageTitle?: string | Ref<string | number | undefined> |
     else if (pageTitle?.value) {
       parts.splice(0, 0, `${pageTitle.value}`)
     }
-    return networkInfo.value.description + ' ' + networkInfo.value.name + ' ' + parts.join(' - ')
+    return (
+      networkInfo.value.description
+      + ' '
+      + networkInfo.value.name
+      + ' '
+      + parts.join(' - ')
+    )
   }
 
   useSeoMeta({

@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faArrowUpRightFromSquare,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import IconValidator from '../icon/IconValidator.vue'
 import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
@@ -14,7 +12,15 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const { onSort, setCursor, setPageSize, setSearch, notificationsDashboards, query, isLoading } = useNotificationsDashboardStore()
+const {
+  onSort,
+  setCursor,
+  setPageSize,
+  setSearch,
+  notificationsDashboards,
+  query,
+  isLoading,
+} = useNotificationsDashboardStore()
 
 const { groups } = useValidatorDashboardGroups()
 
@@ -43,8 +49,10 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
   return {
     paging: notificationsDashboards.value.paging,
     // TODO: set unique identifier after backend is ready
-    data: notificationsDashboards.value.data
-      .map((item, index) => ({ ...item, identifier: index })),
+    data: notificationsDashboards.value.data.map((item, index) => ({
+      ...item,
+      identifier: index,
+    })),
     // .filter(() => false) // comment in to test empty table
   }
 })
@@ -148,14 +156,24 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
                     <IconValidator class="icon-dashboard-type" />
                     {{ slotProps.data.entity.count }}
                     <span>
-                      {{ $t('notifications.dashboards.entity.validators', slotProps.data.entity.count) }}
+                      {{
+                        $t(
+                          "notifications.dashboards.entity.validators",
+                          slotProps.data.entity.count,
+                        )
+                      }}
                     </span>
                   </template>
                   <template v-if="slotProps.data.entity.type === 'account'">
                     <IconAccount class="icon-dashboard-type" />
                     {{ slotProps.data.entity.count }}
                     <span>
-                      {{ $t('notifications.dashboards.entity.accounts', slotProps.data.entity.count) }}
+                      {{
+                        $t(
+                          "notifications.dashboards.entity.accounts",
+                          slotProps.data.entity.count,
+                        )
+                      }}
                     </span>
                   </template>
                   <FontAwesomeIcon
@@ -175,13 +193,13 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
               :header="$t('notifications.dashboards.col.notification')"
             >
               <template #body="slotProps">
-                {{ slotProps.data.notification.join(', ') }}
+                {{ slotProps.data.notification.join(", ") }}
               </template>
             </Column>
             <template #expansion="slotProps">
               <div class="expansion">
                 <div class="label-dashboard">
-                  {{ $t('notifications.dashboards.expansion.label-dashboard') }}
+                  {{ $t("notifications.dashboards.expansion.label-dashboard") }}
                 </div>
                 <NotificationsDashboardsTableItemDashboard
                   :type="slotProps.data.entity.type"
@@ -189,16 +207,18 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
                   :dashboard-name="slotProps.data.dashboardName"
                 />
                 <div class="label-group">
-                  {{ $t('notifications.dashboards.expansion.label-group') }}
+                  {{ $t("notifications.dashboards.expansion.label-group") }}
                 </div>
                 <div class="group">
                   {{ groupNameLabel(slotProps.data.group_id) }}
                 </div>
                 <div class="label-notification">
-                  {{ $t('notifications.dashboards.expansion.label-notification') }}
+                  {{
+                    $t("notifications.dashboards.expansion.label-notification")
+                  }}
                 </div>
                 <div class="notification">
-                  {{ slotProps.data.notification.join(', ') }}
+                  {{ slotProps.data.notification.join(", ") }}
                 </div>
               </div>
             </template>
@@ -211,11 +231,37 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
             <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width < 1024">
-                {{ $t('notifications.dashboards.footer.subscriptions.validators_shortened', { count: 1 }) }} | {{ $t('notifications.dashboards.footer.subscriptions.accounts_shortened', { count: 1 }) }}
+                {{
+                  $t(
+                    "notifications.dashboards.footer.subscriptions.validators_shortened",
+                    { count: 1 },
+                  )
+                }}
+                |
+                {{
+                  $t(
+                    "notifications.dashboards.footer.subscriptions.accounts_shortened",
+                    { count: 1 },
+                  )
+                }}
               </template>
               <template v-else>
-                <div>{{ $t('notifications.dashboards.footer.subscriptions.validators', { count: 1 }) }}</div>
-                <div>{{ $t('notifications.dashboards.footer.subscriptions.accounts', { count: 1 }) }}</div>
+                <div>
+                  {{
+                    $t(
+                      "notifications.dashboards.footer.subscriptions.validators",
+                      { count: 1 },
+                    )
+                  }}
+                </div>
+                <div>
+                  {{
+                    $t(
+                      "notifications.dashboards.footer.subscriptions.accounts",
+                      { count: 1 },
+                    )
+                  }}
+                </div>
               </template>
             </template>
           </BcTable>
@@ -231,7 +277,7 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
 $breakpoint-sm: 640px;
 $breakpoint-lg: 1024px;
 
-:deep(.col-header-network .p-column-header-content){
+:deep(.col-header-network .p-column-header-content) {
   justify-content: center;
 }
 
@@ -293,7 +339,7 @@ $breakpoint-lg: 1024px;
     }
   }
 }
-:deep(.right-info){
+:deep(.right-info) {
   flex-direction: column;
   justify-content: center;
 }
@@ -328,7 +374,8 @@ svg {
     padding-left: 14px !important;
   }
 }
-.label-group, .label-notification {
+.label-group,
+.label-notification {
   font-weight: var(--standard_text_medium_font_weight);
 }
 </style>

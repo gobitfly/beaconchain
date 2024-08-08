@@ -9,7 +9,9 @@ const props = defineProps<{
   valueInText?: number
 }>()
 
-const emitEvent = defineEmits<{ (e: 'checkboxClick', checked: boolean): void }>()
+const emitEvent = defineEmits<{
+  (e: 'checkboxClick', checked: boolean): void
+}>()
 
 const { t } = useTranslation()
 
@@ -20,20 +22,25 @@ const tooltipLines = computed(() => {
   if (props.valueInText !== undefined) {
     options = { plural: props.valueInText }
   }
-  else
-    if (Array.isArray(parentVmodel.value)) {
-      options = { plural: parentVmodel.value.length, list: parentVmodel.value.join(', ') }
+  else if (Array.isArray(parentVmodel.value)) {
+    options = {
+      plural: parentVmodel.value.length,
+      list: parentVmodel.value.join(', '),
+    }
+  }
+  else {
+    let plural: number
+    if (
+      parentVmodel.value.type === 'amount'
+      || parentVmodel.value.type === 'percent'
+    ) {
+      plural = isNaN(parentVmodel.value.num!) ? 0 : parentVmodel.value.num!
     }
     else {
-      let plural: number
-      if (parentVmodel.value.type === 'amount' || parentVmodel.value.type === 'percent') {
-        plural = isNaN(parentVmodel.value.num!) ? 0 : parentVmodel.value.num!
-      }
-      else {
-        plural = parentVmodel.value ? 2 : 1
-      }
-      options = { plural }
+      plural = parentVmodel.value ? 2 : 1
     }
+    options = { plural }
+  }
   return tAll(t, props.tPath + '.hint', options)
 })
 
@@ -46,7 +53,7 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
       class="caption"
       :class="deactivationClass"
     >
-      {{ t(tPath+'.option') }}
+      {{ t(tPath + ".option") }}
     </span>
     <BcTooltip
       v-if="tooltipLines[0]"
@@ -113,9 +120,9 @@ const deactivationClass = props.lacksPremiumSubscription ? 'deactivated' : ''
         <BcInputNumber
           v-if="parentVmodel.num !== undefined"
           v-model="parentVmodel.num"
-          :min="(parentVmodel.type === 'amount') ? 0 : 1"
-          :max="(parentVmodel.type === 'amount') ? 2**32 : 100"
-          :max-fraction-digits="(parentVmodel.type === 'amount') ? 2 : 1"
+          :min="parentVmodel.type === 'amount' ? 0 : 1"
+          :max="parentVmodel.type === 'amount' ? 2 ** 32 : 100"
+          :max-fraction-digits="parentVmodel.type === 'amount' ? 2 : 1"
           :placeholder="t(tPath + '.placeholder')"
           :class="[deactivationClass, parentVmodel.type]"
         />

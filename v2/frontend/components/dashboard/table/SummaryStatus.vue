@@ -58,21 +58,21 @@ const mapped = computed(() => {
 
 @mixin set-pulse-anmiation($color) {
   @keyframes pulse-animation {
-  0% {
-    color: color.adjust($color, $alpha: 0);
-    transform: scale(0.9)
-  }
+    0% {
+      color: color.adjust($color, $alpha: 0);
+      transform: scale(0.9);
+    }
 
-  50% {
-    color: color.adjust($color, $alpha: -0.4);
-    transform: scale(1.1)
-  }
+    50% {
+      color: color.adjust($color, $alpha: -0.4);
+      transform: scale(1.1);
+    }
 
-  100% {
-    color: color.adjust($color, $alpha: 0);
-    transform: scale(0.9)
+    100% {
+      color: color.adjust($color, $alpha: 0);
+      transform: scale(0.9);
+    }
   }
-}
 }
 
 /* unfortunatly we can't use our css variables here as the rgba conversion is done during build process and there is no css native possibility */

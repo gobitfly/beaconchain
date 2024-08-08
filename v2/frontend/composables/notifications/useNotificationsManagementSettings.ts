@@ -1,11 +1,18 @@
 import { inject, warn } from 'vue'
 import type { NotificationPairedDevice } from '~/types/api/notifications'
-import type { NotificationsManagementSettingsGeneralTab, NotificationsManagementSettingsProvider } from '~/types/notifications/settings'
+import type {
+  NotificationsManagementSettingsGeneralTab,
+  NotificationsManagementSettingsProvider,
+} from '~/types/notifications/settings'
 
 export function useNotificationsManagementSettings() {
-  const provider = inject<NotificationsManagementSettingsProvider>('notificationsManagementSettings')
+  const provider = inject<NotificationsManagementSettingsProvider>(
+    'notificationsManagementSettings',
+  )
 
-  const updateGeneralSettings = (newSettings: NotificationsManagementSettingsGeneralTab) => {
+  const updateGeneralSettings = (
+    newSettings: NotificationsManagementSettingsGeneralTab,
+  ) => {
     if (!provider) {
       warn('notifications management settings provider not injected')
       return
@@ -50,5 +57,11 @@ export function useNotificationsManagementSettings() {
     return provider?.isLoading.value
   })
 
-  return { isLoading, generalSettings, updateGeneralSettings, pairedDevices, updatePairedDevices }
+  return {
+    isLoading,
+    generalSettings,
+    updateGeneralSettings,
+    pairedDevices,
+    updatePairedDevices,
+  }
 }

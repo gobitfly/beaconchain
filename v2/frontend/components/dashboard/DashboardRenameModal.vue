@@ -25,7 +25,11 @@ watch(props, (p) => {
 }, { immediate: true })
 
 const renameDisabled = computed(() => {
-  return !name.value?.length || isLoading.value || !REGEXP_VALID_NAME.test(name.value)
+  return (
+    !name.value?.length
+    || isLoading.value
+    || !REGEXP_VALID_NAME.test(name.value)
+  )
 })
 
 const rename = async () => {
@@ -36,8 +40,15 @@ const rename = async () => {
   }
 
   isLoading.value = true
-  const path = props.value?.dashboardType === 'validator' ? API_PATH.DASHBOARD_RENAME_VALIDATOR : API_PATH.DASHBOARD_RENAME_ACCOUNT
-  await fetch(path, { body: { name: name.value } }, { dashboardKey: `${props.value?.dashboard.id}` })
+  const path
+    = props.value?.dashboardType === 'validator'
+      ? API_PATH.DASHBOARD_RENAME_VALIDATOR
+      : API_PATH.DASHBOARD_RENAME_ACCOUNT
+  await fetch(
+    path,
+    { body: { name: name.value } },
+    { dashboardKey: `${props.value?.dashboard.id}` },
+  )
 
   isLoading.value = false
 
@@ -59,7 +70,7 @@ const rename = async () => {
         :disabled="renameDisabled"
         @click="rename"
       >
-        {{ $t('navigation.save') }}
+        {{ $t("navigation.save") }}
       </Button>
     </div>
   </div>
@@ -83,7 +94,7 @@ const rename = async () => {
     width: unset;
   }
 
-  .input-field{
+  .input-field {
     width: 100%;
   }
 

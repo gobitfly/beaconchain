@@ -13,13 +13,18 @@ const tPath = 'dashboard.validator.overview.'
 const { overview } = useValidatorDashboardOverviewStore()
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
-  return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 }).label
+  return converter.value.weiToValue(value as string, { fixedDecimalCount: 4 })
+    .label
 }
 const formatValuePercent = (value: NumberOrString): NumberOrString => {
   return formatPercent(value as number)
 }
 
-const createInfo = (key: string, value: ClElValue<number | string>, formatFunction: (value: Partial<NumberOrString>) => NumberOrString) => {
+const createInfo = (
+  key: string,
+  value: ClElValue<number | string>,
+  formatFunction: (value: Partial<NumberOrString>) => NumberOrString,
+) => {
   const clValue = formatFunction(value.cl)
   const elValue = formatFunction(value.el)
   return {
@@ -48,7 +53,10 @@ const dataList = computed(() => {
 
   const onlineClass = v?.validators.online ? 'positive' : ''
   const offlineClass = v?.validators.online ? 'negative' : ''
-  active.value = { label: `<span class="${onlineClass}">${v?.validators.online ?? 0}</span> / <span class="${offlineClass}">${v?.validators.offline ?? 0}</span>` }
+  active.value = {
+    // eslint-disable-next-line vue/max-len
+    label: `<span class="${onlineClass}">${v?.validators.online ?? 0}</span> / <span class="${offlineClass}">${v?.validators.offline ?? 0}</span>`,
+  }
   active.additonalValues = [
     [
       { label: v?.validators.pending ?? 0 },
@@ -63,13 +71,25 @@ const dataList = computed(() => {
   ]
 
   efficiency.value = { label: formatPercent(v?.efficiency.last_24h ?? 0) }
-  efficiency.infos = TimeFrames.map(k => ({ label: $t(`statistics.${k}`), value: formatValuePercent(v?.efficiency[k] ?? 0) }))
+  efficiency.infos = TimeFrames.map(k => ({
+    label: $t(`statistics.${k}`),
+    value: formatValuePercent(v?.efficiency[k] ?? 0),
+  }))
 
-  rewards.value = converter.value.weiToValue(totalElCl(v?.rewards.last_30d ?? { el: '0', cl: '0' }), { addPlus: true })
-  rewards.infos = TimeFrames.map(k => createInfo(k, v?.rewards[k] ?? { el: '0', cl: '0' }, formatValueWei))
+  rewards.value = converter.value.weiToValue(
+    totalElCl(v?.rewards.last_30d ?? { el: '0', cl: '0' }),
+    { addPlus: true },
+  )
+  rewards.infos = TimeFrames.map(k =>
+    createInfo(k, v?.rewards[k] ?? { el: '0', cl: '0' }, formatValueWei),
+  )
 
-  apr.value = { label: formatPercent(totalElClNumbers(v?.apr.last_30d ?? { cl: 0, el: 0 })) }
-  apr.infos = TimeFrames.map(k => createInfo(k, v?.apr[k] ?? { cl: 0, el: 0 }, formatValuePercent))
+  apr.value = {
+    label: formatPercent(totalElClNumbers(v?.apr.last_30d ?? { cl: 0, el: 0 })),
+  }
+  apr.infos = TimeFrames.map(k =>
+    createInfo(k, v?.apr[k] ?? { cl: 0, el: 0 }, formatValuePercent),
+  )
   return list
 })
 </script>
@@ -85,7 +105,7 @@ const dataList = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 .container {
   @include main.container;
   display: flex;

@@ -13,14 +13,24 @@ const { tick, resetTick } = useInterval(12)
 
 const { slotViz, refreshSlotViz } = useValidatorSlotVizStore()
 
-await useAsyncData('validator_dashboard_slot_viz', () => refreshSlotViz(dashboardKey.value))
+await useAsyncData('validator_dashboard_slot_viz', () =>
+  refreshSlotViz(dashboardKey.value),
+)
 
-watch(() => [dashboardKey.value, selectedGroups.value, tick.value], (newValue, oldValue) => {
-  if (oldValue && (newValue[0] !== oldValue[0] || (newValue[1] as number[]).length !== (oldValue[1] as number[]).length)) {
-    resetTick()
-  }
-  refreshSlotViz(dashboardKey.value, selectedGroups.value)
-}, { immediate: true })
+watch(
+  () => [dashboardKey.value, selectedGroups.value, tick.value],
+  (newValue, oldValue) => {
+    if (
+      oldValue
+      && (newValue[0] !== oldValue[0]
+      || (newValue[1] as number[]).length !== (oldValue[1] as number[]).length)
+    ) {
+      resetTick()
+    }
+    refreshSlotViz(dashboardKey.value, selectedGroups.value)
+  },
+  { immediate: true },
+)
 
 const initiallyHideVisible = computed(() => {
   if (validatorCount.value === undefined) {
@@ -33,7 +43,11 @@ const groups = computed(() => {
   if (!overview.value?.groups) {
     return []
   }
-  return orderBy(overview.value.groups.filter(g => !!g.count), [g => g.name.toLowerCase()], 'asc')
+  return orderBy(
+    overview.value.groups.filter(g => !!g.count),
+    [g => g.name.toLowerCase()],
+    'asc',
+  )
 })
 
 const selectAll = () => {
@@ -49,20 +63,31 @@ const toggleAll = () => {
   }
 }
 
-watch(groups, (newGroups, oldGroups) => {
-  if (!newGroups || newGroups.length <= 0) {
-    selectedGroups.value = []
-  }
-  if (!oldGroups || JSON.stringify(newGroups) !== JSON.stringify(oldGroups)) {
-    selectAll()
-  }
-}, { immediate: true })
+watch(
+  groups,
+  (newGroups, oldGroups) => {
+    if (!newGroups || newGroups.length <= 0) {
+      selectedGroups.value = []
+    }
+    if (!oldGroups || JSON.stringify(newGroups) !== JSON.stringify(oldGroups)) {
+      selectAll()
+    }
+  },
+  { immediate: true },
+)
 
 const selectedLabel = computed(() => {
-  if (selectedGroups.value.length === 0 || selectedGroups.value.length === groups.value.length) {
+  if (
+    selectedGroups.value.length === 0
+    || selectedGroups.value.length === groups.value.length
+  ) {
     return $t('dashboard.group.selection.all')
   }
-  return orderBy(selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)), [g => g.toLowerCase()], 'asc').join(', ')
+  return orderBy(
+    selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)),
+    [g => g.toLowerCase()],
+    'asc',
+  ).join(', ')
 })
 </script>
 
@@ -89,7 +114,7 @@ const selectedLabel = computed(() => {
             class="pointer"
             @click="toggleAll"
           >
-            {{ $t('dashboard.group.selection.all') }}
+            {{ $t("dashboard.group.selection.all") }}
           </span>
         </template>
         <template #value>

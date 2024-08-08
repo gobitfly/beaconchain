@@ -1,6 +1,11 @@
+/* eslint-disable vue/max-len -- TODO:   plz fix this */
 import type { ComposerTranslation } from 'vue-i18n'
 import type { ChainIDs } from '~/types/network'
-import { type ApiErrorResponse, type SearchResult, type InternalPostSearchResponse } from '~/types/api/common'
+import {
+  type ApiErrorResponse,
+  type SearchResult,
+  type InternalPostSearchResponse,
+} from '~/types/api/common'
 
 export const MinimumTimeBetweenAPIcalls = 400 // ms
 export const LayoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
@@ -91,7 +96,9 @@ export type Matching = {
    triggers the event `@go` to call your handler with the actual data of the matching that you picked. If you return `undefined` instead
    of a matching, nothing happens (either no result suits you or you want to deactivate Enter).
    You will find futher below a function named `pickHighestPriorityAmongBestMatchings`. It is an example that you can use directly. */
-export interface PickingCallBackFunction { (possibilities: Matching[]): Matching | undefined }
+export interface PickingCallBackFunction {
+  (possibilities: Matching[]): Matching | undefined
+}
 
 export interface SearchRequest {
   input: string
@@ -100,7 +107,9 @@ export interface SearchRequest {
   count?: boolean
 }
 export type SingleAPIresult = SearchResult
-export interface SearchAheadAPIresponse extends ApiErrorResponse, InternalPostSearchResponse {}
+export interface SearchAheadAPIresponse
+  extends ApiErrorResponse,
+  InternalPostSearchResponse {}
 
 // in SuggestionRow.vue, you will see that the drop-down where the list of result suggestions appear is organised into 3 rows that display a "name", a "description" and some "low level data", about each result
 export type ResultSuggestionOutput = {
@@ -169,9 +178,18 @@ interface SearchbarPurposeInfoField {
   differentialRequests: boolean // If activated, the bar decreases the workload for the API **in certain scenarii** by asking only for results that it does not know yet (which can happen when the user started a search with filters and activates a new filter, then the bar asks only for results corresponding to the newly selected filter). The downside is that the bar cannot help the user by mentionning the number of filtered-out results at the bottom of the suggestion list.
 }
 // this Record describes the look and behavior of the search-bar according to the value that you pass in its props `:bar-purpose`
-export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfoField> = {
+export const SearchbarPurposeInfo: Record<
+  SearchbarPurpose,
+  SearchbarPurposeInfoField
+> = {
   [SearchbarPurpose.GlobalSearch]: {
-    searchable: [Category.Protocol, Category.Addresses, Category.Tokens, Category.NFTs, Category.Validators], // to display the filter buttons in a different order, write the categories in a different order here
+    searchable: [
+      Category.Protocol,
+      Category.Addresses,
+      Category.Tokens,
+      Category.NFTs,
+      Category.Validators,
+    ], // to display the filter buttons in a different order, write the categories in a different order here
     unsearchable: [],
     askAPItoCountResults: false,
     button: 'search',
@@ -185,7 +203,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: false,
     button: 'add',
     placeHolder: 'search_bar.account_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
+    cellsInSuggestionRows:
+      SuggestionrowCells.SubcategoryIdentificationDescription,
     differentialRequests: true,
   },
   [SearchbarPurpose.ValidatorAddition]: {
@@ -194,7 +213,8 @@ export const SearchbarPurposeInfo: Record<SearchbarPurpose, SearchbarPurposeInfo
     askAPItoCountResults: false,
     button: 'add',
     placeHolder: 'search_bar.validator_placeholder',
-    cellsInSuggestionRows: SuggestionrowCells.SubcategoryIdentificationDescription,
+    cellsInSuggestionRows:
+      SuggestionrowCells.SubcategoryIdentificationDescription,
     differentialRequests: true,
   },
 }
@@ -204,11 +224,26 @@ interface CategoryInfoFields {
   filterLabel: TranslatableLitteral
 }
 export const CategoryInfo: Record<Category, CategoryInfoFields> = {
-  [Category.Tokens]: { title: ['common.erc20token', PLURAL], filterLabel: ['common.token', PLURAL] },
-  [Category.NFTs]: { title: ['common.nft', PLURAL], filterLabel: ['common.nft', PLURAL] },
-  [Category.Protocol]: { title: ['common.protocol', SINGULAR], filterLabel: ['common.protocol', SINGULAR] },
-  [Category.Addresses]: { title: ['common.address', PLURAL], filterLabel: ['common.address', PLURAL] },
-  [Category.Validators]: { title: ['common.validator', PLURAL], filterLabel: ['common.validator', PLURAL] },
+  [Category.Tokens]: {
+    title: ['common.erc20token', PLURAL],
+    filterLabel: ['common.token', PLURAL],
+  },
+  [Category.NFTs]: {
+    title: ['common.nft', PLURAL],
+    filterLabel: ['common.nft', PLURAL],
+  },
+  [Category.Protocol]: {
+    title: ['common.protocol', SINGULAR],
+    filterLabel: ['common.protocol', SINGULAR],
+  },
+  [Category.Addresses]: {
+    title: ['common.address', PLURAL],
+    filterLabel: ['common.address', PLURAL],
+  },
+  [Category.Validators]: {
+    title: ['common.validator', PLURAL],
+    filterLabel: ['common.validator', PLURAL],
+  },
 }
 
 interface SubCategoryInfoFields {
@@ -248,7 +283,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     countSource: Indirect.None,
     queryParamField: Indirect.APIstr_value, // this tells us that field `str_value` in singleAPIresult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
-    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value }, // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in singleAPIresult, and `lowLevelData` will be filled with `hash_value`
+    howToFillresultSuggestionOutput: {
+      name: Indirect.APIstr_value,
+      description: '',
+      lowLevelData: Indirect.APIhash_value,
+    }, // this tells us that field `name` in ResultSuggestionOutput will be filled with the content of `str_value` in singleAPIresult, and `lowLevelData` will be filled with `hash_value`
   },
   [ResultType.NFTs]: {
     title: ['common.nft_as_token', SINGULAR],
@@ -258,7 +297,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     countSource: Indirect.None,
     queryParamField: Indirect.APIstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.APIstr_value,
+      description: '',
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.Epochs]: {
     title: ['common.epoch', SINGULAR],
@@ -268,7 +311,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: '' },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: '',
+    },
   },
   [ResultType.Slots]: {
     title: ['common.slot', SINGULAR],
@@ -278,7 +325,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.Blocks]: {
     title: ['common.block', SINGULAR],
@@ -288,7 +339,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.BlockRoots]: {
     title: ['common.block_root', SINGULAR],
@@ -298,7 +353,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.StateRoots]: {
     title: ['common.state_root', SINGULAR],
@@ -308,7 +367,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.Transactions]: {
     title: ['common.transaction', SINGULAR],
@@ -318,7 +381,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APIhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: '',
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.TransactionBatches]: {
     title: ['common.tx_batch', SINGULAR],
@@ -328,7 +395,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: '' },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: '',
+    },
   },
   [ResultType.StateBatches]: {
     title: ['common.state_batch', SINGULAR],
@@ -338,7 +409,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: Indirect.APInum_value, lowLevelData: '' },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: '',
+    },
   },
   [ResultType.Contracts]: {
     title: ['common.contract', SINGULAR],
@@ -348,7 +423,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     countSource: Indirect.None,
     queryParamField: Indirect.APIhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value }, // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
+    howToFillresultSuggestionOutput: {
+      name: Indirect.APIstr_value,
+      description: '',
+      lowLevelData: Indirect.APIhash_value,
+    }, // str_value is the name of the contract (for ex: "uniswap") but if the API gives '' we will replace it with a generic name (the title of this type: "Contract")
   },
   [ResultType.Accounts]: {
     title: ['common.account', SINGULAR],
@@ -358,7 +437,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     countSource: Indirect.None,
     queryParamField: Indirect.APIhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: '', lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: '',
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.EnsAddresses]: {
     title: ['common.ens_address', SINGULAR],
@@ -368,7 +451,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     countSource: Indirect.None,
     queryParamField: Indirect.APIstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.APIstr_value, description: '', lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.APIstr_value,
+      description: '',
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.EnsOverview]: {
     title: ['common.overview_of_ens', SINGULAR],
@@ -378,7 +465,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: true,
     countSource: Indirect.None,
     queryParamField: Indirect.APIstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.APIstr_value, lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: Indirect.APIstr_value,
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.Graffiti]: {
     title: ['common.graffiti', SINGULAR],
@@ -388,7 +479,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APIstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.TypeTitle, description: ['search_bar.blocks_with', 0], lowLevelData: Indirect.APIstr_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.TypeTitle,
+      description: ['search_bar.blocks_with', 0],
+      lowLevelData: Indirect.APIstr_value,
+    },
   },
   [ResultType.ValidatorsByIndex]: {
     title: ['search_bar.validator_by_index', 0],
@@ -398,7 +493,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APInum_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.ValidatorsByPubkey]: {
     title: ['search_bar.validator_by_public_key', 0],
@@ -408,7 +507,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.None,
     queryParamField: Indirect.APIhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: Indirect.APInum_value, lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: Indirect.APInum_value,
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.ValidatorsByDepositAddress]: {
     title: ['search_bar.validator_by_deposit_address', 0],
@@ -418,7 +521,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.APInum_value,
     queryParamField: Indirect.APIhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: ['search_bar.deposited_by', 0],
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.ValidatorsByDepositEnsName]: {
     title: ['search_bar.validator_by_deposit_ens', 0],
@@ -428,7 +535,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.APInum_value,
     queryParamField: Indirect.APIstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.deposited_by', 0], lowLevelData: Indirect.APIstr_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: ['search_bar.deposited_by', 0],
+      lowLevelData: Indirect.APIstr_value,
+    },
   },
   [ResultType.ValidatorsByWithdrawalCredential]: {
     title: ['search_bar.validator_by_credential', 0],
@@ -438,7 +549,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.APInum_value,
     queryParamField: Indirect.APIhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.credential', SINGULAR], lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: ['search_bar.credential', SINGULAR],
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     title: ['search_bar.validator_by_withdrawal_address', 0],
@@ -448,7 +563,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.APInum_value,
     queryParamField: Indirect.APIhash_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.APIhash_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: ['search_bar.withdrawn_to', 0],
+      lowLevelData: Indirect.APIhash_value,
+    },
   },
   [ResultType.ValidatorsByWithdrawalEnsName]: {
     title: ['search_bar.validator_by_withdrawal_ens', 0],
@@ -458,7 +577,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.APInum_value,
     queryParamField: Indirect.APIstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.withdrawn_to', 0], lowLevelData: Indirect.APIstr_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: ['search_bar.withdrawn_to', 0],
+      lowLevelData: Indirect.APIstr_value,
+    },
   },
   [ResultType.ValidatorsByGraffiti]: {
     title: ['search_bar.validator_by_graffiti', 0],
@@ -468,7 +591,11 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     belongsToAllNetworks: false,
     countSource: Indirect.APInum_value,
     queryParamField: Indirect.APIstr_value,
-    howToFillresultSuggestionOutput: { name: Indirect.SubCategoryTitle, description: ['search_bar.block_graffiti', 0], lowLevelData: Indirect.APIstr_value },
+    howToFillresultSuggestionOutput: {
+      name: Indirect.SubCategoryTitle,
+      description: ['search_bar.block_graffiti', 0],
+      lowLevelData: Indirect.APIstr_value,
+    },
   },
   /* [ResultType.ValidatorsByName]: {
     title: ['search_bar.validator_by_name', 0],
@@ -482,25 +609,34 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
   } */
 }
 
-export interface PremiumRowCallBackFunction { (result: ResultSuggestion): boolean }
+export interface PremiumRowCallBackFunction {
+  (result: ResultSuggestion): boolean
+}
 
-export interface ExposedSearchbarMethods { // for internal use
+export interface ExposedSearchbarMethods {
+  // for internal use
   hideResult: (whichOne: ResultSuggestion) => void
   closeDropdown: () => void
   empty: () => void
 }
 export interface SearchBar // your ref to the search-bar component must be of this type
-  extends ComponentPublicInstance, ExposedSearchbarMethods {}
+  extends ComponentPublicInstance,
+  ExposedSearchbarMethods {}
 
 export type CategoryFilter = Map<Category, boolean> // for internal use
 export type NetworkFilter = Map<ChainIDs, boolean> // for internal use
 export type SearchbarDropdownLayout = 'narrow-dropdown' | 'large-dropdown' // for internal use (do not change the litterals, they are used as class names)
 
-export function wasOutputDataGivenByTheAPI(type: ResultType, resultSuggestionOutputField: keyof HowToFillresultSuggestionOutput): boolean {
-  switch (TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]) {
-    case Indirect.APIstr_value :
-    case Indirect.APInum_value :
-    case Indirect.APIhash_value :
+export function wasOutputDataGivenByTheAPI(
+  type: ResultType,
+  resultSuggestionOutputField: keyof HowToFillresultSuggestionOutput,
+): boolean {
+  switch (
+    TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]
+  ) {
+    case Indirect.APIstr_value:
+    case Indirect.APInum_value:
+    case Indirect.APIhash_value:
       return true
     default:
       return false
@@ -510,23 +646,34 @@ export function wasOutputDataGivenByTheAPI(type: ResultType, resultSuggestionOut
 /**
  * @returns Data read from the API response. `undefined` means that something is wrong.
  */
-export function realizeData(apiResponseElement: SingleAPIresult, dataSource: FillFrom, t: ComposerTranslation): any {
+export function realizeData(
+  apiResponseElement: SingleAPIresult,
+  dataSource: FillFrom,
+  t: ComposerTranslation,
+): any {
   const type = apiResponseElement.type as ResultType
   let sourceField: keyof SingleAPIresult
 
   switch (dataSource) {
-    case Indirect.None : return ''
-    case Indirect.APIstr_value : sourceField = 'str_value'
+    case Indirect.None:
+      return ''
+    case Indirect.APIstr_value:
+      sourceField = 'str_value'
       break
-    case Indirect.APInum_value : sourceField = 'num_value'
+    case Indirect.APInum_value:
+      sourceField = 'num_value'
       break
-    case Indirect.APIhash_value : sourceField = 'hash_value'
+    case Indirect.APIhash_value:
+      sourceField = 'hash_value'
       break
-    case Indirect.CategoryTitle : return t(...CategoryInfo[TypeInfo[type].category].title)
-    case Indirect.SubCategoryTitle : return t(...SubCategoryInfo[TypeInfo[type].subCategory].title)
-    case Indirect.TypeTitle : return t(...TypeInfo[type].title)
-    default :
-      return (dataSource === '') ? '' : t(...dataSource)
+    case Indirect.CategoryTitle:
+      return t(...CategoryInfo[TypeInfo[type].category].title)
+    case Indirect.SubCategoryTitle:
+      return t(...SubCategoryInfo[TypeInfo[type].subCategory].title)
+    case Indirect.TypeTitle:
+      return t(...TypeInfo[type].title)
+    default:
+      return dataSource === '' ? '' : t(...dataSource)
   }
 
   return apiResponseElement[sourceField]
@@ -543,17 +690,26 @@ export function getListOfResultTypes(sortByPriority: boolean): ResultType[] {
       listOfResultTypesAsDeclared.push(ResultType[ty])
       listOfResultTypesPrioritized.push(ResultType[ty])
     }
-    listOfResultTypesPrioritized.sort((a, b) => TypeInfo[a].priority - TypeInfo[b].priority)
+    listOfResultTypesPrioritized.sort(
+      (a, b) => TypeInfo[a].priority - TypeInfo[b].priority,
+    )
   }
-  return sortByPriority ? listOfResultTypesPrioritized : listOfResultTypesAsDeclared
+  return sortByPriority
+    ? listOfResultTypesPrioritized
+    : listOfResultTypesAsDeclared
 }
 
-const searchableTypesPerCategory: Record<Category, ResultType[]> = {} as Record<Category, ResultType[]>
+const searchableTypesPerCategory: Record<Category, ResultType[]> = {} as Record<
+  Category,
+  ResultType[]
+>
 /**
  * @returns the list of types belonging to the given category.
  * This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
  */
-export function getListOfResultTypesInCategory(category: Category): ResultType[] {
+export function getListOfResultTypesInCategory(
+  category: Category,
+): ResultType[] {
   if (!(category in searchableTypesPerCategory)) {
     for (const t of getListOfResultTypes(true)) {
       const c = TypeInfo[t].category
@@ -577,7 +733,9 @@ export function getListOfResultTypesInCategory(category: Category): ResultType[]
  * @param possibilities here the function receives the list of matchings (representing result suggestions)
  * @returns the matching fulfilling the criteria explained above
  */
-export function pickHighestPriorityAmongBestMatchings(possibilities: Matching[]): Matching | undefined {
+export function pickHighestPriorityAmongBestMatchings(
+  possibilities: Matching[],
+): Matching | undefined {
   let bestMatchWithHigherPriority = possibilities[0]
   for (const possibility of possibilities) {
     if (possibility.closeness < bestMatchWithHigherPriority.closeness) {
@@ -590,6 +748,8 @@ export function pickHighestPriorityAmongBestMatchings(possibilities: Matching[])
 /**
  * @returns the I18n path of a TranslatableLitteral that you can give to t(). Useful to display the litteral in singular or in plural with respect to your needs.
  */
-export function getI18nPathOfTranslatableLitteral(litteral: TranslatableLitteral): string {
+export function getI18nPathOfTranslatableLitteral(
+  litteral: TranslatableLitteral,
+): string {
   return litteral[0] as string
 }

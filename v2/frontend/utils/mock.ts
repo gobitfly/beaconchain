@@ -1,12 +1,19 @@
 import type { InternalGetLatestStateResponse } from '~/types/api/latest_state'
 import type { ApiDataResponse } from '~/types/api/common'
 import { isMainNet } from '~/types/network'
-import { type SearchAheadAPIresponse, type ResultType, TypeInfo, Indirect } from '~/types/searchbar'
+import {
+  type SearchAheadAPIresponse,
+  type ResultType,
+  TypeInfo,
+  Indirect,
+} from '~/types/searchbar'
 import { type InternalGetUserNotificationSettingsResponse } from '~/types/api/notifications'
 
 const probabilityOfNoResultOrError = 0.0
 
-export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): SearchAheadAPIresponse {
+export function simulateAPIresponseForTheSearchBar(
+  body?: Record<string, any>,
+): SearchAheadAPIresponse {
   const searched = body?.input as string
   const searchableTypes = body?.types as ResultType[]
   const searchableNetworks = body?.networks as number[]
@@ -21,12 +28,14 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
   }
 
   const n = Math.floor(Number(searched))
-  const searchedIsPositiveInteger = (n !== Infinity && n >= 0 && String(n) === searched)
+  const searchedIsPositiveInteger
+    = n !== Infinity && n >= 0 && String(n) === searched
 
   let ordinal = searched
   if (Number(searched) < 11 || Number(searched) > 13) {
     const last = searched.slice(-1)
-    ordinal += (last === '1') ? 'st' : (last === '2' ? 'nd' : (last === '3' ? 'rd' : 'th'))
+    ordinal
+      += last === '1' ? 'st' : last === '2' ? 'nd' : last === '3' ? 'rd' : 'th'
   }
   else {
     ordinal += 'th'
@@ -73,19 +82,22 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
         chain_id: 1,
         type: 'slots',
         num_value: Number(searched),
-        hash_value: '0x910e0f2ee77c80bc506a1cefc90751b919cc612d42f17bb0acc49b546f42f0ce',
+        hash_value:
+          '0x910e0f2ee77c80bc506a1cefc90751b919cc612d42f17bb0acc49b546f42f0ce',
       },
       {
         chain_id: 1,
         type: 'blocks',
         num_value: Number(searched),
-        hash_value: '0x910e0f2ee77c80bc506a1cefc90751b919cc612d42f17bb0acc49b546f42f0ce',
+        hash_value:
+          '0x910e0f2ee77c80bc506a1cefc90751b919cc612d42f17bb0acc49b546f42f0ce',
       },
       {
         chain_id: 1,
         type: 'validator_by_index',
         num_value: Number(searched),
-        hash_value: '0xa525497ec3116c1310be8d73d2efd536dc0ce6bd4b0163dffddf94dad3d91d154c061b9a3bfd1b704a5ba67fc443974a',
+        hash_value:
+          '0xa525497ec3116c1310be8d73d2efd536dc0ce6bd4b0163dffddf94dad3d91d154c061b9a3bfd1b704a5ba67fc443974a',
       },
       {
         chain_id: 1,
@@ -130,7 +142,8 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
         chain_id: 1,
         type: 'validator_by_public_key',
         num_value: Math.floor(Math.random() * 1000000),
-        hash_value: '0x8000300c7607886b7e6f1030f833162f81b02e702ff9cea045e5a1d4a13bc7010e277f077533c7899334df2d51d65660',
+        hash_value:
+          '0x8000300c7607886b7e6f1030f833162f81b02e702ff9cea045e5a1d4a13bc7010e277f077533c7899334df2d51d65660',
       },
       {
         chain_id: 1,
@@ -155,7 +168,8 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
     {
       chain_id: 42161,
       type: 'transactions',
-      hash_value: '0xacd47cc7a30b4273aadec96b4e5aa06d1cfa627b751f358069b9a7febdba3c30',
+      hash_value:
+        '0xacd47cc7a30b4273aadec96b4e5aa06d1cfa627b751f358069b9a7febdba3c30',
     },
     {
       chain_id: 8453,
@@ -179,19 +193,22 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
         chain_id: 8453,
         type: 'slots',
         num_value: Number(searched),
-        hash_value: '0xb47b779916e7b1517863ec60c372abf0dc255180ed6b47dd6f93e77f2dd6b9ca',
+        hash_value:
+          '0xb47b779916e7b1517863ec60c372abf0dc255180ed6b47dd6f93e77f2dd6b9ca',
       },
       {
         chain_id: 8453,
         type: 'blocks',
         num_value: Number(searched),
-        hash_value: '0xb47b779916e7b1517863ec60c372abf0dc255180ed6b47dd6f93e77f2dd6b9ca',
+        hash_value:
+          '0xb47b779916e7b1517863ec60c372abf0dc255180ed6b47dd6f93e77f2dd6b9ca',
       },
       {
         chain_id: 8453,
         type: 'validator_by_index',
         num_value: Number(searched),
-        hash_value: '0x99f9ec412465e15243a5996205928ef1461fd4ef6b6a0c642748c6f85de72c801751facda0c96454a8c2ad3bd19f91ee',
+        hash_value:
+          '0x99f9ec412465e15243a5996205928ef1461fd4ef6b6a0c642748c6f85de72c801751facda0c96454a8c2ad3bd19f91ee',
       },
       {
         chain_id: 100,
@@ -202,19 +219,22 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
         chain_id: 100,
         type: 'slots',
         num_value: Number(searched),
-        hash_value: '0xd13eb040661d8d8de07d154985be5f4332f57141948a9d67b87bb7a2cae29b81',
+        hash_value:
+          '0xd13eb040661d8d8de07d154985be5f4332f57141948a9d67b87bb7a2cae29b81',
       },
       {
         chain_id: 100,
         type: 'blocks',
         num_value: Number(searched),
-        hash_value: '0xd13eb040661d8d8de07d154985be5f4332f57141948a9d67b87bb7a2cae29b81',
+        hash_value:
+          '0xd13eb040661d8d8de07d154985be5f4332f57141948a9d67b87bb7a2cae29b81',
       },
       {
         chain_id: 100,
         type: 'validator_by_index',
         num_value: Number(searched),
-        hash_value: '0x85e5ac15a728a2bf0b0b4f22312dad780d4e27856e30997ee11f73d74d86682800046a86a01d134dbdf171326cd7cc54',
+        hash_value:
+          '0x85e5ac15a728a2bf0b0b4f22312dad780d4e27856e30997ee11f73d74d86682800046a86a01d134dbdf171326cd7cc54',
       },
       {
         chain_id: 100,
@@ -229,7 +249,8 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
       {
         chain_id: 100,
         type: 'validators_by_withdrawal_credential',
-        hash_value: '0x0100000000000000000000000c6bd499ef02a44031ffe8336f59c82d81333f2a',
+        hash_value:
+          '0x0100000000000000000000000c6bd499ef02a44031ffe8336f59c82d81333f2a',
       },
       {
         chain_id: 100,
@@ -306,16 +327,23 @@ export function simulateAPIresponseForTheSearchBar(body?: Record<string, any>): 
 
   // keeping only the results that the API is asked for
   if (searchableTypes.length) {
-    response.data = response.data.filter(singleRes => searchableTypes.includes(singleRes.type as ResultType))
+    response.data = response.data.filter(singleRes =>
+      searchableTypes.includes(singleRes.type as ResultType),
+    )
   }
   if (searchableNetworks.length) {
-    response.data = response.data.filter(singleRes => searchableNetworks.includes(singleRes.chain_id) || TypeInfo[singleRes.type as ResultType].belongsToAllNetworks)
+    response.data = response.data.filter(
+      singleRes =>
+        searchableNetworks.includes(singleRes.chain_id)
+        || TypeInfo[singleRes.type as ResultType].belongsToAllNetworks,
+    )
   }
   // adding fake numbers of identical results where it is possible
   for (const singleRes of response.data) {
     const batchSize = 2 + Math.floor(30 * Math.random())
     switch (TypeInfo[singleRes.type as ResultType].countSource) {
-      case Indirect.APInum_value: singleRes.num_value = batchSize
+      case Indirect.APInum_value:
+        singleRes.num_value = batchSize
         break
       // add cases here in the future if new fields can hold batches or counts
     }
@@ -356,18 +384,32 @@ interface ApiChainInfo {
   name: string
 }
 
-export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<ApiChainInfo[]> {
+export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<
+  ApiChainInfo[]
+> {
   const result = { data: [] } as ApiDataResponse<ApiChainInfo[]>
   if (isMainNet(Number(useRuntimeConfig().public.chainIdByDefault))) {
-    result.data.push({ chain_id: 1, name: 'ethereum' }, { chain_id: 100, name: 'gnosis' })
+    result.data.push(
+      { chain_id: 1, name: 'ethereum' },
+      { chain_id: 100, name: 'gnosis' },
+    )
     if (useRuntimeConfig().public.showInDevelopment) {
-      result.data.push({ chain_id: 42161, name: 'arbitrum' }, { chain_id: 8453, name: 'base' })
+      result.data.push(
+        { chain_id: 42161, name: 'arbitrum' },
+        { chain_id: 8453, name: 'base' },
+      )
     }
   }
   else {
-    result.data.push({ chain_id: 17000, name: 'holesky' }, { chain_id: 10200, name: 'chiado' })
+    result.data.push(
+      { chain_id: 17000, name: 'holesky' },
+      { chain_id: 10200, name: 'chiado' },
+    )
     if (useRuntimeConfig().public.showInDevelopment) {
-      result.data.push({ chain_id: 421614, name: 'arbitrum testnet' }, { chain_id: 84532, name: 'base testnet' })
+      result.data.push(
+        { chain_id: 421614, name: 'arbitrum testnet' },
+        { chain_id: 84532, name: 'base testnet' },
+      )
     }
   }
   return result

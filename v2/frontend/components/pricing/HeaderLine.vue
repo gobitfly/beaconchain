@@ -1,15 +1,13 @@
-<script lang="ts" setup>
-
-</script>
+<script lang="ts" setup></script>
 
 <template>
   <div class="header-line-container">
     <div class="header-line">
       <div class="title">
-        {{ $t('pricing.premium') }}
+        {{ $t("pricing.premium") }}
       </div>
       <div class="subtitle">
-        {{ $t('pricing.subtitle') }}
+        {{ $t("pricing.subtitle") }}
       </div>
     </div>
   </div>
@@ -46,7 +44,7 @@
 }
 
 @media (max-width: 1360px) {
-  .header-line-container{
+  .header-line-container {
     padding-left: 5px;
     margin-bottom: 30px;
 

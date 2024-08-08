@@ -18,8 +18,12 @@ export function levenshteinDistance(str1: string, str2: string): number {
         dist[i][j] = j
       }
       else {
-        const subst = (str1[i - 1] === str2[j - 1]) ? 0 : 1
-        dist[i][j] = Math.min(dist[i - 1][j] + 1, dist[i][j - 1] + 1, dist[i - 1][j - 1] + subst)
+        const subst = str1[i - 1] === str2[j - 1] ? 0 : 1
+        dist[i][j] = Math.min(
+          dist[i - 1][j] + 1,
+          dist[i][j - 1] + 1,
+          dist[i - 1][j - 1] + subst,
+        )
       }
     }
   }
@@ -27,12 +31,11 @@ export function levenshteinDistance(str1: string, str2: string): number {
 }
 
 export function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
-    .replace(/[xy]/g, function (c) {
-      const r = Math.random() * 16 | 0
-      const v = c === 'x' ? r : (r & 0x3 | 0x8)
-      return v.toString(16)
-    })
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
 }
 
 export function isInt(value?: string): boolean {

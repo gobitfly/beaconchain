@@ -18,19 +18,30 @@ const size = computed(() => {
 })
 
 interface Props {
-  dashboardKey: DashboardKey // we need to pass the key as prop as the dialog is not a child component and cannot access the provider
+  // we need to pass the key as prop as the dialog is not a child component and cannot access the provider
+  dashboardKey: DashboardKey
   groupId: number
   groupName?: string
   epoch: number
 }
 
-const { props, setHeader } = useBcDialog<Props>({ showHeader: size.value.expandable, contentClass: 'epoch-duties-modal' })
+const { props, setHeader } = useBcDialog<Props>({
+  showHeader: size.value.expandable,
+  contentClass: 'epoch-duties-modal',
+})
 
 const isLoading = ref(false)
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<PathValues | undefined>({ limit: pageSize.value, sort: 'validator:asc' }, 500)
+const {
+  value: query,
+  temp: tempQuery,
+  bounce: setQuery,
+} = useDebounceValue<PathValues | undefined>(
+  { limit: pageSize.value, sort: 'validator:asc' },
+  500,
+)
 
 const data = ref<InternalGetValidatorDashboardDutiesResponse | undefined>()
 
@@ -56,7 +67,12 @@ const loadData = async () => {
   if (props.value?.dashboardKey) {
     isLoading.value = !data.value
     const testQ = JSON.stringify(query.value)
-    const result = await fetch<InternalGetValidatorDashboardDutiesResponse>(API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY, { query: { ...query.value, group_id: props.value.groupId } }, { dashboardKey: props.value.dashboardKey, epoch: props.value.epoch }, query.value)
+    const result = await fetch<InternalGetValidatorDashboardDutiesResponse>(
+      API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY,
+      { query: { ...query.value, group_id: props.value.groupId } },
+      { dashboardKey: props.value.dashboardKey, epoch: props.value.epoch },
+      query.value,
+    )
 
     // Make sure that during loading the query did not change
     if (testQ === JSON.stringify(query.value)) {
@@ -66,13 +82,21 @@ const loadData = async () => {
   }
 }
 
-watch(() => [props.value, query.value], () => {
-  loadData()
-}, { immediate: true })
+watch(
+  () => [props.value, query.value],
+  () => {
+    loadData()
+  },
+  { immediate: true },
+)
 
 const mapDuties = (duties: ValidatorHistoryDuties) => {
   const list = []
-  if (duties.attestation_head || duties.attestation_source || duties.attestation_target) {
+  if (
+    duties.attestation_head
+    || duties.attestation_source
+    || duties.attestation_target
+  ) {
     list.push($t('dashboard.validator.rewards.attestation'))
   }
   if (duties.proposal) {
@@ -98,9 +122,13 @@ const title = computed(() => {
   return t
 })
 
-watch([title, size], () => {
-  setHeader(title.value, size.value.expandable)
-}, { immediate: true })
+watch(
+  [title, size],
+  () => {
+    setHeader(title.value, size.value.expandable)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -190,7 +218,7 @@ watch([title, size], () => {
             <div class="expansion">
               <div class="info">
                 <div class="label">
-                  {{ $t('dashboard.validator.duties.col.result') }}
+                  {{ $t("dashboard.validator.duties.col.result") }}
                 </div>
                 <div>
                   <ValidatorTableDutyStatus :data="slotProps.data.duties" />
@@ -205,9 +233,9 @@ watch([title, size], () => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/utils.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/utils.scss";
+@use "~/assets/css/fonts.scss";
 
 :global(.epoch-duties-modal) {
   width: 960px;
@@ -221,7 +249,6 @@ watch([title, size], () => {
     width: 100%;
     min-width: 100%;
   }
-
 }
 
 :global(.epoch-duties-modal .bc-table-header) {

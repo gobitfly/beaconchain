@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-icons'
+import {
+  faDiscord,
+  faTwitter,
+  faGithub,
+} from '@fortawesome/free-brands-svg-icons'
 import {
   faCaretRight,
   faHistory,
@@ -37,9 +41,7 @@ import {
   faPaintBrush,
   faDesktop as farDesktop,
 } from '@fortawesome/pro-regular-svg-icons'
-import {
-  faBuildingColumns,
-} from '@fortawesome/sharp-solid-svg-icons'
+import { faBuildingColumns } from '@fortawesome/sharp-solid-svg-icons'
 
 import type { MenuItem } from 'primevue/menuitem'
 import MegaMenu from 'primevue/megamenu'
@@ -61,7 +63,10 @@ const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
 const route = useRoute()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-const megaMenu = ref<{ toggle: (evt: Event) => void, mobileActive: boolean } | null>(null)
+const megaMenu = ref<{
+  toggle: (evt: Event) => void
+  mobileActive: boolean
+} | null>(null)
 
 const breakpoint = `${smallHeaderThreshold}px`
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
@@ -343,7 +348,8 @@ const items = computed(() => {
                 },
               ],
             },
-          ]],
+          ],
+        ],
       },
       {
         label: 'Gnosis',
@@ -561,7 +567,8 @@ const items = computed(() => {
                 },
               ],
             },
-          ]],
+          ],
+        ],
       },
       {
         label: 'Arbitrum',
@@ -675,7 +682,8 @@ const items = computed(() => {
                 },
               ],
             },
-          ]],
+          ],
+        ],
       },
       {
         label: 'Base',
@@ -789,7 +797,8 @@ const items = computed(() => {
                 },
               ],
             },
-          ]],
+          ],
+        ],
       },
       {
         label: 'Optimism',
@@ -936,7 +945,9 @@ const items = computed(() => {
     if (isLoggedIn.value) {
       list.push({
         label: $t('header.settings'),
-        command: async () => { await navigateTo('../user/settings') },
+        command: async () => {
+          await navigateTo('../user/settings')
+        },
       })
     }
   }

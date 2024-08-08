@@ -14,12 +14,16 @@ try {
     gitVersion = info.raw
   }
   if (gitVersion === '' && info.hash != null) {
-    warn('The GitHub tag of the explorer is unknown. Reading the GitHub hash instead.')
+    warn(
+      'The GitHub tag of the explorer is unknown. Reading the GitHub hash instead.',
+    )
     gitVersion = info.hash
   }
 }
 catch (err) {
-  warn('The GitHub tag and hash of the explorer cannot be read with git-describe.')
+  warn(
+    'The GitHub tag and hash of the explorer cannot be read with git-describe.',
+  )
 }
 
 export default defineNuxtConfig({
@@ -58,16 +62,26 @@ export default defineNuxtConfig({
       ssrSecret: process.env.PRIVATE_SSR_SECRET || '',
     },
   },
-  css: ['~/assets/css/main.scss', '~/assets/css/prime.scss', '@fortawesome/fontawesome-svg-core/styles.css'],
+  css: [
+    '~/assets/css/main.scss',
+    '~/assets/css/prime.scss',
+    '@fortawesome/fontawesome-svg-core/styles.css',
+  ],
   modules: [
     '@nuxtjs/i18n',
     '@nuxtjs/color-mode',
-    ['@pinia/nuxt', {
-      storesDirs: ['./stores/**'],
-    }],
-    ['nuxt-primevue', {
-      /* unstyled: true */
-    }],
+    [
+      '@pinia/nuxt',
+      {
+        storesDirs: ['./stores/**'],
+      },
+    ],
+    [
+      'nuxt-primevue',
+      {
+        /* unstyled: true */
+      },
+    ],
     '@nuxt/eslint',
   ],
   typescript: {
@@ -99,10 +113,7 @@ export default defineNuxtConfig({
           },
           format: 'es',
         },
-        plugins: [
-          nodeResolve(),
-          commonjs(),
-        ],
+        plugins: [nodeResolve(), commonjs()],
       },
       minify: true,
     },

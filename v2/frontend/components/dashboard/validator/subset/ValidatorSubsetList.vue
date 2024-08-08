@@ -1,8 +1,6 @@
 <script lang="ts" setup>
 import { warn } from 'vue'
-import {
-  faCopy,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faCopy } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Paging } from '~/types/api/common'
 import { type Cursor } from '~/types/datatable'
@@ -21,22 +19,26 @@ const paging = ref<Paging | null>(null)
 const cursor = ref<Cursor>(undefined)
 const VALIDATORS_PER_PAGE = 100
 
-watch(props, (p) => {
-  cursor.value = undefined
-  if (p?.validators?.length) {
-    if (p.validators.length > VALIDATORS_PER_PAGE) {
-      paging.value = {
-        total_count: p.validators.length,
+watch(
+  props,
+  (p) => {
+    cursor.value = undefined
+    if (p?.validators?.length) {
+      if (p.validators.length > VALIDATORS_PER_PAGE) {
+        paging.value = {
+          total_count: p.validators.length,
+        }
+      }
+      else {
+        paging.value = null
       }
     }
     else {
       paging.value = null
     }
-  }
-  else {
-    paging.value = null
-  }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 const currentPage = computed<VDBSummaryValidator[]>(() => {
   if (!props.validators?.length) {
@@ -50,7 +52,8 @@ function copyValidatorsToClipboard(): void {
   if (!props.validators?.length) {
     return
   }
-  navigator.clipboard.writeText(props.validators.map(v => v.index).join(','))
+  navigator.clipboard
+    .writeText(props.validators.map(v => v.index).join(','))
     .catch((error) => {
       warn('Error copying text to clipboard:', error)
     })
@@ -66,14 +69,23 @@ function mapDutyLabel(dutyObjects?: number[]) {
     case 'proposal_missed':
       return $t('common.slot', dutyObjects.length) + ':'
     case 'pending':
-      return formatGoTimestamp(dutyObjects[0], undefined, 'relative', 'short', $t('locales.date'), true)
+      return formatGoTimestamp(
+        dutyObjects[0],
+        undefined,
+        'relative',
+        'short',
+        $t('locales.date'),
+        true,
+      )
     case 'has_slashed':
       return $t('dashboard.validator.subset_dialog.slashed') + ':'
     case 'got_slashed':
       return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
   }
 }
-function mapDutyLinks(dutyObjects?: number[]): { to?: string, label: string }[] {
+function mapDutyLinks(
+  dutyObjects?: number[],
+): { to?: string, label: string }[] {
   if (!dutyObjects) {
     return []
   }
@@ -143,7 +155,6 @@ function mapDutyLinks(dutyObjects?: number[]): { to?: string, label: string }[] 
               </BcLink>
               <span v-else>{{ link.label }}</span>
               <span>, </span>
-
             </template>
           </span>
         </template>
@@ -160,14 +171,14 @@ function mapDutyLinks(dutyObjects?: number[]): { to?: string, label: string }[] 
         :page-size="VALIDATORS_PER_PAGE"
         :paging="paging"
         :stepper-only="true"
-        @set-cursor="(c: Cursor) => cursor = c"
+        @set-cursor="(c: Cursor) => (cursor = c)"
       />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 
 .validator-list {
   flex-grow: 1;
@@ -186,8 +197,8 @@ function mapDutyLinks(dutyObjects?: number[]): { to?: string, label: string }[] 
     margin: 0;
   }
 
-  .round-brackets>span:last-child:not(.label),
-  .list>span:last-child {
+  .round-brackets > span:last-child:not(.label),
+  .list > span:last-child {
     display: none;
   }
 

@@ -34,7 +34,11 @@ const onSubmit = handleSubmit(async (values) => {
   }
   catch (error) {
     password.value = ''
-    toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_login_group'), detail: $t('login_and_register.error_login_message') })
+    toast.showError({
+      summary: $t('login_and_register.error_title'),
+      group: $t('login_and_register.error_login_group'),
+      detail: $t('login_and_register.error_login_message'),
+    })
   }
 })
 
@@ -50,14 +54,16 @@ const registerLink = computed(() => {
     <div class="page">
       <div class="container">
         <div class="title">
-          {{ $t('login_and_register.title_login') }}
+          {{ $t("login_and_register.title_login") }}
         </div>
         <form @submit="onSubmit">
           <div class="input-row">
             <label
               for="email"
               class="label"
-            >{{ $t('login_and_register.email') }}</label>
+            >{{
+              $t("login_and_register.email")
+            }}</label>
             <InputText
               id="email"
               v-model="email"
@@ -75,14 +81,14 @@ const registerLink = computed(() => {
               for="password"
               class="label"
             >
-              <div>{{ $t('login_and_register.password') }}</div>
+              <div>{{ $t("login_and_register.password") }}</div>
               <div class="right-cell">
                 <BcLink
                   to="/requestReset"
                   :target="Target.Internal"
                   class="link"
                 >
-                  {{ $t('login_and_register.forgotten') }}
+                  {{ $t("login_and_register.forgotten") }}
                 </BcLink>
               </div>
             </label>
@@ -100,13 +106,13 @@ const registerLink = computed(() => {
           </div>
           <div class="last-row">
             <div class="account-invitation">
-              {{ $t('login_and_register.dont_have_account') }}
+              {{ $t("login_and_register.dont_have_account") }}
               <BcLink
                 :to="registerLink"
                 :target="Target.Internal"
                 class="link"
               >
-                {{ $t('login_and_register.signup_here') }}
+                {{ $t("login_and_register.signup_here") }}
               </BcLink>
             </div>
             <Button
@@ -134,7 +140,8 @@ const registerLink = computed(() => {
     padding: var(--padding-large);
     box-sizing: border-box;
     width: min(530px, 100%);
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 600px) {
+      // mobile
       margin-top: 0px;
     }
 

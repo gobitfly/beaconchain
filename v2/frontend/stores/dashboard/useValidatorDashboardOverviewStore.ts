@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { useAllValidatorDashboardRewardsDetailsStore } from './useValidatorDashboardRewardsDetailsStore'
-import type { VDBOverviewData, InternalGetValidatorDashboardResponse } from '~/types/api/validator_dashboard'
+import type {
+  VDBOverviewData,
+  InternalGetValidatorDashboardResponse,
+} from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
@@ -12,7 +15,8 @@ const validatorOverviewStore = defineStore('validator_overview_store', () => {
 export function useValidatorDashboardOverviewStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorOverviewStore())
-  const { clearCache: clearRewardDetails } = useAllValidatorDashboardRewardsDetailsStore()
+  const { clearCache: clearRewardDetails }
+    = useAllValidatorDashboardRewardsDetailsStore()
 
   const overview = computed(() => data.value)
 
@@ -22,7 +26,11 @@ export function useValidatorDashboardOverviewStore() {
       return
     }
     try {
-      const res = await fetch<InternalGetValidatorDashboardResponse>(API_PATH.DASHBOARD_OVERVIEW, undefined, { dashboardKey: key })
+      const res = await fetch<InternalGetValidatorDashboardResponse>(
+        API_PATH.DASHBOARD_OVERVIEW,
+        undefined,
+        { dashboardKey: key },
+      )
       data.value = res.data
 
       clearOverviewDependentCaches()
@@ -45,7 +53,13 @@ export function useValidatorDashboardOverviewStore() {
     if (!overview.value?.validators) {
       return false
     }
-    return !!overview.value.validators.online || !!overview.value.validators.exited || !!overview.value.validators.offline || !!overview.value.validators.pending || !!overview.value.validators.slashed
+    return (
+      !!overview.value.validators.online
+      || !!overview.value.validators.exited
+      || !!overview.value.validators.offline
+      || !!overview.value.validators.pending
+      || !!overview.value.validators.slashed
+    )
   })
 
   const validatorCount = computed(() => {
@@ -55,7 +69,13 @@ export function useValidatorDashboardOverviewStore() {
     if (!overview.value.validators) {
       return 0
     }
-    return overview.value.validators.exited + overview.value.validators.offline + overview.value.validators.online + overview.value.validators.pending + overview.value.validators.slashed
+    return (
+      overview.value.validators.exited
+      + overview.value.validators.offline
+      + overview.value.validators.online
+      + overview.value.validators.pending
+      + overview.value.validators.slashed
+    )
   })
 
   return { overview, refreshOverview, hasValidators, validatorCount }

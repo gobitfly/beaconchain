@@ -12,14 +12,15 @@ useBcSeo(seoTitle, true)
 
 // TODO: This duplicates code from the validator dashboard page
 // Once the account dashboard page is tackled, improve this
-const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
+const dashboardCreationControllerModal
+  = ref<typeof DashboardCreationController>()
 function showDashboardCreation() {
   dashboardCreationControllerModal.value?.show()
 }
 </script>
 
 <template>
-  <div v-if="dashboardKey==''">
+  <div v-if="dashboardKey == ''">
     <BcPageWrapper>
       <DashboardCreationController
         ref="dashboardCreationControllerPanel"

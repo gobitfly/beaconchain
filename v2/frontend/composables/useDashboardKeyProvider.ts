@@ -1,22 +1,37 @@
 import { pullAll, union } from 'lodash-es'
 import { provide, warn } from 'vue'
 import { COOKIE_KEY } from '~/types/cookie'
-import type { DashboardKey, DashboardKeyData, DashboardType } from '~/types/dashboard'
+import type {
+  DashboardKey,
+  DashboardKeyData,
+  DashboardType,
+} from '~/types/dashboard'
 import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
 
-export function useDashboardKeyProvider(type: DashboardType = 'validator', mockKey: DashboardKey = '') {
+export function useDashboardKeyProvider(
+  type: DashboardType = 'validator',
+  mockKey: DashboardKey = '',
+) {
   const route = useRoute()
   const router = useRouter()
   const dashboardType = ref(type)
   const dashboardKey = ref(mockKey)
-  const dashboardKeyCookie = useCookie(dashboardType.value === 'account' ? COOKIE_KEY.ACCOUNT_DASHOBARD_KEY : COOKIE_KEY.VALIDATOR_DASHOBARD_KEY)
+  const dashboardKeyCookie = useCookie(
+    dashboardType.value === 'account'
+      ? COOKIE_KEY.ACCOUNT_DASHOBARD_KEY
+      : COOKIE_KEY.VALIDATOR_DASHOBARD_KEY,
+  )
   const { isLoggedIn } = useUserStore()
 
   const setDashboardKey = (key: string) => {
     if (!route.name) {
       warn('route name missing', route)
     }
-    const newRoute = router.resolve({ name: route.name!, params: { id: key }, hash: document?.location?.hash })
+    const newRoute = router.resolve({
+      name: route.name!,
+      params: { id: key },
+      hash: document?.location?.hash,
+    })
     dashboardKey.value = key
     if (isClient) {
       // we only want to change the url in the browser and don't want to trigger a page refresh
@@ -34,7 +49,11 @@ export function useDashboardKeyProvider(type: DashboardType = 'validator', mockK
         return
       }
       // only use the dashboard cookie key as default if you are not logged in and it's not private
-      if (!isLoggedIn.value && isPublicDashboardKey(dashboardKeyCookie.value) && !isSharedKey(dashboardKeyCookie.value)) {
+      if (
+        !isLoggedIn.value
+        && isPublicDashboardKey(dashboardKeyCookie.value)
+        && !isSharedKey(dashboardKeyCookie.value)
+      ) {
         setDashboardKey(`${dashboardKeyCookie.value}`)
       }
       return
@@ -78,10 +97,24 @@ export function useDashboardKeyProvider(type: DashboardType = 'validator', mockK
     updateEntities(pullAll(publicEntities.value, list))
   }
 
-  const api = { dashboardKey, isPublic, isShared, publicEntities, addEntities, removeEntities, setDashboardKey, dashboardType }
+  const api = {
+    dashboardKey,
+    isPublic,
+    isShared,
+    publicEntities,
+    addEntities,
+    removeEntities,
+    setDashboardKey,
+    dashboardType,
+  }
 
   watch(isLoggedIn, (newValue, oldValue) => {
-    if (oldValue && !newValue && dashboardKeyCookie.value && !isNaN(parseInt(dashboardKeyCookie.value))) {
+    if (
+      oldValue
+      && !newValue
+      && dashboardKeyCookie.value
+      && !isNaN(parseInt(dashboardKeyCookie.value))
+    ) {
       setDashboardKey('')
     }
   })

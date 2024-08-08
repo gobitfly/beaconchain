@@ -56,7 +56,7 @@ const closeDialog = (response: boolean) => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .content {
   display: flex;
@@ -82,7 +82,7 @@ const closeDialog = (response: boolean) => {
     margin-top: var(--padding);
     gap: var(--padding);
 
-    .discreet-button{
+    .discreet-button {
       @include fonts.button_text;
       cursor: pointer;
       color: var(--text-color-discreet);

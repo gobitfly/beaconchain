@@ -14,7 +14,9 @@ defineProps<{
   colorTheme: SearchbarColors
   dropdownLayout: SearchbarDropdownLayout
 }>()
-const liveState = defineModel<CategoryFilter>({ required: true }) // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+// each entry has a Category as key and the state of the option as value.
+// The component will write directly into it, so the data of the parent is always up-to-date.
+const liveState = defineModel<CategoryFilter>({ required: true })
 
 const { t } = useTranslation()
 
@@ -34,7 +36,7 @@ function selectionHasChanged(category: Category, selected: boolean) {
       :bar-shape="barShape"
       :color-theme="colorTheme"
       :dropdown-layout="dropdownLayout"
-      @change="(selected : boolean) => selectionHasChanged(filter[0], selected)"
+      @change="(selected: boolean) => selectionHasChanged(filter[0], selected)"
     >
       {{ t(...CategoryInfo[filter[0]].filterLabel) }}
     </BcSearchbarFilterButton>

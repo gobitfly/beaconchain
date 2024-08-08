@@ -7,7 +7,9 @@ export function useWindowSizeProvider() {
 
   const validatePageSize = () => {
     width.value = document.body.clientWidth // clientWidth => window width - scrollbar width
-    height.value = window.innerHeight // we need to use the innerHeight as the body.clientHeight is content debendent and we don't want to have horizontal scrollbars over the whole page anyway.
+    // we need to use the innerHeight as the body.clientHeight is content
+    // debendent and we don't want to have horizontal scrollbars over the whole page anyway.
+    height.value = window.innerHeight
   }
 
   onMounted(() => {

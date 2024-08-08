@@ -54,7 +54,7 @@ defineProps<Props>()
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
-    animation: spinner-rotation .75s linear infinite;
+    animation: spinner-rotation 0.75s linear infinite;
 
     &.small {
       width: 20px;
@@ -72,8 +72,6 @@ defineProps<Props>()
       width: 100%;
       height: 100%;
     }
-
   }
-
 }
 </style>

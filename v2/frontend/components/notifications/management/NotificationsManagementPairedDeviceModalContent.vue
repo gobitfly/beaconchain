@@ -16,9 +16,13 @@ const accountAccessToggle = ref(false)
 
 <template>
   <div class="row-container">
-    <div class="device-row ">
+    <div class="device-row">
       <div class="device">
-        {{ $t('notifications.general.paired_devices.device') }}: {{ props.device.name || $t('notifications.general.paired_devices.unknown') }}
+        {{ $t("notifications.general.paired_devices.device") }}:
+        {{
+          props.device.name
+            || $t("notifications.general.paired_devices.unknown")
+        }}
       </div>
       <Button
         data-secondary
@@ -29,20 +33,24 @@ const accountAccessToggle = ref(false)
     </div>
     <div class="toggle-row">
       <BcToggle v-model="notificationsToggle" />
-      {{ $t('notifications.general.paired_devices.mobile_notifications') }}
+      {{ $t("notifications.general.paired_devices.mobile_notifications") }}
     </div>
     <div class="toggle-row">
       <BcToggle v-model="accountAccessToggle" />
-      {{ $t('notifications.general.paired_devices.grant_account_access') }}
+      {{ $t("notifications.general.paired_devices.grant_account_access") }}
     </div>
     <div class="paired-row">
-      {{ $t('notifications.general.paired_devices.paired_date', { date: formatGoTimestamp(device.paired_timestamp) }) }}
+      {{
+        $t("notifications.general.paired_devices.paired_date", {
+          date: formatGoTimestamp(device.paired_timestamp),
+        })
+      }}
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .row-container {
   display: flex;

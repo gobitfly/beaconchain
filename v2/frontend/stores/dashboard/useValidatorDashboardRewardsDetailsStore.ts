@@ -1,14 +1,24 @@
 import { defineStore } from 'pinia'
-import type { VDBGroupRewardsData, InternalGetValidatorDashboardGroupRewardsResponse } from '~/types/api/validator_dashboard'
+import type {
+  VDBGroupRewardsData,
+  InternalGetValidatorDashboardGroupRewardsResponse,
+} from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
-const validatorDashboardRewardsDetailsStore = defineStore('validator_dashboard_rewards_details_store', () => {
-  const data = ref < Record<string, VDBGroupRewardsData >>({})
-  return { data }
-})
+const validatorDashboardRewardsDetailsStore = defineStore(
+  'validator_dashboard_rewards_details_store',
+  () => {
+    const data = ref<Record<string, VDBGroupRewardsData>>({})
+    return { data }
+  },
+)
 
-export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: DashboardKey, groupId: number, epoch: number) => {
+export const useValidatorDashboardRewardsDetailsStore = (
+  dashboardKey: DashboardKey,
+  groupId: number,
+  epoch: number,
+) => {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorDashboardRewardsDetailsStore())
 
@@ -17,11 +27,16 @@ export const useValidatorDashboardRewardsDetailsStore = (dashboardKey: Dashboard
   }
 
   async function getDetails() {
-    // Rewards of an epoch will only change when validators changed (see useValidatorDashboardOverviewStore), so we can cache data
+    // Rewards of an epoch will only change when validators changed
+    // (see useValidatorDashboardOverviewStore), so we can cache data
     if (data.value[getKey()]) {
       return data.value[getKey()]
     }
-    const res = await fetch<InternalGetValidatorDashboardGroupRewardsResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS, undefined, { dashboardKey, groupId, epoch })
+    const res = await fetch<InternalGetValidatorDashboardGroupRewardsResponse>(
+      API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS,
+      undefined,
+      { dashboardKey, groupId, epoch },
+    )
     data.value = { ...data.value, [getKey()]: res.data }
     return res.data
   }

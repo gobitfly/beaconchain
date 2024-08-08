@@ -8,7 +8,9 @@ export function useGlobalSetting<T>(identifier: GlobalSetting) {
     if (cookie.value === undefined || cookie.value === null) {
       return config.default as T
     }
-    return config?.parseValue ? config.parseValue<T>(cookie.value) : cookie.value as T
+    return config?.parseValue
+      ? config.parseValue<T>(cookie.value)
+      : (cookie.value as T)
   })
   const changeSetting = (value: T) => {
     cookie.value = config.valueToString !== undefined ? config.valueToString(value) : value as CookieValue

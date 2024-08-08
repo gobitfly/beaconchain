@@ -20,7 +20,9 @@ const getDashboardName = (db: Dashboard): string => {
     return db.name || `${$t('dashboard.title')} ${db.id}` // Just to be sure, we should not have dashboards without a name in prod
   }
   else {
-    return db.id === COOKIE_DASHBOARD_ID.ACCOUNT ? $t('dashboard.account_dashboard') : $t('dashboard.validator_dashboard')
+    return db.id === COOKIE_DASHBOARD_ID.ACCOUNT
+      ? $t('dashboard.account_dashboard')
+      : $t('dashboard.validator_dashboard')
   }
 }
 
@@ -50,9 +52,18 @@ const items = computed<MenuBarEntry[]>(() => {
       })
     }
   }
-  const createMenuBarButton = (type: DashboardType, label: string, id: DashboardKey): MenuBarButton => {
+  const createMenuBarButton = (
+    type: DashboardType,
+    label: string,
+    id: DashboardKey,
+  ): MenuBarButton => {
     if (type === dashboardType.value) {
-      return { label, command: () => setDashboardKey(id), active: id === dashboardKey.value, route: `/dashboard/${id}` }
+      return {
+        label,
+        command: () => setDashboardKey(id),
+        active: id === dashboardKey.value,
+        route: `/dashboard/${id}`,
+      }
     }
 
     if (type === 'validator') {

@@ -13,11 +13,7 @@
         "type": "validator",
         "count": 134
       },
-      "notification": [
-        "Proposal missed",
-        "Back online",
-        "Foo Bar"
-      ]
+      "notification": ["Proposal missed", "Back online", "Foo Bar"]
     },
     {
       "group_id": 122,
@@ -29,11 +25,7 @@
         "type": "account",
         "count": 1
       },
-      "notification": [
-        "Proposal missed",
-        "Back online",
-        "Foo Bar"
-      ]
+      "notification": ["Proposal missed", "Back online", "Foo Bar"]
     },
     {
       "group_id": 1,
@@ -45,11 +37,7 @@
         "type": "validator",
         "count": 134
       },
-      "notification": [
-        "Proposal missed",
-        "Back online",
-        "Foo Bar"
-      ]
+      "notification": ["Proposal missed", "Back online", "Foo Bar"]
     }
   ]
 }

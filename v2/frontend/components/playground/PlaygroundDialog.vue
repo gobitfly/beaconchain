@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { BcDialogConfirm, NotificationsManagementSubscriptionDialog, DashboardCreationController } from '#components'
-import type { NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
+import {
+  BcDialogConfirm,
+  NotificationsManagementSubscriptionDialog,
+  DashboardCreationController,
+} from '#components'
+import type {
+  NotificationSettingsValidatorDashboard,
+  NotificationSettingsAccountDashboard,
+} from '~/types/api/notifications'
 
 const dialog = useDialog()
 const { currentNetwork } = useNetworkStore()
@@ -8,8 +15,7 @@ const { currentNetwork } = useNetworkStore()
 function onClose(answer: boolean) {
   setTimeout(() => {
     alert('response: ' + answer)
-  }, 100,
-  )
+  }, 100)
 }
 
 const openQuestion = (yesLabel?: string, noLabel?: string) => {
@@ -58,7 +64,8 @@ function openSubscriptions(props: any) {
   })
 }
 
-const dashboardCreationControllerModal = ref<typeof DashboardCreationController>()
+const dashboardCreationControllerModal
+  = ref<typeof DashboardCreationController>()
 </script>
 
 <template>
@@ -66,17 +73,39 @@ const dashboardCreationControllerModal = ref<typeof DashboardCreationController>
     <Button @click="dashboardCreationControllerModal?.show()">
       Create dashboard with free will!
     </Button>
-    <Button @click="dashboardCreationControllerModal?.show('validator', currentNetwork)">
+    <Button
+      @click="
+        dashboardCreationControllerModal?.show('validator', currentNetwork)
+      "
+    >
       Create validator dashboard with currentNetwork.value forced
     </Button>
     <Button @click="dashboardCreationControllerModal?.show('account')">
       Create account dashboard with account mode forced
     </Button>
-    Note: to test the saving of the options to the API, open the dialogs from the notification dashboard.<br>The communication with the API is implemented there.
-    <Button @click="openSubscriptions({ dashboardType: 'validator', initialSettings: validatorSub, saveUserSettings: () => {} })">
+    Note: to test the saving of the options to the API, open the dialogs from
+    the notification dashboard.<br>The communication with the API is
+    implemented there.
+    <Button
+      @click="
+        openSubscriptions({
+          dashboardType: 'validator',
+          initialSettings: validatorSub,
+          saveUserSettings: () => {},
+        })
+      "
+    >
       Subscribe to notifications for your validators
     </Button>
-    <Button @click="openSubscriptions({ dashboardType: 'account', initialSettings: accountSub, saveUserSettings: () => {} })">
+    <Button
+      @click="
+        openSubscriptions({
+          dashboardType: 'account',
+          initialSettings: accountSub,
+          saveUserSettings: () => {},
+        })
+      "
+    >
       Subscribe to notifications for your accounts
     </Button>
     <br>
@@ -99,7 +128,7 @@ const dashboardCreationControllerModal = ref<typeof DashboardCreationController>
 </template>
 
 <style lang="scss" scoped>
-.container{
+.container {
   display: flex;
   flex-direction: column;
   align-items: flex-start;

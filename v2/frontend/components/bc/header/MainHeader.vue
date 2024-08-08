@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faBars,
-  faCircleUser,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faBars, faCircleUser } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
@@ -26,7 +23,9 @@ const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 const isMobileScreen = computed(() => width.value < mobileHeaderThreshold)
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished' // TODO: once the searchbar is enabled in production, delete this line
+const hideInDevelopmentClass = showInDevelopment
+  ? ''
+  : 'hide-because-it-is-unfinished' // TODO: once the searchbar is enabled in production, delete this line
 
 const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
 
@@ -44,7 +43,11 @@ const rate = computed(() => {
   return undefined
 })
 
-const currentEpoch = computed(() => latestState.value?.current_slot !== undefined ? slotToEpoch(latestState.value.current_slot) : undefined)
+const currentEpoch = computed(() =>
+  latestState.value?.current_slot !== undefined
+    ? slotToEpoch(latestState.value.current_slot)
+    : undefined,
+)
 
 const toggleMegaMenu = (evt: Event) => {
   megaMenu.value?.toggleMegaMenu(evt)
@@ -56,7 +59,9 @@ const userMenu = computed(() => {
   return [
     {
       label: $t('header.settings'),
-      command: async () => { await navigateTo('../user/settings') },
+      command: async () => {
+        await navigateTo('../user/settings')
+      },
     },
     {
       label: $t('header.logout'),
@@ -85,7 +90,7 @@ const userMenu = computed(() => {
     <div class="top-background" />
     <div class="rows">
       <div class="grid-cell blockchain-info">
-        <span v-if="latestState?.current_slot"><span>{{ $t('header.current_slot') }}</span>:
+        <span v-if="latestState?.current_slot"><span>{{ $t("header.current_slot") }}</span>:
           <BcLink
             :to="`/slot/${latestState.current_slot}`"
             :disabled="!showInDevelopment || null"
@@ -96,7 +101,7 @@ const userMenu = computed(() => {
             />
           </BcLink>
         </span>
-        <span v-if="currentEpoch !== undefined"><span>{{ $t('header.current_epoch') }}</span>:
+        <span v-if="currentEpoch !== undefined"><span>{{ $t("header.current_epoch") }}</span>:
           <BcLink
             :to="`/epoch/${currentEpoch}`"
             :disabled="!showInDevelopment || null"
@@ -114,9 +119,9 @@ const userMenu = computed(() => {
               class="network-icon"
               :harmonize-perceived-size="true"
               :colored="false"
-            />{{ networkInfo.elCurrency }}
-          </span>:
-          <span> {{ rate.symbol }}
+            />{{ networkInfo.elCurrency }} </span>:
+          <span>
+            {{ rate.symbol }}
             <BcFormatNumber
               class="bold"
               :value="rate.rate"
@@ -131,7 +136,11 @@ const userMenu = computed(() => {
           v-if="showInDevelopment && !isHomePage"
           class="bar"
           :bar-shape="SearchbarShape.Medium"
-          :color-theme="isSmallScreen && colorMode.value != 'dark' ? SearchbarColors.LightBlue : SearchbarColors.DarkBlue"
+          :color-theme="
+            isSmallScreen && colorMode.value != 'dark'
+              ? SearchbarColors.LightBlue
+              : SearchbarColors.DarkBlue
+          "
           :screen-width-causing-sudden-change="smallHeaderThreshold"
         />
       </div>
@@ -240,7 +249,8 @@ $smallHeaderThreshold: 1024px;
   border-bottom: 1px solid var(--container-border-color);
   background-color: var(--container-background);
   @include common();
-  &.hide-because-it-is-unfinished {  // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
+  &.hide-because-it-is-unfinished {
+    // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
     @media (max-width: $smallHeaderThreshold) {
       border-bottom: none;
     }
@@ -249,8 +259,11 @@ $smallHeaderThreshold: 1024px;
   .rows {
     position: relative;
     display: grid;
-    grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
-    grid-template-rows: var(--navbar-height) minmax(var(--navbar2-height), min-content);
+    grid-template-columns: 0px min-content min-content auto min-content 0px; // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
+    grid-template-rows: var(--navbar-height) minmax(
+        var(--navbar2-height),
+        min-content
+      );
     width: var(--content-width);
     color: var(--header-top-font-color);
     font-family: var(--main_header_font_family);
@@ -258,7 +271,7 @@ $smallHeaderThreshold: 1024px;
     font-weight: var(--main_header_font_weight);
     color: var(--header-top-font-color);
     @media (max-width: $smallHeaderThreshold) {
-      grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
+      grid-template-columns: 0px min-content auto min-content 0px; // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
     }
     @mixin bottom-cell($row) {
@@ -377,16 +390,24 @@ $smallHeaderThreshold: 1024px;
         font-size: var(--tiny_text_font_size);
         color: var(--megamenu-text-color);
         line-height: 10px;
-        .large-screen { display: inline }
-        .mobile { display: none }
+        .large-screen {
+          display: inline;
+        }
+        .mobile {
+          display: none;
+        }
         @media (max-width: $smallHeaderThreshold) {
           color: var(--grey);
         }
         @media (max-width: $mobileHeaderThreshold) {
           margin-bottom: auto;
           font-size: var(--button_font_size);
-          .large-screen { display: none }
-          .mobile { display: inline }
+          .large-screen {
+            display: none;
+          }
+          .mobile {
+            display: inline;
+          }
         }
       }
     }

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import {
-  faCheck,
-  faEdit,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faCheck, faEdit } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
@@ -46,12 +43,20 @@ const iconClick = () => {
 
 const icon = computed(() => ({
   icon: isEditing.value ? faCheck : faEdit,
-  disabled: (props.disabled || (isEditing.value && (!editValue.value && !props.canBeEmpty)) || (props.pattern && !props.pattern.test(editValue.value))) ? true : null,
+  disabled:
+    props.disabled
+    || (isEditing.value && !editValue.value && !props.canBeEmpty)
+    || (props.pattern && !props.pattern.test(editValue.value))
+      ? true
+      : null,
 }))
 
-watch(() => props.value, (v) => {
-  editValue.value = v ?? ''
-})
+watch(
+  () => props.value,
+  (v) => {
+    editValue.value = v ?? ''
+  },
+)
 
 watch([isEditing, inputRef], ([edit, input]) => {
   if (edit) {
@@ -112,11 +117,11 @@ watch([isEditing, inputRef], ([edit, input]) => {
     @include utils.truncate-text;
   }
 
-  .link{
+  .link {
     margin-right: var(--padding);
   }
 
-  >svg[disabled]{
+  > svg[disabled] {
     color: var(--button-color-disabled);
   }
 }

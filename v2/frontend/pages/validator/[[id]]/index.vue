@@ -15,6 +15,4 @@ warn(`route id: ${route.params.id}, query: ${route.query}`)
   </BcPageWrapper>
 </template>
 
-<style lang="scss">
-
-</style>
+<style lang="scss"></style>

@@ -27,7 +27,10 @@ export function useHashTabs(tabs: HashTabs) {
 
   onMounted(() => {
     const hash = initialHash?.replace('#', '')
-    activeIndex.value = hash && tabs[hash] && !tabs[hash].disabled ? tabs[hash].index : findFirstValidIndex()
+    activeIndex.value
+      = hash && tabs[hash] && !tabs[hash].disabled
+        ? tabs[hash].index
+        : findFirstValidIndex()
   })
 
   const updateHash = (index: number) => {
@@ -37,12 +40,16 @@ export function useHashTabs(tabs: HashTabs) {
     window.location.hash = findHashForIndex(index)
   }
 
-  watch(activeIndex, (index) => {
-    if (isServer && index < 0) {
-      return
-    }
-    updateHash(index)
-  }, { immediate: true })
+  watch(
+    activeIndex,
+    (index) => {
+      if (isServer && index < 0) {
+        return
+      }
+      updateHash(index)
+    },
+    { immediate: true },
+  )
 
   const setActiveIndex = (index: number) => {
     if (isServer) {

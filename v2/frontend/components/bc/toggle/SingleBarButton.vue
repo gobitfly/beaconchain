@@ -14,7 +14,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
+const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
 </script>
 
 <template>
@@ -31,7 +31,15 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
         >
           {{ tooltip }}
         </div>
-        <div>{{ disabled ? $t('common.unavailable') : (selected ? $t('common.selected') : $t('common.deselected')) }}</div>
+        <div>
+          {{
+            disabled
+              ? $t("common.unavailable")
+              : selected
+                ? $t("common.selected")
+                : $t("common.deselected")
+          }}
+        </div>
       </div>
     </template>
     <ToggleButton
@@ -68,12 +76,12 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .button-tooltip {
   width: max-content;
   text-align: left;
-  .individual{
+  .individual {
     margin-bottom: var(--padding);
   }
 }
@@ -117,7 +125,7 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
       :deep(svg) {
         max-width: 36px;
       }
-      &.p-disabled{
+      &.p-disabled {
         opacity: 0.5;
         cursor: default;
       }

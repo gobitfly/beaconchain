@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBGroupSummaryMissedRewards } from '~/types/api/validator_dashboard'
 
 interface Props {
@@ -10,7 +8,16 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const total = computed(() => props.missedRewards ? convertSum(props.missedRewards.proposer_rewards.cl, props.missedRewards.proposer_rewards.el, props.missedRewards.attestations, props.missedRewards.sync) : undefined)
+const total = computed(() =>
+  props.missedRewards
+    ? convertSum(
+      props.missedRewards.proposer_rewards.cl,
+      props.missedRewards.proposer_rewards.el,
+      props.missedRewards.attestations,
+      props.missedRewards.sync,
+    )
+    : undefined,
+)
 </script>
 
 <template>
@@ -27,11 +34,12 @@ const total = computed(() => props.missedRewards ? convertSum(props.missedReward
       <template #tooltip>
         <div>
           <div class="tt-row">
-            <span class="bold top">{{ $t('dashboard.validator.summary.tooltip.estimated_loss') }}
+            <span class="bold top">{{ $t("dashboard.validator.summary.tooltip.estimated_loss") }}
             </span>
           </div>
           <div class="tt-row">
-            <span class="bold">{{ $t('dashboard.validator.blocks.el_rewards') }}: </span>
+            <span class="bold">{{ $t("dashboard.validator.blocks.el_rewards") }}:
+            </span>
             <BcFormatValue
               :value="missedRewards?.proposer_rewards.el"
               :no-tooltip="true"
@@ -39,7 +47,8 @@ const total = computed(() => props.missedRewards ? convertSum(props.missedReward
             />
           </div>
           <div class="tt-row">
-            <span class="bold">{{ $t('dashboard.validator.blocks.cl_rewards') }}: </span>
+            <span class="bold">{{ $t("dashboard.validator.blocks.cl_rewards") }}:
+            </span>
             <BcFormatValue
               :value="missedRewards?.proposer_rewards.cl"
               :no-tooltip="true"
@@ -47,7 +56,8 @@ const total = computed(() => props.missedRewards ? convertSum(props.missedReward
             />
           </div>
           <div class="tt-row">
-            <span class="bold">{{ $t('dashboard.validator.summary.row.attestations') }}: </span>
+            <span class="bold">{{ $t("dashboard.validator.summary.row.attestations") }}:
+            </span>
             <BcFormatValue
               :value="missedRewards?.attestations"
               :no-tooltip="true"
@@ -55,7 +65,8 @@ const total = computed(() => props.missedRewards ? convertSum(props.missedReward
             />
           </div>
           <div class="tt-row">
-            <span class="bold">{{ $t('dashboard.validator.summary.row.sync_committee') }}: </span>
+            <span class="bold">{{ $t("dashboard.validator.summary.row.sync_committee") }}:
+            </span>
             <BcFormatValue
               :value="missedRewards?.sync"
               :no-tooltip="true"
@@ -77,7 +88,7 @@ const total = computed(() => props.missedRewards ? convertSum(props.missedReward
   flex-wrap: nowrap;
   white-space: nowrap;
   gap: 3px;
-  .top{
+  .top {
     padding-bottom: var(--padding);
   }
 }

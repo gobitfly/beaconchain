@@ -15,7 +15,12 @@ export function useDebounceValue<T>(initialValue: T, bounceMs: number = 100) {
     timeout.value = null
   }
 
-  const bounce = (value: T, instantIfNoTimer = false, endlesBounce = false, ms?: number) => {
+  const bounce = (
+    value: T,
+    instantIfNoTimer = false,
+    endlesBounce = false,
+    ms?: number,
+  ) => {
     tempRef.value = value
     if (instantIfNoTimer && !timeout.value) {
       valueRef.value = value

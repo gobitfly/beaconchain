@@ -15,7 +15,9 @@ const label = computed(() => {
   if (props.value === undefined || props.value === '') {
     return props.default
   }
-  return formattedNumberToHtml(trim(props.value, props.maxDecimals ?? 2, props.minDecimals ?? 0))
+  return formattedNumberToHtml(
+    trim(props.value, props.maxDecimals ?? 2, props.minDecimals ?? 0),
+  )
 })
 </script>
 

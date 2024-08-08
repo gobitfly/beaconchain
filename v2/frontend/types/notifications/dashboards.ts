@@ -15,4 +15,5 @@ export type NotifcationDashboardRow = {
   nofitication: string[]
 }
 
-export type NotifcationDashboardResponse = ApiPagingResponse<NotifcationDashboardRow>
+export type NotifcationDashboardResponse =
+  ApiPagingResponse<NotifcationDashboardRow>

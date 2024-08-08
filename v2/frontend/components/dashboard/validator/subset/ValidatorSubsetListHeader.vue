@@ -77,7 +77,9 @@ const icon = computed(() => {
   return { icon, className, slotVizCategory }
 })
 
-const count = computed(() => countSummaryValidatorDuties(props.validators, props.category))
+const count = computed(() =>
+  countSummaryValidatorDuties(props.validators, props.category),
+)
 </script>
 
 <template>
@@ -92,7 +94,9 @@ const count = computed(() => countSummaryValidatorDuties(props.validators, props
       :icon="icon.slotVizCategory"
       :class="icon.className"
     />
-    <span>{{ $t(`dashboard.validator.subset_dialog.category.${category}`) }}</span>
+    <span>{{
+      $t(`dashboard.validator.subset_dialog.category.${category}`)
+    }}</span>
     <span> (<BcFormatNumber :value="count" />)</span>
   </div>
 </template>

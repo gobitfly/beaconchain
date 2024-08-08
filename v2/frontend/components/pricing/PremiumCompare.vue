@@ -1,8 +1,6 @@
 <script lang="ts" setup>
 import { get } from 'lodash-es'
-import {
-  faInfoCircle,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { PremiumPerks } from '~/types/api/user'
 
@@ -29,7 +27,10 @@ type CompareRow = {
 const showContent = ref(false)
 
 const rows = computed(() => {
-  const sorted = products.value?.premium_products?.toSorted((a, b) => a.price_per_month_eur - b.price_per_month_eur) ?? []
+  const sorted
+    = products.value?.premium_products?.toSorted(
+      (a, b) => a.price_per_month_eur - b.price_per_month_eur,
+    ) ?? []
   const rows: CompareRow[] = []
   const mapValue = (property: string, perks: PremiumPerks): CompareValue => {
     if (['support_us', 'bulk_adding'].includes(property)) {
@@ -45,13 +46,17 @@ const rows = computed(() => {
         value = $t('pricing.full_history')
       }
       else {
-        value = $t('common.last_x', { duration: formatTimeDuration(value as number, $t) })
+        value = $t('common.last_x', {
+          duration: formatTimeDuration(value as number, $t),
+        })
       }
     }
 
     let tooltip: string | undefined
     if (property === 'validators_per_dashboard') {
-      tooltip = $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(perks.validators_per_dashboard * 32) })
+      tooltip = $t('pricing.pectra_tooltip', {
+        effectiveBalance: formatNumber(perks.validators_per_dashboard * 32),
+      })
     }
 
     return {
@@ -59,7 +64,14 @@ const rows = computed(() => {
       tooltip,
     }
   }
-  const addRow = (type: RowType, property?: string, className?: string, subText?: string, hidePositiveValues = false, translationKey?: string) => {
+  const addRow = (
+    type: RowType,
+    property?: string,
+    className?: string,
+    subText?: string,
+    hidePositiveValues = false,
+    translationKey?: string,
+  ) => {
     const row: CompareRow = { type, subText, className }
     switch (type) {
       case 'header':
@@ -105,27 +117,69 @@ const rows = computed(() => {
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
   addRow('perc', 'manage_dashboard_via_api', undefined, comingSoon)
-  addRow('perc', 'bulk_adding', 'last-in-group', $t('pricing.percs.bulk_adding_subtext'))
+  addRow(
+    'perc',
+    'bulk_adding',
+    'last-in-group',
+    $t('pricing.percs.bulk_adding_subtext'),
+  )
   addRow('group', 'dashboard_charts')
   addRow('label', 'summary_chart_history', 'first-in-group')
   const chartProps = ['epoch', 'hourly', 'daily', 'weekly']
-  chartProps.forEach(p => addRow('perc', `chart_history_seconds.${p}`, undefined, undefined, undefined, `time_frames.${p}`))
+  chartProps.forEach(p =>
+    addRow(
+      'perc',
+      `chart_history_seconds.${p}`,
+      undefined,
+      undefined,
+      undefined,
+      `time_frames.${p}`,
+    ),
+  )
 
   addRow('label', 'heatmap_history', 'last-in-group', comingSoon)
 
-  addRow('group', 'notification', undefined, showInDevelopment ? undefined : comingSoon)
-  addRow('perc', 'email_notifications_per_day', 'first-in-group', undefined, !showInDevelopment)
+  addRow(
+    'group',
+    'notification',
+    undefined,
+    showInDevelopment ? undefined : comingSoon,
+  )
+  addRow(
+    'perc',
+    'email_notifications_per_day',
+    'first-in-group',
+    undefined,
+    !showInDevelopment,
+  )
   addRow('perc', 'configure_notifications_via_api')
 
-  addRow('perc', 'validator_group_notifications', undefined, undefined, !showInDevelopment)
-  addRow('perc', 'webhook_endpoints', 'last-in-group', undefined, !showInDevelopment)
+  addRow(
+    'perc',
+    'validator_group_notifications',
+    undefined,
+    undefined,
+    !showInDevelopment,
+  )
+  addRow(
+    'perc',
+    'webhook_endpoints',
+    'last-in-group',
+    undefined,
+    !showInDevelopment,
+  )
 
   addRow('group', 'mobille_app')
   addRow('perc', 'mobile_app_custom_themes', 'first-in-group')
   addRow('perc', 'mobile_app_widget')
   addRow('perc', 'monitor_machines')
   addRow('perc', 'machine_monitoring_history_seconds')
-  addRow('perc', 'custom_machine_alerts', 'last last-in-group', $t('pricing.percs.custom_machine_alerts_subtext'))
+  addRow(
+    'perc',
+    'custom_machine_alerts',
+    'last last-in-group',
+    $t('pricing.percs.custom_machine_alerts_subtext'),
+  )
 
   return rows
 })
@@ -133,7 +187,7 @@ const rows = computed(() => {
 
 <template>
   <div class="compare-plans-container">
-    <h1>{{ $t('pricing.compare') }}</h1>
+    <h1>{{ $t("pricing.compare") }}</h1>
     <div
       class="content"
       :class="{ 'show-content': showContent }"
@@ -181,9 +235,9 @@ const rows = computed(() => {
     >
       <Button
         class="pricing_button"
-        @click="() => showContent = !showContent"
+        @click="() => (showContent = !showContent)"
       >
-        {{ $t(showContent ? 'pricing.hide_feature' : 'pricing.show_feature') }}
+        {{ $t(showContent ? "pricing.hide_feature" : "pricing.show_feature") }}
       </Button>
     </div>
   </div>
@@ -390,7 +444,6 @@ const rows = computed(() => {
         }
       }
     }
-
   }
 
   .button-row {

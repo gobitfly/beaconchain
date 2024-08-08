@@ -50,5 +50,4 @@ defineProps<{
   </I18nT>
 </template>
 
-<style lang="scss" scoped>
-</style>
+<style lang="scss" scoped></style>

@@ -23,7 +23,7 @@ defineProps<Props>()
       </template>
     </div>
     <div class="footnote">
-      {{ $t('pricing.excluding_vat') }}
+      {{ $t("pricing.excluding_vat") }}
     </div>
   </div>
 </template>
@@ -54,7 +54,7 @@ defineProps<Props>()
 }
 
 @media (max-width: 1360px) {
-  .premium-products-container{
+  .premium-products-container {
     margin-bottom: 36px;
     .premium-products-row {
       gap: 10px;

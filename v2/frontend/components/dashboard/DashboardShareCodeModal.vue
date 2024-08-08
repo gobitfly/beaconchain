@@ -6,7 +6,8 @@ import { isSharedKey } from '~/utils/dashboard/key'
 
 interface Props {
   dashboardKey: string
-  dashboard?: ValidatorDashboard // Currently only validator dashboards are supported. For public dashboards this will be undefined
+  // Currently only validator dashboards are supported. For public dashboards this will be undefined
+  dashboard?: ValidatorDashboard
 }
 const { props, dialogRef } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
@@ -20,12 +21,19 @@ const isUpdating = ref(false)
 
 const isReadonly = computed(() => !props.value?.dashboard)
 
-const sharedKey = computed(() => props.value?.dashboard ? props.value.dashboard.public_ids?.[0]?.public_id : props.value?.dashboardKey)
+const sharedKey = computed(() =>
+  props.value?.dashboard
+    ? props.value.dashboard.public_ids?.[0]?.public_id
+    : props.value?.dashboardKey,
+)
 
 const isShared = computed(() => isSharedKey(sharedKey.value))
 
 const path = computed(() => {
-  const newRoute = router.resolve({ name: 'dashboard-id', params: { id: sharedKey.value } })
+  const newRoute = router.resolve({
+    name: 'dashboard-id',
+    params: { id: sharedKey.value },
+  })
   return url.origin + newRoute.fullPath
 })
 
@@ -47,7 +55,11 @@ const unpublish = async () => {
   }
   isUpdating.value = true
   const publicId = `${props.value?.dashboard?.public_ids?.[0]?.public_id}`
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID, { method: 'DELETE' }, { dashboardKey: `${props.value?.dashboard?.id}`, publicId })
+  await fetch(
+    API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID,
+    { method: 'DELETE' },
+    { dashboardKey: `${props.value?.dashboard?.id}`, publicId },
+  )
   await refreshDashboards()
   dialogRef?.value?.close('DELETE')
   isUpdating.value = false
@@ -62,7 +74,9 @@ const unpublish = async () => {
         :value="path"
         :size="330"
       />
-      <label class="title">{{ $t('dashboard.share_dialog.public_dashboard_url') }}</label>
+      <label class="title">{{
+        $t("dashboard.share_dialog.public_dashboard_url")
+      }}</label>
       <BcCopyLabel
         :value="path"
         class="copy_label"
@@ -70,15 +84,19 @@ const unpublish = async () => {
       <label
         v-if="isShared"
         class="disclaimer"
-      >{{ $t('dashboard.share_dialog.only_viewing_permission') }}</label>
+      >{{
+        $t("dashboard.share_dialog.only_viewing_permission")
+      }}</label>
       <label
         v-else
         class="disclaimer"
-      >{{ $t('dashboard.share_dialog.share_public_disclaimer') }}</label>
+      >{{
+        $t("dashboard.share_dialog.share_public_disclaimer")
+      }}</label>
       <label
         v-if="!user?.premium_perks?.share_custom_dashboards"
         class="disclaimer"
-      >{{ $t('dashboard.share_dialog.upgrade') }}<BcPremiumGem class="gem" /></label>
+      >{{ $t("dashboard.share_dialog.upgrade") }}<BcPremiumGem class="gem" /></label>
       <div
         v-if="!isReadonly"
         class="footer"
@@ -87,13 +105,13 @@ const unpublish = async () => {
           :disabled="isUpdating"
           @click="unpublish"
         >
-          {{ $t('navigation.unpublish') }}
+          {{ $t("navigation.unpublish") }}
         </Button>
         <Button
           :disabled="isUpdating"
           @click="edit"
         >
-          {{ $t('dashboard.share_dialog.edit') }}
+          {{ $t("dashboard.share_dialog.edit") }}
         </Button>
       </div>
     </div>

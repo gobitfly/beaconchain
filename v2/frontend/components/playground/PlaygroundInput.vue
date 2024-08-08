@@ -9,13 +9,13 @@ const input3 = ref('')
     <div>
       <BcInputLabel
         :value="input1"
-        @set-value="(v: string) => input1 = v"
+        @set-value="(v: string) => (input1 = v)"
       />
     </div>
     <div>
       <BcInputLabel
         :value="input2"
-        @set-value="(v: string) => input2 = v"
+        @set-value="(v: string) => (input2 = v)"
       />
     </div>
     <div>
@@ -23,7 +23,7 @@ const input3 = ref('')
         :value="input3"
         :label="input3 || 'Default'"
         :can-be-empty="true"
-        @set-value="(v: string) => input3 = v"
+        @set-value="(v: string) => (input3 = v)"
       />
     </div>
     <div>
@@ -46,7 +46,7 @@ const input3 = ref('')
   color: var(--container-color);
   border: solid 1px var(--container-border-color);
 
-  >div {
+  > div {
     width: 200px;
     border: solid 1px var(--container-border-color);
     padding: var(--padding-small);

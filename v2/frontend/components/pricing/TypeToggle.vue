@@ -1,12 +1,10 @@
-<script lang="ts" setup>
-
-</script>
+<script lang="ts" setup></script>
 
 <template>
   <div class="type-toggle-container">
     <div class="premium">
       <div class="label">
-        {{ $t('pricing.premium') }}
+        {{ $t("pricing.premium") }}
       </div>
     </div>
     <div
@@ -14,10 +12,10 @@
       disabled
     >
       <div class="label">
-        {{ $t('pricing.API_keys') }}
+        {{ $t("pricing.API_keys") }}
       </div>
       <div class="subtext">
-        {{ $t('common.coming_soon') }}
+        {{ $t("common.coming_soon") }}
       </div>
     </div>
   </div>
@@ -93,7 +91,7 @@
       font-weight: var(--montserrat-bold);
     }
 
-    .api-keys .subtext{
+    .api-keys .subtext {
       font-size: 9px;
     }
   }

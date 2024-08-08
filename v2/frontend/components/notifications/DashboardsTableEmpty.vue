@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCirclePlus, faRightFromBracket } from '@fortawesome/pro-regular-svg-icons'
+import {
+  faCirclePlus,
+  faRightFromBracket,
+} from '@fortawesome/pro-regular-svg-icons'
 
 const { t: $t } = useTranslation()
 
@@ -18,7 +21,10 @@ const handleClick = () => {
 const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
 const hasDashboards = computed(() => {
-  return dashboards.value?.account_dashboards?.length || dashboards.value?.validator_dashboards?.length
+  return (
+    dashboards.value?.account_dashboards?.length
+    || dashboards.value?.validator_dashboards?.length
+  )
 })
 
 const text = computed(() => {

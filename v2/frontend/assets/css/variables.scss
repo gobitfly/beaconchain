@@ -18,7 +18,7 @@
   --default-button-height: 30px;
 
   @media screen and (max-width: 1399px) {
-    --content-width: calc(100% - 2*var(--content-margin));
+    --content-width: calc(100% - 2 * var(--content-margin));
   }
 
   @media screen and (max-width: 800px) {

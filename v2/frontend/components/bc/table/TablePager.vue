@@ -10,11 +10,16 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const emit = defineEmits<{ (e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void }>()
+const emit = defineEmits<{
+  (e: 'setCursor', value: Cursor): void
+  (e: 'setPageSize', value: number): void
+}>()
 
 const pageSizes = [5, 10, 25, 50, 100]
 
-const currentOffset = computed<number>(() => typeof props.cursor === 'number' ? props.cursor : 0)
+const currentOffset = computed<number>(() =>
+  typeof props.cursor === 'number' ? props.cursor : 0,
+)
 
 const data = computed(() => {
   if (!props.paging) {
@@ -29,16 +34,28 @@ const data = computed(() => {
       next_cursor: props.paging.next_cursor,
     }
   }
-  const page = props.paging.total_count > 0 ? 1 + Math.floor(currentOffset.value / props.pageSize) : 0
+  const page
+    = props.paging.total_count > 0
+      ? 1 + Math.floor(currentOffset.value / props.pageSize)
+      : 0
   const from = props.paging.total_count > 0 ? currentOffset.value + 1 : 0
-  const to = Math.min(currentOffset.value + props.pageSize, props.paging.total_count)
+  const to = Math.min(
+    currentOffset.value + props.pageSize,
+    props.paging.total_count,
+  )
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
   return { mode: 'offset', page, from, to, lastPage }
 })
 
 const next = () => {
-  emit('setCursor', Math.min(currentOffset.value + props.pageSize, ((data.value.lastPage ?? 1) - 1) * props.pageSize))
+  emit(
+    'setCursor',
+    Math.min(
+      currentOffset.value + props.pageSize,
+      ((data.value.lastPage ?? 1) - 1) * props.pageSize,
+    ),
+  )
 }
 
 const prev = () => {
@@ -65,11 +82,14 @@ const setPageSize = (size: number) => {
 }
 
 // in case the totalCount decreased
-watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match) => {
-  if (data.value.lastPage !== undefined && match) {
-    last()
-  }
-})
+watch(
+  () => data.value.lastPage && data.value.lastPage < data.value.page,
+  (match) => {
+    if (data.value.lastPage !== undefined && match) {
+      last()
+    }
+  },
+)
 </script>
 
 <template>
@@ -81,7 +101,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
           :disabled="!currentOffset"
           @click="first"
         >
-          {{ $t('table.first') }}
+          {{ $t("table.first") }}
         </div>
         <div
           class="item button"
@@ -94,7 +114,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
           />
         </div>
         <div class="item current-page">
-          {{ data.page }} {{ $t('table.of') }} {{ data.lastPage }}
+          {{ data.page }} {{ $t("table.of") }} {{ data.lastPage }}
         </div>
         <div
           class="item button"
@@ -111,18 +131,16 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
           :disabled="data.page! >= data.lastPage!"
           @click="last"
         >
-          {{ $t('table.last') }}
+          {{ $t("table.last") }}
         </div>
       </template>
       <template v-else-if="data.mode === 'cursor'">
         <div
-          class="
-          item
-          button"
+          class="item button"
           :disabled="!data.prev_cursor"
           @click="first"
         >
-          {{ $t('table.first') }}
+          {{ $t("table.first") }}
         </div>
         <div
           class="item button"
@@ -160,7 +178,13 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       >
         <slot name="bc-table-footer-left">
           <span v-if="props.paging?.total_count">
-            {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
+            {{
+              $t("table.showing", {
+                from: data.from,
+                to: data.to,
+                total: props.paging?.total_count,
+              })
+            }}
           </span>
         </slot>
       </div>
@@ -175,7 +199,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 
 .bc-pageinator {
   position: relative;

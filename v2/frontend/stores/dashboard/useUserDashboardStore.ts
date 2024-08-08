@@ -1,8 +1,17 @@
 import { defineStore } from 'pinia'
 import { warn } from 'vue'
-import type { GetUserDashboardsResponse, UserDashboardsData, ValidatorDashboard } from '~/types/api/dashboard'
+import type {
+  GetUserDashboardsResponse,
+  UserDashboardsData,
+  ValidatorDashboard,
+} from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
-import { type DashboardKey, type DashboardType, type CookieDashboard, COOKIE_DASHBOARD_ID } from '~/types/dashboard'
+import {
+  type DashboardKey,
+  type DashboardType,
+  type CookieDashboard,
+  COOKIE_DASHBOARD_ID,
+} from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
 import { API_PATH } from '~/types/customFetch'
 import type { ChainIDs } from '~/types/network'
@@ -36,7 +45,9 @@ export function useUserDashboardStore() {
 
   async function refreshDashboards() {
     if (isLoggedIn.value) {
-      const res = await fetch<GetUserDashboardsResponse>(API_PATH.USER_DASHBOARDS)
+      const res = await fetch<GetUserDashboardsResponse>(
+        API_PATH.USER_DASHBOARDS,
+      )
       data.value = res.data
 
       // add fallback names for dashboards that have no names
@@ -69,10 +80,18 @@ export function useUserDashboardStore() {
     dashboardCookie.value = JSON.stringify(db)
   }
 
-  async function createValidatorDashboard(name: string, network: ChainIDs, dashboardKey?: string): Promise<CookieDashboard | undefined> {
+  async function createValidatorDashboard(
+    name: string,
+    network: ChainIDs,
+    dashboardKey?: string,
+  ): Promise<CookieDashboard | undefined> {
     if (!isLoggedIn.value) {
       // Create local Validator dashboard
-      const cd: CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', hash: dashboardKey ?? '' }
+      const cd: CookieDashboard = {
+        id: COOKIE_DASHBOARD_ID.VALIDATOR,
+        name: '',
+        hash: dashboardKey ?? '',
+      }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [cd as ValidatorDashboard],
@@ -81,23 +100,39 @@ export function useUserDashboardStore() {
       return cd
     }
     // Create user specific Validator dashboard
-    const res = await fetch<{ data: VDBPostReturnData }>(API_PATH.DASHBOARD_CREATE_VALIDATOR, { body: { name, network } })
+    const res = await fetch<{ data: VDBPostReturnData }>(
+      API_PATH.DASHBOARD_CREATE_VALIDATOR,
+      { body: { name, network } },
+    )
     if (res.data) {
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [
           ...(dashboards.value?.validator_dashboards || []),
-          { id: res.data.id, name: res.data.name, is_archived: false, validator_count: 0, group_count: 1 },
+          {
+            id: res.data.id,
+            name: res.data.name,
+            is_archived: false,
+            validator_count: 0,
+            group_count: 1,
+          },
         ],
       }
       return res.data
     }
   }
 
-  async function createAccountDashboard(name: string, dashboardKey?: string): Promise<CookieDashboard | undefined> {
+  async function createAccountDashboard(
+    name: string,
+    dashboardKey?: string,
+  ): Promise<CookieDashboard | undefined> {
     if (!isLoggedIn.value) {
       // Create local account dashboard
-      const cd: CookieDashboard = { id: COOKIE_DASHBOARD_ID.ACCOUNT, name: '', hash: dashboardKey ?? '' }
+      const cd: CookieDashboard = {
+        id: COOKIE_DASHBOARD_ID.ACCOUNT,
+        name: '',
+        hash: dashboardKey ?? '',
+      }
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
         account_dashboards: [cd],
@@ -106,7 +141,10 @@ export function useUserDashboardStore() {
       return cd
     }
     // Create user specific account dashboard
-    const res = await fetch<{ data: VDBPostReturnData }>(API_PATH.DASHBOARD_CREATE_ACCOUNT, { body: { name } })
+    const res = await fetch<{ data: VDBPostReturnData }>(
+      API_PATH.DASHBOARD_CREATE_ACCOUNT,
+      { body: { name } },
+    )
     if (res.data) {
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
@@ -126,14 +164,24 @@ export function useUserDashboardStore() {
       return
     }
     if (type === 'validator') {
-      const cd: CookieDashboard = { id: COOKIE_DASHBOARD_ID.VALIDATOR, name: '', ...dashboards.value?.validator_dashboards?.[0], hash }
+      const cd: CookieDashboard = {
+        id: COOKIE_DASHBOARD_ID.VALIDATOR,
+        name: '',
+        ...dashboards.value?.validator_dashboards?.[0],
+        hash,
+      }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [cd as ValidatorDashboard],
       }
     }
     else {
-      const cd: CookieDashboard = { id: COOKIE_DASHBOARD_ID.ACCOUNT, name: '', ...dashboards.value?.account_dashboards?.[0], hash }
+      const cd: CookieDashboard = {
+        id: COOKIE_DASHBOARD_ID.ACCOUNT,
+        name: '',
+        ...dashboards.value?.account_dashboards?.[0],
+        hash,
+      }
       data.value = {
         validator_dashboards: dashboards.value?.validator_dashboards || [],
         account_dashboards: [cd],
@@ -144,7 +192,9 @@ export function useUserDashboardStore() {
 
   function getDashboardLabel(key: DashboardKey, type: DashboardType): string {
     const isValidatorDashboard = type === 'validator'
-    const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
+    const list = isValidatorDashboard
+      ? dashboards.value?.validator_dashboards
+      : dashboards.value?.account_dashboards
     const id = parseInt(key ?? '')
     if (!isNaN(id)) {
       const userDb = list?.find(db => db.id === id)
@@ -152,11 +202,14 @@ export function useUserDashboardStore() {
         return userDb.name
       }
 
-      // in production we should not get here, but with our public api key we can also view dashboards that are not part of our list
+      // in production we should not get here, but with our public api key we
+      // can also view dashboards that are not part of our list
       return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
     }
 
-    return isValidatorDashboard ? $t('dashboard.public_validator_dashboard') : $t('dashboard.public_account_dashboard')
+    return isValidatorDashboard
+      ? $t('dashboard.public_validator_dashboard')
+      : $t('dashboard.public_account_dashboard')
   }
 
   return {

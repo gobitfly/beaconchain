@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
-import type { SearchbarShape, SearchbarColors, SearchbarDropdownLayout, NetworkFilter } from '~/types/searchbar'
+import type {
+  SearchbarShape,
+  SearchbarColors,
+  SearchbarDropdownLayout,
+  NetworkFilter,
+} from '~/types/searchbar'
 import { ChainInfo, ChainIDs } from '~/types/network'
 
 const emit = defineEmits<{ (e: 'change'): void }>()
@@ -10,7 +15,9 @@ defineProps<{
   colorTheme: SearchbarColors
   dropdownLayout: SearchbarDropdownLayout
 }>()
-const liveState = defineModel<NetworkFilter>({ required: true }) // each entry has a ChainIDs as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+// each entry has a ChainIDs as key and the state of the option as value.
+// The component will write directly into it, so the data of the parent is always up-to-date.
+const liveState = defineModel<NetworkFilter>({ required: true })
 
 const { t } = useTranslation()
 
@@ -18,17 +25,20 @@ const headState = ref<{ look: 'on' | 'off', network: string }>({
   look: 'off',
   network: '',
 })
-const listInDropdown = ref<{
-  chainId: ChainIDs
-  label: string
-  selected: boolean
-}[]>([])
+const listInDropdown = ref<
+  {
+    chainId: ChainIDs
+    label: string
+    selected: boolean
+  }[]
+>([])
 const dropdownIsOpen = ref<boolean>(false)
 
 const head = ref<HTMLDivElement>()
 const dropdown = ref<HTMLDivElement>()
 
-watch(liveState, updateLocalState) // fires when the parent changes the whole object but not when he / we change a value inside
+// fires when the parent changes the whole object but not when he / we change a value inside
+watch(liveState, updateLocalState)
 
 onBeforeMount(() => {
   dropdownIsOpen.value = false
@@ -43,7 +53,13 @@ onUnmounted(() => {
 })
 
 function listenToClicks(event: Event) {
-  if (!dropdownIsOpen.value || !dropdown.value || !head.value || dropdown.value.contains(event.target as Node) || head.value.contains(event.target as Node)) {
+  if (
+    !dropdownIsOpen.value
+    || !dropdown.value
+    || !head.value
+    || dropdown.value.contains(event.target as Node)
+    || head.value.contains(event.target as Node)
+  ) {
     return
   }
   dropdownIsOpen.value = false
@@ -64,19 +80,27 @@ function updateLocalState() {
       howManyAreSelected++
     }
   }
-  const allNetworksAreSelected = (howManyAreSelected === liveState.value.size)
+  const allNetworksAreSelected = howManyAreSelected === liveState.value.size
   if (howManyAreSelected === 0 || allNetworksAreSelected) {
     headState.value.network = t('search_bar.all_networks')
   }
   else {
     headState.value.network = String(howManyAreSelected)
   }
-  headState.value.look = (howManyAreSelected === 0) ? 'off' : 'on'
+  headState.value.look = howManyAreSelected === 0 ? 'off' : 'on'
   // now we update the list used to fill the dropdown
   listInDropdown.value.length = 0
-  listInDropdown.value.push({ chainId: ChainIDs.Any, label: t('search_bar.all_networks'), selected: allNetworksAreSelected })
+  listInDropdown.value.push({
+    chainId: ChainIDs.Any,
+    label: t('search_bar.all_networks'),
+    selected: allNetworksAreSelected,
+  })
   for (const filter of liveState.value) {
-    listInDropdown.value.push({ chainId: filter[0], label: ChainInfo[filter[0]].name, selected: filter[1] })
+    listInDropdown.value.push({
+      chainId: filter[0],
+      label: ChainInfo[filter[0]].name,
+      selected: filter[1],
+    })
   }
 }
 
@@ -104,14 +128,14 @@ function oneOptionChanged(index: number) {
       :dropdown-layout="dropdownLayout"
       :look="headState.look"
       :state="dropdownIsOpen"
-      @change="(open : boolean) => dropdownIsOpen = open"
+      @change="(open: boolean) => (dropdownIsOpen = open)"
     >
       <div
         ref="head"
         class="content"
       >
         <span class="label">
-          {{ t('search_bar.network_filter_label') + ' ' + headState.network }}
+          {{ t("search_bar.network_filter_label") + " " + headState.network }}
         </span>
         <fontAwesomeIcon
           class="arrow"
@@ -124,7 +148,11 @@ function oneOptionChanged(index: number) {
       ref="dropdown"
       class="dropdown"
       :class="[barShape, colorTheme]"
-      @keydown="(e) => { if (e.key === 'Escape') dropdownIsOpen = false }"
+      @keydown="
+        (e) => {
+          if (e.key === 'Escape') dropdownIsOpen = false;
+        }
+      "
     >
       <div
         v-for="(line, i) of listInDropdown"
@@ -208,11 +236,11 @@ function oneOptionChanged(index: number) {
     }
 
     .line {
-      position:relative;
+      position: relative;
       display: flex;
       width: 100%;
       white-space: nowrap;
-      &:nth-child(n+1) {
+      &:nth-child(n + 1) {
         margin-top: var(--padding-small);
       }
 
@@ -223,7 +251,7 @@ function oneOptionChanged(index: number) {
       }
 
       .label {
-        position:relative;
+        position: relative;
         display: inline-flex;
         flex-grow: 1;
         margin-left: 5px;

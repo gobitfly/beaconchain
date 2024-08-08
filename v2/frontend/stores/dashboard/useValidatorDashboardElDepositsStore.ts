@@ -10,7 +10,8 @@ import { API_PATH } from '~/types/customFetch'
 const validatorDashboardElDepositsStore = defineStore(
   'validator_dashboard_el_deposits_store',
   () => {
-    const data = ref<InternalGetValidatorDashboardExecutionLayerDepositsResponse>()
+    const data
+      = ref<InternalGetValidatorDashboardExecutionLayerDepositsResponse>()
     const total = ref<string>()
     const query = ref<TableQueryParams>()
 

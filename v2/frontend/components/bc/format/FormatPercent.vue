@@ -18,7 +18,8 @@ interface Props {
   fixed?: number
   fullOnEmptyBase?: boolean
   addPositiveSign?: boolean
-  colorBreakPoint?: number // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
+  // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
+  colorBreakPoint?: number
 }
 
 const props = defineProps<Props>()
@@ -41,7 +42,11 @@ const data = computed(() => {
     return { label, className }
   }
   const percent = props.percent ?? calculatePercent(props.value, props.base)
-  const config = { precision: props.precision ?? 2, fixed: props.fixed ?? 2, addPositiveSign: props.addPositiveSign }
+  const config = {
+    precision: props.precision ?? 2,
+    fixed: props.fixed ?? 2,
+    addPositiveSign: props.addPositiveSign,
+  }
   label = formatPercent(percent, config)
   if (props.comparePercent !== undefined) {
     if (Math.abs(props.comparePercent - percent) <= 0.5) {
@@ -61,7 +66,10 @@ const data = computed(() => {
     }
   }
   else if (props.colorBreakPoint) {
-    if ((props.base === 0 && percent === 0) || percent >= props.colorBreakPoint) {
+    if (
+      (props.base === 0 && percent === 0)
+      || percent >= props.colorBreakPoint
+    ) {
       className = 'text-positive'
     }
     else {

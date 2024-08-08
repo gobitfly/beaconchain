@@ -4,7 +4,9 @@ interface Props {
   dismissLabel?: string
 }
 
-const { props, dialogRef, setHeader } = useBcDialog<Props>({ contentClass: 'premium-modal' })
+const { props, dialogRef, setHeader } = useBcDialog<Props>({
+  contentClass: 'premium-modal',
+})
 const { t: $t } = useTranslation()
 
 const hide = () => {
@@ -18,14 +20,14 @@ onMounted(() => {
 
 <template>
   <div class="text">
-    {{ props?.description || $t('premium.description') }}
+    {{ props?.description || $t("premium.description") }}
   </div>
   <div class="footer">
     <div
       class="dismiss"
       @click="hide()"
     >
-      {{ props?.dismissLabel || $t('navigation.dismiss') }}
+      {{ props?.dismissLabel || $t("navigation.dismiss") }}
     </div>
     <BcLink
       to="/pricing"
@@ -62,7 +64,7 @@ onMounted(() => {
   }
 }
 
-:global(.p-dialog:has(.premium-modal)>.p-dialog-header) {
+:global(.p-dialog:has(.premium-modal) > .p-dialog-header) {
   color: var(--primary-color);
   font-size: var(--subtitle_font_size);
 }

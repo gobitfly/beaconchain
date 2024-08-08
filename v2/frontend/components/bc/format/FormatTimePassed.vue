@@ -36,20 +36,41 @@ const label = computed(() => {
   let text: string | null | undefined = ''
   switch (props.type) {
     case 'go-timestamp':
-      text = formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatGoTimestamp(
+        props.value,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
       break
     case 'slot':
-      text = formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatSlotToDateTime(
+        props.value as number,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
       break
     case 'epoch':
     default:
-      text = formatEpochToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatEpochToDateTime(
+        props.value as number,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
   }
 
   if (text && mappedSetting.value === 'absolute') {
     const lastComma = text.lastIndexOf(',')
     if (lastComma > 0) {
-      return { text: text.slice(0, lastComma), subtext: text.slice(lastComma + 1) }
+      return {
+        text: text.slice(0, lastComma),
+        subtext: text.slice(lastComma + 1),
+      }
     }
   }
 
@@ -71,7 +92,7 @@ const label = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.text{
+.text {
   display: flex;
   flex-direction: column;
 

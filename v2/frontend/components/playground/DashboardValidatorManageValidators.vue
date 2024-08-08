@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { DashboardGroupSelectionDialog, DashboardValidatorEpochDutiesModal } from '#components'
+import {
+  DashboardGroupSelectionDialog,
+  DashboardValidatorEpochDutiesModal,
+} from '#components'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 const { groups } = useValidatorDashboardGroups()
@@ -11,8 +14,7 @@ const dialog = useDialog()
 function onClose(groupId: boolean) {
   setTimeout(() => {
     alert('new group: ' + groupId)
-  }, 100,
-  )
+  }, 100)
 }
 
 const openGroupSelection = (withPreselection: boolean) => {
@@ -45,7 +47,9 @@ const openEpochDuties = () => {
   />
   <div class="icon-holder">
     <div class="premium-row">
-      Come on, you cheap friend, buy that premium<BcPremiumGem style="margin-left: 10px;" />
+      Come on, you cheap friend, buy that premium<BcPremiumGem
+        style="margin-left: 10px"
+      />
     </div>
     <DashboardGroupSelection
       v-model="selectedGroupId"
@@ -107,11 +111,11 @@ const openEpochDuties = () => {
 </template>
 
 <style lang="scss" scoped>
-.premium-row{
+.premium-row {
   display: inline-flex;
   gap: 10px;
 }
-.group-selection{
+.group-selection {
   width: 200px;
 }
 .icon-holder {
@@ -121,11 +125,11 @@ const openEpochDuties = () => {
   gap: var(--padding);
 }
 
-.status-holder{
+.status-holder {
   display: flex;
   flex-wrap: wrap;
   padding: 10px;
-  .status{
+  .status {
     width: 140px;
     padding: 5px;
     border: 1px solid black;

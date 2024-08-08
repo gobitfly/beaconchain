@@ -11,7 +11,13 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm, DashboardShareModal, DashboardShareCodeModal, DashboardRenameModal, RocketpoolToggle } from '#components'
+import {
+  BcDialogConfirm,
+  DashboardShareModal,
+  DashboardShareCodeModal,
+  DashboardRenameModal,
+  RocketpoolToggle,
+} from '#components'
 import type { DashboardKey, Dashboard } from '~/types/dashboard'
 import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
@@ -24,9 +30,18 @@ const props = defineProps<Props>()
 const route = useRoute()
 const isValidatorDashboard = route.name === 'dashboard-id'
 const { isLoggedIn } = useUserStore()
-const { dashboardKey, isPublic, isPrivate, isShared, setDashboardKey, dashboardType, publicEntities } = useDashboardKey()
+const {
+  dashboardKey,
+  isPublic,
+  isPrivate,
+  isShared,
+  setDashboardKey,
+  dashboardType,
+  publicEntities,
+} = useDashboardKey()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
-const { refreshDashboards, dashboards, getDashboardLabel, updateHash } = useUserDashboardStore()
+const { refreshDashboards, dashboards, getDashboardLabel, updateHash }
+  = useUserDashboardStore()
 
 const { t: $t } = useTranslation()
 const { width } = useWindowSize()
@@ -48,19 +63,21 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
     dropdown: false,
     faIcon: isMobile.value ? faPeopleGroup : undefined,
     label: $t('dashboard.validator.manage_groups'),
-    command: () => { manageGroupsModalVisisble.value = true },
+    command: () => {
+      manageGroupsModalVisisble.value = true
+    },
   })
 
   if (dashboardType.value === 'validator') {
-    buttons.push(
-      {
-        dropdown: false,
-        faIcon: isMobile.value ? faDesktop : undefined,
-        highlight: !isMobile.value,
-        label: $t('dashboard.validator.manage_validators'),
-        command: () => { manageValidatorsModalVisisble.value = true },
+    buttons.push({
+      dropdown: false,
+      faIcon: isMobile.value ? faDesktop : undefined,
+      highlight: !isMobile.value,
+      label: $t('dashboard.validator.manage_validators'),
+      command: () => {
+        manageValidatorsModalVisisble.value = true
       },
-    )
+    })
   }
 
   if (isMobile.value && buttons.length > 1) {
@@ -79,14 +96,21 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
 
 const shareDashboard = computed(() => {
   return dashboards.value?.validator_dashboards?.find((d) => {
-    return d.id === parseInt(dashboardKey.value) || d.public_ids?.find(p => p.public_id === dashboardKey.value)
+    return (
+      d.id === parseInt(dashboardKey.value)
+      || d.public_ids?.find(p => p.public_id === dashboardKey.value)
+    )
   })
 })
 
 const shareButtonOptions = computed(() => {
   const edit = isPrivate.value && !shareDashboard.value?.public_ids?.length
 
-  const label = isMobile.value ? '' : !edit ? $t('dashboard.shared') : $t('dashboard.share')
+  const label = isMobile.value
+    ? ''
+    : !edit
+        ? $t('dashboard.shared')
+        : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
   const disabled = isShared.value || !dashboardKey.value
   return { label, icon, edit, disabled }
@@ -110,7 +134,9 @@ const editButtons = computed<MenuBarEntry[]>(() => {
   if (!shareButtonOptions.value.disabled) {
     buttons.push({
       faIcon: shareButtonOptions.value.icon,
-      label: shareButtonOptions.value.edit ? $t('dashboard.share_dashboard') : $t('dashboard.shared_dashboard'),
+      label: shareButtonOptions.value.edit
+        ? $t('dashboard.share_dashboard')
+        : $t('dashboard.shared_dashboard'),
       command: share,
     })
   }
@@ -150,9 +176,12 @@ const shareView = () => {
 }
 
 const shareEdit = () => {
-  dialog.open(DashboardShareModal, { data: { dashboard: shareDashboard.value }, onClose: (options?: DynamicDialogCloseOptions) => {
-    options?.data && shareView()
-  } })
+  dialog.open(DashboardShareModal, {
+    data: { dashboard: shareDashboard.value },
+    onClose: (options?: DynamicDialogCloseOptions) => {
+      options?.data && shareView()
+    },
+  })
 }
 
 const share = () => {
@@ -173,8 +202,13 @@ const deleteButtonOptions = computed(() => {
   const deleteDashboard = isPrivate.value
 
   // we can only forward if there is something to forward to after a potential deletion
-  const privateDashboardsCount = isLoggedIn.value ? ((dashboards.value?.validator_dashboards?.length ?? 0) + (dashboards.value?.account_dashboards?.length ?? 0)) : 0
-  const forward = deleteDashboard ? (privateDashboardsCount > 1) : (privateDashboardsCount > 0)
+  const privateDashboardsCount = isLoggedIn.value
+    ? (dashboards.value?.validator_dashboards?.length ?? 0)
+    + (dashboards.value?.account_dashboards?.length ?? 0)
+    : 0
+  const forward = deleteDashboard
+    ? privateDashboardsCount > 1
+    : privateDashboardsCount > 0
 
   return { visible, disabled, deleteDashboard, forward }
 })
@@ -182,8 +216,17 @@ const deleteButtonOptions = computed(() => {
 const onDelete = () => {
   const isDelete = deleteButtonOptions.value.deleteDashboard
   const dialogData = {
-    title: $t(isDelete ? 'dashboard.deletion.delete.title' : 'dashboard.deletion.clear.title'),
-    question: $t(isDelete ? 'dashboard.deletion.delete.text' : 'dashboard.deletion.clear.text', { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) }),
+    title: $t(
+      isDelete
+        ? 'dashboard.deletion.delete.title'
+        : 'dashboard.deletion.clear.title',
+    ),
+    question: $t(
+      isDelete
+        ? 'dashboard.deletion.delete.text'
+        : 'dashboard.deletion.clear.text',
+      { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) },
+    ),
     noLabel: isDelete ? $t('dashboard.deletion.delete.no_label') : undefined,
     yesLabel: isDelete ? $t('dashboard.deletion.delete.yes_label') : undefined,
     severity: isDelete ? 'danger' : undefined,
@@ -191,17 +234,35 @@ const onDelete = () => {
 
   dialog.open(BcDialogConfirm, {
     data: dialogData,
-    onClose: response => response?.data && deleteAction(dashboardKey.value, deleteButtonOptions.value.deleteDashboard, deleteButtonOptions.value.forward),
+    onClose: response =>
+      response?.data
+      && deleteAction(
+        dashboardKey.value,
+        deleteButtonOptions.value.deleteDashboard,
+        deleteButtonOptions.value.forward,
+      ),
   })
 }
 
-const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward: boolean) => {
+const deleteAction = async (
+  key: DashboardKey,
+  deleteDashboard: boolean,
+  forward: boolean,
+) => {
   if (deleteDashboard) {
     if (dashboardType.value === 'validator') {
-      await fetch(API_PATH.DASHBOARD_DELETE_VALIDATOR, { body: { key } }, { dashboardKey: key })
+      await fetch(
+        API_PATH.DASHBOARD_DELETE_VALIDATOR,
+        { body: { key } },
+        { dashboardKey: key },
+      )
     }
     else {
-      await fetch(API_PATH.DASHBOARD_DELETE_ACCOUNT, { body: { key } }, { dashboardKey: key })
+      await fetch(
+        API_PATH.DASHBOARD_DELETE_ACCOUNT,
+        { body: { key } },
+        { dashboardKey: key },
+      )
     }
 
     await refreshDashboards()
@@ -215,8 +276,10 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 
   if (forward) {
     // try to forward the user to a private dashboard
-    let preferedDashboards: Dashboard[] = dashboards.value?.validator_dashboards ?? []
-    let fallbackDashboards: Dashboard[] = dashboards.value?.account_dashboards ?? []
+    let preferedDashboards: Dashboard[]
+      = dashboards.value?.validator_dashboards ?? []
+    let fallbackDashboards: Dashboard[]
+      = dashboards.value?.account_dashboards ?? []
     let fallbackUrl = '/account-dashboard/'
     if (dashboardType.value === 'account') {
       preferedDashboards = dashboards.value?.account_dashboards ?? []
@@ -240,11 +303,19 @@ const deleteAction = async (key: DashboardKey, deleteDashboard: boolean, forward
 }
 
 const title = computed(() => {
-  return props?.dashboardTitle || getDashboardLabel(dashboardKey.value, isValidatorDashboard ? 'validator' : 'account')
+  return (
+    props?.dashboardTitle
+    || getDashboardLabel(
+      dashboardKey.value,
+      isValidatorDashboard ? 'validator' : 'account',
+    )
+  )
 })
 
 const editDashboard = () => {
-  const list = isValidatorDashboard ? dashboards.value?.validator_dashboards : dashboards.value?.account_dashboards
+  const list = isValidatorDashboard
+    ? dashboards.value?.validator_dashboards
+    : dashboards.value?.account_dashboards
   const dashboard = list?.find(d => `${d.id}` === dashboardKey.value)
   if (!dashboard) {
     return
@@ -298,8 +369,8 @@ const editDashboard = () => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/utils.scss";
+@use "~/assets/css/fonts.scss";
 
 .header-row {
   height: 30px;

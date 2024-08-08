@@ -37,7 +37,7 @@ const selected = defineModel<boolean>({ required: true })
 </template>
 
 <style lang="scss" scoped>
-.toggle-container{
+.toggle-container {
   display: flex;
   align-items: center;
   justify-content: space-between;

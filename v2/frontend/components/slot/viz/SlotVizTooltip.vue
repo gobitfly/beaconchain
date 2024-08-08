@@ -1,9 +1,27 @@
 <script setup lang="ts">
-import type { VDBSlotVizDuty, VDBSlotVizSlot, VDBSlotVizStatus } from '~/types/api/slot_viz'
+import type {
+  VDBSlotVizDuty,
+  VDBSlotVizSlot,
+  VDBSlotVizStatus,
+} from '~/types/api/slot_viz'
 import { type SlotVizIcons } from '~/types/dashboard/slotViz'
 
-type RowDuty = { validator?: number, dutySubText?: string, dutySubLink?: string, duty_object?: number }
-type Row = { count?: number, icon: SlotVizIcons, class?: string, change?: string, dutyText?: string, validators?: number[], duties?: RowDuty[], andMore?: number }
+type RowDuty = {
+  validator?: number
+  dutySubText?: string
+  dutySubLink?: string
+  duty_object?: number
+}
+type Row = {
+  count?: number
+  icon: SlotVizIcons
+  class?: string
+  change?: string
+  dutyText?: string
+  validators?: number[]
+  duties?: RowDuty[]
+  andMore?: number
+}
 interface Props {
   id: string
   data: VDBSlotVizSlot
@@ -16,11 +34,18 @@ const data = computed(() => {
   const slot = props.data
   const rows: Row[][] = []
 
-  const status = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0) ? 'scheduled-past' : slot.status
+  const status
+    = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0)
+      ? 'scheduled-past'
+      : slot.status
 
   const networkLabelPath = `slotViz.tooltip.network.${status}`
 
-  const hasDuties = !!slot?.proposal || !!slot?.slashing || !!slot?.attestations || !!slot?.sync
+  const hasDuties
+    = !!slot?.proposal
+    || !!slot?.slashing
+    || !!slot?.attestations
+    || !!slot?.sync
   let hasSuccessDuties = false
   let hasFailedDuties = false
   let maxCount = 0
@@ -45,49 +70,65 @@ const data = computed(() => {
           hasScheduledDuty = true
           break
       }
-      rows.push([{
-        class: className,
-        icon: 'proposal',
-        dutyText,
-        count: 1,
-        duties: [
-          {
-            ...slot.proposal,
-            dutySubText,
-            dutySubLink: slot.status === 'proposed' ? `/block/${slot.proposal.duty_object}` : `/slot/${slot.proposal.duty_object}`,
-          },
-        ],
-      }])
+      rows.push([
+        {
+          class: className,
+          icon: 'proposal',
+          dutyText,
+          count: 1,
+          duties: [
+            {
+              ...slot.proposal,
+              dutySubText,
+              dutySubLink:
+                slot.status === 'proposed'
+                  ? `/block/${slot.proposal.duty_object}`
+                  : `/slot/${slot.proposal.duty_object}`,
+            },
+          ],
+        },
+      ])
     }
 
     if (slot.slashing?.failed) {
       const dutyText = $t('slotViz.tooltip.slashing.failed.main')
       const dutySubText = $t('slotViz.tooltip.slashing.failed.sub')
-      rows.push([{
-        class: 'failed',
-        icon: 'slashing',
-        dutyText,
-        count: slot.slashing.failed.total_count,
-        duties: slot.slashing.failed.slashings?.map(slash => ({
-          ...slash,
-          dutySubText,
-          dutySubLink: `/validator/${slash.duty_object}`,
-        })),
-        andMore: Math.max(0, (slot.slashing.failed.total_count - slot.slashing.failed.slashings?.length)),
-      }])
+      rows.push([
+        {
+          class: 'failed',
+          icon: 'slashing',
+          dutyText,
+          count: slot.slashing.failed.total_count,
+          duties: slot.slashing.failed.slashings?.map(slash => ({
+            ...slash,
+            dutySubText,
+            dutySubLink: `/validator/${slash.duty_object}`,
+          })),
+          andMore: Math.max(
+            0,
+            slot.slashing.failed.total_count
+            - slot.slashing.failed.slashings?.length,
+          ),
+        },
+      ])
     }
     if (slot.slashing?.success) {
       hasSuccessDuties = true
       const dutyText = $t('slotViz.tooltip.slashing.success.main')
-      rows.push([{
-        class: 'success',
-        icon: 'slashing',
-        dutyText,
-        count: slot.slashing.success.total_count,
-      }])
+      rows.push([
+        {
+          class: 'success',
+          icon: 'slashing',
+          dutyText,
+          count: slot.slashing.success.total_count,
+        },
+      ])
     }
 
-    const addDuties = (type: SlotVizIcons, duty?: VDBSlotVizStatus<VDBSlotVizDuty>) => {
+    const addDuties = (
+      type: SlotVizIcons,
+      duty?: VDBSlotVizStatus<VDBSlotVizDuty>,
+    ) => {
       if (!duty) {
         return
       }
@@ -104,7 +145,10 @@ const data = computed(() => {
           count: duty.scheduled.total_count,
           dutyText,
           validators: duty.scheduled.validators,
-          andMore: Math.max(0, (duty.scheduled.total_count - duty.scheduled.validators?.length)),
+          andMore: Math.max(
+            0,
+            duty.scheduled.total_count - duty.scheduled.validators?.length,
+          ),
         })
       }
       if (duty.success) {
@@ -126,7 +170,10 @@ const data = computed(() => {
           count: duty.failed.total_count,
           dutyText,
           validators: duty.failed.validators,
-          andMore: Math.max(0, (duty.failed.total_count - duty.failed.validators?.length)),
+          andMore: Math.max(
+            0,
+            duty.failed.total_count - duty.failed.validators?.length,
+          ),
         })
       }
     }
@@ -134,22 +181,46 @@ const data = computed(() => {
     addDuties('sync', slot.sync)
   }
 
-  const isScheduled = slot.status === 'scheduled' || (slot.status === 'proposed' && hasScheduledDuty)
+  const isScheduled
+    = slot.status === 'scheduled'
+    || (slot.status === 'proposed' && hasScheduledDuty)
   let stateLabel = ''
   if (isScheduled) {
-    stateLabel = formatMultiPartSpan($t, `slotViz.tooltip.status.scheduled.${hasDuties ? 'has_duties' : 'no_duties'}`, [undefined, 'scheduled', undefined])
+    stateLabel = formatMultiPartSpan(
+      $t,
+      `slotViz.tooltip.status.scheduled.${
+        hasDuties ? 'has_duties' : 'no_duties'
+      }`,
+      [undefined, 'scheduled', undefined],
+    )
   }
   else if (hasFailedDuties && hasSuccessDuties) {
-    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_some', [undefined, 'some', undefined])
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_some', [
+      undefined,
+      'some',
+      undefined,
+    ])
   }
   else if (hasFailedDuties) {
-    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_failed', [undefined, 'failed', undefined])
+    stateLabel = formatMultiPartSpan(
+      $t,
+      'slotViz.tooltip.status.duties_failed',
+      [undefined, 'failed', undefined],
+    )
   }
   else if (hasSuccessDuties) {
-    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_success', [undefined, 'success', undefined])
+    stateLabel = formatMultiPartSpan(
+      $t,
+      'slotViz.tooltip.status.duties_success',
+      [undefined, 'success', undefined],
+    )
   }
   else {
-    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.no_duties', [undefined, 'scheduled', undefined])
+    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.no_duties', [
+      undefined,
+      'scheduled',
+      undefined,
+    ])
   }
 
   return {
@@ -157,7 +228,7 @@ const data = computed(() => {
     networkLabelPath,
     rows,
     hasDuties,
-    minWidth: (1 + (`${maxCount}`.length) * 11) + 'px',
+    minWidth: 1 + `${maxCount}`.length * 11 + 'px',
   }
 })
 </script>
@@ -233,9 +304,12 @@ const data = computed(() => {
                   >
                     {{ validator }}
                   </BcLink>
-                  <span v-if="vIndex < row.validators.length -1 || row.andMore">, </span>
+                  <span v-if="vIndex < row.validators.length - 1 || row.andMore">,
+                  </span>
                 </span>
-                <span v-if="row.andMore"> ...{{ $t('common.and_more', { count: row.andMore }) }} </span>
+                <span v-if="row.andMore">
+                  ...{{ $t("common.and_more", { count: row.andMore }) }}
+                </span>
               </div>
               <div
                 v-if="row.duties"
@@ -263,7 +337,7 @@ const data = computed(() => {
                   </BcLink>
                 </div>
                 <div v-if="row.andMore">
-                  ...{{ $t('common.and_more', { count: row.andMore }) }}
+                  ...{{ $t("common.and_more", { count: row.andMore }) }}
                 </div>
               </div>
             </div>
@@ -289,7 +363,7 @@ const data = computed(() => {
       padding-left: var(--padding);
       padding-right: var(--padding);
 
-      &:has(+.rows) {
+      &:has(+ .rows) {
         border-bottom: 3px solid var(--container-border-color);
       }
     }
@@ -303,10 +377,10 @@ const data = computed(() => {
     }
 
     .row {
-        display: flex;
-        align-items: center;
+      display: flex;
+      align-items: center;
 
-      &.state{
+      &.state {
         text-align: left;
       }
 
@@ -338,7 +412,7 @@ const data = computed(() => {
       }
 
       .duties > div,
-      .validators{
+      .validators {
         margin-top: var(--padding);
       }
 
@@ -371,8 +445,8 @@ const data = computed(() => {
           gap: var(--padding-tiny);
           // otherwise the text: `...and XX more` will mess up the first column
           > span:not(:has(> a)) {
-              grid-column: span 2;
-              text-align: left
+            grid-column: span 2;
+            text-align: left;
           }
         }
       }

@@ -33,26 +33,32 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
         password: values.newPassword,
       },
     })
-    toast.showSuccess(
-      {
-        summary: $t('user_settings.password.success.toast_title'),
-        group: $t('user_settings.password.success.toast_group'),
-        detail: $t('user_settings.password.success.toast_message'),
-      })
+    toast.showSuccess({
+      summary: $t('user_settings.password.success.toast_title'),
+      group: $t('user_settings.password.success.toast_group'),
+      detail: $t('user_settings.password.success.toast_message'),
+    })
     resetForm()
   }
   catch (error) {
-    toast.showError(
-      {
-        summary: $t('user_settings.password.error.toast_title'),
-        group: $t('user_settings.password.error.toast_group'),
-        detail: $t('user_settings.password.error.toast_message'),
-      })
+    toast.showError({
+      summary: $t('user_settings.password.error.toast_title'),
+      group: $t('user_settings.password.error.toast_group'),
+      detail: $t('user_settings.password.error.toast_message'),
+    })
   }
   buttonsDisabled.value = false
 })
 
-const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value && !Object.keys(errors.value).length)
+const canSubmit = computed(
+  () =>
+    !buttonsDisabled.value
+    && oldPassword.value
+    && newPassword.value
+    && confirmPassword.value
+    && newPassword.value === confirmPassword.value
+    && !Object.keys(errors.value).length,
+)
 </script>
 
 <template>
@@ -61,10 +67,10 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
     @submit="onSubmit"
   >
     <div class="title">
-      {{ $t('user_settings.password.title') }}
+      {{ $t("user_settings.password.title") }}
     </div>
     <label for="old-password">
-      {{ $t('user_settings.password.old') }}
+      {{ $t("user_settings.password.old") }}
     </label>
     <div class="input-row">
       <InputText
@@ -80,7 +86,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       </div>
     </div>
     <label for="new-password">
-      {{ $t('user_settings.password.new') }}
+      {{ $t("user_settings.password.new") }}
     </label>
     <div class="input-row">
       <InputText
@@ -96,7 +102,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       </div>
     </div>
     <label for="confirm-password">
-      {{ $t('user_settings.password.confirm') }}
+      {{ $t("user_settings.password.confirm") }}
     </label>
     <div class="input-row">
       <InputText
@@ -122,8 +128,8 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/fonts.scss";
 
 .password-container {
   display: flex;

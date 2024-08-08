@@ -27,7 +27,7 @@ type KeyPaths<T> = {
         ? never // remove Arrays
         : `${K}.${KeyPaths<T[K]>}`
       : K
-    : never
+    : never;
 }[keyof T]
 
 export type { KeyPaths }

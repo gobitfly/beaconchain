@@ -3,17 +3,22 @@
 ## D-001: conventinal commits for `commit message formatting`
 
 ### Status
+
 accepted by @MauserBitfly @benji-bitfly @marcel-bitfly
 
 ### Context
+
 At the moment commit messages are not formatted in a standard way.
 This makes it harder to work together, e.g. when resolving merge conflicts.
 
 ### Decision
+
 We are using [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages.
 
 ### Consequences
+
 Commit messsages will be formatted in a standard way.
+
 - which will reduce the cognitive load
   - as it is easier to understand `code changes`, e.g. when `line blaming`
   - as it is easier to formulate meaningful `commit messages`
@@ -24,21 +29,24 @@ Commit messsages will be formatted in a standard way.
 
 1. [Conventinal Commits Cheat Sheet](https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13)
 
-
 👇 Template: copy from here 👇
 
 ## D-XXX: Short_title_of_solved_problem_and_solution
 
 ### Status
+
 proposed | rejected | accepted | deprecated | superseded by D-XXX
 
 ### Context
+
 What is the issue that we're seeing that is motivating this decision or change?
 
 ### Decision
+
 What is the change that we're proposing and/or doing?
 
 ### Consequences
+
 What becomes easier or more difficult to do because of this change?
 
 ### References

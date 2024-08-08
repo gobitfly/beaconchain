@@ -22,11 +22,11 @@ defineProps<Props>()
       :value="reward?.cl"
       :no-tooltip="true"
     />
-    <span v-else>{{ $t('dashboard.validator.blocks.cl_pending') }}</span>
+    <span v-else>{{ $t("dashboard.validator.blocks.cl_pending") }}</span>
     <template #tooltip>
       <div>
         <div class="tt-row">
-          <span>{{ $t('dashboard.validator.blocks.el_rewards') }}: </span>
+          <span>{{ $t("dashboard.validator.blocks.el_rewards") }}: </span>
           <BcFormatValue
             :value="reward?.el"
             :no-tooltip="true"
@@ -34,14 +34,14 @@ defineProps<Props>()
           />
         </div>
         <div class="tt-row">
-          <span>{{ $t('dashboard.validator.blocks.cl_rewards') }}: </span>
+          <span>{{ $t("dashboard.validator.blocks.cl_rewards") }}: </span>
           <BcFormatValue
             v-if="reward?.cl && reward.cl != '0'"
             :value="reward?.cl"
             :no-tooltip="true"
             :full-value="true"
           />
-          <span v-else>{{ $t('dashboard.validator.blocks.pending') }}</span>
+          <span v-else>{{ $t("dashboard.validator.blocks.pending") }}</span>
         </div>
       </div>
     </template>
@@ -61,7 +61,8 @@ defineProps<Props>()
   display: inline-flex;
   flex-direction: column;
 
-  >div:last-child, >span:last-child {
+  > div:last-child,
+  > span:last-child {
     font-size: var(--small_text_font_size);
     color: var(--text-color-discreet);
   }

@@ -31,7 +31,7 @@ const props = defineProps<Props>()
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .format-graffiti {
   width: 100%;
@@ -45,7 +45,6 @@ const props = defineProps<Props>()
     margin-left: var(--padding);
     line-height: 100%;
   }
-
 }
 
 .tt {

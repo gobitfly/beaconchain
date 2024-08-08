@@ -18,7 +18,10 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const emit = defineEmits<{ (e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void }>()
+const emit = defineEmits<{
+  (e: 'setCursor', value: Cursor): void
+  (e: 'setPageSize', value: number): void
+}>()
 
 const expandedRows = ref<Record<any, boolean>>({})
 
@@ -77,14 +80,20 @@ const setPageSize = (value: number) => {
   emit('setPageSize', value)
 }
 
-watch(() => props.expandable, (expandable) => {
-  if (!expandable) {
+watch(
+  () => props.expandable,
+  (expandable) => {
+    if (!expandable) {
+      toggleAll(true)
+    }
+  },
+)
+watch(
+  () => props.data,
+  () => {
     toggleAll(true)
-  }
-})
-watch(() => props.data, () => {
-  toggleAll(true)
-})
+  },
+)
 
 const sort = computed(() => {
   if (!props.selectedSort?.includes(':')) {
@@ -132,7 +141,11 @@ const sort = computed(() => {
         <IconChevron
           v-if="!isRowExpandable || isRowExpandable(slotProps.data)"
           class="toggle"
-          :direction="dataKey && expandedRows[slotProps.data[dataKey]] ? 'bottom' : 'right'"
+          :direction="
+            dataKey && expandedRows[slotProps.data[dataKey]]
+              ? 'bottom'
+              : 'right'
+          "
           @click.stop.prevent="toggleItem(slotProps.data)"
         />
       </template>
@@ -143,7 +156,8 @@ const sort = computed(() => {
       field="space_filler"
     >
       <template #body>
-        <span /> <!-- used to fill up the empty space so that the last column does not strech endlessly -->
+        <span />
+        <!-- used to fill up the empty space so that the last column does not strech endlessly -->
       </template>
     </Column>
     <template #empty>
@@ -205,7 +219,7 @@ const sort = computed(() => {
     height: 140px;
     background: transparent;
 
-    >td {
+    > td {
       border: none;
     }
   }

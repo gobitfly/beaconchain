@@ -15,7 +15,9 @@ const name = computed(() => {
     return $t('dashboard.group.selection.all')
   }
   else if (props.group.id === 0) {
-    return props.group.name && props.group.name !== 'default' ? props.group.name : $t('dashboard.group.selection.default')
+    return props.group.name && props.group.name !== 'default'
+      ? props.group.name
+      : $t('dashboard.group.selection.default')
   }
 
   return props.group.name

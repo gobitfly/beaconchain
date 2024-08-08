@@ -12,7 +12,9 @@ const props = defineProps<{
   variant?: 'secondary' // | 'red'
 }>()
 
-const shouldAppearDisabled = computed(() => props.isDisabled || props.isAriaDisabled)
+const shouldAppearDisabled = computed(
+  () => props.isDisabled || props.isAriaDisabled,
+)
 </script>
 
 <template>
@@ -37,30 +39,30 @@ const shouldAppearDisabled = computed(() => props.isDisabled || props.isAriaDisa
 </template>
 
 <style lang="scss" scoped>
-  .bc-button--secondary {
+.bc-button--secondary {
+  border-color: var(--button-secondary-border-color);
+  background-color: var(--button-secondary-background-color);
+  color: var(--button-secondary-color);
+  &:hover {
+    background-color: var(--button-secondary-background-color--hover);
     border-color: var(--button-secondary-border-color);
+  }
+  &:active {
     background-color: var(--button-secondary-background-color);
-    color: var(--button-secondary-color);
-    &:hover {
-      background-color: var(--button-secondary-background-color--hover);
-      border-color: var(--button-secondary-border-color);
-    }
-    &:active {
-      background-color: var(--button-secondary-background-color);
-      border-color: var(--button-secondary-border-color);
-    }
+    border-color: var(--button-secondary-border-color);
   }
-  .bc-button--disabled {
-    &,
-    &:hover,
-    &:focus {
-      background-color: var(--button-color-disabled);
-      border-color: var(--button-color-disabled);
-      color: var(--button-text-color-disabled);
-      cursor: not-allowed;
-    }
+}
+.bc-button--disabled {
+  &,
+  &:hover,
+  &:focus {
+    background-color: var(--button-color-disabled);
+    border-color: var(--button-color-disabled);
+    color: var(--button-text-color-disabled);
+    cursor: not-allowed;
   }
-  .bc-button__icon {
-    margin-left: var(--padding-small);
-  }
+}
+.bc-button__icon {
+  margin-left: var(--padding-small);
+}
 </style>
