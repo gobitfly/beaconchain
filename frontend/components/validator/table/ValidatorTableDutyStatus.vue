@@ -3,8 +3,8 @@ import type { ValidatorHistoryDuties } from '~/types/api/common'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 interface Props {
-  data?: ValidatorHistoryDuties
   compact?: boolean
+  data?: ValidatorHistoryDuties
 }
 const props = defineProps<Props>()
 
@@ -13,29 +13,29 @@ const { networkInfo } = useNetworkStore()
 
 const mapped = computed(() => {
   const mapSuccess = (
-    status?: 'success' | 'partial' | 'failed' | 'orphaned',
+    status?: 'failed' | 'orphaned' | 'partial' | 'success',
   ) => {
     const success = status === 'success'
 
     let className = ''
     switch (status) {
-      case 'success':
-        className = 'positive'
-        break
-      case 'partial':
-        className = 'partial'
-        break
       case 'failed':
         className = 'negative'
         break
       case 'orphaned':
         className = 'orphaned'
         break
+      case 'partial':
+        className = 'partial'
+        break
+      case 'success':
+        className = 'positive'
+        break
     }
     return {
-      success,
       className,
       status,
+      success,
       tooltip: '',
     }
   }
@@ -67,16 +67,16 @@ const mapped = computed(() => {
       : $t('validator.duty.attestation_missed')
     : ''
   return {
+    head,
+    proposal,
+    slashing,
+    source,
+    sync,
+    target,
     total: {
       className: totalClassName,
       tooltipTitle: totalTooltipTitle,
     },
-    head,
-    source,
-    target,
-    proposal,
-    slashing,
-    sync,
   }
 })
 </script>

@@ -1,9 +1,9 @@
 import { type StringUnitLength } from 'luxon'
 import type { AgeFormat } from '~/types/settings'
 import {
+  formatEpochToDate as formatEpochToDateImported,
   formatEpochToDateTime as formatEpochToDateTimeImported,
   formatSlotToDateTime as formatSlotToDateTimeImported,
-  formatEpochToDate as formatEpochToDateImported,
 } from '~/utils/format'
 
 export function useFormat() {
@@ -16,7 +16,7 @@ export function useFormat() {
     style?: StringUnitLength,
     locales?: string,
     withTime?: boolean,
-  ): string | null | undefined {
+  ): null | string | undefined {
     return formatEpochToDateTimeImported(
       currentNetwork.value,
       epoch,
@@ -35,7 +35,7 @@ export function useFormat() {
     style?: StringUnitLength,
     locales?: string,
     withTime?: boolean,
-  ): string | null | undefined {
+  ): null | string | undefined {
     return formatSlotToDateTimeImported(
       currentNetwork.value,
       slot,
@@ -50,9 +50,9 @@ export function useFormat() {
   function formatEpochToDate(
     epoch: number,
     locales: string,
-  ): string | null | undefined {
+  ): null | string | undefined {
     return formatEpochToDateImported(currentNetwork.value, epoch, locales)
   }
 
-  return { formatEpochToDateTime, formatSlotToDateTime, formatEpochToDate }
+  return { formatEpochToDate, formatEpochToDateTime, formatSlotToDateTime }
 }

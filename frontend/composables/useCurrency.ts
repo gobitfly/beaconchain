@@ -80,5 +80,5 @@ export function useCurrency() {
     }
   })
 
-  return { currency, setCurrency, available, rates, withLabel }
+  return { available, currency, rates, setCurrency, withLabel }
 }

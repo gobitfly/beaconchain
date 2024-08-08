@@ -7,11 +7,11 @@ import { formatGoTimestamp } from '~/utils/format'
 const { formatEpochToDateTime, formatSlotToDateTime } = useFormat()
 
 interface Props {
-  value?: number | string
-  type?: 'epoch' | 'go-timestamp' | 'slot' // we can add other types later when needed, we default to epoch
   format?: 'global-setting' | AgeFormat
   noUpdate?: boolean
+  type?: 'epoch' | 'go-timestamp' | 'slot' // we can add other types later when needed, we default to epoch
   unitLength?: StringUnitLength
+  value?: number | string
 }
 const props = defineProps<Props>()
 const { t: $t } = useTranslation()
@@ -33,7 +33,7 @@ const label = computed(() => {
   }
 
   const ts: number = props.noUpdate ? initTs.value : timestamp.value
-  let text: string | null | undefined = ''
+  let text: null | string | undefined = ''
   switch (props.type) {
     case 'go-timestamp':
       text = formatGoTimestamp(
@@ -68,8 +68,8 @@ const label = computed(() => {
     const lastComma = text.lastIndexOf(',')
     if (lastComma > 0) {
       return {
-        text: text.slice(0, lastComma),
         subtext: text.slice(lastComma + 1),
+        text: text.slice(0, lastComma),
       }
     }
   }

@@ -19,11 +19,11 @@ const questions = computed(() => {
     }
     else {
       list.push({
+        answers: tAll($t, `${path}.answer`),
+        linkLabel: tD($t, `${path}.link.label`),
+        linkPath: tD($t, `${path}.link.path`),
         path,
         question,
-        answers: tAll($t, `${path}.answer`),
-        linkPath: tD($t, `${path}.link.path`),
-        linkLabel: tD($t, `${path}.link.label`),
       })
     }
   }

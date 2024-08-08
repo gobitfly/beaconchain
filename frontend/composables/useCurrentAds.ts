@@ -4,7 +4,7 @@ import type { AdConfiguration } from '~/types/adConfiguration'
 export function useCurrentAds() {
   const { adConfigs, refreshAdConfigs } = useAdConfigurationStore()
   const { user } = useUserStore()
-  const { path, name } = useRoute()
+  const { name, path } = useRoute()
 
   const pathName = computed(() => name?.toString?.() || path)
 

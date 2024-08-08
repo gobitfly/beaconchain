@@ -3,9 +3,9 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
-  trueIcon?: IconDefinition
-  falseIcon?: IconDefinition
   disabled?: boolean
+  falseIcon?: IconDefinition
+  trueIcon?: IconDefinition
 }
 
 const props = defineProps<Props>()

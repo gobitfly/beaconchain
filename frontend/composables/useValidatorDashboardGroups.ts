@@ -8,9 +8,9 @@ export function useValidatorDashboardGroups() {
     if (!overview.value?.groups) {
       return [
         {
+          count: 0,
           id: 0,
           name: $t('dashboard.group.selection.default'),
-          count: 0,
         },
       ]
     }

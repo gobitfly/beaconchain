@@ -6,8 +6,8 @@ import {
 } from '~/types/dashboard/slotViz'
 
 interface Props {
-  data: VDBSlotVizSlot
   currentSlotId?: number
+  data: VDBSlotVizSlot
   selectedCategories: SlotVizCategories[]
 }
 const props = defineProps<Props>()
@@ -101,11 +101,11 @@ const data = computed(() => {
   }
 
   return {
-    id: `slot_${slot.slot}`,
-    outer,
-    inner,
-    icons,
     firstIconClass: `count_${icons.length}`,
+    icons,
+    id: `slot_${slot.slot}`,
+    inner,
+    outer,
   }
 })
 </script>

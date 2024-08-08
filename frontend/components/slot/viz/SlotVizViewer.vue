@@ -19,8 +19,8 @@ import type { ChainInfoFields } from '~/types/network'
 interface Props {
   data: SlotVizEpoch[]
   initiallyHideVisible?: boolean
-  timestamp?: number
   networkInfo?: ChainInfoFields
+  timestamp?: number
 }
 const props = defineProps<Props>()
 
@@ -44,29 +44,29 @@ const selectedCategories = useCookie<SlotVizCategories[]>(
 const icons: MultiBarItem[] = [
   {
     component: IconSlotBlockProposal,
-    value: 'proposal',
     tooltip: $t('slotViz.filter.proposal'),
+    value: 'proposal',
   },
   {
     component: IconSlotAttestation,
-    value: 'attestation',
     tooltip: $t('slotViz.filter.attestation'),
+    value: 'attestation',
   },
   {
     component: IconSlotSync,
-    value: 'sync',
     tooltip: $t('slotViz.filter.sync'),
+    value: 'sync',
   },
   {
     component: IconSlotSlashing,
-    value: 'slashing',
     tooltip: $t('slotViz.filter.slashing'),
+    value: 'slashing',
   },
   {
-    icon: faEye,
-    value: 'visible',
     className: 'visible-icon',
+    icon: faEye,
     tooltip: $t('slotViz.filter.visible'),
+    value: 'visible',
   },
 ]
 

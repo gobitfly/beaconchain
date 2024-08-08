@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import {
-  faTable,
   faHashtag,
   faPercent,
+  faTable,
 } from '@fortawesome/pro-solid-svg-icons'
 import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
 
 interface Props {
-  title?: string
-  searchPlaceholder?: string
-  disabledFilter?: boolean
   chartDisabled?: boolean
+  disabledFilter?: boolean
+  searchPlaceholder?: string
+  title?: string
 }
 const props = defineProps<Props>()
 

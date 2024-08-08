@@ -1,5 +1,5 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { TableQueryParams, Cursor } from '~/types/datatable'
+import type { Cursor, TableQueryParams } from '~/types/datatable'
 
 export const setQueryPageSize = (
   limit: number,
@@ -22,7 +22,7 @@ export const setQuerySearch = (
   return { ...query, search }
 }
 
-export const getSortOrder = (dir?: number | null) =>
+export const getSortOrder = (dir?: null | number) =>
   dir === -1 ? 'asc' : 'desc'
 
 export const setQuerySort = (

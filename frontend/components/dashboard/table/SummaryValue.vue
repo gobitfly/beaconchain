@@ -2,17 +2,17 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import {
+  faArrowUpRightFromSquare,
   faCube,
   faSync,
-  faArrowUpRightFromSquare,
 } from '@fortawesome/pro-solid-svg-icons'
 import {
-  SummaryDetailsEfficiencyProps,
-  SummaryDetailsEfficiencyValidatorProps,
-  type SummaryDetailsEfficiencyValidatorProp,
-  type SummaryDetailsEfficiencyProp,
-  type SummaryDetailsEfficiencyCombinedProp,
   type DashboardValidatorContext,
+  type SummaryDetailsEfficiencyCombinedProp,
+  type SummaryDetailsEfficiencyProp,
+  SummaryDetailsEfficiencyProps,
+  type SummaryDetailsEfficiencyValidatorProp,
+  SummaryDetailsEfficiencyValidatorProps,
   type SummaryTimeFrame,
 } from '~/types/dashboard/summary'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -25,16 +25,16 @@ import type { StatusCount } from '~/types/api/common'
 import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
-  property: SummaryDetailsEfficiencyCombinedProp
-  timeFrame: SummaryTimeFrame
-  data?: VDBGroupSummaryData
-  row: VDBSummaryTableRow
   absolute?: boolean
+  data?: VDBGroupSummaryData
   inDetailView?: boolean
+  property: SummaryDetailsEfficiencyCombinedProp
+  row: VDBSummaryTableRow
+  timeFrame: SummaryTimeFrame
 }
 const props = defineProps<Props>()
 
-const { tm: $tm, t: $t } = useTranslation()
+const { t: $t, tm: $tm } = useTranslation()
 const { dashboardKey } = useDashboardKey()
 const dialog = useDialog()
 const { groups } = useValidatorDashboardGroups()
@@ -51,10 +51,10 @@ const data = computed(() => {
   }
   else if (row && props.property === 'proposals') {
     return {
+      context: !props.inDetailView ? 'proposal' : undefined,
       efficiency: {
         status_count: row.proposals,
       },
-      context: !props.inDetailView ? 'proposal' : undefined,
     }
   }
   else if (
@@ -63,7 +63,7 @@ const data = computed(() => {
       props.property as SummaryDetailsEfficiencyProp,
     )
   ) {
-    const tooltip: { title: string, text: string } | undefined = $tm(
+    const tooltip: { text: string, title: string } | undefined = $tm(
       `dashboard.validator.tooltip.${props.property}`,
     )
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
@@ -99,12 +99,12 @@ const data = computed(() => {
       context = 'slashings'
     }
     return {
-      validators,
       context,
+      validators,
     }
   }
   else if (col && props.property === 'attestation_efficiency') {
-    const tooltip: { title: string, text: string } | undefined = $tm(
+    const tooltip: { text: string, title: string } | undefined = $tm(
       'dashboard.validator.tooltip.attestation_efficiency',
     )
     return {
@@ -116,8 +116,8 @@ const data = computed(() => {
     return {
       apr: {
         apr: col.apr,
-        total: col.apr.cl + col.apr.el,
         income: row.reward,
+        total: col.apr.cl + col.apr.el,
       },
     }
   }
@@ -129,8 +129,8 @@ const data = computed(() => {
   else if (row && props.property === 'efficiency') {
     return {
       efficiencyTotal: {
-        value: row.efficiency,
         compare: row.average_network_efficiency,
+        value: row.efficiency,
       },
     }
   }
@@ -167,14 +167,14 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: data.value?.context,
-      timeFrame: props.timeFrame,
-      groupName: groupName.value,
-      groupId: props.row.group_id,
       dashboardKey: dashboardKey.value,
+      groupId: props.row.group_id,
+      groupName: groupName.value,
       summary: {
-        row: props.row,
         data: props.data,
+        row: props.row,
       },
+      timeFrame: props.timeFrame,
     },
   })
 }

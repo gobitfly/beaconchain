@@ -11,9 +11,9 @@ const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 const {
-  value: tooltip,
   bounce,
   instant,
+  value: tooltip,
 } = useDebounceValue<string>($t('clipboard.copy'), 2000)
 
 function copyToClipboard(): void {

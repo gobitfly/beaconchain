@@ -15,7 +15,7 @@ const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 
-const paging = ref<Paging | null>(null)
+const paging = ref<null | Paging>(null)
 const cursor = ref<Cursor>(undefined)
 const VALIDATORS_PER_PAGE = 100
 
@@ -85,7 +85,7 @@ function mapDutyLabel(dutyObjects?: number[]) {
 }
 function mapDutyLinks(
   dutyObjects?: number[],
-): { to?: string, label: string }[] {
+): { label: string, to?: string }[] {
   if (!dutyObjects) {
     return []
   }
@@ -106,8 +106,8 @@ function mapDutyLinks(
   }
   if (path) {
     return dutyObjects.map(o => ({
-      to: `${path}${o}`,
       label: `${formatValue ? formatNumber(o) : o}`,
+      to: `${path}${o}`,
     }))
   }
   else {

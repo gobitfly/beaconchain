@@ -1,6 +1,6 @@
 import type { ComposerTranslation } from 'vue-i18n'
-import type { StringSchema, BooleanSchema } from 'yup'
-import { ref as yupRef, string as yupString, boolean as yupBool } from 'yup'
+import type { BooleanSchema, StringSchema } from 'yup'
+import { boolean as yupBool, ref as yupRef, string as yupString } from 'yup'
 
 export function passwordValidation(t: ComposerTranslation): StringSchema {
   return yupString()

@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
 import type {
-  SlotVizEpoch,
   InternalGetValidatorDashboardSlotVizResponse,
+  SlotVizEpoch,
 } from '~/types/api/slot_viz'
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
 const validatorSlotVizStore = defineStore('validator_slotViz', () => {
-  const data = ref<SlotVizEpoch[] | undefined | null>()
+  const data = ref<null | SlotVizEpoch[] | undefined>()
   return { data }
 })
 
@@ -46,5 +46,5 @@ export function useValidatorSlotVizStore() {
     return slotViz.value
   }
 
-  return { slotViz, refreshSlotViz }
+  return { refreshSlotViz, slotViz }
 }

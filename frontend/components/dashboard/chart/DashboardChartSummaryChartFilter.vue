@@ -22,9 +22,9 @@ const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
 const aggregationList = computed(() => {
   return AggregationTimeframes.map(a => ({
+    disabled: (overview.value?.chart_history_seconds?.[a] ?? 0) === 0,
     id: a,
     label: $t(`time_frames.${a}`),
-    disabled: (overview.value?.chart_history_seconds?.[a] ?? 0) === 0,
   }))
 })
 

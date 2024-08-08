@@ -1,15 +1,15 @@
 <script setup lang="ts">
 const {
-  value: isTrue,
-  temp: isTrueTemp,
   bounce: bounceTrue,
   instant: instantTrue,
+  temp: isTrueTemp,
+  value: isTrue,
 } = useDebounceValue<boolean>(false, 2000)
 const {
-  value: num,
-  temp: numTemp,
   bounce: bounceNum,
   instant: instantNum,
+  temp: numTemp,
+  value: num,
 } = useDebounceValue<number>(1, 2000)
 </script>
 

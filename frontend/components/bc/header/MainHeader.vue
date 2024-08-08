@@ -4,7 +4,7 @@ import { faBars, faCircleUser } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
+import { SearchbarColors, SearchbarShape } from '~/types/searchbar'
 import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
 defineProps<{
@@ -12,9 +12,9 @@ defineProps<{
   minimalist: boolean
 }>()
 const { latestState } = useLatestStateStore()
-const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
+const { currentNetwork, networkInfo, slotToEpoch } = useNetworkStore()
 const { doLogout, isLoggedIn } = useUserStore()
-const { currency, available, rates } = useCurrency()
+const { available, currency, rates } = useCurrency()
 const { width } = useWindowSize()
 const { t: $t } = useTranslation()
 
@@ -27,7 +27,7 @@ const hideInDevelopmentClass = showInDevelopment
   ? ''
   : 'hide-because-it-is-unfinished' // TODO: once the searchbar is enabled in production, delete this line
 
-const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
+const megaMenu = ref<null | typeof BcHeaderMegaMenu>(null)
 
 const rate = computed(() => {
   if (isFiat(currency.value) && rates.value?.[currency.value]) {
@@ -58,14 +58,14 @@ const isMobileMegaMenuOpen = computed(() => megaMenu.value?.isMobileMenuOpen)
 const userMenu = computed(() => {
   return [
     {
-      label: $t('header.settings'),
       command: async () => {
         await navigateTo('../user/settings')
       },
+      label: $t('header.settings'),
     },
     {
-      label: $t('header.logout'),
       command: () => doLogout(),
+      label: $t('header.logout'),
     },
   ]
 })

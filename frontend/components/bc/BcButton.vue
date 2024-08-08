@@ -1,14 +1,14 @@
 <script lang="ts" setup>
 const props = defineProps<{
   /**
-   * ℹ️ should only be used rarely, e.g. in cases where the action should not be triggerd twice
-   */
-  isDisabled?: boolean
-  /**
    * ♿️ buttons that are aria-disabled are still perceivable by screen readers
    * as they can still be focused on
    */
   isAriaDisabled?: boolean
+  /**
+   * ℹ️ should only be used rarely, e.g. in cases where the action should not be triggerd twice
+   */
+  isDisabled?: boolean
   variant?: 'secondary' // | 'red'
 }>()
 

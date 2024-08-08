@@ -40,5 +40,5 @@ export function useStripe() {
     return stripe?.isStripeDisabled.value
   })
 
-  return { stripeInit, stripeCustomerPortal, stripePurchase, isStripeDisabled }
+  return { isStripeDisabled, stripeCustomerPortal, stripeInit, stripePurchase }
 }

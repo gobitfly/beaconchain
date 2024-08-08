@@ -2,7 +2,7 @@ export type GlobalSetting = 'age-format' | 'rpl'
 
 export type AgeFormat = 'absolute' | 'relative'
 
-export type CookieValue = string | null | undefined
+export type CookieValue = null | string | undefined
 
 interface SettingsGetter {
   <T>(value?: string): T
@@ -26,8 +26,8 @@ export const SettingDefaults: Record<GlobalSetting, SettingsConfig> = {
     default: 'absolute',
   },
   'rpl': {
+    default: true,
     parseValue: parseValueBoolean as SettingsGetter,
     valueToString: valueToStringBoolean as SettingsSetter,
-    default: true,
   },
 }

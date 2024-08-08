@@ -1,352 +1,352 @@
 import {
-  simulateAPIresponseForTheSearchBar,
-  simulateAPIresponseAboutNetworkList,
   mockManageNotificationsGeneral,
+  simulateAPIresponseAboutNetworkList,
+  simulateAPIresponseForTheSearchBar,
 } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
-  USER = '/user/me',
-  USER_CHANGE_EMAIL = '/user/changeEmail',
-  USER_CHANGE_PASSWORD = '/user/changePassword',
-  USER_DELETE = '/user/delete',
-  USER_DASHBOARDS = '/user/dashboards',
+  AVAILABLE_NETWORKS = '/availableNetworks',
+  DASHBOARD_CL_DEPOSITS = '/dashboard/clDeposits',
+  DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_CREATE_ACCOUNT = '/dashboard/createAccount',
   DASHBOARD_CREATE_VALIDATOR = '/dashboard/createValidator',
   DASHBOARD_DELETE_ACCOUNT = '/dashboard/deleteAccountDashbaoard',
   DASHBOARD_DELETE_VALIDATOR = '/dashboard/deleteValidatorDashboard',
-  DASHBOARD_RENAME_ACCOUNT = '/dashboard/renameAccountDashbaoard',
-  DASHBOARD_RENAME_VALIDATOR = '/dashboard/renameValidatorDashboard',
-  DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
-  DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
-  DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID = '/validator-dashboards/publicIds',
-  DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID = '/validator-dashboards/editPublicIds',
-  DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group-modify',
-  DASHBOARD_VALIDATOR_REWARDS_CHART = '/dashboard/validatorRewardsChart',
-  DASHBOARD_VALIDATOR_BLOCKS = '/validator-dashboards/blocks',
-  DASHBOARD_VALIDATOR_WITHDRAWALS = '/validator-dashboards/withdrawals',
-  DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS = '/validator-dashboards/total-withdrawals',
-  DASHBOARD_VALIDATOR_EPOCH_DUTY = '/validator-dashboards/epoch_duty',
-  DASHBOARD_VALIDATOR_INDICES = '/validator-dashboards/indices',
-  DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
-  DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
-  DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
-  DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
-  DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
   DASHBOARD_EL_DEPOSITS = '/dashboard/elDeposits',
   DASHBOARD_EL_DEPOSITS_TOTAL = '/dashboard/elDepositsTotal',
-  DASHBOARD_CL_DEPOSITS = '/dashboard/clDeposits',
-  DASHBOARD_CL_DEPOSITS_TOTAL = '/dashboard/clDepositsTotal',
   DASHBOARD_OVERVIEW = '/dashboard/overview',
+  DASHBOARD_RENAME_ACCOUNT = '/dashboard/renameAccountDashbaoard',
+  DASHBOARD_RENAME_VALIDATOR = '/dashboard/renameValidatorDashboard',
   DASHBOARD_SLOTVIZ = '/dashboard/slotViz',
+  DASHBOARD_SUMMARY = '/dashboard/validatorSummary',
+  DASHBOARD_SUMMARY_CHART = '/dashboard/validatorSummaryChart',
+  DASHBOARD_SUMMARY_DETAILS = '/dashboard/validatorSummaryDetails',
+  DASHBOARD_VALIDATOR_BLOCKS = '/validator-dashboards/blocks',
+  DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID = '/validator-dashboards/publicIds',
+  DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID = '/validator-dashboards/editPublicIds',
+  DASHBOARD_VALIDATOR_EPOCH_DUTY = '/validator-dashboards/epoch_duty',
+  DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group-modify',
+  DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
+  DASHBOARD_VALIDATOR_INDICES = '/validator-dashboards/indices',
+  DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
+  DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
+  DASHBOARD_VALIDATOR_REWARDS_CHART = '/dashboard/validatorRewardsChart',
+  DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
+  DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS = '/validator-dashboards/total-withdrawals',
+  DASHBOARD_VALIDATOR_WITHDRAWALS = '/validator-dashboards/withdrawals',
   GET_NOTIFICATIONS_SETTINGS_DASHBOARD = '/notifications/managementDashboard',
-  NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
-  NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
-  NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   LATEST_STATE = '/latestState',
-  NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
-  REGISTER = '/register',
   LOGIN = '/login',
   LOGOUT = '/logout',
-  SEARCH = '/search',
-  AVAILABLE_NETWORKS = '/availableNetworks',
-  PRODUCT_SUMMARY = '/productSummary',
-  STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
-  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
-  SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards',
+  NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
+  NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
+  NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
+  NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test-webhook',
+  PRODUCT_SUMMARY = '/productSummary',
+  REGISTER = '/register',
+  SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards',
+  SEARCH = '/search',
+  STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
+  STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
+  USER = '/user/me',
+  USER_CHANGE_EMAIL = '/user/changeEmail',
+  USER_CHANGE_PASSWORD = '/user/changePassword',
+  USER_DASHBOARDS = '/user/dashboards',
+  USER_DELETE = '/user/delete',
 }
 
-export type PathValues = Record<string, string | number>
+export type PathValues = Record<string, number | string>
 
 interface MockFunction {
   (body?: any, param?: PathValues, query?: PathValues): any
 }
 
 type MappingData = {
-  path: string
   getPath?: (values?: PathValues) => string
+  legacy?: boolean
+  method?: 'DELETE' | 'GET' | 'POST' | 'PUT' // 'GET' will be used as default
   mock?: boolean
   mockFunction?: MockFunction
-  legacy?: boolean
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' // 'GET' will be used as default
+  path: string
 }
 
 export const mapping: Record<string, MappingData> = {
-  [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT]: {
-    path: 'validator-dashboards/{dashboard_id}/validators',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/validators`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_BLOCKS]: {
-    path: 'validator-dashboards/{dashboard_id}/blocks',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/blocks`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS]: {
-    path: 'validator-dashboards/{dashboard_id}/withdrawals',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/withdrawals`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS]: {
-    path: 'validator-dashboards/{dashboard_id}/total-withdrawals',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/total-withdrawals`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_GROUPS]: {
-    path: 'validator-dashboards/{dashboard_id}/groups',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups`,
-    mock: false,
-    method: 'POST',
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY]: {
-    path: 'validator-dashboards/{dashboard_id}/groups/{group_id}',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
-    mock: false,
-    method: 'PUT', // can be 'DELETE' = delete group or 'PUT' = modify group
-  },
   [API_PATH.AD_CONFIGURATIONs]: {
-    path: '/ad-configurations?={keys}',
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
     mock: true,
+    path: '/ad-configurations?={keys}',
   },
-  [API_PATH.USER]: {
-    path: '/users/me',
-    mock: false,
-  },
-  [API_PATH.USER_CHANGE_EMAIL]: {
-    path: '/users/me/email',
+  [API_PATH.AVAILABLE_NETWORKS]: {
+    method: 'GET',
     mock: true,
-    method: 'PUT',
-  },
-  [API_PATH.USER_CHANGE_PASSWORD]: {
-    path: '/users/me/password',
-    mock: true,
-    method: 'PUT',
-  },
-  [API_PATH.USER_DELETE]: {
-    path: '/users/me',
-    mock: true,
-    method: 'DELETE',
-  },
-  [API_PATH.USER_DASHBOARDS]: {
-    path: '/users/me/dashboards',
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
-    path: '/account-dashboards',
-    mock: true,
-    method: 'POST',
-  },
-  [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
-    path: '/validator-dashboards',
-    mock: false,
-    method: 'POST',
-  },
-  [API_PATH.DASHBOARD_DELETE_ACCOUNT]: {
-    path: '/account-dashboards/{dashboardKey}',
-    getPath: values => `/account-dashboards/${values?.dashboardKey}`,
-    mock: true,
-    method: 'DELETE',
-  },
-  [API_PATH.DASHBOARD_DELETE_VALIDATOR]: {
-    path: '/validator-dashboards/{dashboardKey}',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    mock: false,
-    method: 'DELETE',
-  },
-  [API_PATH.DASHBOARD_RENAME_ACCOUNT]: {
-    path: '/account-dashboards/{dashboardKey}/name',
-    getPath: values => `/account-dashboards/${values?.dashboardKey}/name`,
-    mock: true,
-    method: 'PUT',
-  },
-  [API_PATH.DASHBOARD_RENAME_VALIDATOR]: {
-    path: '/validator-dashboards/{dashboardKey}/name',
-    getPath: values => `/validator-dashboards/${values?.dashboardKey}/name`,
-    mock: false,
-    method: 'PUT',
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID]: {
-    path: '/validator-dashboards/{dashboardKey}/public-ids',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/public-ids`,
-    mock: false,
-    method: 'POST',
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID]: {
-    path: '/validator-dashboards/{dashboardKey}/public-ids/{publicId}',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/public-ids/${values?.publicId}`,
-    mock: false,
-    method: 'PUT',
-  },
-  [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
-    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_SUMMARY]: {
-    path: '/validator-dashboards/{dashboardKey}/summary',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/summary`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART]: {
-    path: '/validator-dashboards/{dashboardKey}/rewards-chart',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/rewards-chart`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS]: {
-    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/rewards',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/rewards/${values?.epoch}`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
-    path: '/validator-dashboards/{dashboardKey}/rewards',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/rewards`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_EL_DEPOSITS]: {
-    path: '/validator-dashboards/{dashboard_id}/execution-layer-deposits',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/execution-layer-deposits`,
-    mock: false,
-  },
-  [API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL]: {
-    path: '/validator-dashboards/{dashboard_id}/total-execution-layer-deposits',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
-    mock: false,
+    mockFunction: simulateAPIresponseAboutNetworkList,
+    path: '/available-networks',
   },
   [API_PATH.DASHBOARD_CL_DEPOSITS]: {
-    path: '/validator-dashboards/{dashboard_id}/consensus-layer-deposits',
     getPath: values =>
       `/validator-dashboards/${values?.dashboardKey}/consensus-layer-deposits`,
     mock: false,
+    path: '/validator-dashboards/{dashboard_id}/consensus-layer-deposits',
   },
   [API_PATH.DASHBOARD_CL_DEPOSITS_TOTAL]: {
-    path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits',
     getPath: values =>
       `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-deposits`,
     mock: false,
+    path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits',
   },
-  [API_PATH.DASHBOARD_SUMMARY_CHART]: {
-    path: '/validator-dashboards/{dashboardKey}/summary-chart?',
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
+  [API_PATH.DASHBOARD_CREATE_ACCOUNT]: {
+    method: 'POST',
+    mock: true,
+    path: '/account-dashboards',
+  },
+  [API_PATH.DASHBOARD_CREATE_VALIDATOR]: {
+    method: 'POST',
     mock: false,
+    path: '/validator-dashboards',
+  },
+  [API_PATH.DASHBOARD_DELETE_ACCOUNT]: {
+    getPath: values => `/account-dashboards/${values?.dashboardKey}`,
+    method: 'DELETE',
+    mock: true,
+    path: '/account-dashboards/{dashboardKey}',
+  },
+  [API_PATH.DASHBOARD_DELETE_VALIDATOR]: {
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
+    method: 'DELETE',
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}',
+  },
+  [API_PATH.DASHBOARD_EL_DEPOSITS]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/execution-layer-deposits`,
+    mock: false,
+    path: '/validator-dashboards/{dashboard_id}/execution-layer-deposits',
+  },
+  [API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
+    mock: false,
+    path: '/validator-dashboards/{dashboard_id}/total-execution-layer-deposits',
   },
   [API_PATH.DASHBOARD_OVERVIEW]: {
-    path: '/validator-dashboards/{dashboardKey}',
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
     mock: false,
+    path: '/validator-dashboards/{dashboardKey}',
+  },
+  [API_PATH.DASHBOARD_RENAME_ACCOUNT]: {
+    getPath: values => `/account-dashboards/${values?.dashboardKey}/name`,
+    method: 'PUT',
+    mock: true,
+    path: '/account-dashboards/{dashboardKey}/name',
+  },
+  [API_PATH.DASHBOARD_RENAME_VALIDATOR]: {
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/name`,
+    method: 'PUT',
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/name',
   },
   [API_PATH.DASHBOARD_SLOTVIZ]: {
-    path: '/validator-dashboards/{dashboardKey}/slot-viz',
     getPath: values =>
       `/validator-dashboards/${values?.dashboardKey}/slot-viz`,
     mock: false,
+    path: '/validator-dashboards/{dashboardKey}/slot-viz',
   },
-  [API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD]: {
-    path: '/users/me/notifications/settings/dashboards',
+  [API_PATH.DASHBOARD_SUMMARY]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/summary`,
     mock: false,
+    path: '/validator-dashboards/{dashboardKey}/summary',
   },
-  [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
-    path: '/users/me/notifications/settings/general',
-    mockFunction: mockManageNotificationsGeneral,
-    mock: true,
+  [API_PATH.DASHBOARD_SUMMARY_CHART]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/summary-chart`,
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/summary-chart?',
   },
-  [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
-    path: '/users/me/notifications/test-push',
+  [API_PATH.DASHBOARD_SUMMARY_DETAILS]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/summary`,
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/summary',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_BLOCKS]: {
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/blocks`,
+    mock: false,
+    path: 'validator-dashboards/{dashboard_id}/blocks',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/public-ids`,
     method: 'POST',
-    mock: true,
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/public-ids',
   },
-  [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
-    path: '/users/me/notifications/test-emails',
-    method: 'POST',
-    mock: true,
+  [API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/public-ids/${values?.publicId}`,
+    method: 'PUT',
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/public-ids/{publicId}',
   },
   [API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY]: {
-    path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
     getPath: values =>
       `/validator-dashboards/${values?.dashboardKey}/duties/${values?.epoch}`,
     mock: false,
+    path: '/validator-dashboards/{dashboard_id}/duties/{epoch}:',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
+    method: 'PUT', // can be 'DELETE' = delete group or 'PUT' = modify group
+    mock: false,
+    path: 'validator-dashboards/{dashboard_id}/groups/{group_id}',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_GROUPS]: {
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups`,
+    method: 'POST',
+    mock: false,
+    path: 'validator-dashboards/{dashboard_id}/groups',
   },
   [API_PATH.DASHBOARD_VALIDATOR_INDICES]: {
-    path: '/validator-dashboards/{dashboard_id}/summary/validators',
     getPath: values =>
       `/validator-dashboards/${values?.dashboardKey}/summary/validators`,
     mock: false,
+    path: '/validator-dashboards/{dashboard_id}/summary/validators',
   },
-  [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
-    path: '/notifications/dashboards',
-    mock: true,
+  [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/validators`,
+    mock: false,
+    path: 'validator-dashboards/{dashboard_id}/validators',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/rewards`,
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/rewards',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/rewards-chart`,
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/rewards-chart',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/groups/${values?.groupId}/rewards/${values?.epoch}`,
+    mock: false,
+    path: '/validator-dashboards/{dashboardKey}/groups/{group_id}/rewards',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/total-withdrawals`,
+    mock: false,
+    path: 'validator-dashboards/{dashboard_id}/total-withdrawals',
+  },
+  [API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/withdrawals`,
+    mock: false,
+    path: 'validator-dashboards/{dashboard_id}/withdrawals',
+  },
+  [API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD]: {
+    mock: false,
+    path: '/users/me/notifications/settings/dashboards',
   },
   [API_PATH.LATEST_STATE]: {
-    path: '/latest-state',
-    mockFunction: mockLatestState,
     mock: false,
-  },
-  [API_PATH.REGISTER]: {
-    path: '/users',
-    method: 'POST',
-    mock: true,
+    mockFunction: mockLatestState,
+    path: '/latest-state',
   },
   [API_PATH.LOGIN]: {
-    path: '/login',
     method: 'POST',
     mock: false,
+    path: '/login',
   },
   [API_PATH.LOGOUT]: {
+    method: 'POST',
+    mock: false,
     path: '/logout',
-    method: 'POST',
-    mock: false,
   },
-  [API_PATH.SEARCH]: {
-    path: '/search',
-    method: 'POST',
-    mockFunction: simulateAPIresponseForTheSearchBar,
-    mock: false,
-  },
-  [API_PATH.AVAILABLE_NETWORKS]: {
-    path: '/available-networks',
-    method: 'GET',
-    mockFunction: simulateAPIresponseAboutNetworkList,
+  [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
     mock: true,
+    path: '/notifications/dashboards',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
+    mock: true,
+    mockFunction: mockManageNotificationsGeneral,
+    path: '/users/me/notifications/settings/general',
+  },
+  [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
+    method: 'POST',
+    mock: true,
+    path: '/users/me/notifications/test-emails',
+  },
+  [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
+    method: 'POST',
+    mock: true,
+    path: '/users/me/notifications/test-push',
+  },
+  [API_PATH.NOTIFICATIONS_TEST_WEBHOOK]: {
+    method: 'POST',
+    mock: false,
+    path: '/users/me/notifications/test-webhook',
   },
   [API_PATH.PRODUCT_SUMMARY]: {
+    mock: false,
     path: '/product-summary',
-    mock: false,
   },
-  [API_PATH.STRIPE_CUSTOMER_PORTAL]: {
-    path: '/user/stripe/customer-portal',
+  [API_PATH.REGISTER]: {
     method: 'POST',
-    mock: false,
-  },
-  [API_PATH.STRIPE_CHECKOUT_SESSION]: {
-    path: '/user/stripe/create-checkout-session',
-    method: 'POST',
-    mock: false,
+    mock: true,
+    path: '/users',
   },
   [API_PATH.SAVE_DASHBOARDS_SETTINGS]: {
-    path: '/users/me/notifications/settings/{for}-dashboards/{dashboard_key}/groups/{group_id}',
     getPath: values =>
       `/users/me/notifications/settings/${values?.for}-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
     method: 'POST',
     mock: false,
+    path: '/users/me/notifications/settings/{for}-dashboards/{dashboard_key}/groups/{group_id}',
   },
-  [API_PATH.NOTIFICATIONS_TEST_WEBHOOK]: {
-    path: '/users/me/notifications/test-webhook',
+  [API_PATH.SEARCH]: {
     method: 'POST',
     mock: false,
+    mockFunction: simulateAPIresponseForTheSearchBar,
+    path: '/search',
+  },
+  [API_PATH.STRIPE_CHECKOUT_SESSION]: {
+    method: 'POST',
+    mock: false,
+    path: '/user/stripe/create-checkout-session',
+  },
+  [API_PATH.STRIPE_CUSTOMER_PORTAL]: {
+    method: 'POST',
+    mock: false,
+    path: '/user/stripe/customer-portal',
+  },
+  [API_PATH.USER]: {
+    mock: false,
+    path: '/users/me',
+  },
+  [API_PATH.USER_CHANGE_EMAIL]: {
+    method: 'PUT',
+    mock: true,
+    path: '/users/me/email',
+  },
+  [API_PATH.USER_CHANGE_PASSWORD]: {
+    method: 'PUT',
+    mock: true,
+    path: '/users/me/password',
+  },
+  [API_PATH.USER_DASHBOARDS]: {
+    mock: false,
+    path: '/users/me/dashboards',
+  },
+  [API_PATH.USER_DELETE]: {
+    method: 'DELETE',
+    mock: true,
+    path: '/users/me',
   },
 }

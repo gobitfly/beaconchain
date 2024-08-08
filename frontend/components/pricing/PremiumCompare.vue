@@ -9,19 +9,19 @@ const { products } = useProductsStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 type CompareValue = {
-  value?: string | boolean
-  tooltip?: string
   class?: string
+  tooltip?: string
+  value?: boolean | string
 }
 
-type RowType = 'header' | 'group' | 'perc' | 'label'
+type RowType = 'group' | 'header' | 'label' | 'perc'
 
 type CompareRow = {
-  type: RowType
+  className?: string
   label?: string
   subText?: string
+  type: RowType
   values?: CompareValue[]
-  className?: string
 }
 
 const showContent = ref(false)
@@ -33,7 +33,7 @@ const rows = computed(() => {
     ) ?? []
   const rows: CompareRow[] = []
   const mapValue = (property: string, perks: PremiumPerks): CompareValue => {
-    if (['support_us', 'bulk_adding'].includes(property)) {
+    if (['bulk_adding', 'support_us'].includes(property)) {
       return { value: perks.ad_free }
     }
     let value = get(perks, property)
@@ -60,8 +60,8 @@ const rows = computed(() => {
     }
 
     return {
-      value,
       tooltip,
+      value,
     }
   }
   const addRow = (
@@ -72,14 +72,14 @@ const rows = computed(() => {
     hidePositiveValues = false,
     translationKey?: string,
   ) => {
-    const row: CompareRow = { type, subText, className }
+    const row: CompareRow = { className, subText, type }
     switch (type) {
-      case 'header':
-        row.values = sorted.map(p => ({ value: p.product_name }))
-        break
       case 'group':
         row.label = $t(`pricing.groups.${property}`)
         row.values = sorted.map(_p => ({}))
+        break
+      case 'header':
+        row.values = sorted.map(p => ({ value: p.product_name }))
         break
       case 'label':
         row.label = $t(translationKey || `pricing.percs.${property}`)

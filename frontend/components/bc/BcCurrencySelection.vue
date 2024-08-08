@@ -5,7 +5,7 @@ defineProps<{
   showCurrencyIcon: boolean
 }>()
 
-const { currency, withLabel, setCurrency } = useCurrency()
+const { currency, setCurrency, withLabel } = useCurrency()
 </script>
 
 <template>

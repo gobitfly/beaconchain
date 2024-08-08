@@ -8,27 +8,27 @@
 import { ChainIDs } from '~/types/network'
 import {
   CategoryInfo,
-  SubCategoryInfo,
-  TypeInfo,
-  ResultType,
-  wasOutputDataGivenByTheAPI,
+  getI18nPathOfTranslatableLitteral,
   type ResultSuggestionInternal,
-  type SearchbarShape,
+  ResultType,
   type SearchbarColors,
   type SearchbarDropdownLayout,
   type SearchbarPurpose,
   SearchbarPurposeInfo,
+  type SearchbarShape,
+  SubCategoryInfo,
   SuggestionrowCells,
-  getI18nPathOfTranslatableLitteral,
+  TypeInfo,
+  wasOutputDataGivenByTheAPI,
 } from '~/types/searchbar'
 
 const props = defineProps<{
-  suggestion: ResultSuggestionInternal
+  barPurpose: SearchbarPurpose
   barShape: SearchbarShape
   colorTheme: SearchbarColors
   dropdownLayout: SearchbarDropdownLayout
-  barPurpose: SearchbarPurpose
   screenWidthCausingSuddenChange: number
+  suggestion: ResultSuggestionInternal
 }>()
 
 const { t } = useTranslation()

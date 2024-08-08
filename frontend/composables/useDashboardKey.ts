@@ -22,11 +22,11 @@ export function useDashboardKey() {
   return {
     ...data,
     dashboardKey,
+    dashboardType,
+    isPrivate,
     isPublic,
     isShared,
-    isPrivate,
     publicEntities,
     setDashboardKey,
-    dashboardType,
   }
 }

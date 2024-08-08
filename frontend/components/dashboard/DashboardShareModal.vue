@@ -7,7 +7,7 @@ import { API_PATH } from '~/types/customFetch'
 interface Props {
   dashboard: ValidatorDashboard // Currently only validator dashboards are supported
 }
-const { props, dialogRef } = useBcDialog<Props>()
+const { dialogRef, props } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 const { refreshDashboards } = useUserDashboardStore()
 const { fetch } = useCustomFetch()

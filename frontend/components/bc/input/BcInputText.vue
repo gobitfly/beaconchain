@@ -9,8 +9,8 @@ const props = defineProps<{
   inputWidth?: `${number}px`
   label: string
   placeholder?: string
-  type?: HTMLInputElement['type']
   shouldAutoselect?: boolean
+  type?: HTMLInputElement['type']
 }>()
 onMounted(() => {
   if (props.shouldAutoselect) {
