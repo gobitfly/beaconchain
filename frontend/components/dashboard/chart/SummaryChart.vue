@@ -53,6 +53,7 @@ const { dashboardKey } = useDashboardKey()
 const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 const { latestState } = useLatestStateStore()
+const { convertColors } = useColorBlindMode()
 const latestSlot = ref(latestState.value?.current_slot || 0)
 const {
   value: timeFrames,
@@ -210,10 +211,19 @@ watch(
 )
 
 const colors = computed(() => {
+  const label = getChartTextColor(colorMode.value)
+  const background = getChartTooltipBackgroundColor(colorMode.value)
+  // we pass the label and background color to the color conversion so it can adjust the summary line colors better
+  // but we will not use the converted label/background colors as we should use the same as the rest of the app.
+  const list = convertColors([
+    { identifier: 'label', color: label },
+    { identifier: 'background', color: background },
+    ...getSummaryChartGroupColors(colorMode.value).map((c, index) => ({ identifier: `chart_${index}`, color: c })),
+  ])
   return {
-    groups: getSummaryChartGroupColors(colorMode.value),
-    label: getChartTextColor(colorMode.value),
-    background: getChartTooltipBackgroundColor(colorMode.value),
+    label,
+    background,
+    groups: list.slice(2).map(c => c.color),
   }
 })
 

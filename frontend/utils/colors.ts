@@ -103,9 +103,11 @@ export function getRewardsChartLineColor(theme: string) {
 }
 
 export function getRewardChartColors() {
+  const styles = window.getComputedStyle(document.documentElement)
+
   return {
-    el: '#ffaa31',
-    cl: '#7DB5EC',
+    el: styles.getPropertyValue('--primary-orange'),
+    cl: styles.getPropertyValue('--melllow-blue'),
   }
 }
 
