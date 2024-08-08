@@ -545,7 +545,9 @@ function distError (k: number, wipColor2D: Eye) : number {
   for (let l = 0; l < distancesOrig.length; l++) {
     if (k === l) { continue }
     const diff = distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1
-    result += (diff < 0 ? (-diff) ** 2 : Math.sqrt(diff))
+    // first case below: the shorter the distance for the CB person than for the normal person, the higher the error, and the error grows fast w.r.t the difference
+    // second case: the longer the distance for the CB person than for the normal person, the higher the error, but the error does not grow fast as this means higher contrast
+    result += (diff < 0 ? (-diff) * 2 : diff / 2)
   }
   return result
 }
