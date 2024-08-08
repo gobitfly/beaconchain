@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faDiscord, faTwitter, faGithub } from '@fortawesome/free-brands-svg-icons'
+import {
+  faDiscord,
+  faTwitter,
+  faGithub,
+} from '@fortawesome/free-brands-svg-icons'
 import {
   faCaretRight,
   faHistory,
@@ -20,7 +24,7 @@ import {
   faRobot,
   faMegaphone,
   faExternalLinkAlt,
-  faDesktop
+  faDesktop,
 } from '@fortawesome/pro-solid-svg-icons'
 import {
   faDrumstickBite,
@@ -35,11 +39,9 @@ import {
   faGasPump,
   faBell,
   faPaintBrush,
-  faDesktop as farDesktop
+  faDesktop as farDesktop,
 } from '@fortawesome/pro-regular-svg-icons'
-import {
-  faBuildingColumns
-} from '@fortawesome/sharp-solid-svg-icons'
+import { faBuildingColumns } from '@fortawesome/sharp-solid-svg-icons'
 
 import type { MenuItem } from 'primevue/menuitem'
 import MegaMenu from 'primevue/megamenu'
@@ -56,13 +58,15 @@ import IconWebhook from '~/components/icon/megaMenu/WebHook.vue'
 import { Target } from '~/types/links'
 import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const { doLogout, isLoggedIn } = useUserStore()
-const { withLabel, currency, setCurrency } = useCurrency()
 const route = useRoute()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-const megaMenu = ref<{toggle:(evt:Event)=>void, mobileActive: boolean} | null>(null)
+const megaMenu = ref<{
+  toggle: (evt: Event) => void
+  mobileActive: boolean
+} | null>(null)
 
 const breakpoint = `${smallHeaderThreshold}px`
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
@@ -83,35 +87,35 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.overview'),
                   svg: NetworkEthereum,
-                  url: '/'
+                  url: '/',
                 },
                 {
                   label: $t('header.megamenu.epochs'),
                   icon: faHistory,
-                  url: '/epochs'
+                  url: '/epochs',
                 },
                 {
                   label: $t('header.megamenu.slots'),
                   icon: faCube,
-                  url: '/slots'
+                  url: '/slots',
                 },
                 {
                   label: $t('header.megamenu.blocks'),
                   icon: faCubes,
-                  url: '/blocks'
+                  url: '/blocks',
                 },
                 {
                   label: $t('header.megamenu.txs'),
                   icon: faCreditCard,
-                  url: '/transactions'
+                  url: '/transactions',
                 },
                 {
                   label: $t('header.megamenu.mempool'),
                   icon: faUpload,
-                  url: '/mempool'
-                }
-              ]
-            }
+                  url: '/mempool',
+                },
+              ],
+            },
           ],
           [
             {
@@ -120,35 +124,35 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.overview'),
                   icon: faTable,
-                  url: '/validators'
+                  url: '/validators',
                 },
                 {
                   label: $t('header.megamenu.slashings'),
                   icon: faUserSlash,
-                  url: '/validators/slashings'
+                  url: '/validators/slashings',
                 },
                 {
                   label: $t('header.megamenu.validator_leaderboard'),
                   icon: faMedal,
-                  url: '/validators/leaderboard'
+                  url: '/validators/leaderboard',
                 },
                 {
                   label: $t('header.megamenu.deposit_leaderboard'),
                   icon: faFileImport,
-                  url: '/validators/deposit-leaderboard'
+                  url: '/validators/deposit-leaderboard',
                 },
                 {
                   label: $t('header.megamenu.deposits'),
                   icon: faFileSignature,
-                  url: '/validators/deposits'
+                  url: '/validators/deposits',
                 },
                 {
                   label: $t('header.megamenu.withdrawals'),
                   icon: faMoneyBill,
-                  url: '/validators/withdrawals'
-                }
-              ]
-            }
+                  url: '/validators/withdrawals',
+                },
+              ],
+            },
           ],
           [
             {
@@ -159,30 +163,30 @@ const items = computed(() => {
                   svg: IconEthermineStaking,
                   url: 'https://ethpool.org/',
                   class: 'orange-box',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: $t('header.megamenu.eth_store'),
                   svg: IconEthStore,
-                  url: '/ethstore'
+                  url: '/ethstore',
                 },
                 {
                   label: $t('header.megamenu.staking_services'),
                   icon: faDrumstickBite,
-                  url: '/stakingServices'
+                  url: '/stakingServices',
                 },
                 {
                   label: $t('header.megamenu.pool_benchmarks'),
                   icon: faChartPie,
-                  url: '/pools'
+                  url: '/pools',
                 },
                 {
                   label: $t('header.megamenu.rocket_pool_stats'),
                   icon: faRocket,
-                  url: '/pools/rocketpool'
-                }
-              ]
-            }
+                  url: '/pools/rocketpool',
+                },
+              ],
+            },
           ],
           [
             {
@@ -191,40 +195,40 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.charts'),
                   icon: faChartBar,
-                  url: '/charts'
+                  url: '/charts',
                 },
                 {
                   label: $t('header.megamenu.reward_history'),
                   icon: farMoneyBill,
-                  url: '/rewards'
+                  url: '/rewards',
                 },
                 {
                   label: $t('header.megamenu.profit_calculator'),
                   icon: faCalculator,
-                  url: '/calculator'
+                  url: '/calculator',
                 },
                 {
                   label: $t('header.megamenu.block_viz'),
                   icon: faProjectDiagram,
-                  url: '/vis'
+                  url: '/vis',
                 },
                 {
                   label: $t('header.megamenu.correlations'),
                   icon: faChartLine,
-                  url: '/correlations'
+                  url: '/correlations',
                 },
                 {
                   label: $t('header.megamenu.eip1599_burn'),
                   icon: faFireFlame,
-                  url: '/burn'
+                  url: '/burn',
                 },
                 {
                   label: $t('header.megamenu.relays'),
                   icon: faRobot,
-                  url: '/relays'
-                }
-              ]
-            }
+                  url: '/relays',
+                },
+              ],
+            },
           ],
           [
             {
@@ -233,46 +237,46 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.beaconchain_app'),
                   icon: faMobileScreen,
-                  url: '/mobile'
+                  url: '/mobile',
                 },
                 {
                   label: $t('header.megamenu.beaconchain_premium'),
                   icon: faGem,
-                  url: '/pricing'
+                  url: '/pricing',
                 },
                 {
                   label: $t('header.megamenu.webhooks'),
                   svg: IconWebhook,
-                  url: '/user/webhooks'
+                  url: '/user/webhooks',
                 },
                 {
                   label: $t('header.megamenu.api_docs'),
                   icon: faLaptopCode,
-                  url: '/api/v1/docs/index.html'
+                  url: '/api/v1/docs/index.html',
                 },
                 {
                   // TODO: Requires pricing page to set the toggle at the top to "API Pricing"
                   label: $t('header.megamenu.api_pricing'),
                   icon: faLaptopCode,
-                  url: '/pricing'
+                  url: '/pricing',
                 },
                 {
                   label: $t('header.megamenu.unit_converter'),
                   icon: faBuildingColumns,
-                  url: '/tools/unitConverter'
+                  url: '/tools/unitConverter',
                 },
                 {
                   label: $t('header.megamenu.gasnow'),
                   icon: faGasPump,
-                  url: '/gasnow'
+                  url: '/gasnow',
                 },
                 {
                   label: $t('header.megamenu.broadcast_signed_messages'),
                   icon: faMegaphone,
-                  url: '/tools/broadcast'
-                }
-              ]
-            }
+                  url: '/tools/broadcast',
+                },
+              ],
+            },
           ],
           [
             {
@@ -283,36 +287,36 @@ const items = computed(() => {
                   svg: IconEversteel,
                   url: 'https://eversteel.io/',
                   class: 'orange-box',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: $t('header.megamenu.notifications'),
                   icon: faBell,
-                  url: '/notifications'
+                  url: '/notifications',
                 },
                 {
                   label: $t('header.megamenu.graffiti_wall'),
                   icon: faPaintBrush,
-                  url: '/graffitiwall'
+                  url: '/graffitiwall',
                 },
                 {
                   label: $t('header.megamenu.ethereum_clients'),
                   icon: farDesktop,
-                  url: '/ethClients'
+                  url: '/ethClients',
                 },
                 {
                   label: $t('header.megamenu.knowledge_base'),
                   icon: faExternalLinkAlt,
                   url: 'https://kb.beaconcha.in',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: $t('header.megamenu.slot_finder'),
                   icon: faCube,
-                  url: '/slots/finder'
-                }
-              ]
-            }
+                  url: '/slots/finder',
+                },
+              ],
+            },
           ],
           [
             {
@@ -322,29 +326,30 @@ const items = computed(() => {
                   label: 'Discord',
                   icon: faDiscord,
                   url: 'https://dsc.gg/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Twitter',
                   icon: faTwitter,
                   url: 'https://twitter.com/beaconcha_in',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github Mobile App',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
-                  target: Target.External
-                }
-              ]
-            }
-          ]]
+                  target: Target.External,
+                },
+              ],
+            },
+          ],
+        ],
       },
       {
         label: 'Gnosis',
@@ -356,40 +361,40 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.overview'),
                   svg: NetworkGnosis,
-                  url: '/'
+                  url: '/',
                 },
                 {
                   label: $t('header.megamenu.epochs'),
                   icon: faHistory,
-                  url: '/epochs'
+                  url: '/epochs',
                 },
                 {
                   label: $t('header.megamenu.slots'),
                   icon: faCube,
-                  url: '/slots'
+                  url: '/slots',
                 },
                 {
                   label: $t('header.megamenu.blocks'),
                   icon: faCubes,
-                  url: '/blocks'
+                  url: '/blocks',
                 },
                 {
                   label: $t('header.megamenu.txs'),
                   icon: faCreditCard,
-                  url: '/transactions'
+                  url: '/transactions',
                 },
                 {
                   label: $t('header.megamenu.validators'),
                   icon: faDesktop,
-                  url: ''
+                  url: '',
                 },
                 {
                   label: $t('header.megamenu.mempool'),
                   icon: faUpload,
-                  url: '/mempool'
-                }
-              ]
-            }
+                  url: '/mempool',
+                },
+              ],
+            },
           ],
           [
             {
@@ -398,35 +403,35 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.overview'),
                   icon: faTable,
-                  url: '/validators'
+                  url: '/validators',
                 },
                 {
                   label: $t('header.megamenu.slashings'),
                   icon: faUserSlash,
-                  url: '/validators/slashings'
+                  url: '/validators/slashings',
                 },
                 {
                   label: $t('header.megamenu.validator_leaderboard'),
                   icon: faMedal,
-                  url: '/validators/leaderboard'
+                  url: '/validators/leaderboard',
                 },
                 {
                   label: $t('header.megamenu.deposit_leaderboard'),
                   icon: faFileImport,
-                  url: '/validators/deposit-leaderboard'
+                  url: '/validators/deposit-leaderboard',
                 },
                 {
                   label: $t('header.megamenu.deposits'),
                   icon: faFileSignature,
-                  url: '/validators/deposits'
+                  url: '/validators/deposits',
                 },
                 {
                   label: $t('header.megamenu.withdrawals'),
                   icon: faMoneyBill,
-                  url: '/validators/withdrawals'
-                }
-              ]
-            }
+                  url: '/validators/withdrawals',
+                },
+              ],
+            },
           ],
           [
             {
@@ -435,40 +440,40 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.charts'),
                   icon: faChartBar,
-                  url: '/charts'
+                  url: '/charts',
                 },
                 {
                   label: $t('header.megamenu.reward_history'),
                   icon: farMoneyBill,
-                  url: '/rewards'
+                  url: '/rewards',
                 },
                 {
                   label: $t('header.megamenu.profit_calculator'),
                   icon: faCalculator,
-                  url: '/calculator'
+                  url: '/calculator',
                 },
                 {
                   label: $t('header.megamenu.block_viz'),
                   icon: faProjectDiagram,
-                  url: '/vis'
+                  url: '/vis',
                 },
                 {
                   label: $t('header.megamenu.correlations'),
                   icon: faChartLine,
-                  url: '/correlations'
+                  url: '/correlations',
                 },
                 {
                   label: $t('header.megamenu.eip1599_burn'),
                   icon: faFireFlame,
-                  url: '/burn'
+                  url: '/burn',
                 },
                 {
                   label: $t('header.megamenu.relays'),
                   icon: faRobot,
-                  url: '/relays'
-                }
-              ]
-            }
+                  url: '/relays',
+                },
+              ],
+            },
           ],
           [
             {
@@ -477,35 +482,35 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.beaconchain_app'),
                   icon: faMobileScreen,
-                  url: '/mobile'
+                  url: '/mobile',
                 },
                 {
                   label: $t('header.megamenu.beaconchain_premium'),
                   icon: faGem,
-                  url: '/premium'
+                  url: '/premium',
                 },
                 {
                   label: $t('header.megamenu.webhooks'),
                   svg: IconWebhook,
-                  url: '/user/webhooks'
+                  url: '/user/webhooks',
                 },
                 {
                   label: $t('header.megamenu.api_docs'),
                   icon: faLaptopCode,
-                  url: '/api/v1/docs/index.html'
+                  url: '/api/v1/docs/index.html',
                 },
                 {
                   label: $t('header.megamenu.api_pricing'),
                   icon: faLaptopCode,
-                  url: '/pricing'
+                  url: '/pricing',
                 },
                 {
                   label: $t('header.megamenu.broadcast_signed_messages'),
                   icon: faMegaphone,
-                  url: '/tools/broadcast'
-                }
-              ]
-            }
+                  url: '/tools/broadcast',
+                },
+              ],
+            },
           ],
           [
             {
@@ -516,21 +521,21 @@ const items = computed(() => {
                   svg: IconEversteel,
                   url: 'https://eversteel.io/',
                   class: 'orange-box',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: $t('header.megamenu.notifications'),
                   icon: faBell,
-                  url: '/notifications'
+                  url: '/notifications',
                 },
                 {
                   label: $t('header.megamenu.knowledge_base'),
                   icon: faExternalLinkAlt,
                   url: 'https://kb.beaconcha.in',
-                  target: Target.External
-                }
-              ]
-            }
+                  target: Target.External,
+                },
+              ],
+            },
           ],
           [
             {
@@ -540,29 +545,30 @@ const items = computed(() => {
                   label: 'Discord',
                   icon: faDiscord,
                   url: 'https://dsc.gg/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Twitter',
                   icon: faTwitter,
                   url: 'https://twitter.com/beaconcha_in',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github Mobile App',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
-                  target: Target.External
-                }
-              ]
-            }
-          ]]
+                  target: Target.External,
+                },
+              ],
+            },
+          ],
+        ],
       },
       {
         label: 'Arbitrum',
@@ -574,35 +580,35 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.overview'),
                   svg: NetworkArbitrum,
-                  url: '/'
+                  url: '/',
                 },
                 {
                   label: $t('header.megamenu.blocks'),
                   icon: faCubes,
-                  url: '/blocks'
+                  url: '/blocks',
                 },
                 {
                   label: $t('header.megamenu.txs'),
                   icon: faCreditCard,
-                  url: '/transactions'
+                  url: '/transactions',
                 },
                 {
                   label: $t('header.megamenu.txsL1L2'),
                   icon: faCreditCard,
-                  url: ''
+                  url: '',
                 },
                 {
                   label: $t('header.megamenu.txsL2L1'),
                   icon: faCreditCard,
-                  url: ''
+                  url: '',
                 },
                 {
                   label: $t('header.megamenu.mempool'),
                   icon: faUpload,
-                  url: '/mempool'
-                }
-              ]
-            }
+                  url: '/mempool',
+                },
+              ],
+            },
           ],
           [
             {
@@ -611,20 +617,20 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.webhooks'),
                   svg: IconWebhook,
-                  url: '/user/webhooks'
+                  url: '/user/webhooks',
                 },
                 {
                   label: $t('header.megamenu.api_docs'),
                   icon: faLaptopCode,
-                  url: '/api/v1/docs/index.html'
+                  url: '/api/v1/docs/index.html',
                 },
                 {
                   label: $t('header.megamenu.api_pricing'),
                   icon: faLaptopCode,
-                  url: '/pricing'
-                }
-              ]
-            }
+                  url: '/pricing',
+                },
+              ],
+            },
           ],
           [
             {
@@ -635,16 +641,16 @@ const items = computed(() => {
                   svg: IconEversteel,
                   url: 'https://eversteel.io/',
                   class: 'orange-box',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: $t('header.megamenu.knowledge_base'),
                   icon: faExternalLinkAlt,
                   url: 'https://kb.beaconcha.in',
-                  target: Target.External
-                }
-              ]
-            }
+                  target: Target.External,
+                },
+              ],
+            },
           ],
           [
             {
@@ -654,29 +660,30 @@ const items = computed(() => {
                   label: 'Discord',
                   icon: faDiscord,
                   url: 'https://dsc.gg/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Twitter',
                   icon: faTwitter,
                   url: 'https://twitter.com/beaconcha_in',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github Mobile App',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
-                  target: Target.External
-                }
-              ]
-            }
-          ]]
+                  target: Target.External,
+                },
+              ],
+            },
+          ],
+        ],
       },
       {
         label: 'Base',
@@ -688,35 +695,35 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.overview'),
                   svg: NetworkBase,
-                  url: '/'
+                  url: '/',
                 },
                 {
                   label: $t('header.megamenu.blocks'),
                   icon: faCubes,
-                  url: '/blocks'
+                  url: '/blocks',
                 },
                 {
                   label: $t('header.megamenu.txs'),
                   icon: faCreditCard,
-                  url: '/transactions'
+                  url: '/transactions',
                 },
                 {
                   label: $t('header.megamenu.txsL1L2'),
                   icon: faCreditCard,
-                  url: ''
+                  url: '',
                 },
                 {
                   label: $t('header.megamenu.txsL2L1'),
                   icon: faCreditCard,
-                  url: ''
+                  url: '',
                 },
                 {
                   label: $t('header.megamenu.mempool'),
                   icon: faUpload,
-                  url: '/mempool'
-                }
-              ]
-            }
+                  url: '/mempool',
+                },
+              ],
+            },
           ],
           [
             {
@@ -725,20 +732,20 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.webhooks'),
                   svg: IconWebhook,
-                  url: '/user/webhooks'
+                  url: '/user/webhooks',
                 },
                 {
                   label: $t('header.megamenu.api_docs'),
                   icon: faLaptopCode,
-                  url: '/api/v1/docs/index.html'
+                  url: '/api/v1/docs/index.html',
                 },
                 {
                   label: $t('header.megamenu.api_pricing'),
                   icon: faLaptopCode,
-                  url: '/pricing'
-                }
-              ]
-            }
+                  url: '/pricing',
+                },
+              ],
+            },
           ],
           [
             {
@@ -749,16 +756,16 @@ const items = computed(() => {
                   svg: IconEversteel,
                   url: 'https://eversteel.io/',
                   class: 'orange-box',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: $t('header.megamenu.knowledge_base'),
                   icon: faExternalLinkAlt,
                   url: 'https://kb.beaconcha.in',
-                  target: Target.External
-                }
-              ]
-            }
+                  target: Target.External,
+                },
+              ],
+            },
           ],
           [
             {
@@ -768,29 +775,30 @@ const items = computed(() => {
                   label: 'Discord',
                   icon: faDiscord,
                   url: 'https://dsc.gg/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Twitter',
                   icon: faTwitter,
                   url: 'https://twitter.com/beaconcha_in',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github Mobile App',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
-                  target: Target.External
-                }
-              ]
-            }
-          ]]
+                  target: Target.External,
+                },
+              ],
+            },
+          ],
+        ],
       },
       {
         label: 'Optimism',
@@ -802,35 +810,35 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.overview'),
                   svg: NetworkOptimism,
-                  url: '/'
+                  url: '/',
                 },
                 {
                   label: $t('header.megamenu.blocks'),
                   icon: faCubes,
-                  url: '/blocks'
+                  url: '/blocks',
                 },
                 {
                   label: $t('header.megamenu.txs'),
                   icon: faCreditCard,
-                  url: '/transactions'
+                  url: '/transactions',
                 },
                 {
                   label: $t('header.megamenu.txsL1L2'),
                   icon: faCreditCard,
-                  url: ''
+                  url: '',
                 },
                 {
                   label: $t('header.megamenu.txsL2L1'),
                   icon: faCreditCard,
-                  url: ''
+                  url: '',
                 },
                 {
                   label: $t('header.megamenu.mempool'),
                   icon: faUpload,
-                  url: '/mempool'
-                }
-              ]
-            }
+                  url: '/mempool',
+                },
+              ],
+            },
           ],
           [
             {
@@ -839,20 +847,20 @@ const items = computed(() => {
                 {
                   label: $t('header.megamenu.webhooks'),
                   svg: IconWebhook,
-                  url: '/user/webhooks'
+                  url: '/user/webhooks',
                 },
                 {
                   label: $t('header.megamenu.api_docs'),
                   icon: faLaptopCode,
-                  url: '/api/v1/docs/index.html'
+                  url: '/api/v1/docs/index.html',
                 },
                 {
                   label: $t('header.megamenu.api_pricing'),
                   icon: faLaptopCode,
-                  url: '/pricing'
-                }
-              ]
-            }
+                  url: '/pricing',
+                },
+              ],
+            },
           ],
           [
             {
@@ -863,16 +871,16 @@ const items = computed(() => {
                   svg: IconEversteel,
                   url: 'https://eversteel.io/',
                   class: 'orange-box',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: $t('header.megamenu.knowledge_base'),
                   icon: faExternalLinkAlt,
                   url: 'https://kb.beaconcha.in',
-                  target: Target.External
-                }
-              ]
-            }
+                  target: Target.External,
+                },
+              ],
+            },
           ],
           [
             {
@@ -882,77 +890,71 @@ const items = computed(() => {
                   label: 'Discord',
                   icon: faDiscord,
                   url: 'https://dsc.gg/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Twitter',
                   icon: faTwitter,
                   url: 'https://twitter.com/beaconcha_in',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/beaconchain',
-                  target: Target.External
+                  target: Target.External,
                 },
                 {
                   label: 'Github Mobile App',
                   icon: faGithub,
                   url: 'https://github.com/gobitfly/eth2-beaconchain-explorer-app',
-                  target: Target.External
-                }
-              ]
-            }
-          ]
-        ]
+                  target: Target.External,
+                },
+              ],
+            },
+          ],
+        ],
       },
       {
         label: $t('header.megamenu.dashboard'),
-        url: '/dashboard'
+        url: '/dashboard',
       },
       {
         label: $t('header.megamenu.pricing'),
-        url: '/pricing'
+        url: '/pricing',
       },
       {
         label: $t('header.megamenu.notifications'),
-        url: '/notifications'
-      }
+        url: '/notifications',
+      },
     ]
-  } else {
+  }
+  else {
     list = [
       {
         label: $t('header.megamenu.dashboard'),
-        url: '/dashboard'
+        url: '/dashboard',
       },
       {
         label: $t('header.megamenu.pricing'),
-        url: '/pricing'
-      }
+        url: '/pricing',
+      },
     ]
   }
   if (isMobile.value) {
     if (isLoggedIn.value) {
       list.push({
         label: $t('header.settings'),
-        command: async () => { await navigateTo('../user/settings') }
+        command: async () => {
+          await navigateTo('../user/settings')
+        },
       })
     }
-
-    list.push({
-      label: currency.value,
-      currency: currency.value,
-      items: [[{
-        label: $t('header.megamenu.select_currency'),
-        items: withLabel.value.map(m => ({ ...m, command: () => setCurrency(m.currency) }))
-      }]]
-    })
   }
   if (isSmallScreen.value && isLoggedIn.value) {
     list.push({
       label: $t('header.logout'),
-      command: () => doLogout()
+      command: () => doLogout(),
     })
   }
   return list
@@ -967,29 +969,60 @@ const toggleMegaMenu = (evt: Event) => {
 
 defineExpose({
   toggleMegaMenu,
-  isMobileMenuOpen
+  isMobileMenuOpen,
 })
 </script>
 
 <template>
   <ClientOnly>
-    <MegaMenu ref="megaMenu" :model="items" :breakpoint="breakpoint">
-      <template #item="{item, hasSubmenu}">
+    <MegaMenu
+      ref="megaMenu"
+      :model="items"
+      :breakpoint="breakpoint"
+    >
+      <template #item="{ item, hasSubmenu }">
         <span class="p-menuitem-link">
-          <span v-if="item.svg || item.icon || item.currency" class="p-menuitem-icon iconSpacing" data-pc-section="icon">
-            <component :is="item.svg" v-if="item.svg" class="monochromatic" />
-            <FontAwesomeIcon v-else-if="item.icon" class="icon" :icon="item.icon" />
-            <IconCurrency v-else-if="item.currency" :currency="item.currency" />
+          <span
+            v-if="item.svg || item.icon"
+            class="p-menuitem-icon iconSpacing"
+            data-pc-section="icon"
+          >
+            <component
+              :is="item.svg"
+              v-if="item.svg"
+              class="monochromatic"
+            />
+            <FontAwesomeIcon
+              v-else-if="item.icon"
+              class="icon"
+              :icon="item.icon"
+            />
           </span>
-          <BcLink v-if="item.url" :to="item.url" :replace="route.path.startsWith(item.url)">
-            <span :class="[item.class]" class="p-menuitem-text">
+          <BcLink
+            v-if="item.url"
+            :to="item.url"
+            :replace="route.path.startsWith(item.url)"
+          >
+            <span
+              :class="[item.class]"
+              class="p-menuitem-text"
+            >
               <span>{{ item.label }}</span>
             </span>
           </BcLink>
-          <div v-else class="pointer p-menuitem-text" :class="[item.class]" @click="item.command?.(null as any)">
+          <div
+            v-else
+            class="pointer p-menuitem-text"
+            :class="[item.class]"
+            @click="item.command?.(null as any)"
+          >
             {{ item.label }}
           </div>
-          <FontAwesomeIcon v-if="hasSubmenu" :icon="faCaretRight" class="p-icon p-submenu-icon" />
+          <FontAwesomeIcon
+            v-if="hasSubmenu"
+            :icon="faCaretRight"
+            class="p-icon p-submenu-icon"
+          />
         </span>
       </template>
     </MegaMenu>

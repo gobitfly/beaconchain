@@ -2,18 +2,24 @@
 import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
-  text?: string,
-  title?: string,
-  layout?: 'dark' | 'default'
-  position?: 'top' | 'left' | 'right' | 'bottom',
-  hide?: boolean,
-  tooltipClass?: string,
-  fitContent?: boolean,
-  renderTextAsHtml?: boolean,
+  text?: string
+  title?: string
+  layout?: 'special' | 'default'
+  position?: 'top' | 'left' | 'right' | 'bottom'
+  hide?: boolean
+  tooltipClass?: string
+  fitContent?: boolean
+  renderTextAsHtml?: boolean
   scrollContainer?: string // query selector for scrollable parent container
   dontOpenPermanently?: boolean
   hoverDelay?: number
+  tooltipWidth?: `${number}px` | `${number}%`
+  tooltipTextAlign?: 'left' | 'center' | 'right'
 }
+
+const toolTipTextAlignWithDefault = computed(
+  () => props.tooltipTextAlign || 'center',
+)
 
 const props = defineProps<Props>()
 const bcTooltipOwner = ref<HTMLElement | null>(null)
@@ -29,15 +35,32 @@ const slots = useSlots()
 const hasContent = computed(() => !!slots.tooltip || !!props.text)
 const canBeOpened = computed(() => !props.hide && hasContent.value)
 
-const { value: hover, bounce: bounceHover, instant: instantHover } = useDebounceValue<boolean>(false, 50)
-const { value: hoverTooltip, bounce: bounceHoverTooltip, instant: instantHoverTooltip } = useDebounceValue<boolean>(false, 50)
-const isSelected = computed(() => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value)
-const isOpen = computed(() => isSelected.value || hover.value || hoverTooltip.value)
+const {
+  value: hover,
+  bounce: bounceHover,
+  instant: instantHover,
+} = useDebounceValue<boolean>(false, 50)
+const {
+  value: hoverTooltip,
+  bounce: bounceHoverTooltip,
+  instant: instantHoverTooltip,
+} = useDebounceValue<boolean>(false, 50)
+const isSelected = computed(
+  () => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value,
+)
+const isOpen = computed(
+  () => isSelected.value || hover.value || hoverTooltip.value,
+)
 
 const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })
 
 const classList = computed(() => {
-  return [props.layout || 'default', props.position || 'bottom', isOpen.value ? 'open' : 'closed', props.fitContent ? 'fit-content' : '']
+  return [
+    props.layout || 'default',
+    props.position || 'bottom',
+    isOpen.value ? 'open' : 'closed',
+    props.fitContent ? 'fit-content' : '',
+  ]
 })
 
 const setPosition = () => {
@@ -54,9 +77,11 @@ const setPosition = () => {
     return
   }
   if (!tt) {
-    // we need to wait for the tt to be added to the dome to get it's measure, but we set the pos at an estimated value until then
+    // we need to wait for the tt to be added to the dome to get it's measure,
+    // but we set the pos at an estimated value until then
     tooltipAddedTimeout.value = setTimeout(setPosition, 10)
   }
+
   const ttWidth = tt?.width ?? 100
   const ttHeight = tt?.height ?? 60
   const padding = 4
@@ -75,18 +100,51 @@ const setPosition = () => {
       top = rect.top + rect.height / 2 - ttHeight / 2
       break
   }
-  left = Math.max(0, Math.min(left, (width.value - ttWidth)))
-  top = Math.max(0, Math.min(top, (height.value - ttHeight)))
+  left = Math.max(0, Math.min(left, width.value - ttWidth))
+  top = Math.max(0, Math.min(top, height.value - ttHeight))
   pos.value = { top: `${top}px`, left: `${left}px` }
+  if (bcTooltip.value) {
+    let centerX = -5 + Math.abs(left - rect.left) + rect.width / 2
+    if (rect.width > ttWidth) {
+      centerX = -5 + ttWidth / 2
+    }
+    let centerY = -5 + Math.abs(top - rect.top) + rect.height / 2
+    if (rect.height > ttHeight) {
+      centerY = -5 + ttHeight / 2
+    }
+    centerX = Math.max(5, Math.min(centerX, ttWidth - 5))
+    centerY = Math.max(5, Math.min(centerY, ttHeight - 5))
+    let afterLeft = centerX
+    let afterTop = -10
+    switch (props.position) {
+      case 'bottom':
+        break
+      case 'left':
+        afterLeft = ttWidth
+        afterTop = centerY
+        break
+      case 'top':
+        afterTop = ttHeight
+        break
+      case 'right':
+        afterLeft = -10
+        afterTop = centerY
+        break
+    }
+    bcTooltip.value.style.setProperty('--tt-after-left', `${afterLeft}px`)
+    bcTooltip.value.style.setProperty('--tt-after-top', `${afterTop}px`)
+  }
 }
 
 const handleClick = () => {
   if (isSelected.value) {
     doSelect(null)
-  } else if (canBeOpened.value) {
+  }
+  else if (canBeOpened.value) {
     if (props.dontOpenPermanently) {
       instantHover(true)
-    } else {
+    }
+    else {
       doSelect(bcTooltipOwner.value)
     }
     setPosition()
@@ -97,7 +155,8 @@ const onHover = () => {
   if (canBeOpened.value && !selected.value) {
     if (props.hoverDelay) {
       bounceHover(true, false, false, props.hoverDelay)
-    } else {
+    }
+    else {
       instantHover(true)
       setPosition()
     }
@@ -105,7 +164,10 @@ const onHover = () => {
 }
 
 const doHide = (event?: Event) => {
-  if (event?.target === bcTooltipOwner.value || isParent(bcTooltipOwner.value, event?.target as HTMLElement)) {
+  if (
+    event?.target === bcTooltipOwner.value
+    || isParent(bcTooltipOwner.value, event?.target as HTMLElement)
+  ) {
     return
   }
   removeParentListeners()
@@ -124,7 +186,8 @@ const checkScrollListener = (add: boolean) => {
     if (container) {
       if (add) {
         container.addEventListener('scroll', doHide)
-      } else {
+      }
+      else {
         container.removeEventListener('scroll', doHide)
       }
     }
@@ -140,13 +203,16 @@ const removeScrollParent = () => {
   scrollParents.forEach(elem => elem.removeEventListener('scroll', doHide))
 }
 
-watch(() => [props.title, props.text], () => {
-  if (isOpen.value) {
-    requestAnimationFrame(() => {
-      setPosition()
-    })
-  }
-})
+watch(
+  () => [props.title, props.text],
+  () => {
+    if (isOpen.value) {
+      requestAnimationFrame(() => {
+        setPosition()
+      })
+    }
+  },
+)
 
 const onWindowResize = () => {
   doHide()
@@ -163,7 +229,7 @@ watch(isOpen, (value) => {
   }
 })
 
-function removeParentListeners () {
+function removeParentListeners() {
   document.removeEventListener('click', doHide)
   document.removeEventListener('scroll', doHide)
   window.removeEventListener('resize', onWindowResize)
@@ -177,8 +243,8 @@ onUnmounted(() => {
     doSelect(null)
   }
 })
-
 </script>
+
 <template>
   <div
     ref="bcTooltipOwner"
@@ -189,8 +255,15 @@ onUnmounted(() => {
     @blur="bounceHover(false, false, true)"
   >
     <slot />
-    <Teleport v-if="isOpen" to="body">
-      <div class="bc-tooltip-wrapper" :style="pos" :class="tooltipClass">
+    <Teleport
+      v-if="isOpen"
+      to="body"
+    >
+      <div
+        class="bc-tooltip-wrapper"
+        :style="{ ...pos, ...{ width: tooltipWidth } }"
+        :class="tooltipClass"
+      >
         <div
           ref="bcTooltip"
           class="bc-tooltip"
@@ -257,12 +330,14 @@ onUnmounted(() => {
 .bc-tooltip {
   --tt-bg-color: var(--tooltip-background);
   --tt-color: var(--tooltip-text-color);
+  --tt-after-left: unset;
+  --tt-after-top: unset;
   position: relative;
   display: inline-flex;
   flex-wrap: wrap;
   opacity: 0;
   transition: opacity 1s;
-  text-align: center;
+  text-align: v-bind(toolTipTextAlignWithDefault);
   padding: 9px 12px;
   border-radius: var(--border-radius);
   background: var(--tt-bg-color);
@@ -271,9 +346,9 @@ onUnmounted(() => {
   pointer-events: none;
   max-width: 300px;
 
-  &.dark {
-    --tt-bg-color: var(--light-black);
-    --tt-color: var(--light-grey);
+  &.special {
+    --tt-bg-color: var(--light-grey-5);
+    --tt-color: var(--light-black);
     border: solid 1px var(--container-border-color);
   }
 
@@ -288,8 +363,8 @@ onUnmounted(() => {
     z-index: 1;
     pointer-events: none;
 
-    top: -10px;
-    left: calc(50% - 5px);
+    top: var(--tt-after-top);
+    left: var(--tt-after-left);
     border-color: transparent transparent var(--tt-bg-color) transparent;
   }
 
@@ -298,39 +373,31 @@ onUnmounted(() => {
     opacity: 1;
     pointer-events: unset;
 
-    &:not(.dark)::after {
+    &:not(.special)::after {
       opacity: 1;
     }
   }
 
   &.top {
     &::after {
-      top: 100%;
-      left: calc(50% - 5px);
       border-color: var(--tt-bg-color) transparent transparent transparent;
     }
-
   }
 
   &.right {
     &::after {
-      top: calc(50% - 5px);
-      left: -10px;
       border-color: transparent var(--tt-bg-color) transparent transparent;
     }
   }
 
   &.left {
     &::after {
-      top: calc(50% - 5px);
-      left: 100%;
       border-color: transparent transparent transparent var(--tt-bg-color);
     }
   }
 
   :deep(.bold),
   :deep(b) {
-    font-weight: bold;
     font-weight: var(--tooltip_text_bold_font_weight);
   }
 
@@ -341,6 +408,15 @@ onUnmounted(() => {
 
   &.fit-content {
     min-width: max-content;
+  }
+}
+
+.dark-mode {
+  .bc-tooltip {
+    &.special {
+      --tt-bg-color: var(--light-black);
+      --tt-color: var(--light-grey);
+    }
   }
 }
 </style>

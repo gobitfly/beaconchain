@@ -1,16 +1,18 @@
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 
-export function useValidatorDashboardGroups () {
+export function useValidatorDashboardGroups() {
   const { overview } = useValidatorDashboardOverviewStore()
-  const { t: $t } = useI18n()
+  const { t: $t } = useTranslation()
 
   const groups = computed<VDBOverviewGroup[]>(() => {
     if (!overview.value?.groups) {
-      return [{
-        id: 0,
-        name: $t('dashboard.group.selection.default'),
-        count: 0
-      }]
+      return [
+        {
+          id: 0,
+          name: $t('dashboard.group.selection.default'),
+          count: 0,
+        },
+      ]
     }
 
     return overview.value.groups

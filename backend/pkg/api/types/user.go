@@ -28,6 +28,21 @@ type EmailUpdate struct {
 
 type InternalPutUserEmailResponse ApiDataResponse[EmailUpdate]
 
+type AdConfigurationUpdateData struct {
+	JQuerySelector  string `json:"jquery_selector"`
+	InsertMode      string `json:"insert_mode"`
+	RefreshInterval uint64 `json:"refresh_interval"`
+	ForAllUsers     bool   `json:"for_all_users"`
+	BannerId        uint64 `json:"banner_id"`
+	HtmlContent     string `json:"html_content"`
+	Enabled         bool   `json:"enabled"`
+}
+
+type AdConfigurationData struct {
+	Key string `json:"key"`
+	*AdConfigurationUpdateData
+}
+
 type ProductCategory string
 
 const ProductCategoryApi ProductCategory = "api"
@@ -126,4 +141,12 @@ type StripeCreateCheckoutSession struct {
 
 type StripeCustomerPortal struct {
 	Url string `json:"url"`
+}
+
+type OAuthAppData struct {
+	ID          uint64 `db:"id"`
+	Owner       uint64 `db:"owner_id"`
+	AppName     string `db:"app_name"`
+	RedirectURI string `db:"redirect_uri"`
+	Active      bool   `db:"active"`
 }

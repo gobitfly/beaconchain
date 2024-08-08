@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 
 interface Props {
@@ -11,7 +11,10 @@ defineProps<Props>()
 <template>
   <div class="premium-products-container">
     <div class="premium-products-row">
-      <template v-for="product in products?.premium_products" :key="product.product_id_yearly">
+      <template
+        v-for="product in products?.premium_products"
+        :key="product.product_id_yearly"
+      >
         <PricingPremiumProductBox
           v-if="product.price_per_year_eur > 0"
           :product
@@ -20,7 +23,7 @@ defineProps<Props>()
       </template>
     </div>
     <div class="footnote">
-      {{ $t('pricing.excluding_vat') }}
+      {{ $t("pricing.excluding_vat") }}
     </div>
   </div>
 </template>
@@ -29,6 +32,7 @@ defineProps<Props>()
 .premium-products-container {
   width: 100%;
   max-width: fit-content;
+  margin-bottom: 38px;
 
   .premium-products-row {
     display: flex;
@@ -47,12 +51,11 @@ defineProps<Props>()
     justify-content: flex-end;
     margin-top: 4px;
   }
-
-  margin-bottom: 38px;
 }
 
 @media (max-width: 1360px) {
-  .premium-products-container{
+  .premium-products-container {
+    margin-bottom: 36px;
     .premium-products-row {
       gap: 10px;
     }
@@ -60,8 +63,6 @@ defineProps<Props>()
     .footnote {
       font-size: 8px;
     }
-
-    margin-bottom: 36px;
   }
 }
 </style>

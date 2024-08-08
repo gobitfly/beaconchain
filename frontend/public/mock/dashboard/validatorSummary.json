@@ -10,7 +10,7 @@
         "current_sync_count": 345,
         "slashed_count": 12
       },
-      "validators":{
+      "validators": {
         "online": 123124,
         "offline": 234,
         "exited": 22

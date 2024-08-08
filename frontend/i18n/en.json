@@ -48,9 +48,13 @@
     "and_more": "and {count} more",
     "live": "Live",
     "current": "Current",
-    "upcoming": "Upcoming", 
+    "upcoming": "Upcoming",
     "past": "Past",
-    "total": "Total"
+    "total": "Total",
+    "selected": "Selected",
+    "deselected": "Not selected",
+    "unavailable": "Unavailable",
+    "send": "Send"
   },
   "seo": {
     "title": "Open Source Ethereum Blockchain Explorer",
@@ -105,8 +109,10 @@
     "valid": "Valid"
   },
   "filter": {
+    "close": "Open Filter.",
+    "disabled": "Filter disabled.",
     "enabled": "Filter enabled.",
-    "disabled": "Filter disabled."
+    "open": "Close Filter."
   },
   "premium": {
     "title": "beaconcha.in Premium",
@@ -115,15 +121,16 @@
     "unlock": "Unlock Full Features"
   },
   "validator_state": {
-    "active": "active",
-    "withdrawn": "withdrawn",
-    "deposited": "deposited",
-    "online": "active",
-    "offline": "offline",
-    "pending": "pending",
+    "slashed": "slashed",
     "exited": "exited",
-    "exiting": "exiting",
-    "slashed": "slashed"
+    "deposited": "deposited",
+    "pending": "pending",
+    "slashing_offline": "slashing",
+    "slashing_online": "slashing",
+    "exiting_offline": "exiting",
+    "exiting_online": "exiting",
+    "active_offline": "active",
+    "active_online": "active"
   },
   "slot_state": {
     "orphaned": "Orphaned",
@@ -170,7 +177,7 @@
   },
   "slotViz": {
     "head": "Head",
-    "info_tootlip": "Slot Viz explanation",
+    "info_tootlip": "Click here for an extended information on how the slot visualization works",
     "filter": {
       "attestation": "If enabled, attestations will be shown.",
       "proposal": "If enabled, blocks will be shown.",
@@ -295,13 +302,110 @@
     "title": "Notifications",
     "login_question": "Do you want to login to set notifications?",
     "manage": "Manage Notifications",
-    "tabs":{
+    "tabs": {
       "general": "General",
       "dashboards": "Dashboards",
       "machines": "Machines",
       "clients": "Clients",
       "rocketpool": "Rocket Pool",
       "network": "Network"
+    },
+    "subscriptions": {
+      "dialog_title": "Edit Subscriptions",
+      "validators": {
+        "explanation": "All notifications are sent after network finality (~{count} min).",
+        "is_validator_offline_subscribed": {
+          "option": "Validator is offline",
+          "hint": [
+            "We will trigger a notification:",
+            "Once the validator has been offline for 3 epochs.",
+            "Every 32 Epochs (~3 hours) during your downtime.",
+            "Once you are back online again."
+          ]
+        },
+        "group_offline_threshold": {
+          "option": "Group is offline",
+          "hint": [
+            "We will trigger a notification:",
+            "Once validators in your group are offline. | Once {count}% of your group is offline. | Once {count}% of your group is offline.",
+            "Once you have been offline for 3 epochs.",
+            "Every 32 Epochs (~3 hours) during your downtime.",
+            "Once you are back online.",
+            "Note:",
+            "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
+          ],
+          "placeholder": ""
+        },
+        "is_attestations_missed_subscribed": {
+          "option": "Attestations missed",
+          "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime."
+        },
+        "is_block_proposal_subscribed": {
+          "option": "Block proposal (missed & success)"
+        },
+        "is_upcoming_block_proposal_subscribed": {
+          "option": "Upcoming block proposal",
+          "hint": "May trigger false positive notifications during reorgs."
+        },
+        "is_sync_subscribed": {
+          "option": "Sync committee"
+        },
+        "is_withdrawal_processed_subscribed": {
+          "option": "Withdrawal processed"
+        },
+        "is_slashed_subscribed": {
+          "option": "Validator got slashed"
+        },
+        "is_real_time_mode_enabled": {
+          "option": "Realtime mode",
+          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications."
+        },
+        "all": {
+          "option": "All events"
+        }
+      },
+      "accounts": {
+        "explanation": "",
+        "is_incoming_transactions_subscribed": {
+          "option": "Incoming transactions"
+        },
+        "is_outgoing_transactions_subscribed": {
+          "option": "Outgoing transactions"
+        },
+        "is_erc20_token_transfers_subscribed": {
+          "option": "ERC20 token transfers"
+        },
+        "erc20_token_transfers_value_threshold": {
+          "option": "ERC20 token transfers",
+          "placeholder": "value ≥ $0"
+        },
+        "is_erc721_token_transfers_subscribed": {
+          "option": "ERC721 token transfers"
+        },
+        "is_erc1155_token_transfers_subscribed": {
+          "option": "ERC1155 token transfers"
+        },
+        "all": {
+          "option": "All events"
+        },
+        "subscribed_chain_ids": {
+          "option": "Networks"
+        },
+        "is_ignore_spam_transactions_enabled": {
+          "option": "Ignore spam transactions",
+          "hint": [
+            "Ignores",
+            "zero value transfer tx's",
+            "and token tx's that have the",
+            "\"hidden\" token label",
+            "."
+          ]
+        }
+      },
+      "button": "Close",
+      "error_title": "Error",
+      "error_group": "Notification subscriptions",
+      "error_message": "We could not save your preferences."
     },
     "management": {
       "title": "Manage Notifications"
@@ -312,6 +416,36 @@
       "subscriptions": "Subscriptions",
       "webhook": "Webhook",
       "networks": "Networks"
+    },
+    "general": {
+      "do_not_disturb": "Do not disturb",
+      "mute": {
+        "all": "Mutes all notifications",
+        "unmute": "Unmute",
+        "until": "Muted until {date}",
+        "until_turned_on": "Muted until turned back on",
+        "select_duration": "Select mute duration",
+        "hours": "{count} hour|{count} hours",
+        "until_i_turn_on": "Until I turn it back on"
+      },
+      "email_notifications": "Email Notifications",
+      "push_notifications": "Push Notifications",
+      "send_test_email": "Send Test E-Mail",
+      "send_test_push": "Send Test Push Notification",
+      "test_notification_error": {
+        "toast_title": "Error",
+        "toast_group": "An error occurred while sending the test notification",
+        "toast_message": "Please try again."
+      },
+      "download_app": ["Download the", "mobile app", "to activate"],
+      "paired_devices": {
+        "title": "Paired Devices",
+        "device": "Device",
+        "mobile_notifications": "Mobile notifications",
+        "grant_account_access": "Grant account access (required)",
+        "paired_date": "Paired: {date}",
+        "unknown": "Unknown"
+      }
     },
     "dashboards": {
       "title": "Dashboards",
@@ -341,9 +475,33 @@
           "accounts": "Accounts ({count} Subscription) |Accounts ({count} Subscriptions)",
           "accounts_shortened": "Accounts ({count} Sub) |Accounts ({count} Subs)"
         }
+      },
+      "dialog": {
+        "button_webhook_test": "Send Test Notification",
+        "heading_webhook": "Edit Webhook",
+        "info_send_via_discord": {
+          "template": "Enable this to receive notifications via Discord. Ensure you have a {_link} set up.",
+          "_link": "Discord webhook"
+        },
+        "label_webhook_url": "Webhook URL",
+        "label_send_via_discord": "Send via Discord",
+        "placeholder_webhook": "https://webhook.example.com/id"
+      },
+      "toast": {
+        "success": {
+          "test_webhook_url": "Webhook send successfully",
+          "test_discord": "Discord webhook send successfully"
+        },
+        "error": {
+          "webhook_url": "Webhook could not be sent successfully",
+          "discord": "Discord webhook could not be sent successfully."
+        }
       }
-        
     }
+  },
+  "rocketpool": {
+    "mode": "RP Mode",
+    "tooltip": "Enables Rocket Pool stats for this dashboard"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -354,7 +512,14 @@
     "share": "Share",
     "shared": "Shared",
     "share_dashboard": "Share Dashboard",
+    "shared_dashboard": "Shared Dashboard",
     "delete_dashboard": "Delete Dashboard",
+    "rename_dashboard": "Rename Dashboard",
+    "header": {
+      "manage": "Manage",
+      "validator": "Validator",
+      "account": "Account"
+    },
     "rename": {
       "title": "Rename Dashboard"
     },
@@ -414,7 +579,7 @@
     "deletion": {
       "delete": {
         "title": "Delete Dashboard",
-        "text": "This will delete dashboard {dashboard} from the archive and is irreversible.",
+        "text": "This will permanently delete the dashboard {dashboard}.",
         "no_label": "Cancel",
         "yes_label": "Delete Dashboard"
       },
@@ -456,9 +621,15 @@
           "proposal_proposed": "Proposed",
           "proposal_missed": "Missed",
           "exiting": "Exiting",
-          "exited":"Exited",
-          "withdrawing":"Withdrawing",
-          "withdrawn":"Withdrawn"
+          "exited": "Exited",
+          "withdrawing": "Withdrawing",
+          "withdrawn": "Withdrawn",
+          "slashing": "Slashing",
+          "slashed": "Slashed",
+          "exited_withdrawing": "Exited [Withdrawing]",
+          "exited_withdrawn": "Exited [Withdrawn]",
+          "slashed_withdrawing": "Slashed [Withdrawing]",
+          "slashed_withdrawn": "Slashed [Withdrawn]"
         }
       },
       "blocks": {
@@ -584,6 +755,7 @@
           "all_groups": "All Groups",
           "average": "Network Average",
           "total": "Total",
+          "no_data": "No chart data",
           "efficiency": {
             "all": "Efficiency",
             "attestation": "Attestation Eff.",
@@ -591,14 +763,14 @@
             "proposal": "Proposal Eff."
           }
         },
-        "tooltip":{
+        "tooltip": {
           "lower": "{name}'s efficiency is below the network average of {average}",
           "higher": "{name}'s efficiency is above the network average of {average}",
-          "equal":"{name}'s OVH’s efficiency is at the network average of {average}",
+          "equal": "{name}'s efficiency is at the network average of {average}",
           "amount_of_validators": "(amount of validators)",
           "amount_of_rounds": "(amount of rounds)",
           "estimated_loss": "Estimated loss based on avg. network performance.",
-          "live": "Validators missing three consecutive attestations are considered offline."
+          "live": "Validators missing two consecutive attestations are considered offline."
         }
       },
       "tabs": {
@@ -634,26 +806,25 @@
     }
   },
   "login_and_register": {
-    "title_login": "Log in",
+    "title_login": "Sign in",
     "title_register": "Sign up",
-    "text1_register": "Sign up to beaconcha.in",
-    "text2_register": "to manage and monitor your validators.",
     "submit_login": "Log in",
     "submit_register": "Sign up",
     "email": "Email address",
     "password": "Password",
+    "forgotten": "Forgot password?",
     "choose_password": "Choose a password",
     "confirm_password": "Confirm your password",
-    "please_agree": ["I agree to the", "Terms and Conditions", "and", "Privacy Policy"],
+    "please_agree": ["I agree to the", "T&C", "and", "Privacy Policy"],
     "error_title": "Error",
     "error_login_group": "Cannot log in",
     "error_login_message": "your email or your password is unknown.",
     "error_register_group": "Cannot sign up",
     "error_register_message": "An error of communication with the served happened.",
-    "dont_have_account": "You do not have an account?",
-    "signup_here": "Click here to sign up.",
-    "already_have_account": "You already have an account?",
-    "login_here": "Click here to log in."
+    "dont_have_account": "Don't have an account?",
+    "signup_here": "Register",
+    "already_have_account": "Already have an account?",
+    "login_here": "Log in"
   },
   "header": {
     "current_slot": "Current Slot",
@@ -892,7 +1063,7 @@
       "button": "Delete My Account",
       "dialog": {
         "title": "Delete Account",
-        "warning": "This will delete your account from the archive and is irreversible.",
+        "warning": "This will permanently delete your account: {email}",
         "no_label": "Cancel",
         "yes_label": "Delete Account"
       }
@@ -906,18 +1077,24 @@
     "years": "{amount} year | {amount} years"
   },
   "validation": {
-    "email" : {
-      "empty": "Please enter your email address.",
-      "invalid": "Please enter a valid email address.",
-      "no_match": "The email addresses don't match."
+    "email": {
+      "empty": "Please provide your email address.",
+      "invalid": "Please provide a valid email address.",
+      "no_match": "The email addresses do not match."
     },
     "password": {
       "empty": "Please enter your password.",
-      "min": "Your password must contain at least {amount} characters.",
-      "max": "Your password must contain at most {amount} characters.",
-      "no_match": "The passwords don't match.",
+      "min": "Please provide at least {amount} characters.",
+      "max": "Please provide at most {amount} characters.",
+      "no_match": "The passwords do not match yet.",
       "not_new": "The new password must differ from the old one."
     },
-    "tos_not_agreed": "Please accept the ToS & Privacy Policy."
+    "url": {
+      "invalid": "Please enter a valid URL."
+    },
+    "webhook": {
+      "empty": "Please provide a webhook URL.",
+      "discord_empty": "Please provide a webhook URL for discord."
+    }
   }
 }

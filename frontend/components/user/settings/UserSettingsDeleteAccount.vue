@@ -3,8 +3,9 @@ import { BcDialogConfirm } from '#components'
 import { API_PATH } from '~/types/customFetch'
 
 const dialog = useDialog()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
+const { user } = useUserStore()
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
@@ -12,12 +13,14 @@ const onDelete = () => {
   dialog.open(BcDialogConfirm, {
     data: {
       title: $t('user_settings.delete_account.dialog.title'),
-      question: $t('user_settings.delete_account.dialog.warning'),
+      question: $t('user_settings.delete_account.dialog.warning', {
+        email: user.value?.email || $t('common.unavailable'),
+      }),
       noLabel: $t('user_settings.delete_account.dialog.no_label'),
       yesLabel: $t('user_settings.delete_account.dialog.yes_label'),
-      severity: 'danger'
+      severity: 'danger',
     },
-    onClose: response => response?.data && deleteAction()
+    onClose: response => response?.data && deleteAction(),
   })
 }
 
@@ -30,28 +33,33 @@ const deleteAction = async () => {
   await fetch(API_PATH.USER_DELETE)
   await navigateTo('/')
 }
-
 </script>
 
 <template>
   <div class="subscriptions-container">
     <div class="title">
-      {{ $t('user_settings.delete_account.title') }}
+      {{ $t("user_settings.delete_account.title") }}
     </div>
     <div class="content-container">
       <div class="warning">
-        {{ $t('user_settings.delete_account.warning') }}
+        {{ $t("user_settings.delete_account.warning") }}
       </div>
       <div class="button-container">
-        <Button :label="$t('user_settings.delete_account.button')" :disabled="buttonsDisabled" severity="danger" class="delete-button" @click="onDelete" />
+        <Button
+          :label="$t('user_settings.delete_account.button')"
+          :disabled="buttonsDisabled"
+          severity="danger"
+          class="delete-button"
+          @click="onDelete"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/fonts.scss";
 
 .subscriptions-container {
   display: flex;

@@ -37,6 +37,7 @@ type Address struct {
 	Hash Hash   `json:"hash"`
 	Ens  string `json:"ens,omitempty"`
 }
+
 type LuckItem struct {
 	Percent  float64       `json:"percent"`
 	Expected time.Time     `json:"expected"`
@@ -63,6 +64,12 @@ type PeriodicValues[T any] struct {
 	Last24h T `json:"last_24h"`
 	Last7d  T `json:"last_7d"`
 	Last30d T `json:"last_30d"`
+}
+
+type PercentageDetails[T any] struct {
+	Percentage float64 `json:"percentage"`
+	MinValue   T       `json:"min_value"`
+	MaxValue   T       `json:"max_value"`
 }
 
 type ChartSeries[I int | string, D float64 | decimal.Decimal] struct {
@@ -130,4 +137,9 @@ type ChartHistorySeconds struct {
 	Hourly uint64 `json:"hourly"`
 	Daily  uint64 `json:"daily"`
 	Weekly uint64 `json:"weekly"`
+}
+
+type IndexBlocks struct {
+	Index  uint64   `json:"index"`
+	Blocks []uint64 `json:"blocks"`
 }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 interface Props {
-  direction?: 'left'| 'right'| 'top' | 'bottom'
+  direction?: 'left' | 'right' | 'top' | 'bottom'
 }
 const props = defineProps<Props>()
 </script>
+
 <template>
   <svg
     class="chevron"
@@ -20,6 +21,7 @@ const props = defineProps<Props>()
     />
   </svg>
 </template>
+
 <style lang="scss" scoped>
 .chevron {
   transform: rotate(-90deg);

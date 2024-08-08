@@ -41,6 +41,9 @@ var DBPGX *pgxpool.Conn
 var WriterDb *sqlx.DB
 var ReaderDb *sqlx.DB
 
+var UserReader *sqlx.DB
+var UserWriter *sqlx.DB
+
 var AlloyReader *sqlx.DB
 var AlloyWriter *sqlx.DB
 

@@ -1,6 +1,6 @@
 import type { HashTabs } from '~/types/hashTabs'
 
-export function useHashTabs (tabs: HashTabs) {
+export function useHashTabs(tabs: HashTabs) {
   const activeIndex = ref(-1)
   const { hash: initialHash } = useRoute()
 
@@ -27,25 +27,32 @@ export function useHashTabs (tabs: HashTabs) {
 
   onMounted(() => {
     const hash = initialHash?.replace('#', '')
-    activeIndex.value = hash && tabs[hash] && !tabs[hash].disabled ? tabs[hash].index : findFirstValidIndex()
+    activeIndex.value
+      = hash && tabs[hash] && !tabs[hash].disabled
+        ? tabs[hash].index
+        : findFirstValidIndex()
   })
 
   const updateHash = (index: number) => {
-    if (process.server) {
+    if (isServer) {
       return
     }
     window.location.hash = findHashForIndex(index)
   }
 
-  watch(activeIndex, (index) => {
-    if (process.server && index < 0) {
-      return
-    }
-    updateHash(index)
-  }, { immediate: true })
+  watch(
+    activeIndex,
+    (index) => {
+      if (isServer && index < 0) {
+        return
+      }
+      updateHash(index)
+    },
+    { immediate: true },
+  )
 
   const setActiveIndex = (index: number) => {
-    if (process.server) {
+    if (isServer) {
       return
     }
     activeIndex.value = index

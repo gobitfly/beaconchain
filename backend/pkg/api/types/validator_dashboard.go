@@ -32,6 +32,11 @@ type VDBOverviewData struct {
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 
+type VDBPostArchivingReturnData struct {
+	Id         uint64 `json:"id"`
+	IsArchived bool   `json:"is_archived"`
+}
+
 // ------------------------------------------------------------
 // Summary Tab
 
@@ -90,6 +95,11 @@ type VDBGroupSummaryData struct {
 	Apr ClElValue[float64] `json:"apr"`
 
 	Luck Luck `json:"luck"`
+
+	RocketPool struct {
+		Minipools  uint64  `json:"minipools"`
+		Collateral float64 `json:"collateral"`
+	} `json:"rocket_pool,omitempty"`
 }
 type InternalGetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
@@ -102,7 +112,7 @@ type VDBSummaryValidator struct {
 	DutyObjects []uint64 `json:"duty_objects,omitempty"`
 }
 type VDBSummaryValidatorsData struct {
-	Category   string                `json:"category" tstype:"'online' | 'offline' | 'pending' | 'deposited' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: online, offline, pending, deposited, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
+	Category   string                `json:"category" tstype:"'deposited' | 'online' | 'offline' | 'slashing' | 'slashed' | 'exited' | 'withdrawn' | 'pending' | 'exiting' | 'withdrawing' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed'" faker:"oneof: deposited, online, offline, slashing, slashed, exited, withdrawn, pending, exiting, withdrawing, sync_current, sync_upcoming, sync_past, has_slashed, got_slashed, proposal_proposed, proposal_missed"`
 	Validators []VDBSummaryValidator `json:"validators"`
 }
 
@@ -270,13 +280,66 @@ type VDBTotalWithdrawalsData struct {
 type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithdrawalsData]
 
 // ------------------------------------------------------------
+// Rocket Pool Tab
+type VDBRocketPoolTableRow struct {
+	Node      Address         `json:"node"`
+	StakedEth decimal.Decimal `json:"staked_eth"`
+	Minipools struct {
+		Total uint64 `json:"total"`
+		Leb16 uint64 `json:"leb_16"`
+		Leb8  uint64 `json:"leb_8"`
+	} `json:"minipools"`
+	Collateral    PercentageDetails[decimal.Decimal] `json:"collateral"`
+	AvgCommission float64                            `json:"avg_commission"`
+	Rpl           struct {
+		Claimed   decimal.Decimal `json:"claimed"`
+		Unclaimed decimal.Decimal `json:"unclaimed"`
+	} `json:"rpl"`
+	EffectiveRpl  decimal.Decimal `json:"effective_rpl"`
+	RplApr        float64         `json:"rpl_apr"`
+	SmoothingPool struct {
+		IsOptIn   bool            `json:"is_opt_in"`
+		Claimed   decimal.Decimal `json:"claimed"`
+		Unclaimed decimal.Decimal `json:"unclaimed"`
+	} `json:"smoothing_pool"`
+}
+type InternalGetValidatorDashboardRocketPoolResponse ApiPagingResponse[VDBRocketPoolTableRow]
+
+type InternalGetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBRocketPoolTableRow]
+
+type VDBNodeRocketPoolData struct {
+	Timezone      string          `json:"timezone"`
+	RefundBalance decimal.Decimal `json:"refund_balance"`
+	DepositCredit decimal.Decimal `json:"deposit_credit"`
+	Penalties     uint64          `json:"penalties"`
+	RplStake      struct {
+		Min decimal.Decimal `json:"min"`
+		Max decimal.Decimal `json:"max"`
+	} `json:"rpl_stake"`
+}
+
+type InternalGetValidatorDashboardNodeRocketPoolResponse ApiDataResponse[VDBNodeRocketPoolData]
+
+type VDBRocketPoolMinipoolsTableRow struct {
+	Node             Address         `json:"node"`
+	ValidatorIndex   uint64          `json:"validator_index"`
+	MinipoolStatus   string          `json:"minipool_status" tstype:"'initialized' | 'prelaunch' | 'staking' | 'withdrawable' | 'dissolved'" faker:"oneof: initialized, prelaunch, staking, withdrawable, dissolved"`
+	ValidatorStatus  string          `json:"validator_status" tstype:"'slashed' | 'exited' | 'deposited' | 'pending' | 'slashing_offline' | 'slashing_online' | 'exiting_offline' | 'exiting_online' | 'active_offline' | 'active_online'" faker:"oneof: slashed, exited, deposited, pending, slashing_offline, slashing_online, exiting_offline, exiting_online, active_offline, active_online"`
+	GroupId          uint64          `json:"group_id"`
+	Deposit          decimal.Decimal `json:"deposit"`
+	Commission       float64         `json:"commission"`
+	CreatedTimestamp int64           `json:"created_timestamp"`
+}
+type InternalGetValidatorDashboardRocketPoolMinipoolsResponse ApiPagingResponse[VDBRocketPoolMinipoolsTableRow]
+
+// ------------------------------------------------------------
 // Manage Modal
 type VDBManageValidatorsTableRow struct {
 	Index                uint64          `json:"index"`
 	PublicKey            PubKey          `json:"public_key"`
 	GroupId              uint64          `json:"group_id"`
 	Balance              decimal.Decimal `json:"balance"`
-	Status               string          `json:"status" tstype:"'pending' | 'online' | 'offline' | 'exiting' | 'exited' | 'slashed' | 'withdrawn'" faker:"oneof: pending, online, offline, exiting, exited, slashed, withdrawn"`
+	Status               string          `json:"status" tstype:"'slashed' | 'exited' | 'deposited' | 'pending' | 'slashing_offline' | 'slashing_online' | 'exiting_offline' | 'exiting_online' | 'active_offline' | 'active_online'" faker:"oneof: slashed, exited, deposited, pending, slashing_offline, slashing_online, exiting_offline, exiting_online, active_offline, active_online"`
 	QueuePosition        *uint64         `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 }

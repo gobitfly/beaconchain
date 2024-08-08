@@ -4,9 +4,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import BcTooltip from '../BcTooltip.vue'
 
 interface Props {
-  icon?: IconDefinition,
-  falseIcon?: IconDefinition,
-  tooltip?: string,
+  icon?: IconDefinition
+  falseIcon?: IconDefinition
+  disabled?: boolean
+  tooltip?: string
+  readonlyClass?: string
 }
 
 const props = defineProps<Props>()
@@ -19,19 +21,49 @@ const icon = computed(() => {
 </script>
 
 <template>
-  <BcTooltip :dont-open-permanently="true" :hover-delay="350">
+  <BcTooltip
+    :dont-open-permanently="true"
+    :hover-delay="350"
+  >
     <template #tooltip>
-      <div class="button-tooltip">
-        <div v-if="tooltip" class="individual">
+      <div
+        class="button-tooltip"
+        :class="readonlyClass"
+      >
+        <div
+          v-if="tooltip"
+          class="individual"
+        >
           {{ tooltip }}
         </div>
-        <div>{{ selected ? $t('filter.enabled'): $t('filter.disabled') }}</div>
+        <div v-if="readonlyClass !== 'read-only'">
+          {{
+            disabled
+              ? $t("common.unavailable")
+              : selected
+                ? $t("filter.enabled")
+                : $t("filter.disabled")
+          }}
+        </div>
       </div>
     </template>
-    <ToggleButton v-model="selected" class="bc-toggle" on-label="''" off-icon="''">
+    <ToggleButton
+      v-model="selected"
+      class="bc-toggle"
+      :class="readonlyClass"
+      on-label="''"
+      off-icon="''"
+      :disabled="disabled || readonlyClass === 'read-only'"
+    >
       <template #icon="slotProps">
-        <slot name="icon" v-bind="slotProps">
-          <FontAwesomeIcon v-if="icon" :icon="icon" />
+        <slot
+          name="icon"
+          v-bind="slotProps"
+        >
+          <FontAwesomeIcon
+            v-if="icon"
+            :icon="icon"
+          />
         </slot>
       </template>
     </ToggleButton>
@@ -39,30 +71,37 @@ const icon = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.button-tooltip{
+.button-tooltip {
   width: max-content;
   text-align: left;
-  .individual{
+  .individual::not(.read-only) {
     margin-bottom: var(--padding);
   }
 }
 .bc-toggle {
+  min-width: 30px;
+  min-height: 30px;
   &.p-button {
     &.p-togglebutton {
-      width: 30px;
-      height: 30px;
       padding: 2px;
       border-style: none;
       color: var(--container-color);
       background-color: var(--container-border-color);
 
-      &:not(.p-highlight) {
+      &:not(.p-highlight),
+      &.read-only {
         background-color: var(--container-background);
       }
 
       // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
       :deep(.p-button-label) {
         display: none;
+      }
+      &.p-disabled {
+        cursor: default;
+        &:not(.read-only) {
+          opacity: 0.5;
+        }
       }
     }
   }

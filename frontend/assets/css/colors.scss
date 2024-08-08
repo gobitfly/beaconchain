@@ -11,25 +11,35 @@
   --light-grey-3: #d3d3d3;
   --light-grey-4: #dddddd;
   --light-grey-5: #eaeaea;
+  --light-grey-6: #e9e9e9;
+  --light-grey-7: #c0c0c0;
   --dark-grey: #5c4e4e;
   --very-dark-grey: #362f32;
+  --very-dark-grey-2: #444142;
   --asphalt: #484f56;
   --graphite: #343a40;
   --almost-black: #232024;
   --light-black: #2a262c;
   --dark-blue: #2f2e42;
   --purple-blue: #3e4461;
-  --light-purple-blue: #545C7E;
-  --blue: #2e82ae;
+  --light-purple-blue: #545c7e;
+  --sky-blue: #cde3ee;
   --light-blue: #66bce9;
-  --melllow-blue: #7DB5EC;
+  --melllow-blue: #7db5ec;
+  --blue: #2e82ae;
+  --teal-blue: #116897;
+  --mint-green: #d3e4d4;
   --flashy-green: #90ed7d;
   --light-green: #4e7451;
   --green: #7dc382;
+  --dark-green: #346f39;
   --flashy-red: #f3454a;
   --light-red: #d42127;
   --dark-red: #ce3438;
+  --bold-red: #b10b11;
+  --pastel-red: #f1c5c6;
   --yellow: #ffd600;
+  --light-yellow: #969100;
   --purple: #9747ff;
   --light-orange: #e77f27;
   --orange: #f7a35c;
@@ -40,6 +50,7 @@
   --orange-color: var(--light-orange);
   --black-transparent-3: rgba(0, 0, 0, 0.3);
 
+@mixin default {
   --primary-contrast-color: var(--grey-4);
   --primary-contrast-color-discreet: var(--light-grey-5);
 
@@ -51,17 +62,22 @@
   --text-color-inverted: var(--light-grey);
   --text-color-disabled: var(--grey);
   --text-color-discreet: var(--dark-grey);
+  --text-color--error: var(--flashy-red);
 
   --button-color-active: var(--primary-orange);
   --button-color-hover: var(--primary-orange-hover);
   --button-color-pressed: var(--primary-orange-pressed);
   --button-color-disabled: var(--grey);
-  --button-color-dark-pattern: var(--light-grey-2);
   --button-color-dangerous: var(--flashy-red);
   --button-color-dangerous-hover: var(--dark-red);
-  --button-text-color-dark-pattern: var(--light-black);
   --button-text-color-disabled: var(--grey-4);
   --button-text-color-dangerous: var(--white);
+
+  --button-secondary-color: var(--light-black);
+  --button-secondary-hover-color: var(--light-grey-6);
+  --button-secondary-background-color--hover: var(--light-grey-4);
+  --button-secondary-background-color: var(--grey-4);
+  --button-secondary-border-color: var(--light-grey-7);
 
   --checkbox-background-color: var(--light-grey-4);
 
@@ -69,7 +85,7 @@
   --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
   --container-border: 1px solid var(--container-border-color);
-  
+
   --subcontainer-background: var(--light-grey-2);
 
   --input-background: var(--grey-4);
@@ -91,12 +107,12 @@
   --searchbar-networkdropdown-bground-blue: var(--light-grey);
   --searchbar-networkdropdown-border-blue: var(--light-grey-3);
   --dropdown-background-hover: var(--grey);
-  --tooltip-background: var(--light-grey-2);
+  --tooltip-background: var(--light-grey-3);
   --tooltip-text-color: var(--light-black);
 
   --link-color: var(--blue);
 
-  --equal-color: var(--yellow);
+  --equal-color: var(--light-yellow);
   --negative-color: var(--light-red);
   --negative-contrast-color: var(--text-color-inverted);
   --positive-color: var(--light-green);
@@ -122,9 +138,29 @@
   --list-hover-color: var(--light-grey);
   --list-hover-descrete-color: var(--light-grey-5);
 
-  --toggle-button-slider-color: var(--light-grey);
+  --switch-slider-color: var(--light-grey);
+  --switch-color-disabled: var(--dark-grey);
+  --switch-color-disabled-hover: var(--very-dark-grey-2);
+
+  --toast-background-color-success: var(--dark-green);
+  --toast-background-success-color: var(--mint-green);
+  --toast-border-sucess-color: var(--dark-green);
+
+  --toast-message-info-color: var(--teal-blue);
+  --toast-background-info-color: var(--sky-blue);
+  --toast-border-info-color: var(--teal-blue);
+
+  --toast-message-error-color: var(--bold-red);
+  --toast-background-error-color: var(--pastel-red);
+  --toast-border-error-color: var(--bold-red);
+}
+
+  &.light-mode {
+    @include default;
+  }
 
   &.dark-mode {
+    @include default;
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
     --primary-contrast-color-discreet: var(--dark-grey);
@@ -143,11 +179,17 @@
     --button-color-hover: var(--primary-orange-hover);
     --button-color-pressed: var(--primary-orange-pressed);
     --button-color-disabled: var(--grey);
-    --button-color-dark-pattern: var(--light-grey);
     --button-text-color-disabled: var(--light-grey);
     --button-text-color-dangerous: var(--light-grey);
 
+    --button-secondary-color: var(--light-grey);
+    --button-secondary-hover-color: var(--light-black);
+    --button-secondary-background-color--hover: var(--light-black);
+    --button-secondary-background-color: var(--very-dark-grey);
+    --button-secondary-border-color: var(--dark-grey);
+
     --checkbox-background-color: var(--light-grey);
+    --checkbox-border-color: var(--dark-grey);
 
     --container-background: var(--light-black);
     --container-color: var(--grey-4);
@@ -164,11 +206,12 @@
     --searchbar-text-detail-default: var(--grey);
     --searchbar-filter-unselected-default: var(--light-grey);
     --dropdown-background-hover: var(--dark-grey);
-    --tooltip-background: var(--light-grey);
-    --tooltip-text-color: var(--light-black);
+    --tooltip-background: var(--dark-grey);
+    --tooltip-text-color: var(--light-grey);
 
     --link-color: var(--light-blue);
 
+    --equal-color: var(--yellow);
     --negative-color: var(--flashy-red);
     --negative-contrast-color: var(--text-color);
     --positive-color: var(--green);

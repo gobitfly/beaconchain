@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import type { Currency } from '~/types/currencies'
 
-const { currency, withLabel, setCurrency } = useCurrency()
+defineProps<{
+  showCurrencyIcon: boolean
+}>()
 
+const { currency, withLabel, setCurrency } = useCurrency()
 </script>
 
 <template>
@@ -15,10 +18,15 @@ const { currency, withLabel, setCurrency } = useCurrency()
     @update:model-value="(currency: Currency) => setCurrency(currency)"
   >
     <template #value>
-      <span class="item in-header ">
-        <span class="icon">
-          <IconCurrency v-if="currency" :currency="currency" />
-        </span>{{ currency }}
+      <span class="item in-header">
+        <span
+          v-if="showCurrencyIcon"
+          class="icon"
+        >
+          <IconCurrency
+            v-if="currency"
+            :currency="currency"
+          /> </span>{{ currency }}
       </span>
     </template>
     <template #option="slotProps">

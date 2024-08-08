@@ -1,5 +1,11 @@
-export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> | ComputedRef<string | number | undefined>, removeDynamicUrlValue = false) {
-  const { t: $t } = useI18n()
+export function useBcSeo(
+  pageTitle?:
+    | string
+    | Ref<string | number | undefined>
+    | ComputedRef<string | number | undefined>,
+  removeDynamicUrlValue = false,
+) {
+  const { t: $t } = useTranslation()
   const route = useRoute()
   const { networkInfo } = useNetworkStore()
 
@@ -8,8 +14,17 @@ export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> 
   const url = 'https://beaconcha.in'
   const logo = `${url}/img/logo.png`
   const ogUrl = () => {
-    const value = removeDynamicUrlValue && Object.values(route.params).find(v => !!v && typeof v === 'string' && route.fullPath.endsWith(v))
-    const path = value ? route.fullPath.substring(0, route.fullPath.lastIndexOf(value as string) - 1) : route.fullPath
+    const value
+      = removeDynamicUrlValue
+      && Object.values(route.params).find(
+        v => !!v && typeof v === 'string' && route.fullPath.endsWith(v),
+      )
+    const path = value
+      ? route.fullPath.substring(
+        0,
+        route.fullPath.lastIndexOf(value as string) - 1,
+      )
+      : route.fullPath
     return `${url}${path}`
   }
   // Maybe we want to have page specific description and keywords in the future, but for now we keep it simple
@@ -21,10 +36,17 @@ export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> 
     const parts: string[] = [$t('seo.title'), 'beaconcha.in', year.toString()]
     if (typeof pageTitle === 'string') {
       parts.splice(0, 0, $t(pageTitle))
-    } else if (pageTitle?.value) {
+    }
+    else if (pageTitle?.value) {
       parts.splice(0, 0, `${pageTitle.value}`)
     }
-    return networkInfo.value.description + ' ' + networkInfo.value.name + ' ' + parts.join(' - ')
+    return (
+      networkInfo.value.description
+      + ' '
+      + networkInfo.value.name
+      + ' '
+      + parts.join(' - ')
+    )
   }
 
   useSeoMeta({
@@ -43,6 +65,6 @@ export function useBcSeo (pageTitle?: string | Ref<string | number | undefined> 
     twitterTitle: dynamicTitle,
     twitterDescription: description,
     twitterImage: logo,
-    twitterImageAlt: imageAlt
+    twitterImageAlt: imageAlt,
   })
 }

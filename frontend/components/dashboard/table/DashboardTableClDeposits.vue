@@ -11,12 +11,22 @@ const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { slotToEpoch } = useNetworkStore()
 
-const { deposits, query: lastQuery, getDeposits, getTotalAmount, totalAmount, isLoadingDeposits, isLoadingTotal } = useValidatorDashboardClDepositsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const {
+  deposits,
+  query: lastQuery,
+  getDeposits,
+  getTotalAmount,
+  totalAmount,
+  isLoadingDeposits,
+  isLoadingTotal,
+} = useValidatorDashboardClDepositsStore()
+const { value: query, bounce: setQuery } = useDebounceValue<
+  TableQueryParams | undefined
+>(undefined, 500)
 
 const { overview, hasValidators } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
@@ -29,7 +39,7 @@ const colsVisible = computed(() => {
     epoch: width.value >= 1000,
     slot: width.value >= 900,
     withdrawalCredentials: width.value >= 800,
-    publicKey: width.value >= 700
+    publicKey: width.value >= 700,
   }
 })
 
@@ -40,16 +50,24 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch([dashboardKey, overview], () => {
-  loadData()
-  getTotalAmount(dashboardKey.value)
-}, { immediate: true })
+watch(
+  [dashboardKey, overview],
+  () => {
+    loadData()
+    getTotalAmount(dashboardKey.value)
+  },
+  { immediate: true },
+)
 
-watch(query, async (q) => {
-  if (q) {
-    await getDeposits(dashboardKey.value, q)
-  }
-}, { immediate: true })
+watch(
+  query,
+  async (q) => {
+    if (q) {
+      await getDeposits(dashboardKey.value, q)
+    }
+  },
+  { immediate: true },
+)
 
 const tableData = computed(() => {
   if (!deposits.value?.data?.length) {
@@ -59,10 +77,10 @@ const tableData = computed(() => {
     paging: deposits.value.paging,
     data: [
       {
-        amount: totalAmount.value
+        amount: totalAmount.value,
       },
-      ...deposits.value.data
-    ]
+      ...deposits.value.data,
+    ],
   }
 })
 
@@ -93,8 +111,8 @@ const getRowClass = (row: VDBConsensusDepositsTableRow) => {
 const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   return row.index !== undefined
 }
-
 </script>
+
 <template>
   <div>
     <BcTableControl :title="$t('dashboard.validator.cl_deposits.title')">
@@ -128,7 +146,10 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 <span v-else>Σ</span>
               </template>
             </Column>
-            <Column field="index" :header="$t('common.index')">
+            <Column
+              field="index"
+              :header="$t('common.index')"
+            >
               <template #body="slotProps">
                 <BcLink
                   v-if="slotProps.data.index !== undefined"
@@ -186,7 +207,10 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </BcLink>
               </template>
             </Column>
-            <Column field="age" body-class="age-field">
+            <Column
+              field="age"
+              body-class="age-field"
+            >
               <template #header>
                 <BcTableAgeHeader />
               </template>
@@ -213,12 +237,24 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 />
               </template>
             </Column>
-            <Column field="amount" :header="$t('table.amount')">
+            <Column
+              field="amount"
+              :header="$t('table.amount')"
+            >
               <template #body="slotProps">
-                <div v-if="slotProps.data.index === undefined && isLoadingTotal">
-                  <BcLoadingSpinner :loading="true" size="small" />
+                <div
+                  v-if="slotProps.data.index === undefined && isLoadingTotal"
+                >
+                  <BcLoadingSpinner
+                    :loading="true"
+                    size="small"
+                  />
                 </div>
-                <BcFormatValue v-else :value="slotProps.data.amount" :options="{ fixedDecimalCount: 0 }" />
+                <BcFormatValue
+                  v-else
+                  :value="slotProps.data.amount"
+                  :options="{ fixedDecimalCount: 0 }"
+                />
               </template>
             </Column>
             <Column
@@ -238,7 +274,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
               <div class="expansion">
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.public_key') }}
+                    {{ $t("dashboard.validator.col.public_key") }}
                   </div>
                   <BcFormatHash
                     :hash="slotProps.data.public_key"
@@ -248,7 +284,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.group') }}
+                    {{ $t("dashboard.validator.col.group") }}
                   </div>
                   <div class="value">
                     {{ groupNameLabel(slotProps.data.group_id) }}
@@ -256,7 +292,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('common.epoch') }}
+                    {{ $t("common.epoch") }}
                   </div>
                   <BcLink
                     v-if="slotProps.data.index !== undefined"
@@ -269,7 +305,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('common.slot') }}
+                    {{ $t("common.slot") }}
                   </div>
                   <BcLink
                     v-if="slotProps.data.index !== undefined"
@@ -282,7 +318,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.withdrawal_credential') }}
+                    {{ $t("dashboard.validator.col.withdrawal_credential") }}
                   </div>
                   <BcFormatHash
                     :hash="slotProps.data.withdrawal_credential"
@@ -292,7 +328,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.signature') }}
+                    {{ $t("dashboard.validator.col.signature") }}
                   </div>
                   <BcFormatHash
                     v-if="slotProps.data.index !== undefined"
@@ -316,7 +352,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.cl_deposits_table) {
-  >.p-datatable-wrapper {
+  > .p-datatable-wrapper {
     min-height: 335px;
   }
 
@@ -339,7 +375,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   .age-field {
     white-space: nowrap;
   }
-  tr>td.age-field {
+  tr > td.age-field {
     padding: 0 7px;
     @include utils.set-all-width(151px);
   }

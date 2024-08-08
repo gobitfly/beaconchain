@@ -2,11 +2,11 @@
 import { type DashboardType } from '~/types/dashboard'
 import { IconAccount, IconValidator } from '#components'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()
 
 interface Props {
-  accountsDisabled: boolean,
+  accountsDisabled: boolean
   validatorsDisabled: boolean
 }
 const props = defineProps<Props>()
@@ -18,23 +18,28 @@ const typeButtons = [
     text: $t('dashboard.creation.type.validators'),
     value: 'validator',
     component: IconValidator,
-    disabled: props.validatorsDisabled
+    disabled: props.validatorsDisabled,
   },
   {
     text: $t('dashboard.creation.type.accounts'),
     subText: $t('common.coming_soon'),
     value: 'account',
     component: IconAccount,
-    disabled: props.accountsDisabled
-  }
+    disabled: props.accountsDisabled,
+  },
 ]
 
 const name = defineModel<string>('name', { required: true })
 
-const emit = defineEmits<{(e: 'next'): void }>()
+const emit = defineEmits<{ (e: 'next'): void }>()
 
 const continueDisabled = computed(() => {
-  return type.value === '' || name.value === '' || name.value.length > 32 || !REGEXP_VALID_NAME.test(name.value)
+  return (
+    type.value === ''
+    || name.value === ''
+    || name.value.length > 32
+    || !REGEXP_VALID_NAME.test(name.value)
+  )
 })
 
 const next = () => {
@@ -51,16 +56,31 @@ const next = () => {
   <div class="mask-container">
     <div class="element-container">
       <div class="big_text">
-        {{ $t('dashboard.creation.title') }}
+        {{ $t("dashboard.creation.title") }}
       </div>
       <div class="subtitle_text">
-        {{ $t('dashboard.creation.type.subtitle') }}
+        {{ $t("dashboard.creation.type.subtitle") }}
       </div>
-      <BcToggleSingleBar v-model="type" class="single-bar" :buttons="typeButtons" />
+      <BcToggleSingleBar
+        v-model="type"
+        class="single-bar"
+        :buttons="typeButtons"
+        layout="gaudy"
+      />
       <div class="row-container">
-        <InputText v-if="isLoggedIn" v-model="name" :placeholder="$t('dashboard.creation.type.placeholder')" class="input-field" @keypress.enter="next" />
-        <Button class="button" :disabled="continueDisabled" @click="next">
-          {{ $t('navigation.continue') }}
+        <InputText
+          v-if="isLoggedIn"
+          v-model="name"
+          :placeholder="$t('dashboard.creation.type.placeholder')"
+          class="input-field"
+          @keypress.enter="next"
+        />
+        <Button
+          class="button"
+          :disabled="continueDisabled"
+          @click="next"
+        >
+          {{ $t("navigation.continue") }}
         </Button>
       </div>
     </div>
@@ -68,32 +88,32 @@ const next = () => {
 </template>
 
 <style lang="scss" scoped>
-  .mask-container{
-    width: 100%;
-    .element-container{
+.mask-container {
+  width: 100%;
+  .element-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding);
+
+    .single-bar {
+      height: 100px;
+    }
+
+    .row-container {
       display: flex;
-      flex-direction: column;
+      justify-content: flex-end;
       gap: var(--padding);
 
-      .single-bar{
-        height: 100px;
+      input {
+        min-width: 250px;
+        max-width: 320px;
+        width: 100%;
       }
 
-      .row-container{
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--padding);
-
-        input {
-            min-width: 250px;
-            max-width: 320px;
-            width: 100%;
-        }
-
-        button {
-            width: 90px;
-        }
+      button {
+        width: 90px;
       }
     }
   }
+}
 </style>

@@ -1,18 +1,29 @@
 <script lang="ts" setup>
 import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
 
-const cookiePreference = useCookie<CookiesPreference>(COOKIE_KEY.COOKIES_PREFERENCE, { default: () => undefined })
+const cookiePreference = useCookie<CookiesPreference>(
+  COOKIE_KEY.COOKIES_PREFERENCE,
+  { default: () => undefined },
+)
 const { isShared } = useDashboardKey()
 const { dashboards } = useUserDashboardStore()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const route = useRoute()
 
 const dismissed = ref(false)
-const visible = computed(() => isShared.value && !dismissed.value && cookiePreference.value !== undefined)
+const visible = computed(
+  () =>
+    isShared.value && !dismissed.value && cookiePreference.value !== undefined,
+)
 
 const text = computed(() => {
-  const userHasOwnDashboard = ((dashboards.value?.validator_dashboards?.length || 0) + (dashboards.value?.account_dashboards?.length || 0)) > 0
-  const textRoot = userHasOwnDashboard ? 'dashboard.shared_modal_with_own' : 'dashboard.shared_modal_without_own'
+  const userHasOwnDashboard
+    = (dashboards.value?.validator_dashboards?.length || 0)
+    + (dashboards.value?.account_dashboards?.length || 0)
+    > 0
+  const textRoot = userHasOwnDashboard
+    ? 'dashboard.shared_modal_with_own'
+    : 'dashboard.shared_modal_without_own'
 
   const caption = $t(textRoot + '.text')
   const button = $t(textRoot + '.button')
@@ -32,10 +43,16 @@ const text = computed(() => {
     <div class="dialog-container">
       {{ text.caption }}
       <div class="button-row">
-        <div class="dismiss" @click="dismissed=true">
-          {{ $t('navigation.dismiss') }}
+        <div
+          class="dismiss"
+          @click="dismissed = true"
+        >
+          {{ $t("navigation.dismiss") }}
         </div>
-        <BcLink :to="`/dashboard`" :replace="route.path.startsWith('/dashboard')">
+        <BcLink
+          :to="`/dashboard`"
+          :replace="route.path.startsWith('/dashboard')"
+        >
           <Button>
             {{ text.button }}
           </Button>

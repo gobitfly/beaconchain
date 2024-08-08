@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-
 import { h, render } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -10,15 +9,23 @@ import {
   GridComponent,
   DataZoomComponent,
   DatasetComponent,
-  TransformComponent
+  TransformComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import type { ECBasicOption } from 'echarts/types/dist/shared'
 import { BigNumber } from '@ethersproject/bignumber'
-import { getChartTextColor, getChartTooltipBackgroundColor, getRewardChartColors, getRewardsChartLineColor } from '~/utils/colors'
+import {
+  getChartTextColor,
+  getChartTooltipBackgroundColor,
+  getRewardChartColors,
+  getRewardsChartLineColor,
+} from '~/utils/colors'
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
-import { type RewardChartSeries, type RewardChartGroupData } from '~/types/dashboard/rewards'
+import {
+  type RewardChartSeries,
+  type RewardChartGroupData,
+} from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
 import { API_PATH } from '~/types/customFetch'
@@ -29,7 +36,11 @@ const { formatEpochToDate } = useFormat()
 const { networkInfo } = useNetworkStore()
 const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
 const { currency } = useCurrency()
-const currencyLabel = computed(() => !currency.value || currency.value === 'NAT' ? networkNativeELcurrency.value : currency.value)
+const currencyLabel = computed(() =>
+  !currency.value || currency.value === 'NAT'
+    ? networkNativeELcurrency.value
+    : currency.value,
+)
 
 use([
   GridComponent,
@@ -39,7 +50,7 @@ use([
   DataZoomComponent,
   TransformComponent,
   BarChart,
-  CanvasRenderer
+  CanvasRenderer,
 ])
 
 const { fetch } = useCustomFetch()
@@ -49,21 +60,29 @@ const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
 const data = ref<ChartData<number, string> | undefined>()
 const isLoading = ref(false)
 
-await useAsyncData('validator_dashboard_rewards_chart', async () => {
-  if (dashboardKey.value === undefined) {
-    data.value = undefined
-    return
-  }
-  isLoading.value = true
-  const res = await fetch<InternalGetValidatorDashboardRewardsChartResponse>(API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART, undefined, { dashboardKey: dashboardKey.value })
+await useAsyncData(
+  'validator_dashboard_rewards_chart',
+  async () => {
+    if (dashboardKey.value === undefined) {
+      data.value = undefined
+      return
+    }
+    isLoading.value = true
+    const res = await fetch<InternalGetValidatorDashboardRewardsChartResponse>(
+      API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART,
+      undefined,
+      { dashboardKey: dashboardKey.value },
+    )
 
-  isLoading.value = false
-  data.value = res.data
-}, { watch: [dashboardKey], server: false, immediate: true })
+    isLoading.value = false
+    data.value = res.data
+  },
+  { watch: [dashboardKey], server: false, immediate: true },
+)
 
 const { groups } = useValidatorDashboardGroups()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const colorMode = useColorMode()
 
 const { converter } = useValue()
@@ -73,7 +92,7 @@ const colors = computed(() => {
     data: getRewardChartColors(),
     label: getChartTextColor(colorMode.value),
     line: getRewardsChartLineColor(colorMode.value),
-    background: getChartTooltipBackgroundColor(colorMode.value)
+    background: getChartTooltipBackgroundColor(colorMode.value),
   }
 })
 
@@ -85,13 +104,17 @@ const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 
 const valueFormatter = computed(() => {
   const decimals = isFiat(currency.value) ? 2 : 5
-  return (value: number) => `${trim(value, decimals, decimals)} ${currencyLabel.value}`
+  return (value: number) =>
+    `${trim(value, decimals, decimals)} ${currencyLabel.value}`
 })
 
 const mapSeriesData = (data: RewardChartSeries) => {
   data.bigData.forEach((bigValue, index) => {
     if (!bigValue.isZero()) {
-      const formatted = converter.value.weiToValue(bigValue, { fixedDecimalCount: 5, minUnit: 'MAIN' })
+      const formatted = converter.value.weiToValue(bigValue, {
+        fixedDecimalCount: 5,
+        minUnit: 'MAIN',
+      })
       data.formatedData[index] = formatted
       const parsedValue = parseFloat(`${formatted.label}`.split(' ')[0])
       if (!isNaN(parsedValue)) {
@@ -118,8 +141,10 @@ const series = computed<RewardChartSeries[]>(() => {
     barMaxWidth: 33,
     groups: [],
     bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
-    data: Array.from(Array(categoryCount)).map(() => 0)
+    formatedData: Array.from(Array(categoryCount)).map(() => ({
+      label: `0 ${currencyLabel.value}`,
+    })),
+    data: Array.from(Array(categoryCount)).map(() => 0),
   }
   const elSeries: RewardChartSeries = {
     id: 2,
@@ -131,8 +156,10 @@ const series = computed<RewardChartSeries[]>(() => {
     barMaxWidth: 33,
     groups: [],
     bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
-    data: Array.from(Array(categoryCount)).map(() => 0)
+    formatedData: Array.from(Array(categoryCount)).map(() => ({
+      label: `0 ${currencyLabel.value}`,
+    })),
+    data: Array.from(Array(categoryCount)).map(() => 0),
   }
   list.push(elSeries)
   list.push(clSeries)
@@ -140,21 +167,25 @@ const series = computed<RewardChartSeries[]>(() => {
     let name
     if (!groupsEnabled) {
       name = $t('dashboard.validator.rewards.chart.rewards')
-    } else {
+    }
+    else {
       name = getGroupLabel($t, group.id, groups.value)
     }
     const newData: RewardChartGroupData = {
       id: group.id,
       bigData: [],
-      name
+      name,
     }
     for (let i = 0; i < categoryCount; i++) {
-      const bigValue = group.data[i] ? BigNumber.from(group.data[i]) : BigNumber.from('0')
+      const bigValue = group.data[i]
+        ? BigNumber.from(group.data[i])
+        : BigNumber.from('0')
 
       if (!bigValue.isZero()) {
         if (group.property === 'el') {
           elSeries.bigData[i] = elSeries.bigData[i].add(bigValue)
-        } else {
+        }
+        else {
           clSeries.bigData[i] = clSeries.bigData[i].add(bigValue)
         }
       }
@@ -163,7 +194,8 @@ const series = computed<RewardChartSeries[]>(() => {
 
     if (group.property === 'el') {
       elSeries.groups.push(newData)
-    } else {
+    }
+    else {
       clSeries.groups.push(newData)
     }
   })
@@ -183,7 +215,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       top: 20,
       bottom: 80,
       left: '5%',
-      right: '5%'
+      right: '5%',
     },
     xAxis: {
       type: 'category',
@@ -199,8 +231,8 @@ const option = computed<ECBasicOption | undefined>(() => {
           }
 
           return `${date}\n${$t('common.epoch')} ${value}`
-        }
-      }
+        },
+      },
     },
     yAxis: {
       type: 'value',
@@ -209,20 +241,20 @@ const option = computed<ECBasicOption | undefined>(() => {
         formatter: valueFormatter.value,
         fontWeight: fontWeightMedium,
         fontSize: textSize,
-        padding: [0, 10, 0, 0]
+        padding: [0, 10, 0, 0],
       },
       splitLine: {
         lineStyle: {
-          color: colors.value.line
-        }
-      }
+          color: colors.value.line,
+        },
+      },
     },
     series: series.value,
     textStyle: {
       fontFamily,
       fontSize: textSize,
       fontWeight: fontWeightLight,
-      color: colors.value.label
+      color: colors.value.label,
     },
     legend: {
       type: 'scroll',
@@ -231,8 +263,8 @@ const option = computed<ECBasicOption | undefined>(() => {
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
-        fontWeight: fontWeightMedium
-      }
+        fontWeight: fontWeightMedium,
+      },
     },
     tooltip: {
       order: 'seriesAsc',
@@ -240,14 +272,23 @@ const option = computed<ECBasicOption | undefined>(() => {
       triggerOn: 'click',
       padding: 0,
       borderColor: colors.value.background,
-      formatter (params: any): HTMLElement {
+      formatter(params: any): HTMLElement {
         const startEpoch = parseInt(params[0].axisValue)
         const dataIndex = params[0].dataIndex
 
         const d = document.createElement('div')
-        render(h(DashboardChartRewardsChartTooltip, { t: $t, startEpoch, dataIndex, series: series.value, weiToValue: converter.value.weiToValue }), d)
+        render(
+          h(DashboardChartRewardsChartTooltip, {
+            t: $t,
+            startEpoch,
+            dataIndex,
+            series: series.value,
+            weiToValue: converter.value.weiToValue,
+          }),
+          d,
+        )
         return d
-      }
+      },
     },
     dataZoom: {
       type: 'slider',
@@ -255,21 +296,30 @@ const option = computed<ECBasicOption | undefined>(() => {
       end: 100,
       dataBackground: {
         lineStyle: {
-          color: colors.value.label
+          color: colors.value.label,
         },
         areaStyle: {
-          color: colors.value.label
-        }
+          color: colors.value.label,
+        },
       },
-      borderColor: colors.value.label
-    }
+      borderColor: colors.value.label,
+    },
   }
 })
 </script>
 
 <template>
   <ClientOnly>
-    <BcLoadingSpinner v-if="isLoading" :loading="true" alignment="center" />
-    <VChart v-else class="chart" :option="option" autoresize />
+    <BcLoadingSpinner
+      v-if="isLoading"
+      :loading="true"
+      alignment="center"
+    />
+    <VChart
+      v-else
+      class="chart"
+      :option="option"
+      autoresize
+    />
   </ClientOnly>
 </template>
