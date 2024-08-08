@@ -5,36 +5,68 @@ import BcTooltip from '../BcTooltip.vue'
 
 interface Props {
   layout: 'minimal' | 'gaudy'
-  icon?: IconDefinition,
-  text?: string,
-  subText?: string,
-  selected: boolean,
-  disabled?:boolean,
-  tooltip?: string,
+  icon?: IconDefinition
+  text?: string
+  subText?: string
+  selected: boolean
+  disabled?: boolean
+  tooltip?: string
 }
 const props = defineProps<Props>()
 
-const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
+const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
 </script>
 
 <template>
-  <BcTooltip :dont-open-permanently="true" :hover-delay="350" :hide="!tooltip">
+  <BcTooltip
+    :dont-open-permanently="true"
+    :hover-delay="350"
+    :hide="!tooltip"
+  >
     <template #tooltip>
       <div class="button-tooltip">
-        <div v-if="tooltip" class="individual">
+        <div
+          v-if="tooltip"
+          class="individual"
+        >
           {{ tooltip }}
         </div>
-        <div>{{ disabled ? $t('common.unavailable') : (selected ? $t('common.selected') : $t('common.deselected')) }}</div>
+        <div>
+          {{
+            disabled
+              ? $t("common.unavailable")
+              : selected
+                ? $t("common.selected")
+                : $t("common.deselected")
+          }}
+        </div>
       </div>
     </template>
-    <ToggleButton class="bc-toggle" :class="layout" :disabled="disabled" :model-value="selected">
+    <ToggleButton
+      class="bc-toggle"
+      :class="layout"
+      :disabled="disabled"
+      :model-value="selected"
+    >
       <template #icon="slotProps">
-        <slot name="icon" v-bind="slotProps">
-          <FontAwesomeIcon v-if="icon" :icon="icon" />
+        <slot
+          name="icon"
+          v-bind="slotProps"
+        >
+          <FontAwesomeIcon
+            v-if="icon"
+            :icon="icon"
+          />
         </slot>
-        <div v-if="text" class="label">
+        <div
+          v-if="text"
+          class="label"
+        >
           {{ text }}
-          <div v-if="subText" class="sub">
+          <div
+            v-if="subText"
+            class="sub"
+          >
             {{ subText }}
           </div>
         </div>
@@ -44,12 +76,12 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .button-tooltip {
   width: max-content;
   text-align: left;
-  .individual{
+  .individual {
     margin-bottom: var(--padding);
   }
 }
@@ -93,7 +125,7 @@ const topBottomPadding = computed(() => props.subText ? '8px' : '16px')
       :deep(svg) {
         max-width: 36px;
       }
-      &.p-disabled{
+      &.p-disabled {
         opacity: 0.5;
         cursor: default;
       }

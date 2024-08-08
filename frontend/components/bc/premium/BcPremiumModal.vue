@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 interface Props {
-  description?: string,
+  description?: string
   dismissLabel?: string
 }
 
-const { props, dialogRef, setHeader } = useBcDialog<Props>({ contentClass: 'premium-modal' })
+const { props, dialogRef, setHeader } = useBcDialog<Props>({
+  contentClass: 'premium-modal',
+})
 const { t: $t } = useTranslation()
 
 const hide = () => {
@@ -14,18 +16,24 @@ const hide = () => {
 onMounted(() => {
   setHeader($t('premium.title'), true)
 })
-
 </script>
 
 <template>
   <div class="text">
-    {{ props?.description || $t('premium.description') }}
+    {{ props?.description || $t("premium.description") }}
   </div>
   <div class="footer">
-    <div class="dismiss" @click="hide()">
-      {{ props?.dismissLabel || $t('navigation.dismiss') }}
+    <div
+      class="dismiss"
+      @click="hide()"
+    >
+      {{ props?.dismissLabel || $t("navigation.dismiss") }}
     </div>
-    <BcLink to="/pricing" target="_blank" @click="hide()">
+    <BcLink
+      to="/pricing"
+      target="_blank"
+      @click="hide()"
+    >
       <Button :label="$t('premium.unlock')" />
     </BcLink>
   </div>
@@ -56,7 +64,7 @@ onMounted(() => {
   }
 }
 
-:global(.p-dialog:has(.premium-modal)>.p-dialog-header) {
+:global(.p-dialog:has(.premium-modal) > .p-dialog-header) {
   color: var(--primary-color);
   font-size: var(--subtitle_font_size);
 }

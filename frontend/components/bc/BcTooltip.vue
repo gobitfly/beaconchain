@@ -2,14 +2,14 @@
 import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
-  text?: string,
-  title?: string,
+  text?: string
+  title?: string
   layout?: 'special' | 'default'
-  position?: 'top' | 'left' | 'right' | 'bottom',
-  hide?: boolean,
-  tooltipClass?: string,
-  fitContent?: boolean,
-  renderTextAsHtml?: boolean,
+  position?: 'top' | 'left' | 'right' | 'bottom'
+  hide?: boolean
+  tooltipClass?: string
+  fitContent?: boolean
+  renderTextAsHtml?: boolean
   scrollContainer?: string // query selector for scrollable parent container
   dontOpenPermanently?: boolean
   hoverDelay?: number
@@ -17,7 +17,9 @@ interface Props {
   tooltipTextAlign?: 'left' | 'center' | 'right'
 }
 
-const toolTipTextAlignWithDefault = computed(() => props.tooltipTextAlign || 'center')
+const toolTipTextAlignWithDefault = computed(
+  () => props.tooltipTextAlign || 'center',
+)
 
 const props = defineProps<Props>()
 const bcTooltipOwner = ref<HTMLElement | null>(null)
@@ -33,15 +35,32 @@ const slots = useSlots()
 const hasContent = computed(() => !!slots.tooltip || !!props.text)
 const canBeOpened = computed(() => !props.hide && hasContent.value)
 
-const { value: hover, bounce: bounceHover, instant: instantHover } = useDebounceValue<boolean>(false, 50)
-const { value: hoverTooltip, bounce: bounceHoverTooltip, instant: instantHoverTooltip } = useDebounceValue<boolean>(false, 50)
-const isSelected = computed(() => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value)
-const isOpen = computed(() => isSelected.value || hover.value || hoverTooltip.value)
+const {
+  value: hover,
+  bounce: bounceHover,
+  instant: instantHover,
+} = useDebounceValue<boolean>(false, 50)
+const {
+  value: hoverTooltip,
+  bounce: bounceHoverTooltip,
+  instant: instantHoverTooltip,
+} = useDebounceValue<boolean>(false, 50)
+const isSelected = computed(
+  () => !!bcTooltipOwner.value && selected.value === bcTooltipOwner.value,
+)
+const isOpen = computed(
+  () => isSelected.value || hover.value || hoverTooltip.value,
+)
 
 const pos = ref<{ top: string, left: string }>({ top: '0', left: '0' })
 
 const classList = computed(() => {
-  return [props.layout || 'default', props.position || 'bottom', isOpen.value ? 'open' : 'closed', props.fitContent ? 'fit-content' : '']
+  return [
+    props.layout || 'default',
+    props.position || 'bottom',
+    isOpen.value ? 'open' : 'closed',
+    props.fitContent ? 'fit-content' : '',
+  ]
 })
 
 const setPosition = () => {
@@ -58,7 +77,8 @@ const setPosition = () => {
     return
   }
   if (!tt) {
-    // we need to wait for the tt to be added to the dome to get it's measure, but we set the pos at an estimated value until then
+    // we need to wait for the tt to be added to the dome to get it's measure,
+    // but we set the pos at an estimated value until then
     tooltipAddedTimeout.value = setTimeout(setPosition, 10)
   }
 
@@ -80,8 +100,8 @@ const setPosition = () => {
       top = rect.top + rect.height / 2 - ttHeight / 2
       break
   }
-  left = Math.max(0, Math.min(left, (width.value - ttWidth)))
-  top = Math.max(0, Math.min(top, (height.value - ttHeight)))
+  left = Math.max(0, Math.min(left, width.value - ttWidth))
+  top = Math.max(0, Math.min(top, height.value - ttHeight))
   pos.value = { top: `${top}px`, left: `${left}px` }
   if (bcTooltip.value) {
     let centerX = -5 + Math.abs(left - rect.left) + rect.width / 2
@@ -119,10 +139,12 @@ const setPosition = () => {
 const handleClick = () => {
   if (isSelected.value) {
     doSelect(null)
-  } else if (canBeOpened.value) {
+  }
+  else if (canBeOpened.value) {
     if (props.dontOpenPermanently) {
       instantHover(true)
-    } else {
+    }
+    else {
       doSelect(bcTooltipOwner.value)
     }
     setPosition()
@@ -133,7 +155,8 @@ const onHover = () => {
   if (canBeOpened.value && !selected.value) {
     if (props.hoverDelay) {
       bounceHover(true, false, false, props.hoverDelay)
-    } else {
+    }
+    else {
       instantHover(true)
       setPosition()
     }
@@ -141,7 +164,10 @@ const onHover = () => {
 }
 
 const doHide = (event?: Event) => {
-  if (event?.target === bcTooltipOwner.value || isParent(bcTooltipOwner.value, event?.target as HTMLElement)) {
+  if (
+    event?.target === bcTooltipOwner.value
+    || isParent(bcTooltipOwner.value, event?.target as HTMLElement)
+  ) {
     return
   }
   removeParentListeners()
@@ -160,7 +186,8 @@ const checkScrollListener = (add: boolean) => {
     if (container) {
       if (add) {
         container.addEventListener('scroll', doHide)
-      } else {
+      }
+      else {
         container.removeEventListener('scroll', doHide)
       }
     }
@@ -176,13 +203,16 @@ const removeScrollParent = () => {
   scrollParents.forEach(elem => elem.removeEventListener('scroll', doHide))
 }
 
-watch(() => [props.title, props.text], () => {
-  if (isOpen.value) {
-    requestAnimationFrame(() => {
-      setPosition()
-    })
-  }
-})
+watch(
+  () => [props.title, props.text],
+  () => {
+    if (isOpen.value) {
+      requestAnimationFrame(() => {
+        setPosition()
+      })
+    }
+  },
+)
 
 const onWindowResize = () => {
   doHide()
@@ -199,7 +229,7 @@ watch(isOpen, (value) => {
   }
 })
 
-function removeParentListeners () {
+function removeParentListeners() {
   document.removeEventListener('click', doHide)
   document.removeEventListener('scroll', doHide)
   window.removeEventListener('resize', onWindowResize)
@@ -213,8 +243,8 @@ onUnmounted(() => {
     doSelect(null)
   }
 })
-
 </script>
+
 <template>
   <div
     ref="bcTooltipOwner"
@@ -225,15 +255,22 @@ onUnmounted(() => {
     @blur="bounceHover(false, false, true)"
   >
     <slot />
-    <Teleport v-if="isOpen" to="body">
-      <div class="bc-tooltip-wrapper" :style="{...pos, ...{ width: tooltipWidth }}"  :class="tooltipClass">
+    <Teleport
+      v-if="isOpen"
+      to="body"
+    >
+      <div
+        class="bc-tooltip-wrapper"
+        :style="{ ...pos, ...{ width: tooltipWidth } }"
+        :class="tooltipClass"
+      >
         <div
-        ref="bcTooltip"
-        class="bc-tooltip"
-        :class="classList"
-        @click="$event.stopImmediatePropagation()"
-        @mouseover="instantHoverTooltip(true)"
-        @mouseleave="bounceHoverTooltip(false, false, true)"
+          ref="bcTooltip"
+          class="bc-tooltip"
+          :class="classList"
+          @click="$event.stopImmediatePropagation()"
+          @mouseover="instantHoverTooltip(true)"
+          @mouseleave="bounceHoverTooltip(false, false, true)"
         >
           <slot name="tooltip">
             <span>
@@ -345,7 +382,6 @@ onUnmounted(() => {
     &::after {
       border-color: var(--tt-bg-color) transparent transparent transparent;
     }
-
   }
 
   &.right {
@@ -375,11 +411,11 @@ onUnmounted(() => {
   }
 }
 
-.dark-mode{
+.dark-mode {
   .bc-tooltip {
-    &.special{
-    --tt-bg-color: var(--light-black);
-    --tt-color: var(--light-grey);
+    &.special {
+      --tt-bg-color: var(--light-black);
+      --tt-color: var(--light-grey);
     }
   }
 }

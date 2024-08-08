@@ -4,7 +4,7 @@ import {
   faGaugeSimpleMax,
   faMonitorWaveform,
   faBolt,
-  faNetworkWired
+  faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import { useUseNotificationsManagementSettingsProvider } from '~/composables/notifications/useNotificationsManagementSettingsProvider'
 
@@ -14,9 +14,9 @@ const visible = defineModel<boolean>()
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { refreshSettings, isLoading } = useUseNotificationsManagementSettingsProvider()
+const { refreshSettings, isLoading }
+  = useUseNotificationsManagementSettingsProvider()
 refreshSettings()
-
 </script>
 
 <template>
@@ -26,35 +26,65 @@ refreshSettings()
     class="notifications-management-modal-container"
   >
     <div id="notifications-management-search-placholder" />
-    <TabView lazy class="notifications-management-tab-view">
+    <TabView
+      lazy
+      class="notifications-management-tab-view"
+    >
       <TabPanel>
         <template #header>
-          <BcTabHeader :header="$t('notifications.tabs.general')" :icon="faCog" />
+          <BcTabHeader
+            :header="$t('notifications.tabs.general')"
+            :icon="faCog"
+          />
         </template>
 
-        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <BcLoadingSpinner
+          v-if="isLoading"
+          class="spinner"
+          :loading="isLoading"
+          alignment="center"
+        />
         <NotificationsManagementGeneralTab v-else />
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faGaugeSimpleMax" />
+          <BcTabHeader
+            :header="$t('notifications.tabs.dashboards')"
+            :icon="faGaugeSimpleMax"
+          />
         </template>
         <NotificationsManagementDashboards />
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('notifications.tabs.machines')" :icon="faMonitorWaveform" />
+          <BcTabHeader
+            :header="$t('notifications.tabs.machines')"
+            :icon="faMonitorWaveform"
+          />
         </template>
-        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <BcLoadingSpinner
+          v-if="isLoading"
+          class="spinner"
+          :loading="isLoading"
+          alignment="center"
+        />
         <div v-else>
           Machines coming soon!
         </div>
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('notifications.tabs.clients')" :icon="faBolt" />
+          <BcTabHeader
+            :header="$t('notifications.tabs.clients')"
+            :icon="faBolt"
+          />
         </template>
-        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <BcLoadingSpinner
+          v-if="isLoading"
+          class="spinner"
+          :loading="isLoading"
+          alignment="center"
+        />
         <div v-else>
           Clients coming soon!
         </div>
@@ -67,22 +97,39 @@ refreshSettings()
             </template>
           </BcTabHeader>
         </template>
-        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <BcLoadingSpinner
+          v-if="isLoading"
+          class="spinner"
+          :loading="isLoading"
+          alignment="center"
+        />
         <div v-else>
           Rocket Pool coming soon!
         </div>
       </TabPanel>
       <TabPanel :disabled="!showInDevelopment">
         <template #header>
-          <BcTabHeader :header="$t('notifications.tabs.network')" :icon="faNetworkWired" />
+          <BcTabHeader
+            :header="$t('notifications.tabs.network')"
+            :icon="faNetworkWired"
+          />
         </template>
-        <BcLoadingSpinner v-if="isLoading" class="spinner" :loading="isLoading" alignment="center" />
+        <BcLoadingSpinner
+          v-if="isLoading"
+          class="spinner"
+          :loading="isLoading"
+          alignment="center"
+        />
         <div v-else>
           Network coming soon!
         </div>
       </TabPanel>
     </TabView>
-    <Button class="done-button" :label="$t('navigation.done')" @click="visible = false" />
+    <Button
+      class="done-button"
+      :label="$t('navigation.done')"
+      @click="visible = false"
+    />
   </BcDialog>
 </template>
 
@@ -108,7 +155,7 @@ refreshSettings()
   margin-right: 40px;
 }
 
-:global(.notifications-management-tab-view >.p-tabview-panels) {
+:global(.notifications-management-tab-view > .p-tabview-panels) {
   min-height: 652px;
 }
 

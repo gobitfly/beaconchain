@@ -1,76 +1,84 @@
 <script setup lang="ts">
-import { type SearchbarShape, type SearchbarColors, SearchbarPurpose, ResultType, type ResultSuggestion, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
+import {
+  type SearchbarShape,
+  type SearchbarColors,
+  SearchbarPurpose,
+  ResultType,
+  type ResultSuggestion,
+  pickHighestPriorityAmongBestMatchings,
+} from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape,
-  colorTheme: SearchbarColors,
+  barShape: SearchbarShape
+  colorTheme: SearchbarColors
   screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
 }>()
 
-async function redirectToRelevantPage (result : ResultSuggestion) {
-  let path : string
+async function redirectToRelevantPage(result: ResultSuggestion) {
+  let path: string
   let q = ''
   const networkPath = '/networks/' + result.chainId
 
   switch (result.type) {
-    case ResultType.Tokens :
-    case ResultType.NFTs :
+    case ResultType.Tokens:
+    case ResultType.NFTs:
       path = '/token/' + result.queryParam
       break
-    case ResultType.Epochs :
+    case ResultType.Epochs:
       path = networkPath + '/epoch/' + result.queryParam
       break
-    case ResultType.Slots :
+    case ResultType.Slots:
       path = networkPath + '/slot/' + result.queryParam
       break
-    case ResultType.Blocks :
+    case ResultType.Blocks:
       path = networkPath + '/block/' + result.queryParam
       break
-    case ResultType.BlockRoots :
-    case ResultType.StateRoots :
-    case ResultType.Transactions :
+    case ResultType.BlockRoots:
+    case ResultType.StateRoots:
+    case ResultType.Transactions:
       path = networkPath + '/tx/' + result.queryParam
       break
-    case ResultType.TransactionBatches :
+    case ResultType.TransactionBatches:
       path = networkPath + '/transactionbatch/' + result.queryParam
       break
-    case ResultType.StateBatches :
+    case ResultType.StateBatches:
       path = networkPath + '/batch/' + result.queryParam
       break
-    case ResultType.Contracts :
-    case ResultType.Accounts :
-    case ResultType.EnsAddresses :
+    case ResultType.Contracts:
+    case ResultType.Accounts:
+    case ResultType.EnsAddresses:
       path = '/address/' + result.queryParam
       break
-    case ResultType.EnsOverview :
+    case ResultType.EnsOverview:
       path = '/ens/' + result.queryParam
       break
-    case ResultType.Graffiti :
+    case ResultType.Graffiti:
       path = networkPath + '/slots'
       q = result.queryParam
       break
-    case ResultType.ValidatorsByIndex :
-    case ResultType.ValidatorsByPubkey :
+    case ResultType.ValidatorsByIndex:
+    case ResultType.ValidatorsByPubkey:
       path = networkPath + '/validator/' + result.queryParam
       break
-    case ResultType.ValidatorsByDepositAddress :
-    case ResultType.ValidatorsByDepositEnsName :
+    case ResultType.ValidatorsByDepositAddress:
+    case ResultType.ValidatorsByDepositEnsName:
       path = networkPath + '/validators/deposits'
       q = result.queryParam
       break
-    case ResultType.ValidatorsByWithdrawalCredential :
-    case ResultType.ValidatorsByWithdrawalAddress :
-    case ResultType.ValidatorsByWithdrawalEnsName :
+    case ResultType.ValidatorsByWithdrawalCredential:
+    case ResultType.ValidatorsByWithdrawalAddress:
+    case ResultType.ValidatorsByWithdrawalEnsName:
       path = networkPath + '/validators/withdrawals'
       q = result.queryParam
       break
-    default :
+    default:
       return
   }
 
   if (q !== '') {
     await navigateTo({ path, query: { q } })
-  } else {
+  }
+  else {
     await navigateTo({ path })
   }
 }

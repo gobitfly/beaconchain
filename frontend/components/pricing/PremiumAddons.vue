@@ -12,10 +12,10 @@ defineProps<Props>()
   <div class="addons-container">
     <div class="text-container">
       <div class="title">
-        {{ $t('pricing.addons.title') }}
+        {{ $t("pricing.addons.title") }}
       </div>
       <div class="subtitle">
-        {{ $t('pricing.addons.subtitle') }}
+        {{ $t("pricing.addons.subtitle") }}
       </div>
     </div>
     <div class="addons-row">
@@ -69,11 +69,11 @@ defineProps<Props>()
     .text-container {
       gap: 8px;
 
-      .title{
+      .title {
         font-size: 16px;
       }
 
-      .subtitle{
+      .subtitle {
         font-size: 18px;
       }
     }

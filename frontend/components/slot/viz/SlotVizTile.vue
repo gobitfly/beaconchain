@@ -1,20 +1,32 @@
 <script setup lang="ts">
 import type { VDBSlotVizSlot } from '~/types/api/slot_viz'
-import { type SlotVizCategories, type SlotVizIcons } from '~/types/dashboard/slotViz'
+import {
+  type SlotVizCategories,
+  type SlotVizIcons,
+} from '~/types/dashboard/slotViz'
+
 interface Props {
-  data: VDBSlotVizSlot,
-  currentSlotId?: number,
+  data: VDBSlotVizSlot
+  currentSlotId?: number
   selectedCategories: SlotVizCategories[]
 }
 const props = defineProps<Props>()
 
 const data = computed(() => {
-  const slot:VDBSlotVizSlot = {
+  const slot: VDBSlotVizSlot = {
     ...props.data,
-    attestations: props.selectedCategories.includes('attestation') ? props.data.attestations : undefined,
-    proposal: props.selectedCategories.includes('proposal') ? props.data.proposal : undefined,
-    slashing: props.selectedCategories.includes('slashing') ? props.data.slashing : undefined,
-    sync: props.selectedCategories.includes('sync') ? props.data.sync : undefined
+    attestations: props.selectedCategories.includes('attestation')
+      ? props.data.attestations
+      : undefined,
+    proposal: props.selectedCategories.includes('proposal')
+      ? props.data.proposal
+      : undefined,
+    slashing: props.selectedCategories.includes('slashing')
+      ? props.data.slashing
+      : undefined,
+    sync: props.selectedCategories.includes('sync')
+      ? props.data.sync
+      : undefined,
   }
   const showIcons = props.selectedCategories.includes('visible')
   let outer = ''
@@ -30,7 +42,8 @@ const data = computed(() => {
     case 'scheduled':
       if (props.currentSlotId && props.currentSlotId > slot.slot) {
         outer = 'scheduled-past'
-      } else if (props.currentSlotId === slot.slot) {
+      }
+      else if (props.currentSlotId === slot.slot) {
         outer = 'scheduled-current'
       }
       break
@@ -42,19 +55,32 @@ const data = computed(() => {
   let inner = ''
   if (slot.status === 'scheduled') {
     inner = 'pending'
-  } else {
-    const hasFailed = !!slot.attestations?.failed || !!slot.sync?.failed || !!slot.slashing?.failed || (!!slot.proposal && slot.status === 'missed')
-    const hasSuccess = !!slot.attestations?.success || !!slot.sync?.success || !!slot.slashing?.success || (!!slot.proposal && slot.status === 'proposed')
+  }
+  else {
+    const hasFailed
+      = !!slot.attestations?.failed
+      || !!slot.sync?.failed
+      || !!slot.slashing?.failed
+      || (!!slot.proposal && slot.status === 'missed')
+    const hasSuccess
+      = !!slot.attestations?.success
+      || !!slot.sync?.success
+      || !!slot.slashing?.success
+      || (!!slot.proposal && slot.status === 'proposed')
     const hasPending = !!slot.attestations?.scheduled || !!slot.sync?.scheduled
     if (!hasFailed && !hasSuccess && !hasPending) {
       inner = 'proposed'
-    } else if (hasFailed && hasSuccess) {
+    }
+    else if (hasFailed && hasSuccess) {
       inner = 'mixed'
-    } else if (hasFailed) {
+    }
+    else if (hasFailed) {
       inner = 'missed'
-    } else if (hasSuccess) {
+    }
+    else if (hasSuccess) {
       inner = 'proposed'
-    } else if (hasPending) {
+    }
+    else if (hasPending) {
       inner = 'pending'
     }
   }
@@ -79,21 +105,46 @@ const data = computed(() => {
     outer,
     inner,
     icons,
-    firstIconClass: `count_${icons.length}`
+    firstIconClass: `count_${icons.length}`,
   }
 })
 </script>
+
 <template>
-  <SlotVizTooltip :id="data.id" :data="props.data" :current-slot-id="currentSlotId">
-    <div :id="data.id" class="tile" :class="data.outer">
-      <div class="inner" :class="data.inner">
-        <IconPlus v-show="data.icons?.length > 2" class="plus" />
-        <SlotVizIcon v-if="data.icons?.length" :icon="data.icons[0]" class="first_icon" :class="data.firstIconClass" />
-        <SlotVizIcon v-if="data.icons?.length === 2" :icon="data.icons[1]" class="second_icon" />
+  <SlotVizTooltip
+    :id="data.id"
+    :data="props.data"
+    :current-slot-id="currentSlotId"
+  >
+    <div
+      :id="data.id"
+      class="tile"
+      :class="data.outer"
+    >
+      <div
+        class="inner"
+        :class="data.inner"
+      >
+        <IconPlus
+          v-show="data.icons?.length > 2"
+          class="plus"
+        />
+        <SlotVizIcon
+          v-if="data.icons?.length"
+          :icon="data.icons[0]"
+          class="first_icon"
+          :class="data.firstIconClass"
+        />
+        <SlotVizIcon
+          v-if="data.icons?.length === 2"
+          :icon="data.icons[1]"
+          class="second_icon"
+        />
       </div>
     </div>
   </SlotVizTooltip>
 </template>
+
 <style lang="scss" scoped>
 .tile {
   display: flex;
@@ -148,14 +199,14 @@ const data = computed(() => {
     height: 10px;
   }
 }
-.scheduled-current{
+.scheduled-current {
   box-shadow: 0px 0px 2px var(--text-color);
 }
-.scheduled-past{
+.scheduled-past {
   opacity: 0.5;
-  background-color: rgb(100,100,100);
+  background-color: rgb(100, 100, 100);
   .inner {
-    background-color: rgb(100,100,100);
+    background-color: rgb(100, 100, 100);
   }
 }
 
