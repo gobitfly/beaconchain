@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
+	"github.com/google/uuid"
 
 	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
@@ -34,6 +35,7 @@ type BlobIndexer struct {
 	clEndpoint string
 	cache      *freecache.Cache
 	cl         consapi.Client
+	id         string
 }
 
 func NewBlobIndexer() (*BlobIndexer, error) {
@@ -56,12 +58,14 @@ func NewBlobIndexer() (*BlobIndexer, error) {
 	}, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
+	id := uuid.New().String()
 	bi := &BlobIndexer{
 		S3Client:   s3Client,
 		runningMu:  &sync.Mutex{},
 		clEndpoint: "http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port,
 		cache:      freecache.NewCache(1024 * 1024),
 		cl:         consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port),
+		id:         id,
 	}
 	return bi, nil
 }
@@ -75,7 +79,7 @@ func (bi *BlobIndexer) Start() {
 	bi.running = true
 	bi.runningMu.Unlock()
 
-	log.InfoWithFields(log.Fields{"version": version.Version, "clEndpoint": bi.clEndpoint, "s3Endpoint": utils.Config.BlobIndexer.S3.Endpoint}, "starting blobindexer")
+	log.InfoWithFields(log.Fields{"version": version.Version, "clEndpoint": bi.clEndpoint, "s3Endpoint": utils.Config.BlobIndexer.S3.Endpoint, "id": bi.id}, "starting blobindexer")
 	for {
 		err := bi.Index()
 		if err != nil {
@@ -134,6 +138,13 @@ func (bi *BlobIndexer) Index() error {
 		return err
 	}
 
+	// skip if another blobIndexer is already indexing, but only if the other blobIndexer is indexing a finalized slot that is at least 2 epochs behind the current finalized slot
+	// note: it is ok if multiple blobIndexers are indexing the same finalized slot, this is just best effort to avoid duplicate work
+	if status.CurrentBlobIndexerId != bi.id && status.LastIndexedFinalizedSlot+utils.Config.Chain.ClConfig.SlotsPerEpoch*2 > finalizedHeader.Data.Header.Message.Slot {
+		log.InfoWithFields(log.Fields{"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot, "currentBlobIndexerId": status.CurrentBlobIndexerId, "finalizedSlot": finalizedHeader.Data.Header.Message.Slot}, "other blobIndexer indexing, skipping")
+		return nil
+	}
+
 	denebForkSlot := utils.Config.Chain.ClConfig.DenebForkEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 	startSlot := status.LastIndexedFinalizedSlot + 1
 	if status.LastIndexedFinalizedSlot <= denebForkSlot {
@@ -184,6 +195,7 @@ func (bi *BlobIndexer) Index() error {
 		if batchEnd <= finalizedHeader.Data.Header.Message.Slot {
 			err := bi.PutIndexerStatus(BlobIndexerStatus{
 				LastIndexedFinalizedSlot: batchEnd,
+				CurrentBlobIndexerId:     bi.id,
 			})
 			if err != nil {
 				return fmt.Errorf("error updating indexer status at slot %v: %w", batchEnd, err)
@@ -328,6 +340,7 @@ func (bi *BlobIndexer) PutIndexerStatus(status BlobIndexerStatus) error {
 
 type BlobIndexerStatus struct {
 	LastIndexedFinalizedSlot uint64 `json:"last_indexed_finalized_slot"`
+	CurrentBlobIndexerId     string `json:"current_blob_indexer_id"`
 	// LastIndexedFinalizedRoot string `json:"last_indexed_finalized_root"`
 	// IndexedUnfinalized       map[string]uint64 `json:"indexed_unfinalized"`
 }
