@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretRight } from '@fortawesome/pro-solid-svg-icons'
 
 interface Props {
-  translationPath?: string
+  translationPath?: string,
 }
 const props = defineProps<Props>()
 const { t: $t } = useTranslation()

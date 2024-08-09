@@ -5,9 +5,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 const emit = defineEmits<{ (e: 'onEdit'): void }>()
 
 interface Props {
-  label?: string
-  noIcon?: boolean
-  truncateText?: boolean
+  label?: string,
+  noIcon?: boolean,
+  truncateText?: boolean,
 }
 defineProps<Props>()
 </script>

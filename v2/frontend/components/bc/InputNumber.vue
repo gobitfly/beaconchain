@@ -3,9 +3,9 @@ import type { Nullable } from 'primevue/ts-helpers'
 import InputNumber from 'primevue/inputnumber'
 
 const props = defineProps<{
-  max: number
-  maxFractionDigits: number
-  min: number
+  max: number,
+  maxFractionDigits: number,
+  min: number,
 }>()
 
 const parentVmodel = defineModel<number>({ required: true })

@@ -5,7 +5,7 @@ import type { ValidatorDashboard } from '~/types/api/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  dashboard: ValidatorDashboard // Currently only validator dashboards are supported
+  dashboard: ValidatorDashboard, // Currently only validator dashboards are supported
 }
 const {
   dialogRef, props,

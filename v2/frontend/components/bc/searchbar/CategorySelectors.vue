@@ -10,9 +10,9 @@ import {
 
 const emit = defineEmits<{ (e: 'change'): void }>()
 defineProps<{
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  dropdownLayout: SearchbarDropdownLayout
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout: SearchbarDropdownLayout,
 }>()
 // each entry has a Category as key and the state of the option as value.
 // The component will write directly into it, so the data of the parent is always up-to-date.

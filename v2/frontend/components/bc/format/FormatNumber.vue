@@ -1,10 +1,10 @@
 <script setup lang="ts">
 interface Props {
-  default?: number | string // used if value is not defined
-  maxDecimals?: number // defaults to 2
-  minDecimals?: number // defaults to 0
-  text?: string // for already formatted numbers
-  value?: number | string // can either be a number or a string representing a number
+  default?: number | string, // used if value is not defined
+  maxDecimals?: number, // defaults to 2
+  minDecimals?: number, // defaults to 0
+  text?: string, // for already formatted numbers
+  value?: number | string, // can either be a number or a string representing a number
 }
 const props = defineProps<Props>()
 

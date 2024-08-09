@@ -8,10 +8,10 @@ import {
 } from '~/types/dashboard/summary'
 
 interface Props {
-  absolute: boolean
-  row: VDBSummaryTableRow
-  tableVisibility: SummaryTableVisibility
-  timeFrame: SummaryTimeFrame
+  absolute: boolean,
+  row: VDBSummaryTableRow,
+  tableVisibility: SummaryTableVisibility,
+  timeFrame: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 

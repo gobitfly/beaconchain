@@ -5,7 +5,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 
 interface Props {
-  available?: boolean
+  available?: boolean,
 }
 defineProps<Props>()
 </script>

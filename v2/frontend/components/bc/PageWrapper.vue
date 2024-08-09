@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{
-  isHomePage?: boolean
-  minimalistHeader?: boolean
+  isHomePage?: boolean,
+  minimalistHeader?: boolean,
 }>()
 </script>
 

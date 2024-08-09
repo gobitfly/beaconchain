@@ -3,16 +3,16 @@ import type { Paging } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
-  cursor: Cursor
-  pageSize: number
-  paging?: Paging
-  stepperOnly?: boolean
+  cursor: Cursor,
+  pageSize: number,
+  paging?: Paging,
+  stepperOnly?: boolean,
 }
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void
-  (e: 'setPageSize', value: number): void
+  (e: 'setCursor', value: Cursor): void,
+  (e: 'setPageSize', value: number): void,
 }>()
 
 const pageSizes = [

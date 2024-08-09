@@ -7,25 +7,25 @@ import type {
 import { type SlotVizIcons } from '~/types/dashboard/slotViz'
 
 type RowDuty = {
-  duty_object?: number
-  dutySubLink?: string
-  dutySubText?: string
-  validator?: number
+  duty_object?: number,
+  dutySubLink?: string,
+  dutySubText?: string,
+  validator?: number,
 }
 type Row = {
-  andMore?: number
-  change?: string
-  class?: string
-  count?: number
-  duties?: RowDuty[]
-  dutyText?: string
-  icon: SlotVizIcons
-  validators?: number[]
+  andMore?: number,
+  change?: string,
+  class?: string,
+  count?: number,
+  duties?: RowDuty[],
+  dutyText?: string,
+  icon: SlotVizIcons,
+  validators?: number[],
 }
 interface Props {
-  currentSlotId?: number
-  data: VDBSlotVizSlot
-  id: string
+  currentSlotId?: number,
+  data: VDBSlotVizSlot,
+  id: string,
 }
 const props = defineProps<Props>()
 const { t: $t } = useTranslation()

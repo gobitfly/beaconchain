@@ -4,14 +4,14 @@ import type { ApiDataResponse } from '~/types/api/common'
 import * as networkTs from '~/types/network'
 
 interface ApiChainInfo {
-  chain_id: networkTs.ChainIDs
-  name: string
+  chain_id: networkTs.ChainIDs,
+  name: string,
 }
 
 const store = defineStore('network-store', () => {
   const data = ref<{
-    availableNetworks: networkTs.ChainIDs[]
-    currentNetwork: networkTs.ChainIDs
+    availableNetworks: networkTs.ChainIDs[],
+    currentNetwork: networkTs.ChainIDs,
   }>({
     availableNetworks: [ networkTs.ChainIDs.Ethereum ],
     // this impossible value by defaut must be kept, it ensures that the `computed`

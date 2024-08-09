@@ -1,7 +1,7 @@
 <script setup lang="ts">
 interface Props {
-  graffiti?: string
-  noCopy?: boolean
+  graffiti?: string,
+  noCopy?: boolean,
 }
 const props = defineProps<Props>()
 </script>

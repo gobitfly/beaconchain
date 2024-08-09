@@ -2,19 +2,19 @@
 import { useTooltipStore } from '~/stores/useTooltipStore'
 
 interface Props {
-  dontOpenPermanently?: boolean
-  fitContent?: boolean
-  hide?: boolean
-  hoverDelay?: number
-  layout?: 'default' | 'special'
-  position?: 'bottom' | 'left' | 'right' | 'top'
-  renderTextAsHtml?: boolean
-  scrollContainer?: string // query selector for scrollable parent container
-  text?: string
-  title?: string
-  tooltipClass?: string
-  tooltipTextAlign?: 'center' | 'left' | 'right'
-  tooltipWidth?: `${number}%` | `${number}px`
+  dontOpenPermanently?: boolean,
+  fitContent?: boolean,
+  hide?: boolean,
+  hoverDelay?: number,
+  layout?: 'default' | 'special',
+  position?: 'bottom' | 'left' | 'right' | 'top',
+  renderTextAsHtml?: boolean,
+  scrollContainer?: string, // query selector for scrollable parent container
+  text?: string,
+  title?: string,
+  tooltipClass?: string,
+  tooltipTextAlign?: 'center' | 'left' | 'right',
+  tooltipWidth?: `${number}%` | `${number}px`,
 }
 
 const toolTipTextAlignWithDefault = computed(
@@ -56,8 +56,8 @@ const isOpen = computed(
   () => isSelected.value || hover.value || hoverTooltip.value,
 )
 
-const pos = ref<{ left: string
-  top: string }>({
+const pos = ref<{ left: string,
+  top: string, }>({
   left: '0',
   top: '0',
 })

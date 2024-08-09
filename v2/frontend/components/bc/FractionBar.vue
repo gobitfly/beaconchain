@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 interface Props {
-  fillPercentage?: number
+  fillPercentage?: number,
 }
 const props = defineProps<Props>()
 

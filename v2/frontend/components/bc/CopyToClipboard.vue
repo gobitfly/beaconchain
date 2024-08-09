@@ -5,7 +5,7 @@ import { warn } from 'vue'
 import BcTooltip from './BcTooltip.vue'
 
 interface Props {
-  value?: string
+  value?: string,
 }
 const props = defineProps<Props>()
 

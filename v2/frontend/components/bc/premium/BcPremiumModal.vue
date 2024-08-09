@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 interface Props {
-  description?: string
-  dismissLabel?: string
+  description?: string,
+  dismissLabel?: string,
 }
 
 const {

@@ -4,13 +4,13 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { InternalEntry } from '~/types/notifications/subscriptionModal'
 
 const props = defineProps<{
-  lacksPremiumSubscription: boolean
-  tPath: string
-  valueInText?: number
+  lacksPremiumSubscription: boolean,
+  tPath: string,
+  valueInText?: number,
 }>()
 
 const emitEvent = defineEmits<{
-  (e: 'checkboxClick', checked: boolean): void
+  (e: 'checkboxClick', checked: boolean): void,
 }>()
 
 const { t } = useTranslation()

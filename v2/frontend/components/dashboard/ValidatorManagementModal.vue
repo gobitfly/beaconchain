@@ -78,11 +78,11 @@ const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
 
 type ValidatorUpdateBody = {
-  deposit_address?: string
-  graffiti?: string
-  group_id?: number
-  validators?: string[]
-  withdrawal_address?: string
+  deposit_address?: string,
+  graffiti?: string,
+  group_id?: number,
+  validators?: string[],
+  withdrawal_address?: string,
 }
 
 const size = computed(() => {

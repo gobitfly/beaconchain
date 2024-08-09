@@ -23,12 +23,12 @@ import {
 } from '~/types/searchbar'
 
 const props = defineProps<{
-  barPurpose: SearchbarPurpose
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  dropdownLayout: SearchbarDropdownLayout
-  screenWidthCausingSuddenChange: number
-  suggestion: ResultSuggestionInternal
+  barPurpose: SearchbarPurpose,
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout: SearchbarDropdownLayout,
+  screenWidthCausingSuddenChange: number,
+  suggestion: ResultSuggestionInternal,
 }>()
 
 const { t } = useTranslation()

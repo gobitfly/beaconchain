@@ -3,7 +3,7 @@ import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 interface Props {
-  group: VDBOverviewGroup
+  group: VDBOverviewGroup,
 }
 
 const props = defineProps<Props>()

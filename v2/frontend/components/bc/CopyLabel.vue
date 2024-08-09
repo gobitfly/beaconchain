@@ -1,7 +1,7 @@
 <script setup lang="ts">
 interface Props {
-  label?: string // will default to value
-  value?: string
+  label?: string, // will default to value
+  value?: string,
 }
 defineProps<Props>()
 </script>

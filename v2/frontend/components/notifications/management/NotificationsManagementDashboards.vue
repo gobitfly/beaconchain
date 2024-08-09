@@ -27,15 +27,15 @@ type AllOptions = NotificationSettingsAccountDashboard &
   NotificationSettingsValidatorDashboard
 
 interface WrappedRow extends NotificationSettingsDashboardsTableRow {
-  dashboard_name: string
-  dashboard_type: DashboardType
-  identifier: string
-  subscriptions: string[]
+  dashboard_name: string,
+  dashboard_type: DashboardType,
+  identifier: string,
+  subscriptions: string[],
 }
 
 interface SettingsWithContext {
-  row: WrappedRow
-  settings: Partial<AllOptions>
+  row: WrappedRow,
+  settings: Partial<AllOptions>,
 }
 
 // #### CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####

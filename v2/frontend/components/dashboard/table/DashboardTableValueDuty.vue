@@ -2,7 +2,7 @@
 import type { VDBRewardsTableDuty } from '~/types/api/validator_dashboard'
 
 interface Props {
-  duty: VDBRewardsTableDuty
+  duty: VDBRewardsTableDuty,
 }
 defineProps<Props>()
 </script>

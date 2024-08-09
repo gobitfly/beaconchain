@@ -41,7 +41,7 @@ use([
 ])
 
 interface Props {
-  filter?: SummaryChartFilter
+  filter?: SummaryChartFilter,
 }
 
 const props = defineProps<Props>()
@@ -63,8 +63,8 @@ const {
   instant: instantTimeFrames,
   temp: tempTimeFrames,
   value: timeFrames,
-} = useDebounceValue<{ from?: number
-  to: number }>({
+} = useDebounceValue<{ from?: number,
+  to: number, }>({
   from: undefined,
   to: 0,
 }, 1000)
@@ -85,11 +85,11 @@ const isLoading = ref(false)
 let reloadCounter = 0
 
 interface SeriesObject {
-  data: number[]
-  name: string
-  smooth: boolean
-  symbol: string
-  type: string
+  data: number[],
+  name: string,
+  smooth: boolean,
+  symbol: string,
+  type: string,
 }
 // we don't want the series to be responsive to not trigger an auto update of the option computed
 const series = ref<SeriesObject[]>([])

@@ -2,7 +2,7 @@
 import type { CryptoCurrency } from '~/types/currencies'
 
 interface Props {
-  currency?: CryptoCurrency
+  currency?: CryptoCurrency,
 }
 defineProps<Props>()
 </script>

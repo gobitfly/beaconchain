@@ -3,13 +3,13 @@ import type { BigNumber } from '@ethersproject/bignumber'
 import type { ValueConvertOptions } from '~/types/value'
 
 interface Props {
-  fullValue?: boolean
-  negativeClass?: string
-  noTooltip?: boolean
-  options?: ValueConvertOptions
-  positiveClass?: string
-  useColors?: boolean
-  value?: BigNumber | string
+  fullValue?: boolean,
+  negativeClass?: string,
+  noTooltip?: boolean,
+  options?: ValueConvertOptions,
+  positiveClass?: string,
+  useColors?: boolean,
+  value?: BigNumber | string,
 }
 const props = withDefaults(defineProps<Props>(), {
   negativeClass: 'negative',

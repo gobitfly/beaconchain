@@ -9,19 +9,19 @@ const { products } = useProductsStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 type CompareValue = {
-  class?: string
-  tooltip?: string
-  value?: boolean | string
+  class?: string,
+  tooltip?: string,
+  value?: boolean | string,
 }
 
 type RowType = 'group' | 'header' | 'label' | 'perc'
 
 type CompareRow = {
-  className?: string
-  label?: string
-  subText?: string
-  type: RowType
-  values?: CompareValue[]
+  className?: string,
+  label?: string,
+  subText?: string,
+  type: RowType,
+  values?: CompareValue[],
 }
 
 const showContent = ref(false)

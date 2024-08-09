@@ -25,12 +25,12 @@ import type { StatusCount } from '~/types/api/common'
 import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
-  absolute?: boolean
-  data?: VDBGroupSummaryData
-  inDetailView?: boolean
-  property: SummaryDetailsEfficiencyCombinedProp
-  row: VDBSummaryTableRow
-  timeFrame: SummaryTimeFrame
+  absolute?: boolean,
+  data?: VDBGroupSummaryData,
+  inDetailView?: boolean,
+  property: SummaryDetailsEfficiencyCombinedProp,
+  row: VDBSummaryTableRow,
+  timeFrame: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 
@@ -59,8 +59,8 @@ const data = computed(() => {
       props.property as SummaryDetailsEfficiencyProp,
     )
   ) {
-    const tooltip: { text: string
-      title: string } | undefined = $tm(
+    const tooltip: { text: string,
+      title: string, } | undefined = $tm(
       `dashboard.validator.tooltip.${props.property}`,
       )
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
@@ -101,8 +101,8 @@ const data = computed(() => {
     }
   }
   else if (col && props.property === 'attestation_efficiency') {
-    const tooltip: { text: string
-      title: string } | undefined = $tm(
+    const tooltip: { text: string,
+      title: string, } | undefined = $tm(
         'dashboard.validator.tooltip.attestation_efficiency',
       )
     return {

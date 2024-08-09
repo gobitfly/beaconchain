@@ -6,7 +6,7 @@ import { type NotificationPairedDevice } from '~/types/api/notifications'
 const { t: $t } = useTranslation()
 
 interface Props {
-  device: NotificationPairedDevice
+  device: NotificationPairedDevice,
 }
 const props = defineProps<Props>()
 

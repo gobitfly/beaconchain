@@ -13,11 +13,11 @@ export type NotificationsManagementSettingsGeneralTab = Pick<
 export interface NotificationsManagementSettingsProvider {
   generalSettings: ComputedRef<
     NotificationsManagementSettingsGeneralTab | undefined
-  >
-  isLoading: Ref<boolean>
-  pairedDevices: ComputedRef<NotificationPairedDevice[] | undefined>
+  >,
+  isLoading: Ref<boolean>,
+  pairedDevices: ComputedRef<NotificationPairedDevice[] | undefined>,
   updateGeneralSettings: (
     newSettings: NotificationsManagementSettingsGeneralTab,
-  ) => void
-  updatePairedDevices: (newDevices: NotificationPairedDevice[]) => void
+  ) => void,
+  updatePairedDevices: (newDevices: NotificationPairedDevice[]) => void,
 }

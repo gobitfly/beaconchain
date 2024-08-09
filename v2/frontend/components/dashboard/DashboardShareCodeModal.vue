@@ -6,8 +6,8 @@ import { isSharedKey } from '~/utils/dashboard/key'
 
 interface Props {
   // Currently only validator dashboards are supported. For public dashboards this will be undefined
-  dashboard?: ValidatorDashboard
-  dashboardKey: string
+  dashboard?: ValidatorDashboard,
+  dashboardKey: string,
 }
 const {
   dialogRef, props,

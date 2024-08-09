@@ -5,13 +5,13 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
-  canBeEmpty?: boolean
-  disabled?: boolean
-  label?: string // used if not in edit mode, defaults to value,
-  maxlength?: number
-  pattern?: RegExp
-  trimInput?: boolean
-  value?: string
+  canBeEmpty?: boolean,
+  disabled?: boolean,
+  label?: string, // used if not in edit mode, defaults to value,
+  maxlength?: number,
+  pattern?: RegExp,
+  trimInput?: boolean,
+  value?: string,
 }
 
 const props = defineProps<Props>()

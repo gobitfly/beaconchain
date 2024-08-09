@@ -15,13 +15,13 @@ import type {
 } from '~/types/api/validator_dashboard'
 
 interface Props {
-  context: DashboardValidatorContext
-  dashboardKey?: DashboardKey
-  data?: VDBGroupSummaryData
-  groupId?: number
-  row: VDBSummaryTableRow
-  timeFrame?: SummaryTimeFrame
-  validators: number[]
+  context: DashboardValidatorContext,
+  dashboardKey?: DashboardKey,
+  data?: VDBGroupSummaryData,
+  groupId?: number,
+  row: VDBSummaryTableRow,
+  timeFrame?: SummaryTimeFrame,
+  validators: number[],
 }
 const props = defineProps<Props>()
 

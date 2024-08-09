@@ -15,13 +15,13 @@ import type {
 } from '~/types/validator'
 
 interface Props {
-  absolute: boolean
-  context: DashboardValidatorContext
-  dashboardKey?: DashboardKey
-  groupId?: number
-  isTooltip?: boolean
-  row: VDBSummaryTableRow
-  timeFrame?: SummaryTimeFrame
+  absolute: boolean,
+  context: DashboardValidatorContext,
+  dashboardKey?: DashboardKey,
+  groupId?: number,
+  isTooltip?: boolean,
+  row: VDBSummaryTableRow,
+  timeFrame?: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 

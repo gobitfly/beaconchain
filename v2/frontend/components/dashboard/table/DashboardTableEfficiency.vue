@@ -2,10 +2,10 @@
 import BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
-  absolute?: boolean
-  failed: number
-  isTooltip?: boolean
-  success: number
+  absolute?: boolean,
+  failed: number,
+  isTooltip?: boolean,
+  success: number,
 }
 const props = defineProps<Props>()
 

@@ -4,12 +4,12 @@ const props = defineProps<{
    * ♿️ buttons that are aria-disabled are still perceivable by screen readers
    * as they can still be focused on
    */
-  isAriaDisabled?: boolean
+  isAriaDisabled?: boolean,
   /**
    * ℹ️ should only be used rarely, e.g. in cases where the action should not be triggerd twice
    */
-  isDisabled?: boolean
-  variant?: 'secondary' // | 'red'
+  isDisabled?: boolean,
+  variant?: 'secondary', // | 'red'
 }>()
 
 const shouldAppearDisabled = computed(

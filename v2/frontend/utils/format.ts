@@ -15,9 +15,9 @@ export const ONE_WEEK = ONE_DAY * 7
 export const ONE_YEAR = ONE_DAY * 365
 
 export interface NumberFormatConfig {
-  addPositiveSign?: boolean
-  fixed?: number
-  precision?: number
+  addPositiveSign?: boolean,
+  fixed?: number,
+  precision?: number,
 }
 
 export function formatPercent(

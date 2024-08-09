@@ -6,7 +6,7 @@ const idError = useId()
  */
 export type BcInputError = false | string
 defineProps<{
-  error?: BcInputError
+  error?: BcInputError,
 }>()
 </script>
 

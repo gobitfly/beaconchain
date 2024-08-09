@@ -4,7 +4,7 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBGroupSummaryMissedRewards } from '~/types/api/validator_dashboard'
 
 interface Props {
-  missedRewards?: VDBGroupSummaryMissedRewards
+  missedRewards?: VDBGroupSummaryMissedRewards,
 }
 const props = defineProps<Props>()
 

@@ -8,8 +8,8 @@ const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()
 
 interface Props {
-  accountsDisabled: boolean
-  validatorsDisabled: boolean
+  accountsDisabled: boolean,
+  validatorsDisabled: boolean,
 }
 const props = defineProps<Props>()
 

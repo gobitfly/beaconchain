@@ -17,10 +17,10 @@ import type { MultiBarItem } from '~/types/multiBar'
 import type { ChainInfoFields } from '~/types/network'
 
 interface Props {
-  data: SlotVizEpoch[]
-  initiallyHideVisible?: boolean
-  networkInfo?: ChainInfoFields
-  timestamp?: number
+  data: SlotVizEpoch[],
+  initiallyHideVisible?: boolean,
+  networkInfo?: ChainInfoFields,
+  timestamp?: number,
 }
 const props = defineProps<Props>()
 

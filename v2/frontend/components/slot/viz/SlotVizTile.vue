@@ -6,9 +6,9 @@ import {
 } from '~/types/dashboard/slotViz'
 
 interface Props {
-  currentSlotId?: number
-  data: VDBSlotVizSlot
-  selectedCategories: SlotVizCategories[]
+  currentSlotId?: number,
+  data: VDBSlotVizSlot,
+  selectedCategories: SlotVizCategories[],
 }
 const props = defineProps<Props>()
 

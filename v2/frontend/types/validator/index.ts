@@ -15,12 +15,12 @@ export type ValidatorSubsetCategory =
   | VDBSummaryValidatorsData['category']
 
 export type ValidatorSubset = {
-  category: ValidatorSubsetCategory
-  validators: VDBSummaryValidator[]
+  category: ValidatorSubsetCategory,
+  validators: VDBSummaryValidator[],
 }
 export type ValidatorSummaryIconRowKey = 'exited' | 'offline' | 'online'
 
 export type SummaryValidatorsIconRowInfo = {
-  count: number
-  key: ValidatorSummaryIconRowKey
+  count: number,
+  key: ValidatorSummaryIconRowKey,
 }

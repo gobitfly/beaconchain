@@ -54,14 +54,14 @@ const { fetch } = useCustomFetch()
 const { availableNetworks } = useNetworkStore()
 
 const props = defineProps<{
-  barPurpose: SearchbarPurpose // what the bar will be used for
-  barShape: SearchbarShape // shape of the bar
-  colorTheme: SearchbarColors // colors of the bar and its dropdown
-  keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
-  onlyNetworks?: ChainIDs[] // the bar will search on these networks only
-  pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
-  rowLacksPremiumSubscription?: PremiumRowCallBackFunction // the bar calls this function for each row and deactivates the row if it returns `true`
-  screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
+  barPurpose: SearchbarPurpose, // what the bar will be used for
+  barShape: SearchbarShape, // shape of the bar
+  colorTheme: SearchbarColors, // colors of the bar and its dropdown
+  keepDropdownOpen?: boolean, // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
+  onlyNetworks?: ChainIDs[], // the bar will search on these networks only
+  pickByDefault: PickingCallBackFunction, // see the declaration of the type to get an explanation
+  rowLacksPremiumSubscription?: PremiumRowCallBackFunction, // the bar calls this function for each row and deactivates the row if it returns `true`
+  screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
 }>()
 const emit = defineEmits<{ (e: 'go', result: ResultSuggestion): any }>()
 
@@ -74,9 +74,9 @@ enum States {
 }
 
 interface GlobalState {
-  functionToCallAfterResultsGetOrganized: (() => void) | null
-  showDropdown: boolean
-  state: States
+  functionToCallAfterResultsGetOrganized: (() => void) | null,
+  showDropdown: boolean,
+  state: States,
 }
 
 let differentialRequests: boolean

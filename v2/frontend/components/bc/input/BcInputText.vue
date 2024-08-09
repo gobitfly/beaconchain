@@ -5,12 +5,12 @@ const idInput = useId()
 const input = defineModel<string>()
 
 const props = defineProps<{
-  error?: BcInputError
-  inputWidth?: `${number}px`
-  label: string
-  placeholder?: string
-  shouldAutoselect?: boolean
-  type?: HTMLInputElement['type']
+  error?: BcInputError,
+  inputWidth?: `${number}px`,
+  label: string,
+  placeholder?: string,
+  shouldAutoselect?: boolean,
+  type?: HTMLInputElement['type'],
 }>()
 onMounted(() => {
   if (props.shouldAutoselect) {

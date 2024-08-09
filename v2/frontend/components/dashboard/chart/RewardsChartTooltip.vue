@@ -8,26 +8,26 @@ import type {
 import type { WeiToValue } from '~/types/value'
 
 interface Props {
-  dataIndex: number
-  series: RewardChartSeries[]
-  startEpoch: number
-  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context,
-  weiToValue: WeiToValue
+  dataIndex: number,
+  series: RewardChartSeries[],
+  startEpoch: number,
+  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
+  weiToValue: WeiToValue,
 }
 
 const props = defineProps<Props>()
 
 interface GroupValue {
-  id: number
-  name: string
-  value: string
+  id: number,
+  name: string,
+  value: string,
 }
 
 interface Series {
-  className?: string
-  groups: GroupValue[]
-  name: string
-  value: string
+  className?: string,
+  groups: GroupValue[],
+  name: string,
+  value: string,
 }
 
 const mapData = (groups: RewardChartGroupData[]): GroupValue[] => {

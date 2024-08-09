@@ -6,6 +6,6 @@ export type SwipeCallback = (
   directions: SwipeDirection[],
 ) => boolean | undefined
 export type SwipeOptions = {
-  directional_threshold?: number // Pixels offset to trigger swipe
-  directions?: SwipeDirection[]
+  directional_threshold?: number, // Pixels offset to trigger swipe
+  directions?: SwipeDirection[],
 }

@@ -7,10 +7,10 @@ import {
 import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
 
 interface Props {
-  chartDisabled?: boolean
-  disabledFilter?: boolean
-  searchPlaceholder?: string
-  title?: string
+  chartDisabled?: boolean,
+  disabledFilter?: boolean,
+  searchPlaceholder?: string,
+  title?: string,
 }
 const props = defineProps<Props>()
 

@@ -380,8 +380,8 @@ export function mockLatestState(..._: any): InternalGetLatestStateResponse {
 }
 
 interface ApiChainInfo {
-  chain_id: number
-  name: string
+  chain_id: number,
+  name: string,
 }
 
 export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<

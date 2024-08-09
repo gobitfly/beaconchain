@@ -6,7 +6,7 @@ import type {
 } from '~/types/currencies'
 
 interface Props {
-  currency?: Currency
+  currency?: Currency,
 }
 
 defineProps<Props>()

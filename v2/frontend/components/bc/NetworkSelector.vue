@@ -6,7 +6,7 @@ import {
 } from '~/types/network'
 
 const props = defineProps<{
-  readonlyNetworks?: ChainIDs[]
+  readonlyNetworks?: ChainIDs[],
 }>()
 
 const {

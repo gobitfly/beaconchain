@@ -25,16 +25,16 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 
 interface Props {
-  context: DashboardValidatorContext
-  dashboardKey?: DashboardKey
-  dashboardName?: string
-  groupId?: number
-  groupName?: string
+  context: DashboardValidatorContext,
+  dashboardKey?: DashboardKey,
+  dashboardName?: string,
+  groupId?: number,
+  groupName?: string,
   summary?: {
-    data?: VDBGroupSummaryData
-    row: VDBSummaryTableRow
-  }
-  timeFrame?: SummaryTimeFrame
+    data?: VDBGroupSummaryData,
+    row: VDBSummaryTableRow,
+  },
+  timeFrame?: SummaryTimeFrame,
 }
 const {
   props, setHeader,

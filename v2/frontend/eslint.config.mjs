@@ -17,6 +17,17 @@ export default withNuxt({
       'error',
       { minItems: 2 },
     ],
+    '@stylistic/member-delimiter-style': [
+      'error',
+      {
+        multiline: {
+          delimiter: 'comma',
+        },
+        singleline: {
+          delimiter: 'comma',
+        },
+      },
+    ],
     '@stylistic/object-curly-newline': [
       'error',
       {
