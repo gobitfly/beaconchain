@@ -960,8 +960,8 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	groupIds := v.checkGroupIdList(q.Get("group_ids"))
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 
-	var aggregation enums.ChartAggregation
-	minAllowedTs, maxAvailableTs, maxAllowedInterval, err := h.getCurrentChartTimeLimitsForUser(&v, ctx, r, dashboardId, &aggregation)
+	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
+	minAllowedTs, maxAvailableTs, maxAllowedInterval, err := h.getCurrentChartTimeLimitsForUser(ctx, dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1182,8 +1182,8 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	}
 	q := r.URL.Query()
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	var aggregation enums.ChartAggregation
-	minAllowedTs, maxAvailableTs, maxAllowedInterval, err := h.getCurrentChartTimeLimitsForUser(&v, r.Context(), r, dashboardId, &aggregation)
+	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
+	minAllowedTs, maxAvailableTs, maxAllowedInterval, err := h.getCurrentChartTimeLimitsForUser(r.Context(), dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1215,8 +1215,11 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	requestedTimestamp := v.checkUint(vars["timestamp"], "timestamp")
 	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
-	var aggregation enums.ChartAggregation
-	minAllowedTs, maxAvailableTs, _, err := h.getCurrentChartTimeLimitsForUser(&v, r.Context(), r, dashboardId, &aggregation)
+	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
+	if v.hasErrors() {
+		handleErr(w, err)
+	}
+	minAllowedTs, maxAvailableTs, _, err := h.getCurrentChartTimeLimitsForUser(r.Context(), dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
