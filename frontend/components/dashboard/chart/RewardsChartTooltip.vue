@@ -95,8 +95,8 @@ const data = computed<Series[]>(() => {
 <template>
   <div class="tooltip-container">
     <DashboardChartTooltipHeader
-      :t="t"
-      :start-epoch="startEpoch"
+      :t
+      :start-epoch
     />
     <div
       v-for="(entry, index) in data"

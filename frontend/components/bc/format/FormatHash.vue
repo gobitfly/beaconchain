@@ -132,11 +132,11 @@ const data = computed(() => {
         </div>
         <div class="tt">
           <BcFormatHash
-            :hash="hash"
+            :hash
             :full="true"
             :no-link="true"
             :no-copy="true"
-            :type="type"
+            :type
           />
         </div>
       </template>

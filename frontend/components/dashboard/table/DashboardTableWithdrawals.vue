@@ -174,11 +174,11 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             data-key="identifier"
             :expandable="!colsVisible.group"
             class="withdrawal-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :add-spacer="true"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :loading="isLoadingWithdrawals"
             :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"

@@ -257,8 +257,8 @@ function getTypeIcon(type: DashboardType) {
         data-key="identifier"
         :expandable="!colsVisible.networks"
         class="notifications-management-dashboard-table"
-        :cursor="cursor"
-        :page-size="pageSize"
+        :cursor
+        :page-size
         :selected-sort="query?.sort"
         :loading="isLoading"
         @set-cursor="setCursor"

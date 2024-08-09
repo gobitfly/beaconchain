@@ -65,7 +65,7 @@ const readonlyClass = computed(() => (props.readonlyMode ? 'read-only' : ''))
       :icon="button.icon"
       :tooltip="button.tooltip"
       :disabled="button.disabled"
-      :readonly-class="readonlyClass"
+      :readonly-class
     >
       <template #icon>
         <slot :name="button.value">

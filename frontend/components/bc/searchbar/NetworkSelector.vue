@@ -126,9 +126,9 @@ function oneOptionChanged(index: number) {
   <div class="anchor">
     <BcSearchbarFilterButton
       class="head"
-      :bar-shape="barShape"
-      :color-theme="colorTheme"
-      :dropdown-layout="dropdownLayout"
+      :bar-shape
+      :color-theme
+      :dropdown-layout
       :look="headState.look"
       :state="dropdownIsOpen"
       @change="(open: boolean) => (dropdownIsOpen = open)"

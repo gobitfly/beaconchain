@@ -74,8 +74,8 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
             :data="notificationsDashboardsWithUniqueIdentifier"
             data-key="dashboardId"
             :expandable="!colsVisible.notifications"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :selected-sort="query?.sort"
             :loading="isLoading"
             @set-cursor="setCursor"

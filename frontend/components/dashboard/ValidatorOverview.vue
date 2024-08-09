@@ -112,7 +112,7 @@ const dataList = computed(() => {
     <DashboardOverviewBox
       v-for="data in dataList"
       :key="data.label"
-      :data="data"
+      :data
     />
   </div>
 </template>

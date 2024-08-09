@@ -44,7 +44,7 @@ const data = {
 <template>
   <BcTable
     class="hash-table"
-    :data="data"
+    :data
     :page-size="50"
   >
     <Column
@@ -67,9 +67,9 @@ const data = {
     >
       <template #body="{ data: { hash, ens, type } }">
         <BcFormatHash
-          :hash="hash"
-          :type="type"
-          :ens="ens"
+          :hash
+          :type
+          :ens
         />
       </template>
     </Column>
@@ -79,9 +79,9 @@ const data = {
     >
       <template #body="{ data: { hash, ens, type } }">
         <BcFormatHash
-          :hash="hash"
-          :type="type"
-          :ens="ens"
+          :hash
+          :type
+          :ens
           :full="true"
         />
       </template>
@@ -92,9 +92,9 @@ const data = {
     >
       <template #body="{ data: { hash, ens, type } }">
         <BcFormatHash
-          :hash="hash"
-          :type="type"
-          :ens="ens"
+          :hash
+          :type
+          :ens
           :no-link="true"
         />
       </template>
@@ -105,9 +105,9 @@ const data = {
     >
       <template #body="{ data: { hash, ens, type } }">
         <BcFormatHash
-          :hash="hash"
-          :type="type"
-          :ens="ens"
+          :hash
+          :type
+          :ens
           :full="true"
           :no-link="true"
         />
@@ -119,9 +119,9 @@ const data = {
     >
       <template #body="{ data: { hash, ens, type } }">
         <BcFormatHash
-          :hash="hash"
-          :type="type"
-          :ens="ens"
+          :hash
+          :type
+          :ens
           :no-copy="true"
         />
       </template>
@@ -132,9 +132,9 @@ const data = {
     >
       <template #body="{ data: { hash, ens, type } }">
         <BcFormatHash
-          :hash="hash"
-          :type="type"
-          :ens="ens"
+          :hash
+          :type
+          :ens
           :full="true"
           :no-copy="true"
         />

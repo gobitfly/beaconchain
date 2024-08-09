@@ -24,10 +24,10 @@ defineProps<Props>()
 <template>
   <div class="tooltip-container">
     <DashboardChartTooltipHeader
-      :t="t"
-      :ts="ts"
-      :aggregation="aggregation"
-      :efficiency-type="efficiencyType"
+      :t
+      :ts
+      :aggregation
+      :efficiency-type
     />
     <div
       v-for="(entry, index) in groupInfos"

@@ -62,7 +62,7 @@ const icon = computed(() => {
         >
           <FontAwesomeIcon
             v-if="icon"
-            :icon="icon"
+            :icon
           />
         </slot>
       </template>

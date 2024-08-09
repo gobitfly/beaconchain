@@ -45,7 +45,7 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
     <ToggleButton
       class="bc-toggle"
       :class="layout"
-      :disabled="disabled"
+      :disabled
       :model-value="selected"
     >
       <template #icon="slotProps">
@@ -55,7 +55,7 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
         >
           <FontAwesomeIcon
             v-if="icon"
-            :icon="icon"
+            :icon
           />
         </slot>
         <div

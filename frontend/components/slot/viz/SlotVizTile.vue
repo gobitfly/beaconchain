@@ -114,7 +114,7 @@ const data = computed(() => {
   <SlotVizTooltip
     :id="data.id"
     :data="props.data"
-    :current-slot-id="currentSlotId"
+    :current-slot-id
   >
     <div
       :id="data.id"

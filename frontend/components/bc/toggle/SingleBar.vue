@@ -64,7 +64,7 @@ function onButtonClicked(value: string) {
       :tooltip="button.tooltip"
       :disabled="button.disabled"
       :class="[layout, button.className]"
-      :layout="layout"
+      :layout
       @click="!button.disabled && onButtonClicked(button.value)"
     >
       <template #icon>

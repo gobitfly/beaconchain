@@ -22,7 +22,7 @@ const selected = defineModel<boolean>({ required: true })
     </slot>
     <InputSwitch
       v-model="selected"
-      :disabled="disabled"
+      :disabled
     />
     <slot name="trueOption">
       <div
