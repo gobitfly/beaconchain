@@ -24,16 +24,15 @@ type UserRepository interface {
 	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
 	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
-	GetUserIdByConfirmationHash(hash string) (uint64, error)
+	GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
-	// TODO @DATA-ACCESS i quickly hacked this together, maybe improve
 	result := uint64(0)
-	err := d.userReader.GetContext(ctx, &result, `SELECT id FROM users WHERE email = $1 LIMIT 1`, email)
+	err := d.userReader.GetContext(ctx, &result, `SELECT id FROM users WHERE email = $1`, email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("%w: user not found", ErrNotFound)
 	}
@@ -41,48 +40,110 @@ func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (u
 }
 
 func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
-	// TODO @DATA-ACCESS
 	// (password is already hashed)
-	return d.dummy.CreateUser(ctx, email, password)
+	var result uint64
+
+	apiKey, err := utils.GenerateRandomAPIKey()
+	if err != nil {
+		return 0, err
+	}
+
+	err = d.userWriter.GetContext(ctx, &result, `
+    	INSERT INTO users (password, email, register_ts, api_key)
+      		VALUES ($1, $2, NOW(), $3)
+		RETURNING id`,
+		password, email, apiKey,
+	)
+
+	return result, err
 }
 
 func (d *DataAccessService) RemoveUser(ctx context.Context, userId uint64) error {
-	// TODO @DATA-ACCESS
-	return d.dummy.RemoveUser(ctx, userId)
+	_, err := d.userWriter.ExecContext(ctx, "DELETE FROM users WHERE id = $1", userId)
+	return err
 }
 
 func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) error {
-	// TODO @DATA-ACCESS
 	// Called after user clicked link for email confirmations + changes, so:
-	// set user_confirmed true, set email (from email_change_to_value), update stripe email
+	// set email_confirmed true, set email (from email_change_to_value), update stripe email
 	// unset email_confirmation_hash
-	return d.dummy.UpdateUserEmail(ctx, userId)
+
+	_, err := d.userWriter.ExecContext(ctx, `
+		UPDATE users 
+		SET 
+			email = email_change_to_value,
+			email_change_to_value = NULL,
+			email_confirmed = true,
+			email_confirmation_hash = NULL
+		WHERE id = $1
+	`, userId)
+
+	return err
 }
 
 func (d *DataAccessService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
-	// TODO @DATA-ACCESS
 	// (password is already hashed)
-	return d.dummy.UpdateUserPassword(ctx, userId, password)
+
+	_, err := d.userWriter.ExecContext(ctx, `
+		UPDATE users 
+		SET 
+			password = $1
+		WHERE id = $2
+	`, password, userId)
+
+	return err
 }
 
 func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationTime(ctx, userId)
+	result := time.Time{}
+
+	var queryResult sql.NullTime
+	err := d.userWriter.GetContext(ctx, &queryResult, `
+    	SELECT
+			email_confirmation_ts
+		FROM users
+		WHERE id = $1`, userId)
+
+	if queryResult.Valid {
+		result = queryResult.Time
+	}
+
+	return result, err
 }
 
 func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
-	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationTime(ctx, userId)
+	_, err := d.userWriter.ExecContext(ctx, `
+		UPDATE users 
+		SET 
+			email_confirmation_ts = NOW()
+		WHERE id = $1
+	`, userId)
+
+	return err
 }
 
 func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailConfirmationHash(ctx, userId)
+	var result string
+
+	err := d.userWriter.GetContext(ctx, &result, `
+    	SELECT
+			email_confirmation_hash
+		FROM users
+		WHERE id = $1`, userId)
+
+	return result, err
 }
 
 func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
-	// TODO @DATA-ACCESS
-	return d.dummy.UpdateEmailConfirmationHash(ctx, userId, email, confirmationHash)
+	_, err := d.userWriter.ExecContext(ctx, `
+		UPDATE users 
+		SET 
+			email_confirmation_hash = $1,
+			email_change_to_value = $2
+		WHERE id = $3
+	`, confirmationHash, email, userId)
+
+	return err
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
@@ -127,9 +188,16 @@ func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string
 	return userId, err
 }
 
-func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetUserIdByConfirmationHash(hash)
+func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
+	var result uint64
+
+	err := d.userWriter.GetContext(ctx, &result, `
+    	SELECT
+			id
+		FROM users
+		WHERE email_confirmation_hash = $1`, hash)
+
+	return result, err
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
