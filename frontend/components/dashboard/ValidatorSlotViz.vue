@@ -105,9 +105,9 @@ const selectedLabel = computed(() => {
   <SlotVizViewer
     v-if="slotViz"
     :data="slotViz"
-    :network-info="networkInfo"
+    :network-info
     :timestamp="tick"
-    :initially-hide-visible="initiallyHideVisible"
+    :initially-hide-visible
   >
     <template #header-right>
       <MultiSelect

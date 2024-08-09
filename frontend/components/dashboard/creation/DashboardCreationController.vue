@@ -169,8 +169,8 @@ async function createDashboard() {
       v-model:state="state"
       v-model:type="type"
       v-model:name="name"
-      :accounts-disabled="accountsDisabled"
-      :validators-disabled="validatorsDisabled"
+      :accounts-disabled
+      :validators-disabled
       @next="onNext()"
     />
     <DashboardCreationNetworkMask
@@ -188,8 +188,8 @@ async function createDashboard() {
         v-model:state="state"
         v-model:type="type"
         v-model:name="name"
-        :accounts-disabled="accountsDisabled"
-        :validators-disabled="validatorsDisabled"
+        :accounts-disabled
+        :validators-disabled
         @next="onNext()"
       />
       <DashboardCreationNetworkMask

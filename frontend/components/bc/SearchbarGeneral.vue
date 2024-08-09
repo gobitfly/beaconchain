@@ -89,11 +89,11 @@ async function redirectToRelevantPage(result: ResultSuggestion) {
 
 <template>
   <BcSearchbarMain
-    :bar-shape="barShape"
-    :color-theme="colorTheme"
+    :bar-shape
+    :color-theme
     :bar-purpose="SearchbarPurpose.GlobalSearch"
     :pick-by-default="pickHighestPriorityAmongBestMatchings"
-    :screen-width-causing-sudden-change="screenWidthCausingSuddenChange"
+    :screen-width-causing-sudden-change
     @go="redirectToRelevantPage"
   />
 </template>

@@ -178,7 +178,7 @@ watch(
       <TabView
         lazy
         class="dashboard-tab-view"
-        :active-index="activeIndex"
+        :active-index
         @update:active-index="setActiveIndex"
       >
         <TabPanel>

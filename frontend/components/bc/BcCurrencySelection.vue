@@ -27,7 +27,7 @@ const {
         >
           <IconCurrency
             v-if="currency"
-            :currency="currency"
+            :currency
           /> </span>{{ currency }}
       </span>
     </template>

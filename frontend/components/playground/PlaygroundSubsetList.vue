@@ -55,7 +55,7 @@ const categories: ValidatorSubsetCategory[] = [
     >
       <h3>{{ category }}</h3>
       <DashboardValidatorSubsetList
-        :category="category"
+        :category
         :validators="list"
       />
     </template>

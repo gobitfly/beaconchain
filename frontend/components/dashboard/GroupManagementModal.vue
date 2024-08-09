@@ -259,11 +259,11 @@ const selectedSort = computed(() =>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="data"
+            :data
             class="management-table"
-            :cursor="cursor"
-            :page-size="pageSize"
-            :selected-sort="selectedSort"
+            :cursor
+            :page-size
+            :selected-sort
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

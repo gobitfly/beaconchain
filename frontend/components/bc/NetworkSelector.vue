@@ -60,13 +60,13 @@ const buttons = computed(() => {
   <BcToggleMultiBar
     v-if="Array.isArray(barSelection)"
     v-model="barSelection"
-    :buttons="buttons"
+    :buttons
     :readonly-mode="!!readonlyNetworks"
   />
   <BcToggleSingleBar
     v-else
     v-model="barSelection"
-    :buttons="buttons"
+    :buttons
     layout="minimal"
   />
 </template>

@@ -56,7 +56,7 @@ const data = computed(() => {
     >
       <slot
         name="tooltip"
-        :data="data"
+        :data
       >
         <BcFormatNumber :text="data.tooltip" />
       </slot>

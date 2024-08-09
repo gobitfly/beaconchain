@@ -94,7 +94,7 @@ const mapped = computed(() => {
       <DashboardTableSummaryValidatorsIconRow
         :icons="mapped.list"
         :total="mapped.total"
-        :absolute="absolute"
+        :absolute
       />
     </BcTooltip>
     <FontAwesomeIcon

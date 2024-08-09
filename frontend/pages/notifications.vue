@@ -85,7 +85,7 @@ const openManageNotifications = () => {
       <TabView
         lazy
         class="notifications-tab-view"
-        :active-index="activeIndex"
+        :active-index
         @update:active-index="setActiveIndex"
       >
         <TabPanel>

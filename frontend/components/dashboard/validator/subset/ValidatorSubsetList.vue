@@ -83,8 +83,10 @@ function mapDutyLabel(dutyObjects?: number[]) {
 }
 function mapDutyLinks(
   dutyObjects?: number[],
-): { label: string,
-    to?: string, }[] {
+): {
+    label: string,
+    to?: string,
+  }[] {
   if (!dutyObjects) {
     return []
   }
@@ -164,9 +166,9 @@ function mapDutyLinks(
     >
       <BcTablePager
         class="pager"
-        :cursor="cursor"
+        :cursor
         :page-size="VALIDATORS_PER_PAGE"
-        :paging="paging"
+        :paging
         :stepper-only="true"
         @set-cursor="(c: Cursor) => (cursor = c)"
       />

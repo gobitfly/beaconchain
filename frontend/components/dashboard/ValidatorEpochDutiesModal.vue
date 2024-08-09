@@ -176,13 +176,13 @@ watch(
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="data"
+          :data
           data-key="validator"
           :expandable="size.expandable"
           class="duties-table"
-          :cursor="cursor"
+          :cursor
           :loading="isLoading"
-          :page-size="pageSize"
+          :page-size
           :selected-sort="tempQuery?.sort as string"
           @set-cursor="setCursor"
           @sort="onSort"
