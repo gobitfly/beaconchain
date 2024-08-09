@@ -3,7 +3,7 @@ const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 
 interface Props {
-  isYearly: boolean
+  isYearly: boolean,
 }
 defineProps<Props>()
 </script>

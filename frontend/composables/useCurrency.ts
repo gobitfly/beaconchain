@@ -11,8 +11,8 @@ export function useCurrency() {
     useRuntimeConfig().public.showInDevelopment,
   )
   const available = ref<Currency[]>([])
-  const withLabel = ref<{ currency: Currency
-    label: string }[]>([])
+  const withLabel = ref<{ currency: Currency,
+    label: string, }[]>([])
 
   const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   function setCurrency(newCurrency: Currency) {

@@ -3,24 +3,24 @@ import type { ApiPagingResponse } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
-  addSpacer?: boolean
-  cursor?: Cursor
-  data?: ApiPagingResponse<any>
-  dataKey?: string // Unique identifier for a data row
-  expandable?: boolean
-  hidePager?: boolean
-  isRowExpandable?: (item: any) => boolean
-  loading?: boolean
-  pageSize?: number
-  selectedSort?: string
-  selectionMode?: 'multiple' | 'single'
-  tableClass?: string
+  addSpacer?: boolean,
+  cursor?: Cursor,
+  data?: ApiPagingResponse<any>,
+  dataKey?: string, // Unique identifier for a data row
+  expandable?: boolean,
+  hidePager?: boolean,
+  isRowExpandable?: (item: any) => boolean,
+  loading?: boolean,
+  pageSize?: number,
+  selectedSort?: string,
+  selectionMode?: 'multiple' | 'single',
+  tableClass?: string,
 }
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void
-  (e: 'setPageSize', value: number): void
+  (e: 'setCursor', value: Cursor): void,
+  (e: 'setPageSize', value: number): void,
 }>()
 
 const expandedRows = ref<Record<any, boolean>>({})

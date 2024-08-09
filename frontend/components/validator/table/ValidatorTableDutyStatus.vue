@@ -3,8 +3,8 @@ import type { ValidatorHistoryDuties } from '~/types/api/common'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 interface Props {
-  compact?: boolean
-  data?: ValidatorHistoryDuties
+  compact?: boolean,
+  data?: ValidatorHistoryDuties,
 }
 const props = defineProps<Props>()
 

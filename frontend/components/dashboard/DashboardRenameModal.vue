@@ -10,8 +10,8 @@ const name = defineModel<string>('name', { default: '' })
 const isLoading = ref(false)
 
 interface Props {
-  dashboard: ValidatorDashboard
-  dashboardType: DashboardType
+  dashboard: ValidatorDashboard,
+  dashboardType: DashboardType,
 }
 const {
   dialogRef, props, setHeader,

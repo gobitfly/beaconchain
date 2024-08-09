@@ -68,8 +68,8 @@ const {
 const route = useRoute()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const megaMenu = ref<{
-  mobileActive: boolean
-  toggle: (evt: Event) => void
+  mobileActive: boolean,
+  toggle: (evt: Event) => void,
 } | null>(null)
 
 const breakpoint = `${smallHeaderThreshold}px`

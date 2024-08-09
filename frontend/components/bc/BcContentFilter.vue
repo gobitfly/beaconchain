@@ -4,8 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type InputText from 'primevue/inputtext'
 
 interface Props {
-  disabledFilter?: boolean
-  searchPlaceholder?: string
+  disabledFilter?: boolean,
+  searchPlaceholder?: string,
 }
 const props = defineProps<Props>()
 

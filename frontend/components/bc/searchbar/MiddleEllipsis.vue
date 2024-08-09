@@ -9,24 +9,24 @@ const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with b
 const ResizeObserverLagMargin = 1 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
 
 const props = defineProps<{
-  class?: string | string[] // to make the list of classes reactive
-  ellipses?: number | number[] // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
-  initialFlexGrow?: number // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
+  class?: string | string[], // to make the list of classes reactive
+  ellipses?: number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
+  initialFlexGrow?: number, // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
   // !! The props below are for internal use only !!
-  meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
-  text?: string
-  widthMediaqueryThreshold?: number // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
+  meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent,
+  text?: string,
+  widthMediaqueryThreshold?: number, // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
 }>()
 
 interface ExposedMembers {
-  amIofDefinedWidth: ComputedRef<boolean>
-  enterUpdateCycleAsAparent: typeof enterUpdateCycleAsAparent
-  getReadyForUpdate: typeof getReadyForUpdate
-  howMuchCanIshrinkOrGrow: typeof howMuchCanIshrinkOrGrow
-  saveFinalState: typeof saveFinalState
-  settleAfterUpdate: typeof settleAfterUpdate
-  updateContent: typeof updateContent
-  whatIsMyFlexGrow: typeof whatIsMyFlexGrow
+  amIofDefinedWidth: ComputedRef<boolean>,
+  enterUpdateCycleAsAparent: typeof enterUpdateCycleAsAparent,
+  getReadyForUpdate: typeof getReadyForUpdate,
+  howMuchCanIshrinkOrGrow: typeof howMuchCanIshrinkOrGrow,
+  saveFinalState: typeof saveFinalState,
+  settleAfterUpdate: typeof settleAfterUpdate,
+  updateContent: typeof updateContent,
+  whatIsMyFlexGrow: typeof whatIsMyFlexGrow,
 }
 
 interface MiddleEllipsis extends ComponentPublicInstance, ExposedMembers {}
@@ -58,8 +58,8 @@ enum SignalDirection {
   ParentToChildren,
 }
 
-type TextProperties = { text: string
-  width: number }
+type TextProperties = { text: string,
+  width: number, }
 
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
 const slot = computed(() => (_s.default ? _s.default() : [])) // `slot`s is always an array, empty if there is no slot
@@ -515,9 +515,9 @@ function enterUpdateCycleAsAparent(
     That would create a gap around the clipped text(s), thus making them clipped short although there is room for more.
     The following lines detect this case and distribute the room to the children before clipping and writing, so they can clip their text longer. */
     const canUseMoreRoom: {
-      child: MiddleEllipsis
-      flexGrow: number
-      growth: number
+      child: MiddleEllipsis,
+      flexGrow: number,
+      growth: number,
     }[] = []
     const hasEnoughRoom: MiddleEllipsis[] = []
     let totalAdditionalRoom = 0
@@ -745,8 +745,8 @@ function determineReason(
   )
   return reason
 
-  function calculateGaps(): { before: number | undefined
-    now: number } {
+  function calculateGaps(): { before: number | undefined,
+    now: number, } {
     // TODO: If needed, calculate the actual gaps when we are a parent (frame width - sum of child widths). Currently not required.
     let before: number | undefined
     const frameWhidthToCompareTo = amIreadyForUpdate
@@ -1021,8 +1021,8 @@ function clipText(
   // complicated and slower
   const nBlocks = nEllipses + 1
   // First, we extract `nBlocks` blocks from the original text. The extraction algorithm guarantees that the sum of their lengths is `room`. Their lengths vary for arithmetic reasons but are as similar as possible.
-  type Block = { start: number
-    visibleLength: number }
+  type Block = { start: number,
+    visibleLength: number, }
   const blocks: Block[] = []
   let totalToExtract = room
   let totalToSkip = originalText.length - room

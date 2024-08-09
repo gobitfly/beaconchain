@@ -18,8 +18,8 @@ import {
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
-type Row = { links: [string, IconDefinition, string, Target][]
-  title: string }
+type Row = { links: [string, IconDefinition, string, Target][],
+  title: string, }
 const columns: Row[] = [
   {
     links: [

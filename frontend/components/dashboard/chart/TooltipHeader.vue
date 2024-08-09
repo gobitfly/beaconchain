@@ -10,11 +10,11 @@ import {
 } from '~/utils/format'
 
 interface Props {
-  aggregation?: AggregationTimeframe
-  efficiencyType?: EfficiencyType
-  startEpoch?: number
-  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context,
-  ts?: number
+  aggregation?: AggregationTimeframe,
+  efficiencyType?: EfficiencyType,
+  startEpoch?: number,
+  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
+  ts?: number,
 }
 
 const props = defineProps<Props>()

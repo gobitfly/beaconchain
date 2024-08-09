@@ -13,22 +13,22 @@ import type {
 import { countSubsetDuties } from '~/utils/dashboard/validator'
 
 interface Props {
-  context: DashboardValidatorContext
-  subsets?: ValidatorSubset[]
-  subTitle?: string
+  context: DashboardValidatorContext,
+  subsets?: ValidatorSubset[],
+  subTitle?: string,
   summary?: {
-    data?: VDBGroupSummaryData
-    row: VDBSummaryTableRow
-  }
+    data?: VDBGroupSummaryData,
+    row: VDBSummaryTableRow,
+  },
 }
 const props = defineProps<Props>()
 
 const infos = computed(() => {
   const validatorIcons: SummaryValidatorsIconRowInfo[] = []
   const list: {
-    className?: string
-    slotVizCategory?: SlotVizCategories
-    value: number | string
+    className?: string,
+    slotVizCategory?: SlotVizCategories,
+    value: number | string,
   }[] = []
   const percent = {
     total: 0,

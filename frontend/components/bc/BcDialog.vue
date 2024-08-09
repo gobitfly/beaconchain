@@ -5,7 +5,7 @@ const { width } = useWindowSize()
 const { setTouchableElement } = useSwipe()
 
 interface Props {
-  header?: string
+  header?: string,
 }
 const props = defineProps<Props>()
 

@@ -15,8 +15,8 @@ import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 import { countSummaryValidatorDuties } from '~/utils/dashboard/validator'
 
 interface Props {
-  category: ValidatorSubsetCategory
-  validators: VDBSummaryValidator[]
+  category: ValidatorSubsetCategory,
+  validators: VDBSummaryValidator[],
 }
 const props = defineProps<Props>()
 

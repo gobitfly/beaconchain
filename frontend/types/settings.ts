@@ -5,17 +5,17 @@ export type AgeFormat = 'absolute' | 'relative'
 export type CookieValue = null | string | undefined
 
 interface SettingsGetter {
-  <T>(value?: string): T
+  <T>(value?: string): T,
 }
 
 interface SettingsSetter {
-  <T>(value?: T): string
+  <T>(value?: T): string,
 }
 
 type SettingsConfig = {
-  default: unknown
-  parseValue?: SettingsGetter
-  valueToString?: SettingsSetter
+  default: unknown,
+  parseValue?: SettingsGetter,
+  valueToString?: SettingsSetter,
 }
 
 const parseValueBoolean = (value: string) => value === 'true'

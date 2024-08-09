@@ -4,7 +4,7 @@ import {
 } from '~/types/searchbar'
 
 const props = defineProps<{
-  type: ResultType
+  type: ResultType,
 }>()
 
 const subCategory = computed(() => TypeInfo[props.type].subCategory)

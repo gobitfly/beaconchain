@@ -60,16 +60,16 @@ export enum API_PATH {
 export type PathValues = Record<string, number | string>
 
 interface MockFunction {
-  (body?: any, param?: PathValues, query?: PathValues): any
+  (body?: any, param?: PathValues, query?: PathValues): any,
 }
 
 type MappingData = {
-  getPath?: (values?: PathValues) => string
-  legacy?: boolean
-  method?: 'DELETE' | 'GET' | 'POST' | 'PUT' // 'GET' will be used as default
-  mock?: boolean
-  mockFunction?: MockFunction
-  path: string
+  getPath?: (values?: PathValues) => string,
+  legacy?: boolean,
+  method?: 'DELETE' | 'GET' | 'POST' | 'PUT', // 'GET' will be used as default
+  mock?: boolean,
+  mockFunction?: MockFunction,
+  path: string,
 }
 
 export const mapping: Record<string, MappingData> = {

@@ -16,11 +16,11 @@ type AllOptions = NotificationSettingsAccountDashboard &
 type DefinedAPIentry = Exclude<APIentry, null | undefined>
 
 interface Props {
-  dashboardType: DashboardType
-  initialSettings: AllOptions
+  dashboardType: DashboardType,
+  initialSettings: AllOptions,
   saveUserSettings: (
     settings: Record<keyof AllOptions, DefinedAPIentry>,
-  ) => void
+  ) => void,
 }
 
 // #### CONFIGURATION OF THE DIALOGS ####

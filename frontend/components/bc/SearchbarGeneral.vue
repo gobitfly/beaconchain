@@ -9,9 +9,9 @@ import {
 } from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
 }>()
 
 async function redirectToRelevantPage(result: ResultSuggestion) {

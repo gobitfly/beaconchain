@@ -4,9 +4,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorStatus } from '~/types/validator'
 
 interface Props {
-  hideLabel?: boolean
-  position?: number
-  status: ValidatorStatus
+  hideLabel?: boolean,
+  position?: number,
+  status: ValidatorStatus,
 }
 const props = defineProps<Props>()
 

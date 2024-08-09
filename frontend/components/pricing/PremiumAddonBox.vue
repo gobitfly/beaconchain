@@ -21,9 +21,9 @@ const {
 } = useStripe()
 
 interface Props {
-  addon: ExtraDashboardValidatorsPremiumAddon
-  isYearly: boolean
-  maximumValidatorLimit?: number
+  addon: ExtraDashboardValidatorsPremiumAddon,
+  isYearly: boolean,
+  maximumValidatorLimit?: number,
 }
 const props = defineProps<Props>()
 

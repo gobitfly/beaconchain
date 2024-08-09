@@ -2,8 +2,8 @@
 import type { ClElValue } from '~/types/api/common'
 
 interface Props {
-  reward?: ClElValue<string>
-  status?: 'missed' | 'orphaned' | 'scheduled' | 'success'
+  reward?: ClElValue<string>,
+  status?: 'missed' | 'orphaned' | 'scheduled' | 'success',
 }
 defineProps<Props>()
 </script>

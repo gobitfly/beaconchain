@@ -3,7 +3,7 @@ import type { VDBSummaryStatus } from '~/types/api/validator_dashboard'
 import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
 interface Props {
-  status: VDBSummaryStatus
+  status: VDBSummaryStatus,
 }
 const props = defineProps<Props>()
 

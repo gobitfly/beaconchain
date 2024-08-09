@@ -58,8 +58,8 @@ export type DashboardValidatorContext =
   | 'sync'
 
 export type SummaryRow = {
-  prop?: SummaryDetailsEfficiencyCombinedProp
-  title: string
+  prop?: SummaryDetailsEfficiencyCombinedProp,
+  title: string,
 }
 
 export const SummaryTimeFrames = [
@@ -72,11 +72,11 @@ export const SummaryTimeFrames = [
 export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
 
 export type SummaryTableVisibility = {
-  attestations: boolean
-  efficiency: boolean
-  proposals: boolean
-  reward: boolean
-  validatorsSortable: boolean
+  attestations: boolean,
+  efficiency: boolean,
+  proposals: boolean,
+  reward: boolean,
+  validatorsSortable: boolean,
 }
 
 export const SUMMARY_CHART_GROUP_TOTAL = -1
@@ -99,8 +99,8 @@ export const EfficiencyTypes = [
 export type EfficiencyType = (typeof EfficiencyTypes)[number]
 
 export type SummaryChartFilter = {
-  aggregation: AggregationTimeframe
-  efficiency: EfficiencyType
-  groupIds: number[]
-  initialised?: boolean
+  aggregation: AggregationTimeframe,
+  efficiency: EfficiencyType,
+  groupIds: number[],
+  initialised?: boolean,
 }

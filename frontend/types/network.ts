@@ -31,19 +31,19 @@ export enum ChainIDs {
 }
 
 export interface ChainInfoFields {
-  clCurrency: CryptoCurrency
-  description: string
-  elCurrency: CryptoCurrency
-  family: ChainFamily
-  L1: ChainIDs // if the network is a L2, this field points to the L1
-  mainNet: ChainIDs // if the network is a testnet, this field points to the non-test network
-  name: string
-  nameParts: string[]
-  priority: number // default order of the networks on the screen (ex: in the drop-down of the search bar)
-  secondsPerSlot: number // if this property is 0, it means that the network has no slots
-  shortName: string
-  slotsPerEpoch: number // if this property is 0, it means that the network has no slots
-  timeStampSlot0: number // if this property is 0, it means that the network has no slots
+  clCurrency: CryptoCurrency,
+  description: string,
+  elCurrency: CryptoCurrency,
+  family: ChainFamily,
+  L1: ChainIDs, // if the network is a L2, this field points to the L1
+  mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
+  name: string,
+  nameParts: string[],
+  priority: number, // default order of the networks on the screen (ex: in the drop-down of the search bar)
+  secondsPerSlot: number, // if this property is 0, it means that the network has no slots
+  shortName: string,
+  slotsPerEpoch: number, // if this property is 0, it means that the network has no slots
+  timeStampSlot0: number, // if this property is 0, it means that the network has no slots
 }
 
 export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
