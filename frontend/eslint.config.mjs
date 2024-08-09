@@ -59,6 +59,7 @@ export default withNuxt({
       'error',
       { allowAllPropertiesOnSameLine: true },
     ],
+    'vue/max-attributes-per-line': 'off',
     'vue/max-len': [
       'error',
       {
