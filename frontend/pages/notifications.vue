@@ -112,7 +112,7 @@ const openManageNotifications = () => {
               :icon="faMonitorWaveform"
             />
           </template>
-          Machines coming soon!
+          <NotificationsMachinesTable />
         </TabPanel>
         <TabPanel :disabled="tabs.clients.disabled">
           <template #header>

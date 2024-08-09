@@ -310,6 +310,22 @@
       "rocketpool": "Rocket Pool",
       "network": "Network"
     },
+    "machine": {
+      "event_type": {
+        "is_machine_offline": "Machine is offline",
+        "machine_storage_usage": "No storage left",
+        "machine_cpu_usage": "CPU overheated",
+        "machine_memory_usage": "High memory usage"
+      },
+      "footer": {
+        "subscriptions": "Machines (1 Subscription) |Machines ({count} Subscriptions)"
+      },
+      "col": {
+        "machine_name": "Machine",
+        "threshold": "Threshold",
+        "event_type": "Event"
+      }
+    },
     "subscriptions": {
       "dialog_title": "Edit Subscriptions",
       "validators": {
