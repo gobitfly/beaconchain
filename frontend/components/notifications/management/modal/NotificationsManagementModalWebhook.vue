@@ -6,8 +6,8 @@ import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
 
 export type WebhookForm = {
-  is_discord_webhook_enabled: boolean
-  webhook_url: string
+  is_discord_webhook_enabled: boolean,
+  webhook_url: string,
 }
 const {
   close, props,
@@ -91,7 +91,7 @@ const handleTestNotification = async () => {
   warn('Test notification sent', values)
 }
 const emit = defineEmits<{
-  (e: 'save', values: WebhookForm, closeCallback: () => void): void
+  (e: 'save', values: WebhookForm, closeCallback: () => void): void,
 }>()
 
 const onSubmit = handleSubmit((values) => {

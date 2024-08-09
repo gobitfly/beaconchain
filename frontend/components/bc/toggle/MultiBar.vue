@@ -4,8 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type MultiBarItem } from '~/types/multiBar'
 
 interface Props {
-  buttons: MultiBarItem[]
-  readonlyMode?: boolean
+  buttons: MultiBarItem[],
+  readonlyMode?: boolean,
 }
 
 const props = defineProps<Props>()

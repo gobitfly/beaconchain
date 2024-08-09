@@ -12,7 +12,7 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 type ExtendedVDBWithdrawalsTableRow = {
-  identifier: string
+  identifier: string,
 } & VDBWithdrawalsTableRow
 
 const { dashboardKey } = useDashboardKey()

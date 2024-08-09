@@ -8,8 +8,8 @@ import type { ValidatorSubsetCategory } from '~/types/validator'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 
 interface Props {
-  category: ValidatorSubsetCategory
-  validators: VDBSummaryValidator[]
+  category: ValidatorSubsetCategory,
+  validators: VDBSummaryValidator[],
 }
 const props = defineProps<Props>()
 
@@ -83,8 +83,8 @@ function mapDutyLabel(dutyObjects?: number[]) {
 }
 function mapDutyLinks(
   dutyObjects?: number[],
-): { label: string
-    to?: string }[] {
+): { label: string,
+    to?: string, }[] {
   if (!dutyObjects) {
     return []
   }

@@ -6,11 +6,11 @@ import type {
 } from '~/types/tag'
 
 interface Props {
-  color?: TagColor
-  icon?: IconDefinition
-  label?: string
-  size?: TagSize
-  tooltip?: string
+  color?: TagColor,
+  icon?: IconDefinition,
+  label?: string,
+  size?: TagSize,
+  tooltip?: string,
 }
 defineProps<Props>()
 </script>

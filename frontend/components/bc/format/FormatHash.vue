@@ -1,19 +1,19 @@
 <script setup lang="ts">
 interface Props {
-  ens?: string
-  full?: boolean // if true the hash will not be truncated
-  hash?: string
-  noCopy?: boolean // same as for the link
+  ens?: string,
+  full?: boolean, // if true the hash will not be truncated
+  hash?: string,
+  noCopy?: boolean, // same as for the link
   // most of the time we want to render it as a link (if possible), but there might be cases where we don't
-  noLink?: boolean
-  noWrap?: boolean // don't wrap elements
+  noLink?: boolean,
+  noWrap?: boolean, // don't wrap elements
   type?:
     | 'address'
     | 'block_hash'
     | 'public_key'
     | 'root' // if none is provided the default format will be applied
     | 'tx'
-    | 'withdrawal_credentials'
+    | 'withdrawal_credentials',
 }
 const props = defineProps<Props>()
 
@@ -29,8 +29,8 @@ const data = computed(() => {
       : props.noWrap
         ? 'no-wrap'
         : ''
-  let parts: { className?: string
-    value: string }[] = []
+  let parts: { className?: string,
+    value: string, }[] = []
   let link: string = ''
   if (props.ens) {
     parts.push({

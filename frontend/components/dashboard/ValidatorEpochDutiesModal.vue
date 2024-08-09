@@ -17,10 +17,10 @@ const size = computed(() => {
 
 interface Props {
   // we need to pass the key as prop as the dialog is not a child component and cannot access the provider
-  dashboardKey: DashboardKey
-  epoch: number
-  groupId: number
-  groupName?: string
+  dashboardKey: DashboardKey,
+  epoch: number,
+  groupId: number,
+  groupName?: string,
 }
 
 const {

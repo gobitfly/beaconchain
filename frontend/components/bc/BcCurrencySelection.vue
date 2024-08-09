@@ -2,7 +2,7 @@
 import type { Currency } from '~/types/currencies'
 
 defineProps<{
-  showCurrencyIcon: boolean
+  showCurrencyIcon: boolean,
 }>()
 
 const {

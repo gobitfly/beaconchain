@@ -9,11 +9,11 @@ const {
 } = useFormat()
 
 interface Props {
-  format?: 'global-setting' | AgeFormat
-  noUpdate?: boolean
-  type?: 'epoch' | 'go-timestamp' | 'slot' // we can add other types later when needed, we default to epoch
-  unitLength?: StringUnitLength
-  value?: number | string
+  format?: 'global-setting' | AgeFormat,
+  noUpdate?: boolean,
+  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
+  unitLength?: StringUnitLength,
+  value?: number | string,
 }
 const props = defineProps<Props>()
 const { t: $t } = useTranslation()

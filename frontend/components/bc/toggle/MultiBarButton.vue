@@ -4,11 +4,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import BcTooltip from '../BcTooltip.vue'
 
 interface Props {
-  disabled?: boolean
-  falseIcon?: IconDefinition
-  icon?: IconDefinition
-  readonlyClass?: string
-  tooltip?: string
+  disabled?: boolean,
+  falseIcon?: IconDefinition,
+  icon?: IconDefinition,
+  readonlyClass?: string,
+  tooltip?: string,
 }
 
 const props = defineProps<Props>()

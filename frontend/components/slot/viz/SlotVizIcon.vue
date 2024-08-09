@@ -2,7 +2,7 @@
 import { type SlotVizIcons } from '~/types/dashboard/slotViz'
 
 interface Props {
-  icon: SlotVizIcons
+  icon: SlotVizIcons,
 }
 const props = defineProps<Props>()
 </script>

@@ -6,7 +6,7 @@ import { type OverviewTableData } from '~/types/dashboard/overview'
 import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
-  data: OverviewTableData
+  data: OverviewTableData,
 }
 const props = defineProps<Props>()
 const dialog = useDialog()

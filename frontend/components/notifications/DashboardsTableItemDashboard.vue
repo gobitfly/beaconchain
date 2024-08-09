@@ -2,9 +2,9 @@
 import type { DashboardType } from '~/types/dashboard'
 
 interface Props {
-  dashboardId: number
-  dashboardName: string
-  type: DashboardType
+  dashboardId: number,
+  dashboardName: string,
+  type: DashboardType,
 }
 const props = defineProps<Props>()
 

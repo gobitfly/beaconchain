@@ -22,8 +22,8 @@ import type BcTooltip from '~/components/bc/BcTooltip.vue'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
 
 interface Props {
-  groupName?: string
-  row: VDBRewardsTableRow
+  groupName?: string,
+  row: VDBRewardsTableRow,
 }
 const props = defineProps<Props>()
 

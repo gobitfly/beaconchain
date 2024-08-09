@@ -14,8 +14,8 @@ import {
 } from '~/types/header'
 
 defineProps<{
-  isHomePage: boolean
-  minimalist: boolean
+  isHomePage: boolean,
+  minimalist: boolean,
 }>()
 const { latestState } = useLatestStateStore()
 const {

@@ -18,8 +18,8 @@ const {
 const { currentNetwork } = useNetworkStore()
 
 interface Props {
-  displayMode: DashboardCreationDisplayMode
-  initiallyVisible?: boolean
+  displayMode: DashboardCreationDisplayMode,
+  initiallyVisible?: boolean,
 }
 const props = defineProps<Props>()
 

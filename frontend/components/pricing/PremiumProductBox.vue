@@ -21,8 +21,8 @@ const {
 } = useStripe()
 
 interface Props {
-  isYearly: boolean
-  product: PremiumProduct
+  isYearly: boolean,
+  product: PremiumProduct,
 }
 const props = defineProps<Props>()
 

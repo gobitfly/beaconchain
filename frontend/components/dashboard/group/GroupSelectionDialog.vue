@@ -4,9 +4,9 @@ import {
 } from 'vue'
 
 interface Props {
-  groupId?: number
-  selectedValidators?: number
-  totalValidators?: number
+  groupId?: number,
+  selectedValidators?: number,
+  totalValidators?: number,
 }
 const {
   dialogRef, props, setHeader,

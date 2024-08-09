@@ -2,11 +2,11 @@
 import { type ModelRef } from 'vue'
 
 export interface BridgeRef<T> extends Ref<T> {
-  pauseBridgeFromNowOn: () => void
-  wakeupBridgeAtNextTick: () => void
+  pauseBridgeFromNowOn: () => void,
+  wakeupBridgeAtNextTick: () => void,
 }
 interface ConverterCallback<Tx, Ty> {
-  (x: Tx): Ty
+  (x: Tx): Ty,
 }
 
 /** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back

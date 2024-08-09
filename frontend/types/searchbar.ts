@@ -86,9 +86,9 @@ export enum ResultType {
 // The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of `Matching` elements
 // and the function returns one `Matching` element (or undefined).
 export type Matching = {
-  closeness: number // how close this result is to what the user inputted (lower value = better similarity)
-  network: ChainIDs // the network that this result belongs to
-  type: ResultType // the type of the result
+  closeness: number, // how close this result is to what the user inputted (lower value = better similarity)
+  network: ChainIDs, // the network that this result belongs to
+  type: ResultType, // the type of the result
 }
 /* When the user presses Enter, the callback function receives a simplified representation of the suggested results and returns one
    element from this list (or undefined). This list is passed in parameter `possibilities` as a simplified view of the actual list of
@@ -97,14 +97,14 @@ export type Matching = {
    of a matching, nothing happens (either no result suits you or you want to deactivate Enter).
    You will find futher below a function named `pickHighestPriorityAmongBestMatchings`. It is an example that you can use directly. */
 export interface PickingCallBackFunction {
-  (possibilities: Matching[]): Matching | undefined
+  (possibilities: Matching[]): Matching | undefined,
 }
 
 export interface SearchRequest {
-  count?: boolean
-  input: string
-  networks: ChainIDs[]
-  types: ResultType[]
+  count?: boolean,
+  input: string,
+  networks: ChainIDs[],
+  types: ResultType[],
 }
 export type SingleAPIresult = SearchResult
 export interface SearchAheadAPIresponse
@@ -113,9 +113,9 @@ export interface SearchAheadAPIresponse
 
 // in SuggestionRow.vue, you will see that the drop-down where the list of result suggestions appear is organised into 3 rows that display a "name", a "description" and some "low level data", about each result
 export type ResultSuggestionOutput = {
-  description: string
-  lowLevelData: string
-  name: string
+  description: string,
+  lowLevelData: string,
+  name: string,
 }
 
 // This type determines different sources that we can retrieve data from, mainly to fill the fields of ResultSuggestionOutput after the API responded
@@ -137,45 +137,45 @@ const PLURAL = 2 // Any number greater than 1 is good, this is just for I18n to 
 export type FillFrom = '' | Indirect | TranslatableLitteral
 
 export interface HowToFillresultSuggestionOutput {
-  description: FillFrom
-  lowLevelData: FillFrom
-  name: FillFrom
+  description: FillFrom,
+  lowLevelData: FillFrom,
+  name: FillFrom,
 }
 
 export interface ResultSuggestion {
-  chainId: ChainIDs // Network that the result belongs to. If the result exists on all networks, it is `ChainIDs.Any` (so 0).
-  closeness: number // How close the suggested result is to the user input (important for graffitis and token names, later for other things if the back-end evolves to find other approximate results).
-  count: number // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
-  output: ResultSuggestionOutput
-  queryParam: string // Data returned by the API that identifies this very result in the back-end. This is the most important data for callback function '@go' given in the props of the Searchbar component.
-  rawResult: SingleAPIresult // Original data given by the API.
-  type: ResultType // Tells what thing(s) this result corresponds to.
+  chainId: ChainIDs, // Network that the result belongs to. If the result exists on all networks, it is `ChainIDs.Any` (so 0).
+  closeness: number, // How close the suggested result is to the user input (important for graffitis and token names, later for other things if the back-end evolves to find other approximate results).
+  count: number, // How many identical results are found (often 1 but the API can inform us if there is more). This value is NaN when there is at least 1 result but the API did not clarify how many.
+  output: ResultSuggestionOutput,
+  queryParam: string, // Data returned by the API that identifies this very result in the back-end. This is the most important data for callback function '@go' given in the props of the Searchbar component.
+  rawResult: SingleAPIresult, // Original data given by the API.
+  type: ResultType, // Tells what thing(s) this result corresponds to.
 }
 
 export interface ResultSuggestionInternal extends ResultSuggestion {
-  lacksPremiumSubscription: boolean // `true` if the result is not accessible to the user due to account restrictions
-  nameWasUnknown: boolean // Tells whether the API had the possibility to fill field `name` in `output` but could not.
-  stringifyiedRawResult: string // Original data given by the API.
+  lacksPremiumSubscription: boolean, // `true` if the result is not accessible to the user due to account restrictions
+  nameWasUnknown: boolean, // Tells whether the API had the possibility to fill field `name` in `output` but could not.
+  stringifyiedRawResult: string, // Original data given by the API.
 }
 
 export interface OrganizedResults {
   networks: {
-    chainId: ChainIDs
+    chainId: ChainIDs,
     types: {
-      suggestions: ResultSuggestionInternal[]
-      type: ResultType
-    }[]
-  }[]
+      suggestions: ResultSuggestionInternal[],
+      type: ResultType,
+    }[],
+  }[],
 }
 
 interface SearchbarPurposeInfoField {
-  askAPItoCountResults: boolean // If `true`, the search-bar will ask the API explicitely to count results when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below). Note that even if not asked, the API can still return counts and batches and we will read this information anyway if so.
-  button: 'add' | 'search' // Utility of the button.
-  cellsInSuggestionRows: SuggestionrowCells // Determines what is shown in each row of the result-suggestion list.
-  differentialRequests: boolean // If activated, the bar decreases the workload for the API **in certain scenarii** by asking only for results that it does not know yet (which can happen when the user started a search with filters and activates a new filter, then the bar asks only for results corresponding to the newly selected filter). The downside is that the bar cannot help the user by mentionning the number of filtered-out results at the bottom of the suggestion list.
-  placeHolder: string // I18n path of the hint to display in the input field when it is empty.
-  searchable: Category[] // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
-  unsearchable: ResultType[] // List of types that the bar will not search for.
+  askAPItoCountResults: boolean, // If `true`, the search-bar will ask the API explicitely to count results when what it searches for can be counted (this is told by field `countable` in the TypeInfo record further below). Note that even if not asked, the API can still return counts and batches and we will read this information anyway if so.
+  button: 'add' | 'search', // Utility of the button.
+  cellsInSuggestionRows: SuggestionrowCells, // Determines what is shown in each row of the result-suggestion list.
+  differentialRequests: boolean, // If activated, the bar decreases the workload for the API **in certain scenarii** by asking only for results that it does not know yet (which can happen when the user started a search with filters and activates a new filter, then the bar asks only for results corresponding to the newly selected filter). The downside is that the bar cannot help the user by mentionning the number of filtered-out results at the bottom of the suggestion list.
+  placeHolder: string, // I18n path of the hint to display in the input field when it is empty.
+  searchable: Category[], // List of categories that the bar can search in. The cateogry filter-buttons will appear on the screen in the same order as in this list.
+  unsearchable: ResultType[], // List of types that the bar will not search for.
 }
 // this Record describes the look and behavior of the search-bar according to the value that you pass in its props `:bar-purpose`
 export const SearchbarPurposeInfo: Record<
@@ -220,8 +220,8 @@ export const SearchbarPurposeInfo: Record<
 }
 
 interface CategoryInfoFields {
-  filterLabel: TranslatableLitteral
-  title: TranslatableLitteral
+  filterLabel: TranslatableLitteral,
+  title: TranslatableLitteral,
 }
 export const CategoryInfo: Record<Category, CategoryInfoFields> = {
   [Category.Addresses]: {
@@ -277,7 +277,7 @@ export const CategoryInfo: Record<Category, CategoryInfoFields> = {
 }
 
 interface SubCategoryInfoFields {
-  title: TranslatableLitteral
+  title: TranslatableLitteral,
 }
 export const SubCategoryInfo: Record<SubCategory, SubCategoryInfoFields> = {
   [SubCategory.Accounts]: {
@@ -349,14 +349,14 @@ export const SubCategoryInfo: Record<SubCategory, SubCategoryInfoFields> = {
 }
 
 interface TypeInfoFields {
-  belongsToAllNetworks: boolean
-  category: Category
-  countSource: Indirect // if it is possible for the API to find several identical results of this type and count them, then this field tells us what field in the response contains the count (it can be an array, in this case we will read the length property)
-  howToFillresultSuggestionOutput: HowToFillresultSuggestionOutput // will be used at execution time to know what data we must copy into each ResultSuggestion.output
-  priority: number
-  queryParamField: Indirect // name of the field in singleAPIresult whose data identifies precisely a result in the back-end
-  subCategory: SubCategory
-  title: TranslatableLitteral
+  belongsToAllNetworks: boolean,
+  category: Category,
+  countSource: Indirect, // if it is possible for the API to find several identical results of this type and count them, then this field tells us what field in the response contains the count (it can be an array, in this case we will read the length property)
+  howToFillresultSuggestionOutput: HowToFillresultSuggestionOutput, // will be used at execution time to know what data we must copy into each ResultSuggestion.output
+  priority: number,
+  queryParamField: Indirect, // name of the field in singleAPIresult whose data identifies precisely a result in the back-end
+  subCategory: SubCategory,
+  title: TranslatableLitteral,
 }
 
 export const TypeInfo: Record<ResultType, TypeInfoFields> = {
@@ -785,14 +785,14 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
 }
 
 export interface PremiumRowCallBackFunction {
-  (result: ResultSuggestion): boolean
+  (result: ResultSuggestion): boolean,
 }
 
 export interface ExposedSearchbarMethods {
-  closeDropdown: () => void
-  empty: () => void
+  closeDropdown: () => void,
+  empty: () => void,
   // for internal use
-  hideResult: (whichOne: ResultSuggestion) => void
+  hideResult: (whichOne: ResultSuggestion) => void,
 }
 export interface SearchBar // your ref to the search-bar component must be of this type
   extends ComponentPublicInstance,

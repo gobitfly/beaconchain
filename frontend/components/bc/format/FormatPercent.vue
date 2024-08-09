@@ -9,17 +9,17 @@ import {
 import { type CompareResult } from '~/types/value'
 
 interface Props {
-  addPositiveSign?: boolean
-  base?: number
+  addPositiveSign?: boolean,
+  base?: number,
   // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
-  colorBreakPoint?: number
-  comparePercent?: number // if set it adds the compare sign in front and colors the values accordingly
-  fixed?: number
-  fullOnEmptyBase?: boolean
-  hideEmptyValue?: boolean
-  percent?: number
-  precision?: number
-  value?: number
+  colorBreakPoint?: number,
+  comparePercent?: number, // if set it adds the compare sign in front and colors the values accordingly
+  fixed?: number,
+  fullOnEmptyBase?: boolean,
+  hideEmptyValue?: boolean,
+  percent?: number,
+  precision?: number,
+  value?: number,
 }
 
 const props = defineProps<Props>()

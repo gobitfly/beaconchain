@@ -5,9 +5,9 @@ import type {
 } from '~/types/tag'
 
 interface Props {
-  blockSlot?: number
-  mobile?: boolean
-  status?: BlockStatus
+  blockSlot?: number,
+  mobile?: boolean,
+  status?: BlockStatus,
 }
 const props = defineProps<Props>()
 

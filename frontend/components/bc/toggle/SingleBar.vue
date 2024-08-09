@@ -4,20 +4,20 @@ import type { Component } from 'vue'
 
 interface Props {
   // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
-  allowDeselect?: boolean
+  allowDeselect?: boolean,
   buttons: {
-    className?: string
-    component?: Component
-    componentClass?: string
-    componentProps?: any
-    disabled?: boolean
-    icon?: IconDefinition
-    subText?: string
-    text?: string
-    tooltip?: string
-    value: string
-  }[]
-  layout: 'gaudy' | 'minimal'
+    className?: string,
+    component?: Component,
+    componentClass?: string,
+    componentProps?: any,
+    disabled?: boolean,
+    icon?: IconDefinition,
+    subText?: string,
+    text?: string,
+    tooltip?: string,
+    value: string,
+  }[],
+  layout: 'gaudy' | 'minimal',
 }
 const props = defineProps<Props>()
 

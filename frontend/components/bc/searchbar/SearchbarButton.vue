@@ -11,9 +11,9 @@ import {
 } from '~/types/searchbar'
 
 defineProps<{
-  barPurpose: SearchbarPurpose
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
+  barPurpose: SearchbarPurpose,
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
 }>()
 </script>
 

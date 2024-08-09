@@ -1,10 +1,10 @@
 <script setup lang="ts">
 interface Props {
-  noLabel?: string // defaults to "No"
-  question?: string
-  severity?: 'danger' | 'default'
-  title?: string
-  yesLabel?: string // defaults to "Yes"
+  noLabel?: string, // defaults to "No"
+  question?: string,
+  severity?: 'danger' | 'default',
+  title?: string,
+  yesLabel?: string, // defaults to "Yes"
 }
 const {
   dialogRef, props,

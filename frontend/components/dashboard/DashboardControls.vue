@@ -27,7 +27,7 @@ import type {
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  dashboardTitle?: string
+  dashboardTitle?: string,
 }
 const props = defineProps<Props>()
 

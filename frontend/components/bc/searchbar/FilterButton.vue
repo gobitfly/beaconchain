@@ -6,11 +6,11 @@ import type {
 } from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  dropdownLayout: SearchbarDropdownLayout
-  look?: 'off' | 'on' // forces the look of the button statically instead of having the color changing with its state
-  state?: boolean
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout: SearchbarDropdownLayout,
+  look?: 'off' | 'on', // forces the look of the button statically instead of having the color changing with its state
+  state?: boolean,
 }>()
 
 const emit = defineEmits<{ (e: 'change', activated: boolean): void }>()
