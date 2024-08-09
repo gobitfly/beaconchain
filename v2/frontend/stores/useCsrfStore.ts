@@ -23,5 +23,8 @@ export function useCsrfStore() {
     }
   }
 
-  return { csrfHeader, setCsrfHeader }
+  return {
+    csrfHeader,
+    setCsrfHeader,
+  }
 }

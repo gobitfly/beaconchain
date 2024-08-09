@@ -12,9 +12,7 @@ const { fetch } = useCustomFetch()
 
 const { width } = useWindowSize()
 const size = computed(() => {
-  return {
-    expandable: width.value <= 1000,
-  }
+  return { expandable: width.value <= 1000 }
 })
 
 interface Props {
@@ -25,7 +23,9 @@ interface Props {
   groupName?: string
 }
 
-const { props, setHeader } = useBcDialog<Props>({
+const {
+  props, setHeader,
+} = useBcDialog<Props>({
   contentClass: 'epoch-duties-modal',
   showHeader: size.value.expandable,
 })
@@ -39,7 +39,10 @@ const {
   temp: tempQuery,
   value: query,
 } = useDebounceValue<PathValues | undefined>(
-  { limit: pageSize.value, sort: 'validator:asc' },
+  {
+    limit: pageSize.value,
+    sort: 'validator:asc',
+  },
   500,
 )
 
@@ -69,8 +72,16 @@ const loadData = async () => {
     const testQ = JSON.stringify(query.value)
     const result = await fetch<InternalGetValidatorDashboardDutiesResponse>(
       API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY,
-      { query: { ...query.value, group_id: props.value.groupId } },
-      { dashboardKey: props.value.dashboardKey, epoch: props.value.epoch },
+      {
+        query: {
+          ...query.value,
+          group_id: props.value.groupId,
+        },
+      },
+      {
+        dashboardKey: props.value.dashboardKey,
+        epoch: props.value.epoch,
+      },
       query.value,
     )
 
@@ -83,7 +94,10 @@ const loadData = async () => {
 }
 
 watch(
-  () => [props.value, query.value],
+  () => [
+    props.value,
+    query.value,
+  ],
   () => {
     loadData()
   },
@@ -123,7 +137,10 @@ const title = computed(() => {
 })
 
 watch(
-  [title, size],
+  [
+    title,
+    size,
+  ],
   () => {
     setHeader(title.value, size.value.expandable)
   },

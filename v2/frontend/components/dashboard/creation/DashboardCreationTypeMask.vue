@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { type DashboardType } from '~/types/dashboard'
-import { IconAccount, IconValidator } from '#components'
+import {
+  IconAccount, IconValidator,
+} from '#components'
 
 const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()

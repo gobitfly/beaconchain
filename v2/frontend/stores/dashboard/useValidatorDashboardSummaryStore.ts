@@ -11,14 +11,19 @@ const validatorDashboardSummaryStore = defineStore(
     const data = ref<InternalGetValidatorDashboardSummaryResponse>()
     const query = ref<TableQueryParams>()
 
-    return { data, query }
+    return {
+      data,
+      query,
+    }
   },
 )
 
 export function useValidatorDashboardSummaryStore() {
   const { fetch } = useCustomFetch()
 
-  const { data, query: storedQuery } = storeToRefs(
+  const {
+    data, query: storedQuery,
+  } = storeToRefs(
     validatorDashboardSummaryStore(),
   )
   const isLoading = ref(false)
@@ -54,5 +59,10 @@ export function useValidatorDashboardSummaryStore() {
     return res
   }
 
-  return { getSummary, isLoading, query, summary }
+  return {
+    getSummary,
+    isLoading,
+    query,
+    summary,
+  }
 }

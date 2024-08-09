@@ -3,9 +3,18 @@ import type { ValidatorHistoryDuties } from '~/types/api/common'
 
 const data: ValidatorHistoryDuties[] = [
   {
-    attestation_head: { income: '123450000', status: 'success' },
-    attestation_source: { income: '133450000', status: 'success' },
-    attestation_target: { income: '143450000', status: 'success' },
+    attestation_head: {
+      income: '123450000',
+      status: 'success',
+    },
+    attestation_source: {
+      income: '133450000',
+      status: 'success',
+    },
+    attestation_target: {
+      income: '143450000',
+      status: 'success',
+    },
     proposal: {
       cl_attestation_inclusion_income: '123450000',
       cl_slashing_inclusion_income: '123450000',
@@ -13,14 +22,29 @@ const data: ValidatorHistoryDuties[] = [
       el_income: '123450000',
       status: 'success',
     },
-    slashing: { income: '123450000', status: 'success' },
-    sync: { income: '123450000', status: 'success' },
+    slashing: {
+      income: '123450000',
+      status: 'success',
+    },
+    sync: {
+      income: '123450000',
+      status: 'success',
+    },
     sync_count: 32,
   },
   {
-    attestation_head: { income: '-123450000', status: 'failed' },
-    attestation_source: { income: '133450000', status: 'success' },
-    attestation_target: { income: '143450000', status: 'success' },
+    attestation_head: {
+      income: '-123450000',
+      status: 'failed',
+    },
+    attestation_source: {
+      income: '133450000',
+      status: 'success',
+    },
+    attestation_target: {
+      income: '143450000',
+      status: 'success',
+    },
     proposal: {
       cl_attestation_inclusion_income: '123450000',
       cl_slashing_inclusion_income: '123450000',
@@ -28,14 +52,29 @@ const data: ValidatorHistoryDuties[] = [
       el_income: '123450000',
       status: 'success',
     },
-    slashing: { income: '123450000', status: 'success' },
-    sync: { income: '123450000', status: 'success' },
+    slashing: {
+      income: '123450000',
+      status: 'success',
+    },
+    sync: {
+      income: '123450000',
+      status: 'success',
+    },
     sync_count: 32,
   },
   {
-    attestation_head: { income: '123450000', status: 'success' },
-    attestation_source: { income: '-133450000', status: 'failed' },
-    attestation_target: { income: '143450000', status: 'success' },
+    attestation_head: {
+      income: '123450000',
+      status: 'success',
+    },
+    attestation_source: {
+      income: '-133450000',
+      status: 'failed',
+    },
+    attestation_target: {
+      income: '143450000',
+      status: 'success',
+    },
     proposal: {
       cl_attestation_inclusion_income: '-133450000',
       cl_slashing_inclusion_income: '-133450000',
@@ -43,14 +82,29 @@ const data: ValidatorHistoryDuties[] = [
       el_income: '-133450000',
       status: 'failed',
     },
-    slashing: { income: '123450000', status: 'partial' },
-    sync: { income: '12450000', status: 'partial' },
+    slashing: {
+      income: '123450000',
+      status: 'partial',
+    },
+    sync: {
+      income: '12450000',
+      status: 'partial',
+    },
     sync_count: 12,
   },
   {
-    attestation_head: { income: '123450000', status: 'success' },
-    attestation_source: { income: '133450000', status: 'success' },
-    attestation_target: { income: '-143450000', status: 'failed' },
+    attestation_head: {
+      income: '123450000',
+      status: 'success',
+    },
+    attestation_source: {
+      income: '133450000',
+      status: 'success',
+    },
+    attestation_target: {
+      income: '-143450000',
+      status: 'failed',
+    },
     proposal: {
       cl_attestation_inclusion_income: '123450000',
       cl_slashing_inclusion_income: '123450000',
@@ -58,14 +112,29 @@ const data: ValidatorHistoryDuties[] = [
       el_income: '123450000',
       status: 'success',
     },
-    slashing: { income: '123450000', status: 'success' },
-    sync: { income: '123450000', status: 'success' },
+    slashing: {
+      income: '123450000',
+      status: 'success',
+    },
+    sync: {
+      income: '123450000',
+      status: 'success',
+    },
     sync_count: 32,
   },
   {
-    attestation_head: { income: '-123450000', status: 'failed' },
-    attestation_source: { income: '-133450000', status: 'failed' },
-    attestation_target: { income: '-143450000', status: 'failed' },
+    attestation_head: {
+      income: '-123450000',
+      status: 'failed',
+    },
+    attestation_source: {
+      income: '-133450000',
+      status: 'failed',
+    },
+    attestation_target: {
+      income: '-143450000',
+      status: 'failed',
+    },
     proposal: {
       cl_attestation_inclusion_income: '-123450000',
       cl_slashing_inclusion_income: '-123450000',
@@ -73,8 +142,14 @@ const data: ValidatorHistoryDuties[] = [
       el_income: '-123450000',
       status: 'failed',
     },
-    slashing: { income: '-123450000', status: 'failed' },
-    sync: { income: '-123450000', status: 'failed' },
+    slashing: {
+      income: '-123450000',
+      status: 'failed',
+    },
+    sync: {
+      income: '-123450000',
+      status: 'failed',
+    },
     sync_count: 0,
   },
   {

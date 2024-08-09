@@ -14,7 +14,9 @@ const visible = defineModel<boolean>()
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { isLoading, refreshSettings }
+const {
+  isLoading, refreshSettings,
+}
   = useUseNotificationsManagementSettingsProvider()
 refreshSettings()
 </script>

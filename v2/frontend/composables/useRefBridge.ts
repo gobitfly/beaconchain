@@ -113,7 +113,10 @@ function createBridge<Torig, Tcreated, TorigWhole, TcreatedWhole>(
         pauseBack = false
       })
     },
-    { deep: true, immediate: true },
+    {
+      deep: true,
+      immediate: true,
+    },
   )
 
   watch(

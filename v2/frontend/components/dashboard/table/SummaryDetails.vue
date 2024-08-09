@@ -18,7 +18,9 @@ const props = defineProps<Props>()
 const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useTranslation()
-const { details: summary, getDetails }
+const {
+  details: summary, getDetails,
+}
   = useValidatorDashboardSummaryDetailsStore(
     dashboardKey.value,
     props.row.group_id,
@@ -29,11 +31,18 @@ watch(
   () => {
     getDetails(props.timeFrame)
   },
-  { deep: true, immediate: true },
+  {
+    deep: true,
+    immediate: true,
+  },
 )
 
 const data = computed<SummaryRow[][]>(() => {
-  const list: SummaryRow[][] = [[], [], []]
+  const list: SummaryRow[][] = [
+    [],
+    [],
+    [],
+  ]
 
   const addToList = (
     index: number,
@@ -41,7 +50,10 @@ const data = computed<SummaryRow[][]>(() => {
     titleKey?: string,
   ) => {
     const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
-    const row = { prop, title }
+    const row = {
+      prop,
+      title,
+    }
     list[index].push(row)
   }
 
@@ -81,7 +93,11 @@ const data = computed<SummaryRow[][]>(() => {
   ])
 
   addCols = !props.tableVisibility.attestations ? [] : rewardCols
-  addPropsTolist(2, ['apr', 'luck', ...addCols])
+  addPropsTolist(2, [
+    'apr',
+    'luck',
+    ...addCols,
+  ])
 
   return list
 })

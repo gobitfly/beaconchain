@@ -13,9 +13,7 @@ const onDelete = () => {
   dialog.open(BcDialogConfirm, {
     data: {
       noLabel: $t('user_settings.delete_account.dialog.no_label'),
-      question: $t('user_settings.delete_account.dialog.warning', {
-        email: user.value?.email || $t('common.unavailable'),
-      }),
+      question: $t('user_settings.delete_account.dialog.warning', { email: user.value?.email || $t('common.unavailable') }),
       severity: 'danger',
       title: $t('user_settings.delete_account.dialog.title'),
       yesLabel: $t('user_settings.delete_account.dialog.yes_label'),

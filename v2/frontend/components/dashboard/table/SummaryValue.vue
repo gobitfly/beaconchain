@@ -34,7 +34,9 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t, tm: $tm } = useTranslation()
+const {
+  t: $t, tm: $tm,
+} = useTranslation()
 const { dashboardKey } = useDashboardKey()
 const dialog = useDialog()
 const { groups } = useValidatorDashboardGroups()
@@ -43,18 +45,12 @@ const data = computed(() => {
   const col = props.data
   const row = props.row
   if (row && props.property === 'attestations') {
-    return {
-      efficiency: {
-        status_count: row.attestations,
-      },
-    }
+    return { efficiency: { status_count: row.attestations } }
   }
   else if (row && props.property === 'proposals') {
     return {
       context: !props.inDetailView ? 'proposal' : undefined,
-      efficiency: {
-        status_count: row.proposals,
-      },
+      efficiency: { status_count: row.proposals },
     }
   }
   else if (
@@ -63,9 +59,10 @@ const data = computed(() => {
       props.property as SummaryDetailsEfficiencyProp,
     )
   ) {
-    const tooltip: { text: string, title: string } | undefined = $tm(
+    const tooltip: { text: string
+      title: string } | undefined = $tm(
       `dashboard.validator.tooltip.${props.property}`,
-    )
+      )
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
 
     return {
@@ -104,9 +101,10 @@ const data = computed(() => {
     }
   }
   else if (col && props.property === 'attestation_efficiency') {
-    const tooltip: { text: string, title: string } | undefined = $tm(
-      'dashboard.validator.tooltip.attestation_efficiency',
-    )
+    const tooltip: { text: string
+      title: string } | undefined = $tm(
+        'dashboard.validator.tooltip.attestation_efficiency',
+      )
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip,
@@ -122,9 +120,7 @@ const data = computed(() => {
     }
   }
   else if (col && props.property === 'luck') {
-    return {
-      luck: col.luck,
-    }
+    return { luck: col.luck }
   }
   else if (row && props.property === 'efficiency') {
     return {
@@ -135,21 +131,13 @@ const data = computed(() => {
     }
   }
   else if (col && props.property === 'attestation_avg_incl_dist') {
-    return {
-      simple: {
-        value: trim(col.attestation_avg_incl_dist, 2, 2),
-      },
-    }
+    return { simple: { value: trim(col.attestation_avg_incl_dist, 2, 2) } }
   }
   else if (row && props.property === 'reward') {
-    return {
-      reward: row.reward,
-    }
+    return { reward: row.reward }
   }
   else if (col && props.property === 'missed_rewards') {
-    return {
-      missedRewards: col.missed_rewards,
-    }
+    return { missedRewards: col.missed_rewards }
   }
   return undefined
 })

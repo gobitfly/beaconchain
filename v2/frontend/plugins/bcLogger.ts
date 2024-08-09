@@ -3,9 +3,7 @@ import * as path from 'path'
 import { warn } from 'vue'
 
 export default defineNuxtPlugin((_nuxtApp) => {
-  const {
-    public: { logFile },
-  } = useRuntimeConfig()
+  const { public: { logFile } } = useRuntimeConfig()
   return {
     provide: {
       bcLogger: {

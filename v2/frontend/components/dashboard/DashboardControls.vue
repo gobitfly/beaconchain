@@ -18,8 +18,12 @@ import {
   DashboardShareModal,
   RocketpoolToggle,
 } from '#components'
-import type { Dashboard, DashboardKey } from '~/types/dashboard'
-import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
+import type {
+  Dashboard, DashboardKey,
+} from '~/types/dashboard'
+import type {
+  MenuBarButton, MenuBarEntry,
+} from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
@@ -40,7 +44,9 @@ const {
   setDashboardKey,
 } = useDashboardKey()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
-const { dashboards, getDashboardLabel, refreshDashboards, updateHash }
+const {
+  dashboards, getDashboardLabel, refreshDashboards, updateHash,
+}
   = useUserDashboardStore()
 
 const { t: $t } = useTranslation()
@@ -81,14 +87,12 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   }
 
   if (isMobile.value && buttons.length > 1) {
-    return [
-      {
-        dropdown: true,
-        highlight: true,
-        items: buttons,
-        label: $t('dashboard.header.manage'),
-      },
-    ]
+    return [ {
+      dropdown: true,
+      highlight: true,
+      items: buttons,
+      label: $t('dashboard.header.manage'),
+    } ]
   }
 
   return buttons
@@ -113,15 +117,18 @@ const shareButtonOptions = computed(() => {
         : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
   const disabled = isShared.value || !dashboardKey.value
-  return { disabled, edit, icon, label }
+  return {
+    disabled,
+    edit,
+    icon,
+    label,
+  }
 })
 
 const editButtons = computed<MenuBarEntry[]>(() => {
   const buttons: MenuBarButton[] = []
 
-  buttons.push({
-    component: RocketpoolToggle,
-  })
+  buttons.push({ component: RocketpoolToggle })
 
   if (isPrivate.value) {
     buttons.push({
@@ -149,19 +156,20 @@ const editButtons = computed<MenuBarEntry[]>(() => {
     })
   }
 
-  return [
-    {
-      dropdown: true,
-      faIcon: faGear,
-      items: buttons,
-    },
-  ]
+  return [ {
+    dropdown: true,
+    faIcon: faGear,
+    items: buttons,
+  } ]
 })
 
 const shareView = () => {
   const dashboardId = shareDashboard.value?.id
   dialog.open(DashboardShareCodeModal, {
-    data: { dashboard: shareDashboard.value, dashboardKey: dashboardKey.value },
+    data: {
+      dashboard: shareDashboard.value,
+      dashboardKey: dashboardKey.value,
+    },
     onClose: (options?: DynamicDialogCloseOptions) => {
       if (options?.data === 'DELETE') {
         if (isShared.value && dashboardId) {
@@ -210,7 +218,12 @@ const deleteButtonOptions = computed(() => {
     ? privateDashboardsCount > 1
     : privateDashboardsCount > 0
 
-  return { deleteDashboard, disabled, forward, visible }
+  return {
+    deleteDashboard,
+    disabled,
+    forward,
+    visible,
+  }
 })
 
 const onDelete = () => {

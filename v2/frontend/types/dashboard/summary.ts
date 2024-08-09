@@ -25,7 +25,7 @@ export const SummaryDetailsEfficiencyLuckProps = [
 export type SummaryDetailsEfficiencyLuckProp =
   (typeof SummaryDetailsEfficiencyLuckProps)[number]
 
-export const SummaryDetailsEfficiencyCustomProps = ['attestations'] as const
+export const SummaryDetailsEfficiencyCustomProps = [ 'attestations' ] as const
 export type SummaryDetailsEfficiencyCustomProp =
   (typeof SummaryDetailsEfficiencyCustomProps)[number]
 
@@ -90,7 +90,12 @@ export const AggregationTimeframes: AggregationTimeframe[] = [
   'weekly',
 ]
 
-export const EfficiencyTypes = ['all', 'attestation', 'sync', 'proposal']
+export const EfficiencyTypes = [
+  'all',
+  'attestation',
+  'sync',
+  'proposal',
+]
 export type EfficiencyType = (typeof EfficiencyTypes)[number]
 
 export type SummaryChartFilter = {

@@ -1,4 +1,6 @@
-import { type CookieValue, type GlobalSetting, SettingDefaults } from '~/types/settings'
+import {
+  type CookieValue, type GlobalSetting, SettingDefaults,
+} from '~/types/settings'
 
 export function useGlobalSetting<T>(identifier: GlobalSetting) {
   const cookie = useCookie(identifier)
@@ -16,5 +18,8 @@ export function useGlobalSetting<T>(identifier: GlobalSetting) {
     cookie.value = config.valueToString !== undefined ? config.valueToString(value) : value as CookieValue
   }
 
-  return { changeSetting, setting }
+  return {
+    changeSetting,
+    setting,
+  }
 }

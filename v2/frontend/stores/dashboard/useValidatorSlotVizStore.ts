@@ -24,7 +24,10 @@ export function useValidatorSlotVizStore() {
     }
     const res = await fetch<InternalGetValidatorDashboardSlotVizResponse>(
       API_PATH.DASHBOARD_SLOTVIZ,
-      { headers: {}, query },
+      {
+        headers: {},
+        query,
+      },
       { dashboardKey: dashboardKey || 'MQ' },
     )
 
@@ -46,5 +49,8 @@ export function useValidatorSlotVizStore() {
     return slotViz.value
   }
 
-  return { refreshSlotViz, slotViz }
+  return {
+    refreshSlotViz,
+    slotViz,
+  }
 }

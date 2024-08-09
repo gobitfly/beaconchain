@@ -1,5 +1,9 @@
-import { provide, warn } from 'vue'
-import { loadStripe, type Stripe } from '@stripe/stripe-js'
+import {
+  provide, warn,
+} from 'vue'
+import {
+  loadStripe, type Stripe,
+} from '@stripe/stripe-js'
 import type { StripeProvider } from '~/types/stripe'
 import type {
   StripeCreateCheckoutSession,
@@ -9,9 +13,7 @@ import { API_PATH } from '~/types/customFetch'
 
 export function useStripeProvider() {
   const { fetch } = useCustomFetch()
-  const {
-    public: { stripeBaseUrl },
-  } = useRuntimeConfig()
+  const { public: { stripeBaseUrl } } = useRuntimeConfig()
 
   const stripe = ref<null | Stripe>(null)
 
@@ -62,7 +64,10 @@ export function useStripeProvider() {
       API_PATH.STRIPE_CHECKOUT_SESSION,
       {
         baseURL: stripeBaseUrl,
-        body: JSON.stringify({ addonQuantity: amount, priceId }),
+        body: JSON.stringify({
+          addonQuantity: amount,
+          priceId,
+        }),
       },
     )
 

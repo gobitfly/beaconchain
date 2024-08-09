@@ -13,8 +13,12 @@ import { formatPremiumProductPrice } from '~/utils/format'
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
-const { isLoggedIn, user } = useUserStore()
-const { isStripeDisabled, stripeCustomerPortal, stripePurchase } = useStripe()
+const {
+  isLoggedIn, user,
+} = useUserStore()
+const {
+  isStripeDisabled, stripeCustomerPortal, stripePurchase,
+} = useStripe()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon
@@ -60,12 +64,8 @@ const prices = computed(() => {
 
 const boxText = computed(() => {
   return {
-    perValidator: $t('pricing.per_validator', {
-      amount: prices.value.perValidator,
-    }),
-    validatorCount: $t('pricing.addons.validator_amount', {
-      amount: formatNumber(props.addon.extra_dashboard_validators),
-    }),
+    perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator }),
+    validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
   }
 })
 

@@ -54,5 +54,9 @@ export function useFormat() {
     return formatEpochToDateImported(currentNetwork.value, epoch, locales)
   }
 
-  return { formatEpochToDate, formatEpochToDateTime, formatSlotToDateTime }
+  return {
+    formatEpochToDate,
+    formatEpochToDateTime,
+    formatSlotToDateTime,
+  }
 }

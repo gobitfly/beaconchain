@@ -18,9 +18,7 @@ export default function ({
         { external: true },
       )
     case 'block':
-      return navigateTo(`${v1Domain}/block/${params.id || params.slug?.[1]}`, {
-        external: true,
-      })
+      return navigateTo(`${v1Domain}/block/${params.id || params.slug?.[1]}`, { external: true })
     case 'dashboard':
     case 'dashboard-id':
       if (query.validators && typeof query.validators === 'string') {
@@ -38,28 +36,20 @@ export default function ({
       }
       break
     case 'epoch':
-      return navigateTo(`${v1Domain}/epoch/${params.id || params.slug?.[1]}`, {
-        external: true,
-      })
+      return navigateTo(`${v1Domain}/epoch/${params.id || params.slug?.[1]}`, { external: true })
     case 'mobile':
       return navigateTo(`${v1Domain}/mobile`, { external: true })
     case 'notifications':
       if (!showInDevelopment) {
-        return navigateTo(`${v1Domain}/user/notifications`, {
-          external: true,
-        })
+        return navigateTo(`${v1Domain}/user/notifications`, { external: true })
       }
       break
     case 'requestReset':
       return navigateTo(`${v1Domain}/requestReset`, { external: true })
     case 'slot':
-      return navigateTo(`${v1Domain}/slot/${params.id || params.slug?.[1]}`, {
-        external: true,
-      })
+      return navigateTo(`${v1Domain}/slot/${params.id || params.slug?.[1]}`, { external: true })
     case 'tx':
-      return navigateTo(`${v1Domain}/tx/${params.id || params.slug?.[1]}`, {
-        external: true,
-      })
+      return navigateTo(`${v1Domain}/tx/${params.id || params.slug?.[1]}`, { external: true })
     case 'user-settings':
       // TODO: Remove once backend for this page is ready
       if (!showInDevelopment) {

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { type ResultType, SubCategory, TypeInfo } from '~/types/searchbar'
+import {
+  type ResultType, SubCategory, TypeInfo,
+} from '~/types/searchbar'
 
 const props = defineProps<{
   type: ResultType

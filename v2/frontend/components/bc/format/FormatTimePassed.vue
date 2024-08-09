@@ -4,7 +4,9 @@ import { useFormat } from '~/composables/useFormat'
 import { type AgeFormat } from '~/types/settings'
 import { formatGoTimestamp } from '~/utils/format'
 
-const { formatEpochToDateTime, formatSlotToDateTime } = useFormat()
+const {
+  formatEpochToDateTime, formatSlotToDateTime,
+} = useFormat()
 
 interface Props {
   format?: 'global-setting' | AgeFormat

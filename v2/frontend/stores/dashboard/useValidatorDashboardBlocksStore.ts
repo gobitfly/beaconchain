@@ -10,13 +10,18 @@ const validatorDashboardBlocksStore = defineStore(
     const data = ref<InternalGetValidatorDashboardBlocksResponse>()
     const query = ref<TableQueryParams>()
 
-    return { data, query }
+    return {
+      data,
+      query,
+    }
   },
 )
 
 export function useValidatorDashboardBlocksStore() {
   const { fetch } = useCustomFetch()
-  const { data, query: storedQuery } = storeToRefs(
+  const {
+    data, query: storedQuery,
+  } = storeToRefs(
     validatorDashboardBlocksStore(),
   )
   const isLoading = ref(false)
@@ -52,5 +57,10 @@ export function useValidatorDashboardBlocksStore() {
     return res
   }
 
-  return { blocks, getBlocks, isLoading, query }
+  return {
+    blocks,
+    getBlocks,
+    isLoading,
+    query,
+  }
 }

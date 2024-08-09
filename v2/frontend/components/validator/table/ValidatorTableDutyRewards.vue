@@ -12,7 +12,8 @@ const { t: $t } = useTranslation()
 
 const mapped = computed(() => {
   const total = totalDutyRewards(props.data)
-  const details: { label: string, value?: string }[] = []
+  const details: { label: string
+    value?: string }[] = []
   if (!total || total.isZero()) {
     return {
       details,

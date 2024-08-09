@@ -34,7 +34,10 @@ export function tD(
   if (typeof options === 'number') {
     options = { plural: options }
   }
-  const translation = t(path, NOT_FOUND, { ...options, missingWarn: false })
+  const translation = t(path, NOT_FOUND, {
+    ...options,
+    missingWarn: false,
+  })
   return translation === NOT_FOUND ? d : translation
 }
 

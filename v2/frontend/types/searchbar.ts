@@ -189,8 +189,8 @@ export const SearchbarPurposeInfo: Record<
       SuggestionrowCells.SubcategoryIdentificationDescription,
     differentialRequests: true,
     placeHolder: 'search_bar.account_placeholder',
-    searchable: [Category.Addresses],
-    unsearchable: [ResultType.EnsOverview],
+    searchable: [ Category.Addresses ],
+    unsearchable: [ ResultType.EnsOverview ],
   },
   [SearchbarPurpose.GlobalSearch]: {
     askAPItoCountResults: false,
@@ -214,7 +214,7 @@ export const SearchbarPurposeInfo: Record<
       SuggestionrowCells.SubcategoryIdentificationDescription,
     differentialRequests: true,
     placeHolder: 'search_bar.validator_placeholder',
-    searchable: [Category.Validators],
+    searchable: [ Category.Validators ],
     unsearchable: [],
   },
 }
@@ -225,24 +225,54 @@ interface CategoryInfoFields {
 }
 export const CategoryInfo: Record<Category, CategoryInfoFields> = {
   [Category.Addresses]: {
-    filterLabel: ['common.address', PLURAL],
-    title: ['common.address', PLURAL],
+    filterLabel: [
+      'common.address',
+      PLURAL,
+    ],
+    title: [
+      'common.address',
+      PLURAL,
+    ],
   },
   [Category.NFTs]: {
-    filterLabel: ['common.nft', PLURAL],
-    title: ['common.nft', PLURAL],
+    filterLabel: [
+      'common.nft',
+      PLURAL,
+    ],
+    title: [
+      'common.nft',
+      PLURAL,
+    ],
   },
   [Category.Protocol]: {
-    filterLabel: ['common.protocol', SINGULAR],
-    title: ['common.protocol', SINGULAR],
+    filterLabel: [
+      'common.protocol',
+      SINGULAR,
+    ],
+    title: [
+      'common.protocol',
+      SINGULAR,
+    ],
   },
   [Category.Tokens]: {
-    filterLabel: ['common.token', PLURAL],
-    title: ['common.erc20token', PLURAL],
+    filterLabel: [
+      'common.token',
+      PLURAL,
+    ],
+    title: [
+      'common.erc20token',
+      PLURAL,
+    ],
   },
   [Category.Validators]: {
-    filterLabel: ['common.validator', PLURAL],
-    title: ['common.validator', PLURAL],
+    filterLabel: [
+      'common.validator',
+      PLURAL,
+    ],
+    title: [
+      'common.validator',
+      PLURAL,
+    ],
   },
 }
 
@@ -250,17 +280,72 @@ interface SubCategoryInfoFields {
   title: TranslatableLitteral
 }
 export const SubCategoryInfo: Record<SubCategory, SubCategoryInfoFields> = {
-  [SubCategory.Accounts]: { title: ['common.account', SINGULAR] },
-  [SubCategory.Batches]: { title: ['common.batch', SINGULAR] },
-  [SubCategory.Contracts]: { title: ['common.contract', SINGULAR] },
-  [SubCategory.EnsOverview]: { title: ['search_bar.ens_overview', SINGULAR] },
-  [SubCategory.Epochs]: { title: ['common.epoch', SINGULAR] },
-  [SubCategory.Graffiti]: { title: ['common.graffiti', SINGULAR] },
-  [SubCategory.NFTs]: { title: ['common.nft', SINGULAR] },
-  [SubCategory.SlotsAndBlocks]: { title: ['common.slot_block', SINGULAR] },
-  [SubCategory.Tokens]: { title: ['common.token', SINGULAR] },
-  [SubCategory.Transactions]: { title: ['common.transaction', SINGULAR] },
-  [SubCategory.Validators]: { title: ['common.validator', SINGULAR] },
+  [SubCategory.Accounts]: {
+    title: [
+      'common.account',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.Batches]: {
+    title: [
+      'common.batch',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.Contracts]: {
+    title: [
+      'common.contract',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.EnsOverview]: {
+    title: [
+      'search_bar.ens_overview',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.Epochs]: {
+    title: [
+      'common.epoch',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.Graffiti]: {
+    title: [
+      'common.graffiti',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.NFTs]: {
+    title: [
+      'common.nft',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.SlotsAndBlocks]: {
+    title: [
+      'common.slot_block',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.Tokens]: {
+    title: [
+      'common.token',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.Transactions]: {
+    title: [
+      'common.transaction',
+      SINGULAR,
+    ],
+  },
+  [SubCategory.Validators]: {
+    title: [
+      'common.validator',
+      SINGULAR,
+    ],
+  },
 }
 
 interface TypeInfoFields {
@@ -287,7 +372,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 2,
     queryParamField: Indirect.APIhash_value,
     subCategory: SubCategory.Accounts,
-    title: ['common.account', SINGULAR],
+    title: [
+      'common.account',
+      SINGULAR,
+    ],
   },
   [ResultType.BlockRoots]: {
     belongsToAllNetworks: false,
@@ -301,7 +389,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 18,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.SlotsAndBlocks,
-    title: ['common.block_root', SINGULAR],
+    title: [
+      'common.block_root',
+      SINGULAR,
+    ],
   },
   [ResultType.Blocks]: {
     belongsToAllNetworks: false,
@@ -315,7 +406,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 10,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.SlotsAndBlocks,
-    title: ['common.block', SINGULAR],
+    title: [
+      'common.block',
+      SINGULAR,
+    ],
   },
   [ResultType.Contracts]: {
     belongsToAllNetworks: true,
@@ -329,7 +423,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 2,
     queryParamField: Indirect.APIhash_value,
     subCategory: SubCategory.Contracts,
-    title: ['common.contract', SINGULAR],
+    title: [
+      'common.contract',
+      SINGULAR,
+    ],
   },
   [ResultType.EnsAddresses]: {
     belongsToAllNetworks: true,
@@ -343,7 +440,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 1,
     queryParamField: Indirect.APIstr_value,
     subCategory: SubCategory.Accounts,
-    title: ['common.ens_address', SINGULAR],
+    title: [
+      'common.ens_address',
+      SINGULAR,
+    ],
   },
   [ResultType.EnsOverview]: {
     belongsToAllNetworks: true,
@@ -357,7 +457,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 15,
     queryParamField: Indirect.APIstr_value,
     subCategory: SubCategory.EnsOverview,
-    title: ['common.overview_of_ens', SINGULAR],
+    title: [
+      'common.overview_of_ens',
+      SINGULAR,
+    ],
   },
   [ResultType.Epochs]: {
     belongsToAllNetworks: false,
@@ -371,21 +474,30 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 12,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.Epochs,
-    title: ['common.epoch', SINGULAR],
+    title: [
+      'common.epoch',
+      SINGULAR,
+    ],
   },
   [ResultType.Graffiti]: {
     belongsToAllNetworks: false,
     category: Category.Protocol,
     countSource: Indirect.None,
     howToFillresultSuggestionOutput: {
-      description: ['search_bar.blocks_with', 0],
+      description: [
+        'search_bar.blocks_with',
+        0,
+      ],
       lowLevelData: Indirect.APIstr_value,
       name: Indirect.TypeTitle,
     },
     priority: 16,
     queryParamField: Indirect.APIstr_value,
     subCategory: SubCategory.Graffiti,
-    title: ['common.graffiti', SINGULAR],
+    title: [
+      'common.graffiti',
+      SINGULAR,
+    ],
   },
   [ResultType.NFTs]: {
     belongsToAllNetworks: true,
@@ -399,7 +511,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 4,
     queryParamField: Indirect.APIstr_value,
     subCategory: SubCategory.NFTs,
-    title: ['common.nft_as_token', SINGULAR],
+    title: [
+      'common.nft_as_token',
+      SINGULAR,
+    ],
   },
   [ResultType.Slots]: {
     belongsToAllNetworks: false,
@@ -413,7 +528,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 11,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.SlotsAndBlocks,
-    title: ['common.slot', SINGULAR],
+    title: [
+      'common.slot',
+      SINGULAR,
+    ],
   },
   [ResultType.StateBatches]: {
     belongsToAllNetworks: false,
@@ -427,7 +545,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 13,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.Batches,
-    title: ['common.state_batch', SINGULAR],
+    title: [
+      'common.state_batch',
+      SINGULAR,
+    ],
   },
   [ResultType.StateRoots]: {
     belongsToAllNetworks: false,
@@ -441,7 +562,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 19,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.SlotsAndBlocks,
-    title: ['common.state_root', SINGULAR],
+    title: [
+      'common.state_root',
+      SINGULAR,
+    ],
   },
   [ResultType.Tokens]: {
     belongsToAllNetworks: true,
@@ -455,7 +579,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 3,
     queryParamField: Indirect.APIstr_value, // this tells us that field `str_value` in singleAPIresult identifies precisely a result of type ResultType.Tokens when communicating about it with the back-end
     subCategory: SubCategory.Tokens,
-    title: ['common.erc20token', SINGULAR],
+    title: [
+      'common.erc20token',
+      SINGULAR,
+    ],
   },
   [ResultType.TransactionBatches]: {
     belongsToAllNetworks: false,
@@ -469,7 +596,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 14,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.Batches,
-    title: ['common.tx_batch', SINGULAR],
+    title: [
+      'common.tx_batch',
+      SINGULAR,
+    ],
   },
   [ResultType.Transactions]: {
     belongsToAllNetworks: false,
@@ -483,49 +613,70 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 17,
     queryParamField: Indirect.APIhash_value,
     subCategory: SubCategory.Transactions,
-    title: ['common.transaction', SINGULAR],
+    title: [
+      'common.transaction',
+      SINGULAR,
+    ],
   },
   [ResultType.ValidatorsByDepositAddress]: {
     belongsToAllNetworks: false,
     category: Category.Validators,
     countSource: Indirect.APInum_value,
     howToFillresultSuggestionOutput: {
-      description: ['search_bar.deposited_by', 0],
+      description: [
+        'search_bar.deposited_by',
+        0,
+      ],
       lowLevelData: Indirect.APIhash_value,
       name: Indirect.SubCategoryTitle,
     },
     priority: 6,
     queryParamField: Indirect.APIhash_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_deposit_address', 0],
+    title: [
+      'search_bar.validator_by_deposit_address',
+      0,
+    ],
   },
   [ResultType.ValidatorsByDepositEnsName]: {
     belongsToAllNetworks: false,
     category: Category.Validators,
     countSource: Indirect.APInum_value,
     howToFillresultSuggestionOutput: {
-      description: ['search_bar.deposited_by', 0],
+      description: [
+        'search_bar.deposited_by',
+        0,
+      ],
       lowLevelData: Indirect.APIstr_value,
       name: Indirect.SubCategoryTitle,
     },
     priority: 5,
     queryParamField: Indirect.APIstr_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_deposit_ens', 0],
+    title: [
+      'search_bar.validator_by_deposit_ens',
+      0,
+    ],
   },
   [ResultType.ValidatorsByGraffiti]: {
     belongsToAllNetworks: false,
     category: Category.Validators,
     countSource: Indirect.APInum_value,
     howToFillresultSuggestionOutput: {
-      description: ['search_bar.block_graffiti', 0],
+      description: [
+        'search_bar.block_graffiti',
+        0,
+      ],
       lowLevelData: Indirect.APIstr_value,
       name: Indirect.SubCategoryTitle,
     },
     priority: 9999,
     queryParamField: Indirect.APIstr_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_graffiti', 0],
+    title: [
+      'search_bar.validator_by_graffiti',
+      0,
+    ],
   },
   [ResultType.ValidatorsByIndex]: {
     belongsToAllNetworks: false,
@@ -539,7 +690,10 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 9,
     queryParamField: Indirect.APInum_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_index', 0],
+    title: [
+      'search_bar.validator_by_index',
+      0,
+    ],
   },
   [ResultType.ValidatorsByPubkey]: {
     belongsToAllNetworks: false,
@@ -553,49 +707,70 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
     priority: 9,
     queryParamField: Indirect.APIhash_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_public_key', 0],
+    title: [
+      'search_bar.validator_by_public_key',
+      0,
+    ],
   },
   [ResultType.ValidatorsByWithdrawalAddress]: {
     belongsToAllNetworks: false,
     category: Category.Validators,
     countSource: Indirect.APInum_value,
     howToFillresultSuggestionOutput: {
-      description: ['search_bar.withdrawn_to', 0],
+      description: [
+        'search_bar.withdrawn_to',
+        0,
+      ],
       lowLevelData: Indirect.APIhash_value,
       name: Indirect.SubCategoryTitle,
     },
     priority: 8,
     queryParamField: Indirect.APIhash_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_withdrawal_address', 0],
+    title: [
+      'search_bar.validator_by_withdrawal_address',
+      0,
+    ],
   },
   [ResultType.ValidatorsByWithdrawalCredential]: {
     belongsToAllNetworks: false,
     category: Category.Validators,
     countSource: Indirect.APInum_value,
     howToFillresultSuggestionOutput: {
-      description: ['search_bar.credential', SINGULAR],
+      description: [
+        'search_bar.credential',
+        SINGULAR,
+      ],
       lowLevelData: Indirect.APIhash_value,
       name: Indirect.SubCategoryTitle,
     },
     priority: 8,
     queryParamField: Indirect.APIhash_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_credential', 0],
+    title: [
+      'search_bar.validator_by_credential',
+      0,
+    ],
   },
   [ResultType.ValidatorsByWithdrawalEnsName]: {
     belongsToAllNetworks: false,
     category: Category.Validators,
     countSource: Indirect.APInum_value,
     howToFillresultSuggestionOutput: {
-      description: ['search_bar.withdrawn_to', 0],
+      description: [
+        'search_bar.withdrawn_to',
+        0,
+      ],
       lowLevelData: Indirect.APIstr_value,
       name: Indirect.SubCategoryTitle,
     },
     priority: 7,
     queryParamField: Indirect.APIstr_value,
     subCategory: SubCategory.Validators,
-    title: ['search_bar.validator_by_withdrawal_ens', 0],
+    title: [
+      'search_bar.validator_by_withdrawal_ens',
+      0,
+    ],
   },
   /* [ResultType.ValidatorsByName]: {
     title: ['search_bar.validator_by_name', 0],

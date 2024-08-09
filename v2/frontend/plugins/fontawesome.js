@@ -19,7 +19,5 @@ library.add(fab)
 */
 
 export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.vueApp.component('font-awesome-icon', FontAwesomeIcon, {
-    css: ['@fortawesome/fontawesome-svg-core/styles.css'],
-  })
+  nuxtApp.vueApp.component('font-awesome-icon', FontAwesomeIcon, { css: [ '@fortawesome/fontawesome-svg-core/styles.css' ] })
 })

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import {
   DAHSHBOARDS_ALL_GROUPS_ID,
   DAHSHBOARDS_NEXT_EPOCH_ID,
@@ -12,7 +14,9 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
-const { dashboardKey, isPublic } = useDashboardKey()
+const {
+  dashboardKey, isPublic,
+} = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -33,7 +37,9 @@ const {
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
-const { hasValidators, overview } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -47,13 +53,19 @@ const colsVisible = computed(() => {
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value, sort: 'epoch:desc' }
+    query = {
+      limit: pageSize.value,
+      sort: 'epoch:desc',
+    }
   }
   setQuery(query, true, true)
 }
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
   },

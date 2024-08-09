@@ -1,10 +1,14 @@
 <script lang="ts" setup>
-import { faDesktop, faTrash, faUser } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faDesktop, faTrash, faUser,
+} from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { API_PATH } from '~/types/customFetch'
-import type { ApiErrorResponse, ApiPagingResponse } from '~/types/api/common'
+import type {
+  ApiErrorResponse, ApiPagingResponse,
+} from '~/types/api/common'
 import type {
   NotificationSettingsAccountDashboard,
   NotificationSettingsDashboardsTableRow,
@@ -163,7 +167,10 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
     dashboardType: row.dashboard_type,
     initialSettings: row.settings,
     saveUserSettings: (settings: AllOptions) =>
-      debouncer.bounce({ row, settings }, true, true),
+      debouncer.bounce({
+        row,
+        settings,
+      }, true, true),
   }
   switch (col) {
     case 'delete':
@@ -173,9 +180,7 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
       alert('TODO: edit networks' + row.group_id)
       break
     case 'subscriptions':
-      dialog.open(NotificationsManagementSubscriptionDialog, {
-        data: dialogProps,
-      })
+      dialog.open(NotificationsManagementSubscriptionDialog, { data: dialogProps })
       break
     case 'webhook':
       dialog.open(NotificationsManagementModalWebhook, {

@@ -1,5 +1,7 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 
 export function useTableQuery(
   initialQuery?: TableQueryParams,

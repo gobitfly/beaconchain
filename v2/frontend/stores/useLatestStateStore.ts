@@ -32,5 +32,8 @@ export function useLatestStateStore() {
     }
   }
 
-  return { latestState, refreshLatestState }
+  return {
+    latestState,
+    refreshLatestState,
+  }
 }

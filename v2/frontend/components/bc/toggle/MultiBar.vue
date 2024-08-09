@@ -29,7 +29,10 @@ function receiveFromVModel(data: string[]): ButtonStates {
 
 function sendToVModel(data: ButtonStates): string[] {
   const selection: string[] = []
-  Object.entries(data).forEach(([key, value]) => {
+  Object.entries(data).forEach(([
+    key,
+    value,
+  ]) => {
     if (value) {
       selection.push(key)
     }

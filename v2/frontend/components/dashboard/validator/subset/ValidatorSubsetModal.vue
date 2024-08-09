@@ -36,7 +36,9 @@ interface Props {
   }
   timeFrame?: SummaryTimeFrame
 }
-const { props, setHeader } = useBcDialog<Props>(undefined)
+const {
+  props, setHeader,
+} = useBcDialog<Props>(undefined)
 
 const isLoading = ref(false)
 const filter = ref('')
@@ -84,7 +86,13 @@ watch(
       const res
         = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(
           API_PATH.DASHBOARD_VALIDATOR_INDICES,
-          { query: { duty, group_id: p?.groupId, period: p?.timeFrame } },
+          {
+            query: {
+              duty,
+              group_id: p?.groupId,
+              period: p?.timeFrame,
+            },
+          },
           { dashboardKey: `${p?.dashboardKey}` },
         )
       data.value = res.data
@@ -108,7 +116,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
       }
       const vali = validators.find(v => v.index === index)
       if (vali) {
-        return [vali]
+        return [ vali ]
       }
     }
     return []
@@ -165,7 +173,10 @@ const subsets = computed<ValidatorSubset[]>(() => {
         : undefined
     if (withdrawn?.validators.length || withdrawing?.validators.length) {
       // a withrawn/withrawing validator can either be in the exited or slashed group
-      const categories: ValidatorSubsetCategory[] = ['exited', 'slashed']
+      const categories: ValidatorSubsetCategory[] = [
+        'exited',
+        'slashed',
+      ]
       categories.forEach((category) => {
         const index = filtered.findIndex(s => s.category === category)
         if (index >= 0) {
@@ -181,18 +192,33 @@ const subsets = computed<ValidatorSubset[]>(() => {
           }
 
           const subsets = [
-            [withdrawn, xWithdrawn],
-            [withdrawing, xWithdrawing],
+            [
+              withdrawn,
+              xWithdrawn,
+            ],
+            [
+              withdrawing,
+              xWithdrawing,
+            ],
           ]
           baseSubset.validators.forEach((v) => {
-            subsets.forEach(([origin, merged]) => {
+            subsets.forEach(([
+              origin,
+              merged,
+            ]) => {
               if (origin?.validators.find(sV => v.index === sV.index)) {
-                merged?.validators.push({ ...v, duty_objects: [] })
+                merged?.validators.push({
+                  ...v,
+                  duty_objects: [],
+                })
               }
             })
           })
 
-          subsets.forEach(([_origin, merged]) => {
+          subsets.forEach(([
+            _origin,
+            merged,
+          ]) => {
             if (merged?.validators.length) {
               filtered.splice(index + 1, 0, merged)
             }

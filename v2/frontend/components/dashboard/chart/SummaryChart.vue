@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { h, render } from 'vue'
+import {
+  h, render,
+} from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -48,7 +50,9 @@ const chart = ref<ECharts | undefined>()
 const { t: $t } = useTranslation()
 const colorMode = useColorMode()
 const { fetch } = useCustomFetch()
-const { secondsPerEpoch, slotToTs, tsToEpoch } = useNetworkStore()
+const {
+  secondsPerEpoch, slotToTs, tsToEpoch,
+} = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
 const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
@@ -59,11 +63,20 @@ const {
   instant: instantTimeFrames,
   temp: tempTimeFrames,
   value: timeFrames,
-} = useDebounceValue<{ from?: number, to: number }>({ from: undefined, to: 0 }, 1000)
-const currentZoom = { end: 100, start: 80 }
+} = useDebounceValue<{ from?: number
+  to: number }>({
+  from: undefined,
+  to: 0,
+}, 1000)
+const currentZoom = {
+  end: 100,
+  start: 80,
+}
 const MAX_DATA_POINTS = 200
 
-const { bounce: bounceFilter, value: filter } = useDebounceValue(
+const {
+  bounce: bounceFilter, value: filter,
+} = useDebounceValue(
   props.filter,
   1000,
 )
@@ -125,12 +138,21 @@ const updateTimestamp = () => {
   latestSlot.value = latestState.value?.current_slot || 0
 }
 
-watch([() => props.filter?.efficiency, () => props.filter?.groupIds], () => {
+watch([
+  () => props.filter?.efficiency,
+  () => props.filter?.groupIds,
+], () => {
   if (!props.filter?.initialised || !props.filter?.efficiency) {
     return
   }
-  bounceFilter({ ...props.filter, groupIds: [...props.filter.groupIds] }, true, true)
-}, { deep: true, immediate: true })
+  bounceFilter({
+    ...props.filter,
+    groupIds: [ ...props.filter.groupIds ],
+  }, true, true)
+}, {
+  deep: true,
+  immediate: true,
+})
 
 watch(() => props.filter?.aggregation, (agg) => {
   if (!agg) {
@@ -202,7 +224,12 @@ const loadData = async () => {
 }
 
 watch(
-  [dashboardKey, filter, aggregation, timeFrames],
+  [
+    dashboardKey,
+    filter,
+    aggregation,
+    timeFrames,
+  ],
   () => {
     loadData()
   },
@@ -265,17 +292,13 @@ const option = computed(() => {
       ...currentZoom,
       borderColor: colors.value.label,
       dataBackground: {
-        areaStyle: {
-          color: colors.value.label,
-        },
-        lineStyle: {
-          color: colors.value.label,
-        },
+        areaStyle: { color: colors.value.label },
+        lineStyle: { color: colors.value.label },
       },
       labelFormatter: (_value: number, valueStr: string) => {
         return formatToDateOrEpoch(valueStr)
       },
-      xAxisIndex: [1],
+      xAxisIndex: [ 1 ],
     },
     grid: {
       containLabel: true,
@@ -377,14 +400,15 @@ const option = computed(() => {
       ),
       nameLocation: 'center',
       nameTextStyle: {
-        padding: [0, 0, 30, 0],
+        padding: [
+          0,
+          0,
+          30,
+          0,
+        ],
       },
       silent: true,
-      splitLine: {
-        lineStyle: {
-          color: colors.value.label,
-        },
-      },
+      splitLine: { lineStyle: { color: colors.value.label } },
       type: 'value',
     },
   }
@@ -515,12 +539,15 @@ const validateDataZoom = (instant?: boolean) => {
   }
 }
 
-watch([option], () => {
+watch([ option ], () => {
   updateTimestamp()
   validateDataZoom(true)
 }, { immediate: true })
 
-watch([categories, chart], () => {
+watch([
+  categories,
+  chart,
+], () => {
   validateDataZoom(true)
 }, { immediate: true })
 

@@ -13,7 +13,11 @@ const { groups } = useValidatorDashboardGroups()
 
 const list = computed<VDBOverviewGroup[]>(() => {
   if (props.includeAll) {
-    return [{ count: 0, id: DAHSHBOARDS_ALL_GROUPS_ID, name: '' }].concat(
+    return [ {
+      count: 0,
+      id: DAHSHBOARDS_ALL_GROUPS_ID,
+      name: '',
+    } ].concat(
       groups.value,
     )
   }

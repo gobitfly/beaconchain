@@ -12,4 +12,6 @@ const isCrypto = (value?: Currency) =>
   !!value && CryptoCurrencies.includes(value as CryptoCurrency)
 const isNative = (value?: Currency) => value === 'NAT'
 
-export { isCrypto, isFiat, isNative }
+export {
+  isCrypto, isFiat, isNative,
+}

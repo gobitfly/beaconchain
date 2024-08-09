@@ -16,7 +16,9 @@ const {
 } = useProductsStore()
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
-const { isStripeDisabled, stripeCustomerPortal, stripePurchase } = useStripe()
+const {
+  isStripeDisabled, stripeCustomerPortal, stripePurchase,
+} = useStripe()
 
 interface Props {
   isYearly: boolean
@@ -151,7 +153,11 @@ const planButton = computed(() => {
   const disabled
     = isStripeDisabled.value || isPremiumSubscribedViaApp.value || undefined
 
-  return { disabled, isDowngrade, text }
+  return {
+    disabled,
+    isDowngrade,
+    text,
+  }
 })
 
 const mainFeatures = computed<Feature[]>(() => {
@@ -176,16 +182,10 @@ const mainFeatures = computed<Feature[]>(() => {
       available: true,
       name:
         props.product.premium_perks.validator_dashboards === 1
-          ? $t('pricing.premium_product.validators', {
-            amount: validatorPerDashboardAmount,
-          })
-          : $t('pricing.premium_product.validators_per_dashboard', {
-            amount: validatorPerDashboardAmount,
-          }),
+          ? $t('pricing.premium_product.validators', { amount: validatorPerDashboardAmount })
+          : $t('pricing.premium_product.validators_per_dashboard', { amount: validatorPerDashboardAmount }),
       percentage: percentages.value.validatorsPerDashboard,
-      subtext: $t('pricing.per_validator', {
-        amount: prices.value.perValidator,
-      }),
+      subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       tooltip: $t('pricing.pectra_tooltip', {
         effectiveBalance: formatNumber(
           props.product?.premium_perks.validators_per_dashboard * 32,

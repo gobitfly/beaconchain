@@ -14,9 +14,7 @@ const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
 const { t: $t } = useTranslation()
 
-await useAsyncData('user_dashboards', () => refreshDashboards(), {
-  watch: [isLoggedIn],
-})
+await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
@@ -27,9 +25,7 @@ const tabs: HashTabs = {
     disabled: !showInDevelopment,
     index: 2,
   },
-  dashboards: {
-    index: 0,
-  },
+  dashboards: { index: 0 },
   machines: {
     disabled: !showInDevelopment,
     index: 1,
@@ -44,24 +40,22 @@ const tabs: HashTabs = {
   },
 }
 
-const { activeIndex, setActiveIndex } = useHashTabs(tabs)
+const {
+  activeIndex, setActiveIndex,
+} = useHashTabs(tabs)
 
 useBcSeo('notifications.title')
 
 const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
-      data: {
-        question: $t('notifications.login_question'),
-      },
+      data: { question: $t('notifications.login_question') },
       onClose: async (response) => {
         if (response?.data) {
           await navigateTo('/login')
         }
       },
-      props: {
-        header: $t('notifications.title'),
-      },
+      props: { header: $t('notifications.title') },
     })
   }
   else {

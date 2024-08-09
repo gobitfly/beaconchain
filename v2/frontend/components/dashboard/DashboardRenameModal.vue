@@ -13,7 +13,9 @@ interface Props {
   dashboard: ValidatorDashboard
   dashboardType: DashboardType
 }
-const { dialogRef, props, setHeader } = useBcDialog<Props>({ pt: { header: { class: 'dashboard-rename-modal-header' } } })
+const {
+  dialogRef, props, setHeader,
+} = useBcDialog<Props>({ pt: { header: { class: 'dashboard-rename-modal-header' } } })
 
 watch(props, (p) => {
   let title = $t('dashboard.rename.title')

@@ -15,7 +15,9 @@ import {
 import { COOKIE_KEY } from '~/types/cookie'
 import { API_PATH } from '~/types/customFetch'
 import type { ChainIDs } from '~/types/network'
-import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
+import {
+  isPublicDashboardKey, isSharedKey,
+} from '~/utils/dashboard/key'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
   const data = ref<null | undefined | UserDashboardsData>()
@@ -94,7 +96,7 @@ export function useUserDashboardStore() {
       }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [cd as ValidatorDashboard],
+        validator_dashboards: [ cd as ValidatorDashboard ],
       }
       saveToCookie(data.value)
       return cd
@@ -102,7 +104,12 @@ export function useUserDashboardStore() {
     // Create user specific Validator dashboard
     const res = await fetch<{ data: VDBPostReturnData }>(
       API_PATH.DASHBOARD_CREATE_VALIDATOR,
-      { body: { name, network } },
+      {
+        body: {
+          name,
+          network,
+        },
+      },
     )
     if (res.data) {
       data.value = {
@@ -134,7 +141,7 @@ export function useUserDashboardStore() {
         name: '',
       }
       data.value = {
-        account_dashboards: [cd],
+        account_dashboards: [ cd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
       saveToCookie(data.value)
@@ -149,7 +156,10 @@ export function useUserDashboardStore() {
       data.value = {
         account_dashboards: [
           ...(dashboards.value?.account_dashboards || []),
-          { id: res.data.id, name: res.data.name },
+          {
+            id: res.data.id,
+            name: res.data.name,
+          },
         ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
@@ -172,7 +182,7 @@ export function useUserDashboardStore() {
       }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [cd as ValidatorDashboard],
+        validator_dashboards: [ cd as ValidatorDashboard ],
       }
     }
     else {
@@ -183,7 +193,7 @@ export function useUserDashboardStore() {
         hash,
       }
       data.value = {
-        account_dashboards: [cd],
+        account_dashboards: [ cd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
     }

@@ -70,59 +70,51 @@ const data = computed(() => {
           hasScheduledDuty = true
           break
       }
-      rows.push([
-        {
-          class: className,
-          count: 1,
-          duties: [
-            {
-              ...slot.proposal,
-              dutySubLink:
+      rows.push([ {
+        class: className,
+        count: 1,
+        duties: [ {
+          ...slot.proposal,
+          dutySubLink:
                 slot.status === 'proposed'
                   ? `/block/${slot.proposal.duty_object}`
                   : `/slot/${slot.proposal.duty_object}`,
-              dutySubText,
-            },
-          ],
-          dutyText,
-          icon: 'proposal',
-        },
-      ])
+          dutySubText,
+        } ],
+        dutyText,
+        icon: 'proposal',
+      } ])
     }
 
     if (slot.slashing?.failed) {
       const dutyText = $t('slotViz.tooltip.slashing.failed.main')
       const dutySubText = $t('slotViz.tooltip.slashing.failed.sub')
-      rows.push([
-        {
-          andMore: Math.max(
-            0,
-            slot.slashing.failed.total_count
-            - slot.slashing.failed.slashings?.length,
-          ),
-          class: 'failed',
-          count: slot.slashing.failed.total_count,
-          duties: slot.slashing.failed.slashings?.map(slash => ({
-            ...slash,
-            dutySubLink: `/validator/${slash.duty_object}`,
-            dutySubText,
-          })),
-          dutyText,
-          icon: 'slashing',
-        },
-      ])
+      rows.push([ {
+        andMore: Math.max(
+          0,
+          slot.slashing.failed.total_count
+          - slot.slashing.failed.slashings?.length,
+        ),
+        class: 'failed',
+        count: slot.slashing.failed.total_count,
+        duties: slot.slashing.failed.slashings?.map(slash => ({
+          ...slash,
+          dutySubLink: `/validator/${slash.duty_object}`,
+          dutySubText,
+        })),
+        dutyText,
+        icon: 'slashing',
+      } ])
     }
     if (slot.slashing?.success) {
       hasSuccessDuties = true
       const dutyText = $t('slotViz.tooltip.slashing.success.main')
-      rows.push([
-        {
-          class: 'success',
-          count: slot.slashing.success.total_count,
-          dutyText,
-          icon: 'slashing',
-        },
-      ])
+      rows.push([ {
+        class: 'success',
+        count: slot.slashing.success.total_count,
+        dutyText,
+        icon: 'slashing',
+      } ])
     }
 
     const addDuties = (
@@ -191,7 +183,11 @@ const data = computed(() => {
       `slotViz.tooltip.status.scheduled.${
         hasDuties ? 'has_duties' : 'no_duties'
       }`,
-      [undefined, 'scheduled', undefined],
+      [
+        undefined,
+        'scheduled',
+        undefined,
+      ],
     )
   }
   else if (hasFailedDuties && hasSuccessDuties) {
@@ -205,14 +201,22 @@ const data = computed(() => {
     stateLabel = formatMultiPartSpan(
       $t,
       'slotViz.tooltip.status.duties_failed',
-      [undefined, 'failed', undefined],
+      [
+        undefined,
+        'failed',
+        undefined,
+      ],
     )
   }
   else if (hasSuccessDuties) {
     stateLabel = formatMultiPartSpan(
       $t,
       'slotViz.tooltip.status.duties_success',
-      [undefined, 'success', undefined],
+      [
+        undefined,
+        'success',
+        undefined,
+      ],
     )
   }
   else {

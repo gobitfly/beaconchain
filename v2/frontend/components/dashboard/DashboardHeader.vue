@@ -1,7 +1,11 @@
 <script lang="ts" setup>
-import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
+import type {
+  MenuBarButton, MenuBarEntry,
+} from '~/types/menuBar'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
-import { COOKIE_DASHBOARD_ID, type CookieDashboard, type Dashboard, type DashboardKey, type DashboardType } from '~/types/dashboard'
+import {
+  COOKIE_DASHBOARD_ID, type CookieDashboard, type Dashboard, type DashboardKey, type DashboardType,
+} from '~/types/dashboard'
 
 const { t: $t } = useTranslation()
 const { width } = useWindowSize()
@@ -11,7 +15,9 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
-const { dashboardKey, dashboardType, isShared, setDashboardKey } = useDashboardKey()
+const {
+  dashboardKey, dashboardType, isShared, setDashboardKey,
+} = useDashboardKey()
 
 const emit = defineEmits<{ (e: 'showCreation'): void }>()
 
@@ -34,7 +40,10 @@ const items = computed<MenuBarEntry[]>(() => {
   const buttons: MenuBarEntry[] = []
 
   // if we are in a public dashboard and change the validators then the route does not get updated
-  const fixedRoute = router.resolve({ name: route.name!, params: { id: dashboardKey.value } })
+  const fixedRoute = router.resolve({
+    name: route.name!,
+    params: { id: dashboardKey.value },
+  })
 
   const addToSortedItems = (label: string, items?: MenuBarButton[]) => {
     if (items?.length) {
@@ -67,9 +76,15 @@ const items = computed<MenuBarEntry[]>(() => {
     }
 
     if (type === 'validator') {
-      return { label, route: `/dashboard/${id}` }
+      return {
+        label,
+        route: `/dashboard/${id}`,
+      }
     }
-    return { label, route: `/account-dashboard/${id}` }
+    return {
+      label,
+      route: `/account-dashboard/${id}`,
+    }
   }
   addToSortedItems($t('dashboard.header.validator'), dashboards.value?.validator_dashboards?.map((db) => {
     const cd = db as CookieDashboard
@@ -81,7 +96,12 @@ const items = computed<MenuBarEntry[]>(() => {
   }))
   const disabledTooltip = !showInDevelopment ? $t('common.coming_soon') : undefined
   const onNotificationsPage = dashboardType.value === 'notifications'
-  addToSortedItems($t('notifications.title'), [{ active: onNotificationsPage, disabledTooltip, label: $t('notifications.title'), route: !onNotificationsPage ? '/notifications' : undefined }])
+  addToSortedItems($t('notifications.title'), [ {
+    active: onNotificationsPage,
+    disabledTooltip,
+    label: $t('notifications.title'),
+    route: !onNotificationsPage ? '/notifications' : undefined,
+  } ])
 
   return buttons
 })

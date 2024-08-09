@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { TagColor, TagSize } from '~/types/tag'
+import type {
+  TagColor, TagSize,
+} from '~/types/tag'
 
 interface Props {
   color?: TagColor

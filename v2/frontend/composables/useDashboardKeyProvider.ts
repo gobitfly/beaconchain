@@ -1,12 +1,18 @@
-import { pullAll, union } from 'lodash-es'
-import { provide, warn } from 'vue'
+import {
+  pullAll, union,
+} from 'lodash-es'
+import {
+  provide, warn,
+} from 'vue'
 import { COOKIE_KEY } from '~/types/cookie'
 import type {
   DashboardKey,
   DashboardKeyData,
   DashboardType,
 } from '~/types/dashboard'
-import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
+import {
+  isPublicDashboardKey, isSharedKey,
+} from '~/utils/dashboard/key'
 
 export function useDashboardKeyProvider(
   type: DashboardType = 'validator',

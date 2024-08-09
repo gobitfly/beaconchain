@@ -22,9 +22,7 @@ const parseValueBoolean = (value: string) => value === 'true'
 const valueToStringBoolean = (value: boolean) => value ? 'true' : 'false'
 
 export const SettingDefaults: Record<GlobalSetting, SettingsConfig> = {
-  'age-format': {
-    default: 'absolute',
-  },
+  'age-format': { default: 'absolute' },
   'rpl': {
     default: true,
     parseValue: parseValueBoolean as SettingsGetter,

@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 const { t: $t } = useTranslation()
 const { currentPremiumSubscription } = useProductsStore()
-const { isStripeDisabled, stripeCustomerPortal } = useStripe()
+const {
+  isStripeDisabled, stripeCustomerPortal,
+} = useStripe()
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
@@ -21,7 +23,10 @@ const planButton = computed(() => {
     : $t('pricing.premium_product.button.select_plan')
   const disabled = isStripeDisabled.value || buttonsDisabled.value || undefined
 
-  return { disabled, text }
+  return {
+    disabled,
+    text,
+  }
 })
 </script>
 

@@ -76,7 +76,10 @@ async function redirectToRelevantPage(result: ResultSuggestion) {
   }
 
   if (q !== '') {
-    await navigateTo({ path, query: { q } })
+    await navigateTo({
+      path,
+      query: { q },
+    })
   }
   else {
     await navigateTo({ path })

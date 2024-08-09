@@ -7,7 +7,9 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const { defineField, errors, handleSubmit } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
     confirmPassword: confirmPasswordValidation($t, 'newPassword'),
     newPassword: newPasswordValidation($t, 'oldPassword'),
@@ -15,9 +17,18 @@ const { defineField, errors, handleSubmit } = useForm({
   }),
 })
 
-const [oldPassword, oldPasswordAttrs] = defineField('oldPassword')
-const [newPassword, newPasswordAttrs] = defineField('newPassword')
-const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
+const [
+  oldPassword,
+  oldPasswordAttrs,
+] = defineField('oldPassword')
+const [
+  newPassword,
+  newPasswordAttrs,
+] = defineField('newPassword')
+const [
+  confirmPassword,
+  confirmPasswordAttrs,
+] = defineField('confirmPassword')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
@@ -28,11 +39,7 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
 
   buttonsDisabled.value = true
   try {
-    await fetch(API_PATH.USER_CHANGE_PASSWORD, {
-      body: {
-        password: values.newPassword,
-      },
-    })
+    await fetch(API_PATH.USER_CHANGE_PASSWORD, { body: { password: values.newPassword } })
     toast.showSuccess({
       detail: $t('user_settings.password.success.toast_message'),
       group: $t('user_settings.password.success.toast_group'),

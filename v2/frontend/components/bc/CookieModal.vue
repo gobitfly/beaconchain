@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
+import {
+  COOKIE_KEY, type CookiesPreference,
+} from '~/types/cookie'
 import { Target } from '~/types/links'
 
 const cookiePreference = useCookie<CookiesPreference>(

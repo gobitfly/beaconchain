@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
-import { type ChainIDs, ChainInfo } from '~/types/network'
+import {
+  type ChainIDs, ChainInfo,
+} from '~/types/network'
 
 const props = defineProps<{
   readonlyNetworks?: ChainIDs[]
 }>()
 
-const { availableNetworks, isNetworkDisabled } = useNetworkStore()
+const {
+  availableNetworks, isNetworkDisabled,
+} = useNetworkStore()
 
 /** If prop `:readonly-networks` is given:
  *   the networks in array `:readonly-networks` are shown to the user and they are unclickable,
@@ -38,7 +42,11 @@ const buttons = computed(() => {
     list.push({
       component: IconNetwork,
       componentClass: 'maximum',
-      componentProps: { chainId, colored: true, harmonizePerceivedSize: true },
+      componentProps: {
+        chainId,
+        colored: true,
+        harmonizePerceivedSize: true,
+      },
       disabled: isNetworkDisabled(chainId),
       tooltip: ChainInfo[chainId].name,
       value: String(chainId),

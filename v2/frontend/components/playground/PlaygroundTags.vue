@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { faAnchor, faTrophy } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faAnchor, faTrophy,
+} from '@fortawesome/pro-solid-svg-icons'
 import type { BlockStatus } from '~/types/block'
 import { TagColors } from '~/types/tag'
 

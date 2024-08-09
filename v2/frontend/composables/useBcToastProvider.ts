@@ -1,5 +1,7 @@
 import { provide } from 'vue'
-import type { BcToastProvider, ToastData } from '~/types/toast'
+import type {
+  BcToastProvider, ToastData,
+} from '~/types/toast'
 
 const TOAST_TIME = 3000
 
@@ -7,13 +9,18 @@ export function useBcToastProvider() {
   const toast = useToast()
   const { t: $t } = useTranslation()
 
-  const { bounce, instant, temp, value } = useDebounceValue<ToastData[]>(
+  const {
+    bounce, instant, temp, value,
+  } = useDebounceValue<ToastData[]>(
     [],
     TOAST_TIME,
   )
 
   const showError = (data: ToastData) => {
-    bounce([...temp.value, data], true)
+    bounce([
+      ...temp.value,
+      data,
+    ], true)
   }
 
   const showInfo = (data: ToastData) => {
@@ -65,12 +72,21 @@ export function useBcToastProvider() {
               ? `${key}: ${list[0].detail}`
               : $t('error.multiple_times', { error: key }, list.length)
 
-          toast.add({ detail, life: TOAST_TIME, severity: 'error', summary })
+          toast.add({
+            detail,
+            life: TOAST_TIME,
+            severity: 'error',
+            summary,
+          })
         }
       }
       instant([])
     }
   })
 
-  provide<BcToastProvider>('bcToast', { showError, showInfo, showSuccess })
+  provide<BcToastProvider>('bcToast', {
+    showError,
+    showInfo,
+    showSuccess,
+  })
 }

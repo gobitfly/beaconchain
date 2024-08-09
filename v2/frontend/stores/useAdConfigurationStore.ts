@@ -14,7 +14,10 @@ export function useAdConfigurationStore() {
   const adConfigs = computed(() => data.value)
 
   async function refreshAdConfigs(route: string) {
-    const keys = ['global', route].join(',')
+    const keys = [
+      'global',
+      route,
+    ].join(',')
     const res = await fetch<AdConfiguration[]>(
       API_PATH.AD_CONFIGURATIONs,
       undefined,
@@ -27,10 +30,16 @@ export function useAdConfigurationStore() {
       }
       newConfigurations[config.key].push(config)
     })
-    data.value = { ...adConfigs.value, ...newConfigurations }
+    data.value = {
+      ...adConfigs.value,
+      ...newConfigurations,
+    }
 
     return adConfigs.value
   }
 
-  return { adConfigs, refreshAdConfigs }
+  return {
+    adConfigs,
+    refreshAdConfigs,
+  }
 }

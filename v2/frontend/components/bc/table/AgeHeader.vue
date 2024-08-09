@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { AgeFormat } from '~/types/settings'
 
-const { changeSetting, setting } = useGlobalSetting<AgeFormat>('age-format')
+const {
+  changeSetting, setting,
+} = useGlobalSetting<AgeFormat>('age-format')
 
 const toggleAgeSetting = () => {
   changeSetting(setting.value === 'absolute' ? 'relative' : 'absolute')

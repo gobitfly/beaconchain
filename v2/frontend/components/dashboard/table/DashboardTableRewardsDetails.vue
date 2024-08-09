@@ -93,7 +93,7 @@ const data = computed(() => {
       tooltip: formatMultiPartSpan(
         $t,
         'dashboard.validator.rewards.tooltip.sync',
-        ['no-wrap'],
+        [ 'no-wrap' ],
       ),
       value: details.value.sync,
     },
@@ -103,7 +103,10 @@ const data = computed(() => {
       tooltip: formatMultiPartSpan(
         $t,
         'dashboard.validator.rewards.tooltip.slashing',
-        ['slash-after no-wrap', ' no-wrap'],
+        [
+          'slash-after no-wrap',
+          ' no-wrap',
+        ],
       ),
       value: details.value.slashing,
     },
@@ -116,9 +119,7 @@ const data = computed(() => {
       icon: faSigma,
       isTotal: true,
       label: $t('dashboard.validator.rewards.total'),
-      value: {
-        income: totalElCl(props.row.reward)?.toString() || '0',
-      } as Partial<VDBGroupRewardsDetails>,
+      value: { income: totalElCl(props.row.reward)?.toString() || '0' } as Partial<VDBGroupRewardsDetails>,
     },
   ].map((reward) => {
     const hasNoReward = reward.isTotal

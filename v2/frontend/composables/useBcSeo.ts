@@ -33,7 +33,11 @@ export function useBcSeo(
   const imageAlt = () => $t('seo.image_alt')
 
   const dynamicTitle = () => {
-    const parts: string[] = [$t('seo.title'), 'beaconcha.in', year.toString()]
+    const parts: string[] = [
+      $t('seo.title'),
+      'beaconcha.in',
+      year.toString(),
+    ]
     if (typeof pageTitle === 'string') {
       parts.splice(0, 0, $t(pageTitle))
     }

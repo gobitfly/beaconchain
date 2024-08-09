@@ -53,7 +53,7 @@ const accountSub: NotificationSettingsAccountDashboard = {
   is_incoming_transactions_subscribed: true,
   is_outgoing_transactions_subscribed: true,
   is_webhook_discord_enabled: true,
-  subscribed_chain_ids: [17000],
+  subscribed_chain_ids: [ 17000 ],
   webhook_url: 'http://bablabla',
 }
 

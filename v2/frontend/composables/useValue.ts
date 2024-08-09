@@ -1,17 +1,29 @@
 import { BigNumber } from '@ethersproject/bignumber'
-import { commify, formatEther } from '@ethersproject/units'
-import type { CryptoCurrency, Currency } from '~/types/currencies'
+import {
+  commify, formatEther,
+} from '@ethersproject/units'
+import type {
+  CryptoCurrency, Currency,
+} from '~/types/currencies'
 import type {
   ExtendedLabel,
   ValueConvertOptions,
   WeiToValue,
 } from '~/types/value'
-import { isFiat, isNative } from '~/utils/currency'
-import { lessThanEth, lessThanGwei, OneEther, OneGwei } from '~/utils/ether'
-import { commmifyLeft, trim, withCurrency } from '~/utils/format'
+import {
+  isFiat, isNative,
+} from '~/utils/currency'
+import {
+  lessThanEth, lessThanGwei, OneEther, OneGwei,
+} from '~/utils/ether'
+import {
+  commmifyLeft, trim, withCurrency,
+} from '~/utils/format'
 
 export function useValue() {
-  const { currency, rates } = useCurrency()
+  const {
+    currency, rates,
+  } = useCurrency()
 
   const converter = computed(() => {
     const weiToValue: WeiToValue = (
@@ -35,9 +47,7 @@ export function useValue() {
             ),
           }
         }
-        return {
-          label: withCurrency('0', target),
-        }
+        return { label: withCurrency('0', target) }
       }
 
       // If a different sourceUnit is defined we multiply accordingly. We usually get gwei, but you never know.

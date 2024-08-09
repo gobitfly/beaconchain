@@ -1,6 +1,8 @@
 <!-- eslint-disable vue/max-len -- TODO: plz fix this -->
 <script setup lang="ts">
-import { type ComponentPublicInstance, warn } from 'vue'
+import {
+  type ComponentPublicInstance, warn,
+} from 'vue'
 
 const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
@@ -56,7 +58,8 @@ enum SignalDirection {
   ParentToChildren,
 }
 
-type TextProperties = { text: string, width: number }
+type TextProperties = { text: string
+  width: number }
 
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
 const slot = computed(() => (_s.default ? _s.default() : [])) // `slot`s is always an array, empty if there is no slot
@@ -82,7 +85,10 @@ let classPropsDuringLastUpdate = props.class || ''
 let textPropsDuringLastUpdate = props.text || ''
 let initialFlexGrowDuringLastUpdate: number | undefined
 let ellipsesPropsDuringLastUpdate: number | number[] | undefined = 1
-let textAfterLastUpdate: TextProperties = { text: '', width: 0 }
+let textAfterLastUpdate: TextProperties = {
+  text: '',
+  width: 0,
+}
 let widthAvailableDuringLastUpdate = 0 // used by determineReason() to find out why an update is needed, during the update process
 let frameWidthAfterLastUpdate = 0 // used by determineReason() to find out why an update is needed, outside the update process
 let lastMeasuredFrameWidth = 0
@@ -91,7 +97,10 @@ let currentText = ''
 const canvasContextToCalculateTextWidths = (
   isServer ? null : document.createElement('canvas').getContext('2d')
 ) as CanvasRenderingContext2D
-const lastTextWidthCalculation: TextProperties = { text: '', width: 0 }
+const lastTextWidthCalculation: TextProperties = {
+  text: '',
+  width: 0,
+}
 let amImounted = false
 let didTheResizingObserverFireSinceMount = false
 let amIreadyForUpdate = false // our parent can call function getReadyForUpdate() as we can, so we use this variable to prevent multiple executions of it in a row
@@ -169,9 +178,7 @@ watch(
     invalidateChildrenIdentities()
     innerElements.slotNonce++
   },
-  {
-    flush: 'pre',
-  },
+  { flush: 'pre' },
 )
 watch(
   slot,
@@ -182,9 +189,7 @@ watch(
     identifyChildren()
     nextTick(() => updateContent(0, false)) // waiting for the next tick ensures that the children are in the DOM when we start the update cycle (this slot-watcher ensured they were instantiated but not inserted in the real DOM)
   },
-  {
-    flush: 'post',
-  },
+  { flush: 'post' },
 )
 
 watch(
@@ -523,7 +528,11 @@ function enterUpdateCycleAsAparent(
       if (growth > 0) {
         const flexGrow = child.whatIsMyFlexGrow()
         totalFlexGrow += flexGrow
-        canUseMoreRoom.push({ child, flexGrow, growth }) // For now, field `growth` represents the maximal growth of the child (due to a max-width constraint) or possibly what would allow its text not to get clipped. We will overwrite this value when we distribute the total additional room later.
+        canUseMoreRoom.push({
+          child,
+          flexGrow,
+          growth,
+        }) // For now, field `growth` represents the maximal growth of the child (due to a max-width constraint) or possibly what would allow its text not to get clipped. We will overwrite this value when we distribute the total additional room later.
       }
       else {
         totalAdditionalRoom -= growth
@@ -612,7 +621,10 @@ function isMyContentClipped(): boolean {
  */
 function calculateTextWidth(text: string | undefined): TextProperties {
   if (!text) {
-    return { text: '', width: 0 }
+    return {
+      text: '',
+      width: 0,
+    }
   }
   if (!lastTextWidthCalculation.text) {
     // hopefully we reach this point rarely because `getComputedStyle().something` triggers a reflow (slow)
@@ -733,7 +745,8 @@ function determineReason(
   )
   return reason
 
-  function calculateGaps(): { before: number | undefined, now: number } {
+  function calculateGaps(): { before: number | undefined
+    now: number } {
     // TODO: If needed, calculate the actual gaps when we are a parent (frame width - sum of child widths). Currently not required.
     let before: number | undefined
     const frameWhidthToCompareTo = amIreadyForUpdate
@@ -749,7 +762,10 @@ function determineReason(
     else {
       before = undefined
     }
-    return { before, now }
+    return {
+      before,
+      now,
+    }
   }
 }
 
@@ -865,7 +881,12 @@ function logStep(
   }
   common
     += whatIam.value === WhatIcanBe.Child ? '    ' : parentInParent ? '  ' : ''
-  common += ['Error', 'Parent', 'Child', 'Standalone'][whatIam.value]
+  common += [
+    'Error',
+    'Parent',
+    'Child',
+    'Standalone',
+  ][whatIam.value]
   if (whatIam.value !== WhatIcanBe.Parent) {
     common += ' "' + (props.text as string).slice(0, 8) + '…"'
   }
@@ -1000,7 +1021,8 @@ function clipText(
   // complicated and slower
   const nBlocks = nEllipses + 1
   // First, we extract `nBlocks` blocks from the original text. The extraction algorithm guarantees that the sum of their lengths is `room`. Their lengths vary for arithmetic reasons but are as similar as possible.
-  type Block = { start: number, visibleLength: number }
+  type Block = { start: number
+    visibleLength: number }
   const blocks: Block[] = []
   let totalToExtract = room
   let totalToSkip = originalText.length - room
@@ -1011,7 +1033,10 @@ function clipText(
     const extractedNow = Math.round(totalToExtract / b) // do not floor here
     totalToExtract -= extractedNow
     o += skipNow
-    blocks.push({ start: o, visibleLength: extractedNow })
+    blocks.push({
+      start: o,
+      visibleLength: extractedNow,
+    })
     o += extractedNow
     skipNow = Math.floor(totalToSkip / s) // do not round here
     totalToSkip -= skipNow

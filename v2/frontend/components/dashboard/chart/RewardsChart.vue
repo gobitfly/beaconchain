@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { h, render } from 'vue'
+import {
+  h, render,
+} from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
@@ -55,7 +57,9 @@ use([
 
 const { fetch } = useCustomFetch()
 
-const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
+const {
+  dashboardKey, isPrivate: groupsEnabled,
+} = useDashboardKey()
 
 const data = ref<ChartData<number, string> | undefined>()
 const isLoading = ref(false)
@@ -77,7 +81,11 @@ await useAsyncData(
     isLoading.value = false
     data.value = res.data
   },
-  { immediate: true, server: false, watch: [dashboardKey] },
+  {
+    immediate: true,
+    server: false,
+    watch: [ dashboardKey ],
+  },
 )
 
 const { groups } = useValidatorDashboardGroups()
@@ -136,9 +144,7 @@ const series = computed<RewardChartSeries[]>(() => {
     bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
     color: colors.value.data.cl,
     data: Array.from(Array(categoryCount)).map(() => 0),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({
-      label: `0 ${currencyLabel.value}`,
-    })),
+    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
     groups: [],
     id: 1,
     name: $t('dashboard.validator.rewards.chart.cl'),
@@ -151,9 +157,7 @@ const series = computed<RewardChartSeries[]>(() => {
     bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
     color: colors.value.data.el,
     data: Array.from(Array(categoryCount)).map(() => 0),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({
-      label: `0 ${currencyLabel.value}`,
-    })),
+    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
     groups: [],
     id: 2,
     name: $t('dashboard.validator.rewards.chart.el'),
@@ -213,12 +217,8 @@ const option = computed<ECBasicOption | undefined>(() => {
     dataZoom: {
       borderColor: colors.value.label,
       dataBackground: {
-        areaStyle: {
-          color: colors.value.label,
-        },
-        lineStyle: {
-          color: colors.value.label,
-        },
+        areaStyle: { color: colors.value.label },
+        lineStyle: { color: colors.value.label },
       },
       end: 100,
       start: 60,
@@ -294,14 +294,15 @@ const option = computed<ECBasicOption | undefined>(() => {
         fontSize: textSize,
         fontWeight: fontWeightMedium,
         formatter: valueFormatter.value,
-        padding: [0, 10, 0, 0],
+        padding: [
+          0,
+          10,
+          0,
+          0,
+        ],
       },
       silent: true,
-      splitLine: {
-        lineStyle: {
-          color: colors.value.line,
-        },
-      },
+      splitLine: { lineStyle: { color: colors.value.line } },
       type: 'value',
     },
   }

@@ -12,7 +12,7 @@ export function levenshteinDistance(str1: string, str2: string): number {
   const dist = []
 
   for (let i = 0; i <= str1.length; i++) {
-    dist[i] = [i]
+    dist[i] = [ i ]
     for (let j = 1; j <= str2.length; j++) {
       if (i === 0) {
         dist[i][j] = j

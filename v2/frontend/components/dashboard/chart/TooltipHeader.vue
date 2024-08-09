@@ -5,7 +5,9 @@ import {
   type AggregationTimeframe,
   type EfficiencyType,
 } from '~/types/dashboard/summary'
-import { ONE_DAY, ONE_HOUR, ONE_WEEK } from '~/utils/format'
+import {
+  ONE_DAY, ONE_HOUR, ONE_WEEK,
+} from '~/utils/format'
 
 interface Props {
   aggregation?: AggregationTimeframe
@@ -17,7 +19,9 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { epochToTs, tsToEpoch } = useNetworkStore()
+const {
+  epochToTs, tsToEpoch,
+} = useNetworkStore()
 
 const startTs = computed(() => {
   if (props.ts) {

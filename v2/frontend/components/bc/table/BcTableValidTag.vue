@@ -8,7 +8,8 @@ const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 
-const data = computed<{ color: TagColor, label: string }>(() => {
+const data = computed<{ color: TagColor
+  label: string }>(() => {
   return {
     color: props.valid ? 'success' : 'failed',
     label: props.valid ? $t('common.true') : $t('common.false'),

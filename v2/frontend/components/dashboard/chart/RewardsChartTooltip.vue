@@ -31,7 +31,7 @@ interface Series {
 }
 
 const mapData = (groups: RewardChartGroupData[]): GroupValue[] => {
-  const sort = [...groups].sort((g1, g2) => {
+  const sort = [ ...groups ].sort((g1, g2) => {
     const v1 = g1.bigData[props.dataIndex] || BigNumber.from('0')
     const v2 = g2.bigData[props.dataIndex] || BigNumber.from('0')
     return v1.gt(v2) ? -1 : 1
@@ -62,7 +62,7 @@ const data = computed<Series[]>(() => {
       = props.series[1].groups.find(elG => elG.id === g.id)?.bigData?.[
         props.dataIndex
       ] ?? BigNumber.from(0)
-    const bigData = [...g.bigData]
+    const bigData = [ ...g.bigData ]
     bigData[props.dataIndex] = bigData[props.dataIndex].add(elValue)
     return {
       ...g,
@@ -84,7 +84,11 @@ const data = computed<Series[]>(() => {
         .add(props.series[0].bigData[props.dataIndex])).label
     }`,
   }
-  return [el, cl, total]
+  return [
+    el,
+    cl,
+    total,
+  ]
 })
 </script>
 

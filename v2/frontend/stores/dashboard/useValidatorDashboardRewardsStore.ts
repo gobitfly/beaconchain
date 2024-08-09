@@ -11,13 +11,18 @@ const validatorDashboardRewardsStore = defineStore(
     const data = ref<InternalGetValidatorDashboardRewardsResponse>()
     const query = ref<TableQueryParams>()
 
-    return { data, query }
+    return {
+      data,
+      query,
+    }
   },
 )
 
 export function useValidatorDashboardRewardsStore() {
   const { fetch } = useCustomFetch()
-  const { data, query: storedQuery } = storeToRefs(
+  const {
+    data, query: storedQuery,
+  } = storeToRefs(
     validatorDashboardRewardsStore(),
   )
   const isLoading = ref(false)
@@ -59,10 +64,18 @@ export function useValidatorDashboardRewardsStore() {
       if (nextEpoch) {
         res.data = [
           {
-            duty: { attestation: 0, proposal: 0, slashing: 0, sync: 0 },
+            duty: {
+              attestation: 0,
+              proposal: 0,
+              slashing: 0,
+              sync: 0,
+            },
             epoch: nextEpoch.epoch,
             group_id: DAHSHBOARDS_NEXT_EPOCH_ID,
-            reward: { cl: '0', el: '0' },
+            reward: {
+              cl: '0',
+              el: '0',
+            },
           },
           ...res.data,
         ]
@@ -73,5 +86,10 @@ export function useValidatorDashboardRewardsStore() {
     return res
   }
 
-  return { getRewards, isLoading, query, rewards }
+  return {
+    getRewards,
+    isLoading,
+    query,
+    rewards,
+  }
 }

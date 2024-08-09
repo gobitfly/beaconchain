@@ -17,7 +17,10 @@ export function useHashTabs(tabs: HashTabs) {
   const findHashForIndex = (index: number) => {
     const entries = Object.entries(tabs)
     for (let i = 0; i < entries.length; i++) {
-      const [hash, tab] = entries[i]
+      const [
+        hash,
+        tab,
+      ] = entries[i]
       if (!tab.disabled && tab.index === index) {
         return `#${hash}`
       }
@@ -59,5 +62,8 @@ export function useHashTabs(tabs: HashTabs) {
     updateHash(index)
   }
 
-  return { activeIndex, setActiveIndex }
+  return {
+    activeIndex,
+    setActiveIndex,
+  }
 }

@@ -13,7 +13,10 @@ const data = computed(() => {
   const failedClass = props.failed ? 'negative' : 'positive'
   const sum = props.failed + props.success
 
-  return { failedClass, sum }
+  return {
+    failedClass,
+    sum,
+  }
 })
 </script>
 

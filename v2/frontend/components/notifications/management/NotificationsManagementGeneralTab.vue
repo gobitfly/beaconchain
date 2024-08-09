@@ -12,7 +12,9 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const { generalSettings, pairedDevices, updateGeneralSettings }
+const {
+  generalSettings, pairedDevices, updateGeneralSettings,
+}
   = useNotificationsManagementSettings()
 
 const isVisible = ref(false)
@@ -111,8 +113,16 @@ watch(
 )
 
 watch(
-  [isEmailToggleOn, isPushToggleOn, timestampMute],
-  ([enableEmail, enablePush, muteTs]) => {
+  [
+    isEmailToggleOn,
+    isPushToggleOn,
+    timestampMute,
+  ],
+  ([
+    enableEmail,
+    enablePush,
+    muteTs,
+  ]) => {
     if (!generalSettings.value) {
       return
     }
@@ -136,9 +146,7 @@ const textMutedUntil = computed(() => {
     if (timestampMute.value === Number.MAX_SAFE_INTEGER) {
       return $t('notifications.general.mute.until_turned_on')
     }
-    return $t('notifications.general.mute.until', {
-      date: formatTsToAbsolute(timestampMute.value, $t('locales.date'), true),
-    })
+    return $t('notifications.general.mute.until', { date: formatTsToAbsolute(timestampMute.value, $t('locales.date'), true) })
   }
 
   return undefined

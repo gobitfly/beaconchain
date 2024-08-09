@@ -25,9 +25,7 @@ watch(
     cursor.value = undefined
     if (p?.validators?.length) {
       if (p.validators.length > VALIDATORS_PER_PAGE) {
-        paging.value = {
-          total_count: p.validators.length,
-        }
+        paging.value = { total_count: p.validators.length }
       }
       else {
         paging.value = null
@@ -85,7 +83,8 @@ function mapDutyLabel(dutyObjects?: number[]) {
 }
 function mapDutyLinks(
   dutyObjects?: number[],
-): { label: string, to?: string }[] {
+): { label: string
+    to?: string }[] {
   if (!dutyObjects) {
     return []
   }
@@ -111,9 +110,7 @@ function mapDutyLinks(
     }))
   }
   else {
-    return dutyObjects.map(o => ({
-      label: `${formatValue ? formatNumber(o) : o}`,
-    }))
+    return dutyObjects.map(o => ({ label: `${formatValue ? formatNumber(o) : o}` }))
   }
 }
 </script>

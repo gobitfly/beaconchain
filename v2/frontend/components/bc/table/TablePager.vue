@@ -15,7 +15,13 @@ const emit = defineEmits<{
   (e: 'setPageSize', value: number): void
 }>()
 
-const pageSizes = [5, 10, 25, 50, 100]
+const pageSizes = [
+  5,
+  10,
+  25,
+  50,
+  100,
+]
 
 const currentOffset = computed<number>(() =>
   typeof props.cursor === 'number' ? props.cursor : 0,
@@ -23,9 +29,7 @@ const currentOffset = computed<number>(() =>
 
 const data = computed(() => {
   if (!props.paging) {
-    return {
-      mode: 'waiting',
-    }
+    return { mode: 'waiting' }
   }
   if (props.paging.total_count === undefined) {
     return {
@@ -45,7 +49,13 @@ const data = computed(() => {
   )
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
-  return { from, lastPage, mode: 'offset', page, to }
+  return {
+    from,
+    lastPage,
+    mode: 'offset',
+    page,
+    to,
+  }
 })
 
 const next = () => {
