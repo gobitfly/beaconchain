@@ -43,7 +43,7 @@ export interface NotificationDashboardsTableRow {
   group_name: string;
   notification_id: number /* uint64 */; // may be string? db schema is not defined afaik
   entity_count: number /* uint64 */;
-  event_types: string[];
+  event_types: 'validator_offline' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'slashed_own'| 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155';
 }
 export type InternalGetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
 export interface NotificationEventGroup {
@@ -96,7 +96,7 @@ export type InternalGetUserNotificationsAccountDashboardResponse = ApiDataRespon
 export interface NotificationMachinesTableRow {
   machine_name: string;
   threshold: number /* float64 */;
-  event_type: string;
+  event_type: 'offline' | 'storage' | 'cpu' | 'memory';
   timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationMachinesResponse = ApiPagingResponse<NotificationMachinesTableRow>;
@@ -116,7 +116,7 @@ export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<Notif
  */
 export interface NotificationRocketPoolTableRow {
   timestamp: number /* int64 */;
-  event_type: string;
+  event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
   alert_value?: number /* float64 */; // only for some notification types, e.g. max collateral
   node_address: Hash;
 }
@@ -128,7 +128,7 @@ export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<No
 export interface NotificationNetworksTableRow {
   chain_id: number /* uint64 */;
   timestamp: number /* int64 */;
-  event_type: string;
+  event_type: 'gas_above' | 'gas_below' | 'participation_rate';
   alert_value: string /* decimal.Decimal */; // wei string for gas alerts, otherwise percentage (0-1) for participation rate
 }
 export type InternalGetUserNotificationNetworksResponse = ApiPagingResponse<NotificationNetworksTableRow>;

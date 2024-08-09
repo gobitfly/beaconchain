@@ -126,3 +126,10 @@ export interface StripeCreateCheckoutSession {
 export interface StripeCustomerPortal {
   url: string;
 }
+export interface OAuthAppData {
+  ID: number /* uint64 */;
+  Owner: number /* uint64 */;
+  AppName: string;
+  RedirectURI: string;
+  Active: boolean;
+}
