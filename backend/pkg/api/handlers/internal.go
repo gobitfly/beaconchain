@@ -459,6 +459,7 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		returnOk(w, types.ApiDataResponse[types.VDBPostArchivingReturnData]{
 			Data: types.VDBPostArchivingReturnData{Id: uint64(dashboardId), IsArchived: req.IsArchived},
 		})
+		return
 	}
 
 	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
