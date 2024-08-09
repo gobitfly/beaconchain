@@ -1,5 +1,8 @@
 <template>
   <TabView lazy>
+    <TabPanel header="Color Blind Enhancements">
+      <PlaygroundColorblind />
+    </TabPanel>
     <TabPanel header="Dialogs">
       <PlaygroundDialog />
     </TabPanel>

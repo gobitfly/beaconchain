@@ -50,6 +50,7 @@
   --orange-color: var(--light-orange);
   --black-transparent-3: rgba(0, 0, 0, 0.3);
 
+@mixin default {
   --primary-contrast-color: var(--grey-4);
   --primary-contrast-color-discreet: var(--light-grey-5);
 
@@ -152,8 +153,14 @@
   --toast-message-error-color: var(--bold-red);
   --toast-background-error-color: var(--pastel-red);
   --toast-border-error-color: var(--bold-red);
+}
+
+  &.light-mode {
+    @include default;
+  }
 
   &.dark-mode {
+    @include default;
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
     --primary-contrast-color-discreet: var(--dark-grey);
