@@ -140,7 +140,7 @@ const openManageNotifications = () => {
               :icon="faNetworkWired"
             />
           </template>
-          Network coming soon!
+          <NotificationsNetworkTable />
         </TabPanel>
       </TabView>
     </BcPageWrapper>

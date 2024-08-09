@@ -215,6 +215,7 @@ watch(
     position: absolute;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     width: 100%;
     .left-info {
       margin-right: auto;
