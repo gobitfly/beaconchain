@@ -171,11 +171,11 @@ export interface VDBHeatmap {
   timestamps: number /* int64 */[]; // X-Axis Categories (unix timestamp)
   group_ids: number /* uint64 */[]; // Y-Axis Categories
   data: VDBHeatmapCell[];
-  aggregation: 'epoch' | 'day';
+  aggregation: 'epoch' | 'hourly' | 'daily' | 'weekly';
 }
 export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmapTooltipData {
-  timestamp: number /* int64 */; // epoch or day
+  timestamp: number /* int64 */;
   proposers: StatusCount;
   syncs: number /* uint64 */;
   slashings: StatusCount;
