@@ -440,8 +440,7 @@ type ColorDefinition = { color: string, identifier: string }
 enum ColorBlindness { Red, Green }
 
 const timeAllowed = 2000 // ms
-/** maximum number of colors that we do not want to touch temporarily */
-const tabuLength = 10
+const switchPeriod = 10 // controls how long the progress can stall before the objective function is changed
 const debug = true
 
 function enhanceColors(colors: ColorDefinition[], colorBlindness: ColorBlindness): ColorDefinition[] {
@@ -490,7 +489,8 @@ let distancesOrig: number[][]
 let wip3D: RGB[] // CS.RGBlinear
 let wip2D: Eye[] // CS.EyePercI
 let errors2D: number[]
-const tabuQueue = new Array<number>(tabuLength)
+const tabuMoves: Array<number[]> = []
+let objectiveFunctionMode = 0
 
 /** @param input must be in the CS.RGBgamma format.
  * @returns enchanced colors in the CS.RGBgamma format
@@ -520,36 +520,71 @@ function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
   errors2D = wip2D.map((col, k) => distError(k, col))
 
   if (debug) {
-    cons.log('confusion levels:', original.map(col => confusion(col)))
     cons.log('Original distances:', distancesOrig)
   }
 
   // search phase
-  tabuQueue.fill(-1)
+  tabuMoves.length = 0
+  for (let k = 0; k < original.length; k++) {
+    tabuMoves.push([0, 0, 0])
+  }
   let iterations = 0
+  let nextSwitch = 0
+  let bestOfBestTotalError = Number.MAX_SAFE_INTEGER
   let bestTotalError = Number.MAX_SAFE_INTEGER
-  let bestWip3D: Array<RGB> = [] // CS.RGBgamma
+  let bestOfBestWip3D: Array<RGB> = []
+  let bestWip3D: Array<RGB> = []
+  let bestWip2D: Array<Eye> = []
+  objectiveFunctionMode = 0
   while (performance.now() < endTime) {
+    iterations++
     optimizeOneStepFurther()
     const error = totalError()
     if (error < bestTotalError) {
+      if (objectiveFunctionMode === 0) {
+        // secondary modes of the objective function do not postpone the switch, their "better" solutions are more
+        // likely a climb of a local optimum
+        nextSwitch = iterations + switchPeriod * original.length
+        if (error < bestOfBestTotalError) {
+          bestOfBestTotalError = error
+          bestOfBestWip3D = wip3D.map(col => col.export(CS.RGBlinear))
+          if (debug) {
+            cons.log('GLOBALLY better set found at it', iterations, bestWip3D.map(col => col.chan))
+          }
+        }
+      }
+      else if (debug) {
+        cons.log('CLIMBING better set found at it', iterations, bestWip3D.map(col => col.chan))
+      }
       bestTotalError = error
-      bestWip3D = wip3D.map(col => col.export(CS.RGBgamma))
+      bestWip3D = wip3D.map(col => col.export(CS.RGBlinear))
+      bestWip2D = wip2D.map(col => col.export(CS.EyePercI))
       if (debug) {
-        cons.log('Better color set found at iteration', iterations, bestWip3D.map(col => col.chan))
+        cons.log('Erreurs:', errors2D)
       }
     }
-    iterations++
+    if (iterations === nextSwitch) {
+      objectiveFunctionMode = ++objectiveFunctionMode % 2
+      nextSwitch = iterations + switchPeriod * original.length
+      wip3D = bestWip3D.map(col => col.export(CS.RGBlinear))
+      wip2D = bestWip2D.map(col => col.export(CS.EyePercI))
+      errors2D = wip2D.map((col, k) => distError(k, col))
+      bestTotalError = totalError()
+      tabuMoves.length = 0
+      for (let k = 0; k < original.length; k++) {
+        tabuMoves.push([0, 0, 0])
+      }
+      if (debug) {
+        cons.log('SWITCH at iteration', iterations, bestWip3D.map(col => col.chan))
+      }
+    }
   }
   if (debug) {
     cons.log('Iterated', iterations, 'times.')
   }
   // 🪄✨
-  return bestWip3D
+  return bestOfBestWip3D.map(col => col.export(CS.RGBgamma))
 }
-
-const hashColor = (k: number, rgb: number[]) => k + Math.floor(256 * rgb[R]) + Math.floor((256 * 128) * rgb[G])
-  + Math.floor((256 * 128 * 128) * rgb[B])
 
 const triedRGB = new RGB(CS.RGBlinear)
 
@@ -557,29 +592,33 @@ function optimizeOneStepFurther() {
   let bestK: number = 0
   let bestError: number = 0
   let bestErrorGain: number = Number.MAX_SAFE_INTEGER
+  let moveToForbid: number[] = []
   let bestColor: number[] = []
 
   for (let k = 0; k < wip3D.length; k++) {
     triedRGB.import(wip3D[k])
-    const step = Math.min(2, 16 * (confusion(triedRGB) ** 2)) / 256
+    const step = 2 / 256
     for (const c of [R, G, B]) {
-      for (const s of [-step, +step]) {
+      for (const s of [-1, +1]) {
+        if (tabuMoves[k][c] === s) {
+          continue
+        }
         const restoredValue = triedRGB.chan[c]
-        triedRGB.chan[c] += s
+        triedRGB.chan[c] += s * step
         if (triedRGB.chan[c] < 0) {
           triedRGB.chan[c] = 0
         }
         if (triedRGB.chan[c] > 1) {
           triedRGB.chan[c] = 1
         }
-        if (!tabuQueue.includes(hashColor(k, triedRGB.chan))) {
-          const error = distError(k, projectOnto2D(triedRGB.chan))
-          if (error - errors2D[k] < bestErrorGain) {
-            bestErrorGain = error - errors2D[k]
-            bestError = error
-            bestK = k
-            bestColor = [...triedRGB.chan]
-          }
+        const error = distError(k, projectOnto2D(triedRGB.chan))
+        if (error - errors2D[k] < bestErrorGain) {
+          bestErrorGain = error - errors2D[k]
+          bestError = error
+          bestK = k
+          moveToForbid = [0, 0, 0]
+          moveToForbid[c] = -s
+          bestColor = [...triedRGB.chan]
         }
         triedRGB.chan[c] = restoredValue
       }
@@ -588,15 +627,8 @@ function optimizeOneStepFurther() {
   wip3D[bestK].import(bestColor)
   wip2D[bestK].import(projectOnto2D(bestColor))
   errors2D[bestK] = bestError
-  tabuQueue.shift()
-  tabuQueue.push(hashColor(bestK, bestColor))
-}
-
-const confuEye = new Eye(CS.EyePercI)
-/** calculates roughly how close to pure red or pure green the color is, independently of the intensity */
-function confusion(rgb: RGB): number {
-  confuEye.import(rgb)
-  return 3 * confuEye.p * (1 / 3 - Math.min(confuEye.r, 1 - confuEye.r, Math.abs(confuEye.r - 1 / 3)))
+  // forbidding only the last move is enough to set to 4 the minimum number of steps required to go back here
+  tabuMoves[bestK] = moveToForbid
 }
 
 const cbSightPO2D = new Eye(CS.EyePercI)
@@ -646,16 +678,22 @@ function distError(k: number, wipColor2D: Eye): number {
     if (k === l) {
       continue
     }
-    const diff = distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1
-    /* First case below: the shorter the distance for the CB person than for the normal person, the higher the error,
-     * and the error grows fast w.r.t the difference.
-     * Second case: the longer the distance for the CB person than for the normal person, the higher the error, but the
-     * error does not grow fast because this case brings higher contrast. */
-    result += (diff < 0 ? (-diff) ** 2 : diff / 2)
-    /* const res = (diff < 0 ? (-diff) ** 2 : diff / 2)
-    if (res > result) {
-      result = res
-    } */
+    let diff = distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1
+    switch (objectiveFunctionMode) {
+      case 0 :
+        if (diff < 0) {
+          diff = Math.min(1, -diff)
+          diff = 1 / (1 - diff)
+          diff = (isNaN(diff) || diff > 2 ** 16 ? 2 ** 16 : diff)
+          result += diff - 1
+        }
+        else {
+          result += diff / 2
+        }
+        break
+      case 1 : result = Math.max(result, (diff < 0 ? (-diff) : 0))
+        break
+    }
   }
   return result
 }
