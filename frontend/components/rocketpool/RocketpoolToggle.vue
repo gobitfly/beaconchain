@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle,
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const { setting, changeSetting } = useGlobalSetting<boolean>('rpl')
+const {
+  changeSetting, setting,
+} = useGlobalSetting<boolean>('rpl')
 
 const rpActive = {
   get value(): boolean {

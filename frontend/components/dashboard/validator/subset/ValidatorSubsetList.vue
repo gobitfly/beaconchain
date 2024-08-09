@@ -8,14 +8,14 @@ import type { ValidatorSubsetCategory } from '~/types/validator'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 
 interface Props {
-  category: ValidatorSubsetCategory
-  validators: VDBSummaryValidator[]
+  category: ValidatorSubsetCategory,
+  validators: VDBSummaryValidator[],
 }
 const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 
-const paging = ref<Paging | null>(null)
+const paging = ref<null | Paging>(null)
 const cursor = ref<Cursor>(undefined)
 const VALIDATORS_PER_PAGE = 100
 
@@ -25,9 +25,7 @@ watch(
     cursor.value = undefined
     if (p?.validators?.length) {
       if (p.validators.length > VALIDATORS_PER_PAGE) {
-        paging.value = {
-          total_count: p.validators.length,
-        }
+        paging.value = { total_count: p.validators.length }
       }
       else {
         paging.value = null
@@ -85,7 +83,10 @@ function mapDutyLabel(dutyObjects?: number[]) {
 }
 function mapDutyLinks(
   dutyObjects?: number[],
-): { to?: string, label: string }[] {
+): {
+    label: string,
+    to?: string,
+  }[] {
   if (!dutyObjects) {
     return []
   }
@@ -106,14 +107,12 @@ function mapDutyLinks(
   }
   if (path) {
     return dutyObjects.map(o => ({
-      to: `${path}${o}`,
       label: `${formatValue ? formatNumber(o) : o}`,
+      to: `${path}${o}`,
     }))
   }
   else {
-    return dutyObjects.map(o => ({
-      label: `${formatValue ? formatNumber(o) : o}`,
-    }))
+    return dutyObjects.map(o => ({ label: `${formatValue ? formatNumber(o) : o}` }))
   }
 }
 </script>
@@ -167,9 +166,9 @@ function mapDutyLinks(
     >
       <BcTablePager
         class="pager"
-        :cursor="cursor"
+        :cursor
         :page-size="VALIDATORS_PER_PAGE"
-        :paging="paging"
+        :paging
         :stepper-only="true"
         @set-cursor="(c: Cursor) => (cursor = c)"
       />

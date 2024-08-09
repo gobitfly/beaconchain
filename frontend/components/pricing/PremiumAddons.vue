@@ -3,7 +3,7 @@ const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 
 interface Props {
-  isYearly: boolean
+  isYearly: boolean,
 }
 defineProps<Props>()
 </script>
@@ -22,8 +22,8 @@ defineProps<Props>()
       <PricingPremiumAddonBox
         v-for="addon in products?.extra_dashboard_validators_premium_addons"
         :key="addon.product_id_yearly"
-        :addon="addon"
-        :is-yearly="isYearly"
+        :addon
+        :is-yearly
         :maximum-validator-limit="products?.validators_per_dashboard_limit"
       />
     </div>

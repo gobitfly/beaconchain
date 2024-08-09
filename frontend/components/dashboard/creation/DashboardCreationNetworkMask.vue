@@ -1,15 +1,19 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { ChainInfo, type ChainIDs, isL1 } from '~/types/network'
+import {
+  type ChainIDs, ChainInfo, isL1,
+} from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const { currentNetwork, availableNetworks, isNetworkDisabled }
+const {
+  availableNetworks, currentNetwork, isNetworkDisabled,
+}
   = useNetworkStore()
 const { t: $t } = useTranslation()
 
-const emit = defineEmits<{ (e: 'next' | 'back'): void }>()
+const emit = defineEmits<{ (e: 'back' | 'next'): void }>()
 const network = defineModel<ChainIDs>('network', { required: true })
-const selection = usePrimitiveRefBridge<ChainIDs, `${ChainIDs}` | ''>(
+const selection = usePrimitiveRefBridge<ChainIDs, '' | `${ChainIDs}`>(
   network,
   net => `${net || ''}`,
   sel => Number(sel || 0),
@@ -28,19 +32,19 @@ watch(
     availableNetworks.value.forEach((chainId) => {
       if (isL1(chainId)) {
         buttonList.value.push({
-          value: String(chainId),
-          text: ChainInfo[chainId].nameParts[0],
-          subText: isNetworkDisabled(chainId)
-            ? $t('common.coming_soon')
-            : ChainInfo[chainId].nameParts[1],
-          disabled: isNetworkDisabled(chainId),
           component: IconNetwork,
+          componentClass: 'dashboard-creation-button-network-icon',
           componentProps: {
             chainId,
             colored: false,
             harmonizePerceivedSize: true,
           },
-          componentClass: 'dashboard-creation-button-network-icon',
+          disabled: isNetworkDisabled(chainId),
+          subText: isNetworkDisabled(chainId)
+            ? $t('common.coming_soon')
+            : ChainInfo[chainId].nameParts[1],
+          text: ChainInfo[chainId].nameParts[0],
+          value: String(chainId),
         })
       }
     })

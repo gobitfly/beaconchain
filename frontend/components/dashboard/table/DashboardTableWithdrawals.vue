@@ -3,15 +3,17 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {
-  identifier: string
-}
+type ExtendedVDBWithdrawalsTableRow = {
+  identifier: string,
+} & VDBWithdrawalsTableRow
 
 const { dashboardKey } = useDashboardKey()
 
@@ -22,44 +24,52 @@ const { t: $t } = useTranslation()
 const { latestState } = useLatestStateStore()
 const { slotToEpoch } = useNetworkStore()
 const {
-  withdrawals,
-  query: lastQuery,
-  getWithdrawals,
-  totalAmount,
   getTotalAmount,
-  isLoadingWithdrawals,
+  getWithdrawals,
   isLoadingTotal,
+  isLoadingWithdrawals,
+  query: lastQuery,
+  totalAmount,
+  withdrawals,
 } = useValidatorDashboardWithdrawalsStore()
 const {
-  value: query,
-  temp: tempQuery,
   bounce: setQuery,
+  temp: tempQuery,
+  value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
 
-const { hasValidators, overview } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 995,
-    slot: width.value > 875,
-    epoch: width.value > 805,
-    recipient: width.value > 695,
     age: width.value > 500,
+    epoch: width.value > 805,
+    group: width.value > 995,
+    recipient: width.value > 695,
+    slot: width.value > 875,
   }
 })
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value, sort: 'slot:desc' }
+    query = {
+      limit: pageSize.value,
+      sort: 'slot:desc',
+    }
   }
   setQuery(query, true, true)
 }
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
     getTotalAmount(dashboardKey.value)
@@ -83,7 +93,6 @@ const tableData = computed(() => {
   }
 
   return {
-    paging: withdrawals.value.paging,
     data: [
       {
         amount: totalAmount.value,
@@ -94,6 +103,7 @@ const tableData = computed(() => {
         identifier: `${w.slot}-${w.index}`,
       })),
     ],
+    paging: withdrawals.value.paging,
   }
 })
 
@@ -164,11 +174,11 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             data-key="identifier"
             :expandable="!colsVisible.group"
             class="withdrawal-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :add-spacer="true"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :loading="isLoadingWithdrawals"
             :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"

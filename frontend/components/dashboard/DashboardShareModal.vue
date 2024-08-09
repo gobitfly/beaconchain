@@ -5,9 +5,11 @@ import type { ValidatorDashboard } from '~/types/api/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  dashboard: ValidatorDashboard // Currently only validator dashboards are supported
+  dashboard: ValidatorDashboard, // Currently only validator dashboards are supported
 }
-const { props, dialogRef } = useBcDialog<Props>()
+const {
+  dialogRef, props,
+} = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 const { refreshDashboards } = useUserDashboardStore()
 const { fetch } = useCustomFetch()
@@ -70,7 +72,10 @@ const edit = async () => {
         share_settings: { share_groups: shareGroups.value },
       },
     },
-    { dashboardKey: `${props.value?.dashboard.id}`, publicId },
+    {
+      dashboardKey: `${props.value?.dashboard.id}`,
+      publicId,
+    },
   )
   await refreshDashboards()
   dialogRef?.value?.close(true)
@@ -99,7 +104,11 @@ const shareGroupTooltip = computed(() => {
   return formatMultiPartSpan(
     $t,
     'dashboard.share_dialog.setting.group.tooltip',
-    [undefined, 'bold', undefined],
+    [
+      undefined,
+      'bold',
+      undefined,
+    ],
   )
 })
 </script>

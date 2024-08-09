@@ -3,7 +3,7 @@ import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
 interface Props {
-  includeAll?: boolean
+  includeAll?: boolean,
 }
 const props = defineProps<Props>()
 
@@ -13,7 +13,11 @@ const { groups } = useValidatorDashboardGroups()
 
 const list = computed<VDBOverviewGroup[]>(() => {
   if (props.includeAll) {
-    return [{ id: DAHSHBOARDS_ALL_GROUPS_ID, name: '', count: 0 }].concat(
+    return [ {
+      count: 0,
+      id: DAHSHBOARDS_ALL_GROUPS_ID,
+      name: '',
+    } ].concat(
       groups.value,
     )
   }

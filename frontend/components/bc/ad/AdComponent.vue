@@ -3,7 +3,7 @@ import type { AdConfiguration } from '~/types/adConfiguration'
 
 const reviveId = '5b200397ccf8a9353bf44ef99b45268c'
 interface Props {
-  ad: AdConfiguration
+  ad: AdConfiguration,
 }
 const props = defineProps<Props>()
 

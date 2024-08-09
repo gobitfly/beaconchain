@@ -7,17 +7,28 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const { handleSubmit, errors, defineField } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
-    oldPassword: passwordValidation($t),
-    newPassword: newPasswordValidation($t, 'oldPassword'),
     confirmPassword: confirmPasswordValidation($t, 'newPassword'),
+    newPassword: newPasswordValidation($t, 'oldPassword'),
+    oldPassword: passwordValidation($t),
   }),
 })
 
-const [oldPassword, oldPasswordAttrs] = defineField('oldPassword')
-const [newPassword, newPasswordAttrs] = defineField('newPassword')
-const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
+const [
+  oldPassword,
+  oldPasswordAttrs,
+] = defineField('oldPassword')
+const [
+  newPassword,
+  newPasswordAttrs,
+] = defineField('newPassword')
+const [
+  confirmPassword,
+  confirmPasswordAttrs,
+] = defineField('confirmPassword')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
@@ -28,23 +39,19 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
 
   buttonsDisabled.value = true
   try {
-    await fetch(API_PATH.USER_CHANGE_PASSWORD, {
-      body: {
-        password: values.newPassword,
-      },
-    })
+    await fetch(API_PATH.USER_CHANGE_PASSWORD, { body: { password: values.newPassword } })
     toast.showSuccess({
-      summary: $t('user_settings.password.success.toast_title'),
-      group: $t('user_settings.password.success.toast_group'),
       detail: $t('user_settings.password.success.toast_message'),
+      group: $t('user_settings.password.success.toast_group'),
+      summary: $t('user_settings.password.success.toast_title'),
     })
     resetForm()
   }
   catch (error) {
     toast.showError({
-      summary: $t('user_settings.password.error.toast_title'),
-      group: $t('user_settings.password.error.toast_group'),
       detail: $t('user_settings.password.error.toast_message'),
+      group: $t('user_settings.password.error.toast_group'),
+      summary: $t('user_settings.password.error.toast_title'),
     })
   }
   buttonsDisabled.value = false

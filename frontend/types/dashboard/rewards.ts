@@ -3,17 +3,17 @@ import type { ExtendedLabel } from '~/types/value'
 import type { ChartSeries } from '~/types/api/common'
 
 export interface RewardChartGroupData {
-  id: number
-  name: string
-  bigData: BigNumber[]
+  bigData: BigNumber[],
+  id: number,
+  name: string,
 }
 export interface RewardChartSeries extends ChartSeries<number, number> {
-  name: string
-  color: string
-  type: 'bar'
-  stack: 'x'
-  barMaxWidth: number
-  bigData: BigNumber[]
-  formatedData: ExtendedLabel[]
-  groups: RewardChartGroupData[]
+  barMaxWidth: number,
+  bigData: BigNumber[],
+  color: string,
+  formatedData: ExtendedLabel[],
+  groups: RewardChartGroupData[],
+  name: string,
+  stack: 'x',
+  type: 'bar',
 }

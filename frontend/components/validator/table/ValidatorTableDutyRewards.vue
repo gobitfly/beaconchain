@@ -4,7 +4,7 @@ import { formatRewardValueOption } from '~/utils/dashboard/table'
 import { totalDutyRewards } from '~/utils/dashboard/validator'
 
 interface Props {
-  data?: ValidatorHistoryDuties
+  data?: ValidatorHistoryDuties,
 }
 const props = defineProps<Props>()
 
@@ -12,11 +12,12 @@ const { t: $t } = useTranslation()
 
 const mapped = computed(() => {
   const total = totalDutyRewards(props.data)
-  const details: { label: string, value?: string }[] = []
+  const details: { label: string,
+    value?: string, }[] = []
   if (!total || total.isZero()) {
     return {
-      total,
       details,
+      total,
     }
   }
 
@@ -45,8 +46,8 @@ const mapped = computed(() => {
   )
   addDetail('total', total.toString())
   return {
-    total,
     details,
+    total,
   }
 })
 </script>

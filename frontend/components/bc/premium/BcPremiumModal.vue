@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 interface Props {
-  description?: string
-  dismissLabel?: string
+  description?: string,
+  dismissLabel?: string,
 }
 
-const { props, dialogRef, setHeader } = useBcDialog<Props>({
-  contentClass: 'premium-modal',
-})
+const {
+  dialogRef, props, setHeader,
+} = useBcDialog<Props>({ contentClass: 'premium-modal' })
 const { t: $t } = useTranslation()
 
 const hide = () => {

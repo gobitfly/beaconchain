@@ -5,7 +5,7 @@ const { width } = useWindowSize()
 const { setTouchableElement } = useSwipe()
 
 interface Props {
-  header?: string
+  header?: string,
 }
 const props = defineProps<Props>()
 
@@ -35,7 +35,7 @@ const onShow = () => {
     :header="props.header"
     :dismissable-mask="true"
     :draggable="false"
-    :position="position"
+    :position
     class="modal_container"
     :class="{ 'p-dialog-header-hidden': !props.header && !$slots.header }"
     @show="onShow"

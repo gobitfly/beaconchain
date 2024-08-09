@@ -8,8 +8,12 @@ date.setHours(date.getHours() + 5)
 
 const list = computed(() =>
   Array.from(Array(count.value)).map((_, index) => ({
+    duty_objects: [
+      Math.floor(date.getTime() / 1000),
+      230,
+      123,
+    ],
     index: index + 1,
-    duty_objects: [Math.floor(date.getTime() / 1000), 230, 123],
   })),
 )
 const categories: ValidatorSubsetCategory[] = [
@@ -51,7 +55,7 @@ const categories: ValidatorSubsetCategory[] = [
     >
       <h3>{{ category }}</h3>
       <DashboardValidatorSubsetList
-        :category="category"
+        :category
         :validators="list"
       />
     </template>

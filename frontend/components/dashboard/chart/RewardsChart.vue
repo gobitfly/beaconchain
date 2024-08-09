@@ -1,14 +1,16 @@
 <script lang="ts" setup>
-import { h, render } from 'vue'
+import {
+  h, render,
+} from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
 import {
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
-  DataZoomComponent,
   DatasetComponent,
+  DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
   TransformComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
@@ -23,8 +25,8 @@ import {
 import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 import {
-  type RewardChartSeries,
   type RewardChartGroupData,
+  type RewardChartSeries,
 } from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
@@ -55,7 +57,9 @@ use([
 
 const { fetch } = useCustomFetch()
 
-const { dashboardKey, isPrivate: groupsEnabled } = useDashboardKey()
+const {
+  dashboardKey, isPrivate: groupsEnabled,
+} = useDashboardKey()
 
 const data = ref<ChartData<number, string> | undefined>()
 const isLoading = ref(false)
@@ -77,7 +81,11 @@ await useAsyncData(
     isLoading.value = false
     data.value = res.data
   },
-  { watch: [dashboardKey], server: false, immediate: true },
+  {
+    immediate: true,
+    server: false,
+    watch: [ dashboardKey ],
+  },
 )
 
 const { groups } = useValidatorDashboardGroups()
@@ -89,10 +97,10 @@ const { converter } = useValue()
 
 const colors = computed(() => {
   return {
+    background: getChartTooltipBackgroundColor(colorMode.value),
     data: getRewardChartColors(),
     label: getChartTextColor(colorMode.value),
     line: getRewardsChartLineColor(colorMode.value),
-    background: getChartTooltipBackgroundColor(colorMode.value),
   }
 })
 
@@ -132,34 +140,30 @@ const series = computed<RewardChartSeries[]>(() => {
 
   const categoryCount = data.value?.categories.length ?? 0
   const clSeries: RewardChartSeries = {
+    barMaxWidth: 33,
+    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
+    color: colors.value.data.cl,
+    data: Array.from(Array(categoryCount)).map(() => 0),
+    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
+    groups: [],
     id: 1,
     name: $t('dashboard.validator.rewards.chart.cl'),
-    color: colors.value.data.cl,
     property: 'cl',
-    type: 'bar',
     stack: 'x',
-    barMaxWidth: 33,
-    groups: [],
-    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({
-      label: `0 ${currencyLabel.value}`,
-    })),
-    data: Array.from(Array(categoryCount)).map(() => 0),
+    type: 'bar',
   }
   const elSeries: RewardChartSeries = {
+    barMaxWidth: 33,
+    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
+    color: colors.value.data.el,
+    data: Array.from(Array(categoryCount)).map(() => 0),
+    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
+    groups: [],
     id: 2,
     name: $t('dashboard.validator.rewards.chart.el'),
-    color: colors.value.data.el,
     property: 'el',
-    type: 'bar',
     stack: 'x',
-    barMaxWidth: 33,
-    groups: [],
-    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({
-      label: `0 ${currencyLabel.value}`,
-    })),
-    data: Array.from(Array(categoryCount)).map(() => 0),
+    type: 'bar',
   }
   list.push(elSeries)
   list.push(clSeries)
@@ -172,8 +176,8 @@ const series = computed<RewardChartSeries[]>(() => {
       name = getGroupLabel($t, group.id, groups.value)
     }
     const newData: RewardChartGroupData = {
-      id: group.id,
       bigData: [],
+      id: group.id,
       name,
     }
     for (let i = 0; i < categoryCount; i++) {
@@ -210,67 +214,41 @@ const option = computed<ECBasicOption | undefined>(() => {
   }
 
   return {
+    dataZoom: {
+      borderColor: colors.value.label,
+      dataBackground: {
+        areaStyle: { color: colors.value.label },
+        lineStyle: { color: colors.value.label },
+      },
+      end: 100,
+      start: 60,
+      type: 'slider',
+    },
     grid: {
-      containLabel: true,
-      top: 20,
       bottom: 80,
+      containLabel: true,
       left: '5%',
       right: '5%',
-    },
-    xAxis: {
-      type: 'category',
-      data: data.value?.categories,
-      axisLabel: {
-        fontSize: textSize,
-        fontWeight: fontWeightMedium,
-        lineHeight: 20,
-        formatter: (value: number) => {
-          const date = formatEpochToDate(value, $t('locales.date'))
-          if (date === undefined) {
-            return ''
-          }
-
-          return `${date}\n${$t('common.epoch')} ${value}`
-        },
-      },
-    },
-    yAxis: {
-      type: 'value',
-      silent: true,
-      axisLabel: {
-        formatter: valueFormatter.value,
-        fontWeight: fontWeightMedium,
-        fontSize: textSize,
-        padding: [0, 10, 0, 0],
-      },
-      splitLine: {
-        lineStyle: {
-          color: colors.value.line,
-        },
-      },
-    },
-    series: series.value,
-    textStyle: {
-      fontFamily,
-      fontSize: textSize,
-      fontWeight: fontWeightLight,
-      color: colors.value.label,
+      top: 20,
     },
     legend: {
-      type: 'scroll',
-      orient: 'horizontal',
       bottom: 50,
+      orient: 'horizontal',
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
         fontWeight: fontWeightMedium,
       },
+      type: 'scroll',
+    },
+    series: series.value,
+    textStyle: {
+      color: colors.value.label,
+      fontFamily,
+      fontSize: textSize,
+      fontWeight: fontWeightLight,
     },
     tooltip: {
-      order: 'seriesAsc',
-      trigger: 'axis',
-      triggerOn: 'click',
-      padding: 0,
       borderColor: colors.value.background,
       formatter(params: any): HTMLElement {
         const startEpoch = parseInt(params[0].axisValue)
@@ -279,30 +257,53 @@ const option = computed<ECBasicOption | undefined>(() => {
         const d = document.createElement('div')
         render(
           h(DashboardChartRewardsChartTooltip, {
-            t: $t,
-            startEpoch,
             dataIndex,
             series: series.value,
+            startEpoch,
+            t: $t,
             weiToValue: converter.value.weiToValue,
           }),
           d,
         )
         return d
       },
+      order: 'seriesAsc',
+      padding: 0,
+      trigger: 'axis',
+      triggerOn: 'click',
     },
-    dataZoom: {
-      type: 'slider',
-      start: 60,
-      end: 100,
-      dataBackground: {
-        lineStyle: {
-          color: colors.value.label,
+    xAxis: {
+      axisLabel: {
+        fontSize: textSize,
+        fontWeight: fontWeightMedium,
+        formatter: (value: number) => {
+          const date = formatEpochToDate(value, $t('locales.date'))
+          if (date === undefined) {
+            return ''
+          }
+
+          return `${date}\n${$t('common.epoch')} ${value}`
         },
-        areaStyle: {
-          color: colors.value.label,
-        },
+        lineHeight: 20,
       },
-      borderColor: colors.value.label,
+      data: data.value?.categories,
+      type: 'category',
+    },
+    yAxis: {
+      axisLabel: {
+        fontSize: textSize,
+        fontWeight: fontWeightMedium,
+        formatter: valueFormatter.value,
+        padding: [
+          0,
+          10,
+          0,
+          0,
+        ],
+      },
+      silent: true,
+      splitLine: { lineStyle: { color: colors.value.line } },
+      type: 'value',
     },
   }
 })
@@ -318,7 +319,7 @@ const option = computed<ECBasicOption | undefined>(() => {
     <VChart
       v-else
       class="chart"
-      :option="option"
+      :option
       autoresize
     />
   </ClientOnly>

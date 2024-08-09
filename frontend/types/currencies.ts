@@ -9,20 +9,25 @@ const FiatCurrencies = [
   'RUB',
 ] as const
 type FiatCurrency = (typeof FiatCurrencies)[number]
-const CryptoCurrencies = ['ETH', 'GNO', 'DAI', 'xDAI'] as const
+const CryptoCurrencies = [
+  'ETH',
+  'GNO',
+  'DAI',
+  'xDAI',
+] as const
 type CryptoCurrency = (typeof CryptoCurrencies)[number]
 const Native = 'NAT' as const
 type Native = typeof Native
-type Currency = FiatCurrency | CryptoCurrency | Native
+type Currency = CryptoCurrency | FiatCurrency | Native
 
-type CryptoUnits = 'MAIN' | 'GWEI' | 'WEI'
+type CryptoUnits = 'GWEI' | 'MAIN' | 'WEI'
 
 export {
-  type Currency,
-  type CryptoUnits,
-  type CryptoCurrency,
-  type FiatCurrency,
   CryptoCurrencies,
+  type CryptoCurrency,
+  type CryptoUnits,
+  type Currency,
   FiatCurrencies,
+  type FiatCurrency,
   Native,
 }

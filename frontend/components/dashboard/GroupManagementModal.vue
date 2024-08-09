@@ -1,13 +1,19 @@
 <script lang="ts" setup>
-import { faAdd, faTrash } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faAdd, faTrash,
+} from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { BcDialogConfirm, BcPremiumModal } from '#components'
+import {
+  BcDialogConfirm, BcPremiumModal,
+} from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
-import type { Cursor, SortOrder } from '~/types/datatable'
+import type {
+  Cursor, SortOrder,
+} from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
 import { API_PATH } from '~/types/customFetch'
 
@@ -15,9 +21,13 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const dialog = useDialog()
 
-const { dashboardKey, isPublic } = useDashboardKey()
+const {
+  dashboardKey, isPublic,
+} = useDashboardKey()
 
-const { width, isMobile } = useWindowSize()
+const {
+  isMobile, width,
+} = useWindowSize()
 
 const visible = defineModel<boolean>()
 
@@ -47,7 +57,7 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
       // lodash needs some help when sorting strings alphabetically
       processedGroups = orderBy(
         processedGroups,
-        [g => g.name.toLowerCase()],
+        [ g => g.name.toLowerCase() ],
         getSortOrder(sortOrder.value),
       )
     }
@@ -62,17 +72,13 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
   const totalCount = processedGroups.length
   const index = cursor.value as number
   return {
-    paging: {
-      total_count: totalCount,
-    },
     data: processedGroups.slice(index, index + pageSize.value),
+    paging: { total_count: totalCount },
   }
 })
 
 const size = computed(() => {
-  return {
-    showSubTitle: width.value >= 760,
-  }
+  return { showSubTitle: width.value >= 760 }
 })
 
 const newGroupDisabled = computed(
@@ -103,7 +109,10 @@ const addGroup = async () => {
 
   await fetch(
     API_PATH.DASHBOARD_VALIDATOR_GROUPS,
-    { method: 'POST', body: { name: newGroupName.value } },
+    {
+      body: { name: newGroupName.value },
+      method: 'POST',
+    },
     { dashboardKey: dashboardKey.value },
   )
   await refreshOverview(dashboardKey.value)
@@ -113,8 +122,14 @@ const addGroup = async () => {
 const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
   await fetch(
     API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY,
-    { method: 'PUT', body: { name: newName } },
-    { dashboardKey: dashboardKey.value, groupId: row.id },
+    {
+      body: { name: newName },
+      method: 'PUT',
+    },
+    {
+      dashboardKey: dashboardKey.value,
+      groupId: row.id,
+    },
   )
   refreshOverview(dashboardKey.value)
 }
@@ -123,7 +138,10 @@ const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
   await fetch(
     API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY,
     { method: 'DELETE' },
-    { dashboardKey: dashboardKey.value, groupId: row.id },
+    {
+      dashboardKey: dashboardKey.value,
+      groupId: row.id,
+    },
   )
   refreshOverview(dashboardKey.value)
 }
@@ -131,15 +149,13 @@ const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
 const removeGroup = (row: VDBOverviewGroup) => {
   hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
+    data: {
+      question: $t('dashboard.validator.group_management.remove_text', { group: row.name }),
+      title: $t('dashboard.validator.group_management.remove_title'),
+    },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
       response?.data && removeGroupConfirmed(row)
-    },
-    data: {
-      title: $t('dashboard.validator.group_management.remove_title'),
-      question: $t('dashboard.validator.group_management.remove_text', {
-        group: row.name,
-      }),
     },
   })
 }
@@ -243,11 +259,11 @@ const selectedSort = computed(() =>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="data"
+            :data
             class="management-table"
-            :cursor="cursor"
-            :page-size="pageSize"
-            :selected-sort="selectedSort"
+            :cursor
+            :page-size
+            :selected-sort
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

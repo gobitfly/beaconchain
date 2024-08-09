@@ -5,13 +5,11 @@ import { generateUUID } from '~/utils/misc'
 provide('app-uuid', { value: generateUUID() })
 useHead(
   {
-    script: [
-      {
-        key: 'revive',
-        src: '../js/revive.min.js',
-        async: false,
-      },
-    ],
+    script: [ {
+      async: false,
+      key: 'revive',
+      src: '../js/revive.min.js',
+    } ],
   },
   { mode: 'client' },
 )

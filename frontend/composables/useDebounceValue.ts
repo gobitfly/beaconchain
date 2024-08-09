@@ -39,5 +39,10 @@ export function useDebounceValue<T>(initialValue: T, bounceMs: number = 100) {
   onUnmounted(() => {
     removeTimeout()
   })
-  return { value, temp, bounce, instant }
+  return {
+    bounce,
+    instant,
+    temp,
+    value,
+  }
 }

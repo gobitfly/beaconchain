@@ -6,36 +6,42 @@ import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
 
 export type WebhookForm = {
-  webhook_url: string
-  is_discord_webhook_enabled: boolean
+  is_discord_webhook_enabled: boolean,
+  webhook_url: string,
 }
-const { props, close } = useBcDialog<WebhookForm>()
+const {
+  close, props,
+} = useBcDialog<WebhookForm>()
 
 const { t: $t } = useTranslation()
 
 const validationSchema = createSchemaObject({
-  webhook_url: validation.url($t('validation.url.invalid')),
   is_discord_webhook_enabled: validation.boolean(),
+  webhook_url: validation.url($t('validation.url.invalid')),
 })
 
-const { defineField, errors, handleSubmit, setFieldError, meta, values }
+const {
+  defineField, errors, handleSubmit, meta, setFieldError, values,
+}
   = useForm({
-    validationSchema,
     initialValues: {
-      webhook_url: props.value?.webhook_url || '',
       is_discord_webhook_enabled:
         props.value?.is_discord_webhook_enabled || false,
+      webhook_url: props.value?.webhook_url || '',
     },
+    validationSchema,
   })
 
-const [webhook_url, webhook_url_attrs] = defineField('webhook_url', {
-  validateOnModelUpdate: false,
-})
+const [
+  webhook_url,
+  webhook_url_attrs,
+] = defineField('webhook_url', { validateOnModelUpdate: false })
 
-const [is_discord_webhook_enabled, is_discord_webhook_enabled_attrs]
-  = defineField('is_discord_webhook_enabled', {
-    validateOnModelUpdate: false,
-  })
+const [
+  is_discord_webhook_enabled,
+  is_discord_webhook_enabled_attrs,
+]
+  = defineField('is_discord_webhook_enabled', { validateOnModelUpdate: false })
 
 const isFormDirty = computed(() => meta.value.dirty)
 const isFormValid = computed(() => meta.value.valid)
@@ -61,26 +67,20 @@ const handleTestNotification = async () => {
   try {
     if (is_discord_webhook_enabled.value) {
       await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
-        method: 'POST',
         body: {
-          webhook_url: webhook_url.value,
           is_discord_webhook_enabled: is_discord_webhook_enabled.value,
+          webhook_url: webhook_url.value,
         },
+        method: 'POST',
       })
-      toast.showSuccess({
-        summary: $t('notifications.dashboards.toast.success.test_discord'),
-      })
+      toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_discord') })
       return
     }
     await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
+      body: { webhook_url: webhook_url.value },
       method: 'POST',
-      body: {
-        webhook_url: webhook_url.value,
-      },
     })
-    toast.showSuccess({
-      summary: $t('notifications.dashboards.toast.success.test_webhook_url'),
-    })
+    toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
   }
   catch (error) {
     const summary = is_discord_webhook_enabled.value
@@ -91,7 +91,7 @@ const handleTestNotification = async () => {
   warn('Test notification sent', values)
 }
 const emit = defineEmits<{
-  (e: 'save', values: WebhookForm, closeCallback: () => void): void
+  (e: 'save', values: WebhookForm, closeCallback: () => void): void,
 }>()
 
 const onSubmit = handleSubmit((values) => {

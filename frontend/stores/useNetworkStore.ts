@@ -4,16 +4,16 @@ import type { ApiDataResponse } from '~/types/api/common'
 import * as networkTs from '~/types/network'
 
 interface ApiChainInfo {
-  chain_id: networkTs.ChainIDs
-  name: string
+  chain_id: networkTs.ChainIDs,
+  name: string,
 }
 
 const store = defineStore('network-store', () => {
   const data = ref<{
-    availableNetworks: networkTs.ChainIDs[]
-    currentNetwork: networkTs.ChainIDs
+    availableNetworks: networkTs.ChainIDs[],
+    currentNetwork: networkTs.ChainIDs,
   }>({
-    availableNetworks: [networkTs.ChainIDs.Ethereum],
+    availableNetworks: [ networkTs.ChainIDs.Ethereum ],
     // this impossible value by defaut must be kept, it ensures that the `computed`
     // of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
     currentNetwork: networkTs.ChainIDs.Any,
@@ -103,20 +103,20 @@ export function useNetworkStore() {
   }
 
   return {
-    loadAvailableNetworks,
     availableNetworks,
-    isNetworkDisabled,
     currentNetwork,
-    networkInfo,
-    setCurrentNetwork,
-    isMainNet,
-    isL1,
     epochsPerDay,
     epochToTs,
+    isL1,
+    isMainNet,
+    isNetworkDisabled,
+    loadAvailableNetworks,
+    networkInfo,
     secondsPerEpoch,
-    slotToTs,
-    tsToSlot,
-    tsToEpoch,
+    setCurrentNetwork,
     slotToEpoch,
+    slotToTs,
+    tsToEpoch,
+    tsToSlot,
   }
 }
