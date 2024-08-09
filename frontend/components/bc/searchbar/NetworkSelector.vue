@@ -7,7 +7,9 @@ import type {
   SearchbarDropdownLayout,
   SearchbarShape,
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo } from '~/types/network'
+import {
+  ChainIDs, ChainInfo,
+} from '~/types/network'
 
 const emit = defineEmits<{ (e: 'change'): void }>()
 defineProps<{
@@ -21,7 +23,8 @@ const liveState = defineModel<NetworkFilter>({ required: true })
 
 const { t } = useTranslation()
 
-const headState = ref<{ look: 'off' | 'on', network: string }>({
+const headState = ref<{ look: 'off' | 'on'
+  network: string }>({
   look: 'off',
   network: '',
 })

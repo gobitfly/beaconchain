@@ -11,11 +11,10 @@ export function useCurrency() {
     useRuntimeConfig().public.showInDevelopment,
   )
   const available = ref<Currency[]>([])
-  const withLabel = ref<{ currency: Currency, label: string }[]>([])
+  const withLabel = ref<{ currency: Currency
+    label: string }[]>([])
 
-  const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, {
-    default: () => 'NAT',
-  })
+  const selectedCurrency = useCookie<Currency>(COOKIE_KEY.CURRENCY, { default: () => 'NAT' })
   function setCurrency(newCurrency: Currency) {
     selectedCurrency.value = newCurrency
   }
@@ -33,9 +32,12 @@ export function useCurrency() {
   })
 
   watch(
-    [latestState, networkInfo],
+    [
+      latestState,
+      networkInfo,
+    ],
     () => {
-      let list: Currency[] = [networkInfo.value.elCurrency]
+      let list: Currency[] = [ networkInfo.value.elCurrency ]
       if (networkInfo.value.clCurrency !== networkInfo.value.elCurrency) {
         list.push(networkInfo.value.clCurrency)
       }
@@ -70,7 +72,10 @@ export function useCurrency() {
       : available.value[0],
   )
 
-  watch([latestState, selectedCurrency], () => {
+  watch([
+    latestState,
+    selectedCurrency,
+  ], () => {
     // once we loaded our latestState and see that we don't support the currency we switch back to the first item
     if (
       latestState.value
@@ -80,5 +85,11 @@ export function useCurrency() {
     }
   })
 
-  return { available, currency, rates, setCurrency, withLabel }
+  return {
+    available,
+    currency,
+    rates,
+    setCurrency,
+    withLabel,
+  }
 }

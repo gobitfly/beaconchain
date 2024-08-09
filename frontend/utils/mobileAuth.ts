@@ -19,9 +19,7 @@ export function provideMobileAuthParams(queryParams: LocationQuery, path: string
       },
     }
   }
-  return {
-    path,
-  }
+  return { path }
 }
 
 // Call after a successfull authenticatio to check whethr the request originated from

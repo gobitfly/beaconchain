@@ -6,7 +6,9 @@ interface Props {
   title?: string
   yesLabel?: string // defaults to "Yes"
 }
-const { dialogRef, props } = useBcDialog<Props>({ showHeader: false })
+const {
+  dialogRef, props,
+} = useBcDialog<Props>({ showHeader: false })
 const { t: $t } = useTranslation()
 
 const noLabel = computed(() => props.value?.noLabel || $t('navigation.no'))

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCheck, faClose } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faCheck, faClose,
+} from '@fortawesome/pro-solid-svg-icons'
 
 interface Props {
   available?: boolean

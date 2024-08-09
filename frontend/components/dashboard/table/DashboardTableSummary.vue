@@ -3,7 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -14,7 +16,9 @@ import {
   SummaryTimeFrames,
 } from '~/types/dashboard/summary'
 
-const { dashboardKey, isPublic } = useDashboardKey()
+const {
+  dashboardKey, isPublic,
+} = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -39,12 +43,17 @@ const {
 
 const showAbsoluteValues = ref<boolean | null>(null)
 
-const { hasValidators, overview, validatorCount }
+const {
+  hasValidators, overview, validatorCount,
+}
   = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const timeFrames = computed(() =>
-  SummaryTimeFrames.map(t => ({ id: t, name: $t(`time_frames.${t}`) })),
+  SummaryTimeFrames.map(t => ({
+    id: t,
+    name: $t(`time_frames.${t}`),
+  })),
 )
 const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
 
@@ -62,7 +71,10 @@ const loadData = (q?: TableQueryParams) => {
   if (!q) {
     q = query.value
       ? { ...query.value }
-      : { limit: pageSize.value, sort: 'efficiency:desc' }
+      : {
+          limit: pageSize.value,
+          sort: 'efficiency:desc',
+        }
   }
   setQuery(q, true, true)
 }
@@ -78,7 +90,10 @@ watch(
 )
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
   },
@@ -86,8 +101,14 @@ watch(
 )
 
 watch(
-  [query, selectedTimeFrame],
-  ([q, timeFrame]) => {
+  [
+    query,
+    selectedTimeFrame,
+  ],
+  ([
+    q,
+    timeFrame,
+  ]) => {
     if (q) {
       getSummary(dashboardKey.value, timeFrame, q)
     }

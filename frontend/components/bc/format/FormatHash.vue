@@ -29,7 +29,8 @@ const data = computed(() => {
       : props.noWrap
         ? 'no-wrap'
         : ''
-  let parts: { className?: string, value: string }[] = []
+  let parts: { className?: string
+    value: string }[] = []
   let link: string = ''
   if (props.ens) {
     parts.push({
@@ -40,14 +41,23 @@ const data = computed(() => {
   else if (props.type === 'withdrawal_credentials') {
     const isSet = hash.startsWith('0x01')
     const color = isSet ? 'green' : 'orange'
-    parts.push({ className: color, value: hash.substring(0, 4) })
+    parts.push({
+      className: color,
+      value: hash.substring(0, 4),
+    })
     if (props.full) {
       parts.push({ value: hash.substring(4) })
     }
     else {
       parts = parts.concat([
-        { className: 'dots-before', value: hash.substring(26, 30) },
-        { className: 'dots-before', value: hash.substring(hash.length - 4) },
+        {
+          className: 'dots-before',
+          value: hash.substring(26, 30),
+        },
+        {
+          className: 'dots-before',
+          value: hash.substring(hash.length - 4),
+        },
       ])
     }
     if (isSet && !props.noLink) {
@@ -58,12 +68,21 @@ const data = computed(() => {
     const color = props.full ? 'prime' : undefined
     const middle = props.full
       ? { value: hash.substring(6, hash.length - 4) }
-      : { className: 'dots-before', value: '' }
+      : {
+          className: 'dots-before',
+          value: '',
+        }
     parts = [
       { value: '0x' },
-      { className: color, value: hash.substring(2, 6) },
+      {
+        className: color,
+        value: hash.substring(2, 6),
+      },
       middle,
-      { className: color, value: hash.substring(hash.length - 4) },
+      {
+        className: color,
+        value: hash.substring(hash.length - 4),
+      },
     ]
   }
   if (!props.noLink) {

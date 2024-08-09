@@ -18,7 +18,8 @@ import {
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
-type Row = { links: [string, IconDefinition, string, Target][], title: string }
+type Row = { links: [string, IconDefinition, string, Target][]
+  title: string }
 const columns: Row[] = [
   {
     links: [
@@ -47,7 +48,12 @@ const columns: Row[] = [
     links: [
       // TODO: Add link once API prices are available
       // [$t('footer.api_pricing'), faFileInvoiceDollar, '/pricing', Target.Internal],
-      [$t('footer.premium'), faUserAstronaut, '/pricing', Target.Internal],
+      [
+        $t('footer.premium'),
+        faUserAstronaut,
+        '/pricing',
+        Target.Internal,
+      ],
       // TODO: Add link once advertise page is available
       // [$t('footer.advertise'), faAd, '/advertisewithus', Target.Internal],
       [
@@ -67,7 +73,12 @@ const columns: Row[] = [
   },
   {
     links: [
-      ['Discord', faDiscord, 'https://dsc.gg/beaconchain', Target.External],
+      [
+        'Discord',
+        faDiscord,
+        'https://dsc.gg/beaconchain',
+        Target.External,
+      ],
       [
         'Twitter',
         faTwitter,

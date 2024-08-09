@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
+import {
+  COOKIE_KEY, type CookiesPreference,
+} from '~/types/cookie'
 
 const cookiePreference = useCookie<CookiesPreference>(
   COOKIE_KEY.COOKIES_PREFERENCE,
@@ -28,7 +30,10 @@ const text = computed(() => {
   const caption = $t(textRoot + '.text')
   const button = $t(textRoot + '.button')
 
-  return { button, caption }
+  return {
+    button,
+    caption,
+  }
 })
 </script>
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { faCheck, faEdit } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faCheck, faEdit,
+} from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
@@ -58,7 +60,13 @@ watch(
   },
 )
 
-watch([isEditing, inputRef], ([edit, input]) => {
+watch([
+  isEditing,
+  inputRef,
+], ([
+  edit,
+  input,
+]) => {
   if (edit) {
     input?.$el?.focus()
   }

@@ -27,7 +27,10 @@ export function useNotificationsDashboardStore() {
     setPageSize,
     setSearch,
     setStoredQuery,
-  } = useTableQuery({ limit: 10, sort: 'dashboard:desc' }, 10)
+  } = useTableQuery({
+    limit: 10,
+    sort: 'dashboard:desc',
+  }, 10)
   const isLoading = ref(false)
 
   async function loadNotificationsDashboards(q: TableQueryParams) {

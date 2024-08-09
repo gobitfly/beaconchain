@@ -1,20 +1,32 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faBars, faCircleUser } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faBars, faCircleUser,
+} from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import { SearchbarColors, SearchbarShape } from '~/types/searchbar'
-import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
+import {
+  SearchbarColors, SearchbarShape,
+} from '~/types/searchbar'
+import {
+  mobileHeaderThreshold, smallHeaderThreshold,
+} from '~/types/header'
 
 defineProps<{
   isHomePage: boolean
   minimalist: boolean
 }>()
 const { latestState } = useLatestStateStore()
-const { currentNetwork, networkInfo, slotToEpoch } = useNetworkStore()
-const { doLogout, isLoggedIn } = useUserStore()
-const { available, currency, rates } = useCurrency()
+const {
+  currentNetwork, networkInfo, slotToEpoch,
+} = useNetworkStore()
+const {
+  doLogout, isLoggedIn,
+} = useUserStore()
+const {
+  available, currency, rates,
+} = useCurrency()
 const { width } = useWindowSize()
 const { t: $t } = useTranslation()
 

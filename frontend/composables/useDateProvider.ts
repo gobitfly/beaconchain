@@ -1,4 +1,6 @@
-import { provide, ref } from 'vue'
+import {
+  provide, ref,
+} from 'vue'
 import type { DateInfo } from '~/types/date'
 
 // useDateProvider provides a global reactive timestamp, which should be more
@@ -21,5 +23,8 @@ export function useDateProvider() {
     interval && clearInterval(interval)
   })
 
-  provide<DateInfo>('date-info', { date, timestamp })
+  provide<DateInfo>('date-info', {
+    date,
+    timestamp,
+  })
 }

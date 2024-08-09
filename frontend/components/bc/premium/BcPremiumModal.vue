@@ -4,9 +4,9 @@ interface Props {
   dismissLabel?: string
 }
 
-const { dialogRef, props, setHeader } = useBcDialog<Props>({
-  contentClass: 'premium-modal',
-})
+const {
+  dialogRef, props, setHeader,
+} = useBcDialog<Props>({ contentClass: 'premium-modal' })
 const { t: $t } = useTranslation()
 
 const hide = () => {

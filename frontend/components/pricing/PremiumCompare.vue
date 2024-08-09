@@ -33,7 +33,10 @@ const rows = computed(() => {
     ) ?? []
   const rows: CompareRow[] = []
   const mapValue = (property: string, perks: PremiumPerks): CompareValue => {
-    if (['bulk_adding', 'support_us'].includes(property)) {
+    if ([
+      'bulk_adding',
+      'support_us',
+    ].includes(property)) {
       return { value: perks.ad_free }
     }
     let value = get(perks, property)
@@ -46,17 +49,13 @@ const rows = computed(() => {
         value = $t('pricing.full_history')
       }
       else {
-        value = $t('common.last_x', {
-          duration: formatTimeDuration(value as number, $t),
-        })
+        value = $t('common.last_x', { duration: formatTimeDuration(value as number, $t) })
       }
     }
 
     let tooltip: string | undefined
     if (property === 'validators_per_dashboard') {
-      tooltip = $t('pricing.pectra_tooltip', {
-        effectiveBalance: formatNumber(perks.validators_per_dashboard * 32),
-      })
+      tooltip = $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(perks.validators_per_dashboard * 32) })
     }
 
     return {
@@ -72,7 +71,11 @@ const rows = computed(() => {
     hidePositiveValues = false,
     translationKey?: string,
   ) => {
-    const row: CompareRow = { className, subText, type }
+    const row: CompareRow = {
+      className,
+      subText,
+      type,
+    }
     switch (type) {
       case 'group':
         row.label = $t(`pricing.groups.${property}`)
@@ -125,7 +128,12 @@ const rows = computed(() => {
   )
   addRow('group', 'dashboard_charts')
   addRow('label', 'summary_chart_history', 'first-in-group')
-  const chartProps = ['epoch', 'hourly', 'daily', 'weekly']
+  const chartProps = [
+    'epoch',
+    'hourly',
+    'daily',
+    'weekly',
+  ]
   chartProps.forEach(p =>
     addRow(
       'perc',

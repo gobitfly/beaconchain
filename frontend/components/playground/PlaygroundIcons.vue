@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { type ChainIDs, getAllExistingChainIDs } from '~/types/network'
+import {
+  type ChainIDs, getAllExistingChainIDs,
+} from '~/types/network'
 </script>
 
 <template>

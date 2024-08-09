@@ -74,7 +74,11 @@ const icon = computed(() => {
       break
   }
 
-  return { className, icon, slotVizCategory }
+  return {
+    className,
+    icon,
+    slotVizCategory,
+  }
 })
 
 const count = computed(() =>

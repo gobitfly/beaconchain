@@ -15,5 +15,10 @@ export function useWindowSize() {
     return (width.value ?? 0) <= 1194
   })
 
-  return { height, isIPad, isMobile, width }
+  return {
+    height,
+    isIPad,
+    isMobile,
+    width,
+  }
 }

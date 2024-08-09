@@ -86,8 +86,8 @@ const infos = computed(() => {
         'slashing',
         props.summary?.data?.slashings.status_count.success,
         props.summary?.data?.slashings.status_count.failed,
-        ['has_slashed'],
-        ['got_slashed'],
+        [ 'has_slashed' ],
+        [ 'got_slashed' ],
       )
       break
     case 'proposal':
@@ -95,8 +95,8 @@ const infos = computed(() => {
         'proposal',
         props.summary?.row.proposals.success,
         props.summary?.row.proposals.failed,
-        ['proposal_proposed'],
-        ['proposal_missed'],
+        [ 'proposal_proposed' ],
+        [ 'proposal_missed' ],
       )
       break
     case 'dashboard':
@@ -105,9 +105,12 @@ const infos = computed(() => {
       let offline = 0
       let exited = 0
       if (props.subsets?.length) {
-        online = countSubsetDuties(props.subsets, ['online'])
-        offline = countSubsetDuties(props.subsets, ['offline'])
-        exited = countSubsetDuties(props.subsets, ['exited', 'slashed'])
+        online = countSubsetDuties(props.subsets, [ 'online' ])
+        offline = countSubsetDuties(props.subsets, [ 'offline' ])
+        exited = countSubsetDuties(props.subsets, [
+          'exited',
+          'slashed',
+        ])
       }
       else if (props.summary?.row.validators) {
         online = props.summary.row.validators.online
@@ -115,13 +118,22 @@ const infos = computed(() => {
         exited = props.summary.row.validators.exited
       }
       if (online) {
-        validatorIcons.push({ count: online, key: 'online' })
+        validatorIcons.push({
+          count: online,
+          key: 'online',
+        })
       }
       if (offline) {
-        validatorIcons.push({ count: offline, key: 'offline' })
+        validatorIcons.push({
+          count: offline,
+          key: 'offline',
+        })
       }
       if (exited) {
-        validatorIcons.push({ count: exited, key: 'exited' })
+        validatorIcons.push({
+          count: exited,
+          key: 'exited',
+        })
       }
       // for the total percentage we ignore the exited validators
       percent.total = online + offline
@@ -129,7 +141,11 @@ const infos = computed(() => {
     }
   }
 
-  return { list, percent, validatorIcons }
+  return {
+    list,
+    percent,
+    validatorIcons,
+  }
 })
 </script>
 

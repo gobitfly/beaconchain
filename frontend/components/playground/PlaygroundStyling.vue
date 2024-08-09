@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { faTable } from '@fortawesome/pro-solid-svg-icons'
 import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
-import { IconAccount, IconSlotBlockProposal, IconValidator } from '#components'
+import {
+  IconAccount, IconSlotBlockProposal, IconValidator,
+} from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -19,23 +21,49 @@ const selected = ref(true)
 
 const completeList = [
   { value: 'attestation' },
-  { component: IconSlotBlockProposal, value: 'proposal' },
+  {
+    component: IconSlotBlockProposal,
+    value: 'proposal',
+  },
   { value: 'sync' },
-  { icon: faChartColumn, value: 'chart' },
+  {
+    icon: faChartColumn,
+    value: 'chart',
+  },
 ]
-const selectedList = ref<string[]>(['attestation', 'proposal'])
+const selectedList = ref<string[]>([
+  'attestation',
+  'proposal',
+])
 
 const selectedType = ref<string>('Validators')
 const allTypes = [
-  { component: IconAccount, text: 'Accounts', value: 'Accounts' },
-  { component: IconValidator, text: 'Validators', value: 'Validators' },
+  {
+    component: IconAccount,
+    text: 'Accounts',
+    value: 'Accounts',
+  },
+  {
+    component: IconValidator,
+    text: 'Validators',
+    value: 'Validators',
+  },
 ]
 
 const dropodownSelection = ref<string | undefined>()
 const dropdownList = [
-  { label: 'Yes', value: 'yes' },
-  { label: 'No', value: 'no' },
-  { label: 'Maybe we need a bigger label', value: 'maybe' },
+  {
+    label: 'Yes',
+    value: 'yes',
+  },
+  {
+    label: 'No',
+    value: 'no',
+  },
+  {
+    label: 'Maybe we need a bigger label',
+    value: 'maybe',
+  },
 ]
 </script>
 

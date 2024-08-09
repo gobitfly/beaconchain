@@ -1,8 +1,12 @@
 import { commify } from '@ethersproject/units'
-import { DateTime, type StringUnitLength } from 'luxon'
+import {
+  DateTime, type StringUnitLength,
+} from 'luxon'
 import { type ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
-import { type ChainIDs, epochToTs, slotToTs } from '~/types/network'
+import {
+  type ChainIDs, epochToTs, slotToTs,
+} from '~/types/network'
 
 export const ONE_MINUTE = 60
 export const ONE_HOUR = ONE_MINUTE * 60
@@ -23,8 +27,14 @@ export function formatPercent(
   if (percent === undefined) {
     return ''
   }
-  const { addPositiveSign, fixed, precision } = {
-    ...{ addPositiveSign: false, fixed: 2, precision: 2 },
+  const {
+    addPositiveSign, fixed, precision,
+  } = {
+    ...{
+      addPositiveSign: false,
+      fixed: 2,
+      precision: 2,
+    },
     ...config,
   }
   let result = trim(percent, precision, fixed)
@@ -183,7 +193,10 @@ function formatTsToRelative(
     : DateTime.now()
   return DateTime.fromMillis(targetTimestamp)
     .setLocale(locales)
-    .toRelative({ base: date, style })
+    .toRelative({
+      base: date,
+      style,
+    })
 }
 
 export function formatGoTimestamp(

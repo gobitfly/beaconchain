@@ -15,7 +15,11 @@ const validatorDashboardElDepositsStore = defineStore(
     const total = ref<string>()
     const query = ref<TableQueryParams>()
 
-    return { data, query, total }
+    return {
+      data,
+      query,
+      total,
+    }
   },
 )
 

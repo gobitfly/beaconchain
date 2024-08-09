@@ -4,7 +4,9 @@ import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'
-import { handleMobileAuth, provideMobileAuthParams } from '~/utils/mobileAuth'
+import {
+  handleMobileAuth, provideMobileAuthParams,
+} from '~/utils/mobileAuth'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -13,7 +15,9 @@ const route = useRoute()
 
 useBcSeo('login_and_register.title_register')
 
-const { defineField, errors, handleSubmit } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
     agreement: checkboxValidation(''),
     confirmPassword: confirmPasswordValidation($t, 'password'),
@@ -22,10 +26,22 @@ const { defineField, errors, handleSubmit } = useForm({
   }),
 })
 
-const [email, emailAttrs] = defineField('email')
-const [password, passwordAttrs] = defineField('password')
-const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
-const [agreement, agreementAttrs] = defineField('agreement')
+const [
+  email,
+  emailAttrs,
+] = defineField('email')
+const [
+  password,
+  passwordAttrs,
+] = defineField('password')
+const [
+  confirmPassword,
+  confirmPasswordAttrs,
+] = defineField('confirmPassword')
+const [
+  agreement,
+  agreementAttrs,
+] = defineField('agreement')
 
 const onSubmit = handleSubmit(async (values) => {
   if (!canSubmit.value) {

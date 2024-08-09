@@ -52,7 +52,10 @@ export function useUseNotificationsManagementSettingsProvider() {
       bounce(
         {
           ...original,
-          general_settings: { ...original.general_settings, ...newSettings },
+          general_settings: {
+            ...original.general_settings,
+            ...newSettings,
+          },
         },
         true,
         true,
@@ -65,7 +68,10 @@ export function useUseNotificationsManagementSettingsProvider() {
       updateRequested = true
       const original: NotificationSettings
         = tempSettings.value as NotificationSettings
-      bounce({ ...original, paired_devices: newDevices }, true, true)
+      bounce({
+        ...original,
+        paired_devices: newDevices,
+      }, true, true)
     }
   }
 
@@ -93,5 +99,8 @@ export function useUseNotificationsManagementSettingsProvider() {
     },
   )
 
-  return { isLoading, refreshSettings }
+  return {
+    isLoading,
+    refreshSettings,
+  }
 }

@@ -1,5 +1,7 @@
 import type { BigNumber } from '@ethersproject/bignumber'
-import type { CryptoCurrency, CryptoUnits, Currency } from '~/types/currencies'
+import type {
+  CryptoCurrency, CryptoUnits, Currency,
+} from '~/types/currencies'
 
 export type ValueConvertOptions = {
   addPlus?: boolean // add + sign if value is positive

@@ -28,7 +28,12 @@ catch (err) {
 
 export default defineNuxtConfig({
   build: {
-    transpile: ['echarts', 'zrender', 'tslib', 'resize-detector'],
+    transpile: [
+      'echarts',
+      'zrender',
+      'tslib',
+      'resize-detector',
+    ],
   },
   colorMode: {
     fallback: 'dark', // fallback value if not system preference found
@@ -47,44 +52,21 @@ export default defineNuxtConfig({
     },
   },
   devtools: { enabled: true },
-  eslint: {
-    config: {
-      stylistic: true,
-    },
-  },
-  i18n: {
-    vueI18n: './i18n.config.ts',
-  },
+  eslint: { config: { stylistic: true } },
+  i18n: { vueI18n: './i18n.config.ts' },
   modules: [
     '@nuxtjs/i18n',
     '@nuxtjs/color-mode',
     [
       '@pinia/nuxt',
-      {
-        storesDirs: ['./stores/**'],
-      },
+      { storesDirs: [ './stores/**' ] },
     ],
-    [
-      'nuxt-primevue',
-      {
-        /* unstyled: true */
-      },
-    ],
+    'nuxt-primevue',
     '@nuxt/eslint',
   ],
-  nitro: {
-    compressPublicAssets: true,
-  },
-  postcss: {
-    plugins: {
-      autoprefixer: {},
-    },
-  },
-  routeRules: {
-    '/': {
-      redirect: '/dashboard',
-    },
-  },
+  nitro: { compressPublicAssets: true },
+  postcss: { plugins: { autoprefixer: {} } },
+  routeRules: { '/': { redirect: '/dashboard' } },
   runtimeConfig: {
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,
@@ -107,9 +89,7 @@ export default defineNuxtConfig({
     },
   },
   ssr: process.env.ENABLE_SSR !== 'FALSE',
-  typescript: {
-    typeCheck: true,
-  },
+  typescript: { typeCheck: true },
   vite: {
     build: {
       minify: true,
@@ -122,7 +102,10 @@ export default defineNuxtConfig({
             }
           },
         },
-        plugins: [nodeResolve(), commonjs()],
+        plugins: [
+          nodeResolve(),
+          commonjs(),
+        ],
       },
     },
   },
