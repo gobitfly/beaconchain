@@ -48,12 +48,15 @@ type RollingAggregatorInt interface {
 // Returns the epoch range of a current exported rolling table
 // Ideally the epoch range has an exact with of 24h, 7d, 31d or 90d BUT it can be more after bootstrap or less if there are less epochs on the network than the rolling width
 func (d *RollingAggregator) getCurrentRollingBounds(tx *sqlx.Tx, tableName string) (edb.EpochBounds, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
 	var bounds edb.EpochBounds
 	var err error
 	if tx == nil {
-		err = db.AlloyWriter.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
+		err = db.AlloyWriter.GetContext(ctx, &bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	} else {
-		err = tx.Get(&bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
+		err = tx.GetContext(ctx, &bounds, fmt.Sprintf(`SELECT max(epoch_start) as epoch_start, max(epoch_end) as epoch_end FROM %s`, tableName))
 	}
 	return bounds, err
 }
