@@ -337,21 +337,17 @@ const chartDatapointLimit uint64 = 200
 
 // helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
 // if no aggregation is passed, it's enforced to be present in the user request
-func (h *HandlerService) getCurrentChartTimeLimitsForUser(v *validationError, ctx context.Context, r *http.Request, dashboardId *types.VDBId, aggregation *enums.ChartAggregation) (uint64, uint64, uint64, error) {
+func (h *HandlerService) getCurrentChartTimeLimitsForUser(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (uint64, uint64, uint64, error) {
 	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
 	if err != nil {
 		return 0, 0, 0, err
 	}
 
-	if aggregation == nil || enums.IsInvalidEnum(aggregation) {
-		tmp := checkEnum[enums.ChartAggregation](v, r.URL.Query().Get("aggregation"), "aggregation")
-		aggregation = &tmp
-	}
-	maxAge := getMaxChartAge(*aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
+	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
 	if maxAge == 0 {
 		return 0, 0, 0, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
 	}
-	latestExportedTs, err := h.dai.GetLatestExportedChartTs(ctx, *aggregation)
+	latestExportedTs, err := h.dai.GetLatestExportedChartTs(ctx, aggregation)
 	if err != nil {
 		return 0, 0, 0, err
 	}
