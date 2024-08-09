@@ -1,9 +1,13 @@
 <script lang="ts" setup>
 import { IconNetwork } from '#components'
-import { type ChainIDs, ChainInfo, isL1 } from '~/types/network'
+import {
+  type ChainIDs, ChainInfo, isL1,
+} from '~/types/network'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const { availableNetworks, currentNetwork, isNetworkDisabled }
+const {
+  availableNetworks, currentNetwork, isNetworkDisabled,
+}
   = useNetworkStore()
 const { t: $t } = useTranslation()
 

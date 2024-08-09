@@ -28,11 +28,34 @@ interface Props {
 const DefaultValues = new Map<keyof AllOptions, InternalEntry>([
   [
     'erc20_token_transfers_value_threshold',
-    { check: false, num: NaN, type: 'amount' },
+    {
+      check: false,
+      num: NaN,
+      type: 'amount',
+    },
   ], // NaN will leave the input field empty (the user sees the placeholder)
-  ['group_offline_threshold', { check: false, num: 10, type: 'percent' }],
-  ['is_real_time_mode_enabled', { check: false, type: 'binary' }],
-  ['subscribed_chain_ids', { networks: [], type: 'networks' }],
+  [
+    'group_offline_threshold',
+    {
+      check: false,
+      num: 10,
+      type: 'percent',
+    },
+  ],
+  [
+    'is_real_time_mode_enabled',
+    {
+      check: false,
+      type: 'binary',
+    },
+  ],
+  [
+    'subscribed_chain_ids',
+    {
+      networks: [],
+      type: 'networks',
+    },
+  ],
 ])
 const orderOfTheRowsInValidatorModal: Array<
   'ALL' | keyof NotificationSettingsValidatorDashboard
@@ -63,12 +86,10 @@ const orderOfTheRowsInAccountModal: Array<
 const RowsWhoseCheckBoxIsInASeparateField = new Map<
   keyof AllOptions,
   keyof AllOptions
->([
-  [
-    'erc20_token_transfers_value_threshold',
-    'is_erc20_token_transfers_subscribed',
-  ],
-])
+>([ [
+  'erc20_token_transfers_value_threshold',
+  'is_erc20_token_transfers_subscribed',
+] ])
 const OptionsOutsideTheScopeOfCheckboxall: Array<keyof AllOptions> = [
   'subscribed_chain_ids',
   'is_ignore_spam_transactions_enabled',
@@ -77,15 +98,15 @@ const OptionsNeedingPremium: Array<keyof AllOptions> = [
   'group_offline_threshold',
   'is_real_time_mode_enabled',
 ]
-const RowsThatExpectAPercentage: Array<keyof AllOptions> = [
-  'group_offline_threshold',
-]
+const RowsThatExpectAPercentage: Array<keyof AllOptions> = [ 'group_offline_threshold' ]
 
 // #### END OF CONFIGURATION OF THE DIALOGS ####
 
 type ModifiableOptions = Record<keyof AllOptions, InternalEntry>
 
-const { dialogRef, props } = useBcDialog<Props>({ showHeader: false })
+const {
+  dialogRef, props,
+} = useBcDialog<Props>({ showHeader: false })
 const { t } = useTranslation()
 const { networkInfo } = useNetworkStore()
 const { user } = useUserStore()
@@ -96,7 +117,10 @@ let orderOfTheRows:
   | typeof orderOfTheRowsInValidatorModal = []
 let originalSettings: AllOptions
 const modifiableOptions = ref({} as ModifiableOptions)
-const checkboxAll = ref<InternalEntry>({ check: false, type: 'binary' })
+const checkboxAll = ref<InternalEntry>({
+  check: false,
+  type: 'binary',
+})
 
 // used by the watcher of `modifiableOptions` to know when it is unnecessary
 // to send changes to the API (it doesn't send if the nonce is 0)
@@ -184,7 +208,10 @@ watch(
     }
     dataNonce++
   },
-  { deep: true, immediate: true },
+  {
+    deep: true,
+    immediate: true,
+  },
 )
 
 /** reads data that our parent received from the API and converts it to our internal format */
@@ -220,7 +247,7 @@ function convertAPIentryToInternalEntry(
       }
     case 'networks':
       return {
-        networks: [...(srcValue as number[])],
+        networks: [ ...(srcValue as number[]) ],
         type,
       }
     case 'percent':

@@ -36,12 +36,18 @@ import {
   TypeInfo,
   wasOutputDataGivenByTheAPI,
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo } from '~/types/network'
+import {
+  ChainIDs, ChainInfo,
+} from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
-defineExpose<ExposedSearchbarMethods>({ closeDropdown, empty, hideResult })
+defineExpose<ExposedSearchbarMethods>({
+  closeDropdown,
+  empty,
+  hideResult,
+})
 
 const { t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -663,7 +669,7 @@ function convertSingleAPIresultIntoResultSuggestion(
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
-  if (areResultsCountable([type], false)) {
+  if (areResultsCountable([ type ], false)) {
     const countSource = realizeData(
       apiResponseElement,
       TypeInfo[type].countSource,

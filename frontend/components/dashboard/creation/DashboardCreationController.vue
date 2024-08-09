@@ -7,10 +7,14 @@ import {
 import { type ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
-const { createAccountDashboard, createValidatorDashboard }
+const {
+  createAccountDashboard, createValidatorDashboard,
+}
   = useUserDashboardStore()
 const { dashboards } = useUserDashboardStore()
-const { isLoggedIn, user } = useUserStore()
+const {
+  isLoggedIn, user,
+} = useUserStore()
 const { currentNetwork } = useNetworkStore()
 
 interface Props {
@@ -28,7 +32,9 @@ const name = ref<string>('')
 const network = ref<ChainIDs>(0)
 const forcedDashboardType = ref<'' | DashboardType>('')
 let forcedNetworkIfValidatorDashboard = 0
-const { dashboardKey, publicEntities } = useDashboardKey()
+const {
+  dashboardKey, publicEntities,
+} = useDashboardKey()
 const { fetch } = useCustomFetch()
 const route = useRoute()
 
@@ -75,9 +81,7 @@ function show(
   name.value = isLoggedIn.value ? '' : 'cookie'
 }
 
-defineExpose({
-  show,
-})
+defineExpose({ show })
 if (props.initiallyVisible) {
   show()
 }
@@ -141,7 +145,10 @@ async function createDashboard() {
       await fetch(
         API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
         {
-          body: { group_id: '0', validators: publicEntities.value },
+          body: {
+            group_id: '0',
+            validators: publicEntities.value,
+          },
           method: 'POST',
         },
         { dashboardKey: response.id },

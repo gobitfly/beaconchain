@@ -81,5 +81,10 @@ export function useBcDialog<T>(dialogProps?: DialogProps) {
     }
   }
 
-  return { close, dialogRef, props, setHeader }
+  return {
+    close,
+    dialogRef,
+    props,
+    setHeader,
+  }
 }

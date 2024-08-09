@@ -6,13 +6,11 @@ export function useValidatorDashboardGroups() {
 
   const groups = computed<VDBOverviewGroup[]>(() => {
     if (!overview.value?.groups) {
-      return [
-        {
-          count: 0,
-          id: 0,
-          name: $t('dashboard.group.selection.default'),
-        },
-      ]
+      return [ {
+        count: 0,
+        id: 0,
+        name: $t('dashboard.group.selection.default'),
+      } ]
     }
 
     return overview.value.groups

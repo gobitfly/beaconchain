@@ -9,7 +9,12 @@ const FiatCurrencies = [
   'RUB',
 ] as const
 type FiatCurrency = (typeof FiatCurrencies)[number]
-const CryptoCurrencies = ['ETH', 'GNO', 'DAI', 'xDAI'] as const
+const CryptoCurrencies = [
+  'ETH',
+  'GNO',
+  'DAI',
+  'xDAI',
+] as const
 type CryptoCurrency = (typeof CryptoCurrencies)[number]
 const Native = 'NAT' as const
 type Native = typeof Native

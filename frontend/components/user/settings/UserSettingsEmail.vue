@@ -7,7 +7,9 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const { defineField, errors, handleSubmit } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
     confirmEmail: confirmEmailValidation($t, 'newEmail'),
     newEmail: emailValidation($t),
@@ -15,9 +17,18 @@ const { defineField, errors, handleSubmit } = useForm({
   }),
 })
 
-const [password, passwordAttrs] = defineField('password')
-const [newEmail, newEmailAttrs] = defineField('newEmail')
-const [confirmEmail, confirmEmailAttrs] = defineField('confirmEmail')
+const [
+  password,
+  passwordAttrs,
+] = defineField('password')
+const [
+  newEmail,
+  newEmailAttrs,
+] = defineField('newEmail')
+const [
+  confirmEmail,
+  confirmEmailAttrs,
+] = defineField('confirmEmail')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 

@@ -5,20 +5,30 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
 const { dashboardKey } = useDashboardKey()
-const { overview, validatorCount } = useValidatorDashboardOverviewStore()
+const {
+  overview, validatorCount,
+} = useValidatorDashboardOverviewStore()
 const { networkInfo } = useNetworkStore()
 const selectedGroups = ref<number[]>([])
 
-const { resetTick, tick } = useInterval(12)
+const {
+  resetTick, tick,
+} = useInterval(12)
 
-const { refreshSlotViz, slotViz } = useValidatorSlotVizStore()
+const {
+  refreshSlotViz, slotViz,
+} = useValidatorSlotVizStore()
 
 await useAsyncData('validator_dashboard_slot_viz', () =>
   refreshSlotViz(dashboardKey.value),
 )
 
 watch(
-  () => [dashboardKey.value, selectedGroups.value, tick.value],
+  () => [
+    dashboardKey.value,
+    selectedGroups.value,
+    tick.value,
+  ],
   (newValue, oldValue) => {
     if (
       oldValue
@@ -45,7 +55,7 @@ const groups = computed(() => {
   }
   return orderBy(
     overview.value.groups.filter(g => !!g.count),
-    [g => g.name.toLowerCase()],
+    [ g => g.name.toLowerCase() ],
     'asc',
   )
 })
@@ -85,7 +95,7 @@ const selectedLabel = computed(() => {
   }
   return orderBy(
     selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)),
-    [g => g.toLowerCase()],
+    [ g => g.toLowerCase() ],
     'asc',
   ).join(', ')
 })

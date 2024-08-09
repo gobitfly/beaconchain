@@ -1,6 +1,10 @@
 import type { ComposerTranslation } from 'vue-i18n'
-import type { BooleanSchema, StringSchema } from 'yup'
-import { boolean as yupBool, ref as yupRef, string as yupString } from 'yup'
+import type {
+  BooleanSchema, StringSchema,
+} from 'yup'
+import {
+  boolean as yupBool, ref as yupRef, string as yupString,
+} from 'yup'
 
 export function passwordValidation(t: ComposerTranslation): StringSchema {
   return yupString()
@@ -14,7 +18,7 @@ export function confirmPasswordValidation(
   comparerRefName: string,
 ): StringSchema {
   return passwordValidation(t).oneOf(
-    [yupRef(comparerRefName)],
+    [ yupRef(comparerRefName) ],
     t('validation.password.no_match'),
   )
 }
@@ -24,7 +28,7 @@ export function newPasswordValidation(
   oldRefName: string,
 ): StringSchema {
   return passwordValidation(t).notOneOf(
-    [yupRef(oldRefName)],
+    [ yupRef(oldRefName) ],
     t('validation.password.not_new'),
   )
 }
@@ -40,7 +44,7 @@ export function confirmEmailValidation(
   comparerRefName: string,
 ): StringSchema {
   return emailValidation(t).oneOf(
-    [yupRef(comparerRefName)],
+    [ yupRef(comparerRefName) ],
     t('validation.email.no_match'),
   )
 }

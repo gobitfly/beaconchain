@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { type BlockStatus } from '~/types/block'
-import type { TagColor, TagSize } from '~/types/tag'
+import type {
+  TagColor, TagSize,
+} from '~/types/tag'
 
 interface Props {
   blockSlot?: number

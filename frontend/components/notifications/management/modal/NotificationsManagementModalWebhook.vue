@@ -9,7 +9,9 @@ export type WebhookForm = {
   is_discord_webhook_enabled: boolean
   webhook_url: string
 }
-const { close, props } = useBcDialog<WebhookForm>()
+const {
+  close, props,
+} = useBcDialog<WebhookForm>()
 
 const { t: $t } = useTranslation()
 
@@ -18,7 +20,9 @@ const validationSchema = createSchemaObject({
   webhook_url: validation.url($t('validation.url.invalid')),
 })
 
-const { defineField, errors, handleSubmit, meta, setFieldError, values }
+const {
+  defineField, errors, handleSubmit, meta, setFieldError, values,
+}
   = useForm({
     initialValues: {
       is_discord_webhook_enabled:
@@ -28,14 +32,16 @@ const { defineField, errors, handleSubmit, meta, setFieldError, values }
     validationSchema,
   })
 
-const [webhook_url, webhook_url_attrs] = defineField('webhook_url', {
-  validateOnModelUpdate: false,
-})
+const [
+  webhook_url,
+  webhook_url_attrs,
+] = defineField('webhook_url', { validateOnModelUpdate: false })
 
-const [is_discord_webhook_enabled, is_discord_webhook_enabled_attrs]
-  = defineField('is_discord_webhook_enabled', {
-    validateOnModelUpdate: false,
-  })
+const [
+  is_discord_webhook_enabled,
+  is_discord_webhook_enabled_attrs,
+]
+  = defineField('is_discord_webhook_enabled', { validateOnModelUpdate: false })
 
 const isFormDirty = computed(() => meta.value.dirty)
 const isFormValid = computed(() => meta.value.valid)
@@ -67,20 +73,14 @@ const handleTestNotification = async () => {
         },
         method: 'POST',
       })
-      toast.showSuccess({
-        summary: $t('notifications.dashboards.toast.success.test_discord'),
-      })
+      toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_discord') })
       return
     }
     await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
-      body: {
-        webhook_url: webhook_url.value,
-      },
+      body: { webhook_url: webhook_url.value },
       method: 'POST',
     })
-    toast.showSuccess({
-      summary: $t('notifications.dashboards.toast.success.test_webhook_url'),
-    })
+    toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
   }
   catch (error) {
     const summary = is_discord_webhook_enabled.value

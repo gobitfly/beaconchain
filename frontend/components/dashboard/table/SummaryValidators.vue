@@ -37,9 +37,7 @@ const openValidatorModal = () => {
       dashboardKey: props.dashboardKey,
       groupId: props.groupId,
       groupName: groupName.value,
-      summary: {
-        row: props.row,
-      },
+      summary: { row: props.row },
       timeFrame: props.timeFrame,
     },
   })
@@ -54,7 +52,10 @@ const mapped = computed(() => {
   const validatorIcons: SummaryValidatorsIconRowInfo[] = []
   const addCount = (key: ValidatorSummaryIconRowKey, count?: number) => {
     if (count) {
-      list.push({ count, key })
+      list.push({
+        count,
+        key,
+      })
     }
   }
 

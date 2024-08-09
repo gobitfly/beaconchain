@@ -26,8 +26,12 @@ const bcTooltipOwner = ref<HTMLElement | null>(null)
 const bcTooltip = ref<HTMLElement | null>(null)
 let scrollParents: HTMLElement[] = []
 const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
-const { doSelect, selected } = useTooltipStore()
-const { height, width } = useWindowSize()
+const {
+  doSelect, selected,
+} = useTooltipStore()
+const {
+  height, width,
+} = useWindowSize()
 
 // this const will be avaiable on template
 const slots = useSlots()
@@ -52,7 +56,11 @@ const isOpen = computed(
   () => isSelected.value || hover.value || hoverTooltip.value,
 )
 
-const pos = ref<{ left: string, top: string }>({ left: '0', top: '0' })
+const pos = ref<{ left: string
+  top: string }>({
+  left: '0',
+  top: '0',
+})
 
 const classList = computed(() => {
   return [
@@ -102,7 +110,10 @@ const setPosition = () => {
   }
   left = Math.max(0, Math.min(left, width.value - ttWidth))
   top = Math.max(0, Math.min(top, height.value - ttHeight))
-  pos.value = { left: `${left}px`, top: `${top}px` }
+  pos.value = {
+    left: `${left}px`,
+    top: `${top}px`,
+  }
   if (bcTooltip.value) {
     let centerX = -5 + Math.abs(left - rect.left) + rect.width / 2
     if (rect.width > ttWidth) {
@@ -204,7 +215,10 @@ const removeScrollParent = () => {
 }
 
 watch(
-  () => [props.title, props.text],
+  () => [
+    props.title,
+    props.text,
+  ],
   () => {
     if (isOpen.value) {
       requestAnimationFrame(() => {

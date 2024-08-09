@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import type { LoginResponse } from '~/types/user'
-import type { InternalGetUserInfoResponse, UserInfo } from '~/types/api/user'
+import type {
+  InternalGetUserInfoResponse, UserInfo,
+} from '~/types/api/user'
 import { API_PATH } from '~/types/customFetch'
 
 const userStore = defineStore('user-store', () => {
@@ -59,5 +61,11 @@ export function useUserStore() {
     return !!user.value
   })
 
-  return { doLogin, doLogout, getUser, isLoggedIn, user }
+  return {
+    doLogin,
+    doLogout,
+    getUser,
+    isLoggedIn,
+    user,
+  }
 }

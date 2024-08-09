@@ -17,7 +17,10 @@ export function useNotificationsManagementDashboards() {
     setPageSize,
     setSearch,
     setStoredQuery,
-  } = useTableQuery({ limit: 10, sort: 'dashboard_id:desc' }, 10)
+  } = useTableQuery({
+    limit: 10,
+    sort: 'dashboard_id:desc',
+  }, 10)
   const isLoading = ref(false)
 
   const dashboardGroups = computed(() => data.value)

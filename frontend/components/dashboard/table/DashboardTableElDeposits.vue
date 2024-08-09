@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useValidatorDashboardElDepositsStore } from '~/stores/dashboard/useValidatorDashboardElDepositsStore'
@@ -21,11 +23,15 @@ const {
   query: lastQuery,
   totalAmount,
 } = useValidatorDashboardElDepositsStore()
-const { bounce: setQuery, value: query } = useDebounceValue<
+const {
+  bounce: setQuery, value: query,
+} = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
 
-const { hasValidators, overview } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -50,7 +56,10 @@ const loadData = (query?: TableQueryParams) => {
 }
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
     getTotalAmount(dashboardKey.value)
@@ -74,9 +83,7 @@ const tableData = computed(() => {
   }
   return {
     data: [
-      {
-        amount: totalAmount.value,
-      },
+      { amount: totalAmount.value },
       ...deposits.value.data,
     ],
     paging: deposits.value.paging,

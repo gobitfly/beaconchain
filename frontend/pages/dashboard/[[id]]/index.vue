@@ -3,45 +3,40 @@ import {
   faArrowDown,
   faChartLineUp,
   faCube,
-  faCubes,
-  faFire,
+  faCubes, faFire,
   faMoneyBill,
   faWallet,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { DashboardCreationController } from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
-import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
+import {
+  isPublicDashboardKey, isSharedKey,
+} from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
 
 const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const tabs: HashTabs = {
-  blocks: {
-    index: 2,
-  },
-  deposits: {
-    index: 4,
-  },
+  blocks: { index: 2 },
+  deposits: { index: 4 },
   heatmap: {
     disabled: !showInDevelopment,
     index: 3,
   },
-  rewards: {
-    index: 1,
-  },
-  summary: {
-    index: 0,
-  },
-  withdrawals: {
-    index: 5,
-  },
+  rewards: { index: 1 },
+  summary: { index: 0 },
+  withdrawals: { index: 5 },
 }
 
-const { activeIndex, setActiveIndex } = useHashTabs(tabs)
+const {
+  activeIndex, setActiveIndex,
+} = useHashTabs(tabs)
 
-const { dashboardKey, setDashboardKey } = useDashboardKeyProvider('validator')
+const {
+  dashboardKey, setDashboardKey,
+} = useDashboardKeyProvider('validator')
 const {
   cookieDashboards,
   dashboards,
@@ -58,15 +53,15 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
-const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
-await useAsyncData('user_dashboards', () => refreshDashboards(), {
-  watch: [isLoggedIn],
-})
+const {
+  overview, refreshOverview,
+} = useValidatorDashboardOverviewStore()
+await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const { error: validatorOverviewError } = await useAsyncData(
   'validator_overview',
   () => refreshOverview(dashboardKey.value),
-  { watch: [dashboardKey] },
+  { watch: [ dashboardKey ] },
 )
 watch(
   validatorOverviewError,
@@ -106,8 +101,14 @@ const setDashboardKeyIfNoError = (key: string) => {
 }
 
 watch(
-  [dashboardKey, isLoggedIn],
-  ([newKey, newLoggedIn], [oldKey]) => {
+  [
+    dashboardKey,
+    isLoggedIn,
+  ],
+  ([
+    newKey,
+    newLoggedIn,
+  ], [ oldKey ]) => {
     if (!newLoggedIn || !newKey) {
       // Some checks if we need to update the dashboard key or the public dashboard
       let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard

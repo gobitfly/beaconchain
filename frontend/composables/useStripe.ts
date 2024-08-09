@@ -1,4 +1,6 @@
-import { inject, warn } from 'vue'
+import {
+  inject, warn,
+} from 'vue'
 import type { StripeProvider } from '~/types/stripe'
 
 export function useStripe() {
@@ -40,5 +42,10 @@ export function useStripe() {
     return stripe?.isStripeDisabled.value
   })
 
-  return { isStripeDisabled, stripeCustomerPortal, stripeInit, stripePurchase }
+  return {
+    isStripeDisabled,
+    stripeCustomerPortal,
+    stripeInit,
+    stripePurchase,
+  }
 }

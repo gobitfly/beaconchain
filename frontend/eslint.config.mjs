@@ -5,6 +5,49 @@ import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt({
   rules: {
+    '@stylistic/array-bracket-newline': [
+      'error',
+      { minItems: 2 },
+    ],
+    '@stylistic/array-bracket-spacing': [
+      'error',
+      'always',
+    ],
+    '@stylistic/array-element-newline': [
+      'error',
+      { minItems: 2 },
+    ],
+    '@stylistic/object-curly-newline': [
+      'error',
+      {
+        ExportDeclaration: {
+          minProperties: 2,
+          multiline: true,
+        },
+        ImportDeclaration: {
+          minProperties: 2,
+          multiline: true,
+        },
+        ObjectExpression: {
+          consistent: true,
+          minProperties: 2,
+          multiline: true,
+        },
+        ObjectPattern: {
+          consistent: true,
+          minProperties: 2,
+          multiline: true,
+        },
+      },
+    ],
+    '@stylistic/object-curly-spacing': [
+      'error',
+      'always',
+    ],
+    '@stylistic/object-property-newline': [
+      'error',
+      { allowAllPropertiesOnSameLine: true },
+    ],
     'vue/max-len': [
       'error',
       {
@@ -14,14 +57,18 @@ export default withNuxt({
       },
     ],
   },
-})
+},
+)
   .prepend({
-    ignores: ['types/api', 'public', 'assets/css/prime_origin.scss'],
+    ignores: [
+      'types/api',
+      'public',
+      'assets/css/prime_origin.scss',
+    ],
   })
   .override('nuxt/typescript/rules', {
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off', // TODO: remove this rule
-    },
+    // TODO: remove this rule
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
   })
   .append(
     // @ts-ignore -- it seams like the plugin is currently not compatible but seems to work
@@ -30,7 +77,7 @@ export default withNuxt({
     // @ts-check
     {
       rules: {
-        // disable the rules as there are conflicts
+      // disable the rules as there are conflicts
         'perfectionist/sort-imports': 'off',
         'perfectionist/sort-vue-attributes': 'off',
       },

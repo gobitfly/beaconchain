@@ -9,13 +9,25 @@ const openToast = (
 ) => {
   switch (severity) {
     case 'error':
-      toast.showError({ detail, group, summary })
+      toast.showError({
+        detail,
+        group,
+        summary,
+      })
       break
     case 'info':
-      toast.showInfo({ detail, group, summary })
+      toast.showInfo({
+        detail,
+        group,
+        summary,
+      })
       break
     case 'success':
-      toast.showSuccess({ detail, group, summary })
+      toast.showSuccess({
+        detail,
+        group,
+        summary,
+      })
       break
   }
 }

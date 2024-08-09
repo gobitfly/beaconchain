@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { faEdit, faTrash } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faEdit, faTrash,
+} from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
@@ -26,7 +28,9 @@ import {
   SearchbarPurpose,
   SearchbarShape,
 } from '~/types/searchbar'
-import { API_PATH, type PathValues } from '~/types/customFetch'
+import {
+  API_PATH, type PathValues,
+} from '~/types/customFetch'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { t: $t } = useTranslation()
@@ -39,18 +43,27 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
-const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
+const {
+  overview, refreshOverview,
+} = useValidatorDashboardOverviewStore()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, dashboardKey, dashboardType, isPublic, removeEntities }
+const {
+  addEntities, dashboardKey, dashboardType, isPublic, removeEntities,
+}
   = useDashboardKey()
 const { updateHash } = useUserDashboardStore()
-const { isLoggedIn, user } = useUserStore()
+const {
+  isLoggedIn, user,
+} = useUserStore()
 
-const initialQuery = { limit: pageSize.value, sort: 'index:asc' }
+const initialQuery = {
+  limit: pageSize.value,
+  sort: 'index:asc',
+}
 
 const {
   bounce: setQuery,
@@ -117,7 +130,10 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
 
   await fetch<VDBPostValidatorsData>(
     API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
-    { body, method: 'POST' },
+    {
+      body,
+      method: 'POST',
+    },
     { dashboardKey: dashboardKey.value },
   )
 
@@ -137,7 +153,10 @@ const removeValidators = async (validators?: NumberOrString[]) => {
 
   await fetch(
     API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
-    { method: 'DELETE', query: { validators: validators.join(',') } },
+    {
+      method: 'DELETE',
+      query: { validators: validators.join(',') },
+    },
     { dashboardKey: dashboardKey.value },
   )
 
@@ -157,7 +176,7 @@ const addValidator = (result: ResultSuggestion) => {
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
-      list = [String(result.rawResult.num_value!)]
+      list = [ String(result.rawResult.num_value!) ]
       selectedValidator.value = list[0]
       body.validators = list
       break
@@ -237,7 +256,10 @@ const setSearch = (value?: string) => {
 }
 
 watch(selectedGroup, (value) => {
-  setQuery({ ...query?.value, group_id: value })
+  setQuery({
+    ...query?.value,
+    group_id: value,
+  })
 })
 
 const loadData = async () => {
@@ -257,12 +279,19 @@ const loadData = async () => {
     }
   }
   else {
-    data.value = { data: [], paging: {} }
+    data.value = {
+      data: [],
+      paging: {},
+    }
   }
 }
 
 watch(
-  () => [dashboardKey.value, visible.value, query.value],
+  () => [
+    dashboardKey.value,
+    visible.value,
+    query.value,
+  ],
   () => {
     if (visible.value) {
       loadData()
@@ -276,13 +305,13 @@ const switchValidatorGroup = (
   group: number,
 ) => {
   changeGroup(
-    { validators: mapIndexOrPubKey([row].concat(selected.value ?? [])) },
+    { validators: mapIndexOrPubKey([ row ].concat(selected.value ?? [])) },
     group,
   )
 }
 
 const removeRow = (row: VDBManageValidatorsTableRow) => {
-  const list = mapIndexOrPubKey([row].concat(selected.value ?? []))
+  const list = mapIndexOrPubKey([ row ].concat(selected.value ?? []))
   if (!list?.length) {
     warn('no validator to remove')
   }

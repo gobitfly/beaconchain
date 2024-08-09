@@ -78,5 +78,10 @@ export function useValidatorDashboardOverviewStore() {
     )
   })
 
-  return { hasValidators, overview, refreshOverview, validatorCount }
+  return {
+    hasValidators,
+    overview,
+    refreshOverview,
+    validatorCount,
+  }
 }

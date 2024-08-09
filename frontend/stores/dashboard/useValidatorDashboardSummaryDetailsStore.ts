@@ -12,7 +12,10 @@ const validatorDashboardSummaryDetailsStore = defineStore(
   () => {
     const data = ref<Record<string, VDBGroupSummaryData>>({})
     const timeFrame = ref<SummaryTimeFrame>()
-    return { data, timeFrame }
+    return {
+      data,
+      timeFrame,
+    }
   },
 )
 
@@ -21,7 +24,9 @@ export function useValidatorDashboardSummaryDetailsStore(
   groupId: number,
 ) {
   const { fetch } = useCustomFetch()
-  const { data, timeFrame: storeTimeFrame } = storeToRefs(
+  const {
+    data, timeFrame: storeTimeFrame,
+  } = storeToRefs(
     validatorDashboardSummaryDetailsStore(),
   )
 
@@ -40,9 +45,15 @@ export function useValidatorDashboardSummaryDetailsStore(
     const res = await fetch<InternalGetValidatorDashboardGroupSummaryResponse>(
       API_PATH.DASHBOARD_SUMMARY_DETAILS,
       { query: { period: timeFrame } },
-      { dashboardKey, groupId },
+      {
+        dashboardKey,
+        groupId,
+      },
     )
-    data.value = { ...data.value, [getKey()]: res.data }
+    data.value = {
+      ...data.value,
+      [getKey()]: res.data,
+    }
     return res.data
   }
 
@@ -50,5 +61,9 @@ export function useValidatorDashboardSummaryDetailsStore(
     return data.value[getKey()]
   })
 
-  return { details, getDetails, getKey }
+  return {
+    details,
+    getDetails,
+    getKey,
+  }
 }

@@ -39,7 +39,10 @@ const data = computed(() => {
     if (!props.hideEmptyValue) {
       label = '0%'
     }
-    return { className, label }
+    return {
+      className,
+      label,
+    }
   }
   const percent = props.percent ?? calculatePercent(props.value, props.base)
   const config = {
@@ -76,7 +79,12 @@ const data = computed(() => {
       className = 'text-negative'
     }
   }
-  return { className, compareResult, label, leadingIcon }
+  return {
+    className,
+    compareResult,
+    label,
+    leadingIcon,
+  }
 })
 </script>
 
