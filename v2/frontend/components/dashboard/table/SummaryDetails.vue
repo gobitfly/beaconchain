@@ -145,9 +145,9 @@ const rowClass = (data: SummaryRow) => {
           v-if="prop.prop"
           class="value"
           :data="summary"
-          :absolute="absolute"
+          :absolute
           :property="prop.prop"
-          :time-frame="timeFrame"
+          :time-frame
           :row="props.row"
           :in-detail-view="true"
         />

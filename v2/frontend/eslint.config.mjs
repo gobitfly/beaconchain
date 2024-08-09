@@ -67,6 +67,13 @@ export default withNuxt({
         ignoreStrings: true,
       },
     ],
+    'vue/v-bind-style': [
+      'error',
+      'shorthand',
+      {
+        sameNameShorthand: 'always',
+      },
+    ],
   },
 },
 )

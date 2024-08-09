@@ -932,7 +932,7 @@ defineExpose({
     <MegaMenu
       ref="megaMenu"
       :model="items"
-      :breakpoint="breakpoint"
+      :breakpoint
     >
       <template #item="{ item, hasSubmenu }">
         <span class="p-menuitem-link">

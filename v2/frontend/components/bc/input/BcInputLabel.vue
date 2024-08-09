@@ -82,7 +82,7 @@ watch([
       <InputText
         ref="inputRef"
         v-model="editValue"
-        :maxlength="maxlength"
+        :maxlength
         @keypress.enter="iconClick"
       />
     </div>

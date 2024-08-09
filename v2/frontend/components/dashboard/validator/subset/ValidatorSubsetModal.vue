@@ -239,7 +239,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
         :context="props.context"
         :sub-title="props.groupName || props.dashboardName"
         :summary="props.summary"
-        :subsets="subsets"
+        :subsets
       />
       <BcContentFilter
         v-model="filter"

@@ -851,9 +851,9 @@ function informationIfHiddenResults(): string {
         <BcSearchbarButton
           class="search-button"
           :class="[barShape, classForDropdownOpenedOrClosed]"
-          :bar-shape="barShape"
-          :color-theme="colorTheme"
-          :bar-purpose="barPurpose"
+          :bar-shape
+          :color-theme
+          :bar-purpose
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
@@ -876,18 +876,18 @@ function informationIfHiddenResults(): string {
             v-if="mustNetworkFilterBeShown()"
             v-model="userInputNetworks"
             class="filter-networks"
-            :bar-shape="barShape"
-            :color-theme="colorTheme"
-            :dropdown-layout="dropdownLayout"
+            :bar-shape
+            :color-theme
+            :dropdown-layout
             @change="userFiltersChanged"
           />
           <BcSearchbarCategorySelectors
             v-if="mustCategoryFiltersBeShown()"
             v-model="userInputCategories"
             class="filter-categories"
-            :bar-shape="barShape"
-            :color-theme="colorTheme"
-            :dropdown-layout="dropdownLayout"
+            :bar-shape
+            :color-theme
+            :dropdown-layout
             @change="userFiltersChanged"
           />
         </div>
@@ -920,14 +920,12 @@ function informationIfHiddenResults(): string {
                   :class="[barShape, dropdownLayout]"
                 />
                 <BcSearchbarSuggestionRow
-                  :suggestion="suggestion"
-                  :bar-shape="barShape"
-                  :color-theme="colorTheme"
-                  :dropdown-layout="dropdownLayout"
-                  :bar-purpose="barPurpose"
-                  :screen-width-causing-sudden-change="
-                    screenWidthCausingSuddenChange
-                  "
+                  :suggestion
+                  :bar-shape
+                  :color-theme
+                  :dropdown-layout
+                  :bar-purpose
+                  :screen-width-causing-sudden-change
                   @click="
                     (e: Event) => {
                       e.stopPropagation();

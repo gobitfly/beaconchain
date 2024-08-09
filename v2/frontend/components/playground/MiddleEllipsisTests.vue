@@ -222,7 +222,7 @@ const showAllCSSclipped = ref<boolean>(false)
         v-for="text of randomTexts"
         :key="text"
         class="percent medium"
-        :text="text"
+        :text
       />
     </div>
   </div>

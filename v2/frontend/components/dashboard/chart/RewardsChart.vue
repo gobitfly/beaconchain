@@ -319,7 +319,7 @@ const option = computed<ECBasicOption | undefined>(() => {
     <VChart
       v-else
       class="chart"
-      :option="option"
+      :option
       autoresize
     />
   </ClientOnly>

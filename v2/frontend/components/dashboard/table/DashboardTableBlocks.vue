@@ -132,11 +132,11 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             data-key="slot"
             :expandable="!colsVisible.graffiti"
             class="block-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :add-spacer="true"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
             @set-cursor="setCursor"

@@ -40,7 +40,7 @@ const scrollToAddons = () => {
         <PricingHeaderLine />
         <PricingPeriodToggle v-model="isYearly" />
         <PricingPremiumViaAppBanner />
-        <PricingPremiumProducts :is-yearly="isYearly" />
+        <PricingPremiumProducts :is-yearly />
         <Button
           class="view-addons-button"
           @click="scrollToAddons()"
@@ -50,7 +50,7 @@ const scrollToAddons = () => {
         <PricingPremiumCompare />
         <PricingPremiumAddons
           id="addons"
-          :is-yearly="isYearly"
+          :is-yearly
         />
         <BcFaq
           class="faq"

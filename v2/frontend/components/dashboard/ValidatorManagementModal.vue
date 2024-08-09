@@ -410,13 +410,13 @@ const premiumLimit = computed(
         <ClientOnly fallback-tag="span">
           <BcTable
             v-model:selection="selected"
-            :data="data"
+            :data
             data-key="public_key"
             :expandable="size.expandable"
             selection-mode="multiple"
             class="management-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :selected-sort="tempQuery?.sort as string"
             @set-cursor="setCursor"
             @sort="onSort"

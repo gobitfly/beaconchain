@@ -571,7 +571,7 @@ const onMouseMove = (e: MouseEvent) => {
       <VChart
         ref="chart"
         class="chart"
-        :option="option"
+        :option
         autoresize
         @datazoom="onDatazoom"
       />

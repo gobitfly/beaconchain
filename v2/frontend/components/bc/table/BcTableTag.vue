@@ -26,7 +26,7 @@ defineProps<Props>()
     {{ label }}
     <FontAwesomeIcon
       v-if="icon"
-      :icon="icon"
+      :icon
     />
   </BcTooltip>
 </template>

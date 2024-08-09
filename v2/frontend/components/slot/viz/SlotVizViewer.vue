@@ -179,8 +179,8 @@ watch(
             v-for="slot in row.slots"
             :key="slot.slot"
             :data="slot"
-            :selected-categories="selectedCategories"
-            :current-slot-id="currentSlotId"
+            :selected-categories
+            :current-slot-id
           />
         </div>
       </template>

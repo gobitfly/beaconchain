@@ -157,7 +157,7 @@ const searchPlaceholder = computed(() =>
   <div>
     <BcTableControl
       v-model:="showAbsoluteValues"
-      :search-placeholder="searchPlaceholder"
+      :search-placeholder
       @set-search="setSearch"
     >
       <template #header-center="{ tableIsShown }">
@@ -185,8 +185,8 @@ const searchPlaceholder = computed(() =>
             data-key="group_id"
             :expandable="true"
             class="summary_table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
@@ -246,7 +246,7 @@ const searchPlaceholder = computed(() =>
                   :absolute="showAbsoluteValues ?? true"
                   :row="slotProps.data"
                   :group-id="slotProps.data.group_id"
-                  :dashboard-key="dashboardKey"
+                  :dashboard-key
                   :time-frame="selectedTimeFrame"
                   context="group"
                 />

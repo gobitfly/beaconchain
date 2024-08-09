@@ -18,7 +18,7 @@ const { pairedDevices } = useNotificationsManagementSettings()
         <NotificationsManagementPairedDeviceModalContent
           v-for="device in pairedDevices"
           :key="device.id"
-          :device="device"
+          :device
         />
       </div>
     </div>

@@ -21,9 +21,9 @@ const blockStati: BlockStatus[] = [
       :key="status"
       class="item"
     >
-      <BlockTableStatus :status="status" />
+      <BlockTableStatus :status />
       <BlockTableStatus
-        :status="status"
+        :status
         :mobile="true"
       />
     </div>
@@ -36,38 +36,38 @@ const blockStati: BlockStatus[] = [
       class="item"
     >
       <BcTableTag
-        :color="color"
+        :color
         :label="color"
       />
       <BcTableTag
-        :color="color"
-        :label="color"
-        :icon="faAnchor"
-      />
-      <BcTableTag
-        :color="color"
-        :label="color"
-        size="compact"
-      />
-      <BcTableTag
-        :color="color"
-        :label="color"
-        size="compact"
-      />
-      <BcTableTag
-        :color="color"
+        :color
         :label="color"
         :icon="faAnchor"
+      />
+      <BcTableTag
+        :color
+        :label="color"
         size="compact"
       />
       <BcTableTag
-        :color="color"
+        :color
+        :label="color"
+        size="compact"
+      />
+      <BcTableTag
+        :color
+        :label="color"
+        :icon="faAnchor"
+        size="compact"
+      />
+      <BcTableTag
+        :color
         :label="color.substring(0, 2)"
         size="circle"
         :tooltip="color"
       />
       <BcTableTag
-        :color="color"
+        :color
         :icon="faAnchor"
         size="circle"
         :tooltip="color"

@@ -129,10 +129,10 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
             data-key="index"
             :expandable="!colsVisible.group"
             class="el_deposits_table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :loading="isLoadingDeposits"
             @set-cursor="setCursor"
             @sort="onSort"

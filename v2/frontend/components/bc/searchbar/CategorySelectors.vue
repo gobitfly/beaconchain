@@ -33,9 +33,9 @@ function selectionHasChanged(category: Category, selected: boolean) {
       :key="filter[0]"
       :state="filter[1]"
       class="button"
-      :bar-shape="barShape"
-      :color-theme="colorTheme"
-      :dropdown-layout="dropdownLayout"
+      :bar-shape
+      :color-theme
+      :dropdown-layout
       @change="(selected: boolean) => selectionHasChanged(filter[0], selected)"
     >
       {{ t(...CategoryInfo[filter[0]].filterLabel) }}

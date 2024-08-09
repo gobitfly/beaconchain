@@ -116,12 +116,12 @@ const sort = computed(() => {
     :sort-field="sort?.field"
     :sort-order="sort?.order"
     :value="data?.data"
-    :data-key="dataKey"
-    :loading="loading"
+    :data-key
+    :loading
   >
     <Column
       v-if="selectionMode"
-      :selection-mode="selectionMode"
+      :selection-mode
       class="selection"
     />
     <Column
@@ -187,7 +187,7 @@ const sort = computed(() => {
         v-if="!hidePager && data?.paging"
         :page-size="pageSize ?? 0"
         :paging="data?.paging"
-        :cursor="cursor"
+        :cursor
         @set-cursor="setCursor"
         @set-page-size="setPageSize"
       >

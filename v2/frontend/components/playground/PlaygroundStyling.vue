@@ -260,25 +260,25 @@ const dropdownList = [
         Toggle loading
       </Button>
       <div class="element_container">
-        <BcLoadingSpinner :loading="loading" />
+        <BcLoadingSpinner :loading />
         <BcLoadingSpinner
-          :loading="loading"
+          :loading
           size="small"
           style="color: lightblue"
         />
         <BcLoadingSpinner
-          :loading="loading"
+          :loading
           size="large"
         />
         <div class="box">
           <BcLoadingSpinner
-            :loading="loading"
+            :loading
             alignment="center"
           />
         </div>
         <div class="box">
           <BcLoadingSpinner
-            :loading="loading"
+            :loading
             size="full"
           />
         </div>

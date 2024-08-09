@@ -47,9 +47,9 @@ function sendValue(input: Nullable<number>): void {
 <template>
   <InputNumber
     v-model="bridgedVmodel"
-    :min="min"
-    :max="max"
-    :max-fraction-digits="maxFractionDigits"
+    :min
+    :max
+    :max-fraction-digits
     locale="en-US"
     class="why-the-hell-dont-they-fix-this-bug"
     @input="

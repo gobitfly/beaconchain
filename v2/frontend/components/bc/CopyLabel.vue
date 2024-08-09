@@ -16,7 +16,7 @@ defineProps<Props>()
       :value="label || value"
     >
     <BcCopyToClipboard
-      :value="value"
+      :value
       class="copy-icon"
     />
   </div>

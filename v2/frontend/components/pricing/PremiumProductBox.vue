@@ -289,14 +289,14 @@ const minorFeatures = computed<Feature[]>(() => {
         <PricingPremiumFeature
           v-for="feature in mainFeatures"
           :key="feature.name"
-          :feature="feature"
+          :feature
         />
       </div>
       <div class="minor-features-container">
         <PricingPremiumFeature
           v-for="feature in minorFeatures"
           :key="feature.name"
-          :feature="feature"
+          :feature
           :link="feature.link"
         />
       </div>

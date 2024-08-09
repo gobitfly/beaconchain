@@ -174,11 +174,11 @@ const wrappedRewards = computed(() => {
             data-key="identifier"
             :expandable="true"
             class="rewards-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :add-spacer="colsVisible.age"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
             @set-cursor="setCursor"

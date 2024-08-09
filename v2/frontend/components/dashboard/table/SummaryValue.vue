@@ -182,7 +182,7 @@ const openValidatorModal = () => {
     class="info_row"
   >
     <DashboardTableEfficiency
-      :absolute="absolute"
+      :absolute
       :success="data.efficiency.status_count.success"
       :failed="data.efficiency.status_count.failed"
     >
@@ -254,7 +254,7 @@ const openValidatorModal = () => {
     :validators="data.validators"
     :time-frame="props.timeFrame"
     :context="data.context"
-    :dashboard-key="dashboardKey"
+    :dashboard-key
     :group-id="props.row.group_id"
     :data="props.data"
     :row="props.row"
