@@ -475,10 +475,9 @@ function distance(eye1: Eye, eye2: Eye): number {
 type ColorDefinition = { color: string, identifier: string }
 enum ColorBlindness { Red, Green }
 
-const timeAllowed = 20000 // ms
 const stallingPeriod = 8 // controls how long the progress can stall before the objective func changes to start climbing
 const climbingPeriod = 4 // controls how long the climbing stage lasts
-let rShaking = -0.05 // controls the amount of rotation that `r` endures (to explore new paths)
+let rShaking = 0.1 // controls the amount of rotation that `r` endures (to explore new paths)
 const debug = false
 
 function enhanceColors(colors: ColorDefinition[], colorBlindness: ColorBlindness): ColorDefinition[] {
@@ -528,8 +527,8 @@ let wip3D: RGB[] // CS.RGBlinear
 let wip2D: Eye[] // CS.EyePercI
 let errors2D: number[]
 const tabuMoves: Array<number[]> = []
-let searchStage: number
-let bestOfBestTotalError: number
+let searchStage: number = 0
+let bestOfBestTotalError = Number.MAX_SAFE_INTEGER
 
 /** @param input must be in the CS.RGBgamma format.
  * @returns enchanced colors in the CS.RGBgamma format
@@ -551,28 +550,26 @@ function runOptimizer(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
     cons.log('Original distances:', distancesOrig)
   }
 
-  const resultShaked = search(input, colorBlindness, true, timeAllowed / 2)
-  // const errorShaked = bestOfBestTotalError
-  // const resultUndisturbed = search(input, colorBlindness, false, timeAllowed / 2)
-  // const errorUndisturbed = bestOfBestTotalError
-  // return (errorShaked < errorUndisturbed) ? resultShaked : resultUndisturbed
-  return resultShaked
+  const originalError = loadSearchBuffers(original)
+  const resultShaked = search(input, colorBlindness, true)
+  const errorShaked = bestOfBestTotalError
+  loadSearchBuffers(original)
+  const resultUndisturbed = search(input, colorBlindness, false)
+  const errorUndisturbed = bestOfBestTotalError
+  cons.log('Globlal difference between distances before search:', originalError)
+  if (errorShaked < errorUndisturbed) {
+    cons.log('The search thread with disturbances produced the best result, the globlal difference between distances is', errorShaked, 'vs', errorUndisturbed)
+    return resultShaked
+  }
+  else {
+    cons.log('The search thread without disturbances produced the best result, the globlal difference between distances is', errorUndisturbed, 'vs', errorShaked)
+    return resultUndisturbed
+  }
 }
 
-function search(input: RGB[], colorBlindness: ColorBlindness, shaking: boolean, timeLimit: number): RGB[] {
-  const endTime = performance.now() + timeLimit
+function search(input: RGB[], colorBlindness: ColorBlindness, shaking: boolean): RGB[] {
+  const startTime = performance.now()
   const finalIteration = 4000 * original.length // 4000 is recommended after some empirical study
-  // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way that
-  // they get more and more distinguishable when viewed by a color blind person
-  wip3D = original.map(col => col.export(CS.RGBlinear))
-  // projecting the original colors into wip2D: they are the starting point and the search phase will make them more
-  // and more distinguishable at each iteration
-  wip2D = wip3D.map(col => projectOntoCBPlane(col.chan).export(CS.EyePercI))
-  errors2D = wip2D.map((col, k) => distError(k, col))
-  tabuMoves.length = 0
-  for (let k = 0; k < original.length; k++) {
-    tabuMoves.push([0, 0, 0])
-  }
   let iterations = 0
   let bestOfBestIteration = 0
   let nextSwitch = 0
@@ -581,7 +578,7 @@ function search(input: RGB[], colorBlindness: ColorBlindness, shaking: boolean, 
   let bestOfBestWip3D: Array<RGB> = []
   let bestWip3D: Array<RGB> = []
   searchStage = 0
-  while (iterations < finalIteration && performance.now() < endTime) {
+  while (iterations < finalIteration) {
     iterations++
     optimizeOneStepFurther()
     const error = totalError()
@@ -609,10 +606,9 @@ function search(input: RGB[], colorBlindness: ColorBlindness, shaking: boolean, 
     if (iterations === nextSwitch) {
       searchStage = ++searchStage % 2
       nextSwitch = iterations + (searchStage === 0 ? stallingPeriod : climbingPeriod) * original.length
-      wip3D = bestWip3D.map(col => col.export(CS.RGBlinear))
       if (shaking && searchStage === 0) {
         rShaking *= -1
-        wip3D.forEach((col) => {
+        bestWip3D.forEach((col) => {
           // we mess up slightly the work of the climbing obj function
           const eye = col.export(CS.EyeNormJ)
           eye.r += rShaking
@@ -622,19 +618,13 @@ function search(input: RGB[], colorBlindness: ColorBlindness, shaking: boolean, 
           col.import(eye)
         })
       }
-      wip2D = wip3D.map(col => projectOntoCBPlane(col.chan).export(CS.EyePercI))
-      errors2D = wip2D.map((col, k) => distError(k, col))
-      bestTotalError = totalError()
-      tabuMoves.length = 0
-      for (let k = 0; k < original.length; k++) {
-        tabuMoves.push([0, 0, 0])
-      }
+      bestTotalError = loadSearchBuffers(bestWip3D)
       if (debug) {
-        cons.log('Switch at iteration', iterations, bestWip3D.map(col => col.chan))
+        cons.log('Switch at iteration', iterations)
       }
     }
   }
-  cons.log('Iterated', iterations, 'times. Best color set found at iteration', bestOfBestIteration)
+  cons.log('Iterated', iterations, 'times in ', Math.round((performance.now() - startTime) / 1000), ' s. Best color set found at iteration', bestOfBestIteration)
   // 🪄✨
   return bestOfBestWip3D.map(col => col.export(CS.RGBgamma))
 }
@@ -756,6 +746,21 @@ function distError(k: number, wipColor2D: Eye): number {
 
 function totalError(): number {
   return errors2D.reduce((prev, curr) => prev + curr, 0)
+}
+
+function loadSearchBuffers(source: RGB[]): number {
+  tabuMoves.length = 0
+  for (let k = 0; k < source.length; k++) {
+    tabuMoves.push([0, 0, 0])
+  }
+  // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way that
+  // they get more and more distinguishable when viewed by a color blind person
+  wip3D = source.map(col => col.export(CS.RGBlinear))
+  // projecting the original colors into wip2D: they are the starting point and the search phase will make them more
+  // and more distinguishable at each iteration
+  wip2D = wip3D.map(col => projectOntoCBPlane(col.chan).export(CS.EyePercI))
+  errors2D = wip2D.map((col, k) => distError(k, col))
+  return totalError()
 }
 
 //
