@@ -104,7 +104,7 @@ class RGB {
       if (this.chan[k] < 0) {
         this.chan[k] = 0
       }
-      if (this.chan[k] > max) {
+      else if (this.chan[k] > max) {
         this.chan[k] = max
       }
     }
@@ -290,6 +290,38 @@ class Eye {
     return to as RGB & Eye & number[]
   }
 
+  /* shifts `r` into [0-1] and trims `p` and `i` or `j` if they exceed their respective limits */
+  limit(): void {
+    if (this.r < 0) {
+      this.r = 1 - ((-this.r) % 1)
+    }
+    else if (this.r > 1) {
+      this.r = this.r % 1
+    }
+    if (this.p < 0) {
+      this.p = 0
+    }
+    else if (this.p > 1) {
+      this.p = 1
+    }
+    if (this.space === CS.EyePercI) {
+      if (this.i < 0) {
+        this.i = 0
+      }
+      else if (this.i > this.iMax) {
+        this.i = this.iMax
+      }
+    }
+    else {
+      if (this.j < 0) {
+        this.j = 0
+      }
+      else if (this.j > 1) {
+        this.j = 1
+      }
+    }
+  }
+
   protected convertToRGB(to: RGB, i: number): void {
     const [l, , h] = Eye.rToChannelOrder(this.r)
     const [h1, h2] = Eye.lowestChanToAnchors(l)
@@ -443,7 +475,7 @@ function distance(eye1: Eye, eye2: Eye): number {
 type ColorDefinition = { color: string, identifier: string }
 enum ColorBlindness { Red, Green }
 
-const timeAllowed = 5000 // ms
+const timeAllowed = 10000 // ms
 const stallingPeriod = 8 // controls how long the progress can stall before the objective func changes to start climbing
 const climbingPeriod = 4 // controls how long the climbing stage lasts
 const debug = false
@@ -495,7 +527,7 @@ let wip3D: RGB[] // CS.RGBlinear
 let wip2D: Eye[] // CS.EyePercI
 let errors2D: number[]
 const tabuMoves: Array<number[]> = []
-let objectiveFunctionMode = 0
+let searchStage = 0
 
 /** @param input must be in the CS.RGBgamma format.
  * @returns enchanced colors in the CS.RGBgamma format
@@ -519,11 +551,10 @@ function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
   // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way that
   // they get more and more distinguishable when viewed by a color blind person
   wip3D = original.map(col => col.export(CS.RGBlinear))
-  // projecting the original colors into wip2D: they are the starting point and the search phase will make them more and
-  // more distinguishable at each iteration
-  wip2D = wip3D.map(col => projectOnto2D(col.chan).export(CS.EyePercI))
+  // projecting the original colors into wip2D: they are the starting point and the search phase will make them more
+  // and more distinguishable at each iteration
+  wip2D = wip3D.map(col => projectOntoCBPlane(col.chan).export(CS.EyePercI))
   errors2D = wip2D.map((col, k) => distError(k, col))
-
   if (debug) {
     cons.log('Original distances:', distancesOrig)
   }
@@ -533,7 +564,7 @@ function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
   for (let k = 0; k < original.length; k++) {
     tabuMoves.push([0, 0, 0])
   }
-  const finalIteration = 2000 * original.length // 2000 is recommended after some empirical study
+  const finalIteration = 4000 * original.length // 4000 is recommended after some empirical study
   let iterations = 0
   let bestOfBestIteration = 0
   let nextSwitch = 0
@@ -541,8 +572,8 @@ function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
   let bestTotalError = Number.MAX_SAFE_INTEGER
   let bestOfBestWip3D: Array<RGB> = []
   let bestWip3D: Array<RGB> = []
-  let bestWip2D: Array<Eye> = []
-  objectiveFunctionMode = 0
+  searchStage = 0
+  let rRotation = -0.05
   while (iterations < finalIteration && performance.now() < endTime) {
     iterations++
     optimizeOneStepFurther()
@@ -550,38 +581,47 @@ function search(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
     if (error < bestTotalError) {
       bestTotalError = error
       bestWip3D = wip3D.map(col => col.export(CS.RGBlinear))
-      bestWip2D = wip2D.map(col => col.export(CS.EyePercI))
-      if (objectiveFunctionMode === 0) {
+      if (searchStage === 0) {
         nextSwitch = iterations + stallingPeriod * original.length
-        if (error < bestOfBestTotalError) { // this test would be wrong if the secondary obj function were being used
+        if (error < bestOfBestTotalError) { // this test would be wrong if the climbing obj-function were being used
           bestOfBestIteration = iterations
           bestOfBestTotalError = error
           bestOfBestWip3D = bestWip3D.map(col => col.export(CS.RGBlinear))
-          if (debug) {
-            cons.log('GLOBALLY better set found at it', iterations, bestWip3D.map(col => col.chan))
-          }
+          cons.log('Globally better set found at it', iterations, bestWip3D.map(col => col.chan))
         }
       }
       else if (debug) {
-        cons.log('CLIMBING better set found at it', iterations, bestWip3D.map(col => col.chan))
+        cons.log('Climbing better set found at it', iterations, bestWip3D.map(col => col.chan))
       }
       if (debug) {
         cons.log('Errors:', errors2D)
       }
     }
     if (iterations === nextSwitch) {
-      objectiveFunctionMode = ++objectiveFunctionMode % 2
-      nextSwitch = iterations + (objectiveFunctionMode === 0 ? stallingPeriod : climbingPeriod) * original.length
+      searchStage = ++searchStage % 2
+      nextSwitch = iterations + (searchStage === 0 ? stallingPeriod : climbingPeriod) * original.length
       wip3D = bestWip3D.map(col => col.export(CS.RGBlinear))
-      wip2D = bestWip2D.map(col => col.export(CS.EyePercI))
-      errors2D = bestWip2D.map((col, k) => distError(k, col))
+      if (searchStage === 0) {
+        wip3D.forEach((col) => {
+          // we mess up slightly the work of the climbing obj function
+          const eye = col.export(CS.EyeNormJ)
+          eye.r += rRotation
+          eye.j = 0.1 + 0.8 * eye.j
+          eye.p = 0.1 + 0.8 * eye.p
+          eye.limit()
+          col.import(eye)
+        })
+        rRotation *= -1
+      }
+      wip2D = wip3D.map(col => projectOntoCBPlane(col.chan).export(CS.EyePercI))
+      errors2D = wip2D.map((col, k) => distError(k, col))
       bestTotalError = totalError()
       tabuMoves.length = 0
       for (let k = 0; k < original.length; k++) {
         tabuMoves.push([0, 0, 0])
       }
       if (debug) {
-        cons.log('SWITCH at iteration', iterations, bestWip3D.map(col => col.chan))
+        cons.log('Switch at iteration', iterations, bestWip3D.map(col => col.chan))
       }
     }
   }
@@ -601,7 +641,7 @@ function optimizeOneStepFurther() {
 
   for (let k = 0; k < wip3D.length; k++) {
     triedRGB.import(wip3D[k])
-    const step = 2 / 256
+    const step = (searchStage === 0 ? 2 : 4) / 256
     for (const c of [R, G, B]) {
       for (const s of [-1, +1]) {
         if (tabuMoves[k][c] === s) {
@@ -615,7 +655,7 @@ function optimizeOneStepFurther() {
         if (triedRGB.chan[c] > 1) {
           triedRGB.chan[c] = 1
         }
-        const error = distError(k, projectOnto2D(triedRGB.chan))
+        const error = distError(k, projectOntoCBPlane(triedRGB.chan))
         if (error - errors2D[k] < bestErrorGain) {
           bestErrorGain = error - errors2D[k]
           bestError = error
@@ -629,7 +669,7 @@ function optimizeOneStepFurther() {
     }
   }
   wip3D[bestK].import(bestColor)
-  wip2D[bestK].import(projectOnto2D(bestColor))
+  wip2D[bestK].import(projectOntoCBPlane(bestColor))
   errors2D[bestK] = bestError
   // forbidding only the last move is enough to set to 4 the minimum number of steps required to go back here
   tabuMoves[bestK] = moveToForbid
@@ -639,7 +679,7 @@ const cbSightPO2D = new Eye(CS.EyePercI)
 const rgbPO2D = new RGB(CS.RGBlinear)
 
 /** @returns the projection of `rgb` into the Eye color-space of the color-blind person */
-function projectOnto2D(rgb: number[]): Eye {
+function projectOntoCBPlane(rgb: number[]): Eye {
   switch (blindness) {
     /* The matrices have been calculated by following the prodedure of
      * Viénot, F., Brettel, H., & Mollon, J. D. (1999) "Digital video colourmaps for checking the legibility of displays
@@ -686,11 +726,14 @@ function distError(k: number, wipColor2D: Eye): number {
     const diff = (distancesOrig[k][l] <= 0.001)
       ? distance(wipColor2D, wip2D[l])
       : distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1
-    if (objectiveFunctionMode === 0) {
+    if (searchStage === 0) {
       // normal objective function
-      let error = (diff <= -1) ? 2 ** 16 : 1 / (1 + diff) - 1
-      if (diff > 0) {
-        error /= 4
+      let error: number
+      if (diff < 0) {
+        error = (diff <= -1) ? 2 ** 16 : 1 / (1 + diff) - 1
+      }
+      else {
+        error = diff
       }
       result += error
     }
@@ -726,9 +769,9 @@ for (let i = 0; i < 16; i++) {
 blindness = ColorBlindness.Green
 const randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), blindness)
   .map(obj => obj.color)
-const randColorsCB = randColors.map(col => RGBarrayToCSS(projectOnto2D(RGBgamma.import(
+const randColorsCB = randColors.map(col => RGBarrayToCSS(projectOntoCBPlane(RGBgamma.import(
   CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
-const randColorsEnhancedCB = randColorsEnhanced.map(col => RGBarrayToCSS(projectOnto2D(
+const randColorsEnhancedCB = randColorsEnhanced.map(col => RGBarrayToCSS(projectOntoCBPlane(
   RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
 
 const colorI = new Eye(CS.EyePercI)
