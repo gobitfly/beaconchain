@@ -468,6 +468,51 @@ function distance(eye1: Eye, eye2: Eye): number {
   return Math.sqrt(x * x + y * y + z * z)
 }
 
+const rgbPO2D = new RGB(CS.RGBlinear)
+const cbSightPO2D = new Eye(CS.EyePercI)
+
+/** @param rgb must be in the CS.RGBlinear format
+ *  @param rgbWorkingBuffer if this function is used by threads, each thread must provide one `RGB(CS.RGBlinear)` object
+ *  @param cbWorkingBuffer if this function is used by threads, each thread must provide one `Eye(CS.EyePercI)` object
+ *  @returns the projection of `rgb` into the Eye color-space of the color-blind person */
+function projectOntoCBPlane(rgb: number[], rgbWorkingBuffer?: RGB, cbWorkingBuffer?: Eye): Eye {
+  if (!rgbWorkingBuffer || !cbWorkingBuffer) {
+    rgbWorkingBuffer = rgbPO2D
+    cbWorkingBuffer = cbSightPO2D
+  }
+  switch (colorBlindness) {
+    /* The matrices have been calculated by following the prodedure of
+     * Viénot, F., Brettel, H., & Mollon, J. D. (1999) "Digital video colourmaps for checking the legibility of
+     * displays by dichromats". Color Research and Application, 24, 4, 243-251. */
+    case ColorBlindness.Red :
+      rgbWorkingBuffer.chan[R] = 0.1123822674257492 * rgb[R] + 0.8876119706946073 * rgb[G]
+      rgbWorkingBuffer.chan[G] = rgbWorkingBuffer.chan[R]
+      rgbWorkingBuffer.chan[B] = 0.00400576009958313 * rgb[R] - 0.004005734096601488 * rgb[G] + rgb[B]
+      break
+    case ColorBlindness.Green :
+      for (const k of [R, G, B]) {
+        rgbWorkingBuffer.chan[k] = 0.99 * rgb[k] + 0.005
+      }
+      rgbWorkingBuffer.chan[B] = -0.02233647741916585 * rgbWorkingBuffer.chan[R]
+      + 0.02233656063451689 * rgbWorkingBuffer.chan[G] + rgbWorkingBuffer.chan[B]
+      rgbWorkingBuffer.chan[G] = 0.292750775976202 * rgbWorkingBuffer.chan[R]
+      + 0.7072518589062524 * rgbWorkingBuffer.chan[G]
+      rgbWorkingBuffer.chan[R] = rgbWorkingBuffer.chan[G]
+      for (const k of [R, G, B]) {
+        rgbWorkingBuffer.chan[k] = 0.99 * rgbWorkingBuffer.chan[k] + 0.005
+      }
+      break
+    default :
+      rgbWorkingBuffer.import(rgb)
+      break
+  }
+  // in rare cases, a value can happen to be slightly below 0 or slightly above 1 (the 0—255 range becomes
+  // approximately -3—258).
+  rgbWorkingBuffer.limit()
+  cbWorkingBuffer.import(rgbWorkingBuffer)
+  return cbWorkingBuffer
+}
+
 //
 // COLOR ENHANCER
 //
@@ -475,10 +520,9 @@ function distance(eye1: Eye, eye2: Eye): number {
 type ColorDefinition = { color: string, identifier: string }
 enum ColorBlindness { Red, Green }
 
-const stallingPeriod = 8 // controls how long the progress can stall before the objective func changes to start climbing
-const climbingPeriod = 4 // controls how long the climbing stage lasts
-let rShaking = 0.1 // controls the amount of rotation that `r` endures (to explore new paths)
-const debug = false
+const stallingPeriod = 8 // controls how long the progress can stall before a run of Tabu search is considered finished
+const maxModeDuration = 4 // controls how long the max-Tabu search lasts
+const debug = true
 
 function enhanceColors(colors: ColorDefinition[], colorBlindness: ColorBlindness): ColorDefinition[] {
   const original = []
@@ -491,8 +535,9 @@ function enhanceColors(colors: ColorDefinition[], colorBlindness: ColorBlindness
     rgb.import(CSStoRGBarray(def.color))
     original.push(rgb)
   }
-
-  const enhanced = runOptimizer(original, colorBlindness)
+  const startTime = performance.now()
+  const enhanced = runOptimizer(original, colorBlindness) // 🪄✨
+  cons.log('Time spent: ', Math.round((performance.now() - startTime) / 1000), 's.')
 
   const result: ColorDefinition[] = []
   for (let c = 0; c < colors.length; c++) {
@@ -520,247 +565,265 @@ function RGBarrayToCSS(RGB: number[]): string {
   return '#' + hex
 }
 
-let blindness: ColorBlindness
-let original: RGB[] // CS.RGBlinear
+let colorBlindness: ColorBlindness
+let originalColors: RGB[] // CS.RGBlinear
 let distancesOrig: number[][]
-let wip3D: RGB[] // CS.RGBlinear
-let wip2D: Eye[] // CS.EyePercI
-let errors2D: number[]
-const tabuMoves: Array<number[]> = []
-let searchStage: number = 0
-let bestOfBestTotalError = Number.MAX_SAFE_INTEGER
+let searchDepth: number
 
 /** @param input must be in the CS.RGBgamma format.
  * @returns enchanced colors in the CS.RGBgamma format
  */
-function runOptimizer(input: RGB[], colorBlindness: ColorBlindness): RGB[] {
-  blindness = colorBlindness
-  original = input.map(col => col.export(CS.RGBlinear))
+function runOptimizer(input: RGB[], blindness: ColorBlindness): RGB[] {
+  // first, calculation of the information needed by the instances of the tabu searcher
+  colorBlindness = blindness
+  originalColors = input.map(col => col.export(CS.RGBlinear))
   distancesOrig = []
-  const originalEye = original.map(col => col.export(CS.EyePercI))
-  const line: number[] = []
+  const originalEye = originalColors.map(col => col.export(CS.EyePercI))
   for (const colA of originalEye) {
-    line.length = 0
+    const line: number[] = []
     for (const colB of originalEye) {
       line.push(distance(colA, colB))
     }
-    distancesOrig.push([...line])
+    distancesOrig.push(line)
   }
   if (debug) {
     cons.log('Original distances:', distancesOrig)
   }
+  searchDepth = 4000 * originalColors.length
 
-  const originalError = loadSearchBuffers(original)
-  const resultShaked = search(input, colorBlindness, true)
-  const errorShaked = bestOfBestTotalError
-  loadSearchBuffers(original)
-  const resultUndisturbed = search(input, colorBlindness, false)
-  const errorUndisturbed = bestOfBestTotalError
-  cons.log('Globlal difference between distances before search:', originalError)
-  if (errorShaked < errorUndisturbed) {
-    cons.log('The search thread with disturbances produced the best result, the globlal difference between distances is', errorShaked, 'vs', errorUndisturbed)
-    return resultShaked
-  }
-  else {
-    cons.log('The search thread without disturbances produced the best result, the globlal difference between distances is', errorUndisturbed, 'vs', errorShaked)
-    return resultUndisturbed
-  }
-}
+  // now, search phase
+  let currentDepth = 0
+  let disturbanceMode = 0
+  const tabuSum = new TabuSearcher(SearchMode.Sum, true)
+  const tabuMax = new TabuSearcher(SearchMode.Max, false)
+  const shaker = new Shaker(SearchMode.Max, false)
+  let bestError = 2.0 ** 24
+  let bestFinding: RGB[] = []
+  let bestIteration = 0
+  tabuSum.prepareSearch(originalColors, currentDepth)
+  cons.log('Measurement of distance errors before search:', tabuSum.bestError)
 
-function search(input: RGB[], colorBlindness: ColorBlindness, shaking: boolean): RGB[] {
-  const startTime = performance.now()
-  const finalIteration = 4000 * original.length // 4000 is recommended after some empirical study
-  let iterations = 0
-  let bestOfBestIteration = 0
-  let nextSwitch = 0
-  bestOfBestTotalError = Number.MAX_SAFE_INTEGER
-  let bestTotalError = Number.MAX_SAFE_INTEGER
-  let bestOfBestWip3D: Array<RGB> = []
-  let bestWip3D: Array<RGB> = []
-  searchStage = 0
-  while (iterations < finalIteration) {
-    iterations++
-    optimizeOneStepFurther()
-    const error = totalError()
-    if (error < bestTotalError) {
-      bestTotalError = error
-      bestWip3D = wip3D.map(col => col.export(CS.RGBlinear))
-      if (searchStage === 0) {
-        nextSwitch = iterations + stallingPeriod * original.length
-        if (error < bestOfBestTotalError) { // this test would be wrong if the climbing obj-function were being used
-          bestOfBestIteration = iterations
-          bestOfBestTotalError = error
-          bestOfBestWip3D = bestWip3D.map(col => col.export(CS.RGBlinear))
-          if (debug) {
-            cons.log('Globally better set found at it', iterations, bestWip3D.map(col => col.chan))
-          }
-        }
-      }
-      else if (debug) {
-        cons.log('Climbing better set found at it', iterations, bestWip3D.map(col => col.chan))
-      }
+  while (currentDepth < searchDepth) {
+    let betterSolutionFound = false
+    tabuSum.search()
+    if (tabuSum.bestError < bestError) {
+      betterSolutionFound = true
+      bestError = tabuSum.bestError
+      bestFinding = tabuSum.bestWip3D
+      bestIteration = currentDepth + tabuSum.bestIteration
       if (debug) {
-        cons.log('Errors:', errors2D)
+        cons.log('Globally-better set found at iteration', bestIteration)
       }
     }
-    if (iterations === nextSwitch) {
-      searchStage = ++searchStage % 2
-      nextSwitch = iterations + (searchStage === 0 ? stallingPeriod : climbingPeriod) * original.length
-      if (shaking && searchStage === 0) {
-        rShaking *= -1
-        bestWip3D.forEach((col) => {
-          // we mess up slightly the work of the climbing obj function
-          const eye = col.export(CS.EyeNormJ)
-          eye.r += rShaking
-          eye.j = 0.1 + 0.8 * eye.j
-          eye.p = 0.1 + 0.8 * eye.p
-          eye.limit()
-          col.import(eye)
-        })
-      }
-      bestTotalError = loadSearchBuffers(bestWip3D)
-      if (debug) {
-        cons.log('Switch at iteration', iterations)
-      }
+    currentDepth += tabuSum.iterated
+    if (currentDepth >= searchDepth) {
+      break
     }
+    let toBeImproved: RGB[]
+    disturbanceMode = (++disturbanceMode) % 2
+    if (disturbanceMode) {
+      tabuMax.prepareSearch(betterSolutionFound ? bestFinding : tabuSum.wip3D, currentDepth)
+      tabuMax.search()
+      toBeImproved = tabuMax.bestWip3D
+      currentDepth += tabuMax.iterated
+    }
+    else {
+      shaker.prepareSearch(bestFinding, currentDepth)
+      shaker.search()
+      toBeImproved = shaker.bestWip3D
+      currentDepth += shaker.iterated
+    }
+    tabuSum.prepareSearch(toBeImproved, currentDepth)
   }
-  cons.log('Iterated', iterations, 'times in ', Math.round((performance.now() - startTime) / 1000), ' s. Best color set found at iteration', bestOfBestIteration)
-  // 🪄✨
-  return bestOfBestWip3D.map(col => col.export(CS.RGBgamma))
+
+  cons.log('Iterated', currentDepth, 'times. Best color set found at iteration', bestIteration)
+  cons.log('Measurement of distance errors after search:', bestError)
+  return bestFinding.map(col => col.export(CS.RGBgamma))
 }
 
-const triedRGB = new RGB(CS.RGBlinear)
-
-function optimizeOneStepFurther() {
-  let bestK: number = 0
-  let bestError: number = 0
-  let bestErrorGain: number = Number.MAX_SAFE_INTEGER
-  let moveToForbid: number[] = []
-  let bestColor: number[] = []
-
-  for (let k = 0; k < wip3D.length; k++) {
-    triedRGB.import(wip3D[k])
-    const step = (searchStage === 0 ? 2 : 4) / 256
-    for (const c of [R, G, B]) {
-      for (const s of [-1, +1]) {
-        if (tabuMoves[k][c] === s) {
-          continue
-        }
-        const restoredValue = triedRGB.chan[c]
-        triedRGB.chan[c] += s * step
-        if (triedRGB.chan[c] < 0) {
-          triedRGB.chan[c] = 0
-        }
-        if (triedRGB.chan[c] > 1) {
-          triedRGB.chan[c] = 1
-        }
-        const error = distError(k, projectOntoCBPlane(triedRGB.chan))
-        if (error - errors2D[k] < bestErrorGain) {
-          bestErrorGain = error - errors2D[k]
-          bestError = error
-          bestK = k
-          moveToForbid = [0, 0, 0]
-          moveToForbid[c] = -s
-          bestColor = [...triedRGB.chan]
-        }
-        triedRGB.chan[c] = restoredValue
-      }
-    }
-  }
-  wip3D[bestK].import(bestColor)
-  wip2D[bestK].import(projectOntoCBPlane(bestColor))
-  errors2D[bestK] = bestError
-  // forbidding only the last move is enough to set to 4 the minimum number of steps required to go back here
-  tabuMoves[bestK] = moveToForbid
+enum SearchMode {
+  Sum,
+  Max,
 }
 
-const cbSightPO2D = new Eye(CS.EyePercI)
-const rgbPO2D = new RGB(CS.RGBlinear)
+class Searcher {
+  iterated = 0
+  bestIteration = 0
+  bestError = 2.0 ** 24
+  bestWip3D: RGB[] = []
+  protected maxIterations = 0
+  protected willStallAt = 0
+  protected computationMode: SearchMode
+  protected watchStalling = false
+  protected tabuMoves: Array<number[]> = []
+  wip3D: RGB[] = [] // CS.RGBlinear
+  protected wip2D: Eye[] = [] // CS.EyePercI
+  protected errors2D: number[] = []
+  /** must be passed to `projectOntoCBPlane()` at every call made from this class */
+  protected rgbProjectionBuffer = new RGB(CS.RGBlinear)
+  /** must be passed to `projectOntoCBPlane()` at every call made from this class */
+  protected cbProjectionBuffer = new Eye(CS.EyePercI)
 
-/** @returns the projection of `rgb` into the Eye color-space of the color-blind person */
-function projectOntoCBPlane(rgb: number[]): Eye {
-  switch (blindness) {
-    /* The matrices have been calculated by following the prodedure of
-     * Viénot, F., Brettel, H., & Mollon, J. D. (1999) "Digital video colourmaps for checking the legibility of displays
-     * by dichromats". Color Research and Application, 24, 4, 243-251. */
-    case ColorBlindness.Red :
-      rgbPO2D.chan[R] = 0.1123822674257492 * rgb[R] + 0.8876119706946073 * rgb[G]
-      rgbPO2D.chan[G] = rgbPO2D.chan[R]
-      rgbPO2D.chan[B] = 0.00400576009958313 * rgb[R] - 0.004005734096601488 * rgb[G] + rgb[B]
-      break
-    case ColorBlindness.Green :
-      for (const k of [R, G, B]) {
-        rgbPO2D.chan[k] = 0.99 * rgb[k] + 0.005
-      }
-      rgbPO2D.chan[R] = 0.292750775976202 * rgbPO2D.chan[R] + 0.7072518589062524 * rgbPO2D.chan[G]
-      rgbPO2D.chan[G] = rgbPO2D.chan[R]
-      rgbPO2D.chan[B] = -0.02233647741916585 * rgbPO2D.chan[R] + 0.02233656063451689 * rgbPO2D.chan[G] + rgbPO2D.chan[B]
-      for (const k of [R, G, B]) {
-        rgbPO2D.chan[k] = 0.99 * rgbPO2D.chan[k] + 0.005
-      }
-      break
-    default :
-      rgbPO2D.import(rgb)
-      break
+  /** @param watchStalling if false, the loop stops after its predefined number of iterations, each better solution does
+   *  not restart the count.
+   */
+  constructor(computationMode: SearchMode, watchStalling: boolean) {
+    this.computationMode = computationMode
+    this.watchStalling = watchStalling
   }
-  // in rare cases, a value can happen to be slightly below 0 or slightly above 1 (the 0—255 range would become
-  // approximately -3—258).
-  rgbPO2D.limit()
-  cbSightPO2D.import(rgbPO2D)
-  return cbSightPO2D
-}
 
-/** for a given color `k` stored in `wipColor2D`, this function calculates a value that reflects
- *    the sum over all colors `l` of
- *      the difference between:
- *        the distance between the original colors k and l
- *        the distance between the projected colors `wipColor2D` and l */
-function distError(k: number, wipColor2D: Eye): number {
-  let result = 0
-  for (let l = 0; l < distancesOrig.length; l++) {
-    if (k === l) {
-      continue
+  prepareSearch(source: RGB[], startingDepth: number): void {
+    this.maxIterations = (this.computationMode === SearchMode.Sum)
+      ? searchDepth - startingDepth
+      : maxModeDuration * originalColors.length
+    this.iterated = 0
+    this.bestIteration = 0
+    this.tabuMoves.length = 0
+    for (let k = 0; k < source.length; k++) {
+      this.tabuMoves.push([0, 0, 0])
     }
-    // -1 means that dist(k,l) for the CB person is much shorter (not good), 0 means equal (perfect), > 0 means longer
-    const diff = (distancesOrig[k][l] <= 0.001)
-      ? distance(wipColor2D, wip2D[l])
-      : distance(wipColor2D, wip2D[l]) / distancesOrig[k][l] - 1
-    if (searchStage === 0) {
-      // normal objective function
+    // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way
+    // that they get more and more distinguishable when viewed by a color blind person
+    this.wip3D = source.map(col => col.export(CS.RGBlinear))
+    this.bestWip3D = this.wip3D
+    this.bestError = this.totalError(false) // this calls fills `wip2D` and `errors2D`
+    this.shiftStallingLimit()
+  }
+
+  search: undefined | (() => void)
+
+  /** the implementation of `search()` calls it when it finds a better solution, to postpone the stalling limit */
+  protected shiftStallingLimit(): void {
+    if (this.watchStalling) {
+      this.willStallAt = this.iterated
+      + (this.computationMode === SearchMode.Sum ? stallingPeriod : maxModeDuration) * originalColors.length
+    }
+    else {
+      this.willStallAt = this.maxIterations
+    }
+  }
+
+  /** for a given color k stored in `wipColor2D`, this function calculates a value that reflects
+   *    the sum over every color l of
+   *      the difference between:
+   *        the distance between the original colors k and l
+   *        the distance between the projected colors `wipColor2D` and l */
+  protected distError(k: number, wipColor2D: Eye): number {
+    let result = 0.0
+    for (let l = 0; l < distancesOrig.length; l++) {
+      if (k === l) {
+        continue
+      }
+      // -1 means that dist(k,l) for the CB person is much shorter (not good), 0 means equal (perfect), > 0 means longer
+      const diff = (distancesOrig[k][l] <= 0.001)
+        ? distance(wipColor2D, this.wip2D[l])
+        : distance(wipColor2D, this.wip2D[l]) / distancesOrig[k][l] - 1
       let error: number
       if (diff < 0) {
-        error = (diff <= -1) ? 2 ** 16 : 1 / (1 + diff) - 1
+        error = (diff <= -1) ? 2.0 ** 16 : 1 / (1 + diff) - 1
       }
       else {
-        error = diff
+        error = 0 // larger distances do not penalize, but we do not want to allow them to compensate for shorter ones
       }
       result += error
     }
-    else {
-      // climbing objective function
-      result = Math.max(result, -diff)
+    return result
+  }
+
+  protected totalError(errors2DisUpToDate: boolean): number {
+    if (!errors2DisUpToDate) {
+      this.wip2D = this.wip3D.map(
+        col => projectOntoCBPlane(col.chan, this.rgbProjectionBuffer, this.cbProjectionBuffer).export(CS.EyePercI))
+      this.errors2D = this.wip2D.map((col, k) => this.distError(k, col))
+    }
+    const initial = (this.computationMode === SearchMode.Sum) ? 0.0 : -(2.0 ** 16)
+    return this.errors2D.reduce(
+      (prev, curr) => (this.computationMode === SearchMode.Sum) ? prev + curr : Math.max(prev, curr),
+      initial)
+  }
+}
+
+class TabuSearcher extends Searcher {
+  override search = () => {
+    const errorBefore = this.bestError
+    while (this.iterated < this.maxIterations && this.iterated < this.willStallAt) {
+      const error = this.totalError(true)
+      if (error < this.bestError) {
+        this.bestError = error
+        this.bestIteration = this.iterated
+        this.bestWip3D = this.wip3D.map(col => col.export(CS.RGBlinear))
+        this.shiftStallingLimit()
+      }
+      this.optimizeOneStepFurther()
+      this.iterated++
+    }
+    if (debug) {
+      cons.log('Tabu search, mode', this.computationMode, '. Iterated', this.iterated, 'times. Distance errors: before', errorBefore, 'after', this.bestError)
     }
   }
-  return result
-}
 
-function totalError(): number {
-  return errors2D.reduce((prev, curr) => prev + curr, 0)
-}
+  protected triedRGB = new RGB(CS.RGBlinear)
 
-function loadSearchBuffers(source: RGB[]): number {
-  tabuMoves.length = 0
-  for (let k = 0; k < source.length; k++) {
-    tabuMoves.push([0, 0, 0])
+  protected optimizeOneStepFurther() {
+    let bestK: number = 0
+    let lowestError: number = 0
+    let bestErrorGain: number = 2.0 ** 24
+    let moveToForbid: number[] = []
+    let bestColor: number[] = []
+
+    for (let k = 0; k < this.wip3D.length; k++) {
+      this.triedRGB.import(this.wip3D[k])
+      const step = (this.computationMode === SearchMode.Sum ? 2 : 4) / 256
+      for (const c of [R, G, B]) {
+        for (const s of [-1, +1]) {
+          if (this.tabuMoves[k][c] === s) {
+            continue
+          }
+          const restoredValue = this.triedRGB.chan[c]
+          this.triedRGB.chan[c] += s * step
+          if (this.triedRGB.chan[c] < 0) {
+            this.triedRGB.chan[c] = 0
+          }
+          if (this.triedRGB.chan[c] > 1) {
+            this.triedRGB.chan[c] = 1
+          }
+          const error = this.distError(k, projectOntoCBPlane(this.triedRGB.chan, this.rgbProjectionBuffer, this.cbProjectionBuffer))
+          if (error - this.errors2D[k] < bestErrorGain) {
+            bestErrorGain = error - this.errors2D[k]
+            lowestError = error
+            bestK = k
+            moveToForbid = [0, 0, 0]
+            moveToForbid[c] = -s
+            bestColor = [...this.triedRGB.chan]
+          }
+          this.triedRGB.chan[c] = restoredValue
+        }
+      }
+    }
+    this.wip3D[bestK].import(bestColor)
+    this.wip2D[bestK].import(projectOntoCBPlane(bestColor, this.rgbProjectionBuffer, this.cbProjectionBuffer))
+    this.errors2D[bestK] = lowestError
+    // forbidding only the last move is enough to set to 4 the minimum number of steps required to go back here
+    this.tabuMoves[bestK] = moveToForbid
   }
-  // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way that
-  // they get more and more distinguishable when viewed by a color blind person
-  wip3D = source.map(col => col.export(CS.RGBlinear))
-  // projecting the original colors into wip2D: they are the starting point and the search phase will make them more
-  // and more distinguishable at each iteration
-  wip2D = wip3D.map(col => projectOntoCBPlane(col.chan).export(CS.EyePercI))
-  errors2D = wip2D.map((col, k) => distError(k, col))
-  return totalError()
+}
+
+class Shaker extends Searcher {
+  override search = () => {
+    if (debug) {
+      cons.log('Shaking.')
+    }
+    this.wip3D.forEach((col) => {
+      const eye = col.export(CS.EyeNormJ)
+      eye.r += 1 / 6 * (1 - 2 * Math.random())
+      eye.j = 0.1 + 0.8 * eye.j
+      eye.p = 0.1 + 0.8 * eye.p
+      eye.limit()
+      col.import(eye)
+    })
+    this.bestWip3D = this.wip3D.map(col => col.export(CS.RGBlinear))
+    this.bestError = this.totalError(false)
+  }
 }
 
 //
@@ -780,8 +843,7 @@ for (let i = 0; i < 16; i++) {
   }
   randColors.push(color)
 }
-blindness = ColorBlindness.Green
-const randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), blindness)
+const randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), ColorBlindness.Green)
   .map(obj => obj.color)
 const randColorsCB = randColors.map(col => RGBarrayToCSS(projectOntoCBPlane(RGBgamma.import(
   CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
