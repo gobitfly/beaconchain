@@ -1,528 +1,9 @@
 <script lang="ts" setup>
 import { warn } from 'vue'
-
-enum CS {
-  /** RGB values between 0-1 and linear with respect to light intensity */
-  RGBlinear,
-  /** RGB values between 0-255 and including a gamma exponent of 2.2 (the standard way to store images) */
-  RGBgamma,
-  /** RPI values (rainbow color, purity, intensity) whose `i` follows the intensity of the light that a human eye
-   * perceive (for a given `i`, all colors that you get with various `r` and `p` produce the same intensity for the
-   * human eye). Caution: some values of `i` are out-of-range for certain `r` and `p` values (meaning that they would
-   * correspond to RGB values greater than 255). */
-  EyePercI,
-  /** RPJ values (rainbow color, purity, intensity) whose `j` is equivalent to `i/iMax` in the `CS.EyePercI` variant, so
-   * `j` is free to take any value between 0 and 1 (so, for a given `j`, the colors that you get with various `r` and
-   * `p` produce different intensities for the human eye, whereas the `CS.EyePercI` variant ensures that `i` represents
-   * a constant perceived intensity whatever the color is) */
-  EyeNormJ,
-}
-type Channel = 0 | 1 | 2
-const R: Channel = 0
-const G: Channel = 1
-const B: Channel = 2
-const gamma = 2.2
-const gammaInv = 1 / gamma
-const SmallestValue = 0.95 * (1 / 255) ** gamma
-
-/** Classical color space in two variants (depending on the parameter given to the constructor) :
- *  - either the values are between 0-1 and linear with respect to light intensity,
- *  - or the values are between 0-255 and include a gamma exponent of 2.2 (the standard way to store images). */
-class RGB {
-  readonly space: CS
-  /** Read and write individually the values of the primary channels here. You cannot assign an array directly.
-   * To assign a whole array, use method `import()`. */
-  readonly chan: number[]
-
-  /** @param space if `CS.RGBlinear` is given, the values will be between 0-1 and linear with respect to light
-   * intensity;
-   * if `CS.RGBgamma` is given, the values will be between 0-255 and include a gamma exponent of 2.2 (the standard way
-   * to store images). */
-  constructor(space: CS) {
-    if (space !== CS.RGBlinear && space !== CS.RGBgamma) {
-      throw new Error('a RGB object can carry RGB information only')
-    }
-    this.space = space
-    this.chan = [0, 0, 0]
-  }
-
-  /** Copies a RGB or Eye instance into the current RGB instance. A regular array of 3 values can also be given (in this
-   * order: R,G,B).
-   * For RGB and Eye objects, color spaces are automatically converted into the color space of the current RGB instance
-   * if they differ.
-   * If a regular array of numbers is given, its values are expected to be compatible with the color space of the
-   * current instance (either linear RGB or gamma-shaped RGB).
-   * @returns the instance that you import into (so not the parameter) */
-  import(from: number[] | RGB | Eye): RGB {
-    if (Array.isArray(from) || from.space === this.space) {
-      if (!Array.isArray(from)) {
-        from = (from as RGB).chan
-      }
-      for (const k of [R, G, B]) {
-        this.chan[k] = from[k]
-      }
-    }
-    else {
-      switch (from.space) {
-        case CS.RGBlinear :
-          for (const k of [R, G, B]) {
-            this.chan[k] = Math.round(((from as RGB).chan[k] ** gammaInv) * 255)
-          }
-          break
-        case CS.RGBgamma :
-          for (const k of [R, G, B]) {
-            this.chan[k] = ((from as RGB).chan[k] / 255) ** gamma
-          }
-          break
-        case CS.EyePercI :
-        case CS.EyeNormJ :
-          from.export(this)
-          break
-      }
-    }
-    return this
-  }
-
-  /** Copies this RGB instance into another RGB or Eye instance.
-   * The color space of the current instance is automatically converted into the color space of the target instance if
-   * needed.
-   * @param to existing instance to fill, or if the identifier of a color space is given instead of an object, `export`
-   * creates an instance for you, fills it and returns it.
-   * @returns target instance (same as `to` if `to` was an instance) */
-  export(to: RGB | Eye | CS): RGB & Eye {
-    if (typeof to !== 'object') {
-      to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
-    }
-    to.import(this)
-    return to as RGB & Eye
-  }
-
-  /** corrects channel values that are not within the limits of the format (0-1 or 0-255) */
-  limit(): void {
-    const max = (this.space === CS.RGBlinear) ? 1 : 255
-    for (const k of [R, G, B]) {
-      if (this.chan[k] < 0) {
-        this.chan[k] = 0
-      }
-      else if (this.chan[k] > max) {
-        this.chan[k] = max
-      }
-    }
-  }
-}
-
-/** Color space close to human perception, in two variants (depending on the parameter given to the constructor) :
- * - either the intensity of the light is stored in `i` and follows what a human eye perceives (so a blue and a green
- * having the same `i` will feel as luminous as each other),
- * - or it is stored in `j` and is normalized so it can take any value between 0 and 1. */
-class Eye {
-  readonly space: CS
-  /** Read and write the perceived rainbow color here. It indicates where the color is on the rainbow. */
-  r: number
-  /** Read and write the perceived purity here. It indicates how much of the pure color `r` is added to white. */
-  p: number
-  /** Read and write the perceived intensity of the light here. It is not normalized because `r` and `p` determine the
-   * maximum intensity that can be perceived and it is often less than 1.
-   * If needed, property `iMax` tells the maximum value that `i` can hold for the current values of `r` and `p`.
-   * `i` makes sense only if `CS.EyePercI` has been passed to the constructor, otherwise its value is undefined and
-   * setting a value has no effect. */
-  i: number
-  /** Read and write the normalized intensity of the light here. Any value between 0 and 1 is possible.
-   * `j` makes sense only if `CS.EyeNormJ` has been passed to the constructor, otherwise its value is undefined and
-   * setting a value has no effect. */
-  j: number
-  /** Maximum value that `i` can have for the current values of `r` and `p`. The intensity that a human perceives
-   *  depends on the color. For example, in RGB (so on all monitors) a 255 blue looks less bright than a 255 green so
-   *  the `iMax` of blue is lower than the `iMax` of green.
-   *  If you set `i` to a value higher than `iMax`, the color will correspond to RGB values greater than 255.
-   * `iMax` is kept up-to-date automatically when you change `r` or `p`. */
-  get iMax(): number {
-    if (this.Imax.rOfValue !== this.r || this.Imax.pOfValue !== this.p) {
-      /* calculates the RGB values for the current r and p, with a standardized intensity value (the smallest iMax
-       * possible) so the RGB cannot be black */
-      this.convertToRGB(Eye.rgbLinear, Eye.lowestImax)
-      const h = Eye.RGBtoHighestChannel(Eye.rgbLinear.chan)
-      this.Imax.value = Eye.lowestImax / (Eye.rgbLinear.chan[h] ** gammaInv)
-      this.Imax.rOfValue = this.r
-      this.Imax.pOfValue = this.p
-    }
-    return this.Imax.value
-  }
-
-  // constants of our perception model, all obtained empirically
-  /** sensitivity of the human eye to primaries, used to calculate the perceived intensity when channels add */
-  protected static readonly sensicol = [15, 20, 5]
-  /* controls the linearity of the perceived color with respect to r when primaries mix together to form a pure
-  intermediary */
-  protected static readonly rPowers = [1.2, 1.6, 0.9]
-  /* perceived ability of the primaries to tint a white light when added to it (controls the width of the the grey part
-  in a row where the purity goes from 0 to 1) */
-  protected static readonly overwhite = [0.6, 1, 0.6]
-  /*  when the primaries of a given color are ordered by perceived intensities (so by `value * sensicol`), tells how
-  much the second perceived dimmest contribute to the perceived intensity of the mix of the three */
-  protected static readonly iotaM = 0.15
-  /** when the primaries of a given color are ordered by perceived intensities(so by `value * sensicol`), tells how much
-   * the perceived dimmest contribute to the perceived intensity of the mix of the three */
-  protected static readonly iotaD = 0.15
-  // the next 2 constants will be filled by the constructor
-  protected static readonly sensicolNorm = [0, 0, 0]
-  protected static readonly rPowersInv = [0, 0, 0]
-  protected static readonly Idivider = Eye.sensicol[R] * Eye.iotaM + Eye.sensicol[G] + Eye.sensicol[B] * Eye.iotaD
-
-  /** Among all possible colors, this is the lowest `iMax` than can be met. In other words, the intensity `i` can be set
-   * to `lowestImax` for any `r` and `p`. Greater values of `i` will be impossible for some colors. */
-  static readonly lowestImax = (Eye.sensicol[B] / Eye.Idivider) ** gammaInv
-
-  /**
-   * @param space if `CS.EyePercI` is given, the intensity of the light will be stored in `i` and follow what a human
-   * eye perceives; if `CS.EyeNormJ` is given, the intensity will be stored in `j` and normalized so it can take any
-   * value between 0 and 1. */
-  constructor(space: CS) {
-    if (space !== CS.EyePercI && space !== CS.EyeNormJ) {
-      throw new Error('an Eye object can carry RPI/J information only')
-    }
-    if (!Eye.sensicolNorm[0]) {
-      for (const k of [R, G, B]) {
-        Eye.sensicolNorm[k] = Eye.sensicol[k] / Eye.Idivider
-        Eye.rPowersInv[k] = 1 / Eye.rPowers[k]
-      }
-    }
-    this.space = space
-    this.r = this.p = this.i = this.j = 0
-  }
-
-  private Imax = {
-    value: 0,
-    rOfValue: -1,
-    pOfValue: -1,
-  }
-
-  protected static rgbLinear = new RGB(CS.RGBlinear)
-  protected static rgbGamma = new RGB(CS.RGBgamma)
-
-  /** Copies a RGB or Eye object or an array of values into the current Eye instance.
-   * Color spaces are automatically converted into the color space of the current Eye instance if they differ.
-   * If an array of values is given, it is assumed to contain gamma-shaped RGB.
-   * @returns the instance that you import into (so not the parameter) */
-  import(from: RGB | Eye | number[]): Eye {
-    if (Array.isArray(from)) {
-      from = Eye.rgbGamma.import(from)
-    }
-    if (from.space === CS.RGBgamma) {
-      from = Eye.rgbLinear.import(from)
-    }
-    if (from.space === CS.RGBlinear) {
-      // conversion of RGB into Eye
-      const rgb = (from as RGB).chan
-      const l = Eye.RGBtoLowestChannel(rgb)
-      const [h1, h2] = Eye.lowestChanToAnchors(l)
-      const anchor2Contribution = (rgb[h2] - rgb[l])
-      const anchors12Contributions = (rgb[h1] - rgb[l]) + anchor2Contribution
-      if (anchors12Contributions < SmallestValue) { // the 3 channels are equal, so we have black, grey or white
-        this.r = 0.5
-        this.p = 0
-      }
-      else {
-        let d = anchor2Contribution / anchors12Contributions
-        if (d < 1 / 2) {
-          d = (2 * d) ** Eye.rPowers[h1] / 2
-        }
-        else {
-          d = (2 * d - 1) ** Eye.rPowersInv[h2] / 2 + 1 / 2
-        }
-        this.r = (h1 + d) / 3
-        const w = (rgb[h1] - rgb[l]) * Eye.overwhite[h1] + (rgb[h2] - rgb[l]) * Eye.overwhite[h2]
-        this.p = w / (rgb[l] + w)
-      }
-      this.fillIntensityFromRGB(rgb)
-    }
-    else {
-      from = from as Eye // for the static checker
-      this.r = from.r
-      this.p = from.p
-      this.i = from.i
-      this.j = from.j
-      this.Imax.value = from.Imax.value
-      this.Imax.rOfValue = from.Imax.rOfValue
-      this.Imax.pOfValue = from.Imax.pOfValue
-      if (from.space !== this.space) {
-        if (this.space === CS.EyePercI) {
-          this.i = this.j * this.iMax
-        }
-        else {
-          this.j = this.i / from.iMax
-        }
-      }
-    }
-    return this
-  }
-
-  /** Copies this Eye instance into another RGB or Eye instance, or in a gamma-shaped RGB array.
-   * The color space of the current instance is automatically converted into the color space of the target instance if
-   * needed.
-   * @param to existing instance or array to fill, or if the identifier of a color space is given instead of an object,
-   * `export` creates an instance for you, fills it and returns it.
-   * @returns target instance or array (same as `to` if `to` was an instance or an array) */
-  export(to: RGB | Eye | CS | number[]): RGB & Eye & number[] {
-    if (Array.isArray(to)) {
-      this.convertToRGB(Eye.rgbLinear, this.i)
-      Eye.rgbGamma.import(Eye.rgbLinear)
-      for (const k of [R, G, B]) {
-        to[k] = Eye.rgbGamma.chan[k]
-      }
-    }
-    else {
-      if (typeof to !== 'object') {
-        to = (to === CS.RGBlinear || to === CS.RGBgamma) ? new RGB(to) : new Eye(to)
-      }
-      if (to.space === CS.EyePercI || to.space === CS.EyeNormJ) {
-        to.import(this)
-      }
-      else
-        if (to.space === CS.RGBgamma) {
-          this.convertToRGB(Eye.rgbLinear, this.i)
-          to.import(Eye.rgbLinear)
-        }
-        else {
-          this.convertToRGB(to as RGB, this.i)
-        }
-    }
-    return to as RGB & Eye & number[]
-  }
-
-  /* shifts `r` into [0-1] and trims `p` and `i` or `j` if they exceed their respective limits */
-  limit(): void {
-    if (this.r < 0) {
-      this.r = 1 - ((-this.r) % 1)
-    }
-    else if (this.r > 1) {
-      this.r = this.r % 1
-    }
-    if (this.p < 0) {
-      this.p = 0
-    }
-    else if (this.p > 1) {
-      this.p = 1
-    }
-    if (this.space === CS.EyePercI) {
-      if (this.i < 0) {
-        this.i = 0
-      }
-      else if (this.i > this.iMax) {
-        this.i = this.iMax
-      }
-    }
-    else {
-      if (this.j < 0) {
-        this.j = 0
-      }
-      else if (this.j > 1) {
-        this.j = 1
-      }
-    }
-  }
-
-  protected convertToRGB(to: RGB, i: number): void {
-    const [l, , h] = Eye.rToChannelOrder(this.r)
-    const [h1, h2] = Eye.lowestChanToAnchors(l)
-    const ratio = [0, 0, 0]
-    const p = this.p
-    let d = 3 * this.r - h1
-    if (d < 1 / 2) {
-      d = (2 * d) ** Eye.rPowersInv[h1] / 2
-    }
-    else {
-      d = (2 * d - 1) ** Eye.rPowers[h2] / 2 + 1 / 2
-    }
-    if ((d < SmallestValue && p > (1 - SmallestValue)) || (this.space === CS.EyePercI && i < SmallestValue)
-      || (this.space === CS.EyeNormJ && this.j < SmallestValue)) {
-      to.chan[l] = 0
-      to.chan[h1] = (this.space === CS.EyePercI) ? i ** gamma / Eye.sensicolNorm[h1] : this.j ** gamma
-      to.chan[h2] = 0
-    }
-    else {
-      const S = (1 - p) * (d * Eye.overwhite[h2] + (1 - d) * Eye.overwhite[h1])
-      const T = p * d
-      const U = S + T
-      ratio[l] = S / U
-      ratio[h1] = (p - T) / U + ratio[l]
-      ratio[h2] = 1
-      if (this.space === CS.EyePercI) {
-        const Ir = [Eye.sensicolNorm[R] * ratio[R], Eye.sensicolNorm[G] * ratio[G], Eye.sensicolNorm[B] * ratio[B]]
-        const [x, y, z] = Eye.RGBtoChannelOrder(Ir)
-        to.chan[h2] = i ** gamma / (Ir[x] * Eye.iotaD + Ir[y] * Eye.iotaM + Ir[z])
-        to.chan[h1] = to.chan[h2] * ratio[h1]
-      }
-      else {
-        to.chan[h] = this.j ** gamma
-        if (h === h2) {
-          to.chan[h1] = to.chan[h2] * ratio[h1]
-        }
-        else {
-          to.chan[h2] = to.chan[h1] / ratio[h1] // if h ≠ h2 then h1 is the highest channel so ratio[h1] > 0
-        }
-      }
-      to.chan[l] = to.chan[h2] * ratio[l]
-    }
-  }
-
-  protected fillIntensityFromRGB(rgb: number[]): void {
-    if (this.space === CS.EyePercI) {
-      const I = [Eye.sensicolNorm[R] * rgb[R], Eye.sensicolNorm[G] * rgb[G], Eye.sensicolNorm[B] * rgb[B]]
-      const [x, y, z] = Eye.RGBtoChannelOrder(I)
-      this.i = (I[x] * Eye.iotaD + I[y] * Eye.iotaM + I[z]) ** gammaInv
-    }
-    else {
-      const h = Eye.RGBtoHighestChannel(rgb)
-      // due to our definitions of r and p, rgb[h] turns out to be the ratio between i (no matter how i is calculated)
-      // and the maximum i that could be reached with r and p constant
-      this.j = rgb[h] ** gammaInv
-    }
-  }
-
-  /** @returns the channel carrying the lowest value. In case of equality(ies), B is preferred over R and R is preferred
-   * over G. */
-  protected static RGBtoLowestChannel(rgb: number[]): Channel {
-    if (rgb[R] <= rgb[G]) {
-      if (rgb[R] < rgb[B]) {
-        return R
-      }
-    }
-    else
-      if (rgb[G] < rgb[B]) {
-        return G
-      }
-    return B
-  }
-
-  /** @returns the channel carrying the highest value. In case of equality(ies), G is preferred over R and R is
-   * preferred over B. */
-  protected static RGBtoHighestChannel(rgb: number[]): Channel {
-    if (rgb[R] > rgb[G]) {
-      if (rgb[R] >= rgb[B]) {
-        return R
-      }
-    }
-    else
-      if (rgb[G] >= rgb[B]) {
-        return G
-      }
-    return B
-  }
-
-  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is
-   * placed before R and R is placed before G. */
-  protected static RGBtoChannelOrder(rgb: number[]): Channel[] {
-    if (rgb[R] <= rgb[G]) {
-      if (rgb[G] < rgb[B]) {
-        return [R, G, B]
-      }
-      return (rgb[R] < rgb[B]) ? [R, B, G] : [B, R, G]
-    }
-    if (rgb[R] < rgb[B]) {
-      return [G, R, B]
-    }
-    return (rgb[G] < rgb[B]) ? [G, B, R] : [B, G, R]
-  }
-
-  /** @returns the order of the channels from the lowest value to the highest-value. In case of equality(ies), B is
-   * placed before R and R is placed before G. */
-  protected static rToChannelOrder(r: number): Channel[] {
-    if (r <= 2 / 6) {
-      return (r < 1 / 6) ? [B, G, R] : [B, R, G]
-    }
-    if (r <= 4 / 6) {
-      return (r <= 3 / 6) ? [R, B, G] : [R, G, B]
-    }
-    return (r < 5 / 6) ? [G, R, B] : [G, B, R]
-  }
-
-  /** @returns the anchors in the same order as on the rainbow (note that R is both before G and after B) */
-  protected static lowestChanToAnchors(lowestChan: Channel): Channel[] {
-    switch (lowestChan) {
-      case R : return [G, B]
-      case G : return [B, R]
-      case B : return [R, G]
-    }
-    return [] // impossible but the static checker believes it can happen
-  }
-}
-
-function distance(eye1: Eye, eye2: Eye): number {
-  function colorOnSlice(e: Eye): number[] {
-    const i = (e.space === CS.EyePercI) ? e.i : e.j * e.iMax
-    const pPi3 = Math.PI / 3 * e.p
-    return [i * Math.sin(pPi3), i * Math.cos(pPi3), 0]
-  }
-  const [r1, r2] = (eye1.r < eye2.r) ? [eye1.r, eye2.r] : [eye2.r, eye1.r]
-  // arbitrary / subjective: a distance of 1/6 on r (sothe distance between a primary and its closest secondary) is how
-  // much two colors can feel different at most. This results in a distance of 1. Change 6 for 3 to get a value evolving
-  // linerarly between a twice larger range (so the distance primary-secondary would be 0.5).
-  const rDist = Math.min(6 * Math.min(r2 - r1, 1 + r1 - r2), 1)
-  const cosSlices = (2 - rDist * rDist) / 2
-  const slice1 = colorOnSlice(eye1)
-  const slice2 = colorOnSlice(eye2)
-  const x = slice1[0] - slice2[0] * cosSlices
-  const y = slice1[1] - slice2[1]
-  const z = slice2[0] * Math.sqrt(1 - cosSlices * cosSlices)
-  return Math.sqrt(x * x + y * y + z * z)
-}
-
-const rgbPO2D = new RGB(CS.RGBlinear)
-const cbSightPO2D = new Eye(CS.EyePercI)
-
-/** @param rgb must be in the CS.RGBlinear format
- *  @param rgbWorkingBuffer if this function is used by threads, each thread must provide one `RGB(CS.RGBlinear)` object
- *  @param cbWorkingBuffer if this function is used by threads, each thread must provide one `Eye(CS.EyePercI)` object
- *  @returns the projection of `rgb` into the Eye color-space of the color-blind person */
-function projectOntoCBPlane(rgb: number[], rgbWorkingBuffer?: RGB, cbWorkingBuffer?: Eye): Eye {
-  if (!rgbWorkingBuffer || !cbWorkingBuffer) {
-    rgbWorkingBuffer = rgbPO2D
-    cbWorkingBuffer = cbSightPO2D
-  }
-  switch (colorBlindness) {
-    /* The matrices have been calculated by following the prodedure of
-     * Viénot, F., Brettel, H., & Mollon, J. D. (1999) "Digital video colourmaps for checking the legibility of
-     * displays by dichromats". Color Research and Application, 24, 4, 243-251. */
-    case ColorBlindness.Red :
-      rgbWorkingBuffer.chan[R] = 0.1123822674257492 * rgb[R] + 0.8876119706946073 * rgb[G]
-      rgbWorkingBuffer.chan[G] = rgbWorkingBuffer.chan[R]
-      rgbWorkingBuffer.chan[B] = 0.00400576009958313 * rgb[R] - 0.004005734096601488 * rgb[G] + rgb[B]
-      break
-    case ColorBlindness.Green :
-      for (const k of [R, G, B]) {
-        rgbWorkingBuffer.chan[k] = 0.99 * rgb[k] + 0.005
-      }
-      rgbWorkingBuffer.chan[B] = -0.02233647741916585 * rgbWorkingBuffer.chan[R]
-      + 0.02233656063451689 * rgbWorkingBuffer.chan[G] + rgbWorkingBuffer.chan[B]
-      rgbWorkingBuffer.chan[G] = 0.292750775976202 * rgbWorkingBuffer.chan[R]
-      + 0.7072518589062524 * rgbWorkingBuffer.chan[G]
-      rgbWorkingBuffer.chan[R] = rgbWorkingBuffer.chan[G]
-      for (const k of [R, G, B]) {
-        rgbWorkingBuffer.chan[k] = 0.99 * rgbWorkingBuffer.chan[k] + 0.005
-      }
-      break
-    default :
-      rgbWorkingBuffer.import(rgb)
-      break
-  }
-  // in rare cases, a value can happen to be slightly below 0 or slightly above 1 (the 0—255 range becomes
-  // approximately -3—258).
-  rgbWorkingBuffer.limit()
-  cbWorkingBuffer.import(rgbWorkingBuffer)
-  return cbWorkingBuffer
-}
-
-//
-// COLOR ENHANCER
-//
+import { CS, R, G, B, RGB, Eye, distance, ColorBlindness, projectOntoCBPlane } from './colorspaces'
+import { optimize } from './optimizer'
 
 type ColorDefinition = { color: string, identifier: string }
-enum ColorBlindness { Red, Green }
-
-const stallingPeriod = 8 // controls how long the progress can stall before a run of Tabu search is considered finished
-const maxModeDuration = 4 // controls how long the max-Tabu search lasts
-const debug = true
 
 function enhanceColors(colors: ColorDefinition[], colorBlindness: ColorBlindness): ColorDefinition[] {
   const original = []
@@ -536,7 +17,7 @@ function enhanceColors(colors: ColorDefinition[], colorBlindness: ColorBlindness
     original.push(rgb)
   }
   const startTime = performance.now()
-  const enhanced = runOptimizer(original, colorBlindness) // 🪄✨
+  const enhanced = optimize(original, colorBlindness) // 🪄✨
   cons.log('Time spent: ', Math.round((performance.now() - startTime) / 1000), 's.')
 
   const result: ColorDefinition[] = []
@@ -565,290 +46,46 @@ function RGBarrayToCSS(RGB: number[]): string {
   return '#' + hex
 }
 
-let colorBlindness: ColorBlindness
-let originalColors: RGB[] // CS.RGBlinear
-let distancesOrig: number[][]
-let searchDepth: number
-
-/** @param input must be in the CS.RGBgamma format.
- * @returns enchanced colors in the CS.RGBgamma format
- */
-function runOptimizer(input: RGB[], blindness: ColorBlindness): RGB[] {
-  // first, calculation of the information needed by the instances of the tabu searcher
-  colorBlindness = blindness
-  originalColors = input.map(col => col.export(CS.RGBlinear))
-  distancesOrig = []
-  const originalEye = originalColors.map(col => col.export(CS.EyePercI))
-  for (const colA of originalEye) {
-    const line: number[] = []
-    for (const colB of originalEye) {
-      line.push(distance(colA, colB))
-    }
-    distancesOrig.push(line)
-  }
-  if (debug) {
-    cons.log('Original distances:', distancesOrig)
-  }
-  searchDepth = 4000 * originalColors.length
-
-  // now, search phase
-  let currentDepth = 0
-  let disturbanceMode = 0
-  const tabuSum = new TabuSearcher(SearchMode.Sum, true)
-  const tabuMax = new TabuSearcher(SearchMode.Max, false)
-  const shaker = new Shaker(SearchMode.Max, false)
-  let bestError = 2.0 ** 24
-  let bestFinding: RGB[] = []
-  let bestIteration = 0
-  tabuSum.prepareSearch(originalColors, currentDepth)
-  cons.log('Measurement of distance errors before search:', tabuSum.bestError)
-
-  while (currentDepth < searchDepth) {
-    let betterSolutionFound = false
-    tabuSum.search()
-    if (tabuSum.bestError < bestError) {
-      betterSolutionFound = true
-      bestError = tabuSum.bestError
-      bestFinding = tabuSum.bestWip3D
-      bestIteration = currentDepth + tabuSum.bestIteration
-      if (debug) {
-        cons.log('Globally-better set found at iteration', bestIteration)
-      }
-    }
-    currentDepth += tabuSum.iterated
-    if (currentDepth >= searchDepth) {
-      break
-    }
-    let toBeImproved: RGB[]
-    disturbanceMode = (++disturbanceMode) % 2
-    if (disturbanceMode) {
-      tabuMax.prepareSearch(betterSolutionFound ? bestFinding : tabuSum.wip3D, currentDepth)
-      tabuMax.search()
-      toBeImproved = tabuMax.bestWip3D
-      currentDepth += tabuMax.iterated
-    }
-    else {
-      shaker.prepareSearch(bestFinding, currentDepth)
-      shaker.search()
-      toBeImproved = shaker.bestWip3D
-      currentDepth += shaker.iterated
-    }
-    tabuSum.prepareSearch(toBeImproved, currentDepth)
-  }
-
-  cons.log('Iterated', currentDepth, 'times. Best color set found at iteration', bestIteration)
-  cons.log('Measurement of distance errors after search:', bestError)
-  return bestFinding.map(col => col.export(CS.RGBgamma))
-}
-
-enum SearchMode {
-  Sum,
-  Max,
-}
-
-class Searcher {
-  iterated = 0
-  bestIteration = 0
-  bestError = 2.0 ** 24
-  bestWip3D: RGB[] = []
-  protected maxIterations = 0
-  protected willStallAt = 0
-  protected computationMode: SearchMode
-  protected watchStalling = false
-  protected tabuMoves: Array<number[]> = []
-  wip3D: RGB[] = [] // CS.RGBlinear
-  protected wip2D: Eye[] = [] // CS.EyePercI
-  protected errors2D: number[] = []
-  /** must be passed to `projectOntoCBPlane()` at every call made from this class */
-  protected rgbProjectionBuffer = new RGB(CS.RGBlinear)
-  /** must be passed to `projectOntoCBPlane()` at every call made from this class */
-  protected cbProjectionBuffer = new Eye(CS.EyePercI)
-
-  /** @param watchStalling if false, the loop stops after its predefined number of iterations, each better solution does
-   *  not restart the count.
-   */
-  constructor(computationMode: SearchMode, watchStalling: boolean) {
-    this.computationMode = computationMode
-    this.watchStalling = watchStalling
-  }
-
-  prepareSearch(source: RGB[], startingDepth: number): void {
-    this.maxIterations = (this.computationMode === SearchMode.Sum)
-      ? searchDepth - startingDepth
-      : maxModeDuration * originalColors.length
-    this.iterated = 0
-    this.bestIteration = 0
-    this.tabuMoves.length = 0
-    for (let k = 0; k < source.length; k++) {
-      this.tabuMoves.push([0, 0, 0])
-    }
-    // copying the original colors into wip3D: they will be modified progressively by the search phase in such a way
-    // that they get more and more distinguishable when viewed by a color blind person
-    this.wip3D = source.map(col => col.export(CS.RGBlinear))
-    this.bestWip3D = this.wip3D
-    this.bestError = this.totalError(false) // this calls fills `wip2D` and `errors2D`
-    this.shiftStallingLimit()
-  }
-
-  search: undefined | (() => void)
-
-  /** the implementation of `search()` calls it when it finds a better solution, to postpone the stalling limit */
-  protected shiftStallingLimit(): void {
-    if (this.watchStalling) {
-      this.willStallAt = this.iterated
-      + (this.computationMode === SearchMode.Sum ? stallingPeriod : maxModeDuration) * originalColors.length
-    }
-    else {
-      this.willStallAt = this.maxIterations
-    }
-  }
-
-  /** for a given color k stored in `wipColor2D`, this function calculates a value that reflects
-   *    the sum over every color l of
-   *      the difference between:
-   *        the distance between the original colors k and l
-   *        the distance between the projected colors `wipColor2D` and l */
-  protected distError(k: number, wipColor2D: Eye): number {
-    let result = 0.0
-    for (let l = 0; l < distancesOrig.length; l++) {
-      if (k === l) {
-        continue
-      }
-      // -1 means that dist(k,l) for the CB person is much shorter (not good), 0 means equal (perfect), > 0 means longer
-      const diff = (distancesOrig[k][l] <= 0.001)
-        ? distance(wipColor2D, this.wip2D[l])
-        : distance(wipColor2D, this.wip2D[l]) / distancesOrig[k][l] - 1
-      let error: number
-      if (diff < 0) {
-        error = (diff <= -1) ? 2.0 ** 16 : 1 / (1 + diff) - 1
-      }
-      else {
-        error = 0 // larger distances do not penalize, but we do not want to allow them to compensate for shorter ones
-      }
-      result += error
-    }
-    return result
-  }
-
-  protected totalError(errors2DisUpToDate: boolean): number {
-    if (!errors2DisUpToDate) {
-      this.wip2D = this.wip3D.map(
-        col => projectOntoCBPlane(col.chan, this.rgbProjectionBuffer, this.cbProjectionBuffer).export(CS.EyePercI))
-      this.errors2D = this.wip2D.map((col, k) => this.distError(k, col))
-    }
-    const initial = (this.computationMode === SearchMode.Sum) ? 0.0 : -(2.0 ** 16)
-    return this.errors2D.reduce(
-      (prev, curr) => (this.computationMode === SearchMode.Sum) ? prev + curr : Math.max(prev, curr),
-      initial)
-  }
-}
-
-class TabuSearcher extends Searcher {
-  override search = () => {
-    const errorBefore = this.bestError
-    while (this.iterated < this.maxIterations && this.iterated < this.willStallAt) {
-      const error = this.totalError(true)
-      if (error < this.bestError) {
-        this.bestError = error
-        this.bestIteration = this.iterated
-        this.bestWip3D = this.wip3D.map(col => col.export(CS.RGBlinear))
-        this.shiftStallingLimit()
-      }
-      this.optimizeOneStepFurther()
-      this.iterated++
-    }
-    if (debug) {
-      cons.log('Tabu search, mode', this.computationMode, '. Iterated', this.iterated, 'times. Distance errors: before', errorBefore, 'after', this.bestError)
-    }
-  }
-
-  protected triedRGB = new RGB(CS.RGBlinear)
-
-  protected optimizeOneStepFurther() {
-    let bestK: number = 0
-    let lowestError: number = 0
-    let bestErrorGain: number = 2.0 ** 24
-    let moveToForbid: number[] = []
-    let bestColor: number[] = []
-
-    for (let k = 0; k < this.wip3D.length; k++) {
-      this.triedRGB.import(this.wip3D[k])
-      const step = (this.computationMode === SearchMode.Sum ? 2 : 4) / 256
-      for (const c of [R, G, B]) {
-        for (const s of [-1, +1]) {
-          if (this.tabuMoves[k][c] === s) {
-            continue
-          }
-          const restoredValue = this.triedRGB.chan[c]
-          this.triedRGB.chan[c] += s * step
-          if (this.triedRGB.chan[c] < 0) {
-            this.triedRGB.chan[c] = 0
-          }
-          if (this.triedRGB.chan[c] > 1) {
-            this.triedRGB.chan[c] = 1
-          }
-          const error = this.distError(k, projectOntoCBPlane(this.triedRGB.chan, this.rgbProjectionBuffer, this.cbProjectionBuffer))
-          if (error - this.errors2D[k] < bestErrorGain) {
-            bestErrorGain = error - this.errors2D[k]
-            lowestError = error
-            bestK = k
-            moveToForbid = [0, 0, 0]
-            moveToForbid[c] = -s
-            bestColor = [...this.triedRGB.chan]
-          }
-          this.triedRGB.chan[c] = restoredValue
-        }
-      }
-    }
-    this.wip3D[bestK].import(bestColor)
-    this.wip2D[bestK].import(projectOntoCBPlane(bestColor, this.rgbProjectionBuffer, this.cbProjectionBuffer))
-    this.errors2D[bestK] = lowestError
-    // forbidding only the last move is enough to set to 4 the minimum number of steps required to go back here
-    this.tabuMoves[bestK] = moveToForbid
-  }
-}
-
-class Shaker extends Searcher {
-  override search = () => {
-    if (debug) {
-      cons.log('Shaking.')
-    }
-    this.wip3D.forEach((col) => {
-      const eye = col.export(CS.EyeNormJ)
-      eye.r += 1 / 6 * (1 - 2 * Math.random())
-      eye.j = 0.1 + 0.8 * eye.j
-      eye.p = 0.1 + 0.8 * eye.p
-      eye.limit()
-      col.import(eye)
-    })
-    this.bestWip3D = this.wip3D.map(col => col.export(CS.RGBlinear))
-    this.bestError = this.totalError(false)
-  }
-}
-
 //
 // TESTS AND ADJUSTEMENTS
 //
 
 const cons = console
 
+let randColorsEnhanced: string[] = []
+let randColorsCB: string[] = []
+let randColorsEnhancedCB: string[] = []
+const enhancements = ref(0)
 const randColors: string[] = []
 const RGBgamma = new RGB(CS.RGBgamma)
-for (let i = 0; i < 16; i++) {
-  // from Alexander:
-  const letters = '0123456789ABCDEF'
-  let color = '#'
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)]
+
+onMounted(() => {
+  generateNewColors()
+  enhanceColorSet()
+})
+
+function generateNewColors(): void {
+  randColors.length = 0
+  for (let i = 0; i < 16; i++) {
+    // from Alexander:
+    const letters = '0123456789ABCDEF'
+    let color = '#'
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)]
+    }
+    randColors.push(color)
   }
-  randColors.push(color)
 }
-const randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), ColorBlindness.Green)
-  .map(obj => obj.color)
-const randColorsCB = randColors.map(col => RGBarrayToCSS(projectOntoCBPlane(RGBgamma.import(
-  CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
-const randColorsEnhancedCB = randColorsEnhanced.map(col => RGBarrayToCSS(projectOntoCBPlane(
-  RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
+
+function enhanceColorSet(): void {
+  randColorsEnhanced = enhanceColors(randColors.map(col => ({ color: col, identifier: '' })), ColorBlindness.Green)
+    .map(obj => obj.color)
+  randColorsCB = randColors.map(col => RGBarrayToCSS(projectOntoCBPlane(RGBgamma.import(
+    CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
+  randColorsEnhancedCB = randColorsEnhanced.map(col => RGBarrayToCSS(projectOntoCBPlane(
+    RGBgamma.import(CSStoRGBarray(col)).export(CS.RGBlinear).chan).export(CS.RGBgamma).chan))
+  enhancements.value++
+}
 
 const colorI = new Eye(CS.EyePercI)
 const colorJ = new Eye(CS.EyeNormJ)
@@ -1008,88 +245,114 @@ function showDistanceTo(kr: number, kp: number, ki: number) {
 </script>
 
 <template>
-  <div style="background-color: rgb(128,128,128); padding: 20px">
-    <TabView>
-      <TabPanel header="Demo">
-        <div style="display: flex; gap: 50px; margin:30px; margin-bottom: 10px;">
-          <div>
-            <div style="text-align: center; width:240px;">
-              seen with normal vision <br><br>
-            </div>
-            <div
-              v-for="(_, m) of 4"
-              :key="m"
-            >
+  <TabView>
+    <TabPanel header="Demo">
+      <div
+        v-if="!enhancements"
+        style="margin: 10px; font-weight:bold; color:red"
+      >
+        Calculations in progress, please wait approximately 10 s...
+      </div>
+      <div
+        v-else
+        :key="enhancements"
+        style="display: flex"
+      >
+        <div style="background-color: rgb(128,128,128); padding: 20px;">
+          <div style="display: flex; gap: 50px; margin:30px; margin-bottom: 10px;">
+            <div>
+              <div style="text-align: center; width:240px;">
+                seen with normal vision <br><br>
+              </div>
               <div
-                v-for="(__, n) of 4"
-                :key="n"
-                style="display: inline-block; width: 60px; height: 60px;"
-                :style="'background-color:'+randColors[4*m+n]"
-              />
+                v-for="(_, m) of 4"
+                :key="m"
+              >
+                <div
+                  v-for="(__, n) of 4"
+                  :key="n"
+                  style="display: inline-block; width: 60px; height: 60px;"
+                  :style="'background-color:'+randColors[4*m+n]"
+                />
+              </div>
+              <div style="text-align: center; width:240px; font-size: 50px; margin-top: 10px;">
+                ⬇
+              </div>
             </div>
-            <div style="text-align: center; width:240px; font-size: 50px; margin-top: 10px;">
-              ⬇
+            <div style="margin-top: 130px; font-size: 30px;">
+              →
+            </div>
+            <div>
+              <div style="text-align: center; width:240px;">
+                seen by a color-blind person <br><br>
+              </div>
+              <div
+                v-for="(_, m) of 4"
+                :key="m"
+              >
+                <div
+                  v-for="(__, n) of 4"
+                  :key="n"
+                  style="display: inline-block; width: 60px; height: 60px;"
+                  :style="'background-color:'+randColorsCB[4*m+n]"
+                />
+              </div>
             </div>
           </div>
-          <div style="margin-top: 130px; font-size: 30px;">
-            →
-          </div>
-          <div>
-            <div style="text-align: center; width:240px;">
-              seen by a color-blind person <br><br>
-            </div>
-            <div
-              v-for="(_, m) of 4"
-              :key="m"
-            >
+          <div style="display: flex; gap: 50px; margin:30px; margin-top: 10px;">
+            <div>
+              <div style="text-align: center; width:240px;">
+                enhanced by Bitfly's technology <br><br>
+              </div>
               <div
-                v-for="(__, n) of 4"
-                :key="n"
-                style="display: inline-block; width: 60px; height: 60px;"
-                :style="'background-color:'+randColorsCB[4*m+n]"
-              />
+                v-for="(_, m) of 4"
+                :key="m"
+              >
+                <div
+                  v-for="(__, n) of 4"
+                  :key="n"
+                  style="display: inline-block; width: 60px; height: 60px;"
+                  :style="'background-color:'+randColorsEnhanced[4*m+n]"
+                />
+              </div>
+            </div>
+            <div style="margin-top: 130px; font-size: 30px;">
+              →
+            </div>
+            <div>
+              <div style="text-align: center; width:240px;">
+                seen by a color-blind person <br><br>
+              </div>
+              <div
+                v-for="(_, m) of 4"
+                :key="m"
+              >
+                <div
+                  v-for="(__, n) of 4"
+                  :key="n"
+                  style="display: inline-block; width: 60px; height: 60px;"
+                  :style="'background-color:'+randColorsEnhancedCB[4*m+n]"
+                />
+              </div>
             </div>
           </div>
         </div>
-        <div style="display: flex; gap: 50px; margin:30px; margin-top: 10px;">
-          <div>
-            <div style="text-align: center; width:240px;">
-              enhanced by Bitfly's technology <br><br>
-            </div>
-            <div
-              v-for="(_, m) of 4"
-              :key="m"
-            >
-              <div
-                v-for="(__, n) of 4"
-                :key="n"
-                style="display: inline-block; width: 60px; height: 60px;"
-                :style="'background-color:'+randColorsEnhanced[4*m+n]"
-              />
-            </div>
-          </div>
-          <div style="margin-top: 130px; font-size: 30px;">
-            →
-          </div>
-          <div>
-            <div style="text-align: center; width:240px;">
-              seen by a color-blind person <br><br>
-            </div>
-            <div
-              v-for="(_, m) of 4"
-              :key="m"
-            >
-              <div
-                v-for="(__, n) of 4"
-                :key="n"
-                style="display: inline-block; width: 60px; height: 60px;"
-                :style="'background-color:'+randColorsEnhancedCB[4*m+n]"
-              />
-            </div>
-          </div>
+        <div style="margin-top: 190px; margin-left: 80px; flex-direction: column;">
+          <BcButton @click="() => { generateNewColors(); enhanceColorSet() }">
+            New colors
+          </BcButton>
+          <br>
+          <BcButton
+            style="margin-top: 350px"
+            @click="enhanceColorSet()"
+          >
+            Re-enhance
+          </BcButton>
         </div>
-      </TabPanel>
-      <TabPanel header="Screen calibration">
+      </div>
+    </TabPanel>
+    <TabPanel header="Screen calibration">
+      <div style="background-color: rgb(128,128,128); padding: 20px">
         <div style="background-color: black; height: 1000px; display: flex; flex-direction: column; padding: 5px">
           <h1>Screen quality check: wavelenghts of the primaries</h1>
           This test tells you whether the primaries of your screen are far enough from each other or if a primary
@@ -1131,8 +394,8 @@ function showDistanceTo(kr: number, kp: number, ki: number) {
         <h1>Screen calibration: gamma in medium brightness.</h1>
         Your screen gamma is 2.2 on the three channels if the following squares look plain (the center parts must not
         look brighter or dimmer).<br>
-        For the test to work properly: the zoom of your browser must be 100% and you should look from far enough
-        (or without glasses)
+        <i>For the test to work properly: the zoom of your browser must be 100% and you should look from far enough
+          (or without glasses)</i>
         <br><br>
         <div style="display: inline-block; padding:50px; margin-left: 50px; background-color: rgb(135,135,135)">
           <div
@@ -1286,8 +549,10 @@ function showDistanceTo(kr: number, kp: number, ki: number) {
             <br>
           </span>
         </div>
-      </TabPanel>
-      <TabPanel header="Adjustements of the perception model">
+      </div>
+    </TabPanel>
+    <TabPanel header="Adjustements of the perception model">
+      <div style="background-color: rgb(128,128,128); padding: 20px">
         <h1>Adjustement of sensicol and iotaM</h1>
         <h2>sensicol</h2>
         In the first column, the framed primary must feel dimmer than its neighbors. <br>
@@ -1626,12 +891,13 @@ function showDistanceTo(kr: number, kp: number, ki: number) {
           :style="'background-color: rgb(' + rainbowSameJ[i].chan[R] + ',' + rainbowSameJ[i].chan[G] + ',' + rainbowSameJ[i].chan[B] + ')'"
         />
         <br><br>
-
-        <br><br>
+      </div>
+    </TabPanel>
+    <TabPanel header="Color distances">
+      <div style="background-color: rgb(128,128,128); padding: 20px">
         <div class="all-colors">
-          <h1>For each primary and each secondary, all purities and perceived brightness :</h1>
-          Here we flatten the color space. r, p and i progress linearly. <br>
-          Click two colors to see their distance. <br>
+          Here we flatten the Eye color space. r, p and i progress linearly. <br>
+          <b>Click two colors to see their distance.</b> <br>
           <br>
           <div
             v-for="(rRow, r) of allColors"
@@ -1661,9 +927,9 @@ function showDistanceTo(kr: number, kp: number, ki: number) {
             {{ allColors[krkpki2[0]][krkpki2[1]][krkpki2[2]].eye }}
           </div>
         </div>
-      </TabPanel>
-    </TabView>
-  </div>
+      </div>
+    </TabPanel>
+  </TabView>
 </template>
 
 <style lang="scss" scoped>
