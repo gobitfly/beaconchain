@@ -310,6 +310,16 @@
       "rocketpool": "Rocket Pool",
       "network": "Network"
     },
+    "network": {
+      "event_type": {
+        "gas_above": "Gas price > {_value}",
+        "gas_below": "Gas price < {_value}",
+        "participation_rate": "Participation rate < {_value}"
+      },
+      "footer": {
+        "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
+      }
+    },
     "machine": {
       "event_type": {
         "is_machine_offline": "Machine is offline",
@@ -431,7 +441,8 @@
       "group": "Group",
       "subscriptions": "Subscriptions",
       "webhook": "Webhook",
-      "networks": "Networks"
+      "networks": "Networks",
+      "notification": "Notification"
     },
     "general": {
       "do_not_disturb": "Do not disturb",
