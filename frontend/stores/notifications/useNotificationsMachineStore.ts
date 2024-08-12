@@ -13,7 +13,11 @@ export function useNotificationsMachineStore() {
 
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(notificationsMachineStore())
-  const { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery } = useTableQuery({ limit: 10, sort: 'timestamp:desc' }, 10)
+  const {
+    cursor, isStoredQuery, onSort, pageSize, pendingQuery, query, setCursor, setPageSize, setSearch, setStoredQuery,
+  } = useTableQuery({
+    limit: 10, sort: 'timestamp:desc',
+  }, 10)
   const isLoading = ref(false)
 
   async function loadMachineNotifications(q: TableQueryParams) {
@@ -53,8 +57,8 @@ export function useNotificationsMachineStore() {
 
   return {
     cursor,
-    machineNotifications,
     isLoading,
+    machineNotifications,
     onSort,
     pageSize,
     query: pendingQuery,

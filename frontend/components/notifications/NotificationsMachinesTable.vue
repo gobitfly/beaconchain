@@ -9,13 +9,13 @@ const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
 const {
+  isLoading,
+  machineNotifications,
   onSort,
+  query,
   setCursor,
   setPageSize,
   setSearch,
-  machineNotifications,
-  query,
-  isLoading,
 } = useNotificationsMachineStore()
 
 const colsVisible = computed(() => {
@@ -38,8 +38,8 @@ const colsVisible = computed(() => {
           <BcTable
             :data="machineNotifications"
             data-key="notification_id"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :selected-sort="query?.sort"
             :loading="isLoading"
             :add-spacer="true"
