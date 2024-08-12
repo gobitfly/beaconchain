@@ -30,6 +30,7 @@ const (
 )
 
 const authConfirmEmailRateLimit = time.Minute * 2
+const authResetEmailRateLimit = time.Minute * 2
 const authEmailExpireTime = time.Minute * 30
 
 type ctxKet string
@@ -95,6 +96,58 @@ Best regards,
 	if err != nil {
 		// shouldn't present this as error to user, confirmation works fine
 		log.Error(err, "error updating email confirmation time, rate limiting won't be enforced", 0, nil)
+	}
+	return nil
+}
+
+// TODO move to service?
+func (h *HandlerService) sendResetEmail(ctx context.Context, userId uint64, email string) error {
+	// 0. check if email resets are allowed
+	// (can be forbidden by admin (not yet in v2))
+	passwordResetAllowed, err := h.dai.IsPasswordResetAllowed(ctx, userId)
+	if err != nil {
+		return err
+	}
+	if !passwordResetAllowed {
+		return newForbiddenErr("password reset not allowed")
+	}
+
+	// 1. check last confirmation time to enforce ratelimit
+	lastTs, err := h.dai.GetEmailResetTime(ctx, userId)
+	if err != nil {
+		return errors.New("error getting confirmation-ts")
+	}
+	if lastTs.Add(authResetEmailRateLimit).After(time.Now()) {
+		return errors.New("rate limit reached, try again later")
+	}
+
+	// 2. update reset hash (before sending so there's no hash mismatch on failure)
+	resetHash := utils.RandomString(40)
+	err = h.dai.UpdatePasswordResetHash(ctx, userId, resetHash)
+	if err != nil {
+		return errors.New("error updating confirmation hash")
+	}
+
+	// 3. send confirmation email
+	subject := fmt.Sprintf("%s: Reset your passsword", utils.Config.Frontend.SiteDomain)
+	msg := fmt.Sprintf(`Please reset your password on %[1]s by clicking this link:
+
+https://%[1]s/api/i/users/password-resets/%[2]s
+
+Best regards,
+
+%[1]s
+`, utils.Config.Frontend.SiteDomain, resetHash)
+	err = mail.SendTextMail(email, subject, msg, []commonTypes.EmailAttachment{})
+	if err != nil {
+		return errors.New("error sending reset email, try again later")
+	}
+
+	// 4. update reset time (only after mail was sent)
+	err = h.dai.UpdatePasswordResetTime(ctx, userId)
+	if err != nil {
+		// shouldn't present this as error to user, reset works fine
+		log.Error(err, "error updating password reset time, rate limiting won't be enforced", 0, nil)
 	}
 	return nil
 }
@@ -238,6 +291,43 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 	}
 
 	// TODO: purge all user sessions
+
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		Email string `json:"email"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate email
+	email := v.checkEmail(req.Email)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	userId, err := h.dai.GetUserByEmail(r.Context(), email)
+	if err != nil {
+		if err == dataaccess.ErrNotFound {
+			returnConflict(w, errors.New("email not registered"))
+		} else {
+			handleErr(w, err)
+		}
+		return
+	}
+
+	// email confirmation
+	err = h.sendResetEmail(r.Context(), userId, email)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 
 	returnOk(w, nil)
 }

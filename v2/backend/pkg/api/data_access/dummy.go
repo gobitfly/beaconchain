@@ -120,7 +120,21 @@ func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint
 	return r, err
 }
 
+func (d *DummyService) GetEmailResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+	r := time.Time{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
+	return nil
+}
+
+func (d *DummyService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
+	return true, nil
+}
+
+func (d *DummyService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
 	return nil
 }
 
@@ -131,6 +145,10 @@ func (d *DummyService) GetEmailConfirmationHash(ctx context.Context, userId uint
 }
 
 func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
+	return nil
+}
+
+func (d *DummyService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
 	return nil
 }
 
