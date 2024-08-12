@@ -292,10 +292,10 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 
 	// TODO: purge all user sessions
 
-	returnOk(w, nil)
+	returnNoContent(w)
 }
 
-func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPutUserPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
 		Email string `json:"email"`
@@ -378,7 +378,7 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 
 	// TODO: purge all user sessions
 
-	returnOk(w, nil)
+	returnNoContent(w)
 }
 
 func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Request) {
