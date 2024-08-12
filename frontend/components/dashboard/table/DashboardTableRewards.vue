@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import {
   DAHSHBOARDS_ALL_GROUPS_ID,
   DAHSHBOARDS_NEXT_EPOCH_ID,
@@ -12,7 +14,9 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
-const { dashboardKey, isPublic } = useDashboardKey()
+const {
+  dashboardKey, isPublic,
+} = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -20,40 +24,48 @@ const { t: $t } = useTranslation()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const {
-  rewards,
-  query: lastQuery,
-  isLoading,
   getRewards,
+  isLoading,
+  query: lastQuery,
+  rewards,
 } = useValidatorDashboardRewardsStore()
 const {
-  value: query,
-  temp: tempQuery,
   bounce: setQuery,
+  temp: tempQuery,
+  value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    duty: width.value > 1180,
-    clRewards: width.value >= 900,
-    elRewards: width.value >= 780,
     age: width.value >= 660,
+    clRewards: width.value >= 900,
+    duty: width.value > 1180,
+    elRewards: width.value >= 780,
   }
 })
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value, sort: 'epoch:desc' }
+    query = {
+      limit: pageSize.value,
+      sort: 'epoch:desc',
+    }
   }
   setQuery(query, true, true)
 }
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
   },
@@ -132,11 +144,11 @@ const wrappedRewards = computed(() => {
     return
   }
   return {
-    paging: rewards.value.paging,
     data: rewards.value.data.map(d => ({
       ...d,
       identifier: `${d.epoch}-${d.group_id}`,
     })),
+    paging: rewards.value.paging,
   }
 })
 </script>
@@ -162,11 +174,11 @@ const wrappedRewards = computed(() => {
             data-key="identifier"
             :expandable="true"
             class="rewards-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :add-spacer="colsVisible.age"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
             @set-cursor="setCursor"

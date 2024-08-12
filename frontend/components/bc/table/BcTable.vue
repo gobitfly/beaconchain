@@ -3,24 +3,24 @@ import type { ApiPagingResponse } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
-  cursor?: Cursor
-  dataKey?: string // Unique identifier for a data row
-  pageSize?: number
-  data?: ApiPagingResponse<any>
-  selectedSort?: string
-  expandable?: boolean
-  isRowExpandable?: (item: any) => boolean
-  selectionMode?: 'multiple' | 'single'
-  tableClass?: string
-  addSpacer?: boolean
-  loading?: boolean
-  hidePager?: boolean
+  addSpacer?: boolean,
+  cursor?: Cursor,
+  data?: ApiPagingResponse<any>,
+  dataKey?: string, // Unique identifier for a data row
+  expandable?: boolean,
+  hidePager?: boolean,
+  isRowExpandable?: (item: any) => boolean,
+  loading?: boolean,
+  pageSize?: number,
+  selectedSort?: string,
+  selectionMode?: 'multiple' | 'single',
+  tableClass?: string,
 }
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void
-  (e: 'setPageSize', value: number): void
+  (e: 'setCursor', value: Cursor): void,
+  (e: 'setPageSize', value: number): void,
 }>()
 
 const expandedRows = ref<Record<any, boolean>>({})
@@ -116,12 +116,12 @@ const sort = computed(() => {
     :sort-field="sort?.field"
     :sort-order="sort?.order"
     :value="data?.data"
-    :data-key="dataKey"
-    :loading="loading"
+    :data-key
+    :loading
   >
     <Column
       v-if="selectionMode"
-      :selection-mode="selectionMode"
+      :selection-mode
       class="selection"
     />
     <Column
@@ -187,7 +187,7 @@ const sort = computed(() => {
         v-if="!hidePager && data?.paging"
         :page-size="pageSize ?? 0"
         :paging="data?.paging"
-        :cursor="cursor"
+        :cursor
         @set-cursor="setCursor"
         @set-page-size="setPageSize"
       >

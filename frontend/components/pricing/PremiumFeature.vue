@@ -6,7 +6,7 @@ import BcTooltip from '../bc/BcTooltip.vue'
 import type { Feature } from '~/types/pricing'
 
 interface Props {
-  feature: Feature
+  feature: Feature,
 }
 defineProps<Props>()
 </script>

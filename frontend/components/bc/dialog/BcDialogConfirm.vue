@@ -1,12 +1,14 @@
 <script setup lang="ts">
 interface Props {
-  title?: string
-  question?: string
-  noLabel?: string // defaults to "No"
-  yesLabel?: string // defaults to "Yes"
-  severity?: 'default' | 'danger'
+  noLabel?: string, // defaults to "No"
+  question?: string,
+  severity?: 'danger' | 'default',
+  title?: string,
+  yesLabel?: string, // defaults to "Yes"
 }
-const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
+const {
+  dialogRef, props,
+} = useBcDialog<Props>({ showHeader: false })
 const { t: $t } = useTranslation()
 
 const noLabel = computed(() => props.value?.noLabel || $t('navigation.no'))

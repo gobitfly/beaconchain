@@ -1,7 +1,7 @@
 <script setup lang="ts">
 interface Props {
-  value?: string
-  label?: string // will default to value
+  label?: string, // will default to value
+  value?: string,
 }
 defineProps<Props>()
 </script>
@@ -16,7 +16,7 @@ defineProps<Props>()
       :value="label || value"
     >
     <BcCopyToClipboard
-      :value="value"
+      :value
       class="copy-icon"
     />
   </div>

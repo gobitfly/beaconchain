@@ -1,6 +1,6 @@
 import type {
-  NotificationSettingsGeneral,
   NotificationPairedDevice,
+  NotificationSettingsGeneral,
 } from '~/types/api/notifications'
 
 export type NotificationsManagementSettingsGeneralTab = Pick<
@@ -13,11 +13,11 @@ export type NotificationsManagementSettingsGeneralTab = Pick<
 export interface NotificationsManagementSettingsProvider {
   generalSettings: ComputedRef<
     NotificationsManagementSettingsGeneralTab | undefined
-  >
+  >,
+  isLoading: Ref<boolean>,
+  pairedDevices: ComputedRef<NotificationPairedDevice[] | undefined>,
   updateGeneralSettings: (
     newSettings: NotificationsManagementSettingsGeneralTab,
-  ) => void
-  pairedDevices: ComputedRef<NotificationPairedDevice[] | undefined>
-  updatePairedDevices: (newDevices: NotificationPairedDevice[]) => void
-  isLoading: Ref<boolean>
+  ) => void,
+  updatePairedDevices: (newDevices: NotificationPairedDevice[]) => void,
 }

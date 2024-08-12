@@ -7,55 +7,61 @@
 import { warn } from 'vue'
 import { levenshteinDistance } from '~/utils/misc'
 import {
-  LayoutThreshold,
-  MinimumTimeBetweenAPIcalls,
   type Category,
-  type ResultType,
-  type HowToFillresultSuggestionOutput,
-  type ResultSuggestionOutput,
-  TypeInfo,
+  type CategoryFilter,
+  type ExposedSearchbarMethods,
   getListOfResultTypes,
   getListOfResultTypesInCategory,
-  wasOutputDataGivenByTheAPI,
+  type HowToFillresultSuggestionOutput,
+  LayoutThreshold,
+  type Matching,
+  MinimumTimeBetweenAPIcalls,
+  type NetworkFilter,
+  type OrganizedResults,
+  type PickingCallBackFunction,
+  type PremiumRowCallBackFunction,
   realizeData,
-  type SearchRequest,
-  type SingleAPIresult,
-  type SearchAheadAPIresponse,
   type ResultSuggestion,
   type ResultSuggestionInternal,
-  type OrganizedResults,
-  type SearchbarShape,
+  type ResultSuggestionOutput,
+  type ResultType,
+  type SearchAheadAPIresponse,
   type SearchbarColors,
   type SearchbarDropdownLayout,
   type SearchbarPurpose,
   SearchbarPurposeInfo,
-  type Matching,
-  type PickingCallBackFunction,
-  type PremiumRowCallBackFunction,
-  type ExposedSearchbarMethods,
-  type CategoryFilter,
-  type NetworkFilter,
+  type SearchbarShape,
+  type SearchRequest,
+  type SingleAPIresult,
+  TypeInfo,
+  wasOutputDataGivenByTheAPI,
 } from '~/types/searchbar'
-import { ChainIDs, ChainInfo } from '~/types/network'
+import {
+  ChainIDs, ChainInfo,
+} from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
-defineExpose<ExposedSearchbarMethods>({ hideResult, closeDropdown, empty })
+defineExpose<ExposedSearchbarMethods>({
+  closeDropdown,
+  empty,
+  hideResult,
+})
 
 const { t } = useTranslation()
 const { fetch } = useCustomFetch()
 const { availableNetworks } = useNetworkStore()
 
 const props = defineProps<{
-  barShape: SearchbarShape // shape of the bar
-  colorTheme: SearchbarColors // colors of the bar and its dropdown
-  barPurpose: SearchbarPurpose // what the bar will be used for
-  screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
-  onlyNetworks?: ChainIDs[] // the bar will search on these networks only
-  rowLacksPremiumSubscription?: PremiumRowCallBackFunction // the bar calls this function for each row and deactivates the row if it returns `true`
-  pickByDefault: PickingCallBackFunction // see the declaration of the type to get an explanation
-  keepDropdownOpen?: boolean // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
+  barPurpose: SearchbarPurpose, // what the bar will be used for
+  barShape: SearchbarShape, // shape of the bar
+  colorTheme: SearchbarColors, // colors of the bar and its dropdown
+  keepDropdownOpen?: boolean, // set to `true` if you want the drop down to stay open when the user clicks a suggestion. You can still close it by calling `<searchbar ref>.value.closeDropdown()` method.
+  onlyNetworks?: ChainIDs[], // the bar will search on these networks only
+  pickByDefault: PickingCallBackFunction, // see the declaration of the type to get an explanation
+  rowLacksPremiumSubscription?: PremiumRowCallBackFunction, // the bar calls this function for each row and deactivates the row if it returns `true`
+  screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
 }>()
 const emit = defineEmits<{ (e: 'go', result: ResultSuggestion): any }>()
 
@@ -68,9 +74,9 @@ enum States {
 }
 
 interface GlobalState {
-  state: States
-  functionToCallAfterResultsGetOrganized: (() => void) | null
-  showDropdown: boolean
+  functionToCallAfterResultsGetOrganized: (() => void) | null,
+  showDropdown: boolean,
+  state: States,
 }
 
 let differentialRequests: boolean
@@ -78,9 +84,9 @@ let searchableTypes: ResultType[]
 let allTypesBelongToAllNetworks = false
 
 const globalState = ref<GlobalState>({
-  state: States.NoText,
   functionToCallAfterResultsGetOrganized: null,
   showDropdown: false,
+  state: States.NoText,
 })
 
 const wholeComponent = ref<HTMLDivElement>()
@@ -97,23 +103,23 @@ const userInputText = ref<string>('')
 let lastKnownText = ''
 
 const nextSearchScope = {
-  networks: new Set<ChainIDs>(),
   categories: new Set<Category>(),
+  networks: new Set<ChainIDs>(),
 }
 
 const debouncer = useDebounceValue<number>(0, MinimumTimeBetweenAPIcalls)
 watch(debouncer.value, callAPIthenOrganizeResultsThenCallBack)
 
 const results = {
-  raw: {
-    stringifyiedList: new Set<string>(), // List of results returned by the API, without structure nor order. The list can be built in serveral steps (for a same text input, if the user selects new filters, the list can augment).
-    scopeMatrix: {} as Record<ChainIDs, Record<Category, boolean>>, // tells which network × category combinations have been explored to obtain the current list of results (as the user can select/deselect successively filters in any order, the scope is not straightforward)
-  },
   organized: {
-    in: { networks: [] } as OrganizedResults, // filtered-in results, organized
     howManyResultsIn: 0,
-    out: { networks: [] } as OrganizedResults, // filtered-out results, organized
     howManyResultsOut: 0,
+    in: { networks: [] } as OrganizedResults, // filtered-in results, organized
+    out: { networks: [] } as OrganizedResults, // filtered-out results, organized
+  },
+  raw: {
+    scopeMatrix: {} as Record<ChainIDs, Record<Category, boolean>>, // tells which network × category combinations have been explored to obtain the current list of results (as the user can select/deselect successively filters in any order, the scope is not straightforward)
+    stringifyiedList: new Set<string>(), // List of results returned by the API, without structure nor order. The list can be built in serveral steps (for a same text input, if the user selects new filters, the list can augment).
   },
 }
 
@@ -369,8 +375,8 @@ function userPressedSearchButtonOrEnter() {
           possibilities.push({
             closeness: suggestion.closeness,
             network: network.chainId,
-            type: type.type,
             s: suggestion,
+            type: type.type,
           } as Matching)
           break // no need to continue, other results of the same type would be indistinguishable in the code of function `props.pickByDefault()` (called below) : the only difference is that their closeness values are worse
         }
@@ -471,9 +477,9 @@ async function callAPIthenOrganizeResultsThenCallBack(nonceWhenCalled: number) {
       body.count = true
     }
     received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body,
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     })
   }
   catch (error) {
@@ -582,8 +588,8 @@ function filterAndOrganizeResults() {
         existingType
           = -1
           + organizedDestination.networks[existingNetwork].types.push({
-            type: toBeAdded.type,
             suggestions: [],
+            type: toBeAdded.type,
           })
       }
       // now we can insert the finding at the right place in the organized results
@@ -663,7 +669,7 @@ function convertSingleAPIresultIntoResultSuggestion(
 
   // Getting the number of identical results found. If the API did not clarify the number results for a countable type, we give NaN.
   let count = 1
-  if (areResultsCountable([type], false)) {
+  if (areResultsCountable([ type ], false)) {
     const countSource = realizeData(
       apiResponseElement,
       TypeInfo[type].countSource,
@@ -705,13 +711,13 @@ function convertSingleAPIresultIntoResultSuggestion(
   }
 
   const result = {
-    output,
-    queryParam,
+    chainId,
     closeness,
     count,
-    chainId,
-    type,
+    output,
+    queryParam,
     rawResult: apiResponseElement,
+    type,
   }
   const lacksPremiumSubscription
     = !!props.rowLacksPremiumSubscription
@@ -719,9 +725,9 @@ function convertSingleAPIresultIntoResultSuggestion(
 
   return {
     ...result,
-    stringifyiedRawResult,
-    nameWasUnknown,
     lacksPremiumSubscription,
+    nameWasUnknown,
+    stringifyiedRawResult,
   }
 }
 
@@ -743,7 +749,7 @@ function areResultsCountable(
 }
 
 function generateTypesFromCategories(
-  categories: Set<Category> | Category[],
+  categories: Category[] | Set<Category>,
 ): ResultType[] {
   let list: ResultType[] = []
 
@@ -845,9 +851,9 @@ function informationIfHiddenResults(): string {
         <BcSearchbarButton
           class="search-button"
           :class="[barShape, classForDropdownOpenedOrClosed]"
-          :bar-shape="barShape"
-          :color-theme="colorTheme"
-          :bar-purpose="barPurpose"
+          :bar-shape
+          :color-theme
+          :bar-purpose
           @click="userPressedSearchButtonOrEnter()"
         />
       </div>
@@ -870,18 +876,18 @@ function informationIfHiddenResults(): string {
             v-if="mustNetworkFilterBeShown()"
             v-model="userInputNetworks"
             class="filter-networks"
-            :bar-shape="barShape"
-            :color-theme="colorTheme"
-            :dropdown-layout="dropdownLayout"
+            :bar-shape
+            :color-theme
+            :dropdown-layout
             @change="userFiltersChanged"
           />
           <BcSearchbarCategorySelectors
             v-if="mustCategoryFiltersBeShown()"
             v-model="userInputCategories"
             class="filter-categories"
-            :bar-shape="barShape"
-            :color-theme="colorTheme"
-            :dropdown-layout="dropdownLayout"
+            :bar-shape
+            :color-theme
+            :dropdown-layout
             @change="userFiltersChanged"
           />
         </div>
@@ -914,14 +920,12 @@ function informationIfHiddenResults(): string {
                   :class="[barShape, dropdownLayout]"
                 />
                 <BcSearchbarSuggestionRow
-                  :suggestion="suggestion"
-                  :bar-shape="barShape"
-                  :color-theme="colorTheme"
-                  :dropdown-layout="dropdownLayout"
-                  :bar-purpose="barPurpose"
-                  :screen-width-causing-sudden-change="
-                    screenWidthCausingSuddenChange
-                  "
+                  :suggestion
+                  :bar-shape
+                  :color-theme
+                  :dropdown-layout
+                  :bar-purpose
+                  :screen-width-causing-sudden-change
                   @click="
                     (e: Event) => {
                       e.stopPropagation();

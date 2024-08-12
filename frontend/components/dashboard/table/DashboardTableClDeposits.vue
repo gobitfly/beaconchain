@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBConsensusDepositsTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useValidatorDashboardClDepositsStore } from '~/stores/dashboard/useValidatorDashboardClDepositsStore'
@@ -17,29 +19,33 @@ const { slotToEpoch } = useNetworkStore()
 
 const {
   deposits,
-  query: lastQuery,
   getDeposits,
   getTotalAmount,
-  totalAmount,
   isLoadingDeposits,
   isLoadingTotal,
+  query: lastQuery,
+  totalAmount,
 } = useValidatorDashboardClDepositsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<
+const {
+  bounce: setQuery, value: query,
+} = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
 
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 1200,
-    signature: width.value >= 1100,
     epoch: width.value >= 1000,
+    group: width.value > 1200,
+    publicKey: width.value >= 700,
+    signature: width.value >= 1100,
     slot: width.value >= 900,
     withdrawalCredentials: width.value >= 800,
-    publicKey: width.value >= 700,
   }
 })
 
@@ -51,7 +57,10 @@ const loadData = (query?: TableQueryParams) => {
 }
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
     getTotalAmount(dashboardKey.value)
@@ -74,13 +83,11 @@ const tableData = computed(() => {
     return
   }
   return {
-    paging: deposits.value.paging,
     data: [
-      {
-        amount: totalAmount.value,
-      },
+      { amount: totalAmount.value },
       ...deposits.value.data,
     ],
+    paging: deposits.value.paging,
   }
 })
 
@@ -123,10 +130,10 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
             data-key="index"
             :expandable="!colsVisible.group"
             class="cl_deposits_table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :loading="isLoadingDeposits"
             @set-cursor="setCursor"
             @sort="onSort"

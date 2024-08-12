@@ -25,18 +25,20 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 
 interface Props {
-  context: DashboardValidatorContext
-  timeFrame?: SummaryTimeFrame
-  dashboardKey?: DashboardKey
-  dashboardName?: string
-  groupName?: string
-  groupId?: number
+  context: DashboardValidatorContext,
+  dashboardKey?: DashboardKey,
+  dashboardName?: string,
+  groupId?: number,
+  groupName?: string,
   summary?: {
-    data?: VDBGroupSummaryData
-    row: VDBSummaryTableRow
-  }
+    data?: VDBGroupSummaryData,
+    row: VDBSummaryTableRow,
+  },
+  timeFrame?: SummaryTimeFrame,
 }
-const { props, setHeader } = useBcDialog<Props>(undefined)
+const {
+  props, setHeader,
+} = useBcDialog<Props>(undefined)
 
 const isLoading = ref(false)
 const filter = ref('')
@@ -84,7 +86,13 @@ watch(
       const res
         = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(
           API_PATH.DASHBOARD_VALIDATOR_INDICES,
-          { query: { period: p?.timeFrame, duty, group_id: p?.groupId } },
+          {
+            query: {
+              duty,
+              group_id: p?.groupId,
+              period: p?.timeFrame,
+            },
+          },
           { dashboardKey: `${p?.dashboardKey}` },
         )
       data.value = res.data
@@ -108,7 +116,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
       }
       const vali = validators.find(v => v.index === index)
       if (vali) {
-        return [vali]
+        return [ vali ]
       }
     }
     return []
@@ -137,8 +145,8 @@ const subsets = computed<ValidatorSubset[]>(() => {
             (list, sub) =>
               list.concat(
                 sub.validators.map(v => ({
-                  index: v.index,
                   duty_objects: [],
+                  index: v.index,
                 })),
               ),
             all.validators,
@@ -165,7 +173,10 @@ const subsets = computed<ValidatorSubset[]>(() => {
         : undefined
     if (withdrawn?.validators.length || withdrawing?.validators.length) {
       // a withrawn/withrawing validator can either be in the exited or slashed group
-      const categories: ValidatorSubsetCategory[] = ['exited', 'slashed']
+      const categories: ValidatorSubsetCategory[] = [
+        'exited',
+        'slashed',
+      ]
       categories.forEach((category) => {
         const index = filtered.findIndex(s => s.category === category)
         if (index >= 0) {
@@ -181,18 +192,33 @@ const subsets = computed<ValidatorSubset[]>(() => {
           }
 
           const subsets = [
-            [withdrawn, xWithdrawn],
-            [withdrawing, xWithdrawing],
+            [
+              withdrawn,
+              xWithdrawn,
+            ],
+            [
+              withdrawing,
+              xWithdrawing,
+            ],
           ]
           baseSubset.validators.forEach((v) => {
-            subsets.forEach(([origin, merged]) => {
+            subsets.forEach(([
+              origin,
+              merged,
+            ]) => {
               if (origin?.validators.find(sV => v.index === sV.index)) {
-                merged?.validators.push({ ...v, duty_objects: [] })
+                merged?.validators.push({
+                  ...v,
+                  duty_objects: [],
+                })
               }
             })
           })
 
-          subsets.forEach(([_origin, merged]) => {
+          subsets.forEach(([
+            _origin,
+            merged,
+          ]) => {
             if (merged?.validators.length) {
               filtered.splice(index + 1, 0, merged)
             }
@@ -213,7 +239,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
         :context="props.context"
         :sub-title="props.groupName || props.dashboardName"
         :summary="props.summary"
-        :subsets="subsets"
+        :subsets
       />
       <BcContentFilter
         v-model="filter"

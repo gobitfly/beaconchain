@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type {
-  InternalGetValidatorDashboardWithdrawalsResponse,
   InternalGetValidatorDashboardTotalWithdrawalsResponse,
+  InternalGetValidatorDashboardWithdrawalsResponse,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
@@ -14,7 +14,11 @@ const validatorDashboardWithdrawalsStore = defineStore(
     const total = ref<string>()
     const query = ref<TableQueryParams>()
 
-    return { data, query, total }
+    return {
+      data,
+      query,
+      total,
+    }
   },
 )
 
@@ -22,8 +26,8 @@ export function useValidatorDashboardWithdrawalsStore() {
   const { fetch } = useCustomFetch()
   const {
     data,
-    total,
     query: storedQuery,
+    total,
   } = storeToRefs(validatorDashboardWithdrawalsStore())
 
   const withdrawals = computed(() => data.value)
@@ -81,12 +85,12 @@ export function useValidatorDashboardWithdrawalsStore() {
   }
 
   return {
-    totalAmount,
     getTotalAmount,
-    withdrawals,
-    query,
     getWithdrawals,
     isLoadingTotal,
     isLoadingWithdrawals,
+    query,
+    totalAmount,
+    withdrawals,
   }
 }

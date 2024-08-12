@@ -3,8 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
 interface Props {
-  header?: string
-  icon?: IconDefinition
+  header?: string,
+  icon?: IconDefinition,
 }
 
 const props = defineProps<Props>()

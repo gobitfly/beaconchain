@@ -1,5 +1,5 @@
 export type HashTab = {
-  index: number
-  disabled?: boolean
+  disabled?: boolean,
+  index: number,
 }
 export type HashTabs = Record<string, HashTab>

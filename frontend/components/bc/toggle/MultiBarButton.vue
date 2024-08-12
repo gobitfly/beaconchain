@@ -4,11 +4,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import BcTooltip from '../BcTooltip.vue'
 
 interface Props {
-  icon?: IconDefinition
-  falseIcon?: IconDefinition
-  disabled?: boolean
-  tooltip?: string
-  readonlyClass?: string
+  disabled?: boolean,
+  falseIcon?: IconDefinition,
+  icon?: IconDefinition,
+  readonlyClass?: string,
+  tooltip?: string,
 }
 
 const props = defineProps<Props>()
@@ -62,7 +62,7 @@ const icon = computed(() => {
         >
           <FontAwesomeIcon
             v-if="icon"
-            :icon="icon"
+            :icon
           />
         </slot>
       </template>

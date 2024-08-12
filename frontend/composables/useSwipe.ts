@@ -8,7 +8,7 @@ import type {
 export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
   const options = {
     directional_threshold: 100,
-    directions: ['all'],
+    directions: [ 'all' ],
     ...swipeOptions,
   }
   const touchStartX = ref(0)
@@ -64,17 +64,29 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     let divX = event.changedTouches[0].screenX - touchStartX.value
     let divY = event.changedTouches[0].screenY - touchStartY.value
     const directions = options.directions
-    if (!intersection(directions, ['all', 'left']).length && divX < 0) {
+    if (!intersection(directions, [
+      'all',
+      'left',
+    ]).length && divX < 0) {
       divX = 0
     }
-    else if (!intersection(directions, ['all', 'right']).length && divX > 0) {
+    else if (!intersection(directions, [
+      'all',
+      'right',
+    ]).length && divX > 0) {
       divX = 0
     }
-    if (!intersection(directions, ['all', 'top']).length && divY < 0) {
+    if (!intersection(directions, [
+      'all',
+      'top',
+    ]).length && divY < 0) {
       divY = 0
     }
     else if (
-      !intersection(directions, ['all', 'bottom']).length
+      !intersection(directions, [
+        'all',
+        'bottom',
+      ]).length
       && divY > 0
     ) {
       divY = 0

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type {
-  VDBGroupRewardsData,
   InternalGetValidatorDashboardGroupRewardsResponse,
+  VDBGroupRewardsData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
@@ -35,16 +35,23 @@ export const useValidatorDashboardRewardsDetailsStore = (
     const res = await fetch<InternalGetValidatorDashboardGroupRewardsResponse>(
       API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS,
       undefined,
-      { dashboardKey, groupId, epoch },
+      {
+        dashboardKey,
+        epoch,
+        groupId,
+      },
     )
-    data.value = { ...data.value, [getKey()]: res.data }
+    data.value = {
+      ...data.value,
+      [getKey()]: res.data,
+    }
     return res.data
   }
 
   // in the component where the store is used the properties will not change so we just need to load the data initially
   getDetails()
 
-  const details = computed<VDBGroupRewardsData | undefined>(() => {
+  const details = computed<undefined | VDBGroupRewardsData>(() => {
     return data.value[getKey()]
   })
 

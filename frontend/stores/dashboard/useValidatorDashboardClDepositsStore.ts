@@ -15,7 +15,11 @@ const validatorDashboardClDepositsStore = defineStore(
     const total = ref<string>()
     const query = ref<TableQueryParams>()
 
-    return { data, query, total }
+    return {
+      data,
+      query,
+      total,
+    }
   },
 )
 
@@ -23,8 +27,8 @@ export function useValidatorDashboardClDepositsStore() {
   const { fetch } = useCustomFetch()
   const {
     data,
-    total,
     query: storedQuery,
+    total,
   } = storeToRefs(validatorDashboardClDepositsStore())
 
   const deposits = computed(() => data.value)
@@ -81,12 +85,12 @@ export function useValidatorDashboardClDepositsStore() {
   }
 
   return {
-    totalAmount,
-    getTotalAmount,
     deposits,
-    query,
     getDeposits,
-    isLoadingTotal,
+    getTotalAmount,
     isLoadingDeposits,
+    isLoadingTotal,
+    query,
+    totalAmount,
   }
 }

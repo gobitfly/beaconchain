@@ -5,15 +5,15 @@ import { warn } from 'vue'
 import BcTooltip from './BcTooltip.vue'
 
 interface Props {
-  value?: string
+  value?: string,
 }
 const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 const {
-  value: tooltip,
   bounce,
   instant,
+  value: tooltip,
 } = useDebounceValue<string>($t('clipboard.copy'), 2000)
 
 function copyToClipboard(): void {

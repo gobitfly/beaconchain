@@ -7,18 +7,20 @@ import type {
 } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
 import {
+  COOKIE_DASHBOARD_ID,
+  type CookieDashboard,
   type DashboardKey,
   type DashboardType,
-  type CookieDashboard,
-  COOKIE_DASHBOARD_ID,
 } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
 import { API_PATH } from '~/types/customFetch'
 import type { ChainIDs } from '~/types/network'
-import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
+import {
+  isPublicDashboardKey, isSharedKey,
+} from '~/utils/dashboard/key'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
-  const data = ref<UserDashboardsData | undefined | null>()
+  const data = ref<null | undefined | UserDashboardsData>()
   return { data }
 })
 
@@ -71,7 +73,7 @@ export function useUserDashboardStore() {
   }
 
   // Public dashboards are saved in a cookie (so that it's accessable during SSR)
-  function saveToCookie(db: UserDashboardsData | undefined | null) {
+  function saveToCookie(db: null | undefined | UserDashboardsData) {
     if (isLoggedIn.value) {
       warn('saveToCookie should only be called when not logged in')
       return
@@ -88,13 +90,13 @@ export function useUserDashboardStore() {
     if (!isLoggedIn.value) {
       // Create local Validator dashboard
       const cd: CookieDashboard = {
+        hash: dashboardKey ?? '',
         id: COOKIE_DASHBOARD_ID.VALIDATOR,
         name: '',
-        hash: dashboardKey ?? '',
       }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [cd as ValidatorDashboard],
+        validator_dashboards: [ cd as ValidatorDashboard ],
       }
       saveToCookie(data.value)
       return cd
@@ -102,7 +104,12 @@ export function useUserDashboardStore() {
     // Create user specific Validator dashboard
     const res = await fetch<{ data: VDBPostReturnData }>(
       API_PATH.DASHBOARD_CREATE_VALIDATOR,
-      { body: { name, network } },
+      {
+        body: {
+          name,
+          network,
+        },
+      },
     )
     if (res.data) {
       data.value = {
@@ -110,11 +117,11 @@ export function useUserDashboardStore() {
         validator_dashboards: [
           ...(dashboards.value?.validator_dashboards || []),
           {
-            id: res.data.id,
-            name: res.data.name,
-            is_archived: false,
-            validator_count: 0,
             group_count: 1,
+            id: res.data.id,
+            is_archived: false,
+            name: res.data.name,
+            validator_count: 0,
           },
         ],
       }
@@ -129,13 +136,13 @@ export function useUserDashboardStore() {
     if (!isLoggedIn.value) {
       // Create local account dashboard
       const cd: CookieDashboard = {
+        hash: dashboardKey ?? '',
         id: COOKIE_DASHBOARD_ID.ACCOUNT,
         name: '',
-        hash: dashboardKey ?? '',
       }
       data.value = {
+        account_dashboards: [ cd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
-        account_dashboards: [cd],
       }
       saveToCookie(data.value)
       return cd
@@ -147,11 +154,14 @@ export function useUserDashboardStore() {
     )
     if (res.data) {
       data.value = {
-        validator_dashboards: dashboards.value?.validator_dashboards || [],
         account_dashboards: [
           ...(dashboards.value?.account_dashboards || []),
-          { id: res.data.id, name: res.data.name },
+          {
+            id: res.data.id,
+            name: res.data.name,
+          },
         ],
+        validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
       return res.data
     }
@@ -172,7 +182,7 @@ export function useUserDashboardStore() {
       }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [cd as ValidatorDashboard],
+        validator_dashboards: [ cd as ValidatorDashboard ],
       }
     }
     else {
@@ -183,8 +193,8 @@ export function useUserDashboardStore() {
         hash,
       }
       data.value = {
+        account_dashboards: [ cd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
-        account_dashboards: [cd],
       }
     }
     saveToCookie(data.value)
@@ -213,9 +223,9 @@ export function useUserDashboardStore() {
   }
 
   return {
+    cookieDashboards,
     createAccountDashboard,
     createValidatorDashboard,
-    cookieDashboards,
     dashboards,
     getDashboardLabel,
     refreshDashboards,

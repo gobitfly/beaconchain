@@ -7,7 +7,9 @@ const { t: $t } = useTranslation()
 useBcSeo('pricing.seo_title')
 const { stripeInit } = useStripeProvider()
 
-const { products, getProducts } = useProductsStore()
+const {
+  getProducts, products,
+} = useProductsStore()
 
 await useAsyncData('get_products', () => getProducts())
 watch(
@@ -38,7 +40,7 @@ const scrollToAddons = () => {
         <PricingHeaderLine />
         <PricingPeriodToggle v-model="isYearly" />
         <PricingPremiumViaAppBanner />
-        <PricingPremiumProducts :is-yearly="isYearly" />
+        <PricingPremiumProducts :is-yearly />
         <Button
           class="view-addons-button"
           @click="scrollToAddons()"
@@ -48,7 +50,7 @@ const scrollToAddons = () => {
         <PricingPremiumCompare />
         <PricingPremiumAddons
           id="addons"
-          :is-yearly="isYearly"
+          :is-yearly
         />
         <BcFaq
           class="faq"

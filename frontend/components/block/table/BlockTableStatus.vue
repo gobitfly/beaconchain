@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { type BlockStatus } from '~/types/block'
-import type { TagSize, TagColor } from '~/types/tag'
+import type {
+  TagColor, TagSize,
+} from '~/types/tag'
 
 interface Props {
-  status?: BlockStatus
-  blockSlot?: number
-  mobile?: boolean
+  blockSlot?: number,
+  mobile?: boolean,
+  status?: BlockStatus,
 }
 const props = defineProps<Props>()
 
@@ -37,28 +39,28 @@ const mapped = computed(() => {
         ? tStatus
         : undefined
   switch (status) {
-    case 'probably_missed':
-      color = 'partial'
-      break
     case 'missed':
       color = 'failed'
-      break
-    case 'success':
-      color = 'success'
       break
     case 'orphaned':
       color = 'orphaned'
       break
+    case 'probably_missed':
+      color = 'partial'
+      break
     case 'scheduled':
       color = 'dark'
+      break
+    case 'success':
+      color = 'success'
       break
   }
 
   return {
-    status,
-    size,
     color,
     label,
+    size,
+    status,
     tooltip,
   }
 })

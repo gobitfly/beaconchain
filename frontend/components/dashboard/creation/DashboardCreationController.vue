@@ -7,15 +7,19 @@ import {
 import { type ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
-const { createValidatorDashboard, createAccountDashboard }
+const {
+  createAccountDashboard, createValidatorDashboard,
+}
   = useUserDashboardStore()
 const { dashboards } = useUserDashboardStore()
-const { user, isLoggedIn } = useUserStore()
+const {
+  isLoggedIn, user,
+} = useUserStore()
 const { currentNetwork } = useNetworkStore()
 
 interface Props {
-  displayMode: DashboardCreationDisplayMode
-  initiallyVisible?: boolean
+  displayMode: DashboardCreationDisplayMode,
+  initiallyVisible?: boolean,
 }
 const props = defineProps<Props>()
 
@@ -23,12 +27,14 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
-const type = ref<DashboardType | ''>('')
+const type = ref<'' | DashboardType>('')
 const name = ref<string>('')
 const network = ref<ChainIDs>(0)
-const forcedDashboardType = ref<DashboardType | ''>('')
+const forcedDashboardType = ref<'' | DashboardType>('')
 let forcedNetworkIfValidatorDashboard = 0
-const { dashboardKey, publicEntities } = useDashboardKey()
+const {
+  dashboardKey, publicEntities,
+} = useDashboardKey()
 const { fetch } = useCustomFetch()
 const route = useRoute()
 
@@ -56,7 +62,7 @@ const validatorsDisabled = computed(() => {
 })
 
 function show(
-  forcedType: DashboardType | '' = '',
+  forcedType: '' | DashboardType = '',
   forcedNetwork: ChainIDs = 0,
 ) {
   visible.value = true
@@ -75,9 +81,7 @@ function show(
   name.value = isLoggedIn.value ? '' : 'cookie'
 }
 
-defineExpose({
-  show,
-})
+defineExpose({ show })
 if (props.initiallyVisible) {
   show()
 }
@@ -141,8 +145,11 @@ async function createDashboard() {
       await fetch(
         API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
         {
+          body: {
+            group_id: '0',
+            validators: publicEntities.value,
+          },
           method: 'POST',
-          body: { validators: publicEntities.value, group_id: '0' },
         },
         { dashboardKey: response.id },
       )
@@ -162,8 +169,8 @@ async function createDashboard() {
       v-model:state="state"
       v-model:type="type"
       v-model:name="name"
-      :accounts-disabled="accountsDisabled"
-      :validators-disabled="validatorsDisabled"
+      :accounts-disabled
+      :validators-disabled
       @next="onNext()"
     />
     <DashboardCreationNetworkMask
@@ -181,8 +188,8 @@ async function createDashboard() {
         v-model:state="state"
         v-model:type="type"
         v-model:name="name"
-        :accounts-disabled="accountsDisabled"
-        :validators-disabled="validatorsDisabled"
+        :accounts-disabled
+        :validators-disabled
         @next="onNext()"
       />
       <DashboardCreationNetworkMask

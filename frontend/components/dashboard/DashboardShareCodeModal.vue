@@ -5,11 +5,13 @@ import { API_PATH } from '~/types/customFetch'
 import { isSharedKey } from '~/utils/dashboard/key'
 
 interface Props {
-  dashboardKey: string
   // Currently only validator dashboards are supported. For public dashboards this will be undefined
-  dashboard?: ValidatorDashboard
+  dashboard?: ValidatorDashboard,
+  dashboardKey: string,
 }
-const { props, dialogRef } = useBcDialog<Props>()
+const {
+  dialogRef, props,
+} = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 const router = useRouter()
 const url = useRequestURL()
@@ -58,7 +60,10 @@ const unpublish = async () => {
   await fetch(
     API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID,
     { method: 'DELETE' },
-    { dashboardKey: `${props.value?.dashboard?.id}`, publicId },
+    {
+      dashboardKey: `${props.value?.dashboard?.id}`,
+      publicId,
+    },
   )
   await refreshDashboards()
   dialogRef?.value?.close('DELETE')

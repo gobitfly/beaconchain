@@ -2,18 +2,20 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCaretDown } from '@fortawesome/pro-solid-svg-icons'
 import type {
-  SearchbarShape,
+  NetworkFilter,
   SearchbarColors,
   SearchbarDropdownLayout,
-  NetworkFilter,
+  SearchbarShape,
 } from '~/types/searchbar'
-import { ChainInfo, ChainIDs } from '~/types/network'
+import {
+  ChainIDs, ChainInfo,
+} from '~/types/network'
 
 const emit = defineEmits<{ (e: 'change'): void }>()
 defineProps<{
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  dropdownLayout: SearchbarDropdownLayout
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout: SearchbarDropdownLayout,
 }>()
 // each entry has a ChainIDs as key and the state of the option as value.
 // The component will write directly into it, so the data of the parent is always up-to-date.
@@ -21,15 +23,16 @@ const liveState = defineModel<NetworkFilter>({ required: true })
 
 const { t } = useTranslation()
 
-const headState = ref<{ look: 'on' | 'off', network: string }>({
+const headState = ref<{ look: 'off' | 'on',
+  network: string, }>({
   look: 'off',
   network: '',
 })
 const listInDropdown = ref<
   {
-    chainId: ChainIDs
-    label: string
-    selected: boolean
+    chainId: ChainIDs,
+    label: string,
+    selected: boolean,
   }[]
 >([])
 const dropdownIsOpen = ref<boolean>(false)
@@ -123,9 +126,9 @@ function oneOptionChanged(index: number) {
   <div class="anchor">
     <BcSearchbarFilterButton
       class="head"
-      :bar-shape="barShape"
-      :color-theme="colorTheme"
-      :dropdown-layout="dropdownLayout"
+      :bar-shape
+      :color-theme
+      :dropdown-layout
       :look="headState.look"
       :state="dropdownIsOpen"
       @change="(open: boolean) => (dropdownIsOpen = open)"
