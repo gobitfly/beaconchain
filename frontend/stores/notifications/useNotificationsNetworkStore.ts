@@ -13,7 +13,11 @@ export function useNotificationsNetworkStore() {
 
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(notificationsNetworkStore())
-  const { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery } = useTableQuery({ limit: 10, sort: 'timestamp:desc' }, 10)
+  const {
+    cursor, isStoredQuery, onSort, pageSize, pendingQuery, query, setCursor, setPageSize, setSearch, setStoredQuery,
+  } = useTableQuery({
+    limit: 10, sort: 'timestamp:desc',
+  }, 10)
   const isLoading = ref(false)
 
   async function loadNetworkNotifications(q: TableQueryParams) {
@@ -53,8 +57,8 @@ export function useNotificationsNetworkStore() {
 
   return {
     cursor,
-    networkNotifications,
     isLoading,
+    networkNotifications,
     onSort,
     pageSize,
     query: pendingQuery,

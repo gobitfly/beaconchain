@@ -317,7 +317,7 @@
         "participation_rate": "Participation rate < {_value}"
       },
       "footer": {
-        "subscriptions": "Network ({count} Subscription) |Validators ({count} Subscriptions)"
+        "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
       }
     },
     "subscriptions": {

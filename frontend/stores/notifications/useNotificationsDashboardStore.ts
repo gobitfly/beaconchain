@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { InternalGetUserNotificationDashboardsResponse } from '~/types/api/notifications'
 import { API_PATH } from '~/types/customFetch'
 import type { TableQueryParams } from '~/types/datatable'
+import type { ChainIDs } from '~/types/network'
 
 const notificationsDashboardStore = defineStore(
   'notifications-dashboard-store',
@@ -11,7 +12,7 @@ const notificationsDashboardStore = defineStore(
   },
 )
 
-export function useNotificationsDashboardStore(networkId: globalThis.Ref<number>) {
+export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainIDs>) {
   const { isLoggedIn } = useUserStore()
 
   const { fetch } = useCustomFetch()
@@ -64,7 +65,8 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<number>
 
   watch([
     query,
-    networkId], ([q]) => {
+    networkId,
+  ], ([ q ]) => {
     if (q) {
       isLoggedIn.value && loadNotificationsDashboards(q)
     }

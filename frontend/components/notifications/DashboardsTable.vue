@@ -6,6 +6,7 @@ import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
+import type { ChainIDs } from '~/types/network'
 
 defineEmits<{ (e: 'openDialog'): void }>()
 
@@ -15,7 +16,7 @@ const { t: $t } = useTranslation()
 
 // TODO: replace currentNetwork with selection from NETWORK_SWITCHER_COMPONENT that has yet to be implemented
 const { currentNetwork } = useNetworkStore()
-const networkId = ref<number>(currentNetwork.value ?? 1)
+const networkId = ref<ChainIDs>(currentNetwork.value ?? 1)
 
 const {
   isLoading,
