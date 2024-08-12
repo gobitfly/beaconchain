@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 import type { LoginResponse } from '~/types/user'
-import type { InternalGetUserInfoResponse, UserInfo } from '~/types/api/user'
+import type {
+  InternalGetUserInfoResponse, UserInfo,
+} from '~/types/api/user'
 import { API_PATH } from '~/types/customFetch'
 
 const userStore = defineStore('user-store', () => {
-  const data = ref<UserInfo | undefined | null>()
+  const data = ref<null | undefined | UserInfo>()
   return { data }
 })
 
@@ -27,7 +29,7 @@ export function useUserStore() {
     data.value = user
   }
 
-  async function getUser(): Promise<UserInfo | undefined> {
+  async function getUser(): Promise<undefined | UserInfo> {
     try {
       const res = await fetch<InternalGetUserInfoResponse>(
         API_PATH.USER,
@@ -59,5 +61,11 @@ export function useUserStore() {
     return !!user.value
   })
 
-  return { doLogin, doLogout, user, isLoggedIn, getUser }
+  return {
+    doLogin,
+    doLogout,
+    getUser,
+    isLoggedIn,
+    user,
+  }
 }

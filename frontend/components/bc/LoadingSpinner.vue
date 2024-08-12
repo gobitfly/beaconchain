@@ -1,8 +1,8 @@
 <script setup lang="ts">
 interface Props {
-  loading?: boolean
-  size?: 'small' | 'medium' | 'large' | 'full' // default = medium
-  alignment?: 'center' | 'default'
+  alignment?: 'center' | 'default',
+  loading?: boolean,
+  size?: 'full' | 'large' | 'medium' | 'small', // default = medium
 }
 defineProps<Props>()
 </script>

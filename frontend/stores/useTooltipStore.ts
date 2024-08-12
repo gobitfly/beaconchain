@@ -14,5 +14,8 @@ export function useTooltipStore() {
     data.value = element
   }
 
-  return { selected, doSelect }
+  return {
+    doSelect,
+    selected,
+  }
 }

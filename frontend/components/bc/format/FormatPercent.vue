@@ -2,36 +2,36 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faArrowUp,
   faArrowDown,
   faArrowsLeftRight,
+  faArrowUp,
 } from '@fortawesome/pro-solid-svg-icons'
 import { type CompareResult } from '~/types/value'
 
 interface Props {
-  percent?: number
-  base?: number
-  value?: number
-  comparePercent?: number // if set it adds the compare sign in front and colors the values accordingly
-  hideEmptyValue?: boolean
-  precision?: number
-  fixed?: number
-  fullOnEmptyBase?: boolean
-  addPositiveSign?: boolean
+  addPositiveSign?: boolean,
+  base?: number,
   // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
-  colorBreakPoint?: number
+  colorBreakPoint?: number,
+  comparePercent?: number, // if set it adds the compare sign in front and colors the values accordingly
+  fixed?: number,
+  fullOnEmptyBase?: boolean,
+  hideEmptyValue?: boolean,
+  percent?: number,
+  precision?: number,
+  value?: number,
 }
 
 const props = defineProps<Props>()
 
 const data = computed(() => {
-  let label: string | null = null
+  let label: null | string = null
   let compareResult: CompareResult | null = null
   let className = ''
   if (props.base === 0 && props.fullOnEmptyBase) {
     return {
-      label: '100%',
       className: 'text-positive',
+      label: '100%',
     }
   }
   let leadingIcon: IconDefinition | undefined
@@ -39,13 +39,16 @@ const data = computed(() => {
     if (!props.hideEmptyValue) {
       label = '0%'
     }
-    return { label, className }
+    return {
+      className,
+      label,
+    }
   }
   const percent = props.percent ?? calculatePercent(props.value, props.base)
   const config = {
-    precision: props.precision ?? 2,
-    fixed: props.fixed ?? 2,
     addPositiveSign: props.addPositiveSign,
+    fixed: props.fixed ?? 2,
+    precision: props.precision ?? 2,
   }
   label = formatPercent(percent, config)
   if (props.comparePercent !== undefined) {
@@ -76,7 +79,12 @@ const data = computed(() => {
       className = 'text-negative'
     }
   }
-  return { label, className, leadingIcon, compareResult }
+  return {
+    className,
+    compareResult,
+    label,
+    leadingIcon,
+  }
 })
 </script>
 

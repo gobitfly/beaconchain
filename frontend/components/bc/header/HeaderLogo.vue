@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  layoutAdaptability: 'low' | 'high'
+  layoutAdaptability: 'high' | 'low',
 }>()
 </script>
 

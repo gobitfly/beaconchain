@@ -4,7 +4,7 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { ClElValue } from '~/types/api/common'
 
 interface Props {
-  reward?: ClElValue<string>
+  reward?: ClElValue<string>,
 }
 const props = defineProps<Props>()
 

@@ -1,31 +1,33 @@
 <script lang="ts" setup>
-import { h, render } from 'vue'
+import {
+  h, render,
+} from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { type ECharts } from 'echarts'
 import { get } from 'lodash-es'
 import {
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
   DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
 import SummaryChartTooltip from './SummaryChartTooltip.vue'
 import {
-  getSummaryChartGroupColors,
   getChartTextColor,
   getChartTooltipBackgroundColor,
+  getSummaryChartGroupColors,
 } from '~/utils/colors'
 import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatTsToTime } from '~/utils/format'
 import { API_PATH } from '~/types/customFetch'
 import {
+  type AggregationTimeframe,
   SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
   SUMMARY_CHART_GROUP_TOTAL,
-  type AggregationTimeframe,
   type SummaryChartFilter,
 } from '~/types/dashboard/summary'
 
@@ -39,7 +41,7 @@ use([
 ])
 
 interface Props {
-  filter?: SummaryChartFilter
+  filter?: SummaryChartFilter,
 }
 
 const props = defineProps<Props>()
@@ -48,22 +50,33 @@ const chart = ref<ECharts | undefined>()
 const { t: $t } = useTranslation()
 const colorMode = useColorMode()
 const { fetch } = useCustomFetch()
-const { tsToEpoch, slotToTs, secondsPerEpoch } = useNetworkStore()
+const {
+  secondsPerEpoch, slotToTs, tsToEpoch,
+} = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
 const { overview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 const { latestState } = useLatestStateStore()
 const latestSlot = ref(latestState.value?.current_slot || 0)
 const {
-  value: timeFrames,
-  temp: tempTimeFrames,
   bounce: bounceTimeFrames,
   instant: instantTimeFrames,
-} = useDebounceValue<{ from?: number, to: number }>({ from: undefined, to: 0 }, 1000)
-const currentZoom = { start: 80, end: 100 }
+  temp: tempTimeFrames,
+  value: timeFrames,
+} = useDebounceValue<{ from?: number,
+  to?: number, }>({
+  from: undefined,
+  to: undefined,
+}, 1000)
+const currentZoom = {
+  end: 100,
+  start: 80,
+}
 const MAX_DATA_POINTS = 200
 
-const { value: filter, bounce: bounceFilter } = useDebounceValue(
+const {
+  bounce: bounceFilter, value: filter,
+} = useDebounceValue(
   props.filter,
   1000,
 )
@@ -72,11 +85,11 @@ const isLoading = ref(false)
 let reloadCounter = 0
 
 interface SeriesObject {
-  data: number[]
-  type: string
-  smooth: boolean
-  symbol: string
-  name: string
+  data: number[],
+  name: string,
+  smooth: boolean,
+  symbol: string,
+  type: string,
 }
 // we don't want the series to be responsive to not trigger an auto update of the option computed
 const series = ref<SeriesObject[]>([])
@@ -125,12 +138,21 @@ const updateTimestamp = () => {
   latestSlot.value = latestState.value?.current_slot || 0
 }
 
-watch([() => props.filter?.efficiency, () => props.filter?.groupIds], () => {
+watch([
+  () => props.filter?.efficiency,
+  () => props.filter?.groupIds,
+], () => {
   if (!props.filter?.initialised || !props.filter?.efficiency) {
     return
   }
-  bounceFilter({ ...props.filter, groupIds: [...props.filter.groupIds] }, true, true)
-}, { immediate: true, deep: true })
+  bounceFilter({
+    ...props.filter,
+    groupIds: [ ...props.filter.groupIds ],
+  }, true, true)
+}, {
+  deep: true,
+  immediate: true,
+})
 
 watch(() => props.filter?.aggregation, (agg) => {
   if (!agg) {
@@ -144,7 +166,7 @@ const loadData = async () => {
   reloadCounter++
   const currentCounter = reloadCounter
   let newCategories: number[] = []
-  if (!dashboardKey.value || !timeFrames.value.to) {
+  if (!dashboardKey.value || (!timeFrames.value.to && !timeFrames.value.from)) {
     series.value = []
     return
   }
@@ -156,10 +178,10 @@ const loadData = async () => {
       {
         query: {
           after_ts: timeFrames.value.from,
-          before_ts: timeFrames.value.to,
-          group_ids: props.filter?.groupIds.join(','),
-          efficiency_type: props.filter?.efficiency,
           aggregation: aggregation.value,
+          before_ts: timeFrames.value.to,
+          efficiency_type: props.filter?.efficiency,
+          group_ids: props.filter?.groupIds.join(','),
         },
       },
       { dashboardKey: dashboardKey.value },
@@ -184,16 +206,19 @@ const loadData = async () => {
         }
         const newObj: SeriesObject = {
           data: element.data,
-          type: 'line',
+          name,
           smooth: false,
           symbol: 'none',
-          name,
+          type: 'line',
         }
         newSeries.push(newObj)
       })
     }
   }
   catch (e) {
+    if (currentCounter !== reloadCounter) {
+      return // make sure we only use the data from the latest call
+    }
     // TODO: Maybe we want to show an error here (either a toast or inline centred in the chart space)
   }
   isLoading.value = false
@@ -202,7 +227,12 @@ const loadData = async () => {
 }
 
 watch(
-  [dashboardKey, filter, aggregation, timeFrames],
+  [
+    dashboardKey,
+    filter,
+    aggregation,
+    timeFrames,
+  ],
   () => {
     loadData()
   },
@@ -211,9 +241,9 @@ watch(
 
 const colors = computed(() => {
   return {
+    background: getChartTooltipBackgroundColor(colorMode.value),
     groups: getSummaryChartGroupColors(colorMode.value),
     label: getChartTextColor(colorMode.value),
-    background: getChartTooltipBackgroundColor(colorMode.value),
   }
 })
 
@@ -259,80 +289,44 @@ const formatTimestamp = (value: string) => {
 // chart options
 const option = computed(() => {
   return {
+    color: colors.value.groups,
+    dataZoom: {
+      type: 'slider',
+      ...currentZoom,
+      borderColor: colors.value.label,
+      dataBackground: {
+        areaStyle: { color: colors.value.label },
+        lineStyle: { color: colors.value.label },
+      },
+      labelFormatter: (_value: number, valueStr: string) => {
+        return formatToDateOrEpoch(valueStr)
+      },
+      xAxisIndex: [ 1 ],
+    },
     grid: {
       containLabel: true,
-      top: 10,
       left: '5%',
       right: '5%',
+      top: 10,
     },
-    xAxis: [
-      {
-        // xAxis of the chart
-        type: 'category',
-        data: chartCategories.value,
-        boundaryGap: false,
-        axisLabel: {
-          fontSize: textSize,
-          lineHeight: 20,
-          formatter: formatTimestamp,
-        },
-      },
-      {
-        // xAxis of the time frame selection
-        type: 'category',
-        data: categories.value,
-        show: false,
-        boundaryGap: false,
-      },
-    ],
-    series: series.value,
-    yAxis: {
-      name: $t(
-        `dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`,
-      ),
-      nameLocation: 'center',
-      nameTextStyle: {
-        padding: [0, 0, 30, 0],
-      },
-      type: 'value',
-      minInterval: 10,
-      maxInterval: 20,
-      min: (range: any) =>
-        range.min >= 0
-          ? Math.max(0, 10 * Math.ceil(range.min / 10 - 1))
-          : 10 * Math.ceil(range.min / 10 - 1),
-      silent: true,
-      axisLabel: {
-        formatter: '{value} %',
-        fontSize: textSize,
-      },
-      splitLine: {
-        lineStyle: {
-          color: colors.value.label,
-        },
-      },
-    },
-    textStyle: {
-      fontFamily,
-      fontSize: textSize,
-      fontWeight: fontWeightLight,
-      color: colors.value.label,
-    },
-    color: colors.value.groups,
     legend: {
-      type: 'scroll',
-      orient: 'horizontal',
       bottom: 40,
+      orient: 'horizontal',
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
         fontWeight: fontWeightMedium,
       },
+      type: 'scroll',
+    },
+    series: series.value,
+    textStyle: {
+      color: colors.value.label,
+      fontFamily,
+      fontSize: textSize,
+      fontWeight: fontWeightLight,
     },
     tooltip: {
-      order: 'seriesAsc',
-      trigger: 'axis',
-      padding: 0,
       borderColor: colors.value.background,
       formatter(params: any): HTMLElement {
         const ts = parseInt(params[0].axisValue)
@@ -350,42 +344,75 @@ const option = computed(() => {
             }
           }
           return {
-            name: param.seriesName,
-            efficiency: param.value,
             color: param.color,
+            efficiency: param.value,
+            name: param.seriesName,
           }
         })
         const d = document.createElement('div')
         render(
           h(SummaryChartTooltip, {
-            t: $t,
-            ts,
-            efficiencyType: props.filter?.efficiency || 'all',
             aggregation: aggregation.value,
+            efficiencyType: props.filter?.efficiency || 'all',
             groupInfos,
             highlightGroup,
+            t: $t,
+            ts,
           }),
           d,
         )
         return d
       },
+      order: 'seriesAsc',
+      padding: 0,
+      trigger: 'axis',
     },
-    dataZoom: {
-      type: 'slider',
-      ...currentZoom,
-      labelFormatter: (_value: number, valueStr: string) => {
-        return formatToDateOrEpoch(valueStr)
-      },
-      xAxisIndex: [1],
-      dataBackground: {
-        lineStyle: {
-          color: colors.value.label,
+    xAxis: [
+      {
+        axisLabel: {
+          fontSize: textSize,
+          formatter: formatTimestamp,
+          lineHeight: 20,
         },
-        areaStyle: {
-          color: colors.value.label,
-        },
+        boundaryGap: false,
+        data: chartCategories.value,
+        // xAxis of the chart
+        type: 'category',
       },
-      borderColor: colors.value.label,
+      {
+        boundaryGap: false,
+        data: categories.value,
+        show: false,
+        // xAxis of the time frame selection
+        type: 'category',
+      },
+    ],
+    yAxis: {
+      axisLabel: {
+        fontSize: textSize,
+        formatter: '{value} %',
+      },
+      maxInterval: 20,
+      min: (range: any) =>
+        range.min >= 0
+          ? Math.max(0, 10 * Math.ceil(range.min / 10 - 1))
+          : 10 * Math.ceil(range.min / 10 - 1),
+      minInterval: 10,
+      name: $t(
+        `dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`,
+      ),
+      nameLocation: 'center',
+      nameTextStyle: {
+        padding: [
+          0,
+          0,
+          30,
+          0,
+        ],
+      },
+      silent: true,
+      splitLine: { lineStyle: { color: colors.value.label } },
+      type: 'value',
     },
   }
 })
@@ -396,8 +423,8 @@ const getDataZoomValues = () => {
   const start: number = get(chartOptions, 'dataZoom[0].start', 80) as number
   const end: number = get(chartOptions, 'dataZoom[0].end', 100) as number
   return {
-    start,
     end,
+    start,
   }
 }
 
@@ -412,15 +439,15 @@ const getZoomTimestamps = () => {
   const fromIndex = Math.floor((max / 100) * zoomValues.start)
   return {
     ...zoomValues,
-    toIndex,
-    toTs: categories.value[toIndex],
     fromIndex,
     fromTs: categories.value[fromIndex],
+    toIndex,
+    toTs: categories.value[toIndex],
   }
 }
 
 // validate and adjust zoom settings
-const validateDataZoom = (instant?: boolean) => {
+const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
   if (!chart.value) {
     return
   }
@@ -428,23 +455,40 @@ const validateDataZoom = (instant?: boolean) => {
   if (!timestamps) {
     return
   }
+  const firstTime = !tempTimeFrames.value.to && !tempTimeFrames.value.from
 
   const max = categories.value.length - 1
-  // check for max data points
-  if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS) {
-    if (timestamps.start !== currentZoom.start) {
+
+  const useDefault = categoryChanged || firstTime
+  // check if data points need to be adjusted
+  if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS || useDefault) {
+    if (useDefault) {
+      let targetPoints = 6
+      switch (aggregation.value) {
+        case 'daily':
+          targetPoints = 7
+          break
+        case 'weekly':
+          targetPoints = 8
+          break
+      }
+      timestamps.toIndex = firstTime ? max : Math.max(Math.ceil(max / 100 * timestamps.end), targetPoints)
+      timestamps.fromIndex = timestamps.toIndex - targetPoints
+    }
+    else if (timestamps.start !== currentZoom.start) {
       timestamps.toIndex = Math.min(
         timestamps.fromIndex + MAX_DATA_POINTS,
         max,
       )
-      timestamps.end = (timestamps.toIndex * 100) / max
-      timestamps.toTs = categories.value[timestamps.toIndex]
     }
     else {
       timestamps.fromIndex = Math.max(0, timestamps.toIndex - MAX_DATA_POINTS)
-      timestamps.start = (timestamps.fromIndex * 100) / max
-      timestamps.fromTs = categories.value[timestamps.fromIndex]
     }
+
+    timestamps.end = (timestamps.toIndex * 100) / max
+    timestamps.toTs = categories.value[timestamps.toIndex]
+    timestamps.start = (timestamps.fromIndex * 100) / max
+    timestamps.fromTs = categories.value[timestamps.fromIndex]
   }
   // to index must be greater then from index
   if (timestamps.toIndex <= timestamps.fromIndex) {
@@ -465,15 +509,19 @@ const validateDataZoom = (instant?: boolean) => {
   }
 
   let fromTs: number | undefined = timestamps.fromTs
+  let toTs: number | undefined = timestamps.toTs
   const bufferSteps = aggregation.value === 'epoch' ? 0 : 5
   // if we are on the far left of the time frame we omit the fromTs to avoid going to far and cause a webservice error
   // in that case the backend will go back depending on the max secons of the dashboard settings
   if (timestamps.fromIndex <= bufferSteps) {
     fromTs = undefined
   }
+  else if (timestamps.toIndex >= max - bufferSteps) {
+    toTs = undefined
+  }
   const newTimeFrames = {
     from: fromTs,
-    to: timestamps.toTs,
+    to: toTs,
   }
   // when the timeframes of the slider change we bounce the new timeframe for the chart
   if (
@@ -497,31 +545,38 @@ const validateDataZoom = (instant?: boolean) => {
 
     // check if dataZoom is ready for the action otherwise use set options
     nextTick(() => {
+      chart.value?.setOption({
+        dataZoom: {
+          ...(get(chart.value, 'xAxis[1]') || {}),
+          ...currentZoom,
+        },
+      })
       if (get(chart.value?.getOption(), 'dataZoom[0]')) {
         chart.value?.dispatchAction({
           type: 'dataZoom',
           ...currentZoom,
         })
       }
-      else {
-        chart.value?.setOption({
-          dataZoom: {
-            ...(get(chart.value, 'xAxis[1]') || {}),
-            ...currentZoom,
-          },
-        })
-      }
     })
   }
 }
 
-watch([option], () => {
-  updateTimestamp()
-  validateDataZoom(true)
-}, { immediate: true })
-
-watch([categories, chart], () => {
-  validateDataZoom(true)
+watch([
+  chart,
+  categories,
+], ([
+  cha,
+  cat,
+], [
+  oldCha,
+  oldCat,
+]) => {
+  const chartChanged = cha !== oldCha
+  const categoriesChanged = cat?.length !== oldCat?.length
+  if (chartChanged) {
+    updateTimestamp()
+  }
+  validateDataZoom(true, categoriesChanged)
 }, { immediate: true })
 
 const onDatazoom = () => {
@@ -544,7 +599,7 @@ const onMouseMove = (e: MouseEvent) => {
       <VChart
         ref="chart"
         class="chart"
-        :option="option"
+        :option
         autoresize
         @datazoom="onDatazoom"
       />

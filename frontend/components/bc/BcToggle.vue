@@ -1,8 +1,8 @@
 <script setup lang="ts">
 interface Props {
-  trueOption?: string
-  falseOption?: string
-  disabled?: boolean
+  disabled?: boolean,
+  falseOption?: string,
+  trueOption?: string,
 }
 defineProps<Props>()
 
@@ -22,7 +22,7 @@ const selected = defineModel<boolean>({ required: true })
     </slot>
     <InputSwitch
       v-model="selected"
-      :disabled="disabled"
+      :disabled
     />
     <slot name="trueOption">
       <div

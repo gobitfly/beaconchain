@@ -1,13 +1,11 @@
 <script lang="ts" setup>
-import {
-  faMagnifyingGlass,
-} from '@fortawesome/pro-solid-svg-icons'
+import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type InputText from 'primevue/inputtext'
 
 interface Props {
-  searchPlaceholder?: string
-  disabledFilter?: boolean
+  disabledFilter?: boolean,
+  searchPlaceholder?: string,
 }
 const props = defineProps<Props>()
 

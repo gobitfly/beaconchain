@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faMagnifyingGlass, faPlus } from '@fortawesome/pro-solid-svg-icons'
 import {
-  type SearchbarShape,
+  faMagnifyingGlass, faPlus,
+} from '@fortawesome/pro-solid-svg-icons'
+import {
   type SearchbarColors,
   type SearchbarPurpose,
   SearchbarPurposeInfo,
+  type SearchbarShape,
 } from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  barPurpose: SearchbarPurpose
+  barPurpose: SearchbarPurpose,
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
 }>()
 </script>
 

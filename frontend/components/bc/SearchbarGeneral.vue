@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import {
-  type SearchbarShape,
+  pickHighestPriorityAmongBestMatchings,
+  type ResultSuggestion,
+  ResultType,
   type SearchbarColors,
   SearchbarPurpose,
-  ResultType,
-  type ResultSuggestion,
-  pickHighestPriorityAmongBestMatchings,
+  type SearchbarShape,
 } from '~/types/searchbar'
 
 defineProps<{
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  screenWidthCausingSuddenChange: number // this information is needed by MiddleEllipsis
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  screenWidthCausingSuddenChange: number, // this information is needed by MiddleEllipsis
 }>()
 
 async function redirectToRelevantPage(result: ResultSuggestion) {
@@ -76,7 +76,10 @@ async function redirectToRelevantPage(result: ResultSuggestion) {
   }
 
   if (q !== '') {
-    await navigateTo({ path, query: { q } })
+    await navigateTo({
+      path,
+      query: { q },
+    })
   }
   else {
     await navigateTo({ path })
@@ -86,11 +89,11 @@ async function redirectToRelevantPage(result: ResultSuggestion) {
 
 <template>
   <BcSearchbarMain
-    :bar-shape="barShape"
-    :color-theme="colorTheme"
+    :bar-shape
+    :color-theme
     :bar-purpose="SearchbarPurpose.GlobalSearch"
     :pick-by-default="pickHighestPriorityAmongBestMatchings"
-    :screen-width-causing-sudden-change="screenWidthCausingSuddenChange"
+    :screen-width-causing-sudden-change
     @go="redirectToRelevantPage"
   />
 </template>

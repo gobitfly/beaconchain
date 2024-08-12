@@ -1,6 +1,9 @@
 <script setup lang="ts">
 const props = defineProps({
-  inline: { type: Boolean, default: false },
+  inline: {
+    default: false,
+    type: Boolean,
+  },
 })
 
 const look = props.inline ? 'inline' : ''

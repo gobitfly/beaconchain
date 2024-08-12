@@ -2,17 +2,17 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import {
+  faArrowUpRightFromSquare,
   faCube,
   faSync,
-  faArrowUpRightFromSquare,
 } from '@fortawesome/pro-solid-svg-icons'
 import {
-  SummaryDetailsEfficiencyProps,
-  SummaryDetailsEfficiencyValidatorProps,
-  type SummaryDetailsEfficiencyValidatorProp,
-  type SummaryDetailsEfficiencyProp,
-  type SummaryDetailsEfficiencyCombinedProp,
   type DashboardValidatorContext,
+  type SummaryDetailsEfficiencyCombinedProp,
+  type SummaryDetailsEfficiencyProp,
+  SummaryDetailsEfficiencyProps,
+  type SummaryDetailsEfficiencyValidatorProp,
+  SummaryDetailsEfficiencyValidatorProps,
   type SummaryTimeFrame,
 } from '~/types/dashboard/summary'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -25,16 +25,18 @@ import type { StatusCount } from '~/types/api/common'
 import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
-  property: SummaryDetailsEfficiencyCombinedProp
-  timeFrame: SummaryTimeFrame
-  data?: VDBGroupSummaryData
-  row: VDBSummaryTableRow
-  absolute?: boolean
-  inDetailView?: boolean
+  absolute?: boolean,
+  data?: VDBGroupSummaryData,
+  inDetailView?: boolean,
+  property: SummaryDetailsEfficiencyCombinedProp,
+  row: VDBSummaryTableRow,
+  timeFrame: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 
-const { tm: $tm, t: $t } = useTranslation()
+const {
+  t: $t, tm: $tm,
+} = useTranslation()
 const { dashboardKey } = useDashboardKey()
 const dialog = useDialog()
 const { groups } = useValidatorDashboardGroups()
@@ -43,18 +45,12 @@ const data = computed(() => {
   const col = props.data
   const row = props.row
   if (row && props.property === 'attestations') {
-    return {
-      efficiency: {
-        status_count: row.attestations,
-      },
-    }
+    return { efficiency: { status_count: row.attestations } }
   }
   else if (row && props.property === 'proposals') {
     return {
-      efficiency: {
-        status_count: row.proposals,
-      },
       context: !props.inDetailView ? 'proposal' : undefined,
+      efficiency: { status_count: row.proposals },
     }
   }
   else if (
@@ -63,9 +59,10 @@ const data = computed(() => {
       props.property as SummaryDetailsEfficiencyProp,
     )
   ) {
-    const tooltip: { title: string, text: string } | undefined = $tm(
+    const tooltip: { text: string,
+      title: string, } | undefined = $tm(
       `dashboard.validator.tooltip.${props.property}`,
-    )
+      )
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
 
     return {
@@ -99,14 +96,15 @@ const data = computed(() => {
       context = 'slashings'
     }
     return {
-      validators,
       context,
+      validators,
     }
   }
   else if (col && props.property === 'attestation_efficiency') {
-    const tooltip: { title: string, text: string } | undefined = $tm(
-      'dashboard.validator.tooltip.attestation_efficiency',
-    )
+    const tooltip: { text: string,
+      title: string, } | undefined = $tm(
+        'dashboard.validator.tooltip.attestation_efficiency',
+      )
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip,
@@ -116,40 +114,30 @@ const data = computed(() => {
     return {
       apr: {
         apr: col.apr,
-        total: col.apr.cl + col.apr.el,
         income: row.reward,
+        total: col.apr.cl + col.apr.el,
       },
     }
   }
   else if (col && props.property === 'luck') {
-    return {
-      luck: col.luck,
-    }
+    return { luck: col.luck }
   }
   else if (row && props.property === 'efficiency') {
     return {
       efficiencyTotal: {
-        value: row.efficiency,
         compare: row.average_network_efficiency,
+        value: row.efficiency,
       },
     }
   }
   else if (col && props.property === 'attestation_avg_incl_dist') {
-    return {
-      simple: {
-        value: trim(col.attestation_avg_incl_dist, 2, 2),
-      },
-    }
+    return { simple: { value: trim(col.attestation_avg_incl_dist, 2, 2) } }
   }
   else if (row && props.property === 'reward') {
-    return {
-      reward: row.reward,
-    }
+    return { reward: row.reward }
   }
   else if (col && props.property === 'missed_rewards') {
-    return {
-      missedRewards: col.missed_rewards,
-    }
+    return { missedRewards: col.missed_rewards }
   }
   return undefined
 })
@@ -167,14 +155,14 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: data.value?.context,
-      timeFrame: props.timeFrame,
-      groupName: groupName.value,
-      groupId: props.row.group_id,
       dashboardKey: dashboardKey.value,
+      groupId: props.row.group_id,
+      groupName: groupName.value,
       summary: {
-        row: props.row,
         data: props.data,
+        row: props.row,
       },
+      timeFrame: props.timeFrame,
     },
   })
 }
@@ -194,7 +182,7 @@ const openValidatorModal = () => {
     class="info_row"
   >
     <DashboardTableEfficiency
-      :absolute="absolute"
+      :absolute
       :success="data.efficiency.status_count.success"
       :failed="data.efficiency.status_count.failed"
     >
@@ -266,7 +254,7 @@ const openValidatorModal = () => {
     :validators="data.validators"
     :time-frame="props.timeFrame"
     :context="data.context"
-    :dashboard-key="dashboardKey"
+    :dashboard-key
     :group-id="props.row.group_id"
     :data="props.data"
     :row="props.row"

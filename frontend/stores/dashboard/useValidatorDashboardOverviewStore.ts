@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia'
 import { useAllValidatorDashboardRewardsDetailsStore } from './useValidatorDashboardRewardsDetailsStore'
 import type {
-  VDBOverviewData,
   InternalGetValidatorDashboardResponse,
+  VDBOverviewData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import { API_PATH } from '~/types/customFetch'
 
 const validatorOverviewStore = defineStore('validator_overview_store', () => {
-  const data = ref<VDBOverviewData | undefined | null>()
+  const data = ref<null | undefined | VDBOverviewData>()
   return { data }
 })
 
@@ -78,5 +78,10 @@ export function useValidatorDashboardOverviewStore() {
     )
   })
 
-  return { overview, refreshOverview, hasValidators, validatorCount }
+  return {
+    hasValidators,
+    overview,
+    refreshOverview,
+    validatorCount,
+  }
 }

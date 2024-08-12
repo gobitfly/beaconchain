@@ -3,7 +3,7 @@ import type { VDBSummaryStatus } from '~/types/api/validator_dashboard'
 import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
 interface Props {
-  status: VDBSummaryStatus
+  status: VDBSummaryStatus,
 }
 const props = defineProps<Props>()
 
@@ -12,9 +12,9 @@ const { t: $t } = useTranslation()
 const mapped = computed(() => {
   const mapCount = (count: number, key: string, icon: SlotVizIcons) => {
     return {
+      className: count > 0 ? `${key.replace('_', '-')} active` : '',
       icon,
       key,
-      className: count > 0 ? `${key.replace('_', '-')} active` : '',
       tooltip: $t(`dashboard.validator.summary.status.${key}`, {}, count),
     }
   }

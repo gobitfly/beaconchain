@@ -30,7 +30,7 @@ export function sortValidatorIds(list?: number[]): number[] {
   if (!list) {
     return []
   }
-  return [...list].sort((a, b) => a - b)
+  return [ ...list ].sort((a, b) => a - b)
 }
 
 export function sortSummaryValidators(
@@ -39,7 +39,7 @@ export function sortSummaryValidators(
   if (!list) {
     return []
   }
-  return [...list].sort((a, b) => a.index - b.index)
+  return [ ...list ].sort((a, b) => a.index - b.index)
 }
 
 export function countSubsetDuties(
@@ -55,12 +55,16 @@ export function countSummaryValidatorDuties(
   validators: VDBSummaryValidator[],
   category: ValidatorSubsetCategory,
 ): number {
-  let countBy: 'index' | 'duty-count' | 'duty-value' = 'index'
+  let countBy: 'duty-count' | 'duty-value' | 'index' = 'index'
   if (category === 'sync_past') {
     countBy = 'duty-value'
   }
   else if (
-    ['has_slashed', 'proposal_proposed', 'proposal_missed'].includes(category)
+    [
+      'has_slashed',
+      'proposal_missed',
+      'proposal_proposed',
+    ].includes(category)
   ) {
     countBy = 'duty-count'
   }

@@ -2,10 +2,10 @@
 import BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
-  success: number
-  failed: number
-  absolute?: boolean
-  isTooltip?: boolean
+  absolute?: boolean,
+  failed: number,
+  isTooltip?: boolean,
+  success: number,
 }
 const props = defineProps<Props>()
 
@@ -13,7 +13,10 @@ const data = computed(() => {
   const failedClass = props.failed ? 'negative' : 'positive'
   const sum = props.failed + props.success
 
-  return { failedClass, sum }
+  return {
+    failedClass,
+    sum,
+  }
 })
 </script>
 

@@ -1,31 +1,33 @@
 <script lang="ts" setup>
 import { type DashboardType } from '~/types/dashboard'
-import { IconAccount, IconValidator } from '#components'
+import {
+  IconAccount, IconValidator,
+} from '#components'
 
 const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()
 
 interface Props {
-  accountsDisabled: boolean
-  validatorsDisabled: boolean
+  accountsDisabled: boolean,
+  validatorsDisabled: boolean,
 }
 const props = defineProps<Props>()
 
-const type = defineModel<DashboardType | ''>('type', { required: true })
+const type = defineModel<'' | DashboardType>('type', { required: true })
 
 const typeButtons = [
   {
-    text: $t('dashboard.creation.type.validators'),
-    value: 'validator',
     component: IconValidator,
     disabled: props.validatorsDisabled,
+    text: $t('dashboard.creation.type.validators'),
+    value: 'validator',
   },
   {
-    text: $t('dashboard.creation.type.accounts'),
-    subText: $t('common.coming_soon'),
-    value: 'account',
     component: IconAccount,
     disabled: props.accountsDisabled,
+    subText: $t('common.coming_soon'),
+    text: $t('dashboard.creation.type.accounts'),
+    value: 'account',
   },
 ]
 

@@ -6,9 +6,9 @@ defineProps<{
   /**
    * The path to the key in the translation file (e.g. en.json)
    */
-  keypath: KeyPaths<MessageSchema>
-  linkpath?: KeyPaths<MessageSchema>
-  tag?: keyof HTMLElementTagNameMap
+  keypath: KeyPaths<MessageSchema>,
+  linkpath?: KeyPaths<MessageSchema>,
+  tag?: keyof HTMLElementTagNameMap,
   /**
    * URL to link to
    *
@@ -23,7 +23,7 @@ defineProps<{
    *   "_link": "Click here"
    * }
    */
-  to?: string
+  to?: string,
 }>()
 </script>
 

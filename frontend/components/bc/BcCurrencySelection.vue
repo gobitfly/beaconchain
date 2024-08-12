@@ -2,10 +2,12 @@
 import type { Currency } from '~/types/currencies'
 
 defineProps<{
-  showCurrencyIcon: boolean
+  showCurrencyIcon: boolean,
 }>()
 
-const { currency, withLabel, setCurrency } = useCurrency()
+const {
+  currency, setCurrency, withLabel,
+} = useCurrency()
 </script>
 
 <template>
@@ -25,7 +27,7 @@ const { currency, withLabel, setCurrency } = useCurrency()
         >
           <IconCurrency
             v-if="currency"
-            :currency="currency"
+            :currency
           /> </span>{{ currency }}
       </span>
     </template>

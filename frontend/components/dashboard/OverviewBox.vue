@@ -6,7 +6,7 @@ import { type OverviewTableData } from '~/types/dashboard/overview'
 import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
-  data: OverviewTableData
+  data: OverviewTableData,
 }
 const props = defineProps<Props>()
 const dialog = useDialog()
@@ -18,8 +18,8 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: 'dashboard',
-      dashboardName: getDashboardLabel(dashboardKey.value, 'validator'),
       dashboardKey: dashboardKey.value,
+      dashboardName: getDashboardLabel(dashboardKey.value, 'validator'),
       timeFrame: 'last_24h',
     },
   })

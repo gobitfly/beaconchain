@@ -17,17 +17,20 @@ export function useNotificationsDashboardStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(notificationsDashboardStore())
   const {
-    query,
-    pendingQuery,
     cursor,
-    pageSize,
+    isStoredQuery,
     onSort,
+    pageSize,
+    pendingQuery,
+    query,
     setCursor,
     setPageSize,
     setSearch,
     setStoredQuery,
-    isStoredQuery,
-  } = useTableQuery({ limit: 10, sort: 'dashboard:desc' }, 10)
+  } = useTableQuery({
+    limit: 10,
+    sort: 'dashboard:desc',
+  }, 10)
   const isLoading = ref(false)
 
   async function loadNotificationsDashboards(q: TableQueryParams) {
@@ -65,8 +68,8 @@ export function useNotificationsDashboardStore() {
 
   return {
     cursor,
-    notificationsDashboards,
     isLoading,
+    notificationsDashboards,
     onSort,
     pageSize,
     query: pendingQuery,

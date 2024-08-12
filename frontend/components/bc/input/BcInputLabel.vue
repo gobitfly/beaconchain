@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { faCheck, faEdit } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faCheck, faEdit,
+} from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 interface Props {
-  value?: string
-  label?: string // used if not in edit mode, defaults to value,
-  disabled?: boolean
-  canBeEmpty?: boolean
-  maxlength?: number
-  pattern?: RegExp
-  trimInput?: boolean
+  canBeEmpty?: boolean,
+  disabled?: boolean,
+  label?: string, // used if not in edit mode, defaults to value,
+  maxlength?: number,
+  pattern?: RegExp,
+  trimInput?: boolean,
+  value?: string,
 }
 
 const props = defineProps<Props>()
@@ -42,13 +44,13 @@ const iconClick = () => {
 }
 
 const icon = computed(() => ({
-  icon: isEditing.value ? faCheck : faEdit,
   disabled:
     props.disabled
     || (isEditing.value && !editValue.value && !props.canBeEmpty)
     || (props.pattern && !props.pattern.test(editValue.value))
       ? true
       : null,
+  icon: isEditing.value ? faCheck : faEdit,
 }))
 
 watch(
@@ -58,7 +60,13 @@ watch(
   },
 )
 
-watch([isEditing, inputRef], ([edit, input]) => {
+watch([
+  isEditing,
+  inputRef,
+], ([
+  edit,
+  input,
+]) => {
   if (edit) {
     input?.$el?.focus()
   }
@@ -74,7 +82,7 @@ watch([isEditing, inputRef], ([edit, input]) => {
       <InputText
         ref="inputRef"
         v-model="editValue"
-        :maxlength="maxlength"
+        :maxlength
         @keypress.enter="iconClick"
       />
     </div>
