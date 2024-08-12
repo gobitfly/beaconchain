@@ -2,7 +2,8 @@
   "conventionalCommits.scopes": [
     "i18n",
     "vscode",
-    "eslint"
+    "eslint",
+    "mainHeader"
   ],
   "editor.rulers": [
     80,
