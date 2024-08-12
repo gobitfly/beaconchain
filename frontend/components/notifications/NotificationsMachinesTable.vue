@@ -168,11 +168,10 @@ $breakpoint-lg: 1024px;
 }
 
 :deep(.col-threshold) {
+  @include utils.set-all-width(140px);
   *:not([data-pc-section="sort"]) {
     @include utils.truncate-text;
   }
-
-  @include utils.set-all-width(140px);
 }
 
 :deep(.col-age) {
