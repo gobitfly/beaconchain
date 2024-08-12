@@ -1,4 +1,6 @@
-import { inject, warn } from 'vue'
+import {
+  inject, warn,
+} from 'vue'
 import type { NotificationPairedDevice } from '~/types/api/notifications'
 import type {
   NotificationsManagementSettingsGeneralTab,
@@ -58,10 +60,10 @@ export function useNotificationsManagementSettings() {
   })
 
   return {
-    isLoading,
     generalSettings,
-    updateGeneralSettings,
+    isLoading,
     pairedDevices,
+    updateGeneralSettings,
     updatePairedDevices,
   }
 }

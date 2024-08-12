@@ -1,19 +1,21 @@
-import { provide, warn } from 'vue'
-import { type Stripe, loadStripe } from '@stripe/stripe-js'
+import {
+  provide, warn,
+} from 'vue'
+import {
+  loadStripe, type Stripe,
+} from '@stripe/stripe-js'
 import type { StripeProvider } from '~/types/stripe'
 import type {
-  StripeCustomerPortal,
   StripeCreateCheckoutSession,
+  StripeCustomerPortal,
 } from '~/types/api/user'
 import { API_PATH } from '~/types/customFetch'
 
 export function useStripeProvider() {
   const { fetch } = useCustomFetch()
-  const {
-    public: { stripeBaseUrl },
-  } = useRuntimeConfig()
+  const { public: { stripeBaseUrl } } = useRuntimeConfig()
 
-  const stripe = ref<Stripe | null>(null)
+  const stripe = ref<null | Stripe>(null)
 
   const isStripeProcessing = ref(false)
 
@@ -41,8 +43,8 @@ export function useStripeProvider() {
     const res = await fetch<StripeCustomerPortal>(
       API_PATH.STRIPE_CUSTOMER_PORTAL,
       {
-        body: JSON.stringify({ returnURL: window.location.href }),
         baseURL: stripeBaseUrl,
+        body: JSON.stringify({ returnURL: window.location.href }),
       },
     )
 
@@ -61,8 +63,11 @@ export function useStripeProvider() {
     const res = await fetch<StripeCreateCheckoutSession>(
       API_PATH.STRIPE_CHECKOUT_SESSION,
       {
-        body: JSON.stringify({ priceId, addonQuantity: amount }),
         baseURL: stripeBaseUrl,
+        body: JSON.stringify({
+          addonQuantity: amount,
+          priceId,
+        }),
       },
     )
 
@@ -77,10 +82,10 @@ export function useStripeProvider() {
   }
 
   provide<StripeProvider>('stripe', {
-    stripeInit,
-    stripeCustomerPortal,
-    stripePurchase,
     isStripeDisabled,
+    stripeCustomerPortal,
+    stripeInit,
+    stripePurchase,
   })
 
   return { stripeInit }

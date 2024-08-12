@@ -1,8 +1,8 @@
 export interface Feature {
-  name: string
-  subtext?: string
-  available: boolean
-  tooltip?: string
-  percentage?: number
-  link?: string
+  available: boolean,
+  link?: string,
+  name: string,
+  percentage?: number,
+  subtext?: string,
+  tooltip?: string,
 }

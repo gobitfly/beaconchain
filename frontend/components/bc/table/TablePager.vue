@@ -3,19 +3,25 @@ import type { Paging } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
-  cursor: Cursor
-  pageSize: number
-  paging?: Paging
-  stepperOnly?: boolean
+  cursor: Cursor,
+  pageSize: number,
+  paging?: Paging,
+  stepperOnly?: boolean,
 }
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void
-  (e: 'setPageSize', value: number): void
+  (e: 'setCursor', value: Cursor): void,
+  (e: 'setPageSize', value: number): void,
 }>()
 
-const pageSizes = [5, 10, 25, 50, 100]
+const pageSizes = [
+  5,
+  10,
+  25,
+  50,
+  100,
+]
 
 const currentOffset = computed<number>(() =>
   typeof props.cursor === 'number' ? props.cursor : 0,
@@ -23,15 +29,13 @@ const currentOffset = computed<number>(() =>
 
 const data = computed(() => {
   if (!props.paging) {
-    return {
-      mode: 'waiting',
-    }
+    return { mode: 'waiting' }
   }
   if (props.paging.total_count === undefined) {
     return {
       mode: 'cursor',
-      prev_cursor: props.paging.prev_cursor,
       next_cursor: props.paging.next_cursor,
+      prev_cursor: props.paging.prev_cursor,
     }
   }
   const page
@@ -45,7 +49,13 @@ const data = computed(() => {
   )
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
-  return { mode: 'offset', page, from, to, lastPage }
+  return {
+    from,
+    lastPage,
+    mode: 'offset',
+    page,
+    to,
+  }
 })
 
 const next = () => {

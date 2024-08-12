@@ -12,22 +12,22 @@ const { fetch } = useCustomFetch()
 
 const { width } = useWindowSize()
 const size = computed(() => {
-  return {
-    expandable: width.value <= 1000,
-  }
+  return { expandable: width.value <= 1000 }
 })
 
 interface Props {
   // we need to pass the key as prop as the dialog is not a child component and cannot access the provider
-  dashboardKey: DashboardKey
-  groupId: number
-  groupName?: string
-  epoch: number
+  dashboardKey: DashboardKey,
+  epoch: number,
+  groupId: number,
+  groupName?: string,
 }
 
-const { props, setHeader } = useBcDialog<Props>({
-  showHeader: size.value.expandable,
+const {
+  props, setHeader,
+} = useBcDialog<Props>({
   contentClass: 'epoch-duties-modal',
+  showHeader: size.value.expandable,
 })
 
 const isLoading = ref(false)
@@ -35,11 +35,14 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 
 const {
-  value: query,
-  temp: tempQuery,
   bounce: setQuery,
+  temp: tempQuery,
+  value: query,
 } = useDebounceValue<PathValues | undefined>(
-  { limit: pageSize.value, sort: 'validator:asc' },
+  {
+    limit: pageSize.value,
+    sort: 'validator:asc',
+  },
   500,
 )
 
@@ -69,8 +72,16 @@ const loadData = async () => {
     const testQ = JSON.stringify(query.value)
     const result = await fetch<InternalGetValidatorDashboardDutiesResponse>(
       API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY,
-      { query: { ...query.value, group_id: props.value.groupId } },
-      { dashboardKey: props.value.dashboardKey, epoch: props.value.epoch },
+      {
+        query: {
+          ...query.value,
+          group_id: props.value.groupId,
+        },
+      },
+      {
+        dashboardKey: props.value.dashboardKey,
+        epoch: props.value.epoch,
+      },
       query.value,
     )
 
@@ -83,7 +94,10 @@ const loadData = async () => {
 }
 
 watch(
-  () => [props.value, query.value],
+  () => [
+    props.value,
+    query.value,
+  ],
   () => {
     loadData()
   },
@@ -123,7 +137,10 @@ const title = computed(() => {
 })
 
 watch(
-  [title, size],
+  [
+    title,
+    size,
+  ],
   () => {
     setHeader(title.value, size.value.expandable)
   },
@@ -159,13 +176,13 @@ watch(
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="data"
+          :data
           data-key="validator"
           :expandable="size.expandable"
           class="duties-table"
-          :cursor="cursor"
+          :cursor
           :loading="isLoading"
-          :page-size="pageSize"
+          :page-size
           :selected-sort="tempQuery?.sort as string"
           @set-cursor="setCursor"
           @sort="onSort"

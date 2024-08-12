@@ -1,12 +1,18 @@
-import { pullAll, union } from 'lodash-es'
-import { provide, warn } from 'vue'
+import {
+  pullAll, union,
+} from 'lodash-es'
+import {
+  provide, warn,
+} from 'vue'
 import { COOKIE_KEY } from '~/types/cookie'
 import type {
   DashboardKey,
   DashboardKeyData,
   DashboardType,
 } from '~/types/dashboard'
-import { isPublicDashboardKey, isSharedKey } from '~/utils/dashboard/key'
+import {
+  isPublicDashboardKey, isSharedKey,
+} from '~/utils/dashboard/key'
 
 export function useDashboardKeyProvider(
   type: DashboardType = 'validator',
@@ -28,9 +34,9 @@ export function useDashboardKeyProvider(
       warn('route name missing', route)
     }
     const newRoute = router.resolve({
+      hash: document?.location?.hash,
       name: route.name!,
       params: { id: key },
-      hash: document?.location?.hash,
     })
     dashboardKey.value = key
     if (isClient) {
@@ -98,14 +104,14 @@ export function useDashboardKeyProvider(
   }
 
   const api = {
+    addEntities,
     dashboardKey,
+    dashboardType,
     isPublic,
     isShared,
     publicEntities,
-    addEntities,
     removeEntities,
     setDashboardKey,
-    dashboardType,
   }
 
   watch(isLoggedIn, (newValue, oldValue) => {

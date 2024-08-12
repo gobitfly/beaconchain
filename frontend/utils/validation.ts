@@ -1,9 +1,9 @@
-import { boolean, object, string, type AnySchema } from 'yup'
+import {
+  type AnySchema, boolean, object, string,
+} from 'yup'
 
 export const createSchemaObject = (schema: Record<string, AnySchema>) => {
-  return object({
-    ...schema,
-  })
+  return object({ ...schema })
 }
 
 export const validation = {

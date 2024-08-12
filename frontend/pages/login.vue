@@ -3,7 +3,9 @@ import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 import { Target } from '~/types/links'
-import { provideMobileAuthParams, handleMobileAuth } from '~/utils/mobileAuth'
+import {
+  handleMobileAuth, provideMobileAuthParams,
+} from '~/utils/mobileAuth'
 
 const { t: $t } = useTranslation()
 const { doLogin } = useUserStore()
@@ -12,15 +14,23 @@ const route = useRoute()
 
 useBcSeo('login_and_register.title_login')
 
-const { handleSubmit, errors, defineField } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
     email: emailValidation($t),
     password: passwordValidation($t),
   }),
 })
 
-const [email, emailAttrs] = defineField('email')
-const [password, passwordAttrs] = defineField('password')
+const [
+  email,
+  emailAttrs,
+] = defineField('email')
+const [
+  password,
+  passwordAttrs,
+] = defineField('password')
 
 const onSubmit = handleSubmit(async (values) => {
   try {
@@ -35,9 +45,9 @@ const onSubmit = handleSubmit(async (values) => {
   catch (error) {
     password.value = ''
     toast.showError({
-      summary: $t('login_and_register.error_title'),
-      group: $t('login_and_register.error_login_group'),
       detail: $t('login_and_register.error_login_message'),
+      group: $t('login_and_register.error_login_group'),
+      summary: $t('login_and_register.error_title'),
     })
   }
 })

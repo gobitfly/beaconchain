@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import {
+  onMounted, ref,
+} from 'vue'
 
 interface Props {
-  groupId?: number
-  selectedValidators?: number
-  totalValidators?: number
+  groupId?: number,
+  selectedValidators?: number,
+  totalValidators?: number,
 }
-const { props, setHeader, dialogRef } = useBcDialog<Props>()
+const {
+  dialogRef, props, setHeader,
+} = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 
 const selectedGroupId = ref<number>()

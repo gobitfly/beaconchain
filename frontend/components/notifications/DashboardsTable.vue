@@ -13,13 +13,13 @@ const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
 const {
+  isLoading,
+  notificationsDashboards,
   onSort,
+  query,
   setCursor,
   setPageSize,
   setSearch,
-  notificationsDashboards,
-  query,
-  isLoading,
 } = useNotificationsDashboardStore()
 
 const { groups } = useValidatorDashboardGroups()
@@ -27,9 +27,9 @@ const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    notifications: width.value > 1024,
     dashboard: width.value >= 640,
     groups: width.value >= 640,
+    notifications: width.value > 1024,
   }
 })
 
@@ -47,12 +47,12 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
     return
   }
   return {
-    paging: notificationsDashboards.value.paging,
     // TODO: set unique identifier after backend is ready
     data: notificationsDashboards.value.data.map((item, index) => ({
       ...item,
       identifier: index,
     })),
+    paging: notificationsDashboards.value.paging,
     // .filter(() => false) // comment in to test empty table
   }
 })
@@ -74,8 +74,8 @@ const notificationsDashboardsWithUniqueIdentifier = computed(() => {
             :data="notificationsDashboardsWithUniqueIdentifier"
             data-key="dashboardId"
             :expandable="!colsVisible.notifications"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :selected-sort="query?.sort"
             :loading="isLoading"
             @set-cursor="setCursor"

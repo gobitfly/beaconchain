@@ -1,21 +1,33 @@
 import { BigNumber } from '@ethersproject/bignumber'
-import { formatEther, commify } from '@ethersproject/units'
-import type { Currency, CryptoCurrency } from '~/types/currencies'
+import {
+  commify, formatEther,
+} from '@ethersproject/units'
+import type {
+  CryptoCurrency, Currency,
+} from '~/types/currencies'
 import type {
   ExtendedLabel,
-  WeiToValue,
   ValueConvertOptions,
+  WeiToValue,
 } from '~/types/value'
-import { isNative, isFiat } from '~/utils/currency'
-import { OneEther, OneGwei, lessThanGwei, lessThanEth } from '~/utils/ether'
-import { commmifyLeft, trim, withCurrency } from '~/utils/format'
+import {
+  isFiat, isNative,
+} from '~/utils/currency'
+import {
+  lessThanEth, lessThanGwei, OneEther, OneGwei,
+} from '~/utils/ether'
+import {
+  commmifyLeft, trim, withCurrency,
+} from '~/utils/format'
 
 export function useValue() {
-  const { currency, rates } = useCurrency()
+  const {
+    currency, rates,
+  } = useCurrency()
 
   const converter = computed(() => {
     const weiToValue: WeiToValue = (
-      wei?: string | BigNumber,
+      wei?: BigNumber | string,
       options?: ValueConvertOptions,
     ): ExtendedLabel => {
       if (!wei) {
@@ -35,9 +47,7 @@ export function useValue() {
             ),
           }
         }
-        return {
-          label: withCurrency('0', target),
-        }
+        return { label: withCurrency('0', target) }
       }
 
       // If a different sourceUnit is defined we multiply accordingly. We usually get gwei, but you never know.
@@ -107,16 +117,16 @@ export function useValue() {
         || !commify(label.replaceAll(',', '')).startsWith(fullLabel)
 
       return {
-        label: withCurrency(
-          addPlusSign(label, options?.addPlus === true),
-          currencyLabel,
-        ),
         fullLabel: fullRequired
           ? withCurrency(
             addPlusSign(fullLabel, options?.addPlus === true),
             currencyLabel,
           )
           : undefined,
+        label: withCurrency(
+          addPlusSign(label, options?.addPlus === true),
+          currencyLabel,
+        ),
       }
     }
     return { weiToValue }

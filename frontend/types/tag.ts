@@ -8,4 +8,4 @@ export const TagColors = [
 ] as const
 export type TagColor = (typeof TagColors)[number]
 
-export type TagSize = 'default' | 'compact' | 'circle'
+export type TagSize = 'circle' | 'compact' | 'default'

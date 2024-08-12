@@ -4,13 +4,13 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import BcTooltip from '../BcTooltip.vue'
 
 interface Props {
-  layout: 'minimal' | 'gaudy'
-  icon?: IconDefinition
-  text?: string
-  subText?: string
-  selected: boolean
-  disabled?: boolean
-  tooltip?: string
+  disabled?: boolean,
+  icon?: IconDefinition,
+  layout: 'gaudy' | 'minimal',
+  selected: boolean,
+  subText?: string,
+  text?: string,
+  tooltip?: string,
 }
 const props = defineProps<Props>()
 
@@ -45,7 +45,7 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
     <ToggleButton
       class="bc-toggle"
       :class="layout"
-      :disabled="disabled"
+      :disabled
       :model-value="selected"
     >
       <template #icon="slotProps">
@@ -55,7 +55,7 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
         >
           <FontAwesomeIcon
             v-if="icon"
-            :icon="icon"
+            :icon
           />
         </slot>
         <div

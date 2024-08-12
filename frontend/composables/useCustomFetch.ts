@@ -1,7 +1,9 @@
 import type { NitroFetchOptions } from 'nitropack'
 import { useCsrfStore } from '~/stores/useCsrfStore'
 import type { LoginResponse } from '~/types/user'
-import { mapping, type PathValues, API_PATH } from '~/types/customFetch'
+import {
+  API_PATH, mapping, type PathValues,
+} from '~/types/customFetch'
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
 
@@ -9,10 +11,12 @@ const pathNames = Object.values(API_PATH)
 type PathName = (typeof pathNames)[number]
 
 export function useCustomFetch() {
-  const headers = useRequestHeaders(['cookie'])
+  const headers = useRequestHeaders([ 'cookie' ])
   const xForwardedFor = useRequestHeader('x-forwarded-for')
   const xRealIp = useRequestHeader('x-real-ip')
-  const { csrfHeader, setCsrfHeader } = useCsrfStore()
+  const {
+    csrfHeader, setCsrfHeader,
+  } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useTranslation()
   const { $bcLogger } = useNuxtApp()
@@ -21,7 +25,7 @@ export function useCustomFetch() {
   async function fetch<T>(
     pathName: PathName,
     // eslint-disable-next-line @typescript-eslint/ban-types
-    options: NitroFetchOptions<string & {}> = {},
+    options: NitroFetchOptions<{} & string> = {},
     pathValues?: PathValues,
     query?: PathValues,
     dontShowError = false,
@@ -43,8 +47,10 @@ export function useCustomFetch() {
     const runtimeConfig = useRuntimeConfig()
     const showInDevelopment = Boolean(runtimeConfig.showInDevelopment)
     const {
-      public: { apiClient, legacyApiClient, apiKey, domain, logIp },
       private: pConfig,
+      public: {
+        apiClient, apiKey, domain, legacyApiClient, logIp,
+      },
     } = runtimeConfig
     const path = map.mock
       ? `${pathName}.json`
@@ -64,7 +70,10 @@ export function useCustomFetch() {
           : pConfig?.apiServer
     }
 
-    options.headers = new Headers({ ...options.headers, ...headers })
+    options.headers = new Headers({
+      ...options.headers,
+      ...headers,
+    })
     if (apiKey) {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
@@ -73,7 +82,10 @@ export function useCustomFetch() {
       options.headers.append('x-ssr-secret', ssrSecret)
     }
 
-    options.query = { ...options.query, ...query }
+    options.query = {
+      ...options.query,
+      ...query,
+    }
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
 
@@ -98,15 +110,19 @@ export function useCustomFetch() {
 
     if (pathName === API_PATH.LOGIN) {
       const res = await $fetch<LoginResponse>(path, {
-        method,
         baseURL,
+        method,
         ...options,
       })
       return res as T
     }
 
     try {
-      const res = await $fetch.raw<T>(path, { method, baseURL, ...options })
+      const res = await $fetch.raw<T>(path, {
+        baseURL,
+        method,
+        ...options,
+      })
       if (method === 'GET') {
         // We get the csrf header from GET requests
         setCsrfHeader(res.headers)
@@ -116,9 +132,9 @@ export function useCustomFetch() {
     catch (e: any) {
       if (!dontShowError && showInDevelopment) {
         showError({
+          detail: `${options.method}: ${baseURL}${path}`,
           group: e.statusCode,
           summary: $t('error.ws_error'),
-          detail: `${options.method}: ${baseURL}${path}`,
         })
       }
       throw e

@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { dashboardKey, isPublic } = useDashboardKey()
+const {
+  dashboardKey, isPublic,
+} = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -14,43 +18,51 @@ const { t: $t } = useTranslation()
 
 const {
   blocks,
-  query: lastQuery,
-  isLoading,
   getBlocks,
+  isLoading,
+  query: lastQuery,
 } = useValidatorDashboardBlocksStore()
 const {
-  value: query,
-  temp: tempQuery,
   bounce: setQuery,
+  temp: tempQuery,
+  value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
-const { hasValidators, overview } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    graffiti: width.value > 1370,
-    epoch: width.value > 1260,
-    slot: width.value > 1120,
     age: width.value > 1005,
-    rewardsRecipient: width.value > 850,
-    status: width.value > 750,
+    epoch: width.value > 1260,
+    graffiti: width.value > 1370,
+    groupSort: width.value > 450,
     mobileStatus: width.value < 1060,
     rewards: width.value > 650,
-    groupSort: width.value > 450,
+    rewardsRecipient: width.value > 850,
+    slot: width.value > 1120,
+    status: width.value > 750,
   }
 })
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value, sort: 'block:desc' }
+    query = {
+      limit: pageSize.value,
+      sort: 'block:desc',
+    }
   }
   setQuery(query, true, true)
 }
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
   },
@@ -120,11 +132,11 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             data-key="slot"
             :expandable="!colsVisible.graffiti"
             class="block-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :add-spacer="true"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :selected-sort="tempQuery?.sort"
             :loading="isLoading"
             @set-cursor="setCursor"

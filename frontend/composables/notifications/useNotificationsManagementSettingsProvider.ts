@@ -2,8 +2,8 @@ import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
 import type {
   InternalGetUserNotificationSettingsResponse,
-  NotificationSettings,
   NotificationPairedDevice,
+  NotificationSettings,
 } from '~/types/api/notifications'
 import type {
   NotificationsManagementSettingsGeneralTab,
@@ -14,10 +14,10 @@ export function useUseNotificationsManagementSettingsProvider() {
   const { fetch } = useCustomFetch()
 
   const {
-    value,
-    temp: tempSettings,
     bounce,
     instant,
+    temp: tempSettings,
+    value,
   } = useDebounceValue<NotificationSettings | undefined>(undefined, 1000)
   const isLoading = ref(false)
   let updateRequested = false
@@ -52,7 +52,10 @@ export function useUseNotificationsManagementSettingsProvider() {
       bounce(
         {
           ...original,
-          general_settings: { ...original.general_settings, ...newSettings },
+          general_settings: {
+            ...original.general_settings,
+            ...newSettings,
+          },
         },
         true,
         true,
@@ -65,7 +68,10 @@ export function useUseNotificationsManagementSettingsProvider() {
       updateRequested = true
       const original: NotificationSettings
         = tempSettings.value as NotificationSettings
-      bounce({ ...original, paired_devices: newDevices }, true, true)
+      bounce({
+        ...original,
+        paired_devices: newDevices,
+      }, true, true)
     }
   }
 
@@ -85,13 +91,16 @@ export function useUseNotificationsManagementSettingsProvider() {
   provide<NotificationsManagementSettingsProvider>(
     'notificationsManagementSettings',
     {
-      isLoading,
       generalSettings,
-      updateGeneralSettings,
+      isLoading,
       pairedDevices,
+      updateGeneralSettings,
       updatePairedDevices,
     },
   )
 
-  return { refreshSettings, isLoading }
+  return {
+    isLoading,
+    refreshSettings,
+  }
 }

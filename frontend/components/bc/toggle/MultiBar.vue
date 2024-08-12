@@ -4,8 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { type MultiBarItem } from '~/types/multiBar'
 
 interface Props {
-  readonlyMode?: boolean
-  buttons: MultiBarItem[]
+  buttons: MultiBarItem[],
+  readonlyMode?: boolean,
 }
 
 const props = defineProps<Props>()
@@ -29,7 +29,10 @@ function receiveFromVModel(data: string[]): ButtonStates {
 
 function sendToVModel(data: ButtonStates): string[] {
   const selection: string[] = []
-  Object.entries(data).forEach(([key, value]) => {
+  Object.entries(data).forEach(([
+    key,
+    value,
+  ]) => {
     if (value) {
       selection.push(key)
     }
@@ -62,7 +65,7 @@ const readonlyClass = computed(() => (props.readonlyMode ? 'read-only' : ''))
       :icon="button.icon"
       :tooltip="button.tooltip"
       :disabled="button.disabled"
-      :readonly-class="readonlyClass"
+      :readonly-class
     >
       <template #icon>
         <slot :name="button.value">

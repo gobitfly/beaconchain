@@ -5,25 +5,29 @@ import {
   faGear,
   faPeopleGroup,
   faShare,
-  faUsers,
   faTrash,
+  faUsers,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import {
   BcDialogConfirm,
-  DashboardShareModal,
-  DashboardShareCodeModal,
   DashboardRenameModal,
+  DashboardShareCodeModal,
+  DashboardShareModal,
   RocketpoolToggle,
 } from '#components'
-import type { DashboardKey, Dashboard } from '~/types/dashboard'
-import type { MenuBarButton, MenuBarEntry } from '~/types/menuBar'
+import type {
+  Dashboard, DashboardKey,
+} from '~/types/dashboard'
+import type {
+  MenuBarButton, MenuBarEntry,
+} from '~/types/menuBar'
 import { API_PATH } from '~/types/customFetch'
 
 interface Props {
-  dashboardTitle?: string
+  dashboardTitle?: string,
 }
 const props = defineProps<Props>()
 
@@ -32,15 +36,17 @@ const isValidatorDashboard = route.name === 'dashboard-id'
 const { isLoggedIn } = useUserStore()
 const {
   dashboardKey,
-  isPublic,
-  isPrivate,
-  isShared,
-  setDashboardKey,
   dashboardType,
+  isPrivate,
+  isPublic,
+  isShared,
   publicEntities,
+  setDashboardKey,
 } = useDashboardKey()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
-const { refreshDashboards, dashboards, getDashboardLabel, updateHash }
+const {
+  dashboards, getDashboardLabel, refreshDashboards, updateHash,
+}
   = useUserDashboardStore()
 
 const { t: $t } = useTranslation()
@@ -60,35 +66,33 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   const buttons: MenuBarEntry[] = []
 
   buttons.push({
-    dropdown: false,
-    faIcon: isMobile.value ? faPeopleGroup : undefined,
-    label: $t('dashboard.validator.manage_groups'),
     command: () => {
       manageGroupsModalVisisble.value = true
     },
+    dropdown: false,
+    faIcon: isMobile.value ? faPeopleGroup : undefined,
+    label: $t('dashboard.validator.manage_groups'),
   })
 
   if (dashboardType.value === 'validator') {
     buttons.push({
+      command: () => {
+        manageValidatorsModalVisisble.value = true
+      },
       dropdown: false,
       faIcon: isMobile.value ? faDesktop : undefined,
       highlight: !isMobile.value,
       label: $t('dashboard.validator.manage_validators'),
-      command: () => {
-        manageValidatorsModalVisisble.value = true
-      },
     })
   }
 
   if (isMobile.value && buttons.length > 1) {
-    return [
-      {
-        label: $t('dashboard.header.manage'),
-        dropdown: true,
-        highlight: true,
-        items: buttons,
-      },
-    ]
+    return [ {
+      dropdown: true,
+      highlight: true,
+      items: buttons,
+      label: $t('dashboard.header.manage'),
+    } ]
   }
 
   return buttons
@@ -113,55 +117,59 @@ const shareButtonOptions = computed(() => {
         : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
   const disabled = isShared.value || !dashboardKey.value
-  return { label, icon, edit, disabled }
+  return {
+    disabled,
+    edit,
+    icon,
+    label,
+  }
 })
 
 const editButtons = computed<MenuBarEntry[]>(() => {
   const buttons: MenuBarButton[] = []
 
-  buttons.push({
-    component: RocketpoolToggle,
-  })
+  buttons.push({ component: RocketpoolToggle })
 
   if (isPrivate.value) {
     buttons.push({
+      command: editDashboard,
       faIcon: faEdit,
       label: $t('dashboard.rename_dashboard'),
-      command: editDashboard,
     })
   }
 
   if (!shareButtonOptions.value.disabled) {
     buttons.push({
+      command: share,
       faIcon: shareButtonOptions.value.icon,
       label: shareButtonOptions.value.edit
         ? $t('dashboard.share_dashboard')
         : $t('dashboard.shared_dashboard'),
-      command: share,
     })
   }
 
   if (!isShared.value && dashboardKey.value) {
     buttons.push({
+      command: onDelete,
       faIcon: faTrash,
       label: $t('dashboard.delete_dashboard'),
-      command: onDelete,
     })
   }
 
-  return [
-    {
-      faIcon: faGear,
-      dropdown: true,
-      items: buttons,
-    },
-  ]
+  return [ {
+    dropdown: true,
+    faIcon: faGear,
+    items: buttons,
+  } ]
 })
 
 const shareView = () => {
   const dashboardId = shareDashboard.value?.id
   dialog.open(DashboardShareCodeModal, {
-    data: { dashboard: shareDashboard.value, dashboardKey: dashboardKey.value },
+    data: {
+      dashboard: shareDashboard.value,
+      dashboardKey: dashboardKey.value,
+    },
     onClose: (options?: DynamicDialogCloseOptions) => {
       if (options?.data === 'DELETE') {
         if (isShared.value && dashboardId) {
@@ -210,26 +218,31 @@ const deleteButtonOptions = computed(() => {
     ? privateDashboardsCount > 1
     : privateDashboardsCount > 0
 
-  return { visible, disabled, deleteDashboard, forward }
+  return {
+    deleteDashboard,
+    disabled,
+    forward,
+    visible,
+  }
 })
 
 const onDelete = () => {
   const isDelete = deleteButtonOptions.value.deleteDashboard
   const dialogData = {
-    title: $t(
-      isDelete
-        ? 'dashboard.deletion.delete.title'
-        : 'dashboard.deletion.clear.title',
-    ),
+    noLabel: isDelete ? $t('dashboard.deletion.delete.no_label') : undefined,
     question: $t(
       isDelete
         ? 'dashboard.deletion.delete.text'
         : 'dashboard.deletion.clear.text',
       { dashboard: getDashboardLabel(dashboardKey.value, dashboardType.value) },
     ),
-    noLabel: isDelete ? $t('dashboard.deletion.delete.no_label') : undefined,
-    yesLabel: isDelete ? $t('dashboard.deletion.delete.yes_label') : undefined,
     severity: isDelete ? 'danger' : undefined,
+    title: $t(
+      isDelete
+        ? 'dashboard.deletion.delete.title'
+        : 'dashboard.deletion.clear.title',
+    ),
+    yesLabel: isDelete ? $t('dashboard.deletion.delete.yes_label') : undefined,
   }
 
   dialog.open(BcDialogConfirm, {

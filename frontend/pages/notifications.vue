@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
+  faBolt,
   faGaugeSimpleMax,
   faMonitorWaveform,
-  faBolt,
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import { BcDialogConfirm } from '#components'
@@ -14,54 +14,48 @@ const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
 const { t: $t } = useTranslation()
 
-await useAsyncData('user_dashboards', () => refreshDashboards(), {
-  watch: [isLoggedIn],
-})
+await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const manageNotificationsModalVisisble = ref(false)
 
 const tabs: HashTabs = {
-  dashboards: {
-    index: 0,
-  },
-  machines: {
-    index: 1,
-    disabled: !showInDevelopment,
-  },
   clients: {
+    disabled: !showInDevelopment,
     index: 2,
-    disabled: !showInDevelopment,
   },
-  rocketpool: {
-    index: 3,
+  dashboards: { index: 0 },
+  machines: {
     disabled: !showInDevelopment,
+    index: 1,
   },
   network: {
-    index: 4,
     disabled: !showInDevelopment,
+    index: 4,
+  },
+  rocketpool: {
+    disabled: !showInDevelopment,
+    index: 3,
   },
 }
 
-const { activeIndex, setActiveIndex } = useHashTabs(tabs)
+const {
+  activeIndex, setActiveIndex,
+} = useHashTabs(tabs)
 
 useBcSeo('notifications.title')
 
 const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
-      props: {
-        header: $t('notifications.title'),
-      },
+      data: { question: $t('notifications.login_question') },
       onClose: async (response) => {
         if (response?.data) {
           await navigateTo('/login')
         }
       },
-      data: {
-        question: $t('notifications.login_question'),
-      },
+      props: { header: $t('notifications.title') },
     })
   }
   else {
@@ -91,7 +85,7 @@ const openManageNotifications = () => {
       <TabView
         lazy
         class="notifications-tab-view"
-        :active-index="activeIndex"
+        :active-index
         @update:active-index="setActiveIndex"
       >
         <TabPanel>
