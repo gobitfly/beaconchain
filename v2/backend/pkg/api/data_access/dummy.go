@@ -120,7 +120,7 @@ func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint
 	return r, err
 }
 
-func (d *DummyService) GetEmailResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+func (d *DummyService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
 	r := time.Time{}
 	err := commonFakeData(&r)
 	return r, err
@@ -170,7 +170,13 @@ func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (ui
 	return r, err
 }
 
-func (d *DummyService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+func (d *DummyService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err

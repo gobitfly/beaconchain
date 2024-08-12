@@ -19,7 +19,7 @@ type UserRepository interface {
 	UpdateUserEmail(ctx context.Context, userId uint64) error
 	UpdateUserPassword(ctx context.Context, userId uint64, password string) error
 	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
-	GetEmailResetTime(ctx context.Context, userId uint64) (time.Time, error)
+	GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error)
 	IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error)
 	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
 	UpdatePasswordResetTime(ctx context.Context, userId uint64) error
@@ -28,7 +28,8 @@ type UserRepository interface {
 	UpdatePasswordResetHash(ctx context.Context, userId uint64, passwordHash string) error
 	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
-	GetUserIdByConfirmationHash(hash string) (uint64, error)
+	GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error)
+	GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
@@ -74,9 +75,9 @@ func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId
 	return d.dummy.GetEmailConfirmationTime(ctx, userId)
 }
 
-func (d *DataAccessService) GetEmailResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+func (d *DataAccessService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetEmailResetTime(ctx, userId)
+	return d.dummy.GetPasswordResetTime(ctx, userId)
 }
 
 func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
@@ -151,9 +152,14 @@ func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string
 	return userId, err
 }
 
-func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetUserIdByConfirmationHash(hash)
+	return d.dummy.GetUserIdByConfirmationHash(ctx, hash)
+}
+
+func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserIdByResetHash(ctx, hash)
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
