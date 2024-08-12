@@ -41,11 +41,11 @@ export enum API_PATH {
   LOGOUT = '/logout',
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
   NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
+  NOTIFICATIONS_NETWORK = '/notifications/networks',
   NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test-webhook',
   PRODUCT_SUMMARY = '/productSummary',
-  NOTIFICATIONS_NETWORK = '/notifications/networks',
   REGISTER = '/register',
   SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards',
   SEARCH = '/search',
@@ -271,10 +271,16 @@ export const mapping: Record<string, MappingData> = {
     mock: false,
     path: '/logout',
   },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
+    path: '/users/me/notifications/dashboards',
+  },
   [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
     mock: true,
     mockFunction: mockManageNotificationsGeneral,
     path: '/users/me/notifications/settings/general',
+  },
+  [API_PATH.NOTIFICATIONS_NETWORK]: {
+    path: '/users/me/notifications/networks',
   },
   [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
     method: 'POST',
@@ -294,12 +300,6 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.PRODUCT_SUMMARY]: {
     mock: false,
     path: '/product-summary',
-  },
-  [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
-    path: '/users/me/notifications/dashboards',
-  },
-  [API_PATH.NOTIFICATIONS_NETWORK]: {
-    path: '/users/me/notifications/networks',
   },
   [API_PATH.REGISTER]: {
     method: 'POST',
