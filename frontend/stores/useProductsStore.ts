@@ -59,10 +59,10 @@ export function useProductsStore() {
   }
 
   return {
-    products,
-    getProducts,
     bestPremiumProduct,
     currentPremiumSubscription,
+    getProducts,
     isPremiumSubscribedViaApp,
+    products,
   }
 }

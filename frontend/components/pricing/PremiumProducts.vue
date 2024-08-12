@@ -3,7 +3,7 @@ const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 
 interface Props {
-  isYearly: boolean
+  isYearly: boolean,
 }
 defineProps<Props>()
 </script>
@@ -18,7 +18,7 @@ defineProps<Props>()
         <PricingPremiumProductBox
           v-if="product.price_per_year_eur > 0"
           :product
-          :is-yearly="isYearly"
+          :is-yearly
         />
       </template>
     </div>

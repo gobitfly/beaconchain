@@ -15,13 +15,13 @@ import type {
 } from '~/types/validator'
 
 interface Props {
-  row: VDBSummaryTableRow
-  absolute: boolean
-  groupId?: number
-  timeFrame?: SummaryTimeFrame
-  context: DashboardValidatorContext
-  dashboardKey?: DashboardKey
-  isTooltip?: boolean
+  absolute: boolean,
+  context: DashboardValidatorContext,
+  dashboardKey?: DashboardKey,
+  groupId?: number,
+  isTooltip?: boolean,
+  row: VDBSummaryTableRow,
+  timeFrame?: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 
@@ -34,13 +34,11 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: props.context,
-      timeFrame: props.timeFrame,
-      groupName: groupName.value,
-      groupId: props.groupId,
       dashboardKey: props.dashboardKey,
-      summary: {
-        row: props.row,
-      },
+      groupId: props.groupId,
+      groupName: groupName.value,
+      summary: { row: props.row },
+      timeFrame: props.timeFrame,
     },
   })
 }
@@ -54,7 +52,10 @@ const mapped = computed(() => {
   const validatorIcons: SummaryValidatorsIconRowInfo[] = []
   const addCount = (key: ValidatorSummaryIconRowKey, count?: number) => {
     if (count) {
-      list.push({ count, key })
+      list.push({
+        count,
+        key,
+      })
     }
   }
 
@@ -93,7 +94,7 @@ const mapped = computed(() => {
       <DashboardTableSummaryValidatorsIconRow
         :icons="mapped.list"
         :total="mapped.total"
-        :absolute="absolute"
+        :absolute
       />
     </BcTooltip>
     <FontAwesomeIcon

@@ -3,9 +3,9 @@ import type { Nullable } from 'primevue/ts-helpers'
 import InputNumber from 'primevue/inputnumber'
 
 const props = defineProps<{
-  min: number
-  max: number
-  maxFractionDigits: number
+  max: number,
+  maxFractionDigits: number,
+  min: number,
 }>()
 
 const parentVmodel = defineModel<number>({ required: true })
@@ -47,9 +47,9 @@ function sendValue(input: Nullable<number>): void {
 <template>
   <InputNumber
     v-model="bridgedVmodel"
-    :min="min"
-    :max="max"
-    :max-fraction-digits="maxFractionDigits"
+    :min
+    :max
+    :max-fraction-digits
     locale="en-US"
     class="why-the-hell-dont-they-fix-this-bug"
     @input="

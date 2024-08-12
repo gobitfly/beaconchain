@@ -19,12 +19,12 @@ function onClose(groupId: boolean) {
 
 const openGroupSelection = (withPreselection: boolean) => {
   dialog.open(DashboardGroupSelectionDialog, {
-    onClose: response => onClose(response?.data),
     data: {
       groupId: withPreselection ? groups.value?.[0]?.id : undefined,
       selectedValidators: withPreselection ? 1 : 10,
       totalValidators: 123,
     },
+    onClose: response => onClose(response?.data),
   })
 }
 
@@ -32,9 +32,9 @@ const openEpochDuties = () => {
   dialog.open(DashboardValidatorEpochDutiesModal, {
     data: {
       dashboardKey: 5003,
+      epoch: 1370,
       groupId: 4,
       groupName: 'My test group',
-      epoch: 1370,
     },
   })
 }

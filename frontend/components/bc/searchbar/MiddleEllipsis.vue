@@ -1,30 +1,32 @@
 <!-- eslint-disable vue/max-len -- TODO: plz fix this -->
 <script setup lang="ts">
-import { type ComponentPublicInstance, warn } from 'vue'
+import {
+  type ComponentPublicInstance, warn,
+} from 'vue'
 
 const DEBUG = false // Use Chromium or Chrome. Firefox will show messages with broken indentation, illegible codes and no color differenciating the types of the messages.
 
 const ResizeObserverLagMargin = 1 // This safety margin is important, because the resizing observer happens to lag. If a small decrease of width making the frame as large as its content does not trigger the observer, then it will not fire anymore because the frame cannot shrink anymore.
 
 const props = defineProps<{
-  text?: string
-  initialFlexGrow?: number // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
-  ellipses?: number | number[] // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
-  widthMediaqueryThreshold?: number // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
+  class?: string | string[], // to make the list of classes reactive
+  ellipses?: number | number[], // If number: number of ellipses to use (the same for any room available), 1 by default. If array, its meaning is: [room above which two `…` are used, room above which three `…` are used, and so on]. Ex: [8,30,100] tells the component to use one ellipsis if there is room for 8 characters or less, or two ellipses between 9 and 30 characters, and so on.
+  initialFlexGrow?: number, // If the component has no defined size (meaning that its width collapses to 0 when it contains nothing) then you must set a value in this props.
   // !! The props below are for internal use only !!
-  meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent
-  class?: string | string[] // to make the list of classes reactive
+  meCallbackToInformParentAboutChanges?: typeof enterUpdateCycleAsAparent,
+  text?: string,
+  widthMediaqueryThreshold?: number, // Very important: if a `@media (min-width: AAApx)` or a `@media (max-width: AAApx)` somewhere in your CSS has an effect on the size of the component (sudden changes of width), give AAA to this pros.
 }>()
 
 interface ExposedMembers {
-  amIofDefinedWidth: ComputedRef<boolean>
-  whatIsMyFlexGrow: typeof whatIsMyFlexGrow
-  howMuchCanIshrinkOrGrow: typeof howMuchCanIshrinkOrGrow
-  getReadyForUpdate: typeof getReadyForUpdate
-  updateContent: typeof updateContent
-  settleAfterUpdate: typeof settleAfterUpdate
-  saveFinalState: typeof saveFinalState
-  enterUpdateCycleAsAparent: typeof enterUpdateCycleAsAparent
+  amIofDefinedWidth: ComputedRef<boolean>,
+  enterUpdateCycleAsAparent: typeof enterUpdateCycleAsAparent,
+  getReadyForUpdate: typeof getReadyForUpdate,
+  howMuchCanIshrinkOrGrow: typeof howMuchCanIshrinkOrGrow,
+  saveFinalState: typeof saveFinalState,
+  settleAfterUpdate: typeof settleAfterUpdate,
+  updateContent: typeof updateContent,
+  whatIsMyFlexGrow: typeof whatIsMyFlexGrow,
 }
 
 interface MiddleEllipsis extends ComponentPublicInstance, ExposedMembers {}
@@ -56,7 +58,8 @@ enum SignalDirection {
   ParentToChildren,
 }
 
-type TextProperties = { text: string, width: number }
+type TextProperties = { text: string,
+  width: number, }
 
 const _s = useSlots() // Not meant to be used directly. Use the reactive variable `slot` defined just below:
 const slot = computed(() => (_s.default ? _s.default() : [])) // `slot`s is always an array, empty if there is no slot
@@ -65,11 +68,11 @@ const innerElements = {
   allInstanciatedElements: ref<(ComponentPublicInstance | MiddleEllipsis)[]>(
     [],
   ), // Instanciated elements from our slot. This array is filled by Vue in the <template>.
+  isAnUpdateOrdered: true,
+  slotNonce: 0,
   // The following arrays are filled by us, each time the slot is modified:
   widthDefinedChildren: [] as MiddleEllipsis[], // List of instanciated elements from our slot that are MiddleEllipsis children with a defined width.
   widthUndefinedChildren: [] as MiddleEllipsis[], // List of instanciated elements from our slot that are MiddleEllipsis children with an undefined width.
-  isAnUpdateOrdered: true,
-  slotNonce: 0,
 }
 const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle: CSSStyleDeclaration
@@ -82,7 +85,10 @@ let classPropsDuringLastUpdate = props.class || ''
 let textPropsDuringLastUpdate = props.text || ''
 let initialFlexGrowDuringLastUpdate: number | undefined
 let ellipsesPropsDuringLastUpdate: number | number[] | undefined = 1
-let textAfterLastUpdate: TextProperties = { text: '', width: 0 }
+let textAfterLastUpdate: TextProperties = {
+  text: '',
+  width: 0,
+}
 let widthAvailableDuringLastUpdate = 0 // used by determineReason() to find out why an update is needed, during the update process
 let frameWidthAfterLastUpdate = 0 // used by determineReason() to find out why an update is needed, outside the update process
 let lastMeasuredFrameWidth = 0
@@ -91,7 +97,10 @@ let currentText = ''
 const canvasContextToCalculateTextWidths = (
   isServer ? null : document.createElement('canvas').getContext('2d')
 ) as CanvasRenderingContext2D
-const lastTextWidthCalculation: TextProperties = { text: '', width: 0 }
+const lastTextWidthCalculation: TextProperties = {
+  text: '',
+  width: 0,
+}
 let amImounted = false
 let didTheResizingObserverFireSinceMount = false
 let amIreadyForUpdate = false // our parent can call function getReadyForUpdate() as we can, so we use this variable to prevent multiple executions of it in a row
@@ -139,19 +148,19 @@ const whatIam = computed(() => {
 
 const exposedMembers: ExposedMembers = {
   amIofDefinedWidth,
-  whatIsMyFlexGrow,
-  howMuchCanIshrinkOrGrow,
-  getReadyForUpdate,
-  updateContent,
-  settleAfterUpdate,
-  saveFinalState,
   enterUpdateCycleAsAparent,
+  getReadyForUpdate,
+  howMuchCanIshrinkOrGrow,
+  saveFinalState,
+  settleAfterUpdate,
+  updateContent,
+  whatIsMyFlexGrow,
 }
 
 defineExpose<ExposedMembers>(exposedMembers)
 
 function isObjectMiddleEllipsis(
-  obj: MiddleEllipsis | ComponentPublicInstance,
+  obj: ComponentPublicInstance | MiddleEllipsis,
 ): MiddleEllipsis | undefined {
   for (const exposedMEsymbol in exposedMembers) {
     if (!(exposedMEsymbol in obj)) {
@@ -169,9 +178,7 @@ watch(
     invalidateChildrenIdentities()
     innerElements.slotNonce++
   },
-  {
-    flush: 'pre',
-  },
+  { flush: 'pre' },
 )
 watch(
   slot,
@@ -182,9 +189,7 @@ watch(
     identifyChildren()
     nextTick(() => updateContent(0, false)) // waiting for the next tick ensures that the children are in the DOM when we start the update cycle (this slot-watcher ensured they were instantiated but not inserted in the real DOM)
   },
-  {
-    flush: 'post',
-  },
+  { flush: 'post' },
 )
 
 watch(
@@ -510,9 +515,9 @@ function enterUpdateCycleAsAparent(
     That would create a gap around the clipped text(s), thus making them clipped short although there is room for more.
     The following lines detect this case and distribute the room to the children before clipping and writing, so they can clip their text longer. */
     const canUseMoreRoom: {
-      child: MiddleEllipsis
-      growth: number
-      flexGrow: number
+      child: MiddleEllipsis,
+      flexGrow: number,
+      growth: number,
     }[] = []
     const hasEnoughRoom: MiddleEllipsis[] = []
     let totalAdditionalRoom = 0
@@ -523,7 +528,11 @@ function enterUpdateCycleAsAparent(
       if (growth > 0) {
         const flexGrow = child.whatIsMyFlexGrow()
         totalFlexGrow += flexGrow
-        canUseMoreRoom.push({ child, growth, flexGrow }) // For now, field `growth` represents the maximal growth of the child (due to a max-width constraint) or possibly what would allow its text not to get clipped. We will overwrite this value when we distribute the total additional room later.
+        canUseMoreRoom.push({
+          child,
+          flexGrow,
+          growth,
+        }) // For now, field `growth` represents the maximal growth of the child (due to a max-width constraint) or possibly what would allow its text not to get clipped. We will overwrite this value when we distribute the total additional room later.
       }
       else {
         totalAdditionalRoom -= growth
@@ -612,7 +621,10 @@ function isMyContentClipped(): boolean {
  */
 function calculateTextWidth(text: string | undefined): TextProperties {
   if (!text) {
-    return { text: '', width: 0 }
+    return {
+      text: '',
+      width: 0,
+    }
   }
   if (!lastTextWidthCalculation.text) {
     // hopefully we reach this point rarely because `getComputedStyle().something` triggers a reflow (slow)
@@ -733,7 +745,8 @@ function determineReason(
   )
   return reason
 
-  function calculateGaps(): { before: number | undefined, now: number } {
+  function calculateGaps(): { before: number | undefined,
+    now: number, } {
     // TODO: If needed, calculate the actual gaps when we are a parent (frame width - sum of child widths). Currently not required.
     let before: number | undefined
     const frameWhidthToCompareTo = amIreadyForUpdate
@@ -749,7 +762,10 @@ function determineReason(
     else {
       before = undefined
     }
-    return { before, now }
+    return {
+      before,
+      now,
+    }
   }
 }
 
@@ -849,7 +865,7 @@ function saveFinalState() {
 }
 
 function logStep(
-  color: 'neutral' | 'attention' | 'event' | 'signal' | 'good' | 'completed',
+  color: 'attention' | 'completed' | 'event' | 'good' | 'neutral' | 'signal',
   msg: string,
   ...others: any[]
 ) {
@@ -865,7 +881,12 @@ function logStep(
   }
   common
     += whatIam.value === WhatIcanBe.Child ? '    ' : parentInParent ? '  ' : ''
-  common += ['Error', 'Parent', 'Child', 'Standalone'][whatIam.value]
+  common += [
+    'Error',
+    'Parent',
+    'Child',
+    'Standalone',
+  ][whatIam.value]
   if (whatIam.value !== WhatIcanBe.Parent) {
     common += ' "' + (props.text as string).slice(0, 8) + '…"'
   }
@@ -878,17 +899,17 @@ function logStep(
     case 'attention':
       msg = '\u001B[31m' + msg
       break
+    case 'completed':
+      msg = '\u001B[35m' + msg
+      break
     case 'event':
       msg = '\u001B[33m' + msg
-      break
-    case 'signal':
-      msg = '\u001B[32m' + msg
       break
     case 'good':
       msg = '\u001B[34m' + msg
       break
-    case 'completed':
-      msg = '\u001B[35m' + msg
+    case 'signal':
+      msg = '\u001B[32m' + msg
       break
     default:
       msg = '\u001B[0m' + msg
@@ -1000,7 +1021,8 @@ function clipText(
   // complicated and slower
   const nBlocks = nEllipses + 1
   // First, we extract `nBlocks` blocks from the original text. The extraction algorithm guarantees that the sum of their lengths is `room`. Their lengths vary for arithmetic reasons but are as similar as possible.
-  type Block = { start: number, visibleLength: number }
+  type Block = { start: number,
+    visibleLength: number, }
   const blocks: Block[] = []
   let totalToExtract = room
   let totalToSkip = originalText.length - room
@@ -1011,7 +1033,10 @@ function clipText(
     const extractedNow = Math.round(totalToExtract / b) // do not floor here
     totalToExtract -= extractedNow
     o += skipNow
-    blocks.push({ start: o, visibleLength: extractedNow })
+    blocks.push({
+      start: o,
+      visibleLength: extractedNow,
+    })
     o += extractedNow
     skipNow = Math.floor(totalToSkip / s) // do not round here
     totalToSkip -= skipNow

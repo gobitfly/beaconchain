@@ -22,9 +22,9 @@ const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
 const aggregationList = computed(() => {
   return AggregationTimeframes.map(a => ({
+    disabled: (overview.value?.chart_history_seconds?.[a] ?? 0) === 0,
     id: a,
     label: $t(`time_frames.${a}`),
-    disabled: (overview.value?.chart_history_seconds?.[a] ?? 0) === 0,
   }))
 })
 
@@ -59,7 +59,7 @@ const groups = computed(() => {
   }
   return orderBy(
     overview.value.groups.filter(g => !!g.count),
-    [g => g.name.toLowerCase()],
+    [ g => g.name.toLowerCase() ],
     'asc',
   )
 })
@@ -74,9 +74,17 @@ watch(
 )
 
 watch(
-  [selectedGroups, total, average],
-  ([list, t, a]) => {
-    const groupIds: number[] = [...list]
+  [
+    selectedGroups,
+    total,
+    average,
+  ],
+  ([
+    list,
+    t,
+    a,
+  ]) => {
+    const groupIds: number[] = [ ...list ]
     if (t) {
       groupIds.push(SUMMARY_CHART_GROUP_TOTAL)
     }
@@ -105,7 +113,7 @@ const toggleGroups = () => {
 const selectedLabel = computed(() => {
   const list: string[] = orderBy(
     selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)),
-    [g => g.toLowerCase()],
+    [ g => g.toLowerCase() ],
     'asc',
   )
 

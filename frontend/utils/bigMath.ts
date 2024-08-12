@@ -11,8 +11,8 @@ const split = (num: number) => {
   const split = str.split('.')
   const factor = getFactor(split[1])
   return {
-    factor,
     combined: split.join(''),
+    factor,
   }
 }
 
@@ -20,7 +20,9 @@ export const bigMul = (big: BigNumber, num: number): BigNumber => {
   if (!big || !num) {
     return big
   }
-  const { factor, combined } = split(num)
+  const {
+    combined, factor,
+  } = split(num)
   return big.mul(combined).div(factor)
 }
 
@@ -28,7 +30,9 @@ export const bigDiv = (big: BigNumber, num: number): BigNumber => {
   if (!big || !num) {
     return big
   }
-  const { factor, combined } = split(num)
+  const {
+    combined, factor,
+  } = split(num)
   return big.mul(factor).div(combined)
 }
 

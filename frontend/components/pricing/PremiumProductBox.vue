@@ -9,18 +9,20 @@ import type { Feature } from '~/types/pricing'
 // import { formatTimeDuration } from '~/utils/format' TODO: See commented code below
 
 const {
-  products,
   bestPremiumProduct,
   currentPremiumSubscription,
   isPremiumSubscribedViaApp,
+  products,
 } = useProductsStore()
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
-const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
+const {
+  isStripeDisabled, stripeCustomerPortal, stripePurchase,
+} = useStripe()
 
 interface Props {
-  product: PremiumProduct
-  isYearly: boolean
+  isYearly: boolean,
+  product: PremiumProduct,
 }
 const props = defineProps<Props>()
 
@@ -40,8 +42,6 @@ const prices = computed(() => {
       $t,
       props.product.price_per_year_eur / 12,
     ),
-    yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
-    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
     perValidator: formatPremiumProductPrice(
       $t,
       mainPrice
@@ -49,16 +49,18 @@ const prices = computed(() => {
       / props.product.premium_perks.validator_dashboards,
       6,
     ),
+    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
+    yearly: formatPremiumProductPrice($t, props.product.price_per_year_eur),
   }
 })
 
 const percentages = computed(() => {
   if (bestPremiumProduct?.value === undefined) {
     return {
+      heatmapChart: 100,
+      summaryChart: 100,
       validatorDashboards: 100,
       validatorsPerDashboard: 100,
-      summaryChart: 100,
-      heatmapChart: 100,
     }
   }
 
@@ -72,6 +74,8 @@ const percentages = computed(() => {
       * 100
   }
   return {
+    heatmapChart: chartPercent,
+    summaryChart: chartPercent,
     validatorDashboards:
       (props.product.premium_perks.validator_dashboards
       / bestProduct.premium_perks.validator_dashboards)
@@ -80,8 +84,6 @@ const percentages = computed(() => {
       (props.product.premium_perks.validators_per_dashboard
       / bestProduct.premium_perks.validators_per_dashboard)
       * 100,
-    summaryChart: chartPercent,
-    heatmapChart: chartPercent,
   }
 })
 
@@ -151,7 +153,11 @@ const planButton = computed(() => {
   const disabled
     = isStripeDisabled.value || isPremiumSubscribedViaApp.value || undefined
 
-  return { text, isDowngrade, disabled }
+  return {
+    disabled,
+    isDowngrade,
+    text,
+  }
 })
 
 const mainFeatures = computed<Feature[]>(() => {
@@ -160,6 +166,7 @@ const mainFeatures = computed<Feature[]>(() => {
   )
   return [
     {
+      available: true,
       name: $t(
         'pricing.premium_product.validator_dashboards',
         {
@@ -169,42 +176,35 @@ const mainFeatures = computed<Feature[]>(() => {
         },
         (props.product?.premium_perks.validator_dashboards || 0) <= 1 ? 1 : 2,
       ),
-      available: true,
       percentage: percentages.value.validatorDashboards,
     },
     {
+      available: true,
       name:
         props.product.premium_perks.validator_dashboards === 1
-          ? $t('pricing.premium_product.validators', {
-            amount: validatorPerDashboardAmount,
-          })
-          : $t('pricing.premium_product.validators_per_dashboard', {
-            amount: validatorPerDashboardAmount,
-          }),
-      subtext: $t('pricing.per_validator', {
-        amount: prices.value.perValidator,
-      }),
-      available: true,
+          ? $t('pricing.premium_product.validators', { amount: validatorPerDashboardAmount })
+          : $t('pricing.premium_product.validators_per_dashboard', { amount: validatorPerDashboardAmount }),
+      percentage: percentages.value.validatorsPerDashboard,
+      subtext: $t('pricing.per_validator', { amount: prices.value.perValidator }),
       tooltip: $t('pricing.pectra_tooltip', {
         effectiveBalance: formatNumber(
           props.product?.premium_perks.validators_per_dashboard * 32,
         ),
       }),
-      percentage: percentages.value.validatorsPerDashboard,
     },
     {
+      available: true,
       name: $t(
         'pricing.premium_product.timeframe_dashboard_chart_no_timeframe',
       ),
-      subtext: $t('pricing.premium_product.coming_soon'),
-      available: true,
       percentage: percentages.value.summaryChart,
+      subtext: $t('pricing.premium_product.coming_soon'),
     },
     {
-      name: $t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe'),
-      subtext: $t('pricing.premium_product.coming_soon'),
       available: true,
+      name: $t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe'),
       percentage: percentages.value.heatmapChart,
+      subtext: $t('pricing.premium_product.coming_soon'),
     },
   ]
 })
@@ -212,22 +212,22 @@ const mainFeatures = computed<Feature[]>(() => {
 const minorFeatures = computed<Feature[]>(() => {
   return [
     {
-      name: $t('pricing.premium_product.no_ads'),
       available: props.product?.premium_perks.ad_free,
+      name: $t('pricing.premium_product.no_ads'),
     },
     {
-      name: $t('pricing.premium_product.share_dashboard'),
       available: props.product?.premium_perks.share_custom_dashboards,
+      name: $t('pricing.premium_product.share_dashboard'),
     },
     {
-      name: $t('pricing.premium_product.mobile_app_widget'),
-      link: '/mobile',
       available: props.product?.premium_perks.mobile_app_widget,
+      link: '/mobile',
+      name: $t('pricing.premium_product.mobile_app_widget'),
     },
     {
+      available: props.product?.premium_perks.manage_dashboard_via_api,
       name: $t('pricing.premium_product.manage_dashboard_via_api'),
       subtext: $t('pricing.premium_product.coming_soon'),
-      available: props.product?.premium_perks.manage_dashboard_via_api,
     },
   ]
 })
@@ -289,14 +289,14 @@ const minorFeatures = computed<Feature[]>(() => {
         <PricingPremiumFeature
           v-for="feature in mainFeatures"
           :key="feature.name"
-          :feature="feature"
+          :feature
         />
       </div>
       <div class="minor-features-container">
         <PricingPremiumFeature
           v-for="feature in minorFeatures"
           :key="feature.name"
-          :feature="feature"
+          :feature
           :link="feature.link"
         />
       </div>

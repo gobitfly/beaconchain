@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import {
   type Category,
-  type SearchbarShape,
+  type CategoryFilter,
   CategoryInfo,
   type SearchbarColors,
   type SearchbarDropdownLayout,
-  type CategoryFilter,
+  type SearchbarShape,
 } from '~/types/searchbar'
 
 const emit = defineEmits<{ (e: 'change'): void }>()
 defineProps<{
-  barShape: SearchbarShape
-  colorTheme: SearchbarColors
-  dropdownLayout: SearchbarDropdownLayout
+  barShape: SearchbarShape,
+  colorTheme: SearchbarColors,
+  dropdownLayout: SearchbarDropdownLayout,
 }>()
 // each entry has a Category as key and the state of the option as value.
 // The component will write directly into it, so the data of the parent is always up-to-date.
@@ -33,9 +33,9 @@ function selectionHasChanged(category: Category, selected: boolean) {
       :key="filter[0]"
       :state="filter[1]"
       class="button"
-      :bar-shape="barShape"
-      :color-theme="colorTheme"
-      :dropdown-layout="dropdownLayout"
+      :bar-shape
+      :color-theme
+      :dropdown-layout
       @change="(selected: boolean) => selectionHasChanged(filter[0], selected)"
     >
       {{ t(...CategoryInfo[filter[0]].filterLabel) }}

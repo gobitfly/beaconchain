@@ -18,13 +18,13 @@ const { currentNetwork } = useNetworkStore()
 const networkId = ref<number>(currentNetwork.value ?? 1)
 
 const {
+  isLoading,
+  notificationsDashboards,
   onSort,
+  query,
   setCursor,
   setPageSize,
   setSearch,
-  notificationsDashboards,
-  query,
-  isLoading,
 } = useNotificationsDashboardStore(networkId)
 
 const { getDashboardLabel } = useUserDashboardStore()
@@ -32,9 +32,9 @@ const { getDashboardLabel } = useUserDashboardStore()
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    notifications: width.value > 1024,
     dashboard: width.value >= 640,
     groups: width.value >= 640,
+    notifications: width.value > 1024,
   }
 })
 
@@ -62,8 +62,8 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
             :data="notificationsDashboards"
             data-key="notification_id"
             :expandable="!colsVisible.notifications"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :selected-sort="query?.sort"
             :loading="isLoading"
             @set-cursor="setCursor"

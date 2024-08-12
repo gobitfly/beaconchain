@@ -4,9 +4,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
 
 const props = defineProps<{
-  error?: BcInputError
-  label?: string
-  infoText?: string
+  error?: BcInputError,
+  infoText?: string,
+  label?: string,
 }>()
 
 const id = props.label ? useId() : undefined

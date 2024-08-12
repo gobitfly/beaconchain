@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { faTable } from '@fortawesome/pro-solid-svg-icons'
 import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
-import { IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
+import {
+  IconAccount, IconSlotBlockProposal, IconValidator,
+} from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -19,23 +21,49 @@ const selected = ref(true)
 
 const completeList = [
   { value: 'attestation' },
-  { value: 'proposal', component: IconSlotBlockProposal },
+  {
+    component: IconSlotBlockProposal,
+    value: 'proposal',
+  },
   { value: 'sync' },
-  { value: 'chart', icon: faChartColumn },
+  {
+    icon: faChartColumn,
+    value: 'chart',
+  },
 ]
-const selectedList = ref<string[]>(['attestation', 'proposal'])
+const selectedList = ref<string[]>([
+  'attestation',
+  'proposal',
+])
 
 const selectedType = ref<string>('Validators')
 const allTypes = [
-  { text: 'Accounts', value: 'Accounts', component: IconAccount },
-  { text: 'Validators', value: 'Validators', component: IconValidator },
+  {
+    component: IconAccount,
+    text: 'Accounts',
+    value: 'Accounts',
+  },
+  {
+    component: IconValidator,
+    text: 'Validators',
+    value: 'Validators',
+  },
 ]
 
 const dropodownSelection = ref<string | undefined>()
 const dropdownList = [
-  { value: 'yes', label: 'Yes' },
-  { value: 'no', label: 'No' },
-  { value: 'maybe', label: 'Maybe we need a bigger label' },
+  {
+    label: 'Yes',
+    value: 'yes',
+  },
+  {
+    label: 'No',
+    value: 'no',
+  },
+  {
+    label: 'Maybe we need a bigger label',
+    value: 'maybe',
+  },
 ]
 </script>
 
@@ -232,25 +260,25 @@ const dropdownList = [
         Toggle loading
       </Button>
       <div class="element_container">
-        <BcLoadingSpinner :loading="loading" />
+        <BcLoadingSpinner :loading />
         <BcLoadingSpinner
-          :loading="loading"
+          :loading
           size="small"
           style="color: lightblue"
         />
         <BcLoadingSpinner
-          :loading="loading"
+          :loading
           size="large"
         />
         <div class="box">
           <BcLoadingSpinner
-            :loading="loading"
+            :loading
             alignment="center"
           />
         </div>
         <div class="box">
           <BcLoadingSpinner
-            :loading="loading"
+            :loading
             size="full"
           />
         </div>

@@ -8,17 +8,19 @@ import {
 } from '~/types/dashboard/summary'
 
 interface Props {
-  row: VDBSummaryTableRow
-  timeFrame: SummaryTimeFrame
-  absolute: boolean
-  tableVisibility: SummaryTableVisibility
+  absolute: boolean,
+  row: VDBSummaryTableRow,
+  tableVisibility: SummaryTableVisibility,
+  timeFrame: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 
 const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useTranslation()
-const { details: summary, getDetails }
+const {
+  details: summary, getDetails,
+}
   = useValidatorDashboardSummaryDetailsStore(
     dashboardKey.value,
     props.row.group_id,
@@ -29,11 +31,18 @@ watch(
   () => {
     getDetails(props.timeFrame)
   },
-  { deep: true, immediate: true },
+  {
+    deep: true,
+    immediate: true,
+  },
 )
 
 const data = computed<SummaryRow[][]>(() => {
-  const list: SummaryRow[][] = [[], [], []]
+  const list: SummaryRow[][] = [
+    [],
+    [],
+    [],
+  ]
 
   const addToList = (
     index: number,
@@ -41,7 +50,10 @@ const data = computed<SummaryRow[][]>(() => {
     titleKey?: string,
   ) => {
     const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
-    const row = { title, prop }
+    const row = {
+      prop,
+      title,
+    }
     list[index].push(row)
   }
 
@@ -81,7 +93,11 @@ const data = computed<SummaryRow[][]>(() => {
   ])
 
   addCols = !props.tableVisibility.attestations ? [] : rewardCols
-  addPropsTolist(2, ['apr', 'luck', ...addCols])
+  addPropsTolist(2, [
+    'apr',
+    'luck',
+    ...addCols,
+  ])
 
   return list
 })
@@ -93,14 +109,14 @@ const rowClass = (data: SummaryRow) => {
   const classNames: Partial<
     Record<SummaryDetailsEfficiencyCombinedProp, string>
   > = {
-    efficiency: 'bold',
+    apr: props.tableVisibility.attestations ? '' : 'spacing-top',
     attestations: 'bold',
-    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
+    attestations_head: 'spacing-top',
+    efficiency: 'bold',
+    luck: 'spacing-top',
     proposals: 'bold spacing-top',
     slashings: 'bold spacing-top',
-    apr: props.tableVisibility.attestations ? '' : 'spacing-top',
-    luck: 'spacing-top',
-    attestations_head: 'spacing-top',
+    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
   }
   return classNames[data.prop]
 }
@@ -129,9 +145,9 @@ const rowClass = (data: SummaryRow) => {
           v-if="prop.prop"
           class="value"
           :data="summary"
-          :absolute="absolute"
+          :absolute
           :property="prop.prop"
-          :time-frame="timeFrame"
+          :time-frame
           :row="props.row"
           :in-detail-view="true"
         />

@@ -1,41 +1,64 @@
 <script setup lang="ts">
 import { warn } from 'vue'
 import type {
-  InternalEntry,
   APIentry,
+  InternalEntry,
 } from '~/types/notifications/subscriptionModal'
 import type {
-  NotificationSettingsValidatorDashboard,
   NotificationSettingsAccountDashboard,
+  NotificationSettingsValidatorDashboard,
 } from '~/types/api/notifications'
 import { ChainFamily } from '~/types/network'
 import type { DashboardType } from '~/types/dashboard'
 
-type AllOptions = NotificationSettingsValidatorDashboard &
-  NotificationSettingsAccountDashboard
+type AllOptions = NotificationSettingsAccountDashboard &
+  NotificationSettingsValidatorDashboard
 type DefinedAPIentry = Exclude<APIentry, null | undefined>
 
 interface Props {
-  dashboardType: DashboardType
-  initialSettings: AllOptions
+  dashboardType: DashboardType,
+  initialSettings: AllOptions,
   saveUserSettings: (
     settings: Record<keyof AllOptions, DefinedAPIentry>,
-  ) => void
+  ) => void,
 }
 
 // #### CONFIGURATION OF THE DIALOGS ####
 
 const DefaultValues = new Map<keyof AllOptions, InternalEntry>([
-  ['group_offline_threshold', { type: 'percent', check: false, num: 10 }],
-  ['is_real_time_mode_enabled', { type: 'binary', check: false }],
   [
     'erc20_token_transfers_value_threshold',
-    { type: 'amount', check: false, num: NaN },
+    {
+      check: false,
+      num: NaN,
+      type: 'amount',
+    },
   ], // NaN will leave the input field empty (the user sees the placeholder)
-  ['subscribed_chain_ids', { type: 'networks', networks: [] }],
+  [
+    'group_offline_threshold',
+    {
+      check: false,
+      num: 10,
+      type: 'percent',
+    },
+  ],
+  [
+    'is_real_time_mode_enabled',
+    {
+      check: false,
+      type: 'binary',
+    },
+  ],
+  [
+    'subscribed_chain_ids',
+    {
+      networks: [],
+      type: 'networks',
+    },
+  ],
 ])
 const orderOfTheRowsInValidatorModal: Array<
-  keyof NotificationSettingsValidatorDashboard | 'ALL'
+  'ALL' | keyof NotificationSettingsValidatorDashboard
 > = [
   'is_validator_offline_subscribed',
   'group_offline_threshold',
@@ -49,7 +72,7 @@ const orderOfTheRowsInValidatorModal: Array<
   'ALL',
 ]
 const orderOfTheRowsInAccountModal: Array<
-  keyof NotificationSettingsAccountDashboard | 'ALL'
+  'ALL' | keyof NotificationSettingsAccountDashboard
 > = [
   'is_incoming_transactions_subscribed',
   'is_outgoing_transactions_subscribed',
@@ -63,12 +86,10 @@ const orderOfTheRowsInAccountModal: Array<
 const RowsWhoseCheckBoxIsInASeparateField = new Map<
   keyof AllOptions,
   keyof AllOptions
->([
-  [
-    'erc20_token_transfers_value_threshold',
-    'is_erc20_token_transfers_subscribed',
-  ],
-])
+>([ [
+  'erc20_token_transfers_value_threshold',
+  'is_erc20_token_transfers_subscribed',
+] ])
 const OptionsOutsideTheScopeOfCheckboxall: Array<keyof AllOptions> = [
   'subscribed_chain_ids',
   'is_ignore_spam_transactions_enabled',
@@ -77,26 +98,29 @@ const OptionsNeedingPremium: Array<keyof AllOptions> = [
   'group_offline_threshold',
   'is_real_time_mode_enabled',
 ]
-const RowsThatExpectAPercentage: Array<keyof AllOptions> = [
-  'group_offline_threshold',
-]
+const RowsThatExpectAPercentage: Array<keyof AllOptions> = [ 'group_offline_threshold' ]
 
 // #### END OF CONFIGURATION OF THE DIALOGS ####
 
 type ModifiableOptions = Record<keyof AllOptions, InternalEntry>
 
-const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
+const {
+  dialogRef, props,
+} = useBcDialog<Props>({ showHeader: false })
 const { t } = useTranslation()
 const { networkInfo } = useNetworkStore()
 const { user } = useUserStore()
 
 const tPath = ref('')
 let orderOfTheRows:
-  | typeof orderOfTheRowsInValidatorModal
-  | typeof orderOfTheRowsInAccountModal = []
+  | typeof orderOfTheRowsInAccountModal
+  | typeof orderOfTheRowsInValidatorModal = []
 let originalSettings: AllOptions
 const modifiableOptions = ref({} as ModifiableOptions)
-const checkboxAll = ref<InternalEntry>({ type: 'binary', check: false })
+const checkboxAll = ref<InternalEntry>({
+  check: false,
+  type: 'binary',
+})
 
 // used by the watcher of `modifiableOptions` to know when it is unnecessary
 // to send changes to the API (it doesn't send if the nonce is 0)
@@ -184,7 +208,10 @@ watch(
     }
     dataNonce++
   },
-  { immediate: true, deep: true },
+  {
+    deep: true,
+    immediate: true,
+  },
 )
 
 /** reads data that our parent received from the API and converts it to our internal format */
@@ -207,27 +234,27 @@ function convertAPIentryToInternalEntry(
     }
   }
   switch (type) {
-    case 'networks':
+    case 'amount':
       return {
+        check: isOptionActivatedInDB(apiKey),
+        num: srcValue as number,
         type,
-        networks: [...(srcValue as number[])],
       }
     case 'binary':
       return {
-        type,
         check: srcValue as boolean,
+        type,
+      }
+    case 'networks':
+      return {
+        networks: [ ...(srcValue as number[]) ],
+        type,
       }
     case 'percent':
       return {
-        type,
         check: isOptionActivatedInDB(apiKey),
         num: (srcValue as number) * 100,
-      }
-    case 'amount':
-      return {
         type,
-        check: isOptionActivatedInDB(apiKey),
-        num: srcValue as number,
       }
   }
 }

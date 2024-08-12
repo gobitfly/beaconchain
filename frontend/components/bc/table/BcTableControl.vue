@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import {
-  faTable,
   faHashtag,
   faPercent,
+  faTable,
 } from '@fortawesome/pro-solid-svg-icons'
 import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
 
 interface Props {
-  title?: string
-  searchPlaceholder?: string
-  disabledFilter?: boolean
-  chartDisabled?: boolean
+  chartDisabled?: boolean,
+  disabledFilter?: boolean,
+  searchPlaceholder?: string,
+  title?: string,
 }
 const props = defineProps<Props>()
 
@@ -47,7 +47,7 @@ const onInput = (value: string) => {
 
       <slot
         name="header-center"
-        :table-is-shown="tableIsShown"
+        :table-is-shown
       >
         <div
           v-if="props.title"
@@ -59,12 +59,12 @@ const onInput = (value: string) => {
       <div class="side right">
         <slot
           name="header-right"
-          :table-is-shown="tableIsShown"
+          :table-is-shown
         />
         <BcContentFilter
           v-if="props.searchPlaceholder && tableIsShown"
           :search-placeholder="props.searchPlaceholder"
-          :disabled-filter="disabledFilter"
+          :disabled-filter
           class="search"
           @filter-changed="onInput"
         />

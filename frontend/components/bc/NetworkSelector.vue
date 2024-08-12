@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
-import { ChainInfo, type ChainIDs } from '~/types/network'
+import {
+  type ChainIDs, ChainInfo,
+} from '~/types/network'
 
 const props = defineProps<{
-  readonlyNetworks?: ChainIDs[]
+  readonlyNetworks?: ChainIDs[],
 }>()
 
-const { availableNetworks, isNetworkDisabled } = useNetworkStore()
+const {
+  availableNetworks, isNetworkDisabled,
+} = useNetworkStore()
 
 /** If prop `:readonly-networks` is given:
  *   the networks in array `:readonly-networks` are shown to the user and they are unclickable,
@@ -37,11 +41,15 @@ const buttons = computed(() => {
   for (const chainId of source) {
     list.push({
       component: IconNetwork,
-      componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
       componentClass: 'maximum',
-      value: String(chainId),
+      componentProps: {
+        chainId,
+        colored: true,
+        harmonizePerceivedSize: true,
+      },
       disabled: isNetworkDisabled(chainId),
       tooltip: ChainInfo[chainId].name,
+      value: String(chainId),
     })
   }
   return list
@@ -52,13 +60,13 @@ const buttons = computed(() => {
   <BcToggleMultiBar
     v-if="Array.isArray(barSelection)"
     v-model="barSelection"
-    :buttons="buttons"
+    :buttons
     :readonly-mode="!!readonlyNetworks"
   />
   <BcToggleSingleBar
     v-else
     v-model="barSelection"
-    :buttons="buttons"
+    :buttons
     layout="minimal"
   />
 </template>

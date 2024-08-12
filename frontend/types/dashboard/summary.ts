@@ -25,7 +25,7 @@ export const SummaryDetailsEfficiencyLuckProps = [
 export type SummaryDetailsEfficiencyLuckProp =
   (typeof SummaryDetailsEfficiencyLuckProps)[number]
 
-export const SummaryDetailsEfficiencyCustomProps = ['attestations'] as const
+export const SummaryDetailsEfficiencyCustomProps = [ 'attestations' ] as const
 export type SummaryDetailsEfficiencyCustomProp =
   (typeof SummaryDetailsEfficiencyCustomProps)[number]
 
@@ -43,23 +43,23 @@ export type SummaryDetailsEfficiencySpecialProp =
   (typeof SummaryDetailsEfficiencySpecialProps)[number]
 
 export type SummaryDetailsEfficiencyCombinedProp =
-  | SummaryDetailsEfficiencySpecialProp
-  | SummaryDetailsEfficiencyProp
   | SummaryDetailsEfficiencyCustomProp
   | SummaryDetailsEfficiencyLuckProp
+  | SummaryDetailsEfficiencyProp
+  | SummaryDetailsEfficiencySpecialProp
   | SummaryDetailsEfficiencyValidatorProp
 
 export type DashboardValidatorContext =
+  | 'attestation'
   | 'dashboard'
   | 'group'
-  | 'attestation'
-  | 'sync'
-  | 'slashings'
   | 'proposal'
+  | 'slashings'
+  | 'sync'
 
 export type SummaryRow = {
-  prop?: SummaryDetailsEfficiencyCombinedProp
-  title: string
+  prop?: SummaryDetailsEfficiencyCombinedProp,
+  title: string,
 }
 
 export const SummaryTimeFrames = [
@@ -72,11 +72,11 @@ export const SummaryTimeFrames = [
 export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
 
 export type SummaryTableVisibility = {
-  proposals: boolean
-  attestations: boolean
-  reward: boolean
-  efficiency: boolean
-  validatorsSortable: boolean
+  attestations: boolean,
+  efficiency: boolean,
+  proposals: boolean,
+  reward: boolean,
+  validatorsSortable: boolean,
 }
 
 export const SUMMARY_CHART_GROUP_TOTAL = -1
@@ -90,12 +90,17 @@ export const AggregationTimeframes: AggregationTimeframe[] = [
   'weekly',
 ]
 
-export const EfficiencyTypes = ['all', 'attestation', 'sync', 'proposal']
+export const EfficiencyTypes = [
+  'all',
+  'attestation',
+  'sync',
+  'proposal',
+]
 export type EfficiencyType = (typeof EfficiencyTypes)[number]
 
 export type SummaryChartFilter = {
-  groupIds: number[]
-  aggregation: AggregationTimeframe
-  efficiency: EfficiencyType
-  initialised?: boolean
+  aggregation: AggregationTimeframe,
+  efficiency: EfficiencyType,
+  groupIds: number[],
+  initialised?: boolean,
 }

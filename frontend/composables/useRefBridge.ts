@@ -2,11 +2,11 @@
 import { type ModelRef } from 'vue'
 
 export interface BridgeRef<T> extends Ref<T> {
-  pauseBridgeFromNowOn: () => void
-  wakeupBridgeAtNextTick: () => void
+  pauseBridgeFromNowOn: () => void,
+  wakeupBridgeAtNextTick: () => void,
 }
 interface ConverterCallback<Tx, Ty> {
-  (x: Tx): Ty
+  (x: Tx): Ty,
 }
 
 /** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back
@@ -18,7 +18,7 @@ interface ConverterCallback<Tx, Ty> {
  * @returns a `BridgeRef` that is essentially a regular Vue `Ref` (you use it the same way, you can assign it to regular refs and v-models, no difference), containing two methods that you can call to control the bridge if needed (`.pauseBridgeFromNowOn()` and `.wakeupBridgeAtNextTick()`).
  * */
 export function usePrimitiveRefBridge<Torig, Tcreated>(
-  origRef: Ref<Torig> | ModelRef<Torig>,
+  origRef: ModelRef<Torig> | Ref<Torig>,
   origToCreated?: ConverterCallback<Torig, Tcreated>,
   createdToOrig?: ConverterCallback<Tcreated, Torig>,
 ): BridgeRef<Tcreated> {
@@ -39,7 +39,7 @@ export function usePrimitiveRefBridge<Torig, Tcreated>(
  * @returns a `BridgeRef` that is essentially a regular Vue `Ref` (you use it the same way, you can assign it to regular refs and v-models, no difference), containing two methods that you can call to control the bridge if needed (`.pauseBridgeFromNowOn()` and `.wakeupBridgeAtNextTick()`).
  * */
 export function useArrayRefBridge<Torig, Tcreated>(
-  origRef: Ref<Torig[]> | ModelRef<Torig[]>,
+  origRef: ModelRef<Torig[]> | Ref<Torig[]>,
   origToCreated?: ConverterCallback<Torig, Tcreated>,
   createdToOrig?: ConverterCallback<Tcreated, Torig>,
 ): BridgeRef<Tcreated[]> {
@@ -60,7 +60,7 @@ export function useArrayRefBridge<Torig, Tcreated>(
  * @returns a `BridgeRef` that is essentially a regular Vue `Ref` (you use it the same way, you can assign it to regular refs and v-models, no difference), containing two methods that you can call to control the bridge if needed (`.pauseBridgeFromNowOn()` and `.wakeupBridgeAtNextTick()`).
  * */
 export function useObjectRefBridge<Torig, Tcreated>(
-  origRef: Ref<Torig> | ModelRef<Torig>,
+  origRef: ModelRef<Torig> | Ref<Torig>,
   origToCreated: ConverterCallback<Torig, Tcreated>,
   createdToOrig: ConverterCallback<Tcreated, Torig>,
 ): BridgeRef<Tcreated> {
@@ -73,7 +73,7 @@ export function useObjectRefBridge<Torig, Tcreated>(
 }
 
 function createBridge<Torig, Tcreated, TorigWhole, TcreatedWhole>(
-  origRef: Ref<TorigWhole> | ModelRef<TorigWhole>,
+  origRef: ModelRef<TorigWhole> | Ref<TorigWhole>,
   origToCreated: ConverterCallback<Torig, Tcreated>,
   createdToOrig: ConverterCallback<Tcreated, Torig>,
   bothEndsAreArrays: boolean,
@@ -113,7 +113,10 @@ function createBridge<Torig, Tcreated, TorigWhole, TcreatedWhole>(
         pauseBack = false
       })
     },
-    { immediate: true, deep: true },
+    {
+      deep: true,
+      immediate: true,
+    },
   )
 
   watch(

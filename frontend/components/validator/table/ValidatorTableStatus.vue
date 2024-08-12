@@ -4,9 +4,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorStatus } from '~/types/validator'
 
 interface Props {
-  status: ValidatorStatus
-  position?: number
-  hideLabel?: boolean
+  hideLabel?: boolean,
+  position?: number,
+  status: ValidatorStatus,
 }
 const props = defineProps<Props>()
 
@@ -37,7 +37,7 @@ const iconColor = computed(() => {
 .wrapper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--padding-small);
   .status {
     text-transform: capitalize;

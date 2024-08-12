@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import {
   faDesktop,
-  faPowerOff,
   faMoneyBill,
+  faPowerOff,
 } from '@fortawesome/pro-solid-svg-icons'
 import {
   faClock,
@@ -15,8 +15,8 @@ import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 import { countSummaryValidatorDuties } from '~/utils/dashboard/validator'
 
 interface Props {
-  category: ValidatorSubsetCategory
-  validators: VDBSummaryValidator[]
+  category: ValidatorSubsetCategory,
+  validators: VDBSummaryValidator[],
 }
 const props = defineProps<Props>()
 
@@ -74,7 +74,11 @@ const icon = computed(() => {
       break
   }
 
-  return { icon, className, slotVizCategory }
+  return {
+    className,
+    icon,
+    slotVizCategory,
+  }
 })
 
 const count = computed(() =>

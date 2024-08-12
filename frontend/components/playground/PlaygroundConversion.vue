@@ -2,7 +2,9 @@
 import type { Currency } from '~/types/currencies'
 import type { AgeFormat } from '~/types/settings'
 
-const { setCurrency, currency } = useCurrency()
+const {
+  currency, setCurrency,
+} = useCurrency()
 const { latestState } = useLatestStateStore()
 
 const { setting } = useGlobalSetting<AgeFormat>('age-format')

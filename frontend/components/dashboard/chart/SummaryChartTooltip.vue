@@ -6,16 +6,16 @@ import {
 } from '~/types/dashboard/summary'
 
 interface Props {
-  t: ComposerTranslation // required as dynamically created components via render do not have the proper app context
-  ts: number
-  aggregation: AggregationTimeframe
-  efficiencyType: EfficiencyType
+  aggregation: AggregationTimeframe,
+  efficiencyType: EfficiencyType,
   groupInfos: {
-    name: string
-    efficiency: number
-    color: string
-  }[]
-  highlightGroup?: string
+    color: string,
+    efficiency: number,
+    name: string,
+  }[],
+  highlightGroup?: string,
+  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context
+  ts: number,
 }
 
 defineProps<Props>()
@@ -24,10 +24,10 @@ defineProps<Props>()
 <template>
   <div class="tooltip-container">
     <DashboardChartTooltipHeader
-      :t="t"
-      :ts="ts"
-      :aggregation="aggregation"
-      :efficiency-type="efficiencyType"
+      :t
+      :ts
+      :aggregation
+      :efficiency-type
     />
     <div
       v-for="(entry, index) in groupInfos"

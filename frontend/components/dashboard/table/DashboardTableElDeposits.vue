@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useValidatorDashboardElDepositsStore } from '~/stores/dashboard/useValidatorDashboardElDepositsStore'
@@ -14,31 +16,35 @@ const { t: $t } = useTranslation()
 
 const {
   deposits,
-  query: lastQuery,
   getDeposits,
   getTotalAmount,
-  totalAmount,
   isLoadingDeposits,
   isLoadingTotal,
+  query: lastQuery,
+  totalAmount,
 } = useValidatorDashboardElDepositsStore()
-const { value: query, bounce: setQuery } = useDebounceValue<
+const {
+  bounce: setQuery, value: query,
+} = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
 
-const { overview, hasValidators } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 1200,
     block: width.value >= 1100,
-    withdrawalCredentials: width.value >= 1060,
-    from: width.value >= 960,
     depositer: width.value >= 860,
+    from: width.value >= 960,
+    group: width.value > 1200,
+    publicKey: width.value >= 560,
     txHash: width.value >= 760,
     valid: width.value >= 660,
-    publicKey: width.value >= 560,
+    withdrawalCredentials: width.value >= 1060,
   }
 })
 
@@ -50,7 +56,10 @@ const loadData = (query?: TableQueryParams) => {
 }
 
 watch(
-  [dashboardKey, overview],
+  [
+    dashboardKey,
+    overview,
+  ],
   () => {
     loadData()
     getTotalAmount(dashboardKey.value)
@@ -73,13 +82,11 @@ const tableData = computed(() => {
     return
   }
   return {
-    paging: deposits.value.paging,
     data: [
-      {
-        amount: totalAmount.value,
-      },
+      { amount: totalAmount.value },
       ...deposits.value.data,
     ],
+    paging: deposits.value.paging,
   }
 })
 
@@ -122,10 +129,10 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
             data-key="index"
             :expandable="!colsVisible.group"
             class="el_deposits_table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :loading="isLoadingDeposits"
             @set-cursor="setCursor"
             @sort="onSort"
