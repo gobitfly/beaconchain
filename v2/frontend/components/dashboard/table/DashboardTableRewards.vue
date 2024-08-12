@@ -21,7 +21,6 @@ const {
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const {
   getRewards,
@@ -164,7 +163,6 @@ const wrappedRewards = computed(() => {
             : 'dashboard.validator.rewards.search_placeholder',
         )
       "
-      :chart-disabled="!showInDevelopment"
       @set-search="setSearch"
     >
       <template #table>
@@ -321,7 +319,7 @@ const wrappedRewards = computed(() => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartRewardsChart v-if="showInDevelopment" />
+          <DashboardChartRewardsChart />
         </div>
       </template>
     </BcTableControl>
