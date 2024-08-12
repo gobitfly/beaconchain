@@ -113,7 +113,7 @@ func (h *HandlerService) sendResetEmail(ctx context.Context, userId uint64, emai
 	}
 
 	// 1. check last confirmation time to enforce ratelimit
-	lastTs, err := h.dai.GetEmailResetTime(ctx, userId)
+	lastTs, err := h.dai.GetPasswordResetTime(ctx, userId)
 	if err != nil {
 		return errors.New("error getting confirmation-ts")
 	}
@@ -263,13 +263,13 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 // email confirmations + changes
 func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	confirmationHash := v.checkConfirmationHash(mux.Vars(r)["token"])
+	confirmationHash := v.checkUserEmailToken(mux.Vars(r)["token"])
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	userId, err := h.dai.GetUserIdByConfirmationHash(confirmationHash)
+	userId, err := h.dai.GetUserIdByConfirmationHash(r.Context(), confirmationHash)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -295,7 +295,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) InternalPostPasswordReset(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
 		Email string `json:"email"`
@@ -322,12 +322,61 @@ func (h *HandlerService) InternalPostPasswordReset(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// email confirmation
+	// send password reset email
 	err = h.sendResetEmail(r.Context(), userId, email)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
+
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	resetToken := v.checkUserEmailToken(mux.Vars(r)["token"])
+	req := struct {
+		Password string `json:"password"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	password := v.checkPassword(req.Password)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	// check token validity
+	userId, err := h.dai.GetUserIdByResetHash(r.Context(), resetToken)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	resetTime, err := h.dai.GetPasswordResetTime(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if resetTime.Add(authEmailExpireTime).Before(time.Now()) {
+		handleErr(w, errors.New("reset link expired"))
+		return
+	}
+
+	// change password
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		handleErr(w, errors.New("error hashing password"))
+		return
+	}
+	err = h.dai.UpdateUserPassword(r.Context(), userId, string(passwordHash))
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// TODO: purge all user sessions
 
 	returnOk(w, nil)
 }
@@ -766,15 +815,19 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		handleErr(w, v)
 		return
 	}
-
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
 	if err != nil {
 		handleErr(w, errors.New("invalid password"))
 		return
 	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		handleErr(w, errors.New("error hashing password"))
+		return
+	}
 
 	// change password
-	err = h.dai.UpdateUserPassword(r.Context(), user.Id, newPassword)
+	err = h.dai.UpdateUserPassword(r.Context(), user.Id, string(passwordHash))
 	if err != nil {
 		handleErr(w, err)
 		return

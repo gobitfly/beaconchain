@@ -103,7 +103,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodPost, "/users", nil, hs.InternalPostUsers},
 		{http.MethodPost, "/users/email-confirmations/{token}", nil, hs.InternalPostUserConfirm},
-		{http.MethodPost, "/users/password/reset", nil, hs.InternalPostPasswordReset},
+		{http.MethodPost, "/users/password/reset", nil, hs.InternalPostUserPasswordReset},
+		{http.MethodPost, "/users/password-resets/{token}", nil, hs.InternalPostUserPasswordResetHash},
 		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
 		{http.MethodDelete, "/users/me", nil, hs.InternalDeleteUser},
 		{http.MethodPut, "/users/me/email", nil, hs.InternalPutUserEmail},
