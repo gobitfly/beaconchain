@@ -9,13 +9,13 @@ const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
 const {
+  isLoading,
+  networkNotifications,
   onSort,
+  query,
   setCursor,
   setPageSize,
   setSearch,
-  networkNotifications,
-  query,
-  isLoading,
 } = useNotificationsNetworkStore()
 </script>
 
@@ -31,8 +31,8 @@ const {
           <BcTable
             :data="networkNotifications"
             data-key="notification_id"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :selected-sort="query?.sort"
             :loading="isLoading"
             :add-spacer="true"
