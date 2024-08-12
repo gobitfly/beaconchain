@@ -611,7 +611,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 
 			if c.Status != v.Status {
 				log.Infof("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
-				log.Infof("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot)
+				log.Infof("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
 				updates++
 			}
