@@ -64,9 +64,9 @@ const {
   temp: tempTimeFrames,
   value: timeFrames,
 } = useDebounceValue<{ from?: number,
-  to: number, }>({
+  to?: number, }>({
   from: undefined,
-  to: 0,
+  to: undefined,
 }, 1000)
 const currentZoom = {
   end: 100,
@@ -166,7 +166,7 @@ const loadData = async () => {
   reloadCounter++
   const currentCounter = reloadCounter
   let newCategories: number[] = []
-  if (!dashboardKey.value || !timeFrames.value.to) {
+  if (!dashboardKey.value || (!timeFrames.value.to && !timeFrames.value.from)) {
     series.value = []
     return
   }
@@ -216,6 +216,9 @@ const loadData = async () => {
     }
   }
   catch (e) {
+    if (currentCounter !== reloadCounter) {
+      return // make sure we only use the data from the latest call
+    }
     // TODO: Maybe we want to show an error here (either a toast or inline centred in the chart space)
   }
   isLoading.value = false
@@ -444,7 +447,7 @@ const getZoomTimestamps = () => {
 }
 
 // validate and adjust zoom settings
-const validateDataZoom = (instant?: boolean) => {
+const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
   if (!chart.value) {
     return
   }
@@ -452,23 +455,40 @@ const validateDataZoom = (instant?: boolean) => {
   if (!timestamps) {
     return
   }
+  const firstTime = !tempTimeFrames.value.to && !tempTimeFrames.value.from
 
   const max = categories.value.length - 1
-  // check for max data points
-  if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS) {
-    if (timestamps.start !== currentZoom.start) {
+
+  const useDefault = categoryChanged || firstTime
+  // check if data points need to be adjusted
+  if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS || useDefault) {
+    if (useDefault) {
+      let targetPoints = 6
+      switch (aggregation.value) {
+        case 'daily':
+          targetPoints = 7
+          break
+        case 'weekly':
+          targetPoints = 8
+          break
+      }
+      timestamps.toIndex = firstTime ? max : Math.max(Math.ceil(max / 100 * timestamps.end), targetPoints)
+      timestamps.fromIndex = timestamps.toIndex - targetPoints
+    }
+    else if (timestamps.start !== currentZoom.start) {
       timestamps.toIndex = Math.min(
         timestamps.fromIndex + MAX_DATA_POINTS,
         max,
       )
-      timestamps.end = (timestamps.toIndex * 100) / max
-      timestamps.toTs = categories.value[timestamps.toIndex]
     }
     else {
       timestamps.fromIndex = Math.max(0, timestamps.toIndex - MAX_DATA_POINTS)
-      timestamps.start = (timestamps.fromIndex * 100) / max
-      timestamps.fromTs = categories.value[timestamps.fromIndex]
     }
+
+    timestamps.end = (timestamps.toIndex * 100) / max
+    timestamps.toTs = categories.value[timestamps.toIndex]
+    timestamps.start = (timestamps.fromIndex * 100) / max
+    timestamps.fromTs = categories.value[timestamps.fromIndex]
   }
   // to index must be greater then from index
   if (timestamps.toIndex <= timestamps.fromIndex) {
@@ -489,15 +509,19 @@ const validateDataZoom = (instant?: boolean) => {
   }
 
   let fromTs: number | undefined = timestamps.fromTs
+  let toTs: number | undefined = timestamps.toTs
   const bufferSteps = aggregation.value === 'epoch' ? 0 : 5
   // if we are on the far left of the time frame we omit the fromTs to avoid going to far and cause a webservice error
   // in that case the backend will go back depending on the max secons of the dashboard settings
   if (timestamps.fromIndex <= bufferSteps) {
     fromTs = undefined
   }
+  else if (timestamps.toIndex >= max - bufferSteps) {
+    toTs = undefined
+  }
   const newTimeFrames = {
     from: fromTs,
-    to: timestamps.toTs,
+    to: toTs,
   }
   // when the timeframes of the slider change we bounce the new timeframe for the chart
   if (
@@ -521,34 +545,38 @@ const validateDataZoom = (instant?: boolean) => {
 
     // check if dataZoom is ready for the action otherwise use set options
     nextTick(() => {
+      chart.value?.setOption({
+        dataZoom: {
+          ...(get(chart.value, 'xAxis[1]') || {}),
+          ...currentZoom,
+        },
+      })
       if (get(chart.value?.getOption(), 'dataZoom[0]')) {
         chart.value?.dispatchAction({
           type: 'dataZoom',
           ...currentZoom,
         })
       }
-      else {
-        chart.value?.setOption({
-          dataZoom: {
-            ...(get(chart.value, 'xAxis[1]') || {}),
-            ...currentZoom,
-          },
-        })
-      }
     })
   }
 }
 
-watch([ option ], () => {
-  updateTimestamp()
-  validateDataZoom(true)
-}, { immediate: true })
-
 watch([
-  categories,
   chart,
-], () => {
-  validateDataZoom(true)
+  categories,
+], ([
+  cha,
+  cat,
+], [
+  oldCha,
+  oldCat,
+]) => {
+  const chartChanged = cha !== oldCha
+  const categoriesChanged = cat?.length !== oldCat?.length
+  if (chartChanged) {
+    updateTimestamp()
+  }
+  validateDataZoom(true, categoriesChanged)
 }, { immediate: true })
 
 const onDatazoom = () => {
