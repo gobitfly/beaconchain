@@ -101,15 +101,13 @@ Best regards,
 
 func (h *HandlerService) GetUserIdBySession(r *http.Request) (uint64, error) {
 	user, err := h.getUserBySession(r)
-	if err != nil {
-		return 0, err
-	}
-	return user.Id, nil
+	return user.Id, err
 }
 
 const authHeaderPrefix = "Bearer "
 
 func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
+	// TODO: store user id in context during ratelimting and use it here
 	var apiKey string
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, authHeaderPrefix) {
@@ -127,10 +125,11 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 	return userId, err
 }
 
+// if this is used, user ID should've been stored in context (by GetUserIdStoreMiddleware)
 func GetUserIdByContext(r *http.Request) (uint64, error) {
 	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
 	if !ok {
-		return 0, errors.New("error getting user id from context, not a uint64")
+		return 0, newUnauthorizedErr("user not authenticated")
 	}
 	return userId, nil
 }
@@ -696,16 +695,21 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 }
 
 // Middlewares
+
 // returns a middleware that stores user id in context, using the provided function
 func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userId, err := userIdFunc(r)
 			if err != nil {
-				handleErr(w, err)
+				if errors.Is(err, errUnauthorized) {
+					// if next handler requires authentication, it should return 'unauthorized' itself
+					next.ServeHTTP(w, r)
+				} else {
+					handleErr(w, err)
+				}
 				return
 			}
-			// store user id in context
 			ctx := r.Context()
 			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 			r = r.WithContext(ctx)
@@ -715,45 +719,42 @@ func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) 
 }
 
 // returns a middleware that checks if user has access to dashboard when a primary id is used
-// expects a userIdFunc to return user id, probably GetUserIdBySession or GetUserIdByApiKey
-func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var err error
-			dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
-			if err != nil {
-				// if primary id is not used, no need to check access
-				next.ServeHTTP(w, r)
-				return
-			}
-			// primary id is used -> user needs to have access to dashboard
-
-			userId, err := userIdFunc(r)
-			if err != nil {
-				handleErr(w, err)
-				return
-			}
-			// store user id in context
-			ctx := r.Context()
-			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
-			r = r.WithContext(ctx)
-
-			dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
-			if err != nil {
-				handleErr(w, err)
-				return
-			}
-
-			if dashboard.UserId != userId {
-				// user does not have access to dashboard
-				// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
-				handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
-				return
-			}
-
+func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
+		if err != nil {
+			// if primary id is not used, no need to check access
 			next.ServeHTTP(w, r)
-		})
-	}
+			return
+		}
+		// primary id is used -> user needs to have access to dashboard
+
+		userId, err := GetUserIdByContext(r)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		// store user id in context
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
+		r = r.WithContext(ctx)
+
+		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+
+		if dashboard.UserId != userId {
+			// user does not have access to dashboard
+			// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
+			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // returns a middleware that checks if user has premium perk to use public validator dashboard api
