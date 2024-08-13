@@ -2077,7 +2077,8 @@ func (h *HandlerService) InternalPostUserNotificationsTestPush(w http.ResponseWr
 func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
-		Url string `json:"url"`
+		WebhookUrl              string `json:"webhook_url"`
+		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)
