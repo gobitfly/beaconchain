@@ -11,8 +11,8 @@ const split = (num: number) => {
   const split = str.split('.')
   const factor = getFactor(split[1])
   return {
+    combined: split.join(''),
     factor,
-    combined: split.join('')
   }
 }
 
@@ -20,7 +20,9 @@ export const bigMul = (big: BigNumber, num: number): BigNumber => {
   if (!big || !num) {
     return big
   }
-  const { factor, combined } = split(num)
+  const {
+    combined, factor,
+  } = split(num)
   return big.mul(combined).div(factor)
 }
 
@@ -28,12 +30,17 @@ export const bigDiv = (big: BigNumber, num: number): BigNumber => {
   if (!big || !num) {
     return big
   }
-  const { factor, combined } = split(num)
+  const {
+    combined, factor,
+  } = split(num)
   return big.mul(factor).div(combined)
 }
 
-export const convertSum = (...values:string[]):BigNumber | undefined => {
-  return values?.reduce((sum, newValue) => sum.add(BigNumber.from(newValue)), BigNumber.from('0'))
+export const convertSum = (...values: string[]): BigNumber | undefined => {
+  return values?.reduce(
+    (sum, newValue) => sum.add(BigNumber.from(newValue)),
+    BigNumber.from('0'),
+  )
 }
 
 export const totalElCl = (value: ClElValue<string>): BigNumber | undefined => {
@@ -51,7 +58,9 @@ export const subWei = (total: string, value: string): BigNumber | undefined => {
   return BigNumber.from(total).sub(BigNumber.from(value ?? '0'))
 }
 
-export const totalElClNumbers = (value: ClElValue<number>): number | undefined => {
+export const totalElClNumbers = (
+  value: ClElValue<number>,
+): number | undefined => {
   if (!value) {
     return
   }

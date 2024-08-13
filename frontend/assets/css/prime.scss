@@ -18,23 +18,26 @@
   border: 1px solid var(--button-color-active);
   border-radius: var(--border-radius);
 
-  &:not([data-secondary]) {
-    color: var(--primary-contrast-color);
-    background: var(--button-color-active);
-  }
-
-  &[data-secondary]{
-    color: var(--button-secondary-color);
-    background: var(--button-secondary-background-color);
-    border-color: var(--button-secondary-border-color);
-  }
-
   display: inline-flex;
   flex-grow: 0;
   justify-content: center;
   align-items: center;
 
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+
+  &:not([data-secondary]) {
+    color: var(--primary-contrast-color);
+    background: var(--button-color-active);
+  }
+
+  &[data-secondary] {
+    color: var(--button-secondary-color);
+    background: var(--button-secondary-background-color);
+    border-color: var(--button-secondary-border-color);
+  }
 
   &.p-disabled {
     color: var(--button-text-color-disabled);
@@ -56,15 +59,16 @@
   &.p-button-icon-only {
     padding: 8px;
     width: var(--default-button-height);
+    flex-shrink: 1;
   }
 
   &.p-button-danger {
     color: var(--button-text-color-dangerous);
-  
+
     &:not(:disabled) {
       background-color: var(--button-color-dangerous);
       border-color: var(--button-color-dangerous);
-  
+
       &:hover {
         background-color: var(--button-color-dangerous-hover);
         border-color: var(--button-color-dangerous-hover);
@@ -80,7 +84,7 @@
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
-  min-width: 375px; 
+  min-width: 375px;
   max-height: calc(100% - 60px);
   touch-action: pan-x pan-y;
 
@@ -116,7 +120,10 @@
   padding: 4px 7px;
   border: 1px solid var(--input-border-color);
   border-radius: var(--border-radius);
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
   appearance: none;
 
   ::placeholder {
@@ -172,6 +179,7 @@
     width: 20px;
     height: 20px;
     border-radius: var(--border-radius);
+    border: 1px solid var(--checkbox-border-color);
     background: var(--checkbox-background-color);
     &.p-highlight:not(:hover) {
       background: var(--primary-color);
@@ -203,7 +211,10 @@
 
   .p-inputswitch-slider {
     background: var(--button-color-active);
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s,
+    transition:
+      background-color 0.2s,
+      color 0.2s,
+      border-color 0.2s,
       box-shadow 0.2s;
     border-radius: 30px;
 
@@ -241,6 +252,7 @@
   &.p-disabled .p-inputswitch-slider {
     background: var(--button-color-disabled);
   }
+  
 }
 
 // Toast
@@ -286,7 +298,10 @@
       height: 32px;
       border-radius: 50%;
       background: transparent;
-      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+      transition:
+        background-color 0.2s,
+        color 0.2s,
+        box-shadow 0.2s;
 
       &:hover {
         background: rgba(255, 255, 255, 0.5);
@@ -345,7 +360,6 @@
   }
 }
 
-
 // Multiselect drop-down
 
 .p-multiselect {
@@ -355,7 +369,10 @@
   border: 1px solid var(--input-border-color);
   height: var(--default-button-height);
   border-radius: var(--border-radius);
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
   justify-content: center;
   width: 100%;
 
@@ -432,7 +449,10 @@
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
   border-radius: var(--border-radius);
   padding: var(--padding);
   display: flex;
@@ -487,10 +507,10 @@
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
   border-radius: 0 0 var(--border-radius) var(--border-radius);
+  transform: translateY(-1px);
   &.header {
     border-radius: var(--border-radius);
   }
-  transform: translateY(-1px);
   &.table {
     background: var(--background-color);
   }

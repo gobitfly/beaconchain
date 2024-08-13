@@ -22,10 +22,6 @@ func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicPostOauthToken(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
 func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	userId, err := h.GetUserIdByApiKey(r)
 	if err != nil {
@@ -108,6 +104,10 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 }
 
 func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+	returnNoContent(w)
+}
+
+func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 

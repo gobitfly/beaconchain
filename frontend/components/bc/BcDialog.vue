@@ -9,11 +9,13 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const dialog = ref<{container: HTMLElement} | undefined>()
+const dialog = ref<{ container: HTMLElement } | undefined>()
 
-const visible = defineModel<boolean>() // requires two way binding as both the parent (only the parent can open the modal) and the component itself (clicking outside the modal closes it) need to update the visibility
+// requires two way binding as both the parent (only the parent can open the modal)
+// and the component itself (clicking outside the modal closes it) need to update the visibility
+const visible = defineModel<boolean>()
 
-const position = computed(() => width.value <= 430 ? 'bottom' : 'center')
+const position = computed(() => (width.value <= 430 ? 'bottom' : 'center'))
 
 const onShow = () => {
   if (dialog.value?.container) {
@@ -33,9 +35,9 @@ const onShow = () => {
     :header="props.header"
     :dismissable-mask="true"
     :draggable="false"
-    :position="position"
+    :position
     class="modal_container"
-    :class="{'p-dialog-header-hidden':!props.header && !$slots.header}"
+    :class="{ 'p-dialog-header-hidden': !props.header && !$slots.header }"
     @show="onShow"
   >
     <template #header>

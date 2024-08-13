@@ -1,14 +1,15 @@
 <script setup lang="ts">
-
 interface Props {
-  title?: string
-  question?: string
-  noLabel?: string // defaults to "No"
-  yesLabel?: string // defaults to "Yes"
-  severity?: 'default' | 'danger'
+  noLabel?: string, // defaults to "No"
+  question?: string,
+  severity?: 'danger' | 'default',
+  title?: string,
+  yesLabel?: string, // defaults to "Yes"
 }
-const { props, dialogRef } = useBcDialog<Props>({ showHeader: false })
-const { t: $t } = useI18n()
+const {
+  dialogRef, props,
+} = useBcDialog<Props>({ showHeader: false })
+const { t: $t } = useTranslation()
 
 const noLabel = computed(() => props.value?.noLabel || $t('navigation.no'))
 const yesLabel = computed(() => props.value?.yesLabel || $t('navigation.yes'))
@@ -20,24 +21,44 @@ const closeDialog = (response: boolean) => {
 
 <template>
   <div class="content">
-    <div v-if="props?.title" class="title">
+    <div
+      v-if="props?.title"
+      class="title"
+    >
       {{ props?.title }}
     </div>
-    <div v-if="props?.question" class="question">
+    <div
+      v-if="props?.question"
+      class="question"
+    >
       {{ props?.question }}
     </div>
     <div class="footer">
-      <Button v-if="props?.severity !== 'danger'" type="button" :label="noLabel" @click="closeDialog(false)" />
-      <div v-else class="discreet-button" @click="closeDialog(false)">
+      <Button
+        v-if="props?.severity !== 'danger'"
+        type="button"
+        :label="noLabel"
+        @click="closeDialog(false)"
+      />
+      <div
+        v-else
+        class="discreet-button"
+        @click="closeDialog(false)"
+      >
         {{ noLabel }}
       </div>
-      <Button type="button" :severity="props?.severity === 'danger' ? `danger` : undefined" :label="yesLabel" @click="closeDialog(true)" />
+      <Button
+        type="button"
+        :severity="props?.severity === 'danger' ? `danger` : undefined"
+        :label="yesLabel"
+        @click="closeDialog(true)"
+      />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/fonts.scss";
 
 .content {
   display: flex;
@@ -63,7 +84,7 @@ const closeDialog = (response: boolean) => {
     margin-top: var(--padding);
     gap: var(--padding);
 
-    .discreet-button{
+    .discreet-button {
       @include fonts.button_text;
       cursor: pointer;
       color: var(--text-color-discreet);
