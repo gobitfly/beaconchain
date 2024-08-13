@@ -2,19 +2,25 @@
 import { faArrowDown } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 useBcSeo('pricing.seo_title')
 const { stripeInit } = useStripeProvider()
 
-const { products, getProducts } = useProductsStore()
+const {
+  getProducts, products,
+} = useProductsStore()
 
 await useAsyncData('get_products', () => getProducts())
-watch(products, () => {
-  if (products.value?.stripe_public_key) {
-    stripeInit(products.value.stripe_public_key)
-  }
-}, { immediate: true })
+watch(
+  products,
+  () => {
+    if (products.value?.stripe_public_key) {
+      stripeInit(products.value.stripe_public_key)
+    }
+  },
+  { immediate: true },
+)
 
 const isYearly = ref(true)
 
@@ -34,13 +40,22 @@ const scrollToAddons = () => {
         <PricingHeaderLine />
         <PricingPeriodToggle v-model="isYearly" />
         <PricingPremiumViaAppBanner />
-        <PricingPremiumProducts :is-yearly="isYearly" />
-        <Button class="view-addons-button" @click="scrollToAddons()">
-          {{ $t('pricing.view_addons') }}<FontAwesomeIcon :icon="faArrowDown" />
+        <PricingPremiumProducts :is-yearly />
+        <Button
+          class="view-addons-button"
+          @click="scrollToAddons()"
+        >
+          {{ $t("pricing.view_addons") }}<FontAwesomeIcon :icon="faArrowDown" />
         </Button>
         <PricingPremiumCompare />
-        <PricingPremiumAddons id="addons" :is-yearly="isYearly" />
-        <BcFaq class="faq" translation-path="faq.pricing" />
+        <PricingPremiumAddons
+          id="addons"
+          :is-yearly
+        />
+        <BcFaq
+          class="faq"
+          translation-path="faq.pricing"
+        />
       </div>
     </div>
   </BcPageWrapper>
@@ -51,7 +66,7 @@ const scrollToAddons = () => {
 </style>
 
 <style lang="scss" scoped>
-@use '~/assets/css/pricing.scss';
+@use "~/assets/css/pricing.scss";
 
 .page-container {
   position: relative;
@@ -107,7 +122,7 @@ const scrollToAddons = () => {
       }
     }
   }
-  .faq{
+  .faq {
     width: 100%;
     margin-top: 51px;
   }

@@ -1,9 +1,14 @@
 <script lang="ts" setup>
-import { COOKIE_KEY, type CookiesPreference } from '~/types/cookie'
+import {
+  COOKIE_KEY, type CookiesPreference,
+} from '~/types/cookie'
 import { Target } from '~/types/links'
 
-const cookiePreference = useCookie<CookiesPreference>(COOKIE_KEY.COOKIES_PREFERENCE, { default: () => undefined })
-const { t: $t } = useI18n()
+const cookiePreference = useCookie<CookiesPreference>(
+  COOKIE_KEY.COOKIES_PREFERENCE,
+  { default: () => undefined },
+)
+const { t: $t } = useTranslation()
 
 const setCookiePreference = (value: CookiesPreference) => {
   cookiePreference.value = value
@@ -22,18 +27,25 @@ const visible = computed(() => cookiePreference.value === undefined)
   >
     <div class="dialog-container">
       <div class="text-container">
-        {{ tOf($t, 'cookies.text', 0) }}
-        <BcLink to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" :target="Target.External" class="link">
-          {{ tOf($t, 'cookies.text', 1) }}
+        {{ tOf($t, "cookies.text", 0) }}
+        <BcLink
+          to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
+          :target="Target.External"
+          class="link"
+        >
+          {{ tOf($t, "cookies.text", 1) }}
         </BcLink>
-        {{ tOf($t, 'cookies.text', 2) }}
+        {{ tOf($t, "cookies.text", 2) }}
       </div>
       <div class="button-container">
-        <div class="necessary-button" @click="setCookiePreference('functional')">
-          {{ $t('cookies.only_necessary') }}
+        <div
+          class="necessary-button"
+          @click="setCookiePreference('functional')"
+        >
+          {{ $t("cookies.only_necessary") }}
         </div>
         <Button @click="setCookiePreference('all')">
-          {{ $t('cookies.accept_all') }}
+          {{ $t("cookies.accept_all") }}
         </Button>
       </div>
     </div>

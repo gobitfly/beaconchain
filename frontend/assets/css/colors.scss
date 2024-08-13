@@ -22,13 +22,13 @@
   --light-black: #2a262c;
   --dark-blue: #2f2e42;
   --purple-blue: #3e4461;
-  --light-purple-blue: #545C7E;
-  --sky-blue:#cde3ee;
+  --light-purple-blue: #545c7e;
+  --sky-blue: #cde3ee;
   --light-blue: #66bce9;
-  --melllow-blue: #7db5eC;
+  --melllow-blue: #7db5ec;
   --blue: #2e82ae;
   --teal-blue: #116897;
-  --mint-green: #D3E4D4;
+  --mint-green: #d3e4d4;
   --flashy-green: #90ed7d;
   --light-green: #4e7451;
   --green: #7dc382;
@@ -37,7 +37,7 @@
   --light-red: #d42127;
   --dark-red: #ce3438;
   --bold-red: #b10b11;
-  --pastel-red: #F1C5C6;
+  --pastel-red: #f1c5c6;
   --yellow: #ffd600;
   --light-yellow: #969100;
   --purple: #9747ff;
@@ -61,6 +61,7 @@
   --text-color-inverted: var(--light-grey);
   --text-color-disabled: var(--grey);
   --text-color-discreet: var(--dark-grey);
+  --text-color--error: var(--flashy-red);
 
   --button-color-active: var(--primary-orange);
   --button-color-hover: var(--primary-orange-hover);
@@ -73,6 +74,7 @@
 
   --button-secondary-color: var(--light-black);
   --button-secondary-hover-color: var(--light-grey-6);
+  --button-secondary-background-color--hover: var(--light-grey-4);
   --button-secondary-background-color: var(--grey-4);
   --button-secondary-border-color: var(--light-grey-7);
 
@@ -82,7 +84,7 @@
   --container-color: var(--light-black);
   --container-border-color: var(--light-grey-3);
   --container-border: 1px solid var(--container-border-color);
-  
+
   --subcontainer-background: var(--light-grey-2);
 
   --input-background: var(--grey-4);
@@ -151,7 +153,6 @@
   --toast-background-error-color: var(--pastel-red);
   --toast-border-error-color: var(--bold-red);
 
-
   &.dark-mode {
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
@@ -176,10 +177,12 @@
 
     --button-secondary-color: var(--light-grey);
     --button-secondary-hover-color: var(--light-black);
+    --button-secondary-background-color--hover: var(--light-black);
     --button-secondary-background-color: var(--very-dark-grey);
     --button-secondary-border-color: var(--dark-grey);
 
     --checkbox-background-color: var(--light-grey);
+    --checkbox-border-color: var(--dark-grey);
 
     --container-background: var(--light-black);
     --container-color: var(--grey-4);

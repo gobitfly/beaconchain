@@ -31,6 +31,10 @@ export interface VDBOverviewData {
   chart_history_seconds: ChartHistorySeconds;
 }
 export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
+export interface VDBPostArchivingReturnData {
+  id: number /* uint64 */;
+  is_archived: boolean;
+}
 export interface VDBSummaryStatus {
   next_sync_count: number /* uint64 */;
   current_sync_count: number /* uint64 */;
