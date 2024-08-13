@@ -512,7 +512,7 @@ const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
   let toTs: number | undefined = timestamps.toTs
   const bufferSteps = aggregation.value === 'epoch' ? 0 : 5
   // if we are on the far left of the time frame we omit the fromTs to avoid going to far and cause a webservice error
-  // in that case the backend will go back depending on the max secons of the dashboard settings
+  // when we omit one of the time stamps the backend will use the max secons of the dashboard settings
   if (timestamps.fromIndex <= bufferSteps) {
     fromTs = undefined
   }
