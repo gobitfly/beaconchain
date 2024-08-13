@@ -526,6 +526,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(attestations_reward, 0) as attestations_reward,
 			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
 			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
+			COALESCE(attestations_executed, 0) as attestations_executed,
 			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
 			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
 			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
@@ -550,6 +551,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			COALESCE(attestations_reward, 0) as attestations_reward,
 			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
 			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
+			COALESCE(attestations_executed, 0) as attestations_executed,
 			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
 			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
 			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
@@ -579,6 +581,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
 
 		AttestationsScheduled     int64 `db:"attestations_scheduled"`
+		AttestationsExecuted      int64 `db:"attestations_executed"`
 		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
 		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
 		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
@@ -676,7 +679,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalSyncExpected += row.SyncCommitteesExpected
 
 		if row.InclusionDelaySum > 0 {
-			totalInclusionDelayDivisor += row.AttestationsScheduled
+			totalInclusionDelayDivisor += row.AttestationsExecuted
 		}
 	}
 
