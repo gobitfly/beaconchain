@@ -155,10 +155,16 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
 
-	err = d.userReader.GetContext(ctx, &userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
+	result := struct {
+		Email     string `db:"email"`
+		UserGroup string `db:"user_group"`
+	}{}
+	err = d.userReader.GetContext(ctx, &result, `SELECT email, user_group FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
+	userInfo.Email = result.Email
+	userInfo.UserGroup = result.UserGroup
 
 	userInfo.Email = utils.CensorEmail(userInfo.Email)
 
