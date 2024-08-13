@@ -762,9 +762,9 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get user id from context
-		userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-		if !ok {
-			handleErr(w, errors.New("error getting user id from context"))
+		userId, err := GetUserIdByContext(r)
+		if err != nil {
+			handleErr(w, err)
 			return
 		}
 		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
