@@ -1,12 +1,12 @@
-export type AdInsertMode = 'after' | 'before' | 'replace' | 'insert'
+export type AdInsertMode = 'after' | 'before' | 'insert' | 'replace'
 
 export type AdConfiguration = {
-  'key': string,
-  'jquery_selector': string,
-  'insert_mode': AdInsertMode,
-  'refresh_interval': number,
-  'for_all_users': boolean,
-  'banner_id'?: number,
-  'html_content'?: string,
-  'enabled': boolean
+  banner_id?: number,
+  enabled: boolean,
+  for_all_users: boolean,
+  html_content?: string,
+  insert_mode: AdInsertMode,
+  jquery_selector: string,
+  key: string,
+  refresh_interval: number,
 }

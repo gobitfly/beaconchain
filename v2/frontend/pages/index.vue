@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
+import {
+  SearchbarColors, SearchbarShape,
+} from '~/types/searchbar'
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
@@ -14,7 +16,11 @@ useBcSeo()
         v-if="showInDevelopment"
         :bar-shape="SearchbarShape.Big"
         :color-theme="SearchbarColors.Default"
-        :screen-width-causing-sudden-change="0 /*if you introduce a media query (or similar) changing the width of the bar, give the threshold here to avoid visual bugs in the list of results */"
+        :screen-width-causing-sudden-change="
+          0
+        /*if you introduce a media query (or similar) changing the width of the
+        bar, give the threshold here to avoid visual bugs in the list of results */
+        "
         class="bar"
       />
     </div>

@@ -1,63 +1,112 @@
-<script lang="ts" setup>import {
-  faTrash,
-  faDesktop,
-  faUser
+<script lang="ts" setup>
+import {
+  faDesktop, faTrash, faUser,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { API_PATH } from '~/types/customFetch'
-import type { ApiPagingResponse, ApiErrorResponse } from '~/types/api/common'
-import type { NotificationSettingsDashboardsTableRow, NotificationSettingsValidatorDashboard, NotificationSettingsAccountDashboard } from '~/types/api/notifications'
+import type {
+  ApiErrorResponse, ApiPagingResponse,
+} from '~/types/api/common'
+import type {
+  NotificationSettingsAccountDashboard,
+  NotificationSettingsDashboardsTableRow,
+  NotificationSettingsValidatorDashboard,
+} from '~/types/api/notifications'
 import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
-import { NotificationsManagementSubscriptionDialog } from '#components'
+import {
+  NotificationsManagementModalWebhook,
+  NotificationsManagementSubscriptionDialog,
+} from '#components'
+import type { WebhookForm } from '~/components/notifications/management/modal/NotificationsManagementModalWebhook.vue'
 
-type AllOptions = NotificationSettingsValidatorDashboard & NotificationSettingsAccountDashboard
+type AllOptions = NotificationSettingsAccountDashboard &
+  NotificationSettingsValidatorDashboard
 
 interface WrappedRow extends NotificationSettingsDashboardsTableRow {
-  dashboard_type: DashboardType,
   dashboard_name: string,
+  dashboard_type: DashboardType,
+  identifier: string,
   subscriptions: string[],
-  identifier: string
 }
 
 interface SettingsWithContext {
   row: WrappedRow,
-  settings: AllOptions
+  settings: Partial<AllOptions>,
 }
 
 // #### CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
 
-const KeysIndicatingASubscription : Array<keyof AllOptions> = [
-  'is_validator_offline_subscribed', 'group_offline_threshold', 'is_attestations_missed_subscribed', 'is_block_proposal_subscribed',
-  'is_upcoming_block_proposal_subscribed', 'is_sync_subscribed', 'is_withdrawal_processed_subscribed', 'is_slashed_subscribed', 'is_real_time_mode_enabled',
-  'is_incoming_transactions_subscribed', 'is_outgoing_transactions_subscribed', 'is_erc20_token_transfers_subscribed', 'is_erc721_token_transfers_subscribed',
-  'is_erc1155_token_transfers_subscribed', 'is_ignore_spam_transactions_enabled'
+const KeysIndicatingASubscription: Array<keyof AllOptions> = [
+  'is_validator_offline_subscribed',
+  'group_offline_threshold',
+  'is_attestations_missed_subscribed',
+  'is_block_proposal_subscribed',
+  'is_upcoming_block_proposal_subscribed',
+  'is_sync_subscribed',
+  'is_withdrawal_processed_subscribed',
+  'is_slashed_subscribed',
+  'is_real_time_mode_enabled',
+  'is_incoming_transactions_subscribed',
+  'is_outgoing_transactions_subscribed',
+  'is_erc20_token_transfers_subscribed',
+  'is_erc721_token_transfers_subscribed',
+  'is_erc1155_token_transfers_subscribed',
+  'is_ignore_spam_transactions_enabled',
 ]
-const TimeoutForSavingFailures = 2300 // ms. We cannot let the user close the dialog and later interrupt his/her new activities with "we lost your preferences half a minute ago, we hope you remember them and do not mind going back to that dialog"
-const MinimumTimeBetweenAPIcalls = 700 // ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
+// ms. We cannot let the user close the dialog and later interrupt his/her
+// new activities with "we lost your preferences half a minute ago,
+// we hope you remember them and do not mind going back to that dialog"
+const TimeoutForSavingFailures = 2300
+// ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
+const MinimumTimeBetweenAPIcalls = 700
 
 // #### END OF CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
 
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const dialog = useDialog()
-const { dashboardGroups, query, cursor, pageSize, isLoading, onSort, setCursor, setPageSize, setSearch } = useNotificationsManagementDashboards()
+const {
+  cursor,
+  dashboardGroups,
+  isLoading,
+  onSort,
+  pageSize,
+  query,
+  setCursor,
+  setPageSize,
+  setSearch,
+} = useNotificationsManagementDashboards()
 const { getDashboardLabel } = useUserDashboardStore()
 const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
 
-const debouncer = useDebounceValue<SettingsWithContext>({} as SettingsWithContext, MinimumTimeBetweenAPIcalls)
-watch(debouncer.value as Ref<SettingsWithContext>, saveUserSettings)
+const debouncer = useDebounceValue<SettingsWithContext>(
+  {} as SettingsWithContext,
+  MinimumTimeBetweenAPIcalls,
+)
+watch(debouncer.value as Ref<SettingsWithContext>, async (value) => {
+  try {
+    await saveUserSettings(value)
+  }
+  catch (error) {
+    toast.showError({
+      detail: $t('notifications.subscriptions.error_message'),
+      group: $t('notifications.subscriptions.error_group'),
+      summary: $t('notifications.subscriptions.error_title'),
+    })
+  }
+})
 
 const colsVisible = computed(() => {
   return {
     networks: width.value > 1101,
+    subscriptions: width.value >= 725,
     webhook: width.value >= 945,
-    subscriptions: width.value >= 725
   }
 })
 
@@ -65,92 +114,141 @@ const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
-const wrappedDashboardGroups: ComputedRef<ApiPagingResponse<WrappedRow>|undefined> = computed(() => {
+const wrappedDashboardGroups: ComputedRef<
+  ApiPagingResponse<WrappedRow> | undefined
+> = computed(() => {
   if (!dashboardGroups.value) {
     return
   }
   return {
-    paging: dashboardGroups.value.paging,
     data: dashboardGroups.value.data.map(d => ({
       ...d,
+      dashboard_name: getDashboardLabel(
+        String(d.dashboard_id),
+        dashboardType(d),
+      ),
       dashboard_type: dashboardType(d),
-      dashboard_name: getDashboardLabel(String(d.dashboard_id), dashboardType(d)),
+      identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`,
       subscriptions: subscriptionList(d),
-      identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`
-    }))
+    })),
+    paging: dashboardGroups.value.paging,
   }
 
-  function dashboardType (row: NotificationSettingsDashboardsTableRow) : DashboardType {
+  function dashboardType(
+    row: NotificationSettingsDashboardsTableRow,
+  ): DashboardType {
     return row.is_account_dashboard ? 'account' : 'validator'
   }
 
-  function subscriptionList (row: NotificationSettingsDashboardsTableRow) : string[] {
+  function subscriptionList(
+    row: NotificationSettingsDashboardsTableRow,
+  ): string[] {
     const result: string[] = []
     for (const key of KeysIndicatingASubscription) {
       if ((row.settings as AllOptions)[key]) {
-        result.push($t('notifications.subscriptions.' + dashboardType(row) + 's.' + key + '.option'))
+        result.push(
+          $t(
+            'notifications.subscriptions.'
+            + dashboardType(row)
+            + 's.'
+            + key
+            + '.option',
+          ),
+        )
       }
     }
     return result
   }
 })
 
-const onEdit = (col: 'delete' | 'subscriptions' | 'webhook' | 'networks', row: WrappedRow) => {
+type Dialog = 'delete' | 'networks' | 'subscriptions' | 'webhook'
+const onEdit = (col: Dialog, row: WrappedRow) => {
   const dialogProps = {
     dashboardType: row.dashboard_type,
     initialSettings: row.settings,
-    saveUserSettings: (settings: AllOptions) => debouncer.bounce({ row, settings }, true, true)
+    saveUserSettings: (settings: AllOptions) =>
+      debouncer.bounce({
+        row,
+        settings,
+      }, true, true),
   }
   switch (col) {
-    case 'subscriptions':
-      dialog.open(NotificationsManagementSubscriptionDialog, { data: dialogProps })
-      break
-    case 'webhook':
-      /* TODO: replace `WebhookDialog` with the name of Marcel's component
-      dialog.open(WebhookDialog, { data }) */
+    case 'delete':
+      alert('TODO: delete' + row.group_id)
       break
     case 'networks':
       alert('TODO: edit networks' + row.group_id)
       break
-    case 'delete':
-      alert('TODO: delete' + row.group_id)
+    case 'subscriptions':
+      dialog.open(NotificationsManagementSubscriptionDialog, { data: dialogProps })
+      break
+    case 'webhook':
+      dialog.open(NotificationsManagementModalWebhook, {
+        data: {
+          is_discord_webhook_enabled: row.settings.is_webhook_discord_enabled,
+          webhook_url: row.settings.webhook_url,
+        },
+        emits: {
+          onSave: async (
+            webhookData: WebhookForm,
+            closeCallback: () => void,
+          ) => {
+            try {
+              await saveUserSettings({
+                row,
+                settings: webhookData,
+              })
+              closeCallback()
+            }
+            catch (error) {
+              toast.showError({
+                detail: $t('notifications.subscriptions.error_message'),
+                group: $t('notifications.subscriptions.error_group'),
+                summary: $t('notifications.subscriptions.error_title'),
+              })
+            }
+          },
+        },
+      })
       break
   }
 }
 
-async function saveUserSettings (settingsAndContext: SettingsWithContext) {
-  let response: ApiErrorResponse | undefined
-  try {
-    response = await fetch<ApiErrorResponse>(API_PATH.SAVE_DASHBOARDS_SETTINGS, {
+async function saveUserSettings(settingsAndContext: SettingsWithContext) {
+  await fetch<ApiErrorResponse>(
+    API_PATH.SAVE_DASHBOARDS_SETTINGS,
+    {
+      body: {
+        ...settingsAndContext.row.settings,
+        ...settingsAndContext.settings,
+      },
       method: 'PUT',
       signal: AbortSignal.timeout(TimeoutForSavingFailures),
-      body: { ...settingsAndContext.row.settings, ...settingsAndContext.settings }
-    }, {
-      for: settingsAndContext.row.dashboard_type,
+    },
+    {
       dashboardKey: String(settingsAndContext.row.dashboard_id),
-      groupId: String(settingsAndContext.row.group_id)
-    })
-  } catch {
-    response = undefined
-  }
-  if (!response || response.error) {
-    toast.showError({ summary: $t('notifications.subscriptions.error_title'), group: $t('notifications.subscriptions.error_group'), detail: $t('notifications.subscriptions.error_message') })
-  }
+      for: settingsAndContext.row.dashboard_type,
+      groupId: String(settingsAndContext.row.group_id),
+    },
+  )
 }
 
-function getTypeIcon (type: DashboardType) {
+function getTypeIcon(type: DashboardType) {
   if (type === 'validator') {
     return faDesktop
   }
   return faUser
 }
-
 </script>
 
 <template>
   <div>
     <Teleport to="#notifications-management-search-placholder">
-      <BcContentFilter :search-placeholder="$t('placeholder')" class="search" @filter-changed="setSearch" />
+      <BcContentFilter
+        :search-placeholder="$t('notifications.dashboards.search_placeholder')"
+        class="search"
+        @filter-changed="setSearch"
+      />
     </Teleport>
 
     <ClientOnly fallback-tag="span">
@@ -159,8 +257,8 @@ function getTypeIcon (type: DashboardType) {
         data-key="identifier"
         :expandable="!colsVisible.networks"
         class="notifications-management-dashboard-table"
-        :cursor="cursor"
-        :page-size="pageSize"
+        :cursor
+        :page-size
         :selected-sort="query?.sort"
         :loading="isLoading"
         @set-cursor="setCursor"
@@ -176,7 +274,10 @@ function getTypeIcon (type: DashboardType) {
         >
           <template #body="slotProps">
             <span>
-              <FontAwesomeIcon :icon="getTypeIcon(slotProps.data.dashboard_type)" class="type-icon" />
+              <FontAwesomeIcon
+                :icon="getTypeIcon(slotProps.data.dashboard_type)"
+                class="type-icon"
+              />
               {{ slotProps.data.dashboard_name }}
             </span>
           </template>
@@ -238,15 +339,21 @@ function getTypeIcon (type: DashboardType) {
               @on-edit="onEdit('networks', slotProps.data)"
             >
               <template #content>
-                <BcNetworkSelector :readonly-networks="slotProps.data.chain_ids" />
+                <BcNetworkSelector
+                  :readonly-networks="slotProps.data.chain_ids"
+                />
                 &nbsp;
               </template>
             </BcTablePopoutEdit>
           </template>
         </Column>
-        <Column field="action" body-class="action-col" header-class="action-col">
+        <Column
+          field="action"
+          body-class="action-col"
+          header-class="action-col"
+        >
           <template #body="slotProps">
-            <!--TODO: once we have our api check how to identify 'deleted' rows-->
+            <!-- TODO: once we have our api check how to identify 'deleted' rows -->
             <div class="action-row">
               <FontAwesomeIcon
                 :disabled="!slotProps.data.subscriptions?.length ? true : null"
@@ -261,7 +368,7 @@ function getTypeIcon (type: DashboardType) {
           <div class="expansion">
             <div class="info">
               <div class="label">
-                {{ $t('notifications.col.subscriptions') }}
+                {{ $t("notifications.col.subscriptions") }}
               </div>
 
               <BcTablePopoutEdit
@@ -272,7 +379,7 @@ function getTypeIcon (type: DashboardType) {
             </div>
             <div class="info">
               <div class="label">
-                {{ $t('notifications.col.webhook') }}
+                {{ $t("notifications.col.webhook") }}
               </div>
 
               <BcTablePopoutEdit
@@ -283,7 +390,7 @@ function getTypeIcon (type: DashboardType) {
             </div>
             <div class="info">
               <div class="label">
-                {{ $t('notifications.col.networks') }}
+                {{ $t("notifications.col.networks") }}
               </div>
 
               <BcTablePopoutEdit
@@ -293,7 +400,9 @@ function getTypeIcon (type: DashboardType) {
               >
                 <template #content>
                   <div class="newtork-row">
-                    <BcNetworkSelector :readonly-networks="slotProps.data.chain_ids" />
+                    <BcNetworkSelector
+                      :readonly-networks="slotProps.data.chain_ids"
+                    />
                     &nbsp;
                   </div>
                 </template>
@@ -348,7 +457,6 @@ function getTypeIcon (type: DashboardType) {
 }
 
 :deep(.notifications-management-dashboard-table) {
-
   .dashboard-col,
   .group-col {
     @include utils.truncate-text;

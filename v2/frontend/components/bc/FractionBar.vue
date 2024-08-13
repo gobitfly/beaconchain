@@ -10,8 +10,14 @@ const fillPercentage = computed(() => {
 </script>
 
 <template>
-  <div v-if="fillPercentage" class="fraction-bar">
-    <div class="fill" :style="{ width: fillPercentage }" />
+  <div
+    v-if="fillPercentage"
+    class="fraction-bar"
+  >
+    <div
+      class="fill"
+      :style="{ width: fillPercentage }"
+    />
   </div>
 </template>
 

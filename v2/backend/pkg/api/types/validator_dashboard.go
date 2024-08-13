@@ -32,6 +32,11 @@ type VDBOverviewData struct {
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 
+type VDBPostArchivingReturnData struct {
+	Id         uint64 `json:"id"`
+	IsArchived bool   `json:"is_archived"`
+}
+
 // ------------------------------------------------------------
 // Summary Tab
 
