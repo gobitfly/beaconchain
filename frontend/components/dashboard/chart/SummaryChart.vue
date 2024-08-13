@@ -72,7 +72,7 @@ const currentZoom = {
   end: 100,
   start: 80,
 }
-const MAX_DATA_POINTS = 200
+const MAX_DATA_POINTS = 199
 
 const {
   bounce: bounceFilter, value: filter,
@@ -96,8 +96,8 @@ const series = ref<SeriesObject[]>([])
 const chartCategories = ref<number[]>([])
 
 const categories = computed<number[]>(() => {
-  // charts have 5 slots delay
-  if (latestSlot.value <= 5 || !aggregation.value) {
+  // charts have at least 5 slots delay, we give it 2 more to be sure
+  if (latestSlot.value <= 7 || !aggregation.value) {
     return []
   }
   const maxSeconds
@@ -106,7 +106,7 @@ const categories = computed<number[]>(() => {
     return []
   }
   const list: number[] = []
-  let latestTs = slotToTs(latestSlot.value - 5) || 0
+  let latestTs = slotToTs(latestSlot.value - 7) || 0
   let step = 0
   switch (aggregation.value) {
     case 'epoch':
@@ -435,7 +435,7 @@ const getZoomTimestamps = () => {
     return
   }
   const zoomValues = getDataZoomValues()
-  const toIndex = Math.ceil((max / 100) * zoomValues.end)
+  const toIndex = Math.floor((max / 100) * zoomValues.end)
   const fromIndex = Math.floor((max / 100) * zoomValues.start)
   return {
     ...zoomValues,
@@ -460,22 +460,27 @@ const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
   const max = categories.value.length - 1
 
   const useDefault = categoryChanged || firstTime
-  // check if data points need to be adjusted
-  if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS || useDefault) {
-    if (useDefault) {
-      let targetPoints = 6
-      switch (aggregation.value) {
-        case 'daily':
-          targetPoints = 7
-          break
-        case 'weekly':
-          targetPoints = 8
-          break
-      }
-      timestamps.toIndex = firstTime ? max : Math.max(Math.ceil(max / 100 * timestamps.end), targetPoints)
-      timestamps.fromIndex = timestamps.toIndex - targetPoints
+  let dataPointsChanged = false
+  if (useDefault) {
+    dataPointsChanged = true
+    let targetPoints = 6
+    switch (aggregation.value) {
+      case 'epoch':
+        targetPoints = 12
+        break
+      case 'daily':
+        targetPoints = 7
+        break
+      case 'weekly':
+        targetPoints = 8
+        break
     }
-    else if (timestamps.start !== currentZoom.start) {
+    timestamps.toIndex = firstTime ? max : Math.max(Math.ceil(max / 100 * timestamps.end), targetPoints)
+    timestamps.fromIndex = timestamps.toIndex - targetPoints
+  }
+  else if (timestamps.toIndex - timestamps.fromIndex > MAX_DATA_POINTS) {
+    dataPointsChanged = true
+    if (timestamps.start !== currentZoom.start) {
       timestamps.toIndex = Math.min(
         timestamps.fromIndex + MAX_DATA_POINTS,
         max,
@@ -484,34 +489,37 @@ const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
     else {
       timestamps.fromIndex = Math.max(0, timestamps.toIndex - MAX_DATA_POINTS)
     }
+  }
+  else {
+    let minDataPoints = 3
+    if (aggregation.value === 'epoch') {
+      minDataPoints = 6
+    }
+    if (timestamps.toIndex - timestamps.fromIndex < minDataPoints) {
+      dataPointsChanged = true
+      if (timestamps.start !== currentZoom.start) {
+        timestamps.toIndex = Math.min(timestamps.fromIndex + minDataPoints, max)
+        timestamps.fromIndex = timestamps.toIndex - minDataPoints
+      }
+      else {
+        timestamps.fromIndex = Math.max(timestamps.toIndex - minDataPoints, 0)
+        timestamps.toIndex = timestamps.fromIndex + minDataPoints
+      }
+    }
+  }
 
+  if (dataPointsChanged) {
     timestamps.end = (timestamps.toIndex * 100) / max
     timestamps.toTs = categories.value[timestamps.toIndex]
     timestamps.start = (timestamps.fromIndex * 100) / max
     timestamps.fromTs = categories.value[timestamps.fromIndex]
   }
-  // to index must be greater then from index
-  if (timestamps.toIndex <= timestamps.fromIndex) {
-    if (
-      (timestamps.start !== currentZoom.start
-      && timestamps.fromIndex !== max)
-      || timestamps.toIndex === 0
-    ) {
-      timestamps.toIndex = timestamps.fromIndex + 1
-      timestamps.end = (timestamps.toIndex * 100) / max
-      timestamps.toTs = categories.value[timestamps.toIndex]
-    }
-    else {
-      timestamps.fromIndex = timestamps.toIndex - 1
-      timestamps.start = (timestamps.fromIndex * 100) / max
-      timestamps.fromTs = categories.value[timestamps.fromIndex]
-    }
-  }
 
   let fromTs: number | undefined = timestamps.fromTs
   let toTs: number | undefined = timestamps.toTs
   const bufferSteps = aggregation.value === 'epoch' ? 0 : 5
-  // if we are on the far left of the time frame we omit the fromTs to avoid going to far and cause a webservice error
+  // if we are on the far left/right we omit the from/to timestamp
+  // to prevent webservice errors if we get slight over the limit
   // when we omit one of the time stamps the backend will use the max secons of the dashboard settings
   if (timestamps.fromIndex <= bufferSteps) {
     fromTs = undefined
@@ -543,7 +551,6 @@ const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
     currentZoom.end = timestamps.end
     currentZoom.start = timestamps.start
 
-    // check if dataZoom is ready for the action otherwise use set options
     nextTick(() => {
       chart.value?.setOption({
         dataZoom: {
