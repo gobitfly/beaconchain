@@ -32,7 +32,10 @@ linters:
     - dupword
     - gocognit
     - dupl
-    # - mnd
+    - mnd
+    - copyloopvar
+    - usestdlibvars
+    - intrange
 
     # Disabled for now:
     - asasalint
