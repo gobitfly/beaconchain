@@ -1,62 +1,62 @@
 {
-  "validator_state": {
-    "active": "actif",
-    "pending": "en attente",
-    "exited": "quitté",
-    "slashed": "slashé"
-  },
-  "statistics": {
-    "24h": "sur 24h",
-    "7d": "sur 7d",
-    "31d": "sur 31d",
-    "365d": "sur 365j",
-    "all": "depuis toujours"
-  },
   "dashboard": {
     "title": "Tableau de bord",
     "validator": {
       "overview": {
-        "total_efficiency": "Efficacité totale",
-        "total_rewards": "Récompense totale",
         "proposal_luck": "Chance: Proposal",
         "sync_committee_luck": "Chance: Sync Committee",
-        "total_apr": "APR total"
+        "total_apr": "APR total",
+        "total_efficiency": "Efficacité totale",
+        "total_rewards": "Récompense totale"
       }
     }
   },
-  "login": {
-    "password": "Mot de passe",
-    "submit": "Identifiant",
-    "title": "Identifiant",
-    "email": "Adresse e-mail"
-  },
   "footer": {
-    "legal_notices": "Mentions légales",
-    "resources": "Ressources",
-    "links": "Liens",
-    "imprint": "À propos",
-    "terms": "Termes et conditions",
-    "privacy": "Protection des données",
+    "advertise": "Devenez annonceur",
     "api_docs": "Docs de l'API",
     "api_pricing": "Tarifs d'accès à l'API",
+    "imprint": "À propos",
+    "legal_notices": "Mentions légales",
+    "links": "Liens",
     "premium": "beaconcha.in Premium",
-    "advertise": "Devenez annonceur",
+    "press_kit": "Dossier de presse",
+    "privacy": "Protection des données",
+    "resources": "Ressources",
     "shop": "Boutique fashion",
     "status": "Statut du site",
-    "press_kit": "Dossier de presse"
+    "terms": "Termes et conditions"
+  },
+  "login": {
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "submit": "Identifiant",
+    "title": "Identifiant"
   },
   "search_bar": {
-    "general_placeholder": "Cherchez dans la blockchain",
     "account_placeholder": "Addresse ou nom ENS",
-    "validator_placeholder": "Index, Clé publique, Adresse ou ENS de dépôt ou de retrait, Graffiti, ...",
+    "by_your_filters": "par vos filtres",
+    "general_placeholder": "Cherchez dans la blockchain",
+    "no_result_matches": "Aucun résultat ne correspond à",
+    "one_result_hidden": "résultat caché",
     "searching": "Recherche en cours...",
+    "several_results_hidden": "résultats cachés",
     "something_wrong": "Une erreur est survenue",
     "try_again": "Essayez à nouveau dans quelques instants.",
-    "no_result_matches": "Aucun résultat ne correspond à",
-    "your_input": "votre entrée",
+    "validator_placeholder": "Index, Clé publique, Adresse ou ENS de dépôt ou de retrait, Graffiti, ...",
     "your_filters": "vos filtres",
-    "one_result_hidden": "résultat caché",
-    "several_results_hidden": "résultats cachés",
-    "by_your_filters": "par vos filtres"
+    "your_input": "votre entrée"
+  },
+  "statistics": {
+    "7d": "sur 7d",
+    "24h": "sur 24h",
+    "31d": "sur 31d",
+    "365d": "sur 365j",
+    "all": "depuis toujours"
+  },
+  "validator_state": {
+    "active": "actif",
+    "exited": "quitté",
+    "pending": "en attente",
+    "slashed": "slashé"
   }
 }
