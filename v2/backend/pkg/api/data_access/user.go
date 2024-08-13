@@ -159,7 +159,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		Email     string `db:"email"`
 		UserGroup string `db:"user_group"`
 	}{}
-	err = d.userReader.GetContext(ctx, &result, `SELECT email, user_group FROM users WHERE id = $1`, userId)
+	err = d.userReader.GetContext(ctx, &result, `SELECT email, COALESCE(user_group, '') as user_group FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
