@@ -498,7 +498,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		thresholdSlot = latestBlock - 64
 	}
 
-	lastGlobalAttestedEpoch := int64(latestBlock/utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1 // subtract 1 to ignore the current in progress epoch
+	lastGlobalAttestedEpoch := int64(latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch)
 
 	latestEpoch := latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
