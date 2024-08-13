@@ -133,62 +133,34 @@ const selectedLabel = computed(() => {
 <template>
   <div class="chart-filter-row">
     <BcDropdown
-      v-model="aggregation"
-      :options="aggregationList"
-      option-value="id"
-      option-label="label"
-      :option-disabled="aggregationDisabled"
-      panel-class="summary-chart-aggregation-panel"
-      class="small"
+      v-model="aggregation" :options="aggregationList" option-value="id" option-label="label"
+      :option-disabled="aggregationDisabled" panel-class="summary-chart-aggregation-panel" class="small"
     >
       <template #option="slotProps">
         <span>{{ slotProps.label }}</span>
-        <BcPremiumGem
-          class="premium-gem"
-          @click.stop="() => undefined"
-        />
+        <BcPremiumGem class="premium-gem" @click.stop="() => undefined" />
       </template>
     </BcDropdown>
-    <BcDropdown
-      v-model="efficiency"
-      :options="efficiencyList"
-      option-value="id"
-      option-label="label"
-      class="small"
-    />
+    <BcDropdown v-model="efficiency" :options="efficiencyList" option-value="id" option-label="label" class="small" />
 
     <MultiSelect
-      v-model="selectedGroups"
-      :options="groups"
-      option-label="name"
-      option-value="id"
+      v-model="selectedGroups" :options="groups" option-label="name" option-value="id"
       :placeholder="$t('dashboard.group.selection.all')"
     >
       <template #header>
         <div class="special-groups">
-          <Checkbox
-            v-model="total"
-            input-id="total"
-            :binary="true"
-          />
+          <Checkbox v-model="total" input-id="total" :binary="true" />
           <label for="total">{{
             $t("dashboard.validator.summary.chart.total")
           }}</label>
         </div>
         <div class="special-groups">
-          <Checkbox
-            v-model="average"
-            input-id="average"
-            :binary="true"
-          />
+          <Checkbox v-model="average" input-id="average" :binary="true" />
           <label for="average">{{
             $t("dashboard.validator.summary.chart.average")
           }}</label>
         </div>
-        <span
-          class="pointer"
-          @click="toggleGroups"
-        >
+        <span class="pointer" @click="toggleGroups">
           {{ $t("dashboard.group.selection.all") }}
         </span>
       </template>
@@ -203,12 +175,18 @@ const selectedLabel = computed(() => {
 .chart-filter-row {
   display: flex;
   gap: var(--padding);
+
   :deep(> .p-multiselect),
   :deep(> .p-dropdown) {
     max-width: 200px;
+
     @media (max-width: 1000px) {
-      max-width: 76px;
+      max-width: 82px;
     }
+  }
+
+  @media (max-width: 1000px) {
+    gap: var(--padding-small);
   }
 }
 
@@ -225,11 +203,7 @@ const selectedLabel = computed(() => {
   align-items: center;
 }
 
-:global(
-    .summary-chart-aggregation-panel
-      .p-dropdown-item:not(.p-disabled)
-      .premium-gem
-  ) {
+:global(.summary-chart-aggregation-panel .p-dropdown-item:not(.p-disabled) .premium-gem) {
   display: none;
 }
 </style>
