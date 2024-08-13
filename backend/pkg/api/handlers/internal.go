@@ -1050,6 +1050,10 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	if v.hasErrors() {
 		handleErr(w, err)
 	}
+	if afterTs < minAllowedTs || beforeTs < minAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", minAllowedTs))
+		return
+	}
 
 	data, err := h.dai.GetValidatorDashboardSummaryChart(ctx, *dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
 	if err != nil {
@@ -1271,6 +1275,10 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	afterTs, beforeTs := v.checkTimestamps(r, maxAvailableTs, minAllowedTs, maxAllowedInterval)
 	if v.hasErrors() {
 		handleErr(w, err)
+	}
+	if afterTs < minAllowedTs || beforeTs < minAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", minAllowedTs))
+		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardHeatmap(r.Context(), *dashboardId, protocolModes, aggregation, afterTs, beforeTs)

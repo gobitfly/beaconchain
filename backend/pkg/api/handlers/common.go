@@ -339,7 +339,6 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 const chartDatapointLimit uint64 = 200
 
 // helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
-// if no aggregation is passed, it's enforced to be present in the user request
 func (h *HandlerService) getCurrentChartTimeLimitsForUser(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (uint64, uint64, uint64, error) {
 	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
 	if err != nil {
