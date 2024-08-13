@@ -690,6 +690,13 @@ func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartH
 	}
 }
 
+func isUserAdmin(user *types.UserInfo) bool {
+	if user == nil {
+		return false
+	}
+	return user.UserGroup == types.UserGroupAdmin
+}
+
 // --------------------------------------
 //   Response handling
 

@@ -241,7 +241,7 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 // Dashboards
 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.GetUserIdBySession(r)
+	userId, err := GetUserIdByContext(r)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -321,9 +321,9 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	req := struct {
@@ -351,8 +351,9 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		handleErr(w, err)
 		return
 	}
-	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
+		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboard(r.Context(), userId, name, chainId)
@@ -460,9 +461,9 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		})
 	}
 
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, !req.IsArchived)
@@ -481,15 +482,15 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 			handleErr(w, err)
 			return
 		}
-		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
 			returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
 			return
 		}
-		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
 			returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
 			return
 		}
-		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard && !isUserAdmin(userInfo) {
 			returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
 			return
 		}
@@ -549,9 +550,9 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 	}
 	ctx := r.Context()
 	// check if user has reached the maximum number of groups
-	userId, ok := ctx.Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(ctx, userId)
@@ -564,7 +565,7 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 		handleErr(w, err)
 		return
 	}
-	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("maximum number of validator dashboard groups reached"))
 		return
 	}
@@ -697,9 +698,9 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	userId, ok := ctx.Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(ctx, userId)
@@ -708,7 +709,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		return
 	}
 	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
-	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding {
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
@@ -1636,9 +1637,9 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 // Notifications
 
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetNotificationOverview(r.Context(), userId)
@@ -1654,9 +1655,9 @@ func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *
 
 func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1717,9 +1718,9 @@ func (h *HandlerService) InternalGetUserNotificationsAccountDashboard(w http.Res
 
 func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1743,9 +1744,9 @@ func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWrit
 
 func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1769,9 +1770,9 @@ func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWrite
 
 func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1795,9 +1796,9 @@ func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWr
 
 func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1820,9 +1821,9 @@ func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWrit
 }
 
 func (h *HandlerService) InternalGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetNotificationSettings(r.Context(), userId)
@@ -1838,9 +1839,9 @@ func (h *HandlerService) InternalGetUserNotificationSettings(w http.ResponseWrit
 
 func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	var req types.NotificationSettingsGeneral
@@ -1858,7 +1859,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.Respo
 		handleErr(w, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
+	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1871,9 +1872,9 @@ func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.Respo
 
 func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	var req types.NotificationSettingsNetwork
@@ -1888,7 +1889,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.Resp
 		handleErr(w, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
+	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1954,9 +1955,9 @@ func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w h
 
 func (h *HandlerService) InternalGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()

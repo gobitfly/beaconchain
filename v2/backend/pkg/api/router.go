@@ -33,6 +33,10 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
 
+	// store user id in context, if available
+	publicRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdByApiKey))
+	internalRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdBySession))
+
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
 	router.Use(metrics.HttpMiddleware)
@@ -237,8 +241,8 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession))
+		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
+		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
 	}
 
 	endpoints := []endpoint{
@@ -288,8 +292,9 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	publicNotificationRouter := publicRouter.PathPrefix(path).Subrouter()
 	internalNotificationRouter := internalRouter.PathPrefix(path).Subrouter()
 
-	publicNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
-	internalNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdBySession))
+	if !debug {
+		publicNotificationRouter.Use(hs.ManageViaApiCheckMiddleware)
+	}
 	endpoints := []endpoint{
 		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
 		{http.MethodGet, "/dashboards", nil, hs.InternalGetUserNotificationDashboards},
@@ -314,8 +319,8 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
 	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
 	if !debug {
-		publicDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
-		internalDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
+		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
+		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 	}
 	dashboardSettingsEndpoints := []endpoint{
 		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
