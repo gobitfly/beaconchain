@@ -736,7 +736,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	if totalInclusionDelayDivisor > 0 {
 		ret.AttestationAvgInclDist = 1.0 + float64(totalInclusionDelaySum)/float64(totalInclusionDelayDivisor)
 	} else {
-		ret.AttestationAvgInclDist = 0 //test
+		ret.AttestationAvgInclDist = 0
 	}
 
 	return ret, nil
