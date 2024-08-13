@@ -523,21 +523,22 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			select
 			validator_index,
 			epoch_start,
-			COALESCE(attestations_reward, 0) as attestations_reward,
-			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
-			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
-			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
-			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
-			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
-			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
-			COALESCE(blocks_proposed, 0) as blocks_proposed,
-			COALESCE(sync_scheduled, 0) as sync_scheduled,
-			COALESCE(sync_executed, 0) as sync_executed,
+			attestations_reward,
+			attestations_ideal_reward,
+			attestations_scheduled,
+			attestations_executed,
+			attestation_head_executed,
+			attestation_source_executed,
+			attestation_target_executed,
+			blocks_scheduled,
+			blocks_proposed,
+			sync_scheduled,
+			sync_executed,
 			slashed AS slashed_in_period,
-			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
-			COALESCE(blocks_expected, 0) as blocks_expected,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
-			COALESCE(sync_committees_expected, 0) as sync_committees_expected
+			blocks_slashing_count AS slashed_amount,
+			blocks_expected,
+			inclusion_delay_sum,
+			sync_committees_expected
 		from %[1]s FINAL
 		inner join validators v on %[1]s.validator_index = v.validator_index
 		where validator_index IN (select validator_index FROM validators)
@@ -547,21 +548,22 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		query = `select
 			validator_index,
 			epoch_start,
-			COALESCE(attestations_reward, 0) as attestations_reward,
-			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
-			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
-			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
-			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
-			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
-			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
-			COALESCE(blocks_proposed, 0) as blocks_proposed,
-			COALESCE(sync_scheduled, 0) as sync_scheduled,
-			COALESCE(sync_executed, 0) as sync_executed,
+			attestations_reward,
+			attestations_ideal_reward,
+			attestations_scheduled,
+			attestations_executed,
+			attestation_head_executed,
+			attestation_source_executed,
+			attestation_target_executed,
+			blocks_scheduled,
+			blocks_proposed,
+			sync_scheduled,
+			sync_executed,
 			slashed AS slashed_in_period,
-			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
-			COALESCE(blocks_expected, 0) as blocks_expected,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
-			COALESCE(sync_committees_expected, 0) as sync_committees_expected
+			blocks_slashing_count AS slashed_amount,
+			blocks_expected,
+			inclusion_delay_sum,
+			sync_committees_expected
 		from %[1]s FINAL
 		where %[1]s.validator_index IN ($1)
 	`
@@ -579,6 +581,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
 
 		AttestationsScheduled     int64 `db:"attestations_scheduled"`
+		AttestationsExecuted      int64 `db:"attestations_executed"`
 		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
 		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
 		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
@@ -676,7 +679,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalSyncExpected += row.SyncCommitteesExpected
 
 		if row.InclusionDelaySum > 0 {
-			totalInclusionDelayDivisor += row.AttestationsScheduled
+			totalInclusionDelayDivisor += row.AttestationsExecuted
 		}
 	}
 
