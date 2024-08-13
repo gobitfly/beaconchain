@@ -110,7 +110,6 @@ const fontFamily = `${styles.getPropertyValue('--roboto-family')}, ${styles.getP
 const textSize = parseInt(styles.getPropertyValue('--standard_text_font_size'))
 const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
-// const minUnit = ref<CryptoUnits>('MAIN')
 
 const valueFormatter = computed(() => {
   const fiat = isFiat(currency.value)
