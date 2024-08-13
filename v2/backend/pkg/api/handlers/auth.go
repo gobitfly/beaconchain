@@ -48,7 +48,7 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 	userGroup := h.scs.GetString(r.Context(), userGroupKey)
 	userId, ok := h.scs.Get(r.Context(), userIdKey).(uint64)
 	if !ok {
-		return types.UserCredentialInfo{}, errors.New("error parsind user id from session, not a uint64")
+		return types.UserCredentialInfo{}, errors.New("error parsing user id from session, not a uint64")
 	}
 
 	return types.UserCredentialInfo{
@@ -56,6 +56,25 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 		ProductId: subscription,
 		UserGroup: userGroup,
 	}, nil
+}
+
+func (h *HandlerService) purgeAllSessionsForUser(ctx context.Context, userId uint64) error {
+	// invalidate all sessions for this user
+	err := h.scs.Iterate(ctx, func(ctx context.Context) error {
+		sessionUserID, ok := h.scs.Get(ctx, userIdKey).(uint64)
+		if !ok {
+			log.Error(nil, "error parsing user id from session, not a uint64", 0, nil)
+			return nil
+		}
+
+		if userId == sessionUserID {
+			return h.scs.Destroy(ctx)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // TODO move to service?
@@ -290,7 +309,11 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// TODO: purge all user sessions
+	err = h.purgeAllSessionsForUser(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 
 	returnNoContent(w)
 }
@@ -376,7 +399,11 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 		return
 	}
 
-	// TODO: purge all user sessions
+	err = h.purgeAllSessionsForUser(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 
 	returnNoContent(w)
 }
@@ -708,6 +735,12 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
 	returnNoContent(w)
 }
 
@@ -833,7 +866,11 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// TODO: purge all user sessions
+	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 
 	returnNoContent(w)
 }
