@@ -325,7 +325,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		// Efficiency
 		wg.Go(func() error {
-
 			ds := goqu.Dialect("postgres").
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
