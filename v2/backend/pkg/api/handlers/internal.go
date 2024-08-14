@@ -1041,17 +1041,18 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
-	minAllowedTs, maxAvailableTs, maxAllowedInterval, err := h.getCurrentChartTimeLimitsForUser(ctx, dashboardId, aggregation)
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(ctx, dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	afterTs, beforeTs := v.checkTimestamps(r, maxAvailableTs, minAllowedTs, maxAllowedInterval)
+	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
 		handleErr(w, err)
+		return
 	}
-	if afterTs < minAllowedTs || beforeTs < minAllowedTs {
-		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", minAllowedTs))
+	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
 		return
 	}
 
@@ -1267,17 +1268,17 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	q := r.URL.Query()
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
-	minAllowedTs, maxAvailableTs, maxAllowedInterval, err := h.getCurrentChartTimeLimitsForUser(r.Context(), dashboardId, aggregation)
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	afterTs, beforeTs := v.checkTimestamps(r, maxAvailableTs, minAllowedTs, maxAllowedInterval)
+	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
 		handleErr(w, err)
 	}
-	if afterTs < minAllowedTs || beforeTs < minAllowedTs {
-		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", minAllowedTs))
+	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
 		return
 	}
 
@@ -1307,12 +1308,12 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 	if v.hasErrors() {
 		handleErr(w, err)
 	}
-	minAllowedTs, maxAvailableTs, _, err := h.getCurrentChartTimeLimitsForUser(r.Context(), dashboardId, aggregation)
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	if requestedTimestamp < minAllowedTs || requestedTimestamp > maxAvailableTs {
+	if requestedTimestamp < chartLimits.MinAllowedTs || requestedTimestamp > chartLimits.LatestExportedTs {
 		handleErr(w, newConflictErr("requested timestamp is outside of allowed chart history for dashboard owner's premium subscription"))
 		return
 	}
