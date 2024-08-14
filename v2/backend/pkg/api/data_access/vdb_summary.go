@@ -1233,12 +1233,6 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	result := &t.VDBSyncSummaryValidators{}
 	var resultMutex = &sync.RWMutex{}
-
-	type PastStruct struct {
-		Index uint64
-		Count uint64
-	}
-
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
@@ -1327,7 +1321,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 
 		resultMutex.Lock()
 		for validatorIndex, count := range validatorCountMap {
-			result.Past = append(result.Past, PastStruct{
+			result.Past = append(result.Past, t.VDBValidatorSyncPast{
 				Index: validatorIndex,
 				Count: count,
 			})
@@ -1348,15 +1342,6 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	result := &t.VDBSlashingsSummaryValidators{}
-
-	type GotSlashedStruct struct {
-		Index     uint64
-		SlashedBy uint64
-	}
-	type HasSlashedStruct struct {
-		Index          uint64
-		SlashedIndices []uint64
-	}
 
 	// Get the table names based on the period
 	clickhouseTable, _, err := d.getTablesForPeriod(period)
@@ -1561,7 +1546,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 	// Process the data
 	for slashingIdx, slashedIdxs := range slashings {
-		result.HasSlashed = append(result.HasSlashed, HasSlashedStruct{
+		result.HasSlashed = append(result.HasSlashed, t.VDBValidatorHasSlashed{
 			Index:          slashingIdx,
 			SlashedIndices: slashedIdxs,
 		})
@@ -1569,13 +1554,13 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 	// Fill the slashed validators
 	for slashedIdx, slashingIdx := range proposalSlashed {
-		result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
+		result.GotSlashed = append(result.GotSlashed, t.VDBValidatorGotSlashed{
 			Index:     slashedIdx,
 			SlashedBy: slashingIdx,
 		})
 	}
 	for slashedIdx, slashingIdx := range attestationSlashed {
-		result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
+		result.GotSlashed = append(result.GotSlashed, t.VDBValidatorGotSlashed{
 			Index:     slashedIdx,
 			SlashedBy: slashingIdx,
 		})
