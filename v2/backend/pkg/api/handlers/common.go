@@ -84,11 +84,13 @@ const (
 )
 
 var (
-	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
-	errBadRequest   = errors.New("bad request")
-	errUnauthorized = errors.New("unauthorized")
-	errForbidden    = errors.New("forbidden")
-	errConflict     = errors.New("conflict")
+	errMsgParsingId    = errors.New("error parsing parameter 'dashboard_id'")
+	errBadRequest      = errors.New("bad request")
+	errUnauthorized    = errors.New("unauthorized")
+	errForbidden       = errors.New("forbidden")
+	errConflict        = errors.New("conflict")
+	errTooManyRequests = errors.New("too many requests")
+	errGone            = errors.New("gone")
 )
 
 type Paging struct {
@@ -740,6 +742,15 @@ func returnForbidden(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusForbidden, err)
 }
 
+func returnTooManyRequests(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusTooManyRequests, err)
+}
+
+//nolint:unused
+func returnGone(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusGone, err)
+}
+
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
@@ -761,6 +772,12 @@ func handleErr(w http.ResponseWriter, err error) {
 		return
 	} else if errors.Is(err, errConflict) {
 		returnConflict(w, err)
+		return
+	} else if errors.Is(err, errTooManyRequests) {
+		returnTooManyRequests(w, err)
+		return
+	} else if errors.Is(err, errGone) {
+		returnTooManyRequests(w, err)
 		return
 	}
 	returnInternalServerError(w, err)
@@ -799,6 +816,14 @@ func newConflictErr(format string, args ...interface{}) error {
 //nolint:unparam
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
+}
+
+func newTooManyRequestsErr(format string, args ...interface{}) error {
+	return errWithMsg(errTooManyRequests, format, args...)
+}
+
+func newGoneErr(format string, args ...interface{}) error {
+	return errWithMsg(errGone, format, args...)
 }
 
 // --------------------------------------
