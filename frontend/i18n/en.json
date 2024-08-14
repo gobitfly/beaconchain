@@ -962,6 +962,7 @@
     "all_networks": "All"
   },
   "pricing": {
+    "promo_code": "Promocode {_code} will be applied during checkout",
     "seo_title": "Premium Pricing",
     "compare": "Compare Plans",
     "show_feature": "Show Features",

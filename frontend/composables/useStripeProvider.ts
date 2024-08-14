@@ -13,6 +13,7 @@ import { API_PATH } from '~/types/customFetch'
 
 export function useStripeProvider() {
   const { fetch } = useCustomFetch()
+  const { promoCode } = usePromoCode()
   const { public: { stripeBaseUrl } } = useRuntimeConfig()
 
   const stripe = ref<null | Stripe>(null)
@@ -67,6 +68,7 @@ export function useStripeProvider() {
         body: JSON.stringify({
           addonQuantity: amount,
           priceId,
+          promotionCode: promoCode,
         }),
       },
     )
