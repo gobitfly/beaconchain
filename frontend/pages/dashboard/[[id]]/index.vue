@@ -215,6 +215,7 @@ watch(
               :icon="faFire"
             />
           </template>
+          <!-- TODO: add heatmap -->
           <DashboardTableEmpty />
         </TabPanel>
         <TabPanel>
