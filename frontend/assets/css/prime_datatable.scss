@@ -11,6 +11,11 @@
 .p-datatable {
   --table-background-color: var(--background-color);
 
+  .p-datatable-loading-overlay {
+    height: min(100%, 300px);
+    pointer-events: none;
+  }
+
   &.no-header {
     .p-datatable-thead {
       display: none;

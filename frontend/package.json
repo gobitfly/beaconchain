@@ -2,9 +2,12 @@
   "name": "beaconchain-explorer",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev --host=local.beaconcha.in",
+    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nuxt dev --host=local.beaconcha.in",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",

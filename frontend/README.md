@@ -51,14 +51,6 @@ chmod 400 server.key
 openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
 ```
 
-Add the following env variable (on Ubuntu: in your `~/.profile`) needed to load local mock data:
-
-```bash
-export NODE_TLS_REJECT_UNAUTHORIZED=0
-```
-
-Restart.
-
 Navigate to folder `beaconchain/frontend` and run
 
 ```bash
