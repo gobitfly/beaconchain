@@ -495,8 +495,8 @@
       "stats": "Stats",
       "tools": "Tools",
       "txs": "Txs",
-      "txsL1L2": "Txs (L1 to L2)",
-      "txsL2L1": "Txs (L2 to L1)",
+      "txs_l1_l2": "Txs (L1 to L2)",
+      "txs_l2_l1": "Txs (L2 to L1)",
       "unit_converter": "Unit Converter",
       "validator_leaderboard": "Validator Leaderboard",
       "validators": "Validators",
@@ -585,9 +585,9 @@
         "validators": "validator | validators"
       },
       "expansion": {
-        "label-dashboard": "Dashboard:",
-        "label-group": "Group:",
-        "label-notification": "Notification:"
+        "label_dashboard": "Dashboard:",
+        "label_group": "Group:",
+        "label_notification": "Notification:"
       },
       "footer": {
         "subscriptions": {
@@ -785,7 +785,6 @@
     "unlock": "Unlock Full Features"
   },
   "pricing": {
-    "API_keys": "API Keys",
     "addons": {
       "button": {
         "manage_addon": "Manage Add-On",
@@ -799,6 +798,7 @@
       "validator_amount": "+{amount} Validators"
     },
     "amount_per_year": "{amount} yearly",
+    "api_keys": "API Keys",
     "compare": "Compare Plans",
     "excluding_vat": "* All prices are excluding VAT",
     "full_history": "Full history",
@@ -919,7 +919,7 @@
     "proposed": "Proposed",
     "scheduled": "Scheduled"
   },
-  "slotViz": {
+  "slot_viz": {
     "filter": {
       "attestation": "If enabled, attestations will be shown.",
       "proposal": "If enabled, blocks will be shown.",
@@ -936,7 +936,7 @@
         "orphaned": "Network orphaned slot {slot}",
         "proposed": "Network proposed slot {slot}",
         "scheduled": "Slot {slot} is scheduled",
-        "scheduled-past": "Slot {slot} is being queried from our database"
+        "scheduled_past": "Slot {slot} is being queried from our database"
       },
       "proposal": {
         "missed": {
