@@ -20,6 +20,12 @@ type VDBOverviewGroup struct {
 	Count uint64 `json:"count"`
 }
 
+type VDBOverviewBalances struct {
+	Total     uint64 `json:"total"`
+	Effective uint64 `json:"effective"`
+	StakedEth uint64 `json:"staked_eth"`
+}
+
 type VDBOverviewData struct {
 	Name                string                                     `json:"name,omitempty"`
 	Groups              []VDBOverviewGroup                         `json:"groups"`
@@ -28,6 +34,7 @@ type VDBOverviewData struct {
 	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
 	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
 	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
+	Balances            VDBOverviewBalances                        `json:"balances"`
 }
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
