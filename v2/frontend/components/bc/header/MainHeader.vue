@@ -173,15 +173,13 @@ const userMenu = computed(() => {
             />
           </BcLink>
         </div>
-        <div
-          v-else-if="!isSmallScreen"
-          class="user-menu"
-        >
+        <div v-else-if="!isSmallScreen" class="user-menu">
           <BcDropdown
             :options="userMenu"
             variant="header"
             option-label="label"
             class="menu-component"
+            panel-class="user-menu-panel"
           >
             <template #value>
               <FontAwesomeIcon
@@ -376,6 +374,14 @@ $smallHeaderThreshold: 1024px;
             width: 19px;
             height: 18px;
           }
+        }
+      }
+      :global(.user-menu-panel) {
+        // hack: panel should always get opened to the left, but this is not possible with component props
+        $widthThePanelHasEnoughSpaceToOpenToTheRight: 1558px;
+        $widthOfUserMenu: 43px;
+        @media screen and (min-width: $widthThePanelHasEnoughSpaceToOpenToTheRight) {
+          translate: calc(-100% + $widthOfUserMenu);
         }
       }
       .burger {

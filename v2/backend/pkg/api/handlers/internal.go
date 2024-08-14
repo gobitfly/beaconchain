@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 	"reflect"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -242,7 +241,7 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 // Dashboards
 
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.GetUserIdBySession(r)
+	userId, err := GetUserIdByContext(r)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -322,9 +321,9 @@ func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	req := struct {
@@ -352,8 +351,9 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		handleErr(w, err)
 		return
 	}
-	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
+		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboard(r.Context(), userId, name, chainId)
@@ -462,9 +462,9 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		return
 	}
 
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, !req.IsArchived)
@@ -483,15 +483,15 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 			handleErr(w, err)
 			return
 		}
-		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
 			returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
 			return
 		}
-		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
 			returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
 			return
 		}
-		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard && !isUserAdmin(userInfo) {
 			returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
 			return
 		}
@@ -551,9 +551,9 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 	}
 	ctx := r.Context()
 	// check if user has reached the maximum number of groups
-	userId, ok := ctx.Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(ctx, userId)
@@ -566,7 +566,7 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 		handleErr(w, err)
 		return
 	}
-	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("maximum number of validator dashboard groups reached"))
 		return
 	}
@@ -699,9 +699,9 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	userId, ok := ctx.Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(ctx, userId)
@@ -710,7 +710,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		return
 	}
 	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
-	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding {
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
@@ -1038,33 +1038,23 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 		handleErr(w, err)
 		return
 	}
-	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
+	q := r.URL.Query()
+	groupIds := v.checkGroupIdList(q.Get("group_ids"))
+	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
+
+	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(ctx, dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	q := r.URL.Query()
-	groupIds := v.checkGroupIdList(q.Get("group_ids"))
-	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
-	aggregation := checkEnum[enums.ChartAggregation](&v, q.Get("aggregation"), "aggregation")
-	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds)
-	now := uint64(time.Now().Unix())
-	if now < maxAge {
-		maxAge = now
-	}
-	minAllowedTs := now - maxAge
-	afterTs, beforeTs := v.checkTimestamps(q.Get("after_ts"), q.Get("before_ts"), minAllowedTs)
+	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, err)
 		return
 	}
-	if maxAge == 0 {
-		returnConflict(w, fmt.Errorf("requested aggregation is not available for dashboard owner's premium subscription"))
-		return
-	}
-	// afterTs is inclusive, beforeTs is exclusive
-	if afterTs < minAllowedTs || beforeTs <= minAllowedTs {
-		returnConflict(w, fmt.Errorf("requested time range is too old, maximum age for dashboard owner's premium subscription is %v seconds", maxAge))
+	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
 		return
 	}
 
@@ -1270,7 +1260,7 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardEpochHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
@@ -1279,13 +1269,22 @@ func (h *HandlerService) InternalGetValidatorDashboardEpochHeatmap(w http.Respon
 	}
 	q := r.URL.Query()
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
+	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, err)
+	}
+	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
+		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
 		return
 	}
 
-	// implicit time period is last hour
-	data, err := h.dai.GetValidatorDashboardEpochHeatmap(r.Context(), *dashboardId, protocolModes)
+	data, err := h.dai.GetValidatorDashboardHeatmap(r.Context(), *dashboardId, protocolModes, aggregation, afterTs, beforeTs)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1296,35 +1295,7 @@ func (h *HandlerService) InternalGetValidatorDashboardEpochHeatmap(w http.Respon
 	returnOk(w, response)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardDailyHeatmap(w http.ResponseWriter, r *http.Request) {
-	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-
-	var v validationError
-	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
-	// allowed periods are: last_7d, last_30d, last_365d
-	allowedPeriods := []enums.Enum{enums.TimePeriods.Last7d, enums.TimePeriods.Last30d, enums.TimePeriods.Last365d}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
-	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, v)
-		return
-	}
-	data, err := h.dai.GetValidatorDashboardDailyHeatmap(r.Context(), *dashboardId, period, protocolModes)
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-	response := types.InternalGetValidatorDashboardHeatmapResponse{
-		Data: *data,
-	}
-	returnOk(w, response)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardGroupEpochHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
@@ -1333,41 +1304,23 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupEpochHeatmap(w http.R
 		return
 	}
 	groupId := v.checkExistingGroupId(vars["group_id"])
-	epoch := v.checkUint(vars["epoch"], "epoch")
+	requestedTimestamp := v.checkUint(vars["timestamp"], "timestamp")
 	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
+	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
 	if v.hasErrors() {
-		handleErr(w, v)
-		return
+		handleErr(w, err)
 	}
-
-	data, err := h.dai.GetValidatorDashboardGroupEpochHeatmap(r.Context(), *dashboardId, groupId, epoch, protocolModes)
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	response := types.InternalGetValidatorDashboardGroupHeatmapResponse{
-		Data: *data,
-	}
-	returnOk(w, response)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardGroupDailyHeatmap(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
-	if err != nil {
-		handleErr(w, err)
-		return
-	}
-	groupId := v.checkExistingGroupId(vars["group_id"])
-	date := v.checkDate(vars["date"])
-	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, v)
+	if requestedTimestamp < chartLimits.MinAllowedTs || requestedTimestamp > chartLimits.LatestExportedTs {
+		handleErr(w, newConflictErr("requested timestamp is outside of allowed chart history for dashboard owner's premium subscription"))
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupDailyHeatmap(r.Context(), *dashboardId, groupId, date, protocolModes)
+	data, err := h.dai.GetValidatorDashboardGroupHeatmap(r.Context(), *dashboardId, groupId, protocolModes, aggregation, requestedTimestamp)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1634,9 +1587,9 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 // Notifications
 
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetNotificationOverview(r.Context(), userId)
@@ -1652,9 +1605,9 @@ func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *
 
 func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1715,9 +1668,9 @@ func (h *HandlerService) InternalGetUserNotificationsAccountDashboard(w http.Res
 
 func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1741,9 +1694,9 @@ func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWrit
 
 func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1767,9 +1720,9 @@ func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWrite
 
 func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1793,9 +1746,9 @@ func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWr
 
 func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1818,9 +1771,9 @@ func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWrit
 }
 
 func (h *HandlerService) InternalGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	data, err := h.dai.GetNotificationSettings(r.Context(), userId)
@@ -1836,9 +1789,9 @@ func (h *HandlerService) InternalGetUserNotificationSettings(w http.ResponseWrit
 
 func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	var req types.NotificationSettingsGeneral
@@ -1856,7 +1809,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.Respo
 		handleErr(w, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
+	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1869,9 +1822,9 @@ func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.Respo
 
 func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	var req types.NotificationSettingsNetwork
@@ -1886,7 +1839,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.Resp
 		handleErr(w, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
+	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -1952,9 +1905,9 @@ func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w h
 
 func (h *HandlerService) InternalGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	q := r.URL.Query()
@@ -2074,7 +2027,8 @@ func (h *HandlerService) InternalPostUserNotificationsTestPush(w http.ResponseWr
 func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
-		Url string `json:"url"`
+		WebhookUrl              string `json:"webhook_url"`
+		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, err)

@@ -28,10 +28,14 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
 
-	if !cfg.Frontend.CsrfInsecure {
+	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
+
+	// store user id in context, if available
+	publicRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdByApiKey))
+	internalRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdBySession))
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
@@ -237,8 +241,8 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession))
+		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
+		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
 	}
 
 	endpoints := []endpoint{
@@ -265,10 +269,8 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
 		{http.MethodGet, "/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
 		{http.MethodGet, "/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
-		{http.MethodGet, "/{dashboard_id}/epoch-heatmap", hs.PublicGetValidatorDashboardEpochHeatmap, hs.InternalGetValidatorDashboardEpochHeatmap},
-		{http.MethodGet, "/{dashboard_id}/daily-heatmap", hs.PublicGetValidatorDashboardDailyHeatmap, hs.InternalGetValidatorDashboardDailyHeatmap},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/epoch-heatmap/{epoch}", hs.PublicGetValidatorDashboardGroupEpochHeatmap, hs.InternalGetValidatorDashboardGroupEpochHeatmap},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/daily-heatmap/{date}", hs.PublicGetValidatorDashboardGroupDailyHeatmap, hs.InternalGetValidatorDashboardGroupDailyHeatmap},
+		{http.MethodGet, "/{dashboard_id}/heatmap", hs.PublicGetValidatorDashboardHeatmap, hs.InternalGetValidatorDashboardHeatmap},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/heatmap/{timestamp}", hs.PublicGetValidatorDashboardGroupHeatmap, hs.InternalGetValidatorDashboardGroupHeatmap},
 		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/total-execution-layer-deposits", nil, hs.InternalGetValidatorDashboardTotalExecutionLayerDeposits},
@@ -288,8 +290,9 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	publicNotificationRouter := publicRouter.PathPrefix(path).Subrouter()
 	internalNotificationRouter := internalRouter.PathPrefix(path).Subrouter()
 
-	publicNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdByApiKey), hs.ManageViaApiCheckMiddleware)
-	internalNotificationRouter.Use(handlers.GetUserIdStoreMiddleware(hs.GetUserIdBySession))
+	if !debug {
+		publicNotificationRouter.Use(hs.ManageViaApiCheckMiddleware)
+	}
 	endpoints := []endpoint{
 		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
 		{http.MethodGet, "/dashboards", nil, hs.InternalGetUserNotificationDashboards},
@@ -314,8 +317,8 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
 	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
 	if !debug {
-		publicDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
-		internalDashboardNotificationSettingsRouter.Use(hs.GetVDBAuthMiddleware(handlers.GetUserIdByContext))
+		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
+		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 	}
 	dashboardSettingsEndpoints := []endpoint{
 		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},

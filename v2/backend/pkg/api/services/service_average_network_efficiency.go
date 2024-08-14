@@ -2,6 +2,7 @@ package services
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -113,7 +113,7 @@ func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, func(), error) {
 	currentEfficiencyMutex.RLock()
 
 	if currentEfficiencyInfo == nil {
-		return nil, currentEfficiencyMutex.RUnlock, errors.New("waiting for efficiencyInfo to be initialized")
+		return nil, currentEfficiencyMutex.RUnlock, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
 	}
 
 	return currentEfficiencyInfo, currentEfficiencyMutex.RUnlock, nil
