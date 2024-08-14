@@ -351,7 +351,7 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		handleErr(w, err)
 		return
 	}
-	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
 		return
 	}
@@ -482,7 +482,7 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 			handleErr(w, err)
 			return
 		}
-		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
+		if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards && !isUserAdmin(userInfo) {
 			returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
 			return
 		}
@@ -496,7 +496,12 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		}
 	}
 
-	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, req.IsArchived)
+	var archivedReason *enums.VDBArchivedReason
+	if req.IsArchived {
+		archivedReason = &enums.VDBArchivedReasons.User
+	}
+
+	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, archivedReason)
 	if err != nil {
 		handleErr(w, err)
 		return

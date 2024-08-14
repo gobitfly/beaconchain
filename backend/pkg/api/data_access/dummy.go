@@ -55,6 +55,10 @@ func commonFakeData(a interface{}) error {
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
 }
 
+func (d *DummyService) StartDataAccessServices() {
+	// nothing to start
+}
+
 func (d *DummyService) Close() {
 	// nothing to close
 }
@@ -224,7 +228,7 @@ func (d *DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId
 	return nil
 }
 
-func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
 	r := t.VDBPostArchivingReturnData{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -814,6 +818,12 @@ func (d *DummyService) GetSlotVoluntaryExits(ctx context.Context, chainId, block
 
 func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
 	r := []t.BlockBlobTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetValidatorDashboardsInfo(ctx context.Context) (map[uint64][]t.ArchiverDashboard, error) {
+	r := make(map[uint64][]t.ArchiverDashboard)
 	err := commonFakeData(&r)
 	return r, err
 }
