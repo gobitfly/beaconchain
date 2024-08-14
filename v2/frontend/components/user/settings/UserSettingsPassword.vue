@@ -3,21 +3,32 @@ import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
 import { API_PATH } from '~/types/customFetch'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const { handleSubmit, errors, defineField } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
-    oldPassword: passwordValidation($t),
+    confirmPassword: confirmPasswordValidation($t, 'newPassword'),
     newPassword: newPasswordValidation($t, 'oldPassword'),
-    confirmPassword: confirmPasswordValidation($t, 'newPassword')
-  })
+    oldPassword: passwordValidation($t),
+  }),
 })
 
-const [oldPassword, oldPasswordAttrs] = defineField('oldPassword')
-const [newPassword, newPasswordAttrs] = defineField('newPassword')
-const [confirmPassword, confirmPasswordAttrs] = defineField('confirmPassword')
+const [
+  oldPassword,
+  oldPasswordAttrs,
+] = defineField('oldPassword')
+const [
+  newPassword,
+  newPasswordAttrs,
+] = defineField('newPassword')
+const [
+  confirmPassword,
+  confirmPasswordAttrs,
+] = defineField('confirmPassword')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
@@ -28,40 +39,45 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
 
   buttonsDisabled.value = true
   try {
-    await fetch(API_PATH.USER_CHANGE_PASSWORD, {
-      body: {
-        password: values.newPassword
-      }
+    await fetch(API_PATH.USER_CHANGE_PASSWORD, { body: { password: values.newPassword } })
+    toast.showSuccess({
+      detail: $t('user_settings.password.success.toast_message'),
+      group: $t('user_settings.password.success.toast_group'),
+      summary: $t('user_settings.password.success.toast_title'),
     })
-    toast.showSuccess(
-      {
-        summary: $t('user_settings.password.success.toast_title'),
-        group: $t('user_settings.password.success.toast_group'),
-        detail: $t('user_settings.password.success.toast_message')
-      })
     resetForm()
-  } catch (error) {
-    toast.showError(
-      {
-        summary: $t('user_settings.password.error.toast_title'),
-        group: $t('user_settings.password.error.toast_group'),
-        detail: $t('user_settings.password.error.toast_message')
-      })
+  }
+  catch (error) {
+    toast.showError({
+      detail: $t('user_settings.password.error.toast_message'),
+      group: $t('user_settings.password.error.toast_group'),
+      summary: $t('user_settings.password.error.toast_title'),
+    })
   }
   buttonsDisabled.value = false
 })
 
-const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && newPassword.value && confirmPassword.value && newPassword.value === confirmPassword.value && !Object.keys(errors.value).length)
-
+const canSubmit = computed(
+  () =>
+    !buttonsDisabled.value
+    && oldPassword.value
+    && newPassword.value
+    && confirmPassword.value
+    && newPassword.value === confirmPassword.value
+    && !Object.keys(errors.value).length,
+)
 </script>
 
 <template>
-  <form class="password-container" @submit="onSubmit">
+  <form
+    class="password-container"
+    @submit="onSubmit"
+  >
     <div class="title">
-      {{ $t('user_settings.password.title') }}
+      {{ $t("user_settings.password.title") }}
     </div>
     <label for="old-password">
-      {{ $t('user_settings.password.old') }}
+      {{ $t("user_settings.password.old") }}
     </label>
     <div class="input-row">
       <InputText
@@ -77,7 +93,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       </div>
     </div>
     <label for="new-password">
-      {{ $t('user_settings.password.new') }}
+      {{ $t("user_settings.password.new") }}
     </label>
     <div class="input-row">
       <InputText
@@ -93,7 +109,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       </div>
     </div>
     <label for="confirm-password">
-      {{ $t('user_settings.password.confirm') }}
+      {{ $t("user_settings.password.confirm") }}
     </label>
     <div class="input-row">
       <InputText
@@ -109,14 +125,18 @@ const canSubmit = computed(() => !buttonsDisabled.value && oldPassword.value && 
       </div>
     </div>
     <div class="button-row">
-      <Button type="submit" :disabled="!canSubmit" :label="$t('navigation.save')" />
+      <Button
+        type="submit"
+        :disabled="!canSubmit"
+        :label="$t('navigation.save')"
+      />
     </div>
   </form>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/fonts.scss";
 
 .password-container {
   display: flex;

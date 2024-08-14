@@ -151,27 +151,30 @@ type IndexTimestamp struct {
 	Timestamp uint64
 }
 
+type VDBValidatorSyncPast struct {
+	Index uint64
+	Count uint64
+}
 type VDBSyncSummaryValidators struct {
 	// fill slices with indices of validators
 	Upcoming []uint64
 	Current  []uint64
-	Past     []struct {
-		Index uint64
-		Count uint64
-	}
+	Past     []VDBValidatorSyncPast
 }
 
+type VDBValidatorGotSlashed struct {
+	Index     uint64
+	SlashedBy uint64
+}
+type VDBValidatorHasSlashed struct {
+	Index          uint64
+	SlashedIndices []uint64
+}
 type VDBSlashingsSummaryValidators struct {
 	// fill with the validator index that got slashed and the index of the validator that slashed it
-	GotSlashed []struct {
-		Index     uint64
-		SlashedBy uint64
-	}
+	GotSlashed []VDBValidatorGotSlashed
 	// fill with the validator index that slashed and the index of the validators that got slashed
-	HasSlashed []struct {
-		Index          uint64
-		SlashedIndices []uint64
-	}
+	HasSlashed []VDBValidatorHasSlashed
 }
 
 type VDBProposalSummaryValidators struct {
@@ -181,6 +184,20 @@ type VDBProposalSummaryValidators struct {
 
 type VDBProtocolModes struct {
 	RocketPool bool
+}
+
+type MobileSubscription struct {
+	ProductIDUnverified string                               `json:"id"`
+	PriceMicros         uint64                               `json:"priceMicros"`
+	Currency            string                               `json:"currency"`
+	Transaction         MobileSubscriptionTransactionGeneric `json:"transaction"`
+	ValidUnverified     bool                                 `json:"valid"`
+}
+
+type MobileSubscriptionTransactionGeneric struct {
+	Type    string `json:"type"`
+	Receipt string `json:"receipt"`
+	ID      string `json:"id"`
 }
 
 type VDBValidatorSummaryChartRow struct {

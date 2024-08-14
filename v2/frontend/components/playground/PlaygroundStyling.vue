@@ -1,11 +1,9 @@
 <script setup lang="ts">
+import { faTable } from '@fortawesome/pro-solid-svg-icons'
+import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
 import {
-  faTable
-} from '@fortawesome/pro-solid-svg-icons'
-import {
-  faChartColumn
-} from '@fortawesome/pro-regular-svg-icons'
-import { IconAccount, IconValidator, IconSlotBlockProposal } from '#components'
+  IconAccount, IconSlotBlockProposal, IconValidator,
+} from '#components'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -21,36 +19,88 @@ const toggleLoading = () => {
 
 const selected = ref(true)
 
-const completeList = [{ value: 'attestation' }, { value: 'proposal', component: IconSlotBlockProposal }, { value: 'sync' }, { value: 'chart', icon: faChartColumn }]
-const selectedList = ref<string[]>(['attestation', 'proposal'])
+const completeList = [
+  { value: 'attestation' },
+  {
+    component: IconSlotBlockProposal,
+    value: 'proposal',
+  },
+  { value: 'sync' },
+  {
+    icon: faChartColumn,
+    value: 'chart',
+  },
+]
+const selectedList = ref<string[]>([
+  'attestation',
+  'proposal',
+])
 
 const selectedType = ref<string>('Validators')
-const allTypes = [{ text: 'Accounts', value: 'Accounts', component: IconAccount }, { text: 'Validators', value: 'Validators', component: IconValidator }]
+const allTypes = [
+  {
+    component: IconAccount,
+    text: 'Accounts',
+    value: 'Accounts',
+  },
+  {
+    component: IconValidator,
+    text: 'Validators',
+    value: 'Validators',
+  },
+]
 
 const dropodownSelection = ref<string | undefined>()
-const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }, { value: 'maybe', label: 'Maybe we need a bigger label' }]
-
+const dropdownList = [
+  {
+    label: 'Yes',
+    value: 'yes',
+  },
+  {
+    label: 'No',
+    value: 'no',
+  },
+  {
+    label: 'Maybe we need a bigger label',
+    value: 'maybe',
+  },
+]
 </script>
 
 <template>
   <BcDialog v-model="emptyModalVisibility">
     <div class="element_container">
-      <Button label="Close" @click="emptyModalVisibility = false" />
+      <Button
+        label="Close"
+        @click="emptyModalVisibility = false"
+      />
     </div>
   </BcDialog>
-  <BcDialog v-model="headerPropModalVisibility" header="Text via Header Prop">
+  <BcDialog
+    v-model="headerPropModalVisibility"
+    header="Text via Header Prop"
+  >
     <div class="element_container">
-      <Button label="Close" @click="headerPropModalVisibility = false" />
+      <Button
+        label="Close"
+        @click="headerPropModalVisibility = false"
+      />
     </div>
   </BcDialog>
-  <BcDialog v-model="slotModalVisibility" header="HeaderProp - Ignored as header slot wins">
+  <BcDialog
+    v-model="slotModalVisibility"
+    header="HeaderProp - Ignored as header slot wins"
+  >
     <template #header>
       Utilizing the header slot for custom content
     </template>
     <div>
       Utilizing the default slot for custom content
       <br>
-      <Button label="Close" @click="slotModalVisibility = false" />
+      <Button
+        label="Close"
+        @click="slotModalVisibility = false"
+      />
     </div>
 
     <template #footer>
@@ -61,12 +111,19 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   <TabView lazy>
     <TabPanel header="Buttons">
       <div class="element_container">
-        <Button>
-          Text Button
-        </Button>
-        <Button label="Empty Modal" @click="emptyModalVisibility = true" />
-        <Button label="Header Prop Modal" @click="headerPropModalVisibility = true" />
-        <Button label="Slots Modal" @click="slotModalVisibility = true" />
+        <Button> Text Button </Button>
+        <Button
+          label="Empty Modal"
+          @click="emptyModalVisibility = true"
+        />
+        <Button
+          label="Header Prop Modal"
+          @click="headerPropModalVisibility = true"
+        />
+        <Button
+          label="Slots Modal"
+          @click="slotModalVisibility = true"
+        />
         <Button>
           <BcLink to="/dashboard">
             Dashboard Link
@@ -76,7 +133,11 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           Disabled
         </Button>
         <Button class="p-button-icon-only">
-          <IconPlus alt="Plus icon" width="100%" height="100%" />
+          <IconPlus
+            alt="Plus icon"
+            width="100%"
+            height="100%"
+          />
         </Button>
       </div>
     </TabPanel>
@@ -91,13 +152,20 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
     <TabPanel header="Input">
       <div class="element_container">
         <InputText placeholder="Input" />
-        <InputText placeholder="Disabled Input" disabled />
+        <InputText
+          placeholder="Disabled Input"
+          disabled
+        />
       </div>
     </TabPanel>
     <TabPanel header="Checkbox">
       <div class="element_container">
-        default checkbox: <Checkbox v-model="selected" :binary="true" />
-        disabled: <Checkbox disabled />
+        default checkbox:
+        <Checkbox
+          v-model="selected"
+          :binary="true"
+        /> disabled:
+        <Checkbox disabled />
       </div>
     </TabPanel>
     <TabPanel header="Toggle">
@@ -105,7 +173,11 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
       <div class="element_container">
         <div>
           isTable: {{ isTable }}
-          <BcIconToggle v-model="isTable" :true-icon="faTable" :false-icon="faChartColumn" />
+          <BcIconToggle
+            v-model="isTable"
+            :true-icon="faTable"
+            :false-icon="faChartColumn"
+          />
         </div>
 
         <div>
@@ -123,10 +195,17 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
 
         <div>
           Selected: {{ selected }}
-          <BcToggleMultiBarButton v-model="selected" :icon="faTable" />
+          <BcToggleMultiBarButton
+            v-model="selected"
+            :icon="faTable"
+          />
         </div>
         <div>
-          <BcToggleMultiBar v-model="selectedList" :buttons="completeList" style="margin-right: 10px;">
+          <BcToggleMultiBar
+            v-model="selectedList"
+            :buttons="completeList"
+            style="margin-right: 10px"
+          >
             <template #attestation>
               <IconSlotAttestation />
             </template>
@@ -135,17 +214,26 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
               <IconSlotSync />
             </template>
           </BcToggleMultiBar>
-          Selected: {{ selectedList.join(', ') }}
+          Selected: {{ selectedList.join(", ") }}
         </div>
       </div>
       <h1>Single Toggle</h1>
       <div class="element_container">
         selectedType: {{ selectedType }}
-        <BcToggleSingleBar v-model="selectedType" :buttons="allTypes" class="single_bar_container" layout="gaudy" :allow-deselect="true" />
+        <BcToggleSingleBar
+          v-model="selectedType"
+          :buttons="allTypes"
+          class="single_bar_container"
+          layout="gaudy"
+          :allow-deselect="true"
+        />
       </div>
     </TabPanel>
     <TabPanel header="Dropdown">
-      <div class="element_container" style="background-color: darkred; padding: 5px;">
+      <div
+        class="element_container"
+        style="background-color: darkred; padding: 5px"
+      >
         <BcDropdown
           v-model="dropodownSelection"
           :options="dropdownList"
@@ -153,7 +241,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           option-label="label"
           placeholder="for rock wtf this is a long placeholder"
           panel-style="max-width: 100px"
-          style="max-width: 100px;"
+          style="max-width: 100px"
         />
         <BcDropdown
           v-model="dropodownSelection"
@@ -162,7 +250,7 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
           option-label="label"
           variant="table"
           placeholder="and roll"
-          style="width: 200px;"
+          style="width: 200px"
         />
         Selected: {{ dropodownSelection }}
       </div>
@@ -172,18 +260,34 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
         Toggle loading
       </Button>
       <div class="element_container">
-        <BcLoadingSpinner :loading="loading" />
-        <BcLoadingSpinner :loading="loading" size="small" style="color: lightblue;" />
-        <BcLoadingSpinner :loading="loading" size="large" />
+        <BcLoadingSpinner :loading />
+        <BcLoadingSpinner
+          :loading
+          size="small"
+          style="color: lightblue"
+        />
+        <BcLoadingSpinner
+          :loading
+          size="large"
+        />
         <div class="box">
-          <BcLoadingSpinner :loading="loading" alignment="center" />
+          <BcLoadingSpinner
+            :loading
+            alignment="center"
+          />
         </div>
         <div class="box">
-          <BcLoadingSpinner :loading="loading" size="full" />
+          <BcLoadingSpinner
+            :loading
+            size="full"
+          />
         </div>
       </div>
     </TabPanel>
-    <TabPanel :disabled="true" header="Disabled Tab" />
+    <TabPanel
+      :disabled="true"
+      header="Disabled Tab"
+    />
   </TabView>
 </template>
 
@@ -201,11 +305,11 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
   background-color: antiquewhite;
 }
 
-.scroll-box{
+.scroll-box {
   width: 100px;
   height: 100px;
   overflow: auto;
-  div{
+  div {
     background-color: grey;
     width: 200px;
     height: 200px;
@@ -213,6 +317,6 @@ const dropdownList = [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No'
 }
 
 .single_bar_container {
-  width: 600px
+  width: 600px;
 }
 </style>

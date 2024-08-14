@@ -1,0 +1,16 @@
+{
+  "conventionalCommits.scopes": [
+    "i18n",
+    "vscode",
+    "eslint",
+    "mainHeader"
+  ],
+  "editor.rulers": [
+    80,
+    120
+],
+"editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+},
+"editor.formatOnSave": false
+}

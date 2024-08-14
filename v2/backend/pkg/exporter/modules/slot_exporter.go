@@ -304,6 +304,55 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		return fmt.Errorf("error retrieving data for slot %v: %w", slot, err)
 	}
 
+	// for the slot itself start by preparing the duties for export to bigtable
+	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
+	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
+
+	for validator, duty := range block.SyncDuties {
+		syncDuties[types.Slot(block.Slot)][validator] = duty
+	}
+
+	attDuties := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
+	for validator, attestedSlots := range block.AttestationDuties {
+		for _, attestedSlot := range attestedSlots {
+			if attDuties[attestedSlot] == nil {
+				attDuties[attestedSlot] = make(map[types.ValidatorIndex][]types.Slot)
+			}
+			if attDuties[attestedSlot][validator] == nil {
+				attDuties[attestedSlot][validator] = make([]types.Slot, 0, 10)
+			}
+			attDuties[attestedSlot][validator] = append(attDuties[attestedSlot][validator], types.Slot(block.Slot))
+		}
+	}
+
+	// save sync & attestation duties to bigtable
+	err = db.BigtableClient.SaveAttestationDuties(attDuties)
+	if err != nil {
+		return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
+	}
+	err = db.BigtableClient.SaveSyncComitteeDuties(syncDuties)
+	if err != nil {
+		return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
+	}
+
+	// save the proposal to bigtable
+	err = db.BigtableClient.SaveProposal(block)
+	if err != nil {
+		return fmt.Errorf("error exporting proposal to bigtable for slot %v: %w", block.Slot, err)
+	}
+
+	// save the block data to the db
+	err = edb.SaveBlock(block, false, tx)
+	if err != nil {
+		return fmt.Errorf("error saving slot to the db: %w", err)
+	}
+
+	if block.Status == 1 {
+		if latestProposed < block.Slot {
+			latestProposed = block.Slot
+		}
+	}
+
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		epoch := utils.EpochOfSlot(block.Slot)
 
@@ -619,54 +668,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		// time.Sleep(time.Minute)
 	}
 
-	// for the slot itself start by preparing the duties for export to bigtable
-	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
-	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
-
-	for validator, duty := range block.SyncDuties {
-		syncDuties[types.Slot(block.Slot)][validator] = duty
-	}
-
-	attDuties := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
-	for validator, attestedSlots := range block.AttestationDuties {
-		for _, attestedSlot := range attestedSlots {
-			if attDuties[attestedSlot] == nil {
-				attDuties[attestedSlot] = make(map[types.ValidatorIndex][]types.Slot)
-			}
-			if attDuties[attestedSlot][validator] == nil {
-				attDuties[attestedSlot][validator] = make([]types.Slot, 0, 10)
-			}
-			attDuties[attestedSlot][validator] = append(attDuties[attestedSlot][validator], types.Slot(block.Slot))
-		}
-	}
-
-	// save sync & attestation duties to bigtable
-	err = db.BigtableClient.SaveAttestationDuties(attDuties)
-	if err != nil {
-		return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
-	}
-	err = db.BigtableClient.SaveSyncComitteeDuties(syncDuties)
-	if err != nil {
-		return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
-	}
-
-	// save the proposal to bigtable
-	err = db.BigtableClient.SaveProposal(block)
-	if err != nil {
-		return fmt.Errorf("error exporting proposal to bigtable for slot %v: %w", block.Slot, err)
-	}
-
-	// save the block data to the db
-	err = edb.SaveBlock(block, false, tx)
-	if err != nil {
-		return fmt.Errorf("error saving slot to the db: %w", err)
-	}
-
-	if block.Status == 1 {
-		if latestProposed < block.Slot {
-			latestProposed = block.Slot
-		}
-	}
 	// time.Sleep(time.Second)
 
 	log.InfoWithFields(

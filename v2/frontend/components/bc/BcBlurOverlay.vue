@@ -1,6 +1,7 @@
 <template>
   <div class="gradient-blur" />
 </template>
+
 <style lang="scss" scoped>
 .gradient-blur {
   background: linear-gradient(rgba(233, 233, 233, 0), rgba(233, 233, 233, 1));
