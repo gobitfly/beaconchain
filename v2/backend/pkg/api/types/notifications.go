@@ -37,7 +37,7 @@ type NotificationDashboardsTableRow struct {
 	GroupName          string   `json:"group_name"`
 	NotificationId     uint64   `json:"notification_id"` // may be string? db schema is not defined afaik
 	EntityCount        uint64   `json:"entity_count"`
-	EventTypes         []string `json:"event_types" tstype:"'validator_offline' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'slashed_own'| 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155'" faker:"oneof: validator_offline, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, sync, withdrawal, slashed_own, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
+	EventTypes         []string `json:"event_types" tstype:"'validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155'" faker:"oneof: validator_offline, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, sync, withdrawal, slashed_own, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
