@@ -383,6 +383,7 @@
   }
   .p-multiselect-trigger {
     margin-right: var(--padding);
+    width: 12px;
   }
   .p-multiselect-label-container {
     margin-top: auto;
@@ -503,10 +504,8 @@
     }
   }
   .p-dropdown-trigger {
+    width: 12px;
     margin-left: var(--padding);
-    background: transparent;
-    border-top-right-radius: var(--border-radius);
-    border-bottom-right-radius: var(--border-radius);
   }
 }
 

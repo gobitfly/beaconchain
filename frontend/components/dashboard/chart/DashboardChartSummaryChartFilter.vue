@@ -146,7 +146,7 @@ const selectedLabel = computed(() => {
     </BcDropdown>
     <BcDropdown v-model="efficiency" :options="efficiencyList" option-value="id" option-label="label" class="small" />
 
-    <MultiSelect
+    <BcMultiSelect
       v-model="selectedGroups" class="small" :options="groups" option-label="name" option-value="id"
       :placeholder="$t('dashboard.group.selection.all')"
     >
@@ -170,7 +170,7 @@ const selectedLabel = computed(() => {
       <template #value>
         {{ selectedLabel }}
       </template>
-    </MultiSelect>
+    </BcMultiSelect>
   </div>
 </template>
 
