@@ -443,7 +443,9 @@
   &.small {
     padding: var(--padding-small);
     height: 30px;
-    font-size: var(--tiny_text_font_size);
+    .p-dropdown-label {
+      font-size: var(--tiny_text_font_size);
+    }
 
     .p-dropdown-trigger {
       margin-left: var(--padding-small);
