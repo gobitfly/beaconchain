@@ -74,6 +74,12 @@ const scrollToAddons = () => {
   </BcPageWrapper>
 </template>
 
+<style lang="scss">
+// we need this one to have the pricing css variables on the whole page available
+@import "~/assets/css/pricing.scss";
+</style>
+
+
 <style lang="scss" scoped>
 @use "~/assets/css/pricing.scss";
 
