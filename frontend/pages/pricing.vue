@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 const { t: $t } = useTranslation()
 
 useBcSeo('pricing.seo_title')
+const { promoCode } = usePromoCode()
 const { stripeInit } = useStripeProvider()
 
 const {
@@ -57,16 +58,43 @@ const scrollToAddons = () => {
           translation-path="faq.pricing"
         />
       </div>
+      <div v-if="promoCode" class="promo-overlay">
+        <I18nT
+          keypath="pricing.promo_code"
+          scope="global"
+          tag="span"
+          class="promo-text"
+        >
+          <template #_code>
+            <span class="promo-code">{{ promoCode }}</span>
+          </template>
+        </I18nT>
+      </div>
     </div>
   </BcPageWrapper>
 </template>
 
-<style lang="scss">
-@import "~/assets/css/pricing.scss";
-</style>
-
 <style lang="scss" scoped>
 @use "~/assets/css/pricing.scss";
+
+.promo-overlay {
+  position: fixed;
+  z-index: 2;
+  bottom: 1px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  .promo-text {
+    background-color: var(--background-color);
+    border: 1px solid var(--primary-color);
+    padding: 18px 26px;
+
+    .promo-code {
+      color: var(--primary-color);
+    }
+  }
+}
 
 .page-container {
   position: relative;
