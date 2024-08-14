@@ -3,25 +3,42 @@ import type { Nullable } from 'primevue/ts-helpers'
 import InputNumber from 'primevue/inputnumber'
 
 const props = defineProps<{
-  min: number,
   max: number,
-  maxFractionDigits: number
+  maxFractionDigits: number,
+  min: number,
 }>()
 
 const parentVmodel = defineModel<number>({ required: true })
-const bridgedVmodel = usePrimitiveRefBridge<number, Nullable<number>>(parentVmodel, n => (isNaN(n) ? null : n), n => (n ?? NaN))
+const bridgedVmodel = usePrimitiveRefBridge<number, Nullable<number>>(
+  parentVmodel,
+  n => (isNaN(n) ? null : n),
+  n => n ?? NaN,
+)
 
-function sendValue (input: Nullable<number>) : void {
-  if (input === undefined || input === null || isNaN(input) || input < props.min || input > props.max) {
+function sendValue(input: Nullable<number>): void {
+  if (
+    input === undefined
+    || input === null
+    || isNaN(input)
+    || input < props.min
+    || input > props.max
+  ) {
     input = NaN
-  } else {
+  }
+  else {
     const stringifyied = String(input)
     const comma = stringifyied.indexOf('.')
-    if (comma >= 0 && stringifyied.length - comma - 1 > props.maxFractionDigits) {
+    if (
+      comma >= 0
+      && stringifyied.length - comma - 1 > props.maxFractionDigits
+    ) {
       input = NaN
     }
   }
-  bridgedVmodel.pauseBridgeFromNowOn() // this allows us to output the value to the parent v-model without causing an injection of the value back into the InputNumber v-model (that would empty InputNumber at each key stroke if the input is invalid)
+  // this allows us to output the value to the parent v-model without causing
+  // an injection of the value back into the InputNumber v-model (that would
+  // empty InputNumber at each key stroke if the input is invalid)
+  bridgedVmodel.pauseBridgeFromNowOn()
   parentVmodel.value = input
   bridgedVmodel.wakeupBridgeAtNextTick()
 }
@@ -30,17 +47,23 @@ function sendValue (input: Nullable<number>) : void {
 <template>
   <InputNumber
     v-model="bridgedVmodel"
-    :min="min"
-    :max="max"
-    :max-fraction-digits="maxFractionDigits"
+    :min
+    :max
+    :max-fraction-digits
     locale="en-US"
     class="why-the-hell-dont-they-fix-this-bug"
-    @input="input => { if (typeof input.value !== 'string') sendValue(input.value) }"
+    @input="
+      (input) => {
+        if (typeof input.value !== 'string') sendValue(input.value);
+      }
+    "
   />
 </template>
 
 <style scoped lang="scss">
 .why-the-hell-dont-they-fix-this-bug {
-  :deep(input) { width: 100%; }
+  :deep(input) {
+    width: 100%;
+  }
 }
 </style>

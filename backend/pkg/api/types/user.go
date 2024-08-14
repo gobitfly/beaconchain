@@ -1,7 +1,10 @@
 package types
 
+const UserGroupAdmin = "ADMIN"
+
 type UserInfo struct {
 	Id            uint64             `json:"id"`
+	UserGroup     string             `json:"-"`
 	Email         string             `json:"email"`
 	ApiKeys       []string           `json:"api_keys"`
 	ApiPerks      ApiPerks           `json:"api_perks"`
@@ -141,4 +144,12 @@ type StripeCreateCheckoutSession struct {
 
 type StripeCustomerPortal struct {
 	Url string `json:"url"`
+}
+
+type OAuthAppData struct {
+	ID          uint64 `db:"id"`
+	Owner       uint64 `db:"owner_id"`
+	AppName     string `db:"app_name"`
+	RedirectURI string `db:"redirect_uri"`
+	Active      bool   `db:"active"`
 }

@@ -7,7 +7,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
+
+var ErrWaiting error = errors.New("waiting for service to be initialized")
 
 type Services struct {
 	readerDb                *sqlx.DB

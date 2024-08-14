@@ -21,6 +21,11 @@ export interface VDBOverviewGroup {
   name: string;
   count: number /* uint64 */;
 }
+export interface VDBOverviewBalances {
+  total: number /* uint64 */;
+  effective: number /* uint64 */;
+  staked_eth: number /* uint64 */;
+}
 export interface VDBOverviewData {
   name?: string;
   groups: VDBOverviewGroup[];
@@ -29,6 +34,7 @@ export interface VDBOverviewData {
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
   chart_history_seconds: ChartHistorySeconds;
+  balances: VDBOverviewBalances;
 }
 export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBPostArchivingReturnData {
@@ -175,11 +181,11 @@ export interface VDBHeatmap {
   timestamps: number /* int64 */[]; // X-Axis Categories (unix timestamp)
   group_ids: number /* uint64 */[]; // Y-Axis Categories
   data: VDBHeatmapCell[];
-  aggregation: 'epoch' | 'day';
+  aggregation: 'epoch' | 'hourly' | 'daily' | 'weekly';
 }
 export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmapTooltipData {
-  timestamp: number /* int64 */; // epoch or day
+  timestamp: number /* int64 */;
   proposers: StatusCount;
   syncs: number /* uint64 */;
   slashings: StatusCount;

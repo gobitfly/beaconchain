@@ -1,20 +1,28 @@
 <script setup lang="ts">
-
 interface Props {
-  variant?: 'default' | 'table' | 'header',
-  panelClass?: string
+  panelClass?: string,
+  variant?: 'default' | 'header' | 'table',
 }
 
 defineProps<Props>()
 </script>
 
 <template>
-  <Dropdown :class="variant" :panel-class="[variant, panelClass]">
+  <Dropdown
+    :class="variant"
+    :panel-class="[variant, panelClass]"
+  >
     <template #value="slotProps">
-      <slot name="value" v-bind="slotProps" />
+      <slot
+        name="value"
+        v-bind="slotProps"
+      />
     </template>
     <template #option="slotProps">
-      <slot name="option" v-bind="slotProps.option" />
+      <slot
+        name="option"
+        v-bind="slotProps.option"
+      />
     </template>
   </Dropdown>
 </template>

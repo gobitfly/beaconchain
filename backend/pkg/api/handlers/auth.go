@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -14,8 +15,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/mail"
-	commontsTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
+	commonTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,6 +27,7 @@ const (
 	userIdKey        = "user_id"
 	subscriptionKey  = "subscription"
 	userGroupKey     = "user_group"
+	mobileAuthKey    = "mobile_auth"
 )
 
 const authConfirmEmailRateLimit = time.Minute * 2
@@ -33,6 +36,8 @@ const authEmailExpireTime = time.Minute * 30
 type ctxKet string
 
 const ctxUserIdKey ctxKet = "user_id"
+
+var errBadCredentials = newUnauthorizedErr("invalid email or password")
 
 func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredentialInfo, error) {
 	authenticated := h.scs.GetBool(r.Context(), authenticatedKey)
@@ -81,7 +86,7 @@ Best regards,
 
 %[1]s
 `, utils.Config.Frontend.SiteDomain, confirmationHash)
-	err = mail.SendTextMail(email, subject, msg, []commontsTypes.EmailAttachment{})
+	err = mail.SendTextMail(email, subject, msg, []commonTypes.EmailAttachment{})
 	if err != nil {
 		return errors.New("error sending confirmation email, try again later")
 	}
@@ -97,15 +102,13 @@ Best regards,
 
 func (h *HandlerService) GetUserIdBySession(r *http.Request) (uint64, error) {
 	user, err := h.getUserBySession(r)
-	if err != nil {
-		return 0, err
-	}
-	return user.Id, nil
+	return user.Id, err
 }
 
 const authHeaderPrefix = "Bearer "
 
 func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
+	// TODO: store user id in context during ratelimting and use it here
 	var apiKey string
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, authHeaderPrefix) {
@@ -123,10 +126,11 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 	return userId, err
 }
 
+// if this is used, user ID should've been stored in context (by GetUserIdStoreMiddleware)
 func GetUserIdByContext(r *http.Request) (uint64, error) {
 	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
 	if !ok {
-		return 0, errors.New("error getting user id from context, not a uint64")
+		return 0, newUnauthorizedErr("user not authenticated")
 	}
 	return userId, nil
 }
@@ -256,7 +260,6 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	badCredentialsErr := newUnauthorizedErr("invalid email or password")
 	// fetch user
 	userId, err := h.dai.GetUserByEmail(r.Context(), email)
 	if err != nil {
@@ -266,7 +269,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	user, err := h.dai.GetUserCredentialInfo(r.Context(), userId)
 	if err != nil {
 		if errors.Is(err, dataaccess.ErrNotFound) {
-			err = badCredentialsErr
+			err = errBadCredentials
 		}
 		handleErr(w, err)
 		return
@@ -279,7 +282,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	// validate password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		handleErr(w, badCredentialsErr)
+		handleErr(w, errBadCredentials)
 		return
 	}
 
@@ -294,6 +297,251 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	h.scs.Put(r.Context(), userIdKey, user.Id)
 	h.scs.Put(r.Context(), subscriptionKey, user.ProductId)
 	h.scs.Put(r.Context(), userGroupKey, user.UserGroup)
+
+	returnOk(w, nil)
+}
+
+// Can be used to login on mobile, requires an authenticated session
+// Response must conform to OAuth spec
+func (h *HandlerService) InternalPostMobileAuthorize(w http.ResponseWriter, r *http.Request) {
+	req := struct {
+		DeviceIDAndName string `json:"client_id"`
+		RedirectURI     string `json:"redirect_uri"`
+		State           string `json:"state"`
+	}{}
+
+	// Retrieve parameters from GET request
+	req.DeviceIDAndName = r.URL.Query().Get("client_id")
+	req.RedirectURI = r.URL.Query().Get("redirect_uri")
+	req.State = r.URL.Query().Get("state")
+
+	// To be compliant with OAuth 2 Spec, we include client_name in client_id instead of adding an additional param
+	// Split req.DeviceID on ":", first one is the client id and second one the client name
+	deviceIDParts := strings.Split(req.DeviceIDAndName, ":")
+	var clientID, clientName string
+	if len(deviceIDParts) != 2 {
+		clientID = req.DeviceIDAndName
+		clientName = "Unknown"
+	} else {
+		clientID = deviceIDParts[0]
+		clientName = deviceIDParts[1]
+	}
+
+	state := ""
+	if req.State != "" {
+		state = "&state=" + req.State
+	}
+
+	// check if user has a session
+	userInfo, err := h.getUserBySession(r)
+	if err != nil {
+		callback := req.RedirectURI + "?error=invalid_request&error_description=unauthorized_client" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+
+	// check if oauth app exists to validate whether redirect uri is valid
+	appInfo, err := h.dai.GetAppDataFromRedirectUri(req.RedirectURI)
+	if err != nil {
+		callback := req.RedirectURI + "?error=invalid_request&error_description=missing_redirect_uri" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+
+	// renew session and pass to callback
+	err = h.scs.RenewToken(r.Context())
+	if err != nil {
+		callback := req.RedirectURI + "?error=invalid_request&error_description=server_error" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+	session := h.scs.Token(r.Context())
+
+	sanitizedDeviceName := html.EscapeString(clientName)
+	err = h.dai.AddUserDevice(userInfo.Id, utils.HashAndEncode(session+session), clientID, sanitizedDeviceName, appInfo.ID)
+	if err != nil {
+		log.Warnf("Error adding user device: %v", err)
+		callback := req.RedirectURI + "?error=invalid_request&error_description=server_error" + state
+		http.Redirect(w, r, callback, http.StatusSeeOther)
+		return
+	}
+
+	// pass via redirect to app oauth callback handler
+	callback := req.RedirectURI + "?access_token=" + session + "&token_type=bearer" + state // prefixed session
+	http.Redirect(w, r, callback, http.StatusFound)
+}
+
+// Abstract: One time Transitions old v1 app sessions to new v2 sessions so users stay signed in
+// Can be used to exchange a legacy mobile auth access_token & refresh_token pair for a session
+// Refresh token is consumed and can no longer be used after this
+func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		DeviceName   string `json:"client_name"`
+		RefreshToken string `json:"refresh_token"`
+		DeviceID     string `json:"client_id"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	// get user id by refresh token
+	userID, refreshTokenHashed, err := h.getTokenByRefresh(r, req.RefreshToken)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// Get user info
+	user, err := h.dai.GetUserCredentialInfo(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, dataaccess.ErrNotFound) {
+			err = errBadCredentials
+		}
+		handleErr(w, err)
+		return
+	}
+	if !user.EmailConfirmed {
+		handleErr(w, newUnauthorizedErr("email not confirmed"))
+		return
+	}
+
+	// create new session
+	err = h.scs.RenewToken(r.Context())
+	if err != nil {
+		handleErr(w, errors.New("error creating session"))
+		return
+	}
+	session := h.scs.Token(r.Context())
+
+	// invalidate old refresh token and replace with hashed session id
+	sanitizedDeviceName := html.EscapeString(req.DeviceName)
+	err = h.dai.MigrateMobileSession(refreshTokenHashed, utils.HashAndEncode(session+session), req.DeviceID, sanitizedDeviceName) // salted with session
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// set fields of session after invalidating refresh token
+	h.scs.Put(r.Context(), authenticatedKey, true)
+	h.scs.Put(r.Context(), userIdKey, userID)
+	h.scs.Put(r.Context(), subscriptionKey, user.ProductId)
+	h.scs.Put(r.Context(), userGroupKey, user.UserGroup)
+	h.scs.Put(r.Context(), mobileAuthKey, true)
+
+	returnOk(w, struct {
+		Session string
+	}{
+		Session: session,
+	})
+}
+
+func (h *HandlerService) InternalPostUsersMeNotificationSettingsPairedDevicesToken(w http.ResponseWriter, r *http.Request) {
+	deviceID := mux.Vars(r)["client_id"]
+	var v validationError
+	req := struct {
+		Token string `json:"token"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	err = h.dai.AddMobileNotificationToken(user.Id, deviceID, req.Token)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	returnOk(w, nil)
+}
+
+const USER_SUBSCRIPTION_LIMIT = 8
+
+func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := types.MobileSubscription{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	user, err := h.getUserBySession(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	if req.ProductIDUnverified == "plankton" {
+		handleErr(w, newForbiddenErr("plankton subscription has been discontinued"))
+		return
+	}
+
+	// Only allow ios and android purchases to be registered via this endpoint
+	if req.Transaction.Type != "ios-appstore" && req.Transaction.Type != "android-playstore" {
+		handleErr(w, newForbiddenErr("only ios-appstore and android-playstore purchases are allowed"))
+		return
+	}
+
+	subscriptionCount, err := h.dai.GetAppSubscriptionCount(user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if subscriptionCount >= USER_SUBSCRIPTION_LIMIT {
+		handleErr(w, newForbiddenErr("user has reached the subscription limit"))
+		return
+	}
+
+	// Verify subscription with apple/google
+	verifyPackage := &commonTypes.PremiumData{
+		ID:        0,
+		Receipt:   req.Transaction.Receipt,
+		Store:     req.Transaction.Type,
+		Active:    false,
+		ProductID: req.ProductIDUnverified,
+		ExpiresAt: time.Now(),
+	}
+
+	validationResult, err := userservice.VerifyReceipt(nil, nil, verifyPackage)
+	if err != nil {
+		log.Warn(err, "could not verify receipt %v", 0, map[string]interface{}{"receipt": verifyPackage.Receipt})
+		if errors.Is(err, userservice.ErrClientInit) {
+			log.Error(err, "Apple or Google client is NOT initialized. Did you provide their configuration?", 0, nil)
+			handleErr(w, err)
+			return
+		}
+	}
+
+	err = h.dai.AddMobilePurchase(nil, user.Id, req, validationResult, "")
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	if !validationResult.Valid {
+		handleErr(w, newForbiddenErr("receipt is not valid"))
+		return
+	}
 
 	returnOk(w, nil)
 }
@@ -448,16 +696,21 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 }
 
 // Middlewares
+
 // returns a middleware that stores user id in context, using the provided function
 func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userId, err := userIdFunc(r)
 			if err != nil {
-				handleErr(w, err)
+				if errors.Is(err, errUnauthorized) {
+					// if next handler requires authentication, it should return 'unauthorized' itself
+					next.ServeHTTP(w, r)
+				} else {
+					handleErr(w, err)
+				}
 				return
 			}
-			// store user id in context
 			ctx := r.Context()
 			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 			r = r.WithContext(ctx)
@@ -467,45 +720,42 @@ func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) 
 }
 
 // returns a middleware that checks if user has access to dashboard when a primary id is used
-// expects a userIdFunc to return user id, probably GetUserIdBySession or GetUserIdByApiKey
-func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var err error
-			dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
-			if err != nil {
-				// if primary id is not used, no need to check access
-				next.ServeHTTP(w, r)
-				return
-			}
-			// primary id is used -> user needs to have access to dashboard
-
-			userId, err := userIdFunc(r)
-			if err != nil {
-				handleErr(w, err)
-				return
-			}
-			// store user id in context
-			ctx := r.Context()
-			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
-			r = r.WithContext(ctx)
-
-			dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
-			if err != nil {
-				handleErr(w, err)
-				return
-			}
-
-			if dashboard.UserId != userId {
-				// user does not have access to dashboard
-				// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
-				handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
-				return
-			}
-
+func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
+		if err != nil {
+			// if primary id is not used, no need to check access
 			next.ServeHTTP(w, r)
-		})
-	}
+			return
+		}
+		// primary id is used -> user needs to have access to dashboard
+
+		userId, err := GetUserIdByContext(r)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		// store user id in context
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
+		r = r.WithContext(ctx)
+
+		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+
+		if dashboard.UserId != userId {
+			// user does not have access to dashboard
+			// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
+			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // returns a middleware that checks if user has premium perk to use public validator dashboard api
@@ -513,9 +763,9 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get user id from context
-		userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-		if !ok {
-			handleErr(w, errors.New("error getting user id from context"))
+		userId, err := GetUserIdByContext(r)
+		if err != nil {
+			handleErr(w, err)
 			return
 		}
 		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
@@ -548,7 +798,7 @@ func (h *HandlerService) GetVDBArchivedCheckMiddleware(ctx context.Context, r *h
 }
 
 // allows to return a middleware auth check which excludes specified endpoints under the same subrouter
-func (h *HandlerService) GetMiddlewareExcludRoutes(middlewareCheckFunc func(context.Context, *http.Request, ...interface{}) error, excludedRoutes []*mux.Route, params interface{}) func(http.Handler) http.Handler {
+func (h *HandlerService) GetMiddlewareExcludedRoutes(middlewareCheckFunc func(context.Context, *http.Request, ...interface{}) error, excludedRoutes []*mux.Route, params interface{}) func(http.Handler) http.Handler {
 	var excludedRoutesRegexp []*regexp.Regexp
 	for _, excludedRoute := range excludedRoutes {
 		pathRegexp, err := excludedRoute.GetPathRegexp()
