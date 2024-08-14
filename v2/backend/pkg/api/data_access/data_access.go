@@ -27,7 +27,9 @@ type DataAccessor interface {
 	NotificationsRepository
 	AdminRepository
 	BlockRepository
+	ArchiverRepository
 
+	StartDataAccessServices()
 	Close()
 
 	GetLatestFinalizedEpoch() (uint64, error)
@@ -77,12 +79,6 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	db.ClickHouseReader = das.clickhouseReader
 	db.BigtableClient = das.bigtable
 	db.PersistentRedisDbClient = das.persistentRedisDbClient
-
-	// Create the services
-	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.clickhouseReader, das.bigtable, das.persistentRedisDbClient)
-
-	// Initialize the services
-	das.services.InitServices()
 
 	return das
 }
@@ -245,6 +241,14 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 
 	// Return the result
 	return &dataAccessService
+}
+
+func (d *DataAccessService) StartDataAccessServices() {
+	// Create the services
+	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
+
+	// Initialize the services
+	d.services.InitServices()
 }
 
 func (d *DataAccessService) Close() {

@@ -187,9 +187,24 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	return nil
 }
 
-func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.UpdateValidatorDashboardArchiving(ctx, dashboardId, archived)
+func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
+	result := &t.VDBPostArchivingReturnData{}
+
+	var archivedReasonText *string
+	if archivedReason != nil {
+		reason := archivedReason.ToString()
+		archivedReasonText = &reason
+	}
+
+	err := d.alloyWriter.GetContext(ctx, result, `
+		UPDATE users_val_dashboards SET is_archived = $1 WHERE id = $2
+		RETURNING id, is_archived IS NOT NULL AS is_archived
+	`, archivedReasonText, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
