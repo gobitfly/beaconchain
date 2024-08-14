@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -337,6 +336,38 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	return dashboardId, nil
 }
 
+const chartDatapointLimit uint64 = 200
+
+type ChartTimeDashboardLimits struct {
+	MinAllowedTs       uint64
+	LatestExportedTs   uint64
+	MaxAllowedInterval uint64
+}
+
+// helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
+func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (ChartTimeDashboardLimits, error) {
+	limits := ChartTimeDashboardLimits{}
+	var err error
+	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
+	if err != nil {
+		return limits, err
+	}
+
+	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
+	if maxAge == 0 {
+		return limits, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
+	}
+	limits.LatestExportedTs, err = h.dai.GetLatestExportedChartTs(ctx, aggregation)
+	if err != nil {
+		return limits, err
+	}
+	limits.MinAllowedTs = limits.LatestExportedTs - min(maxAge, limits.LatestExportedTs)                        // min to prevent underflow
+	secondsPerEpoch := uint64(12 * 32)                                                                          // TODO: fetch dashboards chain id and use correct value for network once available
+	limits.MaxAllowedInterval = chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
+
+	return limits, nil
+}
+
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
 }
@@ -486,8 +517,6 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
 // precondition: the enum is the same type as the allowed enums.
-//
-//nolint:unparam
 func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
@@ -598,15 +627,6 @@ func (v *validationError) checkValidators(validators []intOrString, allowEmpty b
 	return indexes, publicKeys
 }
 
-func (v *validationError) checkDate(dateString string) time.Time {
-	// expecting date in format "YYYY-MM-DD"
-	date, err := time.Parse("2006-01-02", dateString)
-	if err != nil {
-		v.add("date", fmt.Sprintf("given value '%s' is not a valid date", dateString))
-	}
-	return date
-}
-
 func (v *validationError) checkNetwork(network intOrString) uint64 {
 	chainId, ok := isValidNetwork(network)
 	if !ok {
@@ -638,22 +658,24 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
-func (v *validationError) checkTimestamps(afterParam string, beforeParam string, latestExportedTs uint64, minAllowedTs uint64, maxAllowedInterval uint64) (after uint64, before uint64) {
+func (v *validationError) checkTimestamps(r *http.Request, chartLimits ChartTimeDashboardLimits) (after uint64, before uint64) {
+	afterParam := r.URL.Query().Get("after_ts")
+	beforeParam := r.URL.Query().Get("before_ts")
 	switch {
 	// If both parameters are empty, return the latest data
 	case afterParam == "" && beforeParam == "":
-		return max(latestExportedTs-maxAllowedInterval, minAllowedTs), latestExportedTs
+		return max(chartLimits.LatestExportedTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs), chartLimits.LatestExportedTs
 
 	// If only the afterParam is provided
 	case afterParam != "" && beforeParam == "":
 		afterTs := v.checkUint(afterParam, "after_ts")
-		beforeTs := afterTs + maxAllowedInterval
+		beforeTs := afterTs + chartLimits.MaxAllowedInterval
 		return afterTs, beforeTs
 
 	// If only the beforeParam is provided
 	case beforeParam != "" && afterParam == "":
 		beforeTs := v.checkUint(beforeParam, "before_ts")
-		afterTs := max(beforeTs-maxAllowedInterval, minAllowedTs)
+		afterTs := max(beforeTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs)
 		return afterTs, beforeTs
 
 	// If both parameters are provided, validate them
@@ -665,8 +687,8 @@ func (v *validationError) checkTimestamps(afterParam string, beforeParam string,
 			v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
 		}
 
-		if beforeTs-afterTs > maxAllowedInterval {
-			v.add("before_ts", fmt.Sprintf("parameters `after_ts` and `before_ts` must not lie apart more than %d seconds for this aggregation", maxAllowedInterval))
+		if beforeTs-afterTs > chartLimits.MaxAllowedInterval {
+			v.add("before_ts", fmt.Sprintf("parameters `after_ts` and `before_ts` must not lie apart more than %d seconds for this aggregation", chartLimits.MaxAllowedInterval))
 		}
 
 		return afterTs, beforeTs
@@ -816,7 +838,6 @@ func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
-//nolint:nolintlint
 //nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
