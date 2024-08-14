@@ -42,22 +42,6 @@ func newSessionManager(cfg *types.Config) *scs.SessionManager {
 	return scs
 }
 
-// enforces the use of a secret key to use the API
-func GetAuthMiddleware(apiKey string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			header := r.Header.Get("Authorization")
-			query := r.URL.Query().Get("api_key")
-
-			if header != "Bearer "+apiKey && query != apiKey {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 // returns goriila/csrf middleware with the given config settings
 func getCsrfProtectionMiddleware(cfg *types.Config) func(http.Handler) http.Handler {
 	csrfBytes, err := hex.DecodeString(cfg.Frontend.CsrfAuthKey)
