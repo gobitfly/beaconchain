@@ -126,7 +126,10 @@ const selectedLabel = computed(() => {
   if (!list.length) {
     return $t('dashboard.group.selection.all')
   }
-  return list.join(', ')
+  if (list.length === 1) {
+    return list[0]
+  }
+  return $t('dashboard.validator.summary.chart.groups', { count: list.length })
 })
 </script>
 
@@ -176,7 +179,13 @@ const selectedLabel = computed(() => {
   display: flex;
   gap: var(--padding);
 
-  :deep(> .p-multiselect),
+  :deep(> .p-multiselect){
+    max-width: 200px;
+
+    @media (max-width: 1000px) {
+      max-width: 90px;
+    }
+  }
   :deep(> .p-dropdown) {
     max-width: 200px;
 
