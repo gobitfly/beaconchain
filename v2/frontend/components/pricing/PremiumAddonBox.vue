@@ -19,6 +19,7 @@ const {
 const {
   isStripeDisabled, stripeCustomerPortal, stripePurchase,
 } = useStripe()
+const { promoCode } = usePromoCode()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
@@ -108,7 +109,9 @@ const addonButton = computed(() => {
       }
     }
     else {
-      await navigateTo('/login')
+      await navigateTo({
+        path: '/login', query: { promoCode },
+      })
     }
   }
 

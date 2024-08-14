@@ -861,6 +861,7 @@
       "validators_per_dashboard": "{amount} Validators per Dashboard"
     },
     "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
+    "promo_code": "Promocode {_code} will be applied during checkout",
     "save_up_to": "SAVE UP TO {percentage}%",
     "savings": "You save {amount} a year",
     "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",

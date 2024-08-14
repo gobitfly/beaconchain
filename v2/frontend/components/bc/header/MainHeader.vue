@@ -29,6 +29,7 @@ const {
 } = useCurrency()
 const { width } = useWindowSize()
 const { t: $t } = useTranslation()
+const { promoCode } = usePromoCode()
 
 const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
@@ -166,7 +167,11 @@ const userMenu = computed(() => {
           v-if="!isLoggedIn"
           class="logged-out"
         >
-          <BcLink to="/login">
+          <BcLink
+            :to="{ path: '/login',
+                   query: { promoCode },
+            }"
+          >
             <Button
               class="login"
               :label="$t('header.login')"
