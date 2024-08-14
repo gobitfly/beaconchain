@@ -569,12 +569,12 @@ const items = computed(() => {
               },
               {
                 icon: faCreditCard,
-                label: $t('header.megamenu.txsL1L2'),
+                label: $t('header.megamenu.txs_l1_l2'),
                 url: '',
               },
               {
                 icon: faCreditCard,
-                label: $t('header.megamenu.txsL2L1'),
+                label: $t('header.megamenu.txs_l2_l1'),
                 url: '',
               },
               {
@@ -676,12 +676,12 @@ const items = computed(() => {
               },
               {
                 icon: faCreditCard,
-                label: $t('header.megamenu.txsL1L2'),
+                label: $t('header.megamenu.txs_l1_l2'),
                 url: '',
               },
               {
                 icon: faCreditCard,
-                label: $t('header.megamenu.txsL2L1'),
+                label: $t('header.megamenu.txs_l2_l1'),
                 url: '',
               },
               {
@@ -783,12 +783,12 @@ const items = computed(() => {
               },
               {
                 icon: faCreditCard,
-                label: $t('header.megamenu.txsL1L2'),
+                label: $t('header.megamenu.txs_l1_l2'),
                 url: '',
               },
               {
                 icon: faCreditCard,
-                label: $t('header.megamenu.txsL2L1'),
+                label: $t('header.megamenu.txs_l2_l1'),
                 url: '',
               },
               {
