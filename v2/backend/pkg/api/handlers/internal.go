@@ -472,28 +472,31 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		handleErr(w, err)
 		return
 	}
-	if req.IsArchived {
-		if dashboardCount >= maxArchivedDashboardsCount {
-			returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
-			return
-		}
-	} else {
-		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
-		if err != nil {
-			handleErr(w, err)
-			return
-		}
-		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
-			returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
-			return
-		}
-		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
-			returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
-			return
-		}
-		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard && !isUserAdmin(userInfo) {
-			returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
-			return
+
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if !isUserAdmin(userInfo) {
+		if req.IsArchived {
+			if dashboardCount >= maxArchivedDashboardsCount {
+				returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
+				return
+			}
+		} else {
+			if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+				returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
+				return
+			}
+			if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+				returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
+				return
+			}
+			if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+				returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
+				return
+			}
 		}
 	}
 
