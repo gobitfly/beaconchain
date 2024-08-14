@@ -144,7 +144,7 @@ const selectedLabel = computed(() => {
     <BcDropdown v-model="efficiency" :options="efficiencyList" option-value="id" option-label="label" class="small" />
 
     <MultiSelect
-      v-model="selectedGroups" :options="groups" option-label="name" option-value="id"
+      v-model="selectedGroups" class="small" :options="groups" option-label="name" option-value="id"
       :placeholder="$t('dashboard.group.selection.all')"
     >
       <template #header>
