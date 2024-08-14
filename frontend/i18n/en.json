@@ -781,6 +781,7 @@
         "chart": {
           "all_groups": "All Groups",
           "average": "Network Average",
+          "groups": "Groups ({count})",
           "total": "Total",
           "no_data": "No chart data",
           "efficiency": {
