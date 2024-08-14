@@ -23,10 +23,7 @@
   justify-content: center;
   align-items: center;
 
-  transition:
-    background-color 0.2s,
-    color 0.2s,
-    border-color 0.2s;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 
   &:not([data-secondary]) {
     color: var(--primary-contrast-color);
@@ -120,10 +117,7 @@
   padding: 4px 7px;
   border: 1px solid var(--input-border-color);
   border-radius: var(--border-radius);
-  transition:
-    background-color 0.2s,
-    color 0.2s,
-    border-color 0.2s;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   appearance: none;
 
   ::placeholder {
@@ -211,10 +205,7 @@
 
   .p-inputswitch-slider {
     background: var(--button-color-active);
-    transition:
-      background-color 0.2s,
-      color 0.2s,
-      border-color 0.2s,
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s,
       box-shadow 0.2s;
     border-radius: 30px;
 
@@ -252,7 +243,6 @@
   &.p-disabled .p-inputswitch-slider {
     background: var(--button-color-disabled);
   }
-  
 }
 
 // Toast
@@ -298,10 +288,7 @@
       height: 32px;
       border-radius: 50%;
       background: transparent;
-      transition:
-        background-color 0.2s,
-        color 0.2s,
-        box-shadow 0.2s;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
 
       &:hover {
         background: rgba(255, 255, 255, 0.5);
@@ -369,10 +356,7 @@
   border: 1px solid var(--input-border-color);
   height: var(--default-button-height);
   border-radius: var(--border-radius);
-  transition:
-    background-color 0.2s,
-    color 0.2s,
-    border-color 0.2s;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   justify-content: center;
   width: 100%;
 
@@ -449,10 +433,7 @@
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
-  transition:
-    background-color 0.2s,
-    color 0.2s,
-    border-color 0.2s;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   border-radius: var(--border-radius);
   padding: var(--padding);
   display: flex;
@@ -460,8 +441,13 @@
   align-items: center;
 
   &.small {
-    padding: var(--padding-small) var(--padding);
+    padding: var(--padding-small);
     height: 30px;
+    font-size: var(--tiny_text_font_size);
+
+    .p-dropdown-trigger {
+      margin-left: var(--padding-small);
+    }
   }
 
   &.table {

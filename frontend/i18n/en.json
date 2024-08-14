@@ -310,6 +310,32 @@
       "rocketpool": "Rocket Pool",
       "network": "Network"
     },
+    "network": {
+      "event_type": {
+        "gas_above": "Gas price > {_value}",
+        "gas_below": "Gas price < {_value}",
+        "participation_rate": "Participation rate < {_value}"
+      },
+      "footer": {
+        "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
+      }
+    },
+    "machine": {
+      "event_type": {
+        "is_machine_offline": "Machine is offline",
+        "machine_storage_usage": "No storage left",
+        "machine_cpu_usage": "CPU overheated",
+        "machine_memory_usage": "High memory usage"
+      },
+      "footer": {
+        "subscriptions": "Machines (1 Subscription) |Machines ({count} Subscriptions)"
+      },
+      "col": {
+        "machine_name": "Machine",
+        "threshold": "Threshold",
+        "event_type": "Event"
+      }
+    },
     "subscriptions": {
       "dialog_title": "Edit Subscriptions",
       "validators": {
@@ -415,7 +441,8 @@
       "group": "Group",
       "subscriptions": "Subscriptions",
       "webhook": "Webhook",
-      "networks": "Networks"
+      "networks": "Networks",
+      "notification": "Notification"
     },
     "general": {
       "do_not_disturb": "Do not disturb",

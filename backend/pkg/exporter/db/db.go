@@ -498,6 +498,8 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		thresholdSlot = latestBlock - 64
 	}
 
+	lastGlobalAttestedEpoch := int64(latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+
 	latestEpoch := latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
 	var queries strings.Builder
@@ -577,7 +579,12 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			// ELSE 'active_online'
 			// END
 			db.BigtableClient.LastAttestationCacheMux.Lock()
-			offline := db.BigtableClient.LastAttestationCache[v.Index] < thresholdSlot
+			lastAttestationSlot := db.BigtableClient.LastAttestationCache[v.Index]
+			lastValidatorAttestedEpoch := int64(lastAttestationSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+
+			// offline := lastAttestationSlot < thresholdSlot
+			offline := lastGlobalAttestedEpoch-lastValidatorAttestedEpoch > 1 // validator has not attested in the last two epochs
+
 			db.BigtableClient.LastAttestationCacheMux.Unlock()
 
 			if v.ExitEpoch <= latestEpoch && v.Slashed {
@@ -603,8 +610,8 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			}
 
 			if c.Status != v.Status {
-				log.Tracef("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
-				// logger.Tracef("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v", v.ActivationEpoch, latestEpoch, lastAttestationSlots[v.Index], thresholdSlot)
+				log.Infof("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
+				log.Infof("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
 				updates++
 			}

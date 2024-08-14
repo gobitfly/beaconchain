@@ -122,7 +122,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
-			goqu.L("COALESCE(SUM(r.attestations_reward + r.blocks_cl_reward + r.sync_rewards + r.blocks_cl_slasher_reward), 0) AS cl_rewards"),
+			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS cl_rewards"),
 			goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
 			goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
 			goqu.L("COALESCE(SUM(r.attestations_executed), 0) AS attestations_executed"),
@@ -523,21 +523,22 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			select
 			validator_index,
 			epoch_start,
-			COALESCE(attestations_reward, 0) as attestations_reward,
-			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
-			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
-			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
-			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
-			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
-			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
-			COALESCE(blocks_proposed, 0) as blocks_proposed,
-			COALESCE(sync_scheduled, 0) as sync_scheduled,
-			COALESCE(sync_executed, 0) as sync_executed,
+			attestations_reward,
+			attestations_ideal_reward,
+			attestations_scheduled,
+			attestations_executed,
+			attestation_head_executed,
+			attestation_source_executed,
+			attestation_target_executed,
+			blocks_scheduled,
+			blocks_proposed,
+			sync_scheduled,
+			sync_executed,
 			slashed AS slashed_in_period,
-			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
-			COALESCE(blocks_expected, 0) as blocks_expected,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
-			COALESCE(sync_committees_expected, 0) as sync_committees_expected
+			blocks_slashing_count AS slashed_amount,
+			blocks_expected,
+			inclusion_delay_sum,
+			sync_committees_expected
 		from %[1]s FINAL
 		inner join validators v on %[1]s.validator_index = v.validator_index
 		where validator_index IN (select validator_index FROM validators)
@@ -547,21 +548,22 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		query = `select
 			validator_index,
 			epoch_start,
-			COALESCE(attestations_reward, 0) as attestations_reward,
-			COALESCE(attestations_ideal_reward, 0) as attestations_ideal_reward,
-			COALESCE(attestations_scheduled, 0) as attestations_scheduled,
-			COALESCE(attestation_head_executed, 0) as attestation_head_executed,
-			COALESCE(attestation_source_executed, 0) as attestation_source_executed,
-			COALESCE(attestation_target_executed, 0) as attestation_target_executed,
-			COALESCE(blocks_scheduled, 0) as blocks_scheduled,
-			COALESCE(blocks_proposed, 0) as blocks_proposed,
-			COALESCE(sync_scheduled, 0) as sync_scheduled,
-			COALESCE(sync_executed, 0) as sync_executed,
+			attestations_reward,
+			attestations_ideal_reward,
+			attestations_scheduled,
+			attestations_executed,
+			attestation_head_executed,
+			attestation_source_executed,
+			attestation_target_executed,
+			blocks_scheduled,
+			blocks_proposed,
+			sync_scheduled,
+			sync_executed,
 			slashed AS slashed_in_period,
-			COALESCE(blocks_slashing_count, 0) AS slashed_amount,
-			COALESCE(blocks_expected, 0) as blocks_expected,
-			COALESCE(inclusion_delay_sum, 0) as inclusion_delay_sum,
-			COALESCE(sync_committees_expected, 0) as sync_committees_expected
+			blocks_slashing_count AS slashed_amount,
+			blocks_expected,
+			inclusion_delay_sum,
+			sync_committees_expected
 		from %[1]s FINAL
 		where %[1]s.validator_index IN ($1)
 	`
@@ -579,6 +581,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
 
 		AttestationsScheduled     int64 `db:"attestations_scheduled"`
+		AttestationsExecuted      int64 `db:"attestations_executed"`
 		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
 		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
 		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
@@ -676,7 +679,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalSyncExpected += row.SyncCommitteesExpected
 
 		if row.InclusionDelaySum > 0 {
-			totalInclusionDelayDivisor += row.AttestationsScheduled
+			totalInclusionDelayDivisor += row.AttestationsExecuted
 		}
 	}
 
@@ -1081,7 +1084,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	return ret, nil
 }
 
-func (d *DataAccessService) GetLatestExportedChartTs(aggregation enums.ChartAggregation) (uint64, error) {
+func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
 	var table string
 	var dateColumn string
 	switch aggregation {
@@ -1103,7 +1106,7 @@ func (d *DataAccessService) GetLatestExportedChartTs(aggregation enums.ChartAggr
 
 	query := fmt.Sprintf(`SELECT max(%s) FROM %s`, dateColumn, table)
 	var ts time.Time
-	err := d.clickhouseReader.Get(&ts, query)
+	err := d.clickhouseReader.GetContext(ctx, &ts, query)
 	if err != nil {
 		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %v", err)
 	}
@@ -1230,12 +1233,6 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	result := &t.VDBSyncSummaryValidators{}
 	var resultMutex = &sync.RWMutex{}
-
-	type PastStruct struct {
-		Index uint64
-		Count uint64
-	}
-
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
@@ -1324,7 +1321,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 
 		resultMutex.Lock()
 		for validatorIndex, count := range validatorCountMap {
-			result.Past = append(result.Past, PastStruct{
+			result.Past = append(result.Past, t.VDBValidatorSyncPast{
 				Index: validatorIndex,
 				Count: count,
 			})
@@ -1345,15 +1342,6 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
 	// possible periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	result := &t.VDBSlashingsSummaryValidators{}
-
-	type GotSlashedStruct struct {
-		Index     uint64
-		SlashedBy uint64
-	}
-	type HasSlashedStruct struct {
-		Index          uint64
-		SlashedIndices []uint64
-	}
 
 	// Get the table names based on the period
 	clickhouseTable, _, err := d.getTablesForPeriod(period)
@@ -1558,7 +1546,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 	// Process the data
 	for slashingIdx, slashedIdxs := range slashings {
-		result.HasSlashed = append(result.HasSlashed, HasSlashedStruct{
+		result.HasSlashed = append(result.HasSlashed, t.VDBValidatorHasSlashed{
 			Index:          slashingIdx,
 			SlashedIndices: slashedIdxs,
 		})
@@ -1566,13 +1554,13 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 	// Fill the slashed validators
 	for slashedIdx, slashingIdx := range proposalSlashed {
-		result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
+		result.GotSlashed = append(result.GotSlashed, t.VDBValidatorGotSlashed{
 			Index:     slashedIdx,
 			SlashedBy: slashingIdx,
 		})
 	}
 	for slashedIdx, slashingIdx := range attestationSlashed {
-		result.GotSlashed = append(result.GotSlashed, GotSlashedStruct{
+		result.GotSlashed = append(result.GotSlashed, t.VDBValidatorGotSlashed{
 			Index:     slashedIdx,
 			SlashedBy: slashingIdx,
 		})
