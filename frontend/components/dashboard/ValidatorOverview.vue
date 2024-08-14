@@ -10,8 +10,6 @@ import { totalElClNumbers } from '~/utils/bigMath'
 const { t: $t } = useTranslation()
 const { converter } = useValue()
 
-const tPath = 'dashboard.validator.overview.'
-
 const { overview } = useValidatorDashboardOverviewStore()
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
@@ -40,11 +38,11 @@ const dataList = computed(() => {
 
   const active: OverviewTableData = {
     addValidatorModal: true,
-    label: $t(`${tPath}your_online_validators`),
+    label: $t('dashboard.validator.overview.online_validators'),
   }
-  const efficiency: OverviewTableData = { label: $t(`${tPath}24h_efficiency`) }
-  const rewards: OverviewTableData = { label: $t(`${tPath}30d_rewards`) }
-  const apr: OverviewTableData = { label: $t(`${tPath}30d_apr`) }
+  const efficiency: OverviewTableData = { label: $t('dashboard.validator.overview.24h_efficiency') }
+  const rewards: OverviewTableData = { label: $t('dashboard.validator.overview.30d_rewards') }
+  const apr: OverviewTableData = { label: $t('dashboard.validator.overview.30d_apr') }
   const list: OverviewTableData[] = [
     active,
     efficiency,
