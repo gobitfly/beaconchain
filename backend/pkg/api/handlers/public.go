@@ -323,19 +323,11 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicGetValidatorDashboardEpochHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicGetValidatorDashboardDailyHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
-func (h *HandlerService) PublicGetValidatorDashboardGroupEpochHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
-func (h *HandlerService) PublicGetValidatorDashboardGroupDailyHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 

@@ -207,12 +207,12 @@ type VDBHeatmap struct {
 	Timestamps  []int64          `json:"timestamps"` // X-Axis Categories (unix timestamp)
 	GroupIds    []uint64         `json:"group_ids"`  // Y-Axis Categories
 	Data        []VDBHeatmapCell `json:"data"`
-	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'day'" faker:"oneof: epoch, day"`
+	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'hourly' | 'daily' | 'weekly'" faker:"oneof: epoch, hourly, daily, weekly"`
 }
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
 type VDBHeatmapTooltipData struct {
-	Timestamp int64 `json:"timestamp"` // epoch or day
+	Timestamp int64 `json:"timestamp"`
 
 	Proposers StatusCount `json:"proposers"`
 	Syncs     uint64      `json:"syncs"`
