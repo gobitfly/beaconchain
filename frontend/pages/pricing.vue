@@ -79,16 +79,19 @@ const scrollToAddons = () => {
 
 .promo-overlay {
   position: fixed;
-  z-index: 2;
+  z-index: 6;
   bottom: 1px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
+  pointer-events: none;
   .promo-text {
     background-color: var(--background-color);
     border: 1px solid var(--primary-color);
+    border-radius: 4px;
     padding: 18px 26px;
+    pointer-events: unset;
 
     .promo-code {
       color: var(--primary-color);
