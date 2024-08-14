@@ -66,7 +66,7 @@ func (h *HandlerService) sendConfirmationEmail(ctx context.Context, userId uint6
 		return errors.New("error getting confirmation-ts")
 	}
 	if lastTs.Add(authConfirmEmailRateLimit).After(time.Now()) {
-		return errors.New("rate limit reached, try again later")
+		return newTooManyRequestsErr("rate limit reached, try again later")
 	}
 
 	// 2. update confirmation hash (before sending so there's no hash mismatch on failure)
@@ -101,7 +101,7 @@ Best regards,
 }
 
 // TODO move to service?
-func (h *HandlerService) sendResetEmail(ctx context.Context, userId uint64, email string) error {
+func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint64, email string) error {
 	// 0. check if email resets are allowed
 	// (can be forbidden by admin (not yet in v2))
 	passwordResetAllowed, err := h.dai.IsPasswordResetAllowed(ctx, userId)
@@ -118,7 +118,7 @@ func (h *HandlerService) sendResetEmail(ctx context.Context, userId uint64, emai
 		return errors.New("error getting confirmation-ts")
 	}
 	if lastTs.Add(authResetEmailRateLimit).After(time.Now()) {
-		return errors.New("rate limit reached, try again later")
+		return newTooManyRequestsErr("rate limit reached, try again later")
 	}
 
 	// 2. update reset hash (before sending so there's no hash mismatch on failure)
@@ -280,7 +280,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		return
 	}
 	if confirmationTime.Add(authEmailExpireTime).Before(time.Now()) {
-		handleErr(w, errors.New("confirmation link expired"))
+		handleErr(w, newGoneErr("confirmation link expired"))
 		return
 	}
 
@@ -315,7 +315,8 @@ func (h *HandlerService) InternalPutUserPasswordReset(w http.ResponseWriter, r *
 	userId, err := h.dai.GetUserByEmail(r.Context(), email)
 	if err != nil {
 		if err == dataaccess.ErrNotFound {
-			returnConflict(w, errors.New("email not registered"))
+			// don't leak if email is registered
+			returnOk(w, nil)
 		} else {
 			handleErr(w, err)
 		}
@@ -323,7 +324,7 @@ func (h *HandlerService) InternalPutUserPasswordReset(w http.ResponseWriter, r *
 	}
 
 	// send password reset email
-	err = h.sendResetEmail(r.Context(), userId, email)
+	err = h.sendPasswordResetEmail(r.Context(), userId, email)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -360,7 +361,7 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 		return
 	}
 	if resetTime.Add(authEmailExpireTime).Before(time.Now()) {
-		handleErr(w, errors.New("reset link expired"))
+		handleErr(w, newGoneErr("reset link expired"))
 		return
 	}
 
