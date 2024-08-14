@@ -43,7 +43,7 @@ export interface NotificationDashboardsTableRow {
   group_name: string;
   notification_id: number /* uint64 */; // may be string? db schema is not defined afaik
   entity_count: number /* uint64 */;
-  event_types: 'validator_offline' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'slashed_own'| 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155';
+  event_types: 'validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155';
 }
 export type InternalGetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
 export interface NotificationEventGroup {
