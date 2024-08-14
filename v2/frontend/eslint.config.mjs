@@ -118,4 +118,21 @@ export default withNuxt({
         ],
       },
     },
+    {
+      files: [ 'locales/**/*.json' ],
+      rules: {
+        'jsonc/key-name-casing': [
+          'error',
+          {
+            camelCase: false,
+            ignores: [
+              'mGNO',
+              'xDAI',
+            ],
+            SCREAMING_SNAKE_CASE: true,
+            snake_case: true,
+          },
+        ],
+      },
+    },
   )
