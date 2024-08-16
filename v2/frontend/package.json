@@ -55,7 +55,9 @@
     "lint": "eslint . --report-unused-disable-directives",
     "lint:fix": "npm run lint -- --fix",
     "postinstall": "nuxt prepare",
-    "preview": "nuxt preview"
+    "preview": "nuxt preview",
+    "typecheck": "npx nuxi typecheck",
+    "validate": "npm run lint:fix && npm run typecheck"
   },
   "type": "module"
 }

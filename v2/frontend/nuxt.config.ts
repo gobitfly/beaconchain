@@ -87,7 +87,6 @@ export default defineNuxtConfig({
     },
   },
   ssr: process.env.ENABLE_SSR !== 'FALSE',
-  typescript: { typeCheck: true },
   vite: {
     build: {
       minify: true,

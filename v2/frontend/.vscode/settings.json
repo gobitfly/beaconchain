@@ -4,7 +4,8 @@
     "vscode",
     "eslint",
     "mainHeader",
-    "checkout"
+    "checkout",
+    "ci"
   ],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
