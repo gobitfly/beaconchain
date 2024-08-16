@@ -126,7 +126,10 @@ const selectedLabel = computed(() => {
   if (!list.length) {
     return $t('dashboard.group.selection.all')
   }
-  return list.join(', ')
+  if (list.length === 1) {
+    return list[0]
+  }
+  return $t('dashboard.validator.summary.chart.groups', { count: list.length })
 })
 </script>
 
@@ -143,8 +146,8 @@ const selectedLabel = computed(() => {
     </BcDropdown>
     <BcDropdown v-model="efficiency" :options="efficiencyList" option-value="id" option-label="label" class="small" />
 
-    <MultiSelect
-      v-model="selectedGroups" :options="groups" option-label="name" option-value="id"
+    <BcMultiSelect
+      v-model="selectedGroups" class="small" :options="groups" option-label="name" option-value="id"
       :placeholder="$t('dashboard.group.selection.all')"
     >
       <template #header>
@@ -167,7 +170,7 @@ const selectedLabel = computed(() => {
       <template #value>
         {{ selectedLabel }}
       </template>
-    </MultiSelect>
+    </BcMultiSelect>
   </div>
 </template>
 
@@ -176,7 +179,13 @@ const selectedLabel = computed(() => {
   display: flex;
   gap: var(--padding);
 
-  :deep(> .p-multiselect),
+  :deep(> .p-multiselect){
+    max-width: 200px;
+
+    @media (max-width: 1000px) {
+      max-width: 90px;
+    }
+  }
   :deep(> .p-dropdown) {
     max-width: 200px;
 

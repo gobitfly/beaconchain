@@ -46,10 +46,8 @@ export default defineNuxtConfig({
     '@fortawesome/fontawesome-svg-core/styles.css',
   ],
   devServer: {
-    https: {
-      cert: 'server.crt',
-      key: 'server.key',
-    },
+    host: 'local.beaconcha.in',
+    https: true,
   },
   devtools: { enabled: true },
   eslint: { config: { stylistic: true } },

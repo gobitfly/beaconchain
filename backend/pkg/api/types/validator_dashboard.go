@@ -289,8 +289,11 @@ type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTo
 // ------------------------------------------------------------
 // Rocket Pool Tab
 type VDBRocketPoolTableRow struct {
-	Node      Address         `json:"node"`
-	StakedEth decimal.Decimal `json:"staked_eth"`
+	Node   Address `json:"node"`
+	Staked struct {
+		Eth decimal.Decimal `json:"eth"`
+		Rpl decimal.Decimal `json:"rpl"`
+	} `json:"staked"`
 	Minipools struct {
 		Total uint64 `json:"total"`
 		Leb16 uint64 `json:"leb_16"`
@@ -302,9 +305,11 @@ type VDBRocketPoolTableRow struct {
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
 	} `json:"rpl"`
-	EffectiveRpl  decimal.Decimal `json:"effective_rpl"`
-	RplApr        float64         `json:"rpl_apr"`
-	SmoothingPool struct {
+	EffectiveRpl   decimal.Decimal `json:"effective_rpl"`
+	RplApr         float64         `json:"rpl_apr"`
+	RplAprUpdateTs int64           `json:"rpl_apr_update_ts"`
+	RplEstimate    decimal.Decimal `json:"rpl_estimate"`
+	SmoothingPool  struct {
 		IsOptIn   bool            `json:"is_opt_in"`
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
@@ -318,7 +323,6 @@ type VDBNodeRocketPoolData struct {
 	Timezone      string          `json:"timezone"`
 	RefundBalance decimal.Decimal `json:"refund_balance"`
 	DepositCredit decimal.Decimal `json:"deposit_credit"`
-	Penalties     uint64          `json:"penalties"`
 	RplStake      struct {
 		Min decimal.Decimal `json:"min"`
 		Max decimal.Decimal `json:"max"`
@@ -336,6 +340,7 @@ type VDBRocketPoolMinipoolsTableRow struct {
 	Deposit          decimal.Decimal `json:"deposit"`
 	Commission       float64         `json:"commission"`
 	CreatedTimestamp int64           `json:"created_timestamp"`
+	Penalties        uint64          `json:"penalties"`
 }
 type InternalGetValidatorDashboardRocketPoolMinipoolsResponse ApiPagingResponse[VDBRocketPoolMinipoolsTableRow]
 

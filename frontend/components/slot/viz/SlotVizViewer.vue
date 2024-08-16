@@ -44,28 +44,28 @@ const selectedCategories = useCookie<SlotVizCategories[]>(
 const icons: MultiBarItem[] = [
   {
     component: IconSlotBlockProposal,
-    tooltip: $t('slotViz.filter.proposal'),
+    tooltip: $t('slot_viz.filter.proposal'),
     value: 'proposal',
   },
   {
     component: IconSlotAttestation,
-    tooltip: $t('slotViz.filter.attestation'),
+    tooltip: $t('slot_viz.filter.attestation'),
     value: 'attestation',
   },
   {
     component: IconSlotSync,
-    tooltip: $t('slotViz.filter.sync'),
+    tooltip: $t('slot_viz.filter.sync'),
     value: 'sync',
   },
   {
     component: IconSlotSlashing,
-    tooltip: $t('slotViz.filter.slashing'),
+    tooltip: $t('slot_viz.filter.slashing'),
     value: 'slashing',
   },
   {
     className: 'visible-icon',
     icon: faEye,
-    tooltip: $t('slotViz.filter.visible'),
+    tooltip: $t('slot_viz.filter.visible'),
     value: 'visible',
   },
 ]
@@ -136,7 +136,7 @@ watch(
     <div class="header-row">
       <BcTooltip
         class="info"
-        :text="$t('slotViz.info_tootlip')"
+        :text="$t('slot_viz.info_tootlip')"
         :dont-open-permanently="true"
       >
         <BcLink
@@ -169,7 +169,7 @@ watch(
           <BcFormatNumber
             :text="
               row.state === 'head'
-                ? $t('slotViz.head')
+                ? $t('slot_viz.head')
                 : formatNumber(row.epoch)
             "
           />
