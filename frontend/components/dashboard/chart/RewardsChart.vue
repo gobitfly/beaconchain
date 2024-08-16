@@ -33,6 +33,7 @@ import { DashboardChartRewardsChartTooltip } from '#components'
 import { API_PATH } from '~/types/customFetch'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 import { useFormat } from '~/composables/useFormat'
+import type { CryptoUnits } from '~/types/currencies'
 
 const { formatEpochToDate } = useFormat()
 const { networkInfo } = useNetworkStore()
@@ -64,7 +65,7 @@ const {
 const data = ref<ChartData<number, string> | undefined>()
 const isLoading = ref(false)
 
-await useAsyncData(
+useAsyncData(
   'validator_dashboard_rewards_chart',
   async () => {
     if (dashboardKey.value === undefined) {
@@ -111,17 +112,43 @@ const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 
 const valueFormatter = computed(() => {
+  const fiat = isFiat(currency.value)
+  const label = fiat || series.value?.minUnit === 'MAIN' ? currencyLabel.value : series.value?.minUnit
   const decimals = isFiat(currency.value) ? 2 : 5
   return (value: number) =>
-    `${trim(value, decimals, decimals)} ${currencyLabel.value}`
+    `${trim(value, decimals, decimals)} ${label}`
 })
 
-const mapSeriesData = (data: RewardChartSeries) => {
+const getMinUnit = (data: RewardChartSeries[]): CryptoUnits => {
+  let unit: CryptoUnits = 'MAIN'
+  for (const seriesI in data) {
+    const series = data[seriesI]
+    for (const bigValueI in series.bigData) {
+      const bigValue = series.bigData[bigValueI]
+      if (bigValue.isZero()) {
+        continue
+      }
+      if (lessThanGwei(bigValue, 5)) {
+        return 'WEI'
+      }
+      if (lessThanEth(bigValue, 5)) {
+        unit = 'GWEI'
+        break
+      }
+    }
+    if (unit === 'GWEI') {
+      break
+    }
+  }
+  return unit
+}
+
+const mapSeriesData = (data: RewardChartSeries, minUnit: CryptoUnits) => {
   data.bigData.forEach((bigValue, index) => {
     if (!bigValue.isZero()) {
       const formatted = converter.value.weiToValue(bigValue, {
         fixedDecimalCount: 5,
-        minUnit: 'MAIN',
+        minUnit,
       })
       data.formatedData[index] = formatted
       const parsedValue = parseFloat(`${formatted.label}`.split(' ')[0])
@@ -132,10 +159,12 @@ const mapSeriesData = (data: RewardChartSeries) => {
   })
 }
 
-const series = computed<RewardChartSeries[]>(() => {
+const series = computed<{ list: RewardChartSeries[], minUnit: CryptoUnits } >(() => {
   const list: RewardChartSeries[] = []
   if (!data.value?.series) {
-    return list
+    return {
+      list, minUnit: 'MAIN',
+    }
   }
 
   const categoryCount = data.value?.categories.length ?? 0
@@ -203,9 +232,15 @@ const series = computed<RewardChartSeries[]>(() => {
       clSeries.groups.push(newData)
     }
   })
-  mapSeriesData(elSeries)
-  mapSeriesData(clSeries)
-  return list
+  const min = getMinUnit([
+    elSeries,
+    clSeries,
+  ])
+  mapSeriesData(elSeries, min)
+  mapSeriesData(clSeries, min)
+  return {
+    list, minUnit: min,
+  }
 })
 
 const option = computed<ECBasicOption | undefined>(() => {
@@ -241,7 +276,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       },
       type: 'scroll',
     },
-    series: series.value,
+    series: series.value.list,
     textStyle: {
       color: colors.value.label,
       fontFamily,
@@ -258,7 +293,7 @@ const option = computed<ECBasicOption | undefined>(() => {
         render(
           h(DashboardChartRewardsChartTooltip, {
             dataIndex,
-            series: series.value,
+            series: series.value.list,
             startEpoch,
             t: $t,
             weiToValue: converter.value.weiToValue,
@@ -310,17 +345,38 @@ const option = computed<ECBasicOption | undefined>(() => {
 </script>
 
 <template>
-  <ClientOnly>
-    <BcLoadingSpinner
-      v-if="isLoading"
-      :loading="true"
-      alignment="center"
-    />
-    <VChart
-      v-else
-      class="chart"
-      :option
-      autoresize
-    />
-  </ClientOnly>
+  <div class="rewards-chart-container">
+    <ClientOnly>
+      <VChart ref="chart" class="chart" :option autoresize />
+    </ClientOnly>
+    <BcLoadingSpinner v-if="isLoading" class="loading-spinner" :loading="true" alignment="center" />
+    <div v-if="!isLoading && !series?.list?.length" class="no-data" alignment="center">
+      {{ $t("dashboard.validator.summary.chart.no_data") }}
+    </div>
+  </div>
 </template>
+
+<style lang="scss" scoped>
+.rewards-chart-container {
+  position: relative;
+  height: 100%;
+
+  .loading-spinner {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .no-data {
+    position: absolute;
+    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+  }
+}
+</style>

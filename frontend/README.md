@@ -43,22 +43,6 @@ Set the following mapping in your `/etc/hosts` file:
 127.0.0.1 local.beaconcha.in
 ```
 
-Create server certificates for locally running on https, by runing these comands in the console (the last two with `sudo`)
-
-```bash
-openssl genrsa 2048 > server.key
-chmod 400 server.key
-openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
-```
-
-Add the following env variable (on Ubuntu: in your `~/.profile`) needed to load local mock data:
-
-```bash
-export NODE_TLS_REJECT_UNAUTHORIZED=0
-```
-
-Restart.
-
 Navigate to folder `beaconchain/frontend` and run
 
 ```bash

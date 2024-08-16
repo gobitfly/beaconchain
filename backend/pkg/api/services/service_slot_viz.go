@@ -280,7 +280,7 @@ func (s *Services) GetCurrentDutiesInfo() (*SyncData, func(), error) {
 	currentDataMutex.RLock()
 
 	if currentDutiesInfo == nil {
-		return nil, currentDataMutex.RUnlock, errors.New("waiting for dutiesInfo to be initialized")
+		return nil, currentDataMutex.RUnlock, fmt.Errorf("%w: dutiesInfo", ErrWaiting)
 	}
 
 	return currentDutiesInfo, currentDataMutex.RUnlock, nil

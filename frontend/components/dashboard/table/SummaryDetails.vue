@@ -37,6 +37,8 @@ watch(
   },
 )
 
+type CombinedPropOrUndefined = SummaryDetailsEfficiencyCombinedProp | undefined
+
 const data = computed<SummaryRow[][]>(() => {
   const list: SummaryRow[][] = [
     [],
@@ -47,9 +49,11 @@ const data = computed<SummaryRow[][]>(() => {
   const addToList = (
     index: number,
     prop?: SummaryDetailsEfficiencyCombinedProp,
-    titleKey?: string,
   ) => {
-    const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
+    if (!prop) {
+      return
+    }
+    const title = $t(`dashboard.validator.summary.row.${prop}`)
     const row = {
       prop,
       title,
@@ -59,21 +63,21 @@ const data = computed<SummaryRow[][]>(() => {
 
   const addPropsTolist = (
     index: number,
-    props: SummaryDetailsEfficiencyCombinedProp[],
+    props: CombinedPropOrUndefined[],
   ) => {
     props.forEach(p => addToList(index, p))
   }
 
-  const rewardCols: SummaryDetailsEfficiencyCombinedProp[] = [
-    'reward',
+  const rewardCols: CombinedPropOrUndefined[] = [
+    (!props.tableVisibility.reward ? 'reward' : undefined),
     'missed_rewards',
   ]
-  let addCols: SummaryDetailsEfficiencyCombinedProp[] = props.tableVisibility
+  let addCols: CombinedPropOrUndefined[] = props.tableVisibility
     .attestations
     ? []
     : rewardCols
   addPropsTolist(0, [
-    'efficiency',
+    (!props.tableVisibility.efficiency ? 'efficiency' : undefined),
     ...addCols,
     'attestations',
     'attestations_source',
@@ -115,6 +119,7 @@ const rowClass = (data: SummaryRow) => {
     efficiency: 'bold',
     luck: 'spacing-top',
     proposals: 'bold spacing-top',
+    reward: 'bold',
     slashings: 'bold spacing-top',
     sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
   }

@@ -1,17 +1,18 @@
 import { defineStore } from 'pinia'
+import type { InternalGetUserNotificationDashboardsResponse } from '~/types/api/notifications'
 import { API_PATH } from '~/types/customFetch'
 import type { TableQueryParams } from '~/types/datatable'
-import type { NotifcationDashboardResponse } from '~/types/notifications/dashboards'
+import type { ChainIDs } from '~/types/network'
 
 const notificationsDashboardStore = defineStore(
   'notifications-dashboard-store',
   () => {
-    const data = ref<NotifcationDashboardResponse | undefined>()
+    const data = ref<InternalGetUserNotificationDashboardsResponse | undefined>()
     return { data }
   },
 )
 
-export function useNotificationsDashboardStore() {
+export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainIDs>) {
   const { isLoggedIn } = useUserStore()
 
   const { fetch } = useCustomFetch()
@@ -29,26 +30,32 @@ export function useNotificationsDashboardStore() {
     setStoredQuery,
   } = useTableQuery({
     limit: 10,
-    sort: 'dashboard:desc',
+    sort: 'timestamp:desc',
   }, 10)
   const isLoading = ref(false)
 
   async function loadNotificationsDashboards(q: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
-    const result = await fetch<NotifcationDashboardResponse>(
-      API_PATH.NOTIFICATIONS_DASHBOARDS,
-      undefined,
-      undefined,
-      q,
-    )
+    try {
+      const result = await fetch<InternalGetUserNotificationDashboardsResponse>(
+        API_PATH.NOTIFICATIONS_DASHBOARDS,
+        { query: { network: networkId.value } },
+        undefined,
+        q,
+      )
 
-    isLoading.value = false
-    if (!isStoredQuery(q)) {
-      return // in case some query params change while loading
+      isLoading.value = false
+      if (!isStoredQuery(q)) {
+        return // in case some query params change while loading
+      }
+
+      data.value = result
     }
-
-    data.value = result
+    catch (e) {
+      data.value = undefined
+      isLoading.value = false
+    }
     return data.value
   }
 
@@ -56,14 +63,15 @@ export function useNotificationsDashboardStore() {
     return data.value
   })
 
-  watch(
+  watch([
     query,
-    (q) => {
-      if (q) {
-        isLoggedIn.value && loadNotificationsDashboards(q)
-      }
-    },
-    { immediate: true },
+    networkId,
+  ], ([ q ]) => {
+    if (q) {
+      isLoggedIn.value && loadNotificationsDashboards(q)
+    }
+  },
+  { immediate: true },
   )
 
   return {

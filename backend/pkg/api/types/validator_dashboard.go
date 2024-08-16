@@ -20,6 +20,12 @@ type VDBOverviewGroup struct {
 	Count uint64 `json:"count"`
 }
 
+type VDBOverviewBalances struct {
+	Total     uint64 `json:"total"`
+	Effective uint64 `json:"effective"`
+	StakedEth uint64 `json:"staked_eth"`
+}
+
 type VDBOverviewData struct {
 	Name                string                                     `json:"name,omitempty"`
 	Groups              []VDBOverviewGroup                         `json:"groups"`
@@ -28,6 +34,7 @@ type VDBOverviewData struct {
 	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
 	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
 	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
+	Balances            VDBOverviewBalances                        `json:"balances"`
 }
 
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
@@ -200,12 +207,12 @@ type VDBHeatmap struct {
 	Timestamps  []int64          `json:"timestamps"` // X-Axis Categories (unix timestamp)
 	GroupIds    []uint64         `json:"group_ids"`  // Y-Axis Categories
 	Data        []VDBHeatmapCell `json:"data"`
-	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'day'" faker:"oneof: epoch, day"`
+	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'hourly' | 'daily' | 'weekly'" faker:"oneof: epoch, hourly, daily, weekly"`
 }
 type InternalGetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
 type VDBHeatmapTooltipData struct {
-	Timestamp int64 `json:"timestamp"` // epoch or day
+	Timestamp int64 `json:"timestamp"`
 
 	Proposers StatusCount `json:"proposers"`
 	Syncs     uint64      `json:"syncs"`
@@ -282,8 +289,11 @@ type InternalGetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTo
 // ------------------------------------------------------------
 // Rocket Pool Tab
 type VDBRocketPoolTableRow struct {
-	Node      Address         `json:"node"`
-	StakedEth decimal.Decimal `json:"staked_eth"`
+	Node   Address `json:"node"`
+	Staked struct {
+		Eth decimal.Decimal `json:"eth"`
+		Rpl decimal.Decimal `json:"rpl"`
+	} `json:"staked"`
 	Minipools struct {
 		Total uint64 `json:"total"`
 		Leb16 uint64 `json:"leb_16"`
@@ -295,9 +305,11 @@ type VDBRocketPoolTableRow struct {
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
 	} `json:"rpl"`
-	EffectiveRpl  decimal.Decimal `json:"effective_rpl"`
-	RplApr        float64         `json:"rpl_apr"`
-	SmoothingPool struct {
+	EffectiveRpl   decimal.Decimal `json:"effective_rpl"`
+	RplApr         float64         `json:"rpl_apr"`
+	RplAprUpdateTs int64           `json:"rpl_apr_update_ts"`
+	RplEstimate    decimal.Decimal `json:"rpl_estimate"`
+	SmoothingPool  struct {
 		IsOptIn   bool            `json:"is_opt_in"`
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
@@ -311,7 +323,6 @@ type VDBNodeRocketPoolData struct {
 	Timezone      string          `json:"timezone"`
 	RefundBalance decimal.Decimal `json:"refund_balance"`
 	DepositCredit decimal.Decimal `json:"deposit_credit"`
-	Penalties     uint64          `json:"penalties"`
 	RplStake      struct {
 		Min decimal.Decimal `json:"min"`
 		Max decimal.Decimal `json:"max"`
@@ -329,6 +340,7 @@ type VDBRocketPoolMinipoolsTableRow struct {
 	Deposit          decimal.Decimal `json:"deposit"`
 	Commission       float64         `json:"commission"`
 	CreatedTimestamp int64           `json:"created_timestamp"`
+	Penalties        uint64          `json:"penalties"`
 }
 type InternalGetValidatorDashboardRocketPoolMinipoolsResponse ApiPagingResponse[VDBRocketPoolMinipoolsTableRow]
 

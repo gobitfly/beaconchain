@@ -1,4 +1,6 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+const { t: $t } = useTranslation()
+</script>
 
 <template>
   <div class="type-toggle-container">
@@ -12,7 +14,7 @@
       disabled
     >
       <div class="label">
-        {{ $t("pricing.API_keys") }}
+        {{ $t("pricing.api_keys") }}
       </div>
       <div class="subtext">
         {{ $t("common.coming_soon") }}

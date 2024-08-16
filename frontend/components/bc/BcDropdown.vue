@@ -12,6 +12,9 @@ defineProps<Props>()
     :class="variant"
     :panel-class="[variant, panelClass]"
   >
+    <template #dropdownicon>
+      <IconChevron direction="bottom" />
+    </template>
     <template #value="slotProps">
       <slot
         name="value"
