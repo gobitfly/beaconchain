@@ -26,7 +26,7 @@ type EmailUpdate struct {
 	PendingEmail string `json:"pending_email"`
 }
 
-type InternalPutUserEmailResponse ApiDataResponse[EmailUpdate]
+type InternalPostUserEmailResponse ApiDataResponse[EmailUpdate]
 
 type AdConfigurationUpdateData struct {
 	JQuerySelector  string `json:"jquery_selector"`

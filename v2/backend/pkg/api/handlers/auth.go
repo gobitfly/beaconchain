@@ -295,7 +295,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 	returnNoContent(w)
 }
 
-func (h *HandlerService) InternalPutUserPasswordReset(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
 		Email string `json:"email"`
@@ -712,7 +712,7 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 	returnNoContent(w)
 }
 
-func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Request) {
 	// validate user
 	user, err := h.getUserBySession(r)
 	if err != nil {
@@ -780,7 +780,7 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	response := types.InternalPutUserEmailResponse{
+	response := types.InternalPostUserEmailResponse{
 		Data: types.EmailUpdate{
 			Id:           userInfo.Id,
 			CurrentEmail: userInfo.Email,
