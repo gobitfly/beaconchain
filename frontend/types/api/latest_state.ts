@@ -19,3 +19,12 @@ export interface LatestStateData {
   exchange_rates: EthConversionRate[];
 }
 export type InternalGetLatestStateResponse = ApiDataResponse<LatestStateData>;
+export interface RocketPoolData {
+  last_update_slot: number /* uint64 */;
+  next_update_slot: number /* uint64 */;
+  eth_rates: {
+    rpl: number /* float64 */;
+    reth: number /* float64 */;
+  };
+}
+export type InternalGetRocketPoolResponse = ApiDataResponse<RocketPoolData>;

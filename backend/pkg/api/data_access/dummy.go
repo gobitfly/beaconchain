@@ -817,3 +817,9 @@ func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) 
 	err := commonFakeData(&r)
 	return r, err
 }
+
+func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPoolData, error) {
+	r := t.RocketPoolData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
