@@ -6,6 +6,7 @@ on:
       - 'backend/**'
     branches:
       - main
+      - staging
   pull_request:
     paths:
       - 'backend/**'

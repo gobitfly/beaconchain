@@ -5,14 +5,17 @@ const tooltipStore = defineStore('tooltip_store', () => {
   return { data }
 })
 
-export function useTooltipStore () {
+export function useTooltipStore() {
   const { data } = storeToRefs(tooltipStore())
 
   const selected = computed(() => data?.value)
 
-  function doSelect (element: HTMLElement | null) {
+  function doSelect(element: HTMLElement | null) {
     data.value = element
   }
 
-  return { selected, doSelect }
+  return {
+    doSelect,
+    selected,
+  }
 }

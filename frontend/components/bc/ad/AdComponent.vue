@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import type { AdConfiguration } from '~/types/adConfiguration'
+
 const reviveId = '5b200397ccf8a9353bf44ef99b45268c'
 interface Props {
-  ad: AdConfiguration
+  ad: AdConfiguration,
 }
 const props = defineProps<Props>()
 
 const adComponent = ref<HTMLElement | null>(null)
 const interval = ref<NodeJS.Timeout | null>(null)
 
-const containerId = computed(() => `${props.ad.key}-${props.ad.jquery_selector}-${props.ad.insert_mode}`)
+const containerId = computed(
+  () => `${props.ad.key}-${props.ad.jquery_selector}-${props.ad.insert_mode}`,
+)
 
 const refreshAd = () => {
   const ins = document.getElementById(containerId.value)?.firstElementChild
@@ -19,7 +22,12 @@ const refreshAd = () => {
 }
 const makeSureReviveIsInitiated = () => {
   const ins = document.getElementById(containerId.value)?.firstElementChild
-  if (ins && ins.getAttribute('data-revive-id') && !ins.getAttribute('data-revive-seq') && !ins.getAttribute('data-revive-loaded')) {
+  if (
+    ins
+    && ins.getAttribute('data-revive-id')
+    && !ins.getAttribute('data-revive-seq')
+    && !ins.getAttribute('data-revive-loaded')
+  ) {
     window.reviveAsync?.[reviveId].refresh()
   }
 }
@@ -56,17 +64,28 @@ onBeforeUnmount(() => {
   }
 })
 </script>
+
 <template>
   <div ref="adComponent">
     <div v-if="ad.banner_id">
       <div class="ad-banner">
-        <div :id="containerId" class="revive-container">
-          <ins ref="ins" :data-revive-zoneid="ad.banner_id" :data-revive-id="reviveId" />
+        <div
+          :id="containerId"
+          class="revive-container"
+        >
+          <ins
+            ref="ins"
+            :data-revive-zoneid="ad.banner_id"
+            :data-revive-id="reviveId"
+          />
         </div>
       </div>
     </div>
     <!-- eslint-disable vue/no-v-html -->
-    <div v-else v-html="ad.html_content" />
+    <div
+      v-else
+      v-html="ad.html_content"
+    />
   </div>
 </template>
 

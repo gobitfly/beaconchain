@@ -1,4 +1,4 @@
 {
-    "refresh_token": "mySuperCoolRefreshToken",
-    "access_token": "INowHaveAccessToken"
+  "refresh_token": "mySuperCoolRefreshToken",
+  "access_token": "INowHaveAccessToken"
 }

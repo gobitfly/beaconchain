@@ -11,6 +11,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/ratelimit"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -60,6 +61,12 @@ func main() {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}(cfg.Metrics.Address)
+	}
+
+	if cfg.Frontend.RatelimitEnabled {
+		log.Infof("enabling ratelimit")
+		ratelimit.Init()
+		router.Use(ratelimit.HttpMiddleware)
 	}
 
 	srv := &http.Server{

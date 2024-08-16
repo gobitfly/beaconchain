@@ -32,7 +32,7 @@
   white-space: nowrap;
 }
 
-.text-disabled{
+.text-disabled {
   color: var(--text-color-disabled);
 }
 
@@ -52,12 +52,12 @@
   color: var(--orphaned-color);
 }
 
-@mixin positive-background() {  
+@mixin positive-background() {
   background-color: var(--positive-color);
   color: var(--positive-contrast-color);
 }
 
-@mixin negative-background(){
+@mixin negative-background() {
   background-color: var(--negative-color);
   color: var(--negative-contrast-color);
 }
@@ -80,6 +80,18 @@
 @mixin light-tag-background() {
   background-color: var(--light-tag-color);
   color: var(--light-tag-contrast-color);
+}
+
+.text-positive {
+  color: var(--positive-color);
+}
+
+.text-negative {
+  color: var(--negative-color);
+}
+
+.text-equal {
+  color: var(--equal-color);
 }
 
 .comma {
@@ -124,9 +136,15 @@
 }
 
 @keyframes delayed-fadein {
-  0% { opacity: 0; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .delayed-fadein-animation {

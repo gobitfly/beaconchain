@@ -1,24 +1,33 @@
 package dataaccess
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"math/big"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBRewardsTableRow, 0)
 	var paging t.Paging
+
+	wg := errgroup.Group{}
 
 	// Initialize the cursor
 	var currentCursor t.RewardsCursor
@@ -31,11 +40,10 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	}
 
 	// Prepare the sorting
+	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
 	sortSearchDirection := ">"
-	sortSearchOrder := " ASC"
-	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
+	if isReverseDirection {
 		sortSearchDirection = "<"
-		sortSearchOrder = " DESC"
 	}
 
 	// Analyze the search term
@@ -66,65 +74,70 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	}
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
-	const epochLookBack = 10
-
-	queryResult := []struct {
-		Epoch                 uint64          `db:"epoch"`
-		GroupId               int64           `db:"group_id"`
-		ClRewards             int64           `db:"cl_rewards"`
-		ElRewards             decimal.Decimal `db:"el_rewards"`
-		AttestationsScheduled uint64          `db:"attestations_scheduled"`
-		AttestationsExecuted  uint64          `db:"attestations_executed"`
-		BlocksScheduled       uint64          `db:"blocks_scheduled"`
-		BlocksProposed        uint64          `db:"blocks_proposed"`
-		SyncScheduled         uint64          `db:"sync_scheduled"`
-		SyncExecuted          uint64          `db:"sync_executed"`
-		SlashedInEpoch        uint64          `db:"slashed_in_epoch"`
-		SlashedAmount         uint64          `db:"slashed_amount"`
-	}{}
-
-	queryParams := []interface{}{}
-	rewardsQuery := ""
+	const epochLookBack = 9
+	startEpoch := uint64(0)
+	if latestFinalizedEpoch > epochLookBack {
+		startEpoch = latestFinalizedEpoch - epochLookBack
+	}
 
 	groupIdSearchMap := make(map[uint64]bool, 0)
 
-	rewardsDataQuery := `
-		SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) +
-		COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards,
-		COALESCE(SUM(COALESCE(r.value, ep.fee_recipient_reward * 1e18)), 0) AS el_rewards,		
-		SUM(COALESCE(e.attestations_scheduled, 0)) AS attestations_scheduled,
-		SUM(COALESCE(e.attestations_executed, 0)) AS attestations_executed,
-		SUM(COALESCE(e.blocks_scheduled, 0)) AS blocks_scheduled,
-		SUM(COALESCE(e.blocks_proposed, 0)) AS blocks_proposed,
-		SUM(COALESCE(e.sync_scheduled, 0)) AS sync_scheduled,
-		SUM(COALESCE(e.sync_executed, 0)) AS sync_executed,
-		SUM(CASE WHEN e.slashed_by IS NOT NULL THEN 1 ELSE 0 END) AS slashed_in_epoch,
-		SUM(COALESCE(s.slashed_amount, 0)) AS slashed_amount
-		`
+	// ------------------------------------------------------------------------------------------------------------------
+	// Build the query that serves as base for both the main and EL rewards queries
+	rewardsDs := goqu.Dialect("postgres").
+		From(goqu.L("validator_dashboard_data_epoch e")).
+		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+		Select(
+			goqu.L("e.epoch"),
+			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_rewards, 0)) AS cl_rewards`),
+			goqu.L("SUM(COALESCE(e.attestations_scheduled, 0)) AS attestations_scheduled"),
+			goqu.L("SUM(COALESCE(e.attestations_executed, 0)) AS attestations_executed"),
+			goqu.L("SUM(COALESCE(e.blocks_scheduled, 0)) AS blocks_scheduled"),
+			goqu.L("SUM(COALESCE(e.blocks_proposed, 0)) AS blocks_proposed"),
+			goqu.L("SUM(COALESCE(e.sync_scheduled, 0)) AS sync_scheduled"),
+			goqu.L("SUM(COALESCE(e.sync_executed, 0)) AS sync_executed"),
+			goqu.L("SUM(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed_in_epoch"),
+			goqu.L("SUM(COALESCE(e.blocks_slashing_count, 0)) AS slashed_amount")).
+		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(startEpoch).Unix()))
+
+	elDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("b.epoch"),
+			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
+		From(goqu.L("users_val_dashboards_validators v")).
+		Where(goqu.L("b.epoch >= ?", startEpoch)).
+		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
+		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")))
 
 	if dashboardId.Validators == nil {
-		queryParams = append(queryParams, dashboardId.Id, latestFinalizedEpoch-epochLookBack)
-		whereQuery := fmt.Sprintf("WHERE v.dashboard_id = $%d AND e.epoch > $%d", len(queryParams)-1, len(queryParams))
+		rewardsDs = rewardsDs.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
+		elDs = elDs.
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 		if currentCursor.IsValid() {
 			if currentCursor.IsReverse() {
 				if currentCursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups excluding the cursor epoch
-					queryParams = append(queryParams, currentCursor.Epoch)
-					whereQuery += fmt.Sprintf(" AND e.epoch%[1]s$%[2]d", sortSearchDirection, len(queryParams))
+					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
 				} else {
 					// The cursor is on a specific group, get the data for the whole epoch since we could need it for the total rewards
-					queryParams = append(queryParams, currentCursor.Epoch)
-					whereQuery += fmt.Sprintf(" AND e.epoch%[1]s=$%[2]d", sortSearchDirection, len(queryParams))
+					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
 				}
 			} else {
 				if currentCursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups including the cursor epoch
-					queryParams = append(queryParams, currentCursor.Epoch)
-					whereQuery += fmt.Sprintf(" AND e.epoch%[1]s=$%[2]d", sortSearchDirection, len(queryParams))
+					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
 				} else {
 					// The cursor is on a specific group so get the data for groups before/after it
-					queryParams = append(queryParams, currentCursor.Epoch, currentCursor.GroupId)
-					whereQuery += fmt.Sprintf(" AND (e.epoch%[1]s$%[2]d OR (e.epoch=$%[2]d AND v.group_id%[1]s$%[3]d))", sortSearchDirection, len(queryParams)-1, len(queryParams))
+					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("(e.epoch_timestamp %[1]s fromUnixTimestamp(?) OR (e.epoch_timestamp = fromUnixTimestamp(?) AND v.group_id %[1]s ?))", sortSearchDirection),
+						utils.EpochToTime(currentCursor.Epoch).Unix(), utils.EpochToTime(currentCursor.Epoch).Unix(), currentCursor.GroupId))
+					elDs = elDs.Where(goqu.L(fmt.Sprintf("(b.epoch %[1]s ? OR (b.epoch = ? AND v.group_id %[1]s ?))", sortSearchDirection),
+						currentCursor.Epoch, currentCursor.Epoch, currentCursor.GroupId))
 				}
 			}
 		}
@@ -140,42 +153,44 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				if indexSearch != -1 {
 					// Find whether the index is in the dashboard
 					// If it is then show all the data
-					err = d.alloyReader.Get(&found, `
+					err = d.readerDb.GetContext(ctx, &found, `
 						SELECT EXISTS(
-								SELECT 1 
-								FROM users_val_dashboards_validators
-								WHERE dashboard_id = $1 AND validator_index = $2)
+							SELECT 1
+							FROM users_val_dashboards_validators
+							WHERE dashboard_id = $1 AND validator_index = $2)
 						`, dashboardId.Id, indexSearch)
 					if err != nil {
 						return nil, nil, err
 					}
 				}
 				if !found && epochSearch != -1 {
-					queryParams = append(queryParams, epochSearch)
-					whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+					rewardsDs = rewardsDs.Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(uint64(epochSearch)).Unix()))
+					elDs = elDs.Where(goqu.L("b.epoch = ?", epochSearch))
 				}
 			} else {
 				// Create a secondary query to get the group ids that match the search term
 				// We cannot do everything in one query because we need to know the "epoch total" even for groups we do not search for
-				groupIdQueryParams := []interface{}{}
+				groupIdDs := goqu.Dialect("postgres").
+					Select(goqu.L("DISTINCT(group_id)")).
+					From(goqu.L("users_val_dashboards_validators v")).
+					InnerJoin(goqu.L("users_val_dashboards_groups g"), goqu.On(goqu.L("v.group_id = g.id AND v.dashboard_id = g.dashboard_id"))).
+					Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
-				indexSearchQuery := ""
 				if indexSearch != -1 {
-					groupIdQueryParams = append(groupIdQueryParams, indexSearch)
-					indexSearchQuery = fmt.Sprintf(" OR v.validator_index = $%d", len(groupIdQueryParams))
+					groupIdDs = groupIdDs.
+						Where(goqu.L("(g.name ILIKE (?||'%') OR v.validator_index = ?)", search, indexSearch))
+				} else {
+					groupIdDs = groupIdDs.
+						Where(goqu.L("g.name ILIKE (?||'%')", search))
 				}
 
-				groupIdQueryParams = append(groupIdQueryParams, dashboardId.Id, search)
-				groupIdQuery := fmt.Sprintf(`
-					SELECT
-						DISTINCT(group_id)
-					FROM users_val_dashboards_validators v
-					INNER JOIN users_val_dashboards_groups g ON v.group_id = g.id AND v.dashboard_id = g.dashboard_id
-					WHERE v.dashboard_id = $%d AND (g.name ILIKE ($%d||'%%') %s)
-					`, len(groupIdQueryParams)-1, len(groupIdQueryParams), indexSearchQuery)
+				groupIdQuery, groupIdArgs, err := groupIdDs.Prepared(true).ToSQL()
+				if err != nil {
+					return nil, nil, err
+				}
 
 				var groupIdSearch []uint64
-				err = d.alloyReader.Select(&groupIdSearch, groupIdQuery, groupIdQueryParams...)
+				err = d.readerDb.SelectContext(ctx, &groupIdSearch, groupIdQuery, groupIdArgs...)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -188,8 +203,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				if len(groupIdSearchMap) == 0 {
 					if epochSearch != -1 {
 						// If we have an epoch search but no group search then we can restrict the query to the epoch
-						queryParams = append(queryParams, epochSearch)
-						whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+						rewardsDs = rewardsDs.Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(uint64(epochSearch)).Unix()))
+						elDs = elDs.Where(goqu.L("b.epoch = ?", epochSearch))
 					} else {
 						// No search for goup or epoch possible, return empty results
 						return result, &paging, nil
@@ -198,37 +213,52 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			}
 		}
 
-		groupIdQuery := "v.group_id,"
-		groupByQuery := "GROUP BY e.epoch, v.group_id"
-		orderQuery := fmt.Sprintf("ORDER BY e.epoch %[1]s, v.group_id %[1]s", sortSearchOrder)
 		if dashboardId.AggregateGroups {
-			queryParams = append(queryParams, t.DefaultGroupId)
-			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
-			groupByQuery = "GROUP BY e.epoch"
-			orderQuery = fmt.Sprintf("ORDER BY e.epoch %s", sortSearchOrder)
-		}
+			rewardsDs = rewardsDs.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+				GroupBy(goqu.L("e.epoch"))
 
-		rewardsQuery = fmt.Sprintf(`
-			SELECT
-				e.epoch,
-				%s
-				%s
-			FROM validator_dashboard_data_epoch e
-			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
-			LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
-			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-			%s
-			%s
-			%s`, groupIdQuery, rewardsDataQuery, whereQuery, groupByQuery, orderQuery)
+			elDs = elDs.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+				GroupBy(goqu.L("b.epoch"))
+
+			if isReverseDirection {
+				rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Desc())
+				elDs = elDs.Order(goqu.L("b.epoch").Desc())
+			} else {
+				rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Asc())
+				elDs = elDs.Order(goqu.L("b.epoch").Asc())
+			}
+		} else {
+			rewardsDs = rewardsDs.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupBy(goqu.L("e.epoch"), goqu.L("result_group_id"))
+			elDs = elDs.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupBy(goqu.L("b.epoch"), goqu.L("result_group_id"))
+
+			if isReverseDirection {
+				rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Desc(), goqu.L("result_group_id").Desc())
+				elDs = elDs.Order(goqu.L("b.epoch").Desc(), goqu.L("result_group_id").Desc())
+			} else {
+				rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Asc(), goqu.L("result_group_id").Asc())
+				elDs = elDs.Order(goqu.L("b.epoch").Asc(), goqu.L("result_group_id").Asc())
+			}
+		}
 	} else {
 		// In case a list of validators is provided set the group to the default id
-		queryParams = append(queryParams, pq.Array(dashboardId.Validators), latestFinalizedEpoch-epochLookBack)
-		whereQuery := fmt.Sprintf("WHERE e.validator_index = ANY($%d) AND e.epoch > $%d", len(queryParams)-1, len(queryParams))
+		rewardsDs = rewardsDs.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators)).
+			GroupBy(goqu.L("e.epoch"))
+		elDs = elDs.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
+			GroupBy(goqu.L("b.epoch"))
+
 		if currentCursor.IsValid() {
-			queryParams = append(queryParams, currentCursor.Epoch)
-			whereQuery += fmt.Sprintf(" AND e.epoch%s$%d", sortSearchDirection, len(queryParams))
+			rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
+			elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
 		}
 		if search != "" {
 			if epochSearch == -1 && indexSearch == -1 {
@@ -243,34 +273,84 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				found = utils.ElementExists(dashboardId.Validators, t.VDBValidator(indexSearch))
 			}
 			if !found && epochSearch != -1 {
-				queryParams = append(queryParams, epochSearch)
-				whereQuery += fmt.Sprintf(" AND e.epoch = $%d", len(queryParams))
+				rewardsDs = rewardsDs.Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(uint64(epochSearch)).Unix()))
+				elDs = elDs.Where(goqu.L("b.epoch = ?", epochSearch))
 			}
 		}
 
-		orderQuery := fmt.Sprintf("ORDER BY e.epoch %s", sortSearchOrder)
-
-		queryParams = append(queryParams, t.DefaultGroupId)
-		rewardsQuery = fmt.Sprintf(`
-			SELECT
-				e.epoch,
-				$%d::smallint AS group_id,
-				%s
-			FROM validator_dashboard_data_epoch e
-			LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
-			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-			%s
-			GROUP BY e.epoch
-			%s`, len(queryParams), rewardsDataQuery, whereQuery, orderQuery)
+		if isReverseDirection {
+			rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Desc())
+			elDs = elDs.Order(goqu.L("b.epoch").Desc())
+		} else {
+			rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Asc())
+			elDs = elDs.Order(goqu.L("b.epoch").Asc())
+		}
 	}
 
-	err = d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
+	// ------------------------------------------------------------------------------------------------------------------
+	// Build the main query and get the data
+	queryResult := []struct {
+		Epoch                 uint64 `db:"epoch"`
+		GroupId               int64  `db:"result_group_id"`
+		ClRewards             int64  `db:"cl_rewards"`
+		AttestationsScheduled uint64 `db:"attestations_scheduled"`
+		AttestationsExecuted  uint64 `db:"attestations_executed"`
+		BlocksScheduled       uint64 `db:"blocks_scheduled"`
+		BlocksProposed        uint64 `db:"blocks_proposed"`
+		SyncScheduled         uint64 `db:"sync_scheduled"`
+		SyncExecuted          uint64 `db:"sync_executed"`
+		SlashedInEpoch        uint64 `db:"slashed_in_epoch"`
+		SlashedAmount         uint64 `db:"slashed_amount"`
+	}{}
+
+	wg.Go(func() error {
+		query, args, err := rewardsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving rewards data: %v", err)
+		}
+		return nil
+	})
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get the EL rewards
+	elRewards := make(map[uint64]map[int64]decimal.Decimal)
+	wg.Go(func() error {
+		elQueryResult := []struct {
+			Epoch     uint64          `db:"epoch"`
+			GroupId   int64           `db:"result_group_id"`
+			ElRewards decimal.Decimal `db:"el_rewards"`
+		}{}
+
+		query, args, err := elDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving el rewards data for rewards: %v", err)
+		}
+
+		for _, entry := range elQueryResult {
+			if _, ok := elRewards[entry.Epoch]; !ok {
+				elRewards[entry.Epoch] = make(map[int64]decimal.Decimal)
+			}
+			elRewards[entry.Epoch][entry.GroupId] = entry.ElRewards
+		}
+		return nil
+	})
+
+	err = wg.Wait()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %v", err)
 	}
 
+	// ------------------------------------------------------------------------------------------------------------------
 	// Create the result without the total rewards first
 	resultWoTotal := make([]t.VDBRewardsTableRow, 0)
 
@@ -289,7 +369,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	totalEpochInfo := make(map[uint64]*TotalEpochInfo, 0)
 
 	for _, res := range queryResult {
-		duty := t.VDBRewardesTableDuty{}
+		duty := t.VDBRewardsTableDuty{}
 		if res.AttestationsScheduled > 0 {
 			attestationPercentage := (float64(res.AttestationsExecuted) / float64(res.AttestationsScheduled)) * 100.0
 			duty.Attestation = &attestationPercentage
@@ -315,7 +395,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 				Duty:    duty,
 				GroupId: res.GroupId,
 				Reward: t.ClElValue[decimal.Decimal]{
-					El: res.ElRewards,
+					El: elRewards[res.Epoch][res.GroupId],
 					Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
 				},
 			})
@@ -326,7 +406,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			}
 			totalEpochInfo[res.Epoch].Groups = append(totalEpochInfo[res.Epoch].Groups, uint64(res.GroupId))
 			totalEpochInfo[res.Epoch].ClRewards += res.ClRewards
-			totalEpochInfo[res.Epoch].ElRewards = totalEpochInfo[res.Epoch].ElRewards.Add(res.ElRewards)
+			totalEpochInfo[res.Epoch].ElRewards = totalEpochInfo[res.Epoch].ElRewards.Add(elRewards[res.Epoch][res.GroupId])
 			totalEpochInfo[res.Epoch].AttestationsScheduled += res.AttestationsScheduled
 			totalEpochInfo[res.Epoch].AttestationsExecuted += res.AttestationsExecuted
 			totalEpochInfo[res.Epoch].BlocksScheduled += res.BlocksScheduled
@@ -347,7 +427,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 			continue
 		}
 
-		duty := t.VDBRewardesTableDuty{}
+		duty := t.VDBRewardsTableDuty{}
 		if totalInfo.AttestationsScheduled > 0 {
 			attestationPercentage := (float64(totalInfo.AttestationsExecuted) / float64(totalInfo.AttestationsScheduled)) * 100.0
 			duty.Attestation = &attestationPercentage
@@ -430,15 +510,76 @@ func (d *DataAccessService) GetValidatorDashboardRewards(dashboardId t.VDBId, cu
 	return result, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBId, groupId int64, epoch uint64) (*t.VDBGroupRewardsData, error) {
+func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBGroupRewardsData, error) {
+	// @DATA-ACCESS incorporate protocolModes
 	ret := &t.VDBGroupRewardsData{}
+
+	wg := errgroup.Group{}
 
 	if dashboardId.AggregateGroups {
 		// If we are aggregating groups then ignore the group id and sum up everything
 		groupId = t.AllGroups
 	}
 
-	type queryResult struct {
+	// ------------------------------------------------------------------------------------------------------------------
+	// Build the query that serves as base for both the main and EL rewards queries
+	rewardsDs := goqu.Dialect("postgres").
+		From(goqu.L("validator_dashboard_data_epoch e")).
+		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+		Select(
+			goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
+			goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
+			goqu.L("COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward"),
+			goqu.L("COALESCE(e.attestations_inactivity_reward, 0) AS attestations_inactivity_reward"),
+			goqu.L("COALESCE(e.attestations_inclusion_reward, 0) AS attestations_inclusion_reward"),
+			goqu.L("COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled"),
+			goqu.L("COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed"),
+			goqu.L("COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed"),
+			goqu.L("COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed"),
+			goqu.L("COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled"),
+			goqu.L("COALESCE(e.blocks_proposed, 0) AS blocks_proposed"),
+			goqu.L("COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward"),
+			goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
+			goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
+			goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
+			goqu.L("(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed_in_epoch"),
+			goqu.L("COALESCE(e.blocks_slashing_count, 0) AS slashed_amount"),
+			goqu.L("COALESCE(e.blocks_cl_slasher_reward, 0) AS slasher_reward"),
+			goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
+			goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward")).
+		Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(epoch).Unix()))
+
+	elDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("COALESCE(SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)), 0) AS blocks_el_reward")).
+		From(goqu.L("users_val_dashboards_validators v")).
+		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
+		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		Where(goqu.L("b.epoch = ?", epoch))
+
+	// handle the case when we have a list of validators
+
+	if dashboardId.Validators == nil {
+		rewardsDs = rewardsDs.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
+		elDs = elDs.
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+		if groupId != t.AllGroups {
+			rewardsDs = rewardsDs.Where(goqu.L("v.group_id = ?", groupId))
+			elDs = elDs.Where(goqu.L("v.group_id = ?", groupId))
+		}
+	} else { // handle the case when we have a dashboard id and an optional group id
+		rewardsDs = rewardsDs.
+			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators))
+		elDs = elDs.
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Build the main query and get the data
+	queryResult := []struct {
 		AttestationSourceReward      decimal.Decimal `db:"attestations_source_reward"`
 		AttestationTargetReward      decimal.Decimal `db:"attestations_target_reward"`
 		AttestationHeadReward        decimal.Decimal `db:"attestations_head_reward"`
@@ -453,7 +594,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 		BlocksScheduled uint32          `db:"blocks_scheduled"`
 		BlocksProposed  uint32          `db:"blocks_proposed"`
 		BlocksClReward  decimal.Decimal `db:"blocks_cl_reward"`
-		BlocksElReward  decimal.Decimal `db:"blocks_el_reward"`
 
 		SyncScheduled uint32          `db:"sync_scheduled"`
 		SyncExecuted  uint32          `db:"sync_executed"`
@@ -465,186 +605,222 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(dashboardId t.VDBI
 
 		BlocksClAttestationsReward decimal.Decimal `db:"blocks_cl_attestations_reward"`
 		BlockClSyncAggregateReward decimal.Decimal `db:"blocks_cl_sync_aggregate_reward"`
+	}{}
+
+	wg.Go(func() error {
+		query, args, err := rewardsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving group rewards data: %v", err)
+		}
+		return nil
+	})
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get the EL rewards
+	var elRewards decimal.Decimal
+	wg.Go(func() error {
+		query, args, err := elDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.readerDb.GetContext(ctx, &elRewards, query, args...)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("error retrieving el rewards data for group rewards: %v", err)
+		}
+		return nil
+	})
+
+	err := wg.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validator dashboard group rewards data: %v", err)
 	}
 
-	// TODO: El rewards data (blocks_el_reward) will be provided at a later point
-	query := `SELECT
-			COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
-			COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
-			COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
-			COALESCE(e.attestations_inactivity_reward, 0) AS attestations_inactivity_reward,
-			COALESCE(e.attestations_inclusion_reward, 0) AS attestations_inclusion_reward,
-			COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
-			COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
-			COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
-			COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
-			COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
-			COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
-			COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward,
-			COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward,
-			COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
-			COALESCE(e.sync_executed, 0) AS sync_executed,
-			COALESCE(e.sync_rewards, 0) AS sync_rewards,
-			e.slashed_by IS NOT NULL AS slashed_in_epoch,
-			COALESCE(s.slashed_amount, 0) AS slashed_amount,
-			COALESCE(e.slasher_reward, 0) AS slasher_reward,
-			COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
-			COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
-		`
-
-	var rows []*queryResult
-
-	// handle the case when we have a list of validators
-	if len(dashboardId.Validators) > 0 {
-		whereClause := `
-		FROM validator_dashboard_data_epoch e
-		LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
-		LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-		LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-		LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-		WHERE e.validator_index = any($1) AND e.epoch = $2
-		`
-		query = fmt.Sprintf("%s %s", query, whereClause)
-		err := d.alloyReader.Select(&rows, query, pq.Array(dashboardId.Validators), epoch)
-		if err != nil {
-			log.Error(err, "error while getting validator dashboard group rewards", 0)
-			return nil, err
-		}
-	} else { // handle the case when we have a dashboard id and an optional group id
-		joinAndWhereClause := `
-			FROM users_val_dashboards_validators v
-			INNER JOIN validator_dashboard_data_epoch e ON e.validator_index = v.validator_index
-			LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
-			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-			WHERE (v.dashboard_id = $1 AND (v.group_id = $2 OR $2 = -1) AND e.epoch = $3)
-		`
-		query = fmt.Sprintf("%s %s", query, joinAndWhereClause)
-		err := d.alloyReader.Select(&rows, query, dashboardId.Id, groupId, epoch)
-		if err != nil {
-			log.Error(err, "error while getting validator dashboard group rewards", 0)
-			return nil, err
-		}
-	}
-
+	// ------------------------------------------------------------------------------------------------------------------
+	// Create the result
 	gWei := decimal.NewFromInt(1e9)
 
-	for _, row := range rows {
-		ret.AttestationsHead.Income = ret.AttestationsHead.Income.Add(row.AttestationHeadReward.Mul(gWei))
-		ret.AttestationsHead.StatusCount.Success += uint64(row.AttestationHeadExecuted)
-		ret.AttestationsHead.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
+	for _, entry := range queryResult {
+		ret.AttestationsHead.Income = ret.AttestationsHead.Income.Add(entry.AttestationHeadReward.Mul(gWei))
+		ret.AttestationsHead.StatusCount.Success += uint64(entry.AttestationHeadExecuted)
+		ret.AttestationsHead.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationHeadExecuted)
 
-		ret.AttestationsSource.Income = ret.AttestationsSource.Income.Add(row.AttestationSourceReward.Mul(gWei))
-		ret.AttestationsSource.StatusCount.Success += uint64(row.AttestationSourceExecuted)
-		ret.AttestationsSource.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
+		ret.AttestationsSource.Income = ret.AttestationsSource.Income.Add(entry.AttestationSourceReward.Mul(gWei))
+		ret.AttestationsSource.StatusCount.Success += uint64(entry.AttestationSourceExecuted)
+		ret.AttestationsSource.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationSourceExecuted)
 
-		ret.AttestationsTarget.Income = ret.AttestationsTarget.Income.Add(row.AttestationTargetReward.Mul(gWei))
-		ret.AttestationsTarget.StatusCount.Success += uint64(row.AttestationTargetExecuted)
-		ret.AttestationsTarget.StatusCount.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
+		ret.AttestationsTarget.Income = ret.AttestationsTarget.Income.Add(entry.AttestationTargetReward.Mul(gWei))
+		ret.AttestationsTarget.StatusCount.Success += uint64(entry.AttestationTargetExecuted)
+		ret.AttestationsTarget.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationTargetExecuted)
 
-		ret.Inactivity.Income = ret.Inactivity.Income.Add(row.AttestationInactivitytReward.Mul(gWei))
-		if row.AttestationInactivitytReward.LessThan(decimal.Zero) {
+		ret.Inactivity.Income = ret.Inactivity.Income.Add(entry.AttestationInactivitytReward.Mul(gWei))
+		if entry.AttestationInactivitytReward.LessThan(decimal.Zero) {
 			ret.Inactivity.StatusCount.Failed++
 		} else {
 			ret.Inactivity.StatusCount.Success++
 		}
 
-		ret.Proposal.Income = ret.Proposal.Income.Add(row.BlocksClReward.Mul(gWei)).Add(row.BlocksElReward)
-		ret.Proposal.StatusCount.Success += uint64(row.BlocksProposed)
-		ret.Proposal.StatusCount.Failed += uint64(row.BlocksScheduled) - uint64(row.BlocksProposed)
+		ret.Proposal.Income = ret.Proposal.Income.Add(entry.BlocksClReward.Mul(gWei))
+		ret.Proposal.StatusCount.Success += uint64(entry.BlocksProposed)
+		ret.Proposal.StatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
 
-		ret.Sync.Income = ret.Sync.Income.Add(row.SyncRewards.Mul(gWei))
-		ret.Sync.StatusCount.Success += uint64(row.SyncExecuted)
-		ret.Sync.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
+		ret.Sync.Income = ret.Sync.Income.Add(entry.SyncRewards.Mul(gWei))
+		ret.Sync.StatusCount.Success += uint64(entry.SyncExecuted)
+		ret.Sync.StatusCount.Failed += uint64(entry.SyncScheduled) - uint64(entry.SyncExecuted)
 
-		ret.Slashing.Income = ret.Slashing.Income.Add(row.SlasherRewards.Mul(gWei))
-		ret.Slashing.StatusCount.Success += uint64(row.SlashedAmount)
-		if row.SlashedInEpoch {
+		ret.Slashing.Income = ret.Slashing.Income.Add(entry.SlasherRewards.Mul(gWei))
+		ret.Slashing.StatusCount.Success += uint64(entry.SlashedAmount)
+		if entry.SlashedInEpoch {
 			ret.Slashing.StatusCount.Failed++
 		}
 
-		ret.ProposalElReward = ret.ProposalElReward.Add(row.BlocksElReward)
-
-		ret.ProposalClAttIncReward = ret.ProposalClAttIncReward.Add(row.BlocksClAttestationsReward.Mul(gWei))
-		ret.ProposalClSyncIncReward = ret.ProposalClSyncIncReward.Add(row.BlockClSyncAggregateReward.Mul(gWei))
-		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(row.SlasherRewards.Mul(gWei))
+		ret.ProposalClAttIncReward = ret.ProposalClAttIncReward.Add(entry.BlocksClAttestationsReward.Mul(gWei))
+		ret.ProposalClSyncIncReward = ret.ProposalClSyncIncReward.Add(entry.BlockClSyncAggregateReward.Mul(gWei))
+		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(entry.SlasherRewards.Mul(gWei))
 	}
+
+	ret.Proposal.Income = ret.Proposal.Income.Add(elRewards)
+	ret.ProposalElReward = elRewards
 
 	return ret, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBId) (*t.ChartData[int, decimal.Decimal], error) {
+func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.ChartData[int, decimal.Decimal], error) {
+	// @DATA-ACCESS incorporate protocolModes
 	// bar chart for the CL and EL rewards for each group for each epoch.
 	// NO series for all groups combined except if AggregateGroups is true.
 	// series id is group id, series property is 'cl' or 'el'
 
+	wg := errgroup.Group{}
+
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
-	const epochLookBack = 10
+	const epochLookBack = 224
+	startEpoch := uint64(0)
+	if latestFinalizedEpoch > epochLookBack {
+		startEpoch = latestFinalizedEpoch - epochLookBack
+	}
 
-	queryResult := []struct {
-		Epoch     uint64          `db:"epoch"`
-		GroupId   uint64          `db:"group_id"`
-		ElRewards decimal.Decimal `db:"el_rewards"`
-		ClRewards int64           `db:"cl_rewards"`
-	}{}
+	// ------------------------------------------------------------------------------------------------------------------
+	// Build the query that serves as base for both the main and EL rewards queries
+	rewardsDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("e.epoch"),
+			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_rewards, 0)) AS cl_rewards`)).
+		From(goqu.L("validator_dashboard_data_epoch e")).
+		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(startEpoch).Unix()))
 
-	queryParams := []interface{}{}
-	rewardsQuery := ""
-
-	rewardsDataQuery := `
-		COALESCE(SUM(COALESCE(r.value, ep.fee_recipient_reward * 1e18)), 0) AS el_rewards,
-		SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) +
-		COALESCE(e.sync_rewards, 0) + COALESCE(e.slasher_reward, 0)) AS cl_rewards
-		`
+	elDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("b.epoch"),
+			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
+		From(goqu.L("users_val_dashboards_validators v")).
+		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
+		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		Where(goqu.L("b.epoch >= ?", startEpoch))
 
 	if dashboardId.Validators == nil {
-		groupIdQuery := "v.group_id,"
-		groupByQuery := "GROUP BY e.epoch, v.group_id"
-		orderQuery := "ORDER BY e.epoch, v.group_id"
-		if dashboardId.AggregateGroups {
-			queryParams = append(queryParams, t.DefaultGroupId)
-			groupIdQuery = fmt.Sprintf("$%d::smallint AS group_id,", len(queryParams))
-			groupByQuery = "GROUP BY e.epoch"
-			orderQuery = "ORDER BY e.epoch"
-		}
+		rewardsDs = rewardsDs.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
+		elDs = elDs.
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
-		queryParams = append(queryParams, dashboardId.Id, latestFinalizedEpoch-epochLookBack)
-		rewardsQuery = fmt.Sprintf(`
-			SELECT
-				e.epoch,
-				%s
-				%s
-			FROM validator_dashboard_data_epoch e
-			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
-			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-			WHERE v.dashboard_id = $%d AND e.epoch > $%d
-			%s
-			%s`, groupIdQuery, rewardsDataQuery, len(queryParams)-1, len(queryParams), groupByQuery, orderQuery)
+		if dashboardId.AggregateGroups {
+			rewardsDs = rewardsDs.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+				GroupBy(goqu.L("e.epoch")).
+				Order(goqu.L("e.epoch").Asc())
+			elDs = elDs.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+				GroupBy(goqu.L("b.epoch")).
+				Order(goqu.L("b.epoch").Asc())
+		} else {
+			rewardsDs = rewardsDs.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupBy(goqu.L("e.epoch"), goqu.L("result_group_id")).
+				Order(goqu.L("e.epoch").Asc(), goqu.L("result_group_id").Asc())
+			elDs = elDs.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupBy(goqu.L("b.epoch"), goqu.L("result_group_id")).
+				Order(goqu.L("b.epoch").Asc(), goqu.L("result_group_id").Asc())
+		}
 	} else {
 		// In case a list of validators is provided set the group to the default id
-		queryParams = append(queryParams, t.DefaultGroupId, pq.Array(dashboardId.Validators), latestFinalizedEpoch-epochLookBack)
-		rewardsQuery = fmt.Sprintf(`
-			SELECT
-				e.epoch,
-				$%d::smallint AS group_id,
-				%s
-			FROM validator_dashboard_data_epoch e
-			LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-			LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-			WHERE e.validator_index = ANY($%d) AND e.epoch > $%d
-			GROUP BY e.epoch
-			ORDER BY e.epoch`, len(queryParams)-2, rewardsDataQuery, len(queryParams)-1, len(queryParams))
+		rewardsDs = rewardsDs.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators)).
+			GroupBy(goqu.L("e.epoch")).
+			Order(goqu.L("e.epoch").Asc())
+		elDs = elDs.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
+			GroupBy(goqu.L("b.epoch")).
+			Order(goqu.L("b.epoch").Asc())
 	}
 
-	err := d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
+	// ------------------------------------------------------------------------------------------------------------------
+	// Build the main query and get the data
+	queryResult := []struct {
+		Epoch     uint64 `db:"epoch"`
+		GroupId   uint64 `db:"result_group_id"`
+		ClRewards int64  `db:"cl_rewards"`
+	}{}
+
+	wg.Go(func() error {
+		query, args, err := rewardsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving rewards chart data: %v", err)
+		}
+		return nil
+	})
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get the EL rewards
+	elRewards := make(map[uint64]map[uint64]decimal.Decimal)
+	wg.Go(func() error {
+		elQueryResult := []struct {
+			Epoch     uint64          `db:"epoch"`
+			GroupId   uint64          `db:"result_group_id"`
+			ElRewards decimal.Decimal `db:"el_rewards"`
+		}{}
+
+		query, args, err := elDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving el rewards data for rewards chart: %v", err)
+		}
+
+		for _, entry := range elQueryResult {
+			if _, ok := elRewards[entry.Epoch]; !ok {
+				elRewards[entry.Epoch] = make(map[uint64]decimal.Decimal)
+			}
+			elRewards[entry.Epoch][entry.GroupId] = entry.ElRewards
+		}
+		return nil
+	})
+
+	err := wg.Wait()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %v", err)
 	}
 
+	// ------------------------------------------------------------------------------------------------------------------
 	// Create a map structure to store the data
 	epochData := make(map[uint64]map[uint64]t.ClElValue[decimal.Decimal])
 	epochList := make([]uint64, 0)
@@ -656,7 +832,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 		}
 
 		epochData[res.Epoch][res.GroupId] = t.ClElValue[decimal.Decimal]{
-			El: res.ElRewards,
+			El: elRewards[res.Epoch][res.GroupId],
 			Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
 		}
 	}
@@ -703,9 +879,11 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(dashboardId t.VDBI
 	return &result, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	result := make([]t.VDBEpochDutiesTableRow, 0)
 	var paging t.Paging
+
+	wg := errgroup.Group{}
 
 	if dashboardId.AggregateGroups {
 		// If we are aggregating groups then ignore the group id and sum up everything
@@ -718,17 +896,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 	if cursor != "" {
 		currentCursor, err = utils.StringToCursor[t.ValidatorDutiesCursor](cursor)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as ValidatorDutiesCursor: %w", err)
 		}
 	}
 
 	// Prepare the sorting
-	sortSearchDirection := ">"
-	sortSearchOrder := " ASC"
-	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
-		sortSearchDirection = "<"
-		sortSearchOrder = " DESC"
-	}
+	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
 
 	// Analyze the search term
 	indexSearch := int64(-1)
@@ -758,72 +931,66 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		}
 	}
 
-	queryResult := []struct {
-		ValidatorIndex              uint64          `db:"validator_index"`
-		TotalReward                 decimal.Decimal `db:"total_reward"`
-		AttestationsScheduled       uint64          `db:"attestations_scheduled"`
-		AttestationsSourceExecuted  uint64          `db:"attestation_source_executed"`
-		AttestationsSourceReward    int64           `db:"attestations_source_reward"`
-		AttestationsTargetExecuted  uint64          `db:"attestation_target_executed"`
-		AttestationsTargetReward    int64           `db:"attestations_target_reward"`
-		AttestationsHeadExecuted    uint64          `db:"attestation_head_executed"`
-		AttestationsHeadReward      int64           `db:"attestations_head_reward"`
-		SyncScheduled               uint64          `db:"sync_scheduled"`
-		SyncExecuted                uint64          `db:"sync_executed"`
-		SyncRewards                 int64           `db:"sync_rewards"`
-		SlashedInEpoch              bool            `db:"slashed_in_epoch"`
-		SlashedAmount               uint64          `db:"slashed_amount"`
-		SlasherReward               int64           `db:"slasher_reward"`
-		BlocksScheduled             uint64          `db:"blocks_scheduled"`
-		BlocksProposed              uint64          `db:"blocks_proposed"`
-		BlocksElReward              decimal.Decimal `db:"blocks_el_reward"`
-		BlocksClAttestationsReward  int64           `db:"blocks_cl_attestations_reward"`
-		BlocksClSyncAggregateReward int64           `db:"blocks_cl_sync_aggregate_reward"`
-	}{}
-
-	queryParams := []interface{}{}
-
-	joinSubquery := `
-		LEFT JOIN validator_dashboard_data_epoch_slashedby_count s ON e.epoch = s.epoch AND e.validator_index = s.slashed_by
-	`
-
-	queryParams = append(queryParams, epoch)
-	whereSubquery := fmt.Sprintf(`WHERE e.epoch = $%d
-		AND (
-			COALESCE(e.attestations_scheduled, 0) +
+	// ------------------------------------------------------------------------------------------------------------------
+	// Build the main and EL rewards queries
+	rewardsDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("e.validator_index"),
+			goqu.L("COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled"),
+			goqu.L("COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed"),
+			goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
+			goqu.L("COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed"),
+			goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
+			goqu.L("COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed"),
+			goqu.L("COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward"),
+			goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
+			goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
+			goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
+			goqu.L("e.slashed AS slashed_in_epoch"),
+			goqu.L("COALESCE(e.blocks_slashing_count, 0) AS slashed_amount"),
+			goqu.L("COALESCE(e.blocks_cl_slasher_reward, 0) AS slasher_reward"),
+			goqu.L("COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled"),
+			goqu.L("COALESCE(e.blocks_proposed, 0) AS blocks_proposed"),
+			goqu.L("COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward"),
+			goqu.L("COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward")).
+		From(goqu.L("validator_dashboard_data_epoch e")).
+		Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(epoch).Unix())).
+		Where(goqu.L(`
+			(COALESCE(e.attestations_scheduled, 0) +
 			COALESCE(e.sync_scheduled,0) +
 			COALESCE(e.blocks_scheduled,0) +
-			CASE WHEN e.slashed_by IS NOT NULL THEN 1 ELSE 0 END +
-			COALESCE(s.slashed_amount, 0)
-		) > 0
-	`, len(queryParams))
-	whereQuery := ""
+			CASE WHEN e.slashed THEN 1 ELSE 0 END +
+			COALESCE(e.blocks_slashing_count, 0)) > 0`))
 
-	orderQuery := ""
+	elDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("b.proposer"),
+			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
+		From(goqu.L("blocks b")).
+		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
+		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		Where(goqu.L("b.epoch = ?", epoch)).
+		Where(goqu.L("b.status = '1'")).
+		GroupBy(goqu.L("b.proposer"))
 
-	queryParams = append(queryParams, limit+1)
-	limitQuery := fmt.Sprintf(`LIMIT $%d
-	`, len(queryParams))
-
+	// ------------------------------------------------------------------------------------------------------------------
+	// Add further conditions
 	if dashboardId.Validators == nil {
-		joinSubquery += `
-			INNER JOIN users_val_dashboards_validators v ON e.validator_index = v.validator_index
-		`
-
-		queryParams = append(queryParams, dashboardId.Id)
-		whereSubquery += fmt.Sprintf(`AND v.dashboard_id = $%d
-		`, len(queryParams))
+		rewardsDs = rewardsDs.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+		elDs = elDs.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
 		if groupId != t.AllGroups {
-			queryParams = append(queryParams, groupId)
-			whereSubquery += fmt.Sprintf(`AND v.group_id = $%d
-			`, len(queryParams))
+			rewardsDs = rewardsDs.Where(goqu.L("v.group_id = ?", groupId))
+			elDs = elDs.Where(goqu.L("v.group_id = ?", groupId))
 		}
 
 		if indexSearch != -1 {
-			queryParams = append(queryParams, indexSearch)
-			whereSubquery += fmt.Sprintf(`AND e.validator_index = $%d
-			`, len(queryParams))
+			rewardsDs = rewardsDs.Where(goqu.L("e.validator_index = ?", indexSearch))
+			elDs = elDs.Where(goqu.L("b.proposer = ?", indexSearch))
 		}
 	} else {
 		// In case a list of validators is provided set the group to the default id
@@ -838,87 +1005,86 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 			return result, &paging, nil
 		}
 
-		queryParams = append(queryParams, pq.Array(validators))
-		whereSubquery += fmt.Sprintf(`AND e.validator_index = ANY($%d)
-		`, len(queryParams))
+		rewardsDs = rewardsDs.Where(goqu.L("e.validator_index IN ?", validators))
+		elDs = elDs.Where(goqu.L("b.proposer = ANY(?)", pq.Array(validators)))
 	}
 
-	joinSubquery += `
-		LEFT JOIN blocks b ON e.epoch = b.epoch AND e.validator_index = b.proposer AND b.status = '1'
-		LEFT JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-		LEFT JOIN relays_blocks r ON r.exec_block_hash = b.exec_block_hash
-	`
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get the main data
+	queryResult := []struct {
+		ValidatorIndex              uint64 `db:"validator_index"`
+		AttestationsScheduled       uint64 `db:"attestations_scheduled"`
+		AttestationsSourceExecuted  uint64 `db:"attestation_source_executed"`
+		AttestationsSourceReward    int64  `db:"attestations_source_reward"`
+		AttestationsTargetExecuted  uint64 `db:"attestation_target_executed"`
+		AttestationsTargetReward    int64  `db:"attestations_target_reward"`
+		AttestationsHeadExecuted    uint64 `db:"attestation_head_executed"`
+		AttestationsHeadReward      int64  `db:"attestations_head_reward"`
+		SyncScheduled               uint64 `db:"sync_scheduled"`
+		SyncExecuted                uint64 `db:"sync_executed"`
+		SyncRewards                 int64  `db:"sync_rewards"`
+		SlashedInEpoch              bool   `db:"slashed_in_epoch"`
+		SlashedAmount               uint64 `db:"slashed_amount"`
+		SlasherReward               int64  `db:"slasher_reward"`
+		BlocksScheduled             uint64 `db:"blocks_scheduled"`
+		BlocksProposed              uint64 `db:"blocks_proposed"`
+		BlocksClAttestationsReward  int64  `db:"blocks_cl_attestations_reward"`
+		BlocksClSyncAggregateReward int64  `db:"blocks_cl_sync_aggregate_reward"`
+	}{}
 
-	if colSort.Column == enums.VDBDutiesColumns.Validator {
-		if currentCursor.IsValid() {
-			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, currentCursor.Index)
-			whereSubquery += fmt.Sprintf(`AND e.validator_index%s$%d
-			`, sortSearchDirection, len(queryParams))
+	wg.Go(func() error {
+		query, args, err := rewardsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
 		}
-		orderQuery = fmt.Sprintf(`ORDER BY validator_index %s
-		`, sortSearchOrder)
-	} else if colSort.Column == enums.VDBDutiesColumns.Reward {
-		if currentCursor.IsValid() {
-			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, currentCursor.Reward, currentCursor.Index)
 
-			whereQuery += fmt.Sprintf(`WHERE (total_reward%[1]s$%[2]d OR (total_reward=$%[2]d AND validator_index%[1]s$%[3]d))
-			`, sortSearchDirection, len(queryParams)-1, len(queryParams))
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving validator rewards data: %v", err)
 		}
-		orderQuery = fmt.Sprintf(`ORDER BY total_reward %[1]s, validator_index %[1]s
-		`, sortSearchOrder)
-	}
+		return nil
+	})
 
-	// Use a subquery to allow access to total_reward in the where clause
-	rewardsQuery := fmt.Sprintf(`
-		SELECT *
-		FROM (
-			SELECT
-				e.validator_index,
-				(
-					COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) +
-					CAST((
-						COALESCE(e.attestations_reward, 0) +
-						COALESCE(e.blocks_cl_reward, 0) +
-						COALESCE(e.sync_rewards, 0) +
-						COALESCE(e.slasher_reward, 0)
-					) AS numeric) * 10^9
-				) AS total_reward,	
-				COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled,
-				COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed,
-				COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward,
-				COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed,
-				COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward,
-				COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed,
-				COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward,
-				COALESCE(e.sync_scheduled, 0) AS sync_scheduled,
-				COALESCE(e.sync_executed, 0) AS sync_executed,
-				COALESCE(e.sync_rewards, 0) AS sync_rewards,
-				e.slashed_by IS NOT NULL AS slashed_in_epoch,
-				COALESCE(s.slashed_amount, 0) AS slashed_amount,
-				COALESCE(e.slasher_reward, 0) AS slasher_reward,
-				COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled,
-				COALESCE(e.blocks_proposed, 0) AS blocks_proposed,
-				COALESCE(r.value, ep.fee_recipient_reward * 1e18, 0) AS blocks_el_reward,
-				COALESCE(e.blocks_cl_attestations_reward, 0) AS blocks_cl_attestations_reward,
-				COALESCE(e.blocks_cl_sync_aggregate_reward, 0) AS blocks_cl_sync_aggregate_reward
-			FROM validator_dashboard_data_epoch e
-			%s
-			%s
-		) AS subquery
-		%s
-		%s
-		%s`, joinSubquery, whereSubquery, whereQuery, orderQuery, limitQuery)
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get the EL rewards
+	elRewards := make(map[uint64]decimal.Decimal)
+	wg.Go(func() error {
+		elQueryResult := []struct {
+			ValidatorIndex uint64          `db:"proposer"`
+			ElRewards      decimal.Decimal `db:"el_rewards"`
+		}{}
 
-	err = d.alloyReader.Select(&queryResult, rewardsQuery, queryParams...)
+		query, args, err := elDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving validator el rewards data for rewards: %v", err)
+		}
+
+		for _, entry := range elQueryResult {
+			elRewards[entry.ValidatorIndex] = entry.ElRewards
+		}
+		return nil
+	})
+
+	err = wg.Wait()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %v", err)
 	}
 
+	// ------------------------------------------------------------------------------------------------------------------
 	// Create the result
 	cursorData := make([]t.ValidatorDutiesCursor, 0)
 	for _, res := range queryResult {
+		clReward := utils.GWeiToWei(big.NewInt(
+			res.AttestationsHeadReward + res.AttestationsSourceReward + res.AttestationsTargetReward +
+				res.SyncRewards +
+				res.BlocksClAttestationsReward + res.BlocksClSyncAggregateReward + res.SlasherReward))
+		totalReward := clReward.Add(elRewards[res.ValidatorIndex])
+
 		row := t.VDBEpochDutiesTableRow{
 			Validator: res.ValidatorIndex,
 		}
@@ -951,7 +1117,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		// Get proposal data
 		if res.BlocksScheduled > 0 {
 			proposalEvent := t.ValidatorHistoryProposal{
-				ElIncome:                     res.BlocksElReward,
+				ElIncome:                     elRewards[res.ValidatorIndex],
 				ClAttestationInclusionIncome: utils.GWeiToWei(big.NewInt(res.BlocksClAttestationsReward)),
 				ClSyncInclusionIncome:        utils.GWeiToWei(big.NewInt(res.BlocksClSyncAggregateReward)),
 				ClSlashingInclusionIncome:    utils.GWeiToWei(big.NewInt(res.SlasherReward)),
@@ -970,8 +1136,89 @@ func (d *DataAccessService) GetValidatorDashboardDuties(dashboardId t.VDBId, epo
 		result = append(result, row)
 		cursorData = append(cursorData, t.ValidatorDutiesCursor{
 			Index:  res.ValidatorIndex,
-			Reward: res.TotalReward,
+			Reward: totalReward,
 		})
+	}
+
+	// Sort the result
+	totalReward := func(resultEntry t.VDBEpochDutiesTableRow) decimal.Decimal {
+		totalReward := decimal.Zero
+		if resultEntry.Duties.AttestationSource != nil {
+			totalReward = totalReward.Add(resultEntry.Duties.AttestationHead.Income).Add(resultEntry.Duties.AttestationSource.Income).Add(resultEntry.Duties.AttestationTarget.Income)
+		}
+		if resultEntry.Duties.Sync != nil {
+			totalReward = totalReward.Add(resultEntry.Duties.Sync.Income)
+		}
+		if resultEntry.Duties.Proposal != nil {
+			totalReward = totalReward.Add(resultEntry.Duties.Proposal.ElIncome).Add(resultEntry.Duties.Proposal.ClAttestationInclusionIncome).Add(resultEntry.Duties.Proposal.ClSyncInclusionIncome).Add(resultEntry.Duties.Proposal.ClSlashingInclusionIncome)
+		}
+		return totalReward
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		switch colSort.Column {
+		case enums.VDBDutiesColumns.Validator:
+			if isReverseDirection {
+				return result[i].Validator > result[j].Validator
+			}
+			return result[i].Validator < result[j].Validator
+		case enums.VDBDutiesColumns.Reward:
+			// It is possible that rewards are equal, in that case we sort by validator index secondarily
+			if isReverseDirection {
+				if totalReward(result[i]).Equal(totalReward(result[j])) {
+					return result[i].Validator > result[j].Validator
+				}
+				return totalReward(result[i]).GreaterThan(totalReward(result[j]))
+			}
+			if totalReward(result[i]).Equal(totalReward(result[j])) {
+				return result[i].Validator < result[j].Validator
+			}
+			return totalReward(result[i]).LessThan(totalReward(result[j]))
+		default:
+			return false
+		}
+	})
+
+	sort.Slice(cursorData, func(i, j int) bool {
+		switch colSort.Column {
+		case enums.VDBDutiesColumns.Validator:
+			if isReverseDirection {
+				return cursorData[i].Index > cursorData[j].Index
+			}
+			return cursorData[i].Index < cursorData[j].Index
+		case enums.VDBDutiesColumns.Reward:
+			// It is possible that rewards are equal, in that case we sort by validator index secondarily
+			if isReverseDirection {
+				if cursorData[i].Reward.Equal(cursorData[j].Reward) {
+					return cursorData[i].Index > cursorData[j].Index
+				}
+				return cursorData[i].Reward.GreaterThan(cursorData[j].Reward)
+			}
+			if cursorData[i].Reward.Equal(cursorData[j].Reward) {
+				return cursorData[i].Index < cursorData[j].Index
+			}
+			return cursorData[i].Reward.LessThan(cursorData[j].Reward)
+		default:
+			return false
+		}
+	})
+
+	// Remove data before the cursor
+	if currentCursor.IsValid() {
+		cursorIndex := -1
+
+		for idx, cursorEntry := range cursorData {
+			if cursorEntry.Index == currentCursor.Index && cursorEntry.Reward.Equal(currentCursor.Reward) {
+				cursorIndex = idx
+				break
+			}
+		}
+		if cursorIndex == -1 {
+			return nil, nil, fmt.Errorf("cursor not found in data")
+		}
+
+		result = result[cursorIndex+1:]
+		cursorData = cursorData[cursorIndex+1:]
 	}
 
 	// Flag if above limit

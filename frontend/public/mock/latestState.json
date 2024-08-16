@@ -1,13 +1,13 @@
 {
-    "lastProposedSlot": 4181855,
-    "currentSlot": 4181855,
-    "currentEpoch": 130682,
-    "currentFinalizedEpoch": 130679,
-    "finalityDelay": 3,
-    "syncing": false,
-    "rates": {
-        "EUR": 2127.51,
-        "USD": 2304.85,
-        "GNO": 10.46
-    }
+  "lastProposedSlot": 4181855,
+  "currentSlot": 4181855,
+  "currentEpoch": 130682,
+  "currentFinalizedEpoch": 130679,
+  "finalityDelay": 3,
+  "syncing": false,
+  "rates": {
+    "EUR": 2127.51,
+    "USD": 2304.85,
+    "GNO": 10.46
+  }
 }

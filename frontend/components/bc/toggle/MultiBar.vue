@@ -1,43 +1,84 @@
+<!-- eslint-disable vue/max-len -- TODO:   plz fix this -->
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import type { Component } from 'vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { type MultiBarItem } from '~/types/multiBar'
 
 interface Props {
-  icons: {
-    icon?: IconDefinition
-    component?: Component,
-    value: string
-  }[]
+  buttons: MultiBarItem[],
+  readonlyMode?: boolean,
 }
 
 const props = defineProps<Props>()
 
-const selected = defineModel<string[]>({ required: true })
+type ButtonStates = Record<string, boolean>
 
-const inital: Record<string, boolean> = {}
-const modelValues = ref<Record<string, boolean>>(props.icons.reduce((map, { value }) => {
-  map[value] = selected.value.includes(value)
-  return map
-}, inital))
+const selection = defineModel<string[]>({ required: true })
+const buttonStates = useObjectRefBridge<string[], ButtonStates>(
+  selection,
+  receiveFromVModel,
+  sendToVModel,
+)
 
-watch(modelValues, () => {
-  const list: string[] = []
-  Object.entries(modelValues.value).forEach(([key, value]) => {
+function receiveFromVModel(data: string[]): ButtonStates {
+  const states = props.buttons.reduce((map, { value }) => {
+    map[value] = data.includes(value)
+    return map
+  }, {} as ButtonStates)
+  return states
+}
+
+function sendToVModel(data: ButtonStates): string[] {
+  const selection: string[] = []
+  Object.entries(data).forEach(([
+    key,
+    value,
+  ]) => {
     if (value) {
-      list.push(key)
+      selection.push(key)
     }
   })
-  selected.value = list
-}, { deep: true })
+  return selection
+}
 
+// this line is independent of the bridge above (that addresses the on/off states), this line updates the component
+// if the list of buttons comes late
+watch(
+  () => props.buttons,
+  () => {
+    buttonStates.value = receiveFromVModel(selection.value)
+  },
+)
+
+const readonlyClass = computed(() => (props.readonlyMode ? 'read-only' : ''))
 </script>
 
 <template>
-  <div class="bc-togglebar">
-    <BcToggleMultiBarButton v-for="icon in props.icons" :key="icon.value" v-model="modelValues[icon.value]" :icon="icon.icon">
+  <div
+    class="bc-togglebar"
+    :class="readonlyClass"
+  >
+    <BcToggleMultiBarButton
+      v-for="button in props.buttons"
+      :key="button.value"
+      v-model="buttonStates[button.value]"
+      :class="button.className"
+      :icon="button.icon"
+      :tooltip="button.tooltip"
+      :disabled="button.disabled"
+      :readonly-class
+    >
       <template #icon>
-        <slot :name="icon.value">
-          <component :is="icon.component" />
+        <slot :name="button.value">
+          <component
+            :is="button.component"
+            v-if="button.component"
+            v-bind="button.componentProps"
+            :class="button.componentClass"
+          />
+          <FontAwesomeIcon
+            v-else-if="button.icon"
+            :icon="button.icon"
+          />
         </slot>
       </template>
     </BcToggleMultiBarButton>
@@ -47,11 +88,16 @@ watch(modelValues, () => {
 <style lang="scss" scoped>
 .bc-togglebar {
   display: inline-flex;
-  gap: var(--padding);
+  gap: var(--padding-small);
   padding: 7px 10px;
 
   background-color: var(--container-background);
   border: solid 1px var(--container-border-color);
   border-radius: var(--border-radius);
+
+  &.read-only {
+    padding: 0px;
+    border: none;
+  }
 }
 </style>

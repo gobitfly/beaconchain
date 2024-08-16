@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	ethutil "github.com/wealdtech/go-eth2-util"
@@ -358,10 +359,10 @@ func CreateVoluntaryExitNodeJob(nj *types.NodeJob) (*types.NodeJob, error) {
 		return nil, err
 	}
 
-	switch vali.Status {
-	case "exited", "exiting_online", "exiting_offline":
+	switch constypes.ValidatorDbStatus(vali.Status) {
+	case constypes.DbExited, constypes.DbExitingOffline, constypes.DbExitingOnline:
 		return nil, fmt.Errorf("validator has exited")
-	case "slashed", "slashing_offline", "slashing_online":
+	case constypes.DbSlashed, constypes.DbSlashingOffline, constypes.DbSlashingOnline:
 		return nil, fmt.Errorf("validator has been slashed")
 	default:
 	}

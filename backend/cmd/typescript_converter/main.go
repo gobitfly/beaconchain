@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"go/ast"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -45,6 +46,12 @@ func main() {
 		out += "/"
 	}
 
+	// delete everything in the output folder
+	err := deleteFiles(out)
+	if err != nil {
+		log.Fatal(err, "Failed to delete files in output folder", 0)
+	}
+
 	// Load package
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedTypes | packages.NeedSyntax,
@@ -82,6 +89,20 @@ func main() {
 	}
 
 	log.Infof("Juhu!")
+}
+
+func deleteFiles(out string) error {
+	files, err := filepath.Glob(out + "*.ts")
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		err = os.Remove(file)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func getTygoConfig(out, file, frontmatter string) *tygo.Config {

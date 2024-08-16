@@ -1,11 +1,18 @@
 <script setup lang="ts">
-const props = defineProps({ isHomePage: { type: Boolean } })
+defineProps<{
+  isHomePage?: boolean,
+  minimalistHeader?: boolean,
+}>()
 </script>
 
 <template>
   <BcCookieModal />
   <div class="page">
-    <BcHeaderMainHeader :is-home-page="props.isHomePage" />
+    <BcHeaderMainHeader
+      :is-home-page="!!isHomePage"
+      :minimalist="!!minimalistHeader"
+    />
+    <BcMaintenanceBanner />
     <div class="content">
       <slot name="top" />
       <BcAdControl />
@@ -23,11 +30,12 @@ const props = defineProps({ isHomePage: { type: Boolean } })
   position: relative;
   flex-direction: column;
   align-items: center;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .content {
   width: var(--content-width);
-  margin: var(--padding) var(--content-margin) var(--padding) var(--content-margin);
+  margin: var(--padding) var(--content-margin) var(--padding)
+    var(--content-margin);
 }
 </style>

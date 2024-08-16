@@ -226,18 +226,47 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 }
 
 func (d *epochWriter) createEpochPartition(epochFrom, epochTo uint64) error {
+	partitionName := fmt.Sprintf("%s_%d_%d", edb.EpochWriterTableName, epochFrom, epochTo)
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %[1]s_%d_%d 
-		PARTITION OF %[1]s
-			FOR VALUES FROM (%[2]d) TO (%[3]d)
+		CREATE TABLE IF NOT EXISTS %s(
+			LIKE %s INCLUDING DEFAULTS INCLUDING CONSTRAINTS
+		)
 		`,
-		edb.EpochWriterTableName, epochFrom, epochTo,
+		partitionName, edb.EpochWriterTableName,
 	))
+	if err != nil {
+		return errors.Wrap(err, "failed to create epoch partition (1)")
+	}
+
+	isAttached, err := isPartitionAttached(edb.EpochWriterTableName, partitionName)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if partition is attached")
+	}
+
+	if !isAttached {
+		_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
+		ALTER TABLE %s ATTACH PARTITION %s
+		FOR VALUES FROM (%d) TO (%d)
+		`,
+			edb.EpochWriterTableName, partitionName, epochFrom, epochTo,
+		))
+	}
+
 	return err
 }
 
 func (d *epochWriter) deleteEpochPartition(epochFrom, epochTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		ALTER TABLE %[1]s DETACH PARTITION %[1]s_%[2]d_%[3]d;
+		`,
+		edb.EpochWriterTableName, epochFrom, epochTo,
+	))
+
+	if err != nil {
+		return err
+	}
+
+	_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
 		DROP TABLE IF EXISTS %s_%d_%d
 		`,
 		edb.EpochWriterTableName, epochFrom, epochTo,

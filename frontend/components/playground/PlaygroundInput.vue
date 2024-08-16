@@ -1,24 +1,36 @@
 <script setup lang="ts">
-
 const input1 = ref('My name')
 const input2 = ref('Not empty')
 const input3 = ref('')
-
 </script>
 
 <template>
   <div class="container">
     <div>
-      <BcInputLabel :value="input1" @set-value="(v: string) => input1 = v" />
+      <BcInputLabel
+        :value="input1"
+        @set-value="(v: string) => (input1 = v)"
+      />
     </div>
     <div>
-      <BcInputLabel :value="input2" @set-value="(v: string) => input2 = v" />
+      <BcInputLabel
+        :value="input2"
+        @set-value="(v: string) => (input2 = v)"
+      />
     </div>
     <div>
-      <BcInputLabel :value="input3" :label="input3 || 'Default'" :can-be-empty="true" @set-value="(v: string) => input3 = v" />
+      <BcInputLabel
+        :value="input3"
+        :label="input3 || 'Default'"
+        :can-be-empty="true"
+        @set-value="(v: string) => (input3 = v)"
+      />
     </div>
     <div>
-      <BcInputLabel :value="input1" :disabled="true" />
+      <BcInputLabel
+        :value="input1"
+        :disabled="true"
+      />
     </div>
   </div>
 </template>
@@ -34,7 +46,7 @@ const input3 = ref('')
   color: var(--container-color);
   border: solid 1px var(--container-border-color);
 
-  >div {
+  > div {
     width: 200px;
     border: solid 1px var(--container-border-color);
     padding: var(--padding-small);

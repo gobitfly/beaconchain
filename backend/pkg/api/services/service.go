@@ -7,7 +7,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
+
+var ErrWaiting error = errors.New("waiting for service to be initialized")
 
 type Services struct {
 	readerDb                *sqlx.DB
@@ -34,6 +37,8 @@ func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader 
 func (s *Services) InitServices() {
 	go s.startSlotVizDataService()
 	go s.startIndexMappingService()
+	go s.startEfficiencyDataService()
+	go s.startEmailSenderService()
 
 	log.Infof("initializing prices...")
 	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)

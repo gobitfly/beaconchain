@@ -23,13 +23,22 @@ type DataAccessor interface {
 	SearchRepository
 	NetworkRepository
 	UserRepository
+	AppRepository
+	NotificationsRepository
+	AdminRepository
+	BlockRepository
+	ProtocolRepository
 
 	Close()
 
+	GetLatestFinalizedEpoch() (uint64, error)
 	GetLatestSlot() (uint64, error)
+	GetLatestBlock() (uint64, error)
+	GetBlockHeightAt(slot uint64) (uint64, error)
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
-	GetProductSummary() (*t.ProductSummary, error)
+	GetProductSummary(ctx context.Context) (*t.ProductSummary, error)
+	GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error)
 
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
 }
@@ -62,6 +71,8 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// This should be removed and the db functions should become methods of a struct that contains the db pointers.
 	db.ReaderDb = das.readerDb
 	db.WriterDb = das.writerDb
+	db.UserReader = das.userWriter
+	db.UserWriter = das.userReader
 	db.AlloyReader = das.alloyReader
 	db.AlloyWriter = das.alloyWriter
 	db.ClickHouseReader = das.clickhouseReader
@@ -95,6 +106,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.WriterDatabase.Port,
 				MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
+				SSL:          cfg.WriterDatabase.SSL,
 			},
 			&types.DatabaseConfig{
 				Username:     cfg.ReaderDatabase.Username,
@@ -104,6 +116,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.ReaderDatabase.Port,
 				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
+				SSL:          cfg.ReaderDatabase.SSL,
 			}, "pgx", "postgres",
 		)
 	}()

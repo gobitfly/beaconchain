@@ -3,9 +3,11 @@ const colorMode = useColorMode()
 const switchPosition = ref('dark')
 
 onMounted(() => {
-  // intializes the theme with what the user selected the last time or with her/his system preference if (s)he never clicked the button
+  // intializes the theme with what the user selected the last time or with
+  // her/his system preference if (s)he never clicked the button
   switchPosition.value = colorMode.value
-  // colorMode.preference should not be read here because its value can be 'system', whereas colorMode.value contains either 'dark' or 'light'
+  // colorMode.preference should not be read here because its value can be 'system',
+  // whereas colorMode.value contains either 'dark' or 'light'
 })
 </script>
 
@@ -59,7 +61,7 @@ input {
   transition: 0.2s;
 }
 
-input:checked+.slider {
+input:checked + .slider {
   -webkit-transform: translateX(17px);
   -ms-transform: translateX(17px);
   transform: translateX(17px);

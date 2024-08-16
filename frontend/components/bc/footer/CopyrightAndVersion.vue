@@ -4,5 +4,5 @@ const version = useRuntimeConfig().public.gitVersion
 </script>
 
 <template>
-  <span>© bitfly GmbH {{ year }} | v{{ version }}</span>
+  <span>© bitfly explorer GmbH {{ year }} | v{{ version }}</span>
 </template>

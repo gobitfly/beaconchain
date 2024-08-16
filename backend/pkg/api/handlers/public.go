@@ -22,17 +22,13 @@ func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicPostOauthToken(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
 func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.GetUserIdByApiKey(r)
+	userId, err := GetUserIdByContext(r)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	data, err := h.dai.GetUserDashboards(userId)
+	data, err := h.dai.GetUserDashboards(r.Context(), userId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -111,6 +107,10 @@ func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r
 	returnNoContent(w)
 }
 
+func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
+	returnNoContent(w)
+}
+
 func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	returnCreated(w, nil)
 }
@@ -119,7 +119,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 	returnCreated(w, nil)
 }
 
-func (h *HandlerService) PublicDeleteValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWriter, r *http.Request) {
 	returnNoContent(w)
 }
 
@@ -157,8 +157,9 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 
+	ctx := r.Context()
 	groupId := req.GroupId
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(dashboardId, groupId)
+	groupExists, err := h.dai.GetValidatorDashboardGroupExists(ctx, dashboardId, groupId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -167,17 +168,21 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(userId)
+	userInfo, err := h.dai.GetUserInfo(ctx, userId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
 	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
+		returnConflict(w, errors.New("bulk adding not allowed with current subscription plan"))
+		return
+	}
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
@@ -193,7 +198,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			return
 		}
 		// check if adding more validators than allowed
-		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(dashboardId, validators)
+		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(ctx, dashboardId, validators)
 		if err != nil {
 			handleErr(w, err)
 			return
@@ -202,7 +207,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidators(dashboardId, groupId, validators)
+		data, dataErr = h.dai.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
 
 	case req.DepositAddress != "":
 		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
@@ -210,15 +215,15 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(dashboardId, groupId, depositAddress, limit)
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
 
 	case req.WithdrawalAddress != "":
-		withdrawalAddress := v.checkRegex(reEthereumAddress, req.WithdrawalAddress, "withdrawal_address")
+		withdrawalAddress := v.checkRegex(reWithdrawalCredential, req.WithdrawalAddress, "withdrawal_address")
 		if v.hasErrors() {
 			handleErr(w, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(dashboardId, groupId, withdrawalAddress, limit)
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
 
 	case req.Graffiti != "":
 		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
@@ -226,7 +231,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByGraffiti(dashboardId, groupId, graffiti, limit)
+		data, dataErr = h.dai.AddValidatorDashboardValidatorsByGraffiti(ctx, dashboardId, groupId, graffiti, limit)
 	}
 
 	if dataErr != nil {
@@ -261,7 +266,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, err)
 		return
 	}
-	err = h.dai.RemoveValidatorDashboardValidators(dashboardId, validators)
+	err = h.dai.RemoveValidatorDashboardValidators(r.Context(), dashboardId, validators)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -318,19 +323,11 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicGetValidatorDashboardEpochHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicGetValidatorDashboardDailyHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
-func (h *HandlerService) PublicGetValidatorDashboardGroupEpochHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
-func (h *HandlerService) PublicGetValidatorDashboardGroupDailyHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
@@ -343,6 +340,22 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 }
 
 func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
@@ -442,7 +455,15 @@ func (h *HandlerService) PublicGetNetworkSlotAttestations(w http.ResponseWriter,
 	returnOk(w, nil)
 }
 
+func (h *HandlerService) PublicGetNetworkSlotVotes(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
 func (h *HandlerService) PublicGetNetworkBlockAttestations(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetNetworkBlockVotes(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
@@ -614,6 +635,10 @@ func (h *HandlerService) PublicGetNetworkAverageGasLimitHistory(w http.ResponseW
 }
 
 func (h *HandlerService) PublicGetNetworkGasUsedHistory(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetRocketPool(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 

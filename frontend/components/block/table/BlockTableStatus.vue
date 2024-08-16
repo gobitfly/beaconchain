@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { type BlockStatus } from '~/types/block'
-import type { TagSize, TagColor } from '~/types/tag'
+import type {
+  TagColor, TagSize,
+} from '~/types/tag'
 
 interface Props {
-  status?: BlockStatus,
   blockSlot?: number,
-  mobile?: boolean
+  mobile?: boolean,
+  status?: BlockStatus,
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { latestState } = useLatestStateStore()
 
@@ -22,38 +24,51 @@ const mapped = computed(() => {
   }
   const size: TagSize = props.mobile ? 'circle' : 'default'
   let color: TagColor
-  const status = props.status === 'scheduled' && (props.blockSlot && (props.blockSlot < currentSlot)) ? 'probably_missed' : props.status
+  const status
+    = props.status === 'scheduled'
+    && props.blockSlot
+    && props.blockSlot < currentSlot
+      ? 'probably_missed'
+      : props.status
   const tStatus = $t(`block.status.${status}`)
   const label = props.mobile ? tStatus.substring(0, 1) : tStatus
-  const tooltip = status === 'probably_missed' ? $t('block.status_might_change_on_reorg') : props.mobile ? tStatus : undefined
+  const tooltip
+    = status === 'probably_missed'
+      ? $t('block.status_might_change_on_reorg')
+      : props.mobile
+        ? tStatus
+        : undefined
   switch (status) {
-    case 'probably_missed':
-      color = 'partial'
-      break
     case 'missed':
       color = 'failed'
-      break
-    case 'success':
-      color = 'success'
       break
     case 'orphaned':
       color = 'orphaned'
       break
+    case 'probably_missed':
+      color = 'partial'
+      break
     case 'scheduled':
       color = 'dark'
+      break
+    case 'success':
+      color = 'success'
       break
   }
 
   return {
-    status,
-    size,
     color,
     label,
-    tooltip
+    size,
+    status,
+    tooltip,
   }
 })
-
 </script>
+
 <template>
-  <BcTableTag v-if="mapped" v-bind="mapped" />
+  <BcTableTag
+    v-if="mapped"
+    v-bind="mapped"
+  />
 </template>

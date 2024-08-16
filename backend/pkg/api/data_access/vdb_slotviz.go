@@ -1,13 +1,16 @@
 package dataaccess
 
 import (
+	"context"
+
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([]t.SlotVizEpoch, error) {
-	validatorsArray, err := d.getDashboardValidators(dashboardId)
+func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error) {
+	// If groupIds is empty, get all groups; otherwise only fetch data for the specific groups
+	validatorsArray, err := d.getDashboardValidators(ctx, dashboardId, groupIds)
 	if err != nil {
 		return nil, err
 	}
@@ -16,6 +19,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 
 	// Get min/max slot/epoch
 	headEpoch := cache.LatestEpoch.Get() // Reminder: Currently it is possible to get the head epoch from the cache but nothing sets it in v2
+	latestProposedSlot := cache.LatestProposedSlot.Get()
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
 	minEpoch := uint64(0)
@@ -202,7 +206,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(dashboardId t.VDBId) ([
 			}
 			attestationsRef := slotVizEpochs[epochIdx].Slots[slotIdx].Attestations
 
-			if uint64(slot) >= dutiesInfo.LatestSlot {
+			if uint64(slot) >= latestProposedSlot {
 				if attestationsRef.Scheduled == nil {
 					attestationsRef.Scheduled = &t.VDBSlotVizDuty{}
 				}

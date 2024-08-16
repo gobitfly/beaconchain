@@ -1,3 +1,3 @@
 interface Window {
-  reviveAsync?: Record<string, { refresh: () => void }>
+  reviveAsync?: Record<string, { refresh: () => void }>,
 }

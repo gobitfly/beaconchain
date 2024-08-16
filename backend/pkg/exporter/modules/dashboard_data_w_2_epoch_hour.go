@@ -150,18 +150,47 @@ func (d *epochToHourAggregator) getHourRetentionDurationEpochs() uint64 {
 }
 
 func (d *epochToHourAggregator) createHourlyPartition(epochStartFrom, epochStartTo uint64) error {
+	partitionName := fmt.Sprintf("%s_%d_%d", edb.HourWriterTableName, epochStartFrom, epochStartTo)
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %[3]s_%[1]d_%[2]d 
-		PARTITION OF %[3]s
-			FOR VALUES FROM (%[1]d) TO (%[2]d)
+		CREATE TABLE IF NOT EXISTS %s(
+			LIKE %s INCLUDING DEFAULTS INCLUDING CONSTRAINTS
+		)
 		`,
-		epochStartFrom, epochStartTo, edb.HourWriterTableName,
+		partitionName, edb.HourWriterTableName,
 	))
+	if err != nil {
+		return errors.Wrap(err, "failed to create epoch partition (1)")
+	}
+
+	isAttached, err := isPartitionAttached(edb.HourWriterTableName, partitionName)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if partition is attached")
+	}
+
+	if !isAttached {
+		_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
+		ALTER TABLE %s ATTACH PARTITION %s
+		FOR VALUES FROM (%d) TO (%d)
+		`,
+			edb.HourWriterTableName, partitionName, epochStartFrom, epochStartTo,
+		))
+	}
+
 	return err
 }
 
 func (d *epochToHourAggregator) deleteHourlyPartition(epochStartFrom, epochStartTo uint64) error {
 	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
+		ALTER TABLE %[1]s DETACH PARTITION %[1]s_%[2]d_%[3]d;
+		`,
+		edb.HourWriterTableName, epochStartFrom, epochStartTo,
+	))
+
+	if err != nil {
+		return err
+	}
+
+	_, err = db.AlloyWriter.Exec(fmt.Sprintf(`
 		DROP TABLE IF EXISTS %s_%d_%d
 		`,
 		edb.HourWriterTableName, epochStartFrom, epochStartTo,

@@ -1,25 +1,31 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faArrowUpRightFromSquare
-} from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext } from '~/types/dashboard/summary'
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
+import type {
+  DashboardValidatorContext,
+  SummaryTimeFrame,
+} from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
-import type { TimeFrame } from '~/types/value'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { sortValidatorIds } from '~/utils/dashboard/validator'
 import type { DashboardKey } from '~/types/dashboard'
+import type {
+  VDBGroupSummaryData,
+  VDBSummaryTableRow,
+} from '~/types/api/validator_dashboard'
 
 interface Props {
-  validators: number[],
-  groupId?: number,
-  timeFrame?: TimeFrame
   context: DashboardValidatorContext,
   dashboardKey?: DashboardKey,
+  data?: VDBGroupSummaryData,
+  groupId?: number,
+  row: VDBSummaryTableRow,
+  timeFrame?: SummaryTimeFrame,
+  validators: number[],
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { groups } = useValidatorDashboardGroups()
 
 const dialog = useDialog()
@@ -28,27 +34,40 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: props.context,
-      timeFrame: props.timeFrame,
-      groupName: groupName.value,
-      validators: props.validators,
+      dashboardKey: props.dashboardKey,
       groupId: props.groupId,
-      dashboardKey: props.dashboardKey
-    }
+      groupName: groupName.value,
+      summary: {
+        data: props.data,
+        row: props.row,
+      },
+      timeFrame: props.timeFrame,
+      validators: props.validators,
+    },
   })
 }
 
 const groupName = computed(() => {
-  return getGroupLabel($t, props.groupId, groups.value)
+  return getGroupLabel($t, props.groupId, groups.value, $t('common.total'))
 })
 
-const cappedValidators = computed(() => sortValidatorIds(props.validators).slice(0, 10))
-
+const cappedValidators = computed(() =>
+  sortValidatorIds(props.validators).slice(0, 10),
+)
 </script>
+
 <template>
   <div class="validator_column">
     <div class="validators">
-      <template v-for="v in cappedValidators" :key="v">
-        <BcLink :to="`/validator/${v}`" target="_blank" class="link validator_link">
+      <template
+        v-for="v in cappedValidators"
+        :key="v"
+      >
+        <BcLink
+          :to="`/validator/${v}`"
+          target="_blank"
+          class="link validator_link"
+        >
           {{ v }}
         </BcLink>
         <span>, </span>
@@ -64,7 +83,7 @@ const cappedValidators = computed(() => sortValidatorIds(props.validators).slice
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .validator_column {
   display: flex;

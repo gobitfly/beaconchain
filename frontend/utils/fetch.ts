@@ -1,4 +1,4 @@
-export function getCSRFHeader (headers?: Headers): [string, string] | undefined {
+export function getCSRFHeader(headers?: Headers): [string, string] | undefined {
   if (!headers) {
     return
   }

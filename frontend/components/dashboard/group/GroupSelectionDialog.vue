@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import {
+  onMounted, ref,
+} from 'vue'
 
 interface Props {
-  groupId?: number
-  selectedValidators?: number
-  totalValidators?: number
+  groupId?: number,
+  selectedValidators?: number,
+  totalValidators?: number,
 }
-const { props, setHeader, dialogRef } = useBcDialog<Props>()
-const { t: $t } = useI18n()
+const {
+  dialogRef, props, setHeader,
+} = useBcDialog<Props>()
+const { t: $t } = useTranslation()
 
 const selectedGroupId = ref<number>()
 
@@ -19,24 +23,36 @@ const closeDialog = (groupId?: number) => {
   dialogRef?.value.close(groupId)
 }
 
-watch(() => props.value?.groupId, (groupId) => {
-  if (groupId !== undefined) {
-    selectedGroupId.value = groupId
-  }
-})
-
+watch(
+  () => props.value?.groupId,
+  (groupId) => {
+    if (groupId !== undefined) {
+      selectedGroupId.value = groupId
+    }
+  },
+)
 </script>
 
 <template>
   <div class="content">
     <div class="form">
-      {{ $t('dashboard.group.selection.dialog.assign_group') }}
-      <DashboardGroupSelection v-model="selectedGroupId" class="group-selection" />
+      {{ $t("dashboard.group.selection.dialog.assign_group") }}
+      <DashboardGroupSelection
+        v-model="selectedGroupId"
+        class="group-selection"
+      />
     </div>
     <div class="footer">
-      <b v-if="props?.totalValidators"> {{ $t('dashboard.group.selection.dialog.validators_selected', {
-        total: props.totalValidators
-      }, props.selectedValidators ?? 0 ) }}</b>
+      <b v-if="props?.totalValidators">
+        {{
+          $t(
+            "dashboard.group.selection.dialog.validators_selected",
+            {
+              total: props.totalValidators,
+            },
+            props.selectedValidators ?? 0,
+          )
+        }}</b>
       <Button
         :disabled="selectedGroupId === undefined"
         type="button"

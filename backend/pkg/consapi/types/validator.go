@@ -3,6 +3,7 @@ package types
 import "github.com/ethereum/go-ethereum/common/hexutil"
 
 const (
+	// Node statuses
 	PendingInitialized ValidatorStatus = "pending_initialized"
 	PendingQueued      ValidatorStatus = "pending_queued"
 	ActiveOngoing      ValidatorStatus = "active_ongoing"
@@ -16,6 +17,18 @@ const (
 	Pending            ValidatorStatus = "pending"
 	Exited             ValidatorStatus = "exited"
 	Withdrawal         ValidatorStatus = "withdrawal"
+
+	// Db statuses
+	DbSlashed         ValidatorDbStatus = "slashed"
+	DbExited          ValidatorDbStatus = "exited"
+	DbDeposited       ValidatorDbStatus = "deposited"
+	DbPending         ValidatorDbStatus = "pending"
+	DbSlashingOffline ValidatorDbStatus = "slashing_offline"
+	DbSlashingOnline  ValidatorDbStatus = "slashing_online"
+	DbExitingOffline  ValidatorDbStatus = "exiting_offline"
+	DbExitingOnline   ValidatorDbStatus = "exiting_online"
+	DbActiveOffline   ValidatorDbStatus = "active_offline"
+	DbActiveOnline    ValidatorDbStatus = "active_online"
 )
 
 // eth/v1/beacon/states/{state_id}/validators

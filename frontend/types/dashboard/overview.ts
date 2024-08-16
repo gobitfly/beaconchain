@@ -1,11 +1,12 @@
 import type { ExtendedLabel } from '~/types/value'
 
 export type OverviewTableData = {
-  label: string,
-  value?: ExtendedLabel,
   additonalValues?: ExtendedLabel[][],
+  addValidatorModal?: boolean,
   infos?: {
     label: string,
-    value: string | number
-  }[]
+    value: number | string,
+  }[],
+  label: string,
+  value?: ExtendedLabel,
 }

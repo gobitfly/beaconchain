@@ -1,7 +1,7 @@
 import { inject } from 'vue'
 import type { WindowSize } from '~/types/window'
 
-export function useWindowSize () {
+export function useWindowSize() {
   const size = inject<WindowSize>('windowSize')
 
   const width = computed(() => size?.width?.value ?? 2000)
@@ -15,5 +15,10 @@ export function useWindowSize () {
     return (width.value ?? 0) <= 1194
   })
 
-  return { width, height, isMobile, isIPad }
+  return {
+    height,
+    isIPad,
+    isMobile,
+    width,
+  }
 }

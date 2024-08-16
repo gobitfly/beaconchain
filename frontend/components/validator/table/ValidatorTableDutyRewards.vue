@@ -8,15 +8,16 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const mapped = computed(() => {
   const total = totalDutyRewards(props.data)
-  const details: {label: string, value?: string}[] = []
+  const details: { label: string,
+    value?: string, }[] = []
   if (!total || total.isZero()) {
     return {
+      details,
       total,
-      details
     }
   }
 
@@ -26,7 +27,7 @@ const mapped = computed(() => {
     }
     details.push({
       label: $t(`validator.rewards.${key}`),
-      value
+      value,
     })
   }
 
@@ -34,26 +35,38 @@ const mapped = computed(() => {
   addDetail('attestation_source', props?.data?.attestation_source?.income)
   addDetail('attestation_target', props?.data?.attestation_target?.income)
   addDetail('proposer_el', props?.data?.proposal?.el_income)
-  addDetail('proposer_attestation', props?.data?.proposal?.cl_attestation_inclusion_income)
+  addDetail(
+    'proposer_attestation',
+    props?.data?.proposal?.cl_attestation_inclusion_income,
+  )
   addDetail('proposer_sync', props?.data?.proposal?.cl_sync_inclusion_income)
-  addDetail('proposer_slashing', props?.data?.proposal?.cl_slashing_inclusion_income)
+  addDetail(
+    'proposer_slashing',
+    props?.data?.proposal?.cl_slashing_inclusion_income,
+  )
   addDetail('total', total.toString())
   return {
+    details,
     total,
-    details
   }
 })
-
 </script>
+
 <template>
   <BcFormatValue
     :value="mapped.total"
     :use-colors="true"
     :options="formatRewardValueOption"
   >
-    <template v-if="mapped.details?.length" #tooltip>
+    <template
+      v-if="mapped.details?.length"
+      #tooltip
+    >
       <div class="tooltip">
-        <div v-for="detail in mapped.details" :key="detail.label">
+        <div
+          v-for="detail in mapped.details"
+          :key="detail.label"
+        >
           <b>{{ detail.label }}: </b>
           <BcFormatValue
             :value="detail.value"
@@ -65,10 +78,11 @@ const mapped = computed(() => {
     </template>
   </BcFormatValue>
 </template>
+
 <style lang="scss" scoped>
-.tooltip{
+.tooltip {
   text-align: left;
-  .head{
+  .head {
     margin-top: var(--padding);
   }
 }

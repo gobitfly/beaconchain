@@ -40,6 +40,15 @@ func main() {
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
+	if utils.Config.Metrics.Enabled {
+		go func(addr string) {
+			log.Infof("serving metrics on %v", addr)
+			if err := metrics.Serve(addr); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}(utils.Config.Metrics.Address)
+	}
+
 	wg := &sync.WaitGroup{}
 	if !cfg.JustV2 {
 		wg.Add(1)

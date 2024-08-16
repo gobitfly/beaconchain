@@ -1,29 +1,82 @@
 <script setup lang="ts">
-import { ChainFamily, ChainIDs, ChainInfo } from '~/types/network'
+import {
+  ChainFamily, type ChainIDs, ChainInfo,
+} from '~/types/network'
+
 const colorMode = useColorMode()
 
 // Usage :
-// Both properties width and height must be set by the parent component. The icon will fill this frame as much as possible without deformation.
+// Both properties width and height must be set by the parent component.
+// The icon will fill this frame as much as possible without deformation.
 // Additional properties are the following:
 const props = defineProps({
-  chainId: { type: Number, required: true }, // network whose icon must be displayed (L2s and tesnets can be given)
-  colored: { type: Boolean, default: false }, // tells whether the icon must be in its official color or in the color of the font
-  doNotAdaptToColorTheme: { type: Boolean, default: false }, // some icons in their original colors are hard to see on a dark background, so they are adapted automatically, but you can deactivate this behavior if your background is always light
-  harmonizePerceivedSize: { type: Boolean, default: false } // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
+  chainId: {
+    required: true,
+    type: Number,
+  }, // network whose icon must be displayed (L2s and tesnets can be given)
+  // tells whether the icon must be in its official color or in the color of the font
+  colored: {
+    default: false,
+    type: Boolean,
+  },
+  // some icons in their original colors are hard to see on a dark background,
+  //  so they are adapted automatically, but you can deactivate this behavior
+  // if your background is always light
+  doNotAdaptToColorTheme: {
+    default: false,
+    type: Boolean,
+  },
+  // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
+  harmonizePerceivedSize: {
+    default: false,
+    type: Boolean,
+  },
 })
 
-const family = computed(() => ChainInfo[props.chainId as ChainIDs].family)
-const coloring = computed(() => !props.colored ? 'monochromatic' : (colorMode.value !== 'dark' || props.doNotAdaptToColorTheme ? '' : 'pastel'))
-const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
+const family = computed(() =>
+  props.chainId in ChainInfo
+    ? ChainInfo[props.chainId as ChainIDs].family
+    : ChainFamily.Ethereum,
+)
+const coloring = computed(() =>
+  !props.colored
+    ? 'monochromatic'
+    : colorMode.value !== 'dark' || props.doNotAdaptToColorTheme
+      ? ''
+      : 'pastel',
+)
+const sizing = computed(() =>
+  props.harmonizePerceivedSize ? family.value : '',
+)
 </script>
 
 <template>
   <div class="frame">
-    <IconNetworkEthereum v-if="family === ChainFamily.Ethereum" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkArbitrum v-else-if="family === ChainFamily.Arbitrum" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkOptimism v-else-if="family === ChainFamily.Optimism" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkBase v-else-if="family === ChainFamily.Base" class="icon" :class="[sizing,coloring]" />
-    <IconNetworkGnosis v-else-if="family === ChainFamily.Gnosis" class="icon" :class="[sizing,coloring]" />
+    <IconNetworkEthereum
+      v-if="family === ChainFamily.Ethereum"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkArbitrum
+      v-else-if="family === ChainFamily.Arbitrum"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkOptimism
+      v-else-if="family === ChainFamily.Optimism"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkBase
+      v-else-if="family === ChainFamily.Base"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
+    <IconNetworkGnosis
+      v-else-if="family === ChainFamily.Gnosis"
+      class="icon"
+      :class="[sizing, coloring]"
+    />
   </div>
 </template>
 
@@ -37,7 +90,7 @@ const sizing = computed(() => props.harmonizePerceivedSize ? family.value : '')
     width: 100%;
     top: 50%;
     left: 50%;
-    transform: translate(-50%,-50%);
+    transform: translate(-50%, -50%);
   }
 
   // The following classes are used only if props `harmonize-perceived-size` has been set to true.

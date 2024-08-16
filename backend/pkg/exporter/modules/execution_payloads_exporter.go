@@ -99,7 +99,7 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 			dashboard_id,
 			group_id,
 			slot DESC;
-	`, "cached_proposal_rewards", []string{"dashboard_id", "slot"}, []string{"dashboard_id", "reward"})
+	`, "cached_proposal_rewards", []string{"dashboard_id", "slot"}, []string{"dashboard_id", "reward"}, []string{"dashboard_id"})
 	return err
 }
 

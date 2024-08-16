@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"regexp"
@@ -18,7 +19,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+	// @DATA-ACCESS incorporate protocolModes
 	var err error
 	var currentCursor t.BlocksCursor
 
@@ -49,7 +51,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		// (query validators twice: once without search applied (fast) to pre-filter scheduled proposals (which are sent to db, want to minimize),
 		// again for blocks query with search applied to not having to send potentially huge validator-list)
 		startTime := time.Now()
-		valis, err := d.getDashboardValidators(dashboardId)
+		valis, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		log.Debugf("=== getting validators took %s", time.Since(startTime))
 		if err != nil {
 			return nil, nil, err
@@ -255,7 +257,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 		params = append(params, scheduledProposers)
 		params = append(params, scheduledEpochs)
 		params = append(params, scheduledSlots)
-		query = fmt.Sprintf(`SELECT distinct on (%s) 
+		query = fmt.Sprintf(`SELECT distinct on (%s)
 			%s
 		FROM ( SELECT * FROM (WITH scheduled_proposals (
 			proposer,
@@ -265,7 +267,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 			block,
 			reward,
 			graffiti_text
-		) AS (SELECT 
+		) AS (SELECT
 			*,
 			'0',
 			null::int,
@@ -324,7 +326,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(dashboardId t.VDBId, cur
 	`
 
 	startTime := time.Now()
-	err = d.alloyReader.Select(&proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
+	err = d.alloyReader.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err

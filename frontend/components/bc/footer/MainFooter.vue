@@ -1,6 +1,4 @@
-<script setup lang="ts">
-
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div class="main-footer">
@@ -25,11 +23,13 @@
   margin-top: 64px;
   background-color: var(--container-background);
 
-  @media (min-width: 600px) { // large screen
+  @media (min-width: 600px) {
+    // large screen
     justify-content: center;
   }
 
-  @media (max-width: 599.9px) { // mobile
+  @media (max-width: 599.9px) {
+    // mobile
     justify-content: flex-start;
     padding-left: var(--padding-large);
   }
@@ -38,13 +38,15 @@
     display: flex;
     position: relative;
 
-    @media (min-width: 600px) { // large screen
+    @media (min-width: 600px) {
+      // large screen
       justify-content: center;
       flex-direction: row;
       gap: 130px;
     }
 
-    @media (max-width: 599.9px) { // mobile
+    @media (max-width: 599.9px) {
+      // mobile
       justify-content: flex-start;
       align-items: flex-start;
       flex-direction: column;
@@ -57,11 +59,13 @@
     flex-direction: row;
     padding-bottom: 13px;
 
-    @media (min-width: 600px) { // large screen
+    @media (min-width: 600px) {
+      // large screen
       justify-content: center;
     }
 
-    @media (max-width: 599.9px) { // mobile
+    @media (max-width: 599.9px) {
+      // mobile
       justify-content: flex-start;
     }
   }

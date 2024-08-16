@@ -1,2 +1,2 @@
-export type DashboardCreationState = 'type' | 'network' | ''
-export type DashboardCreationDisplayType = 'modal' | 'panel' | ''
+export type DashboardCreationState = '' | 'network' | 'type'
+export type DashboardCreationDisplayMode = '' | 'modal' | 'panel'
