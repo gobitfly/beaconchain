@@ -11,6 +11,7 @@ const { t: $t } = useTranslation()
 const { doLogin } = useUserStore()
 const toast = useBcToast()
 const route = useRoute()
+const { promoCode } = usePromoCode()
 
 useBcSeo('login_and_register.title_login')
 
@@ -40,7 +41,14 @@ const onSubmit = handleSubmit(async (values) => {
       return
     }
 
-    await navigateTo('/')
+    if (promoCode) {
+      await navigateTo({
+        path: '/pricing', query: { promoCode },
+      })
+    }
+    else {
+      await navigateTo('/')
+    }
   }
   catch (error) {
     password.value = ''

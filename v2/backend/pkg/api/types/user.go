@@ -1,7 +1,10 @@
 package types
 
+const UserGroupAdmin = "ADMIN"
+
 type UserInfo struct {
 	Id            uint64             `json:"id"`
+	UserGroup     string             `json:"-"`
 	Email         string             `json:"email"`
 	ApiKeys       []string           `json:"api_keys"`
 	ApiPerks      ApiPerks           `json:"api_perks"`
