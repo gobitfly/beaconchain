@@ -25,6 +25,7 @@
     "@nuxtjs/color-mode": "^3.3.2",
     "@nuxtjs/i18n": "^8.0.0",
     "@nuxtjs/style-resources": "^1.2.2",
+    "@nuxtjs/stylelint-module": "^5.2.0",
     "@rollup/plugin-babel": "^6.0.4",
     "@types/lodash-es": "^4.17.12",
     "@types/luxon": "^3.4.2",
@@ -36,6 +37,8 @@
     "nuxt-primevue": "^0.2.2",
     "postcss": "^8.4.33",
     "sass": "^1.70.0",
+    "stylelint": "^16.8.2",
+    "stylelint-config-standard": "^36.0.1",
     "typescript": "^5.5.3",
     "vue-router": "^4.2.5",
     "vue-tsc": "^2.0.26"

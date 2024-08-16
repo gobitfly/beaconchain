@@ -56,6 +56,7 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxtjs/color-mode',
     '@nuxtjs/i18n',
+    '@nuxtjs/stylelint-module',
     [
       '@pinia/nuxt',
       {
