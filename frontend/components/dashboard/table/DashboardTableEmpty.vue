@@ -1,5 +1,5 @@
 <template>
-  <div class="empty delayed-fadein-animation" >
+  <div class="empty delayed-fadein-animation">
     <span class="big_text">{{ $t('dashboard.empty.empty_table') }}</span>
   </div>
 </template>
