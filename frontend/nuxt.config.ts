@@ -53,14 +53,17 @@ export default defineNuxtConfig({
   eslint: { config: { stylistic: true } },
   i18n: { vueI18n: './i18n.config.ts' },
   modules: [
-    '@nuxtjs/i18n',
+    '@nuxt/eslint',
     '@nuxtjs/color-mode',
+    '@nuxtjs/i18n',
+    '@nuxtjs/stylelint-module',
     [
       '@pinia/nuxt',
-      { storesDirs: [ './stores/**' ] },
+      {
+        storesDirs: [ './stores/**' ],
+      },
     ],
     'nuxt-primevue',
-    '@nuxt/eslint',
   ],
   nitro: { compressPublicAssets: true },
   postcss: { plugins: { autoprefixer: {} } },
