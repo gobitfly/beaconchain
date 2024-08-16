@@ -232,3 +232,4 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, da
 	}
 
 	return slotVizEpochs, nil
+}
