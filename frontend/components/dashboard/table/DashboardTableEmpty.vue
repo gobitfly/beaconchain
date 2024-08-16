@@ -13,8 +13,5 @@
   justify-content: center;
   align-items: center;
   color: var(--text-color-disabled);
-  gap: var(--padding);
-  cursor: pointer;
-
 }
 </style>
