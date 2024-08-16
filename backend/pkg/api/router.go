@@ -240,6 +240,27 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
 
+	// add middleware to check if user has access to dashboard
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
+		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
+	}
+
+	archivalEndpoints := []endpoint{
+		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
+		{http.MethodPut, "/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving, hs.InternalPutValidatorDashboardArchiving},
+	}
+
+	addEndpointsToRouters(archivalEndpoints, publicDashboardRouter, internalDashboardRouter)
+
+	// create new subrouters for archived check middleware, will be used for all endpoints added after this
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter = publicDashboardRouter.NewRoute().Subrouter()
+		internalDashboardRouter = internalDashboardRouter.NewRoute().Subrouter()
+		publicDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
+		internalDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
+	}
+
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", nil, hs.InternalPutValidatorDashboardName},
@@ -276,24 +297,6 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}/minipools", hs.PublicGetValidatorDashboardRocketPoolMinipools, hs.InternalGetValidatorDashboardRocketPoolMinipools},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
-
-	// add middleware to check if user has access to dashboard
-	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
-		// create new subrouters for archived check middleware, will be used for all endpoints added after this
-		publicDashboardRouter = publicDashboardRouter.NewRoute().Subrouter()
-		internalDashboardRouter = internalDashboardRouter.NewRoute().Subrouter()
-		publicDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
-		internalDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
-	}
-
-	archivalEndpoints := []endpoint{
-		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
-		{http.MethodPut, "/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving, hs.InternalPutValidatorDashboardArchiving},
-	}
-
-	addEndpointsToRouters(archivalEndpoints, publicDashboardRouter, internalDashboardRouter)
 }
 
 func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
