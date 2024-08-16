@@ -1,6 +1,6 @@
 <template>
   <div class="empty delayed-fadein-animation" >
-    <span class="big_text">{{ $t('dashboard.validator.summary.empty_table') }}</span>
+    <span class="big_text">{{ $t('dashboard.empty.empty_table') }}</span>
   </div>
 </template>
 
@@ -16,9 +16,5 @@
   gap: var(--padding);
   cursor: pointer;
 
-  svg {
-    width: 30px;
-    height: 30px;
-  }
 }
 </style>
