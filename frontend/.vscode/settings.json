@@ -4,7 +4,8 @@
     "vscode",
     "eslint",
     "mainHeader",
-    "checkout"
+    "checkout",
+    "nuxt.config"
   ],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
