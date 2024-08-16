@@ -3,7 +3,8 @@
     "i18n",
     "vscode",
     "eslint",
-    "mainHeader"
+    "mainHeader",
+    "checkout"
   ],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"

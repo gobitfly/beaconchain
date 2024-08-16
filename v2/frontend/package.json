@@ -50,7 +50,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nuxt dev --host=local.beaconcha.in",
+    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nuxt dev",
     "generate": "nuxt generate",
     "lint": "eslint . --report-unused-disable-directives",
     "lint:fix": "npm run lint -- --fix",
