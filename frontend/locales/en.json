@@ -124,6 +124,9 @@
         "yes_label": "Delete Dashboard"
       }
     },
+    "empty": { 
+        "empty_table": "Nothing to see here... yet"
+      },
     "group": {
       "selection": {
         "all": "All groups",
