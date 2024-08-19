@@ -218,13 +218,13 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 		log.Error(err, "error validating json", 0, nil)
 		return errors.New("couldn't validate JSON request")
 	}
-	if !result.Valid() {
+	isSchemaValid := result.Valid()
+	if !isSchemaValid {
 		v.add("request body", "invalid schema, check the API documentation for the expected format")
-		return nil
 	}
 
-	// Unmarshal into the target struct
-	if err := json.Unmarshal(bodyBytes, data); err != nil {
+	// Unmarshal into the target struct, only log error if it's a valid JSON
+	if err := json.Unmarshal(bodyBytes, data); err != nil && isSchemaValid {
 		log.Error(err, "error decoding json into target structure", 0, nil)
 		return errors.New("couldn't decode JSON request into target structure")
 	}
