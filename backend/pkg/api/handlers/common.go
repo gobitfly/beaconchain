@@ -898,7 +898,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		return []types.VDBSummaryValidatorsData{
 			mapUintSlice("sync_current", v.Current),
-			mapUintSlice("sync_upcoming", v.Current),
+			mapUintSlice("sync_upcoming", v.Upcoming),
 			mapSlice("sync_past", v.Past,
 				func(v types.VDBValidatorSyncPast) (uint64, []uint64) { return v.Index, []uint64{v.Count} },
 			),
