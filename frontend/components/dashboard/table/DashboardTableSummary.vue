@@ -328,7 +328,6 @@ const searchPlaceholder = computed(() =>
             </template>
             <template #empty>
               <DashboardTableAddValidator v-if="!hasValidators" />
-              <DashboardTableEmpty v-else />
             </template>
           </BcTable>
         </ClientOnly>
