@@ -360,7 +360,6 @@ export function mockLatestState(..._: any): InternalGetLatestStateResponse {
   }
   return {
     data: {
-      finalized_epoch: Math.floor(mockSlot / 32),
       current_slot: ++mockSlot,
       exchange_rates: [
         {
@@ -376,6 +375,7 @@ export function mockLatestState(..._: any): InternalGetLatestStateResponse {
           rate: randomize(2758.45),
         },
       ],
+      finalized_epoch: Math.floor(mockSlot / 32),
     },
   }
 }
