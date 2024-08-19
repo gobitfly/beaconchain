@@ -829,6 +829,12 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		handleErr(w, err)
 		return
 	}
+	// user doesn't contain password, fetch from db
+	userData, err := h.dai.GetUserCredentialInfo(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
 
 	// validate request
 	var v validationError
@@ -848,7 +854,7 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		handleErr(w, v)
 		return
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
+	err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(oldPassword))
 	if err != nil {
 		handleErr(w, errors.New("invalid password"))
 		return
