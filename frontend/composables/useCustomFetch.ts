@@ -62,7 +62,7 @@ export function useCustomFetch() {
         : apiClient
     const ssrSecret = pConfig?.ssrSecret
 
-    if (isServer) {
+    if (isServerSide) {
       baseURL = map.mock
         ? `${domain || url.origin.replace('http:', 'https:')}/mock`
         : map.legacy
@@ -78,7 +78,7 @@ export function useCustomFetch() {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
 
-    if (isServer && ssrSecret) {
+    if (isServerSide && ssrSecret) {
       options.headers.append('x-ssr-secret', ssrSecret)
     }
 
@@ -89,7 +89,7 @@ export function useCustomFetch() {
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
 
-    if (isServer && logIp === 'LOG') {
+    if (isServerSide && logIp === 'LOG') {
       $bcLogger.warn(
         `${
           uuid?.value

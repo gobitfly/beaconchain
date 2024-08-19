@@ -61,6 +61,19 @@ func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.R
 	returnOk(w, response)
 }
 
+func (h *HandlerService) InternalGetRocketPool(w http.ResponseWriter, r *http.Request) {
+	data, err := h.dai.GetRocketPoolOverview(r.Context())
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	response := types.InternalGetRocketPoolResponse{
+		Data: *data,
+	}
+	returnOk(w, response)
+}
+
 // All handler function names must include the HTTP method and the path they handle
 // Internal handlers may only be authenticated by an OAuth token
 

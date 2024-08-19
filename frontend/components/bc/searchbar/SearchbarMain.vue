@@ -229,7 +229,7 @@ watch(() => props, reconfigureSearchbar, { immediate: true })
 watch(availableNetworks, reconfigureSearchbar)
 
 let resizingObserver: ResizeObserver
-if (isClient) {
+if (isClientSide) {
   resizingObserver = new ResizeObserver((entries) => {
     const newLayout: SearchbarDropdownLayout
       = entries[0].borderBoxSize[0].inlineSize < LayoutThreshold
