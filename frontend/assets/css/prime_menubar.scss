@@ -67,6 +67,9 @@
     white-space: nowrap;
     text-align: center;
     gap: var(--padding);
+    @media (max-width: 519px) {
+      gap: var(--padding-small);
+    }
 
     &:has(.icon):has(.text){
       justify-content: flex-start;
