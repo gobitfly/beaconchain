@@ -65,7 +65,7 @@ var (
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
-	reEmailConfirmationHash        = regexp.MustCompile(`^[a-z0-9]{40}$`)
+	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
 )
 
 const (
@@ -84,11 +84,13 @@ const (
 )
 
 var (
-	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
-	errBadRequest   = errors.New("bad request")
-	errUnauthorized = errors.New("unauthorized")
-	errForbidden    = errors.New("forbidden")
-	errConflict     = errors.New("conflict")
+	errMsgParsingId    = errors.New("error parsing parameter 'dashboard_id'")
+	errBadRequest      = errors.New("bad request")
+	errUnauthorized    = errors.New("unauthorized")
+	errForbidden       = errors.New("forbidden")
+	errConflict        = errors.New("conflict")
+	errTooManyRequests = errors.New("too many requests")
+	errGone            = errors.New("gone")
 )
 
 type Paging struct {
@@ -172,8 +174,8 @@ func (v *validationError) checkPassword(password string) string {
 	return v.checkRegex(rePassword, password, "password")
 }
 
-func (v *validationError) checkConfirmationHash(hash string) string {
-	return v.checkRegex(reEmailConfirmationHash, hash, "token")
+func (v *validationError) checkUserEmailToken(token string) string {
+	return v.checkRegex(reEmailUserToken, token, "token")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -789,6 +791,14 @@ func returnForbidden(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusForbidden, err)
 }
 
+func returnTooManyRequests(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusTooManyRequests, err)
+}
+
+func returnGone(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusGone, err)
+}
+
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
@@ -810,6 +820,10 @@ func handleErr(w http.ResponseWriter, err error) {
 		returnConflict(w, err)
 	case errors.Is(err, services.ErrWaiting):
 		returnError(w, http.StatusServiceUnavailable, err)
+	case errors.Is(err, errTooManyRequests):
+		returnTooManyRequests(w, err)
+	case errors.Is(err, errGone):
+		returnGone(w, err)
 	default:
 		returnInternalServerError(w, err)
 	}
@@ -847,6 +861,14 @@ func newConflictErr(format string, args ...interface{}) error {
 //nolint:unparam
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
+}
+
+func newTooManyRequestsErr(format string, args ...interface{}) error {
+	return errWithMsg(errTooManyRequests, format, args...)
+}
+
+func newGoneErr(format string, args ...interface{}) error {
+	return errWithMsg(errGone, format, args...)
 }
 
 // --------------------------------------
