@@ -190,7 +190,7 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
             <template #expansion="slotProps">
               <div class="expansion">
                 <div class="label-dashboard">
-                  {{ $t("notifications.dashboards.expansion.label-dashboard") }}
+                  {{ $t("notifications.dashboards.expansion.label_dashboard") }}
                 </div>
                 <NotificationsDashboardsTableItemDashboard
                   :type="getDashboardType(slotProps.data.is_account_dashboard)"
@@ -201,14 +201,14 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
                   )"
                 />
                 <div class="label-group">
-                  {{ $t("notifications.dashboards.expansion.label-group") }}
+                  {{ $t("notifications.dashboards.expansion.label_group") }}
                 </div>
                 <div class="group">
                   {{ slotProps.data.group_name }}
                 </div>
                 <div class="label-notification">
                   {{
-                    $t("notifications.dashboards.expansion.label-notification")
+                    $t("notifications.dashboards.expansion.label_notification")
                   }}
                 </div>
                 <div class="notification">

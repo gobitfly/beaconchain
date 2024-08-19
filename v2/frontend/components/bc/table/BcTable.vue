@@ -165,6 +165,7 @@ const sort = computed(() => {
         v-if="!loading"
         name="empty"
       />
+      <DashboardTableEmpty />
     </template>
 
     <template #expansion="slotProps">

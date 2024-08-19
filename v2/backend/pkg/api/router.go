@@ -107,11 +107,12 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodPost, "/users", nil, hs.InternalPostUsers},
 		{http.MethodPost, "/users/email-confirmations/{token}", nil, hs.InternalPostUserConfirm},
+		{http.MethodPost, "/users/password-resets", nil, hs.InternalPostUserPasswordReset},
+		{http.MethodPost, "/users/password-resets/{token}", nil, hs.InternalPostUserPasswordResetHash},
 		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
 		{http.MethodDelete, "/users/me", nil, hs.InternalDeleteUser},
-		{http.MethodPut, "/users/me/email", nil, hs.InternalPutUserEmail},
+		{http.MethodPost, "/users/me/email", nil, hs.InternalPostUserEmail},
 		{http.MethodPut, "/users/me/password", nil, hs.InternalPutUserPassword},
-		// TODO reset password
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 		{http.MethodPut, "/users/me/notifications/settings/paired-devices/{client_id}/token", nil, hs.InternalPostUsersMeNotificationSettingsPairedDevicesToken},
 
@@ -220,6 +221,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/average-gas-limit-history", hs.PublicGetNetworkAverageGasLimitHistory, nil},
 		{http.MethodGet, "/networks/{network}/gas-used-history", hs.PublicGetNetworkGasUsedHistory, nil},
 
+		{http.MethodGet, "/rocket-pool", hs.PublicGetRocketPool, hs.InternalGetRocketPool},
 		{http.MethodGet, "/rocket-pool/nodes", hs.PublicGetRocketPoolNodes, nil},
 		{http.MethodGet, "/rocket-pool/minipools", hs.PublicGetRocketPoolMinipools, nil},
 
@@ -239,16 +241,30 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
+
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
 		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
 		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
 	}
 
-	endpoints := []endpoint{
-		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
+	archivalEndpoints := []endpoint{
 		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving, hs.InternalPutValidatorDashboardArchiving},
+	}
+
+	addEndpointsToRouters(archivalEndpoints, publicDashboardRouter, internalDashboardRouter)
+
+	// create new subrouters for archived check middleware, will be used for all endpoints added after this
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter = publicDashboardRouter.NewRoute().Subrouter()
+		internalDashboardRouter = internalDashboardRouter.NewRoute().Subrouter()
+		publicDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
+		internalDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
+	}
+
+	endpoints := []endpoint{
+		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", nil, hs.InternalPutValidatorDashboardName},
 		{http.MethodPost, "/{dashboard_id}/groups", hs.PublicPostValidatorDashboardGroups, hs.InternalPostValidatorDashboardGroups},
 		{http.MethodPut, "/{dashboard_id}/groups/{group_id}", hs.PublicPutValidatorDashboardGroups, hs.InternalPutValidatorDashboardGroups},
