@@ -90,7 +90,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
     return [ {
       dropdown: true,
       highlight: true,
-      items: buttons,
+      items: buttons.reverse(), // In the dropdown we want the button sorting to be reversed
       label: $t('dashboard.header.manage'),
     } ]
   }

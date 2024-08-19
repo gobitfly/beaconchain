@@ -153,10 +153,12 @@ const items = computed<MenuBarEntry[]>(() => {
     overflow: hidden;
   }
 
-  :deep(.p-menubar-root-list > .p-menuitem) {
-    width: 145px;
-    .button-content {
-      gap: unset;
+  :deep(.p-menubar-root-list >.p-menuitem ) {
+    min-width: 102px;
+    >.p-menuitem-content:not(:has(.toggle)) {
+      .button-content {
+        justify-content: center;
+      }
     }
   }
 

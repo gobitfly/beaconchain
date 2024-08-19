@@ -21,6 +21,11 @@ export interface VDBOverviewGroup {
   name: string;
   count: number /* uint64 */;
 }
+export interface VDBOverviewBalances {
+  total: number /* uint64 */;
+  effective: number /* uint64 */;
+  staked_eth: number /* uint64 */;
+}
 export interface VDBOverviewData {
   name?: string;
   groups: VDBOverviewGroup[];
@@ -29,6 +34,7 @@ export interface VDBOverviewData {
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
   chart_history_seconds: ChartHistorySeconds;
+  balances: VDBOverviewBalances;
 }
 export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBPostArchivingReturnData {
@@ -175,11 +181,11 @@ export interface VDBHeatmap {
   timestamps: number /* int64 */[]; // X-Axis Categories (unix timestamp)
   group_ids: number /* uint64 */[]; // Y-Axis Categories
   data: VDBHeatmapCell[];
-  aggregation: 'epoch' | 'day';
+  aggregation: 'epoch' | 'hourly' | 'daily' | 'weekly';
 }
 export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmapTooltipData {
-  timestamp: number /* int64 */; // epoch or day
+  timestamp: number /* int64 */;
   proposers: StatusCount;
   syncs: number /* uint64 */;
   slashings: StatusCount;
@@ -251,7 +257,10 @@ export type InternalGetValidatorDashboardTotalWithdrawalsResponse = ApiDataRespo
  */
 export interface VDBRocketPoolTableRow {
   node: Address;
-  staked_eth: string /* decimal.Decimal */;
+  staked: {
+    eth: string /* decimal.Decimal */;
+    rpl: string /* decimal.Decimal */;
+  };
   minipools: {
     total: number /* uint64 */;
     leb_16: number /* uint64 */;
@@ -265,6 +274,8 @@ export interface VDBRocketPoolTableRow {
   };
   effective_rpl: string /* decimal.Decimal */;
   rpl_apr: number /* float64 */;
+  rpl_apr_update_ts: number /* int64 */;
+  rpl_estimate: string /* decimal.Decimal */;
   smoothing_pool: {
     is_opt_in: boolean;
     claimed: string /* decimal.Decimal */;
@@ -277,7 +288,6 @@ export interface VDBNodeRocketPoolData {
   timezone: string;
   refund_balance: string /* decimal.Decimal */;
   deposit_credit: string /* decimal.Decimal */;
-  penalties: number /* uint64 */;
   rpl_stake: {
     min: string /* decimal.Decimal */;
     max: string /* decimal.Decimal */;
@@ -293,6 +303,7 @@ export interface VDBRocketPoolMinipoolsTableRow {
   deposit: string /* decimal.Decimal */;
   commission: number /* float64 */;
   created_timestamp: number /* int64 */;
+  penalties: number /* uint64 */;
 }
 export type InternalGetValidatorDashboardRocketPoolMinipoolsResponse = ApiPagingResponse<VDBRocketPoolMinipoolsTableRow>;
 /**

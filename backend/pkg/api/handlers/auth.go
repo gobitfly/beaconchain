@@ -85,7 +85,7 @@ func (h *HandlerService) sendConfirmationEmail(ctx context.Context, userId uint6
 		return errors.New("error getting confirmation-ts")
 	}
 	if lastTs.Add(authConfirmEmailRateLimit).After(time.Now()) {
-		return errors.New("rate limit reached, try again later")
+		return newTooManyRequestsErr("rate limit reached, try again later")
 	}
 
 	// 2. update confirmation hash (before sending so there's no hash mismatch on failure)
@@ -120,7 +120,7 @@ Best regards,
 }
 
 // TODO move to service?
-func (h *HandlerService) sendResetEmail(ctx context.Context, userId uint64, email string) error {
+func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint64, email string) error {
 	// 0. check if email resets are allowed
 	// (can be forbidden by admin (not yet in v2))
 	passwordResetAllowed, err := h.dai.IsPasswordResetAllowed(ctx, userId)
@@ -137,7 +137,7 @@ func (h *HandlerService) sendResetEmail(ctx context.Context, userId uint64, emai
 		return errors.New("error getting confirmation-ts")
 	}
 	if lastTs.Add(authResetEmailRateLimit).After(time.Now()) {
-		return errors.New("rate limit reached, try again later")
+		return newTooManyRequestsErr("rate limit reached, try again later")
 	}
 
 	// 2. update reset hash (before sending so there's no hash mismatch on failure)
@@ -173,15 +173,13 @@ Best regards,
 
 func (h *HandlerService) GetUserIdBySession(r *http.Request) (uint64, error) {
 	user, err := h.getUserBySession(r)
-	if err != nil {
-		return 0, err
-	}
-	return user.Id, nil
+	return user.Id, err
 }
 
 const authHeaderPrefix = "Bearer "
 
 func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
+	// TODO: store user id in context during ratelimting and use it here
 	var apiKey string
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, authHeaderPrefix) {
@@ -199,10 +197,11 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 	return userId, err
 }
 
+// if this is used, user ID should've been stored in context (by GetUserIdStoreMiddleware)
 func GetUserIdByContext(r *http.Request) (uint64, error) {
 	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
 	if !ok {
-		return 0, errors.New("error getting user id from context, not a uint64")
+		return 0, newUnauthorizedErr("user not authenticated")
 	}
 	return userId, nil
 }
@@ -299,7 +298,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		return
 	}
 	if confirmationTime.Add(authEmailExpireTime).Before(time.Now()) {
-		handleErr(w, errors.New("confirmation link expired"))
+		handleErr(w, newGoneErr("confirmation link expired"))
 		return
 	}
 
@@ -318,7 +317,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 	returnNoContent(w)
 }
 
-func (h *HandlerService) InternalPutUserPasswordReset(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
 		Email string `json:"email"`
@@ -338,7 +337,8 @@ func (h *HandlerService) InternalPutUserPasswordReset(w http.ResponseWriter, r *
 	userId, err := h.dai.GetUserByEmail(r.Context(), email)
 	if err != nil {
 		if err == dataaccess.ErrNotFound {
-			returnConflict(w, errors.New("email not registered"))
+			// don't leak if email is registered
+			returnOk(w, nil)
 		} else {
 			handleErr(w, err)
 		}
@@ -346,7 +346,7 @@ func (h *HandlerService) InternalPutUserPasswordReset(w http.ResponseWriter, r *
 	}
 
 	// send password reset email
-	err = h.sendResetEmail(r.Context(), userId, email)
+	err = h.sendPasswordResetEmail(r.Context(), userId, email)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -383,7 +383,7 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 		return
 	}
 	if resetTime.Add(authEmailExpireTime).Before(time.Now()) {
-		handleErr(w, errors.New("reset link expired"))
+		handleErr(w, newGoneErr("reset link expired"))
 		return
 	}
 
@@ -744,7 +744,7 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 	returnNoContent(w)
 }
 
-func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Request) {
 	// validate user
 	user, err := h.getUserBySession(r)
 	if err != nil {
@@ -812,7 +812,7 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	response := types.InternalPutUserEmailResponse{
+	response := types.InternalPostUserEmailResponse{
 		Data: types.EmailUpdate{
 			Id:           userInfo.Id,
 			CurrentEmail: userInfo.Email,
@@ -882,16 +882,21 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 }
 
 // Middlewares
+
 // returns a middleware that stores user id in context, using the provided function
 func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userId, err := userIdFunc(r)
 			if err != nil {
-				handleErr(w, err)
+				if errors.Is(err, errUnauthorized) {
+					// if next handler requires authentication, it should return 'unauthorized' itself
+					next.ServeHTTP(w, r)
+				} else {
+					handleErr(w, err)
+				}
 				return
 			}
-			// store user id in context
 			ctx := r.Context()
 			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 			r = r.WithContext(ctx)
@@ -901,45 +906,42 @@ func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) 
 }
 
 // returns a middleware that checks if user has access to dashboard when a primary id is used
-// expects a userIdFunc to return user id, probably GetUserIdBySession or GetUserIdByApiKey
-func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var err error
-			dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
-			if err != nil {
-				// if primary id is not used, no need to check access
-				next.ServeHTTP(w, r)
-				return
-			}
-			// primary id is used -> user needs to have access to dashboard
-
-			userId, err := userIdFunc(r)
-			if err != nil {
-				handleErr(w, err)
-				return
-			}
-			// store user id in context
-			ctx := r.Context()
-			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
-			r = r.WithContext(ctx)
-
-			dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
-			if err != nil {
-				handleErr(w, err)
-				return
-			}
-
-			if dashboard.UserId != userId {
-				// user does not have access to dashboard
-				// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
-				handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
-				return
-			}
-
+func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		dashboardId, err := strconv.ParseUint(mux.Vars(r)["dashboard_id"], 10, 64)
+		if err != nil {
+			// if primary id is not used, no need to check access
 			next.ServeHTTP(w, r)
-		})
-	}
+			return
+		}
+		// primary id is used -> user needs to have access to dashboard
+
+		userId, err := GetUserIdByContext(r)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		// store user id in context
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
+		r = r.WithContext(ctx)
+
+		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+
+		if dashboard.UserId != userId {
+			// user does not have access to dashboard
+			// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
+			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // returns a middleware that checks if user has premium perk to use public validator dashboard api
@@ -947,9 +949,9 @@ func (h *HandlerService) GetVDBAuthMiddleware(userIdFunc func(r *http.Request) (
 func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get user id from context
-		userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
-		if !ok {
-			handleErr(w, errors.New("error getting user id from context"))
+		userId, err := GetUserIdByContext(r)
+		if err != nil {
+			handleErr(w, err)
 			return
 		}
 		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
@@ -959,6 +961,27 @@ func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Han
 		}
 		if !userInfo.PremiumPerks.ManageDashboardViaApi {
 			handleErr(w, newForbiddenErr("user does not have access to public validator dashboard endpoints"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// middleware check to return if specified dashboard is not archived (and accessible)
+func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		dashboard, err := h.dai.GetValidatorDashboard(r.Context(), *dashboardId)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		if dashboard.IsArchived {
+			handleErr(w, newForbiddenErr("dashboard with id %v is archived", dashboardId))
 			return
 		}
 		next.ServeHTTP(w, r)

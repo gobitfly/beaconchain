@@ -1,5 +1,6 @@
 // @ts-check
 import perfectionist from 'eslint-plugin-perfectionist'
+import eslintPluginJsonc from 'eslint-plugin-jsonc'
 
 import withNuxt from './.nuxt/eslint.config.mjs'
 
@@ -80,9 +81,11 @@ export default withNuxt({
 )
   .prepend({
     ignores: [
-      'types/api',
-      'public',
       'assets/css/prime_origin.scss',
+      'public',
+      'package-lock.json',
+      'tsconfig.json',
+      'types/api',
     ],
   })
   .override('nuxt/typescript/rules', {
@@ -99,6 +102,37 @@ export default withNuxt({
       // disable the rules as there are conflicts
         'perfectionist/sort-imports': 'off',
         'perfectionist/sort-vue-attributes': 'off',
+      },
+    },
+  )
+  .append(
+    ...eslintPluginJsonc.configs['flat/recommended-with-json'],
+    {
+      rules: {
+        'jsonc/sort-keys': [
+          'error',
+          'asc',
+          {
+            natural: true,
+          },
+        ],
+      },
+    },
+    {
+      files: [ 'locales/**/*.json' ],
+      rules: {
+        'jsonc/key-name-casing': [
+          'error',
+          {
+            camelCase: false,
+            ignores: [
+              'mGNO',
+              'xDAI',
+            ],
+            SCREAMING_SNAKE_CASE: true,
+            snake_case: true,
+          },
+        ],
       },
     },
   )

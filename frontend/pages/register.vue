@@ -12,6 +12,7 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const route = useRoute()
+const { promoCode } = usePromoCode()
 
 useBcSeo('login_and_register.title_register')
 
@@ -58,7 +59,14 @@ const onSubmit = handleSubmit(async (values) => {
     if (handleMobileAuth(route.query)) {
       return
     }
-    await navigateTo('/')
+    if (promoCode) {
+      await navigateTo({
+        path: '/pricing', query: { promoCode },
+      })
+    }
+    else {
+      await navigateTo('/')
+    }
   }
   catch (error) {
     toast.showError({

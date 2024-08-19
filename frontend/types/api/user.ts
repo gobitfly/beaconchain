@@ -27,7 +27,7 @@ export interface EmailUpdate {
   current_email: string;
   pending_email: string;
 }
-export type InternalPutUserEmailResponse = ApiDataResponse<EmailUpdate>;
+export type InternalPostUserEmailResponse = ApiDataResponse<EmailUpdate>;
 export interface AdConfigurationUpdateData {
   jquery_selector: string;
   insert_mode: string;
