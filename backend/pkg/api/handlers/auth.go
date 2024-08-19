@@ -923,3 +923,24 @@ func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Han
 		next.ServeHTTP(w, r)
 	})
 }
+
+// middleware check to return if specified dashboard is not archived (and accessible)
+func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		dashboard, err := h.dai.GetValidatorDashboard(r.Context(), *dashboardId)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		if dashboard.IsArchived {
+			handleErr(w, newForbiddenErr("dashboard with id %v is archived", dashboardId))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
