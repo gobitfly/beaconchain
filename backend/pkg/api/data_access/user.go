@@ -19,15 +19,20 @@ type UserRepository interface {
 	UpdateUserEmail(ctx context.Context, userId uint64) error
 	UpdateUserPassword(ctx context.Context, userId uint64, password string) error
 	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
+	GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error)
+	IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error)
 	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
+	UpdatePasswordResetTime(ctx context.Context, userId uint64) error
 	GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error)
 	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
+	UpdatePasswordResetHash(ctx context.Context, userId uint64, passwordHash string) error
 	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
-	GetUserIdByConfirmationHash(hash string) (uint64, error)
+	GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error)
+	GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
-	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
+	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -70,9 +75,23 @@ func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId
 	return d.dummy.GetEmailConfirmationTime(ctx, userId)
 }
 
+func (d *DataAccessService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetPasswordResetTime(ctx, userId)
+}
+
 func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
 	return d.dummy.UpdateEmailConfirmationTime(ctx, userId)
+}
+
+func (d *DataAccessService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
+	return d.dummy.IsPasswordResetAllowed(ctx, userId)
+}
+
+func (d *DataAccessService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdatePasswordResetTime(ctx, userId)
 }
 
 func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
@@ -83,6 +102,12 @@ func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId
 func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
 	// TODO @DATA-ACCESS
 	return d.dummy.UpdateEmailConfirmationHash(ctx, userId, email, confirmationHash)
+}
+
+func (d *DataAccessService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
+	// TODO @DATA-ACCESS
+	// this method refers to updating the `password_reset_hash` in the db
+	return d.dummy.UpdatePasswordResetHash(ctx, userId, confirmationHash)
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
@@ -127,9 +152,14 @@ func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string
 	return userId, err
 }
 
-func (d *DataAccessService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
 	// TODO @DATA-ACCESS
-	return d.dummy.GetUserIdByConfirmationHash(hash)
+	return d.dummy.GetUserIdByConfirmationHash(ctx, hash)
+}
+
+func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserIdByResetHash(ctx, hash)
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
@@ -155,10 +185,18 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
 
-	err = d.userReader.GetContext(ctx, &userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
+	result := struct {
+		Email     string `db:"email"`
+		UserGroup string `db:"user_group"`
+	}{}
+	err = d.userReader.GetContext(ctx, &result, `SELECT email, COALESCE(user_group, '') as user_group FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
+	userInfo.Email = result.Email
+	userInfo.UserGroup = result.UserGroup
+
+	userInfo.Email = utils.CensorEmail(userInfo.Email)
 
 	err = d.userReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
@@ -539,6 +577,7 @@ func (d *DataAccessService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPer
 }
 
 func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
+	// TODO @DATA-ACCESS Adjust to api changes: return archival related fields
 	result := &t.UserDashboardsData{}
 
 	dbReturn := []struct {
@@ -603,7 +642,9 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	return result, nil
 }
 
-func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
+// return number of active / archived dashboards
+func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
+	// @DATA-ACCESS return number of dashboards depending on archival status (see comment above)
 	var count uint64
 	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards

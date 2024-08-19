@@ -1,12 +1,12 @@
 export type ToastData = {
-  summary: string,
   detail?: string,
-  group?: string
+  group?: string,
+  summary: string,
 }
-type ToastFunction = (data: ToastData)=>void
+type ToastFunction = (data: ToastData) => void
 
-export interface BcToastProvider{
-  showError:ToastFunction,
+export interface BcToastProvider {
+  showError: ToastFunction,
   showInfo: ToastFunction,
-  showSuccess: ToastFunction
+  showSuccess: ToastFunction,
 }

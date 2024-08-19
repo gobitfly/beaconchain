@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand/v2"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
 )
 
@@ -63,6 +65,24 @@ func (d *DummyService) GetLatestSlot() (uint64, error) {
 	return r, err
 }
 
+func (d *DummyService) GetLatestFinalizedEpoch() (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetLatestBlock() (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetBlockHeightAt(slot uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
 	r := []t.EthConversionRate{}
 	err := commonFakeData(&r)
@@ -99,7 +119,21 @@ func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint
 	return r, err
 }
 
+func (d *DummyService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+	r := time.Time{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
+	return nil
+}
+
+func (d *DummyService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
+	return true, nil
+}
+
+func (d *DummyService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
 	return nil
 }
 
@@ -110,6 +144,10 @@ func (d *DummyService) GetEmailConfirmationHash(ctx context.Context, userId uint
 }
 
 func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
+	return nil
+}
+
+func (d *DummyService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
 	return nil
 }
 
@@ -131,7 +169,13 @@ func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (ui
 	return r, err
 }
 
-func (d *DummyService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+func (d *DummyService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
@@ -159,6 +203,15 @@ func (d *DummyService) GetValidatorDashboardInfoByPublicId(ctx context.Context, 
 	r := t.DashboardInfo{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+	r := t.ValidatorDashboard{}
+	// return semi-valid data to not break staging
+	//nolint:errcheck
+	commonFakeData(&r)
+	r.IsArchived = false
+	return &r, nil
 }
 
 func (d *DummyService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
@@ -193,6 +246,12 @@ func (d *DummyService) GetValidatorDashboardOverview(ctx context.Context, dashbo
 
 func (d *DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
 	return nil
+}
+
+func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+	r := t.VDBPostArchivingReturnData{}
+	err := commonFakeData(&r)
+	return &r, err
 }
 
 func (d *DummyService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
@@ -369,25 +428,13 @@ func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboar
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
+func (d *DummyService) GetValidatorDashboardHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.VDBHeatmap, error) {
 	r := t.VDBHeatmap{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
-	r := t.VDBHeatmap{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
-	r := t.VDBHeatmapTooltipData{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, day time.Time, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
+func (d *DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, timestamp uint64) (*t.VDBHeatmapTooltipData, error) {
 	r := t.VDBHeatmapTooltipData{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -433,6 +480,34 @@ func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context
 	r := t.VDBTotalWithdrawalsData{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
+	r := []t.VDBRocketPoolTableRow{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, &p, err
+}
+
+func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
+	r := t.VDBRocketPoolTableRow{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
+	r := t.VDBNodeRocketPoolData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
+	r := []t.VDBRocketPoolMinipoolsTableRow{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, &p, err
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
@@ -483,7 +558,7 @@ func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainI
 	return &r, err
 }
 
-func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
+func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
@@ -617,4 +692,158 @@ func (d *DummyService) UpdateAdConfiguration(ctx context.Context, key, jquerySel
 
 func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) error {
 	return nil
+}
+
+func (d *DummyService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
+	r := t.OAuthAppData{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+	return nil
+}
+
+func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
+	return nil
+}
+
+func (d *DummyService) GetBlockOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
+	r := t.BlockOverview{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetBlockTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
+	r := []t.BlockTransactionTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
+	r := t.BlockSummary{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetBlockVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
+	r := []t.BlockVoteTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetBlockAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
+	r := []t.BlockAttestationTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetBlockWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
+	r := []t.BlockWithdrawalTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
+	r := []t.BlockBlsChangeTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetBlockVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
+	r := []t.BlockVoluntaryExitTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
+	r := []t.BlockBlobTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlot(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
+	r := t.BlockSummary{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSlotOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
+	r := t.BlockOverview{}
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+func (d *DummyService) GetSlotTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
+	r := []t.BlockTransactionTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
+	r := []t.BlockVoteTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
+	r := []t.BlockAttestationTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
+	r := []t.BlockWithdrawalTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
+	r := []t.BlockBlsChangeTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
+	r := []t.BlockVoluntaryExitTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
+	r := []t.BlockBlobTableRow{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPoolData, error) {
+	r := t.RocketPoolData{}
+	err := commonFakeData(&r)
+	return &r, err
 }

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -55,6 +56,11 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Cont
 		return nil, fmt.Errorf("%w: public id %v not found", ErrNotFound, publicDashboardId)
 	}
 	return result, err
+}
+
+func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetValidatorDashboard(ctx, dashboardId)
 }
 
 func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
@@ -181,6 +187,11 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	return nil
 }
 
+func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdateValidatorDashboardArchiving(ctx, dashboardId, archived)
+}
+
 func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
 	result := &t.VDBPostReturnData{}
 
@@ -197,6 +208,7 @@ func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, da
 
 func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
 	// @DATA-ACCESS incorporate poolmode
+	// @DATA-ACCESS return VDBOverviewBalances
 	data := t.VDBOverviewData{}
 	wg := errgroup.Group{}
 	var err error
@@ -285,27 +297,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		return nil
 	})
 
-	query := `SELECT
-		COALESCE(SUM(attestations_reward), 0)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-		COALESCE(SUM(blocks_proposed), 0)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-		COALESCE(SUM(sync_executed), 0)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-	FROM %[1]s v
-	INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validator_index
-	WHERE uvdv.dashboard_id = $1`
-
-	if dashboardId.Validators != nil {
-		query = `SELECT
-			COALESCE(SUM(attestations_reward), 0)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency,
-			COALESCE(SUM(blocks_proposed), 0)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency,
-			COALESCE(SUM(sync_executed), 0)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency
-		FROM %[1]s
-		WHERE validator_index = ANY($1)`
-	}
-
-	retrieveRewardsAndEfficiency := func(table string, days int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
+	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		wg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, validators, days)
+			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
@@ -314,30 +309,68 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		// Efficiency
 		wg.Go(func() error {
-			var params interface{}
-			if dashboardId.Validators == nil {
-				params = dashboardId.Id
+			ds := goqu.Dialect("postgres").
+				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
+				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+				Select(
+					goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
+					goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
+					goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
+					goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
+					goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
+					goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
+
+			if len(dashboardId.Validators) > 0 {
+				ds = ds.
+					Where(goqu.L("r.validator_index IN ?", validators))
 			} else {
-				params = validators
-			}
-			var queryResult struct {
-				AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
-				ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
-				SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+				ds = ds.
+					InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+					Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 			}
 
-			err := d.alloyReader.GetContext(ctx, &queryResult, fmt.Sprintf(query, table), params)
+			var queryResult struct {
+				AttestationReward      decimal.Decimal `db:"attestations_reward"`
+				AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
+				BlocksProposed         uint64          `db:"blocks_proposed"`
+				BlocksScheduled        uint64          `db:"blocks_scheduled"`
+				SyncExecuted           uint64          `db:"sync_executed"`
+				SyncScheduled          uint64          `db:"sync_scheduled"`
+			}
+
+			query, args, err := ds.Prepared(true).ToSQL()
+			if err != nil {
+				return fmt.Errorf("error preparing query: %v", err)
+			}
+
+			err = d.clickhouseReader.GetContext(ctx, &queryResult, query, args...)
 			if err != nil {
 				return err
 			}
-			*efficiency = d.calculateTotalEfficiency(queryResult.AttestationEfficiency, queryResult.ProposerEfficiency, queryResult.SyncEfficiency)
+
+			// Calculate efficiency
+			var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
+			if !queryResult.AttestationIdealReward.IsZero() {
+				attestationEfficiency.Float64 = queryResult.AttestationReward.Div(queryResult.AttestationIdealReward).InexactFloat64()
+				attestationEfficiency.Valid = true
+			}
+			if queryResult.BlocksScheduled > 0 {
+				proposerEfficiency.Float64 = float64(queryResult.BlocksProposed) / float64(queryResult.BlocksScheduled)
+				proposerEfficiency.Valid = true
+			}
+			if queryResult.SyncScheduled > 0 {
+				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
+				syncEfficiency.Valid = true
+			}
+			*efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+
 			return nil
 		})
 	}
 
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_daily", 1, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_weekly", 7, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_monthly", 30, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_24h", 24, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_7d", 7*24, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", 30*24, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
 	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
 	err = wg.Wait()

@@ -3,57 +3,89 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {identifier: string}
+type ExtendedVDBWithdrawalsTableRow = {
+  identifier: string,
+} & VDBWithdrawalsTableRow
 
 const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const { latestState } = useLatestStateStore()
 const { slotToEpoch } = useNetworkStore()
-const { withdrawals, query: lastQuery, getWithdrawals, totalAmount, getTotalAmount, isLoadingWithdrawals, isLoadingTotal } = useValidatorDashboardWithdrawalsStore()
-const { value: query, temp: tempQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const {
+  getTotalAmount,
+  getWithdrawals,
+  isLoadingTotal,
+  isLoadingWithdrawals,
+  query: lastQuery,
+  totalAmount,
+  withdrawals,
+} = useValidatorDashboardWithdrawalsStore()
+const {
+  bounce: setQuery,
+  temp: tempQuery,
+  value: query,
+} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
 
-const { hasValidators, overview } = useValidatorDashboardOverviewStore()
+const {
+  hasValidators, overview,
+} = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    group: width.value > 995,
-    slot: width.value > 875,
+    age: width.value > 500,
     epoch: width.value > 805,
+    group: width.value > 995,
     recipient: width.value > 695,
-    age: width.value > 500
+    slot: width.value > 875,
   }
 })
 
 const loadData = (query?: TableQueryParams) => {
   if (!query) {
-    query = { limit: pageSize.value, sort: 'slot:desc' }
+    query = {
+      limit: pageSize.value,
+      sort: 'slot:desc',
+    }
   }
   setQuery(query, true, true)
 }
 
-watch([dashboardKey, overview], () => {
-  loadData()
-  getTotalAmount(dashboardKey.value)
-}, { immediate: true })
+watch(
+  [
+    dashboardKey,
+    overview,
+  ],
+  () => {
+    loadData()
+    getTotalAmount(dashboardKey.value)
+  },
+  { immediate: true },
+)
 
-watch(query, (q) => {
-  if (q) {
-    getWithdrawals(dashboardKey.value, q)
-  }
-}, { immediate: true })
+watch(
+  query,
+  (q) => {
+    if (q) {
+      getWithdrawals(dashboardKey.value, q)
+    }
+  },
+  { immediate: true },
+)
 
 const tableData = computed(() => {
   if (!withdrawals.value?.data?.length) {
@@ -61,17 +93,17 @@ const tableData = computed(() => {
   }
 
   return {
-    paging: withdrawals.value.paging,
     data: [
       {
         amount: totalAmount.value,
-        identifier: totalIdentifier
+        identifier: totalIdentifier,
       },
       ...withdrawals.value.data.map(w => ({
         ...w,
-        identifier: `${w.slot}-${w.index}`
-      }))
-    ]
+        identifier: `${w.slot}-${w.index}`,
+      })),
+    ],
+    paging: withdrawals.value.paging,
   }
 })
 
@@ -124,13 +156,15 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
 
   return false
 }
-
 </script>
+
 <template>
   <div>
     <BcTableControl
       :title="$t('dashboard.validator.withdrawals.title')"
-      :search-placeholder="$t('dashboard.validator.withdrawals.search_placeholder')"
+      :search-placeholder="
+        $t('dashboard.validator.withdrawals.search_placeholder')
+      "
       @set-search="setSearch"
     >
       <template #table>
@@ -140,11 +174,11 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             data-key="identifier"
             :expandable="!colsVisible.group"
             class="withdrawal-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :row-class="getRowClass"
             :add-spacer="true"
-            :is-row-expandable="isRowExpandable"
+            :is-row-expandable
             :loading="isLoadingWithdrawals"
             :selected-sort="tempQuery?.sort"
             @set-cursor="setCursor"
@@ -159,12 +193,17 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               header-class="index"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.is_missing_estimate" class="value-with-tooltip-container">
-                  {{ $t('dashboard.validator.withdrawals.pending') }}
+                <div
+                  v-if="slotProps.data.is_missing_estimate"
+                  class="value-with-tooltip-container"
+                >
+                  {{ $t("dashboard.validator.withdrawals.pending") }}
                   <BcTooltip>
                     <FontAwesomeIcon :icon="faInfoCircle" />
                     <template #tooltip>
-                      {{ $t('dashboard.validator.withdrawals.pending_tooltip') }}
+                      {{
+                        $t("dashboard.validator.withdrawals.pending_tooltip")
+                      }}
                     </template>
                   </BcTooltip>
                 </div>
@@ -176,7 +215,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 >
                   {{ slotProps.data.index || "-" }}
                 </BcLink>
-                <div v-else class="all-time-total">
+                <div
+                  v-else
+                  class="all-time-total"
+                >
                   Σ
                 </div>
               </template>
@@ -189,7 +231,12 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.group')"
             >
               <template #body="slotProps">
-                <span v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate">
+                <span
+                  v-if="
+                    slotProps.data.identifier !== totalIdentifier
+                      && !slotProps.data.is_missing_estimate
+                  "
+                >
                   {{ groupNameLabel(slotProps.data.group_id) }}
                 </span>
               </template>
@@ -202,12 +249,18 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <BcLink
-                  v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
+                  v-if="
+                    slotProps.data.identifier !== totalIdentifier
+                      && !slotProps.data.is_missing_estimate
+                  "
                   :to="`/epoch/${slotProps.data.epoch}`"
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.epoch" default="-" />
+                  <BcFormatNumber
+                    :value="slotProps.data.epoch"
+                    default="-"
+                  />
                 </BcLink>
               </template>
             </Column>
@@ -219,12 +272,18 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             >
               <template #body="slotProps">
                 <BcLink
-                  v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
+                  v-if="
+                    slotProps.data.identifier !== totalIdentifier
+                      && !slotProps.data.is_missing_estimate
+                  "
                   :to="`/slot/${slotProps.data.slot}`"
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotProps.data.slot" default="-" />
+                  <BcFormatNumber
+                    :value="slotProps.data.slot"
+                    default="-"
+                  />
                 </BcLink>
               </template>
             </Column>
@@ -238,7 +297,10 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
-                  v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate"
+                  v-if="
+                    slotProps.data.identifier !== totalIdentifier
+                      && !slotProps.data.is_missing_estimate
+                  "
                   type="slot"
                   :value="slotProps.data.slot"
                 />
@@ -251,7 +313,12 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.recipient')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.identifier !== totalIdentifier && !slotProps.data.is_missing_estimate">
+                <div
+                  v-if="
+                    slotProps.data.identifier !== totalIdentifier
+                      && !slotProps.data.is_missing_estimate
+                  "
+                >
                   <BcFormatHash
                     v-if="slotProps.data.recipient?.hash"
                     type="address"
@@ -271,18 +338,32 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               :header="$t('dashboard.validator.col.amount')"
             >
               <template #body="slotProps">
-                <div v-if="slotProps.data.identifier === totalIdentifier && isLoadingTotal">
-                  <BcLoadingSpinner :loading="true" size="small" />
+                <div
+                  v-if="
+                    slotProps.data.identifier === totalIdentifier
+                      && isLoadingTotal
+                  "
+                >
+                  <BcLoadingSpinner
+                    :loading="true"
+                    size="small"
+                  />
                 </div>
-                <div v-else-if="!slotProps.data.is_missing_estimate" class="value-with-tooltip-container">
+                <div
+                  v-else-if="!slotProps.data.is_missing_estimate"
+                  class="value-with-tooltip-container"
+                >
                   <BcFormatValue
                     :value="slotProps.data.amount"
-                    :class="{'all-time-total':slotProps.data.identifier === totalIdentifier}"
+                    :class="{
+                      'all-time-total':
+                        slotProps.data.identifier === totalIdentifier,
+                    }"
                   />
                   <BcTooltip v-if="isRowInFuture(slotProps.data)">
                     <FontAwesomeIcon :icon="faInfoCircle" />
                     <template #tooltip>
-                      {{ $t('dashboard.validator.withdrawals.future_tooltip') }}
+                      {{ $t("dashboard.validator.withdrawals.future_tooltip") }}
                     </template>
                   </BcTooltip>
                 </div>
@@ -292,7 +373,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
               <div class="expansion">
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.group') }}:
+                    {{ $t("dashboard.validator.col.group") }}:
                   </div>
                   <div :class="getExpansionValueClass(slotProps.data)">
                     {{ groupNameLabel(slotProps.data.group_id) }}
@@ -300,27 +381,46 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('common.epoch') }}:
+                    {{ $t("common.epoch") }}:
                   </div>
-                  <BcLink :to="`/epoch/${slotProps.data.epoch}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)">
-                    <BcFormatNumber :value="slotProps.data.epoch" default="-" />
+                  <BcLink
+                    :to="`/epoch/${slotProps.data.epoch}`"
+                    target="_blank"
+                    class="link"
+                    :class="getExpansionValueClass(slotProps.data)"
+                  >
+                    <BcFormatNumber
+                      :value="slotProps.data.epoch"
+                      default="-"
+                    />
                   </BcLink>
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('common.slot') }}:
+                    {{ $t("common.slot") }}:
                   </div>
-                  <BcLink :to="`/slot/${slotProps.data.slot}`" target="_blank" class="link" :class="getExpansionValueClass(slotProps.data)">
-                    <BcFormatNumber :value="slotProps.data.slot" default="-" />
+                  <BcLink
+                    :to="`/slot/${slotProps.data.slot}`"
+                    target="_blank"
+                    class="link"
+                    :class="getExpansionValueClass(slotProps.data)"
+                  >
+                    <BcFormatNumber
+                      :value="slotProps.data.slot"
+                      default="-"
+                    />
                   </BcLink>
                 </div>
                 <div class="row">
                   <BcTableAgeHeader class="label" />
-                  <BcFormatTimePassed type="slot" :value="slotProps.data.slot" />
+                  <BcFormatTimePassed
+                    type="slot"
+                    :value="slotProps.data.slot"
+                  />
                 </div>
                 <div class="row">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.recipient') }}:
+                    {{ $t("dashboard.validator.col.recipient") }}:
                   </div>
                   <BcFormatHash
                     v-if="slotProps.data.recipient?.hash"
@@ -349,7 +449,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
 @use "~/assets/css/utils.scss";
 
 :deep(.withdrawal-table) {
-  >.p-datatable-wrapper {
+  > .p-datatable-wrapper {
     min-height: 577px;
   }
   .index .all-time-total {
@@ -364,7 +464,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
   age-field {
     white-space: nowrap;
   }
-  tr>td.age-field {
+  tr > td.age-field {
     padding: 0 7px;
     @include utils.set-all-width(156px);
   }
@@ -384,9 +484,9 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
   }
 
   .gray-out > td {
-    >a,
-    >div,
-    >span {
+    > a,
+    > div,
+    > span {
       opacity: 0.5;
     }
   }

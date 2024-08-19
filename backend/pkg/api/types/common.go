@@ -68,6 +68,12 @@ type PeriodicValues[T any] struct {
 	Last30d T `json:"last_30d"`
 }
 
+type PercentageDetails[T any] struct {
+	Percentage float64 `json:"percentage"`
+	MinValue   T       `json:"min_value"`
+	MaxValue   T       `json:"max_value"`
+}
+
 type ChartSeries[I int | string, D float64 | decimal.Decimal] struct {
 	Id       I      `json:"id"`                 // id may be a string or an int
 	Property string `json:"property,omitempty"` // for stacking bar charts
