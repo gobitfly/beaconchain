@@ -36,10 +36,10 @@ const data = computed(() => {
 
   const status
     = slot.status === 'scheduled' && slot.slot < (props.currentSlotId ?? 0)
-      ? 'scheduled-past'
+      ? 'scheduled_past'
       : slot.status
 
-  const networkLabelPath = `slotViz.tooltip.network.${status}`
+  const networkLabelPath = `slot_viz.tooltip.network.${status}`
 
   const hasDuties
     = !!slot?.proposal
@@ -53,8 +53,8 @@ const data = computed(() => {
 
   if (hasDuties) {
     if (slot.proposal) {
-      const dutyText = $t(`slotViz.tooltip.proposal.${slot.status}.main`)
-      const dutySubText = $t(`slotViz.tooltip.proposal.${slot.status}.sub`)
+      const dutyText = $t(`slot_viz.tooltip.proposal.${slot.status}.main`)
+      const dutySubText = $t(`slot_viz.tooltip.proposal.${slot.status}.sub`)
       let className = 'scheduled'
       switch (slot.status) {
         case 'proposed':
@@ -87,8 +87,8 @@ const data = computed(() => {
     }
 
     if (slot.slashing?.failed) {
-      const dutyText = $t('slotViz.tooltip.slashing.failed.main')
-      const dutySubText = $t('slotViz.tooltip.slashing.failed.sub')
+      const dutyText = $t('slot_viz.tooltip.slashing.failed.main')
+      const dutySubText = $t('slot_viz.tooltip.slashing.failed.sub')
       rows.push([ {
         andMore: Math.max(
           0,
@@ -108,7 +108,7 @@ const data = computed(() => {
     }
     if (slot.slashing?.success) {
       hasSuccessDuties = true
-      const dutyText = $t('slotViz.tooltip.slashing.success.main')
+      const dutyText = $t('slot_viz.tooltip.slashing.success.main')
       rows.push([ {
         class: 'success',
         count: slot.slashing.success.total_count,
@@ -126,7 +126,7 @@ const data = computed(() => {
       }
       const subRows: Row[] = []
       rows.push(subRows)
-      const dutyText = $t(`slotViz.tooltip.${type}`)
+      const dutyText = $t(`slot_viz.tooltip.${type}`)
 
       if (duty.scheduled) {
         hasScheduledDuty = true
@@ -180,7 +180,7 @@ const data = computed(() => {
   if (isScheduled) {
     stateLabel = formatMultiPartSpan(
       $t,
-      `slotViz.tooltip.status.scheduled.${
+      `slot_viz.tooltip.status.scheduled.${
         hasDuties ? 'has_duties' : 'no_duties'
       }`,
       [
@@ -191,7 +191,7 @@ const data = computed(() => {
     )
   }
   else if (hasFailedDuties && hasSuccessDuties) {
-    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.duties_some', [
+    stateLabel = formatMultiPartSpan($t, 'slot_viz.tooltip.status.duties_some', [
       undefined,
       'some',
       undefined,
@@ -200,7 +200,7 @@ const data = computed(() => {
   else if (hasFailedDuties) {
     stateLabel = formatMultiPartSpan(
       $t,
-      'slotViz.tooltip.status.duties_failed',
+      'slot_viz.tooltip.status.duties_failed',
       [
         undefined,
         'failed',
@@ -211,7 +211,7 @@ const data = computed(() => {
   else if (hasSuccessDuties) {
     stateLabel = formatMultiPartSpan(
       $t,
-      'slotViz.tooltip.status.duties_success',
+      'slot_viz.tooltip.status.duties_success',
       [
         undefined,
         'success',
@@ -220,7 +220,7 @@ const data = computed(() => {
     )
   }
   else {
-    stateLabel = formatMultiPartSpan($t, 'slotViz.tooltip.status.no_duties', [
+    stateLabel = formatMultiPartSpan($t, 'slot_viz.tooltip.status.no_duties', [
       undefined,
       'scheduled',
       undefined,

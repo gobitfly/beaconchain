@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -23,6 +22,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/services"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
@@ -84,11 +84,13 @@ const (
 )
 
 var (
-	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
-	errBadRequest   = errors.New("bad request")
-	errUnauthorized = errors.New("unauthorized")
-	errForbidden    = errors.New("forbidden")
-	errConflict     = errors.New("conflict")
+	errMsgParsingId    = errors.New("error parsing parameter 'dashboard_id'")
+	errBadRequest      = errors.New("bad request")
+	errUnauthorized    = errors.New("unauthorized")
+	errForbidden       = errors.New("forbidden")
+	errConflict        = errors.New("conflict")
+	errTooManyRequests = errors.New("too many requests")
+	errGone            = errors.New("gone")
 )
 
 type Paging struct {
@@ -216,13 +218,13 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 		log.Error(err, "error validating json", 0, nil)
 		return errors.New("couldn't validate JSON request")
 	}
-	if !result.Valid() {
+	isSchemaValid := result.Valid()
+	if !isSchemaValid {
 		v.add("request body", "invalid schema, check the API documentation for the expected format")
-		return nil
 	}
 
-	// Unmarshal into the target struct
-	if err := json.Unmarshal(bodyBytes, data); err != nil {
+	// Unmarshal into the target struct, only log error if it's a valid JSON
+	if err := json.Unmarshal(bodyBytes, data); err != nil && isSchemaValid {
 		log.Error(err, "error decoding json into target structure", 0, nil)
 		return errors.New("couldn't decode JSON request into target structure")
 	}
@@ -334,6 +336,38 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	}
 
 	return dashboardId, nil
+}
+
+const chartDatapointLimit uint64 = 200
+
+type ChartTimeDashboardLimits struct {
+	MinAllowedTs       uint64
+	LatestExportedTs   uint64
+	MaxAllowedInterval uint64
+}
+
+// helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
+func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (ChartTimeDashboardLimits, error) {
+	limits := ChartTimeDashboardLimits{}
+	var err error
+	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
+	if err != nil {
+		return limits, err
+	}
+
+	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
+	if maxAge == 0 {
+		return limits, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
+	}
+	limits.LatestExportedTs, err = h.dai.GetLatestExportedChartTs(ctx, aggregation)
+	if err != nil {
+		return limits, err
+	}
+	limits.MinAllowedTs = limits.LatestExportedTs - min(maxAge, limits.LatestExportedTs)                        // min to prevent underflow
+	secondsPerEpoch := uint64(12 * 32)                                                                          // TODO: fetch dashboards chain id and use correct value for network once available
+	limits.MaxAllowedInterval = chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
+
+	return limits, nil
 }
 
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
@@ -485,8 +519,6 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
 // precondition: the enum is the same type as the allowed enums.
-//
-//nolint:unparam
 func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
@@ -597,15 +629,6 @@ func (v *validationError) checkValidators(validators []intOrString, allowEmpty b
 	return indexes, publicKeys
 }
 
-func (v *validationError) checkDate(dateString string) time.Time {
-	// expecting date in format "YYYY-MM-DD"
-	date, err := time.Parse("2006-01-02", dateString)
-	if err != nil {
-		v.add("date", fmt.Sprintf("given value '%s' is not a valid date", dateString))
-	}
-	return date
-}
-
 func (v *validationError) checkNetwork(network intOrString) uint64 {
 	chainId, ok := isValidNetwork(network)
 	if !ok {
@@ -637,20 +660,41 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
-func (v *validationError) checkTimestamps(afterParam string, beforeParam string, minAllowedTs uint64) (after uint64, before uint64) {
-	// TODO add functionality for max interval between timestamps
-	afterTs := minAllowedTs
-	if afterParam != "" {
-		afterTs = v.checkUint(afterParam, "after_ts")
+func (v *validationError) checkTimestamps(r *http.Request, chartLimits ChartTimeDashboardLimits) (after uint64, before uint64) {
+	afterParam := r.URL.Query().Get("after_ts")
+	beforeParam := r.URL.Query().Get("before_ts")
+	switch {
+	// If both parameters are empty, return the latest data
+	case afterParam == "" && beforeParam == "":
+		return max(chartLimits.LatestExportedTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs), chartLimits.LatestExportedTs
+
+	// If only the afterParam is provided
+	case afterParam != "" && beforeParam == "":
+		afterTs := v.checkUint(afterParam, "after_ts")
+		beforeTs := afterTs + chartLimits.MaxAllowedInterval
+		return afterTs, beforeTs
+
+	// If only the beforeParam is provided
+	case beforeParam != "" && afterParam == "":
+		beforeTs := v.checkUint(beforeParam, "before_ts")
+		afterTs := max(beforeTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs)
+		return afterTs, beforeTs
+
+	// If both parameters are provided, validate them
+	default:
+		afterTs := v.checkUint(afterParam, "after_ts")
+		beforeTs := v.checkUint(beforeParam, "before_ts")
+
+		if afterTs > beforeTs {
+			v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
+		}
+
+		if beforeTs-afterTs > chartLimits.MaxAllowedInterval {
+			v.add("before_ts", fmt.Sprintf("parameters `after_ts` and `before_ts` must not lie apart more than %d seconds for this aggregation", chartLimits.MaxAllowedInterval))
+		}
+
+		return afterTs, beforeTs
 	}
-	beforeTs := uint64(time.Now().Unix())
-	if beforeParam != "" {
-		beforeTs = v.checkUint(beforeParam, "before_ts")
-	}
-	if afterTs > beforeTs {
-		v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
-	}
-	return afterTs, beforeTs
 }
 
 // getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
@@ -668,6 +712,13 @@ func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartH
 	default:
 		return 0
 	}
+}
+
+func isUserAdmin(user *types.UserInfo) bool {
+	if user == nil {
+		return false
+	}
+	return user.UserGroup == types.UserGroupAdmin
 }
 
 // --------------------------------------
@@ -740,6 +791,14 @@ func returnForbidden(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusForbidden, err)
 }
 
+func returnTooManyRequests(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusTooManyRequests, err)
+}
+
+func returnGone(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusGone, err)
+}
+
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
@@ -747,23 +806,27 @@ func returnInternalServerError(w http.ResponseWriter, err error) {
 }
 
 func handleErr(w http.ResponseWriter, err error) {
-	if _, ok := err.(validationError); ok || errors.Is(err, errBadRequest) {
+	_, isValidationError := err.(validationError)
+	switch {
+	case isValidationError || errors.Is(err, errBadRequest):
 		returnBadRequest(w, err)
-		return
-	} else if errors.Is(err, dataaccess.ErrNotFound) {
+	case errors.Is(err, dataaccess.ErrNotFound):
 		returnNotFound(w, err)
-		return
-	} else if errors.Is(err, errUnauthorized) {
+	case errors.Is(err, errUnauthorized):
 		returnUnauthorized(w, err)
-		return
-	} else if errors.Is(err, errForbidden) {
+	case errors.Is(err, errForbidden):
 		returnForbidden(w, err)
-		return
-	} else if errors.Is(err, errConflict) {
+	case errors.Is(err, errConflict):
 		returnConflict(w, err)
-		return
+	case errors.Is(err, services.ErrWaiting):
+		returnError(w, http.StatusServiceUnavailable, err)
+	case errors.Is(err, errTooManyRequests):
+		returnTooManyRequests(w, err)
+	case errors.Is(err, errGone):
+		returnGone(w, err)
+	default:
+		returnInternalServerError(w, err)
 	}
-	returnInternalServerError(w, err)
 }
 
 // --------------------------------------
@@ -784,12 +847,10 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
 
-//nolint:unparam
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
-//nolint:nolintlint
 //nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
@@ -801,6 +862,14 @@ func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
 }
 
+func newTooManyRequestsErr(format string, args ...interface{}) error {
+	return errWithMsg(errTooManyRequests, format, args...)
+}
+
+func newGoneErr(format string, args ...interface{}) error {
+	return errWithMsg(errGone, format, args...)
+}
+
 // --------------------------------------
 // misc. helper functions
 
@@ -810,13 +879,10 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 		return nil, errors.New("no data found when mapping")
 	}
 
-	var data []types.VDBSummaryValidatorsData
-	// Helper function to create a VDBValidatorIndices and append to data
-
 	switch v := indices.(type) {
 	case *types.VDBGeneralSummaryValidators:
 		// deposited, online, offline, slashing, slashed, exited, withdrawn, pending, exiting, withdrawing
-		data = append(data,
+		return []types.VDBSummaryValidatorsData{
 			mapUintSlice("deposited", v.Deposited),
 			mapUintSlice("online", v.Online),
 			mapUintSlice("offline", v.Offline),
@@ -827,100 +893,66 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 			mapIndexTimestampSlice("pending", v.Pending),
 			mapIndexTimestampSlice("exiting", v.Exiting),
 			mapIndexTimestampSlice("withdrawing", v.Withdrawing),
-		)
-		return data, nil
+		}, nil
 
 	case *types.VDBSyncSummaryValidators:
-		data = append(data,
+		return []types.VDBSummaryValidatorsData{
 			mapUintSlice("sync_current", v.Current),
 			mapUintSlice("sync_upcoming", v.Current),
-		)
-		pastValidators := make([]types.VDBSummaryValidator, len(v.Past))
-		for i, validator := range v.Past {
-			pastValidators[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Count}}
-		}
-		data = append(data, types.VDBSummaryValidatorsData{
-			Category:   "sync_past",
-			Validators: pastValidators,
-		})
-		return data, nil
+			mapSlice("sync_past", v.Past,
+				func(v types.VDBValidatorSyncPast) (uint64, []uint64) { return v.Index, []uint64{v.Count} },
+			),
+		}, nil
 
 	case *types.VDBSlashingsSummaryValidators:
-		return mapVDBSummarySlashings(v), nil
+		return []types.VDBSummaryValidatorsData{
+			mapSlice("got_slashed", v.GotSlashed,
+				func(v types.VDBValidatorGotSlashed) (uint64, []uint64) { return v.Index, []uint64{v.SlashedBy} },
+			),
+			mapSlice("has_slashed", v.HasSlashed,
+				func(v types.VDBValidatorHasSlashed) (uint64, []uint64) { return v.Index, v.SlashedIndices },
+			),
+		}, nil
 
 	case *types.VDBProposalSummaryValidators:
-		return mapVDBSummaryProposals(v), nil
+		return []types.VDBSummaryValidatorsData{
+			mapIndexBlocksSlice("proposal_proposed", v.Proposed),
+			mapIndexBlocksSlice("proposal_missed", v.Missed),
+		}, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported indices type")
 	}
 }
-func mapUintSlice(category string, validators []uint64) types.VDBSummaryValidatorsData {
+
+// maps different types of validator dashboard summary validators to a common format
+func mapSlice[T any](category string, validators []T, getIndexAndDutyObjects func(validator T) (index uint64, dutyObjects []uint64)) types.VDBSummaryValidatorsData {
 	validatorsData := make([]types.VDBSummaryValidator, len(validators))
-	for i, validatorIndex := range validators {
-		validatorsData[i] = types.VDBSummaryValidator{Index: validatorIndex}
+	for i, validator := range validators {
+		index, dutyObjects := getIndexAndDutyObjects(validator)
+		validatorsData[i] = types.VDBSummaryValidator{Index: index, DutyObjects: dutyObjects}
 	}
 	return types.VDBSummaryValidatorsData{
 		Category:   category,
 		Validators: validatorsData,
 	}
+}
+func mapUintSlice(category string, validators []uint64) types.VDBSummaryValidatorsData {
+	return mapSlice(category, validators,
+		func(v uint64) (uint64, []uint64) { return v, nil },
+	)
 }
 
 func mapIndexTimestampSlice(category string, validators []types.IndexTimestamp) types.VDBSummaryValidatorsData {
-	validatorsData := make([]types.VDBSummaryValidator, len(validators))
-	for i, validator := range validators {
-		validatorsData[i] = types.VDBSummaryValidator{Index: validator.Index, DutyObjects: []uint64{validator.Timestamp}}
-	}
-	return types.VDBSummaryValidatorsData{
-		Category:   category,
-		Validators: validatorsData,
-	}
+	return mapSlice(category, validators,
+		func(v types.IndexTimestamp) (uint64, []uint64) { return v.Index, []uint64{v.Timestamp} },
+	)
 }
 
-func mapVDBSummarySlashings(v *types.VDBSlashingsSummaryValidators) []types.VDBSummaryValidatorsData {
-	gotSlashedValidators := make([]types.VDBSummaryValidator, len(v.GotSlashed))
-	for i, gotSlashed := range v.GotSlashed {
-		gotSlashedValidators[i] = types.VDBSummaryValidator{Index: gotSlashed.Index, DutyObjects: []uint64{gotSlashed.SlashedBy}}
-	}
-
-	hasSlashedValidators := make([]types.VDBSummaryValidator, len(v.HasSlashed))
-	for i, hasSlashed := range v.HasSlashed {
-		hasSlashedValidators[i] = types.VDBSummaryValidator{Index: hasSlashed.Index, DutyObjects: hasSlashed.SlashedIndices}
-	}
-
-	return []types.VDBSummaryValidatorsData{
-		{
-			Category:   "got_slashed",
-			Validators: gotSlashedValidators,
-		},
-		{
-			Category:   "has_slashed",
-			Validators: hasSlashedValidators,
-		},
-	}
-}
-
-func mapVDBSummaryProposals(v *types.VDBProposalSummaryValidators) []types.VDBSummaryValidatorsData {
-	proposedValidators := make([]types.VDBSummaryValidator, len(v.Proposed))
-	for i, proposed := range v.Proposed {
-		proposedValidators[i] = types.VDBSummaryValidator{Index: proposed.Index, DutyObjects: proposed.Blocks}
-	}
-
-	missedValidators := make([]types.VDBSummaryValidator, len(v.Missed))
-	for i, missed := range v.Missed {
-		missedValidators[i] = types.VDBSummaryValidator{Index: missed.Index, DutyObjects: missed.Blocks}
-	}
-
-	return []types.VDBSummaryValidatorsData{
-		{
-			Category:   "proposal_proposed",
-			Validators: proposedValidators,
-		},
-		{
-			Category:   "proposal_missed",
-			Validators: missedValidators,
-		},
-	}
+func mapIndexBlocksSlice(category string, validators []types.IndexBlocks) types.VDBSummaryValidatorsData {
+	return mapSlice(category, validators,
+		func(v types.IndexBlocks) (uint64, []uint64) { return v.Index, v.Blocks },
+	)
 }
 
 // --------------------------------------

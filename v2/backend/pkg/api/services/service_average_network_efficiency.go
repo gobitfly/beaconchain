@@ -2,6 +2,7 @@ package services
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -40,32 +41,52 @@ func (s *Services) updateEfficiencyData() error {
 
 	setEfficiencyData := func(tableName string, period enums.TimePeriod) error {
 		var queryResult struct {
-			AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
-			ProposerEfficiency    sql.NullFloat64 `db:"proposer_efficiency"`
-			SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
+			AttestationReward      decimal.Decimal `db:"attestations_reward"`
+			AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
+			BlocksProposed         uint64          `db:"blocks_proposed"`
+			BlocksScheduled        uint64          `db:"blocks_scheduled"`
+			SyncExecuted           uint64          `db:"sync_executed"`
+			SyncScheduled          uint64          `db:"sync_scheduled"`
 		}
 
-		ds := goqu.
+		ds := goqu.Dialect("postgres").
+			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, tableName))).
 			Select(
-				goqu.L("COALESCE(SUM(attestations_reward), 0)::decimal / NULLIF(SUM(attestations_ideal_reward)::decimal, 0) AS attestation_efficiency"),
-				goqu.L("COALESCE(SUM(blocks_proposed), 0)::decimal / NULLIF(SUM(blocks_scheduled)::decimal, 0) AS proposer_efficiency"),
-				goqu.L("COALESCE(SUM(sync_executed), 0)::decimal / NULLIF(SUM(sync_scheduled)::decimal, 0) AS sync_efficiency")).
-			From(goqu.T(tableName))
+				goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
+				goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
+				goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
+				goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
+				goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
+				goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
 
-		query, args, err := ds.ToSQL()
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		err = s.clickhouseReader.Get(&queryResult, query, args...)
 		if err != nil {
 			return err
 		}
 
-		err = s.alloyReader.Get(&queryResult, query, args...)
-		if err != nil {
-			return err
+		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
+		if !queryResult.AttestationIdealReward.IsZero() {
+			attestationEfficiency.Float64 = queryResult.AttestationReward.Div(queryResult.AttestationIdealReward).InexactFloat64()
+			attestationEfficiency.Valid = true
+		}
+		if queryResult.BlocksScheduled > 0 {
+			proposerEfficiency.Float64 = float64(queryResult.BlocksProposed) / float64(queryResult.BlocksScheduled)
+			proposerEfficiency.Valid = true
+		}
+		if queryResult.SyncScheduled > 0 {
+			syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
+			syncEfficiency.Valid = true
 		}
 
 		efficiencyMutex.Lock()
-		efficiencyInfo.AttestationEfficiency[period] = queryResult.AttestationEfficiency
-		efficiencyInfo.ProposalEfficiency[period] = queryResult.ProposerEfficiency
-		efficiencyInfo.SyncEfficiency[period] = queryResult.SyncEfficiency
+		efficiencyInfo.AttestationEfficiency[period] = attestationEfficiency
+		efficiencyInfo.ProposalEfficiency[period] = proposerEfficiency
+		efficiencyInfo.SyncEfficiency[period] = syncEfficiency
 		efficiencyMutex.Unlock()
 
 		return nil
@@ -75,19 +96,23 @@ func (s *Services) updateEfficiencyData() error {
 	wg := &errgroup.Group{}
 
 	wg.Go(func() error {
+		err := setEfficiencyData("validator_dashboard_data_rolling_1h", enums.TimePeriods.Last1h)
+		return err
+	})
+	wg.Go(func() error {
+		err := setEfficiencyData("validator_dashboard_data_rolling_24h", enums.TimePeriods.Last24h)
+		return err
+	})
+	wg.Go(func() error {
+		err := setEfficiencyData("validator_dashboard_data_rolling_7d", enums.TimePeriods.Last7d)
+		return err
+	})
+	wg.Go(func() error {
+		err := setEfficiencyData("validator_dashboard_data_rolling_30d", enums.TimePeriods.Last30d)
+		return err
+	})
+	wg.Go(func() error {
 		err := setEfficiencyData("validator_dashboard_data_rolling_total", enums.TimePeriods.AllTime)
-		return err
-	})
-	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_daily", enums.TimePeriods.Last24h)
-		return err
-	})
-	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_weekly", enums.TimePeriods.Last7d)
-		return err
-	})
-	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_monthly", enums.TimePeriods.Last30d)
 		return err
 	})
 
@@ -113,7 +138,7 @@ func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, func(), error) {
 	currentEfficiencyMutex.RLock()
 
 	if currentEfficiencyInfo == nil {
-		return nil, currentEfficiencyMutex.RUnlock, errors.New("waiting for efficiencyInfo to be initialized")
+		return nil, currentEfficiencyMutex.RUnlock, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
 	}
 
 	return currentEfficiencyInfo, currentEfficiencyMutex.RUnlock, nil

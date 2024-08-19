@@ -16,6 +16,7 @@ const {
 } = useProductsStore()
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
+const { promoCode } = usePromoCode()
 const {
   isStripeDisabled, stripeCustomerPortal, stripePurchase,
 } = useStripe()
@@ -106,7 +107,9 @@ async function buttonCallback() {
     }
   }
   else {
-    await navigateTo('/login')
+    await navigateTo({
+      path: '/login', query: { promoCode },
+    })
   }
 }
 

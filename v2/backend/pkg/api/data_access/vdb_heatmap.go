@@ -2,30 +2,18 @@ package dataaccess
 
 import (
 	"context"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
 // retrieve data for last hour
-func (d *DataAccessService) GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
+func (d *DataAccessService) GetValidatorDashboardHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.VDBHeatmap, error) {
 	// WORKING Rami
-	return d.dummy.GetValidatorDashboardEpochHeatmap(ctx, dashboardId, protocolModes)
+	return d.dummy.GetValidatorDashboardHeatmap(ctx, dashboardId, protocolModes, aggregation, afterTs, beforeTs)
 }
 
-// allowed periods are: last_7d, last_30d, last_365d
-func (d *DataAccessService) GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
-	// TODO @remoterami
-	return d.dummy.GetValidatorDashboardDailyHeatmap(ctx, dashboardId, period, protocolModes)
-}
-
-func (d *DataAccessService) GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
+func (d *DataAccessService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, timestamp uint64) (*t.VDBHeatmapTooltipData, error) {
 	// WORKING Rami
-	return d.dummy.GetValidatorDashboardGroupEpochHeatmap(ctx, dashboardId, groupId, epoch, protocolModes)
-}
-
-func (d *DataAccessService) GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, day time.Time, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
-	// TODO @remoterami
-	return d.dummy.GetValidatorDashboardGroupDailyHeatmap(ctx, dashboardId, groupId, day, protocolModes)
+	return d.dummy.GetValidatorDashboardGroupHeatmap(ctx, dashboardId, groupId, protocolModes, aggregation, timestamp)
 }
