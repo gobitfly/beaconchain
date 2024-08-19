@@ -68,6 +68,7 @@ func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboard
 	wg.Go(func() error {
 		dbReturn := []struct {
 			Name         string         `db:"name"`
+			Network      string         `db:"network"`
 			IsArchived   sql.NullString `db:"is_archived"`
 			PublicId     sql.NullString `db:"public_id"`
 			PublicName   sql.NullString `db:"public_name"`
@@ -77,6 +78,7 @@ func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboard
 		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
 		SELECT
 			uvd.name,
+			uvd.network,
 			uvd.is_archived,
 			uvds.public_id,
 			uvds.name AS public_name,
