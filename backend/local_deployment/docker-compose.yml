@@ -1,5 +1,5 @@
 x-service: &default-service
-  image: golang:1.21
+  image: golang:1.22
   working_dir: /app/backend
   network_mode: "host"
   volumes:

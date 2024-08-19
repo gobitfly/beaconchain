@@ -169,4 +169,4 @@ echo "adding test user"
 HASHED_PW=$(htpasswd -nbBC 10 user password | cut -d ":" -sf 2)
 psql postgres://postgres:pass@localhost:$POSTGRES_PORT/db?sslmode=disable -c "INSERT INTO users(password, email, email_confirmed) \
 VALUES ('$HASHED_PW', 'test@beaconcha.in', true);"
-echo "created test user with email 'test@beaconcha.in' and password 'pass' "
+echo "created test user with email 'test@beaconcha.in' and password 'password' "
