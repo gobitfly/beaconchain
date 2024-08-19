@@ -72,9 +72,9 @@ func (a *Archiver) updateArchivedStatus() error {
 			if dashboardInfo.IsArchived {
 				archivedDashboards = append(archivedDashboards, dashboardInfo.DashboardId)
 			} else {
-				if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+				if dashboardInfo.GroupCount > userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
 					dashboardsToBeArchived = append(dashboardsToBeArchived, ArchivedDashboard{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Groups})
-				} else if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+				} else if dashboardInfo.ValidatorCount > userInfo.PremiumPerks.ValidatorsPerDashboard {
 					dashboardsToBeArchived = append(dashboardsToBeArchived, ArchivedDashboard{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Validators})
 				} else {
 					activeDashboards = append(activeDashboards, dashboardInfo.DashboardId)
