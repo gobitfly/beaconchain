@@ -140,9 +140,9 @@
       }
     },
     "header": {
-      "account": "Account",
+      "account": "Accounts",
       "manage": "Manage",
-      "validator": "Validator"
+      "validator": "Validators"
     },
     "public_account_dashboard": "Dashboard",
     "public_validator_dashboard": "Dashboard",
