@@ -1,36 +1,47 @@
 <script setup lang="ts">
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { Component } from 'vue'
+
 interface Props {
+  // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
+  allowDeselect?: boolean,
   buttons: {
-    icon?: IconDefinition,
-    text?: string,
-    subText?: string,
+    className?: string,
     component?: Component,
-    componentProps?: any,
     componentClass?: string,
+    componentProps?: any,
+    disabled?: boolean,
+    icon?: IconDefinition,
+    subText?: string,
+    text?: string,
+    tooltip?: string,
     value: string,
-    disabled?: boolean
   }[],
-  allowDeselect?: boolean // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
+  layout: 'gaudy' | 'minimal',
 }
 const props = defineProps<Props>()
 
 const selected = defineModel<string>()
 
-const values = ref<Record<string, boolean>>(props.buttons.reduce((map, { value }) => {
-  map[value] = value === selected.value
-  return map
-}, {} as Record<string, boolean>))
+const values = ref<Record<string, boolean>>(
+  props.buttons.reduce(
+    (map, { value }) => {
+      map[value] = value === selected.value
+      return map
+    },
+    {} as Record<string, boolean>,
+  ),
+)
 
-function onButtonClicked (value: string) {
+function onButtonClicked(value: string) {
   for (const key in values.value) {
     if (key === value) {
       if (values.value[key] && !props.allowDeselect) {
         continue
       }
       values.value[key] = !values.value[key]
-    } else {
+    }
+    else {
       values.value[key] = false
     }
   }
@@ -39,7 +50,10 @@ function onButtonClicked (value: string) {
 </script>
 
 <template>
-  <div class="bc-togglebar">
+  <div
+    class="bc-togglebar"
+    :class="layout"
+  >
     <BcToggleSingleBarButton
       v-for="button in props.buttons"
       :key="button.value"
@@ -47,12 +61,19 @@ function onButtonClicked (value: string) {
       :text="button.text"
       :sub-text="button.subText"
       :selected="values[button.value]"
+      :tooltip="button.tooltip"
       :disabled="button.disabled"
+      :class="[layout, button.className]"
+      :layout
       @click="!button.disabled && onButtonClicked(button.value)"
     >
       <template #icon>
         <slot :name="button.value">
-          <component :is="button.component" v-bind="button.componentProps" :class="button.componentClass" />
+          <component
+            :is="button.component"
+            v-bind="button.componentProps"
+            :class="button.componentClass"
+          />
         </slot>
       </template>
     </BcToggleSingleBarButton>
@@ -62,6 +83,19 @@ function onButtonClicked (value: string) {
 <style lang="scss" scoped>
 .bc-togglebar {
   display: inline-flex;
-  gap: var(--padding);
+  &.gaudy {
+    gap: var(--padding);
+  }
+  &.minimal {
+    gap: var(--padding-small);
+    padding: 7px 10px;
+    background-color: var(--container-background);
+    border: solid 1px var(--container-border-color);
+    border-radius: var(--border-radius);
+  }
+  .gaudy {
+    width: 100%;
+    height: 100%;
+  }
 }
 </style>

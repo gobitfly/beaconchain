@@ -16,8 +16,6 @@ func IsInvalidEnum(e Enum) bool {
 	return e.Int() == -1
 }
 
-// Validator Dashboard Rewards Table
-
 type AdInsertMode int
 
 var _ EnumFactory[AdInsertMode] = AdInsertMode(0)
@@ -254,4 +252,19 @@ var ChartAggregations = struct {
 	IntervalHourly,
 	IntervalDaily,
 	IntervalWeekly,
+}
+
+func (c ChartAggregation) Duration(secondsPerEpoch uint64) time.Duration {
+	switch c {
+	case IntervalEpoch:
+		return time.Second * time.Duration(secondsPerEpoch)
+	case IntervalHourly:
+		return time.Hour
+	case IntervalDaily:
+		return 24 * time.Hour
+	case IntervalWeekly:
+		return 7 * 24 * time.Hour
+	default:
+		return 0
+	}
 }

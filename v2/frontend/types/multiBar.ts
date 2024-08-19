@@ -1,9 +1,12 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
 export type MultiBarItem = {
-  icon?: IconDefinition
+  className?: string,
   component?: Component,
-  value: string,
+  componentClass?: string,
+  componentProps?: any,
+  disabled?: boolean,
+  icon?: IconDefinition,
   tooltip?: string,
-  className?: string
+  value: string,
 }

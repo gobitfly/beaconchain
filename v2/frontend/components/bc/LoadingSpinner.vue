@@ -1,15 +1,22 @@
 <script setup lang="ts">
 interface Props {
-  loading?: boolean
-  size?: 'small' | 'medium' | 'large' | 'full' // default = medium
-  alignment?: 'center' | 'default'
+  alignment?: 'center' | 'default',
+  loading?: boolean,
+  size?: 'full' | 'large' | 'medium' | 'small', // default = medium
 }
 defineProps<Props>()
-
 </script>
+
 <template>
-  <div v-if="loading !== false" class="spinning-container" :class="[alignment]">
-    <div class="spinner" :class="[size]">
+  <div
+    v-if="loading !== false"
+    class="spinning-container"
+    :class="[alignment]"
+  >
+    <div
+      class="spinner"
+      :class="[size]"
+    >
       <span />
     </div>
   </div>
@@ -47,7 +54,7 @@ defineProps<Props>()
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
-    animation: spinner-rotation .75s linear infinite;
+    animation: spinner-rotation 0.75s linear infinite;
 
     &.small {
       width: 20px;
@@ -65,7 +72,6 @@ defineProps<Props>()
       width: 100%;
       height: 100%;
     }
-
   }
-
-}</style>
+}
+</style>

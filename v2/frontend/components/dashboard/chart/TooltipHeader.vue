@@ -1,20 +1,27 @@
 <script lang="ts" setup>
 import { type ComposerTranslation } from 'vue-i18n'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import { type AggregationTimeframe, type EfficiencyType } from '~/types/dashboard/summary'
-import { ONE_HOUR, ONE_DAY, ONE_WEEK } from '~/utils/format'
+import {
+  type AggregationTimeframe,
+  type EfficiencyType,
+} from '~/types/dashboard/summary'
+import {
+  ONE_DAY, ONE_HOUR, ONE_WEEK,
+} from '~/utils/format'
 
 interface Props {
-  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
-  ts?: number,
-  startEpoch?: number,
   aggregation?: AggregationTimeframe,
   efficiencyType?: EfficiencyType,
+  startEpoch?: number,
+  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
+  ts?: number,
 }
 
 const props = defineProps<Props>()
 
-const { tsToEpoch, epochToTs } = useNetworkStore()
+const {
+  epochToTs, tsToEpoch,
+} = useNetworkStore()
 
 const startTs = computed(() => {
   if (props.ts) {
@@ -23,6 +30,7 @@ const startTs = computed(() => {
   if (props.startEpoch) {
     return epochToTs(props.startEpoch)
   }
+  return undefined
 })
 
 const endTs = computed(() => {
@@ -46,11 +54,25 @@ const dateText = computed(() => {
   if (!startTs.value) {
     return
   }
-  const date = formatGoTimestamp(startTs.value, undefined, 'absolute', 'narrow', props.t('locales.date'), true)
+  const date = formatGoTimestamp(
+    startTs.value,
+    undefined,
+    'absolute',
+    'narrow',
+    props.t('locales.date'),
+    true,
+  )
   if (!endTs.value) {
     return date
   }
-  const endDate = formatGoTimestamp(endTs.value, undefined, 'absolute', 'narrow', props.t('locales.date'), true)
+  const endDate = formatGoTimestamp(
+    endTs.value,
+    undefined,
+    'absolute',
+    'narrow',
+    props.t('locales.date'),
+    true,
+  )
 
   return `${date} - ${endDate}`
 })
@@ -69,18 +91,17 @@ const epochText = computed(() => {
 
 const title = computed(() => {
   if (props.efficiencyType) {
-    return props.t(`dashboard.validator.summary.chart.efficiency.${props.efficiencyType}`)
+    return props.t(
+      `dashboard.validator.summary.chart.efficiency.${props.efficiencyType}`,
+    )
   }
+  return undefined
 })
 </script>
 
 <template>
   <b>
-    <div>
-      {{ title }} {{ dateText }}
-    </div>
-    <div>
-      {{ t('common.epoch') }} {{ epochText }}
-    </div>
+    <div>{{ title }} {{ dateText }}</div>
+    <div>{{ t("common.epoch") }} {{ epochText }}</div>
   </b>
 </template>

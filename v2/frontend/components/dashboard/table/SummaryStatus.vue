@@ -3,19 +3,19 @@ import type { VDBSummaryStatus } from '~/types/api/validator_dashboard'
 import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
 interface Props {
-  status: VDBSummaryStatus
+  status: VDBSummaryStatus,
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const mapped = computed(() => {
   const mapCount = (count: number, key: string, icon: SlotVizIcons) => {
     return {
+      className: count > 0 ? `${key.replace('_', '-')} active` : '',
       icon,
       key,
-      className: count > 0 ? `${key.replace('_', '-')} active` : '',
-      tooltip: $t(`dashboard.validator.summary.status.${key}`, {}, count)
+      tooltip: $t(`dashboard.validator.summary.status.${key}`, {}, count),
     }
   }
 
@@ -26,18 +26,28 @@ const mapped = computed(() => {
   return [
     mapCount(currentSyncCount, 'current_sync', 'sync'),
     mapCount(scheduledSyncCount, 'scheduled_sync', 'sync'),
-    mapCount(slashedCount, 'slashing', 'slashing')
+    mapCount(slashedCount, 'slashing', 'slashing'),
   ]
 })
-
 </script>
+
 <template>
   <div class="summary-status-container">
-    <BcTooltip v-for="item in mapped" :key="item.key" :text="item.tooltip" :fit-content="true" class="tooltip">
-      <SlotVizIcon :class="item.className" :icon="item.icon" />
+    <BcTooltip
+      v-for="item in mapped"
+      :key="item.key"
+      :text="item.tooltip"
+      :fit-content="true"
+      class="tooltip"
+    >
+      <SlotVizIcon
+        :class="item.className"
+        :icon="item.icon"
+      />
     </BcTooltip>
   </div>
 </template>
+
 <style lang="scss" scoped>
 @use "sass:color";
 @keyframes status-rotation {
@@ -48,21 +58,21 @@ const mapped = computed(() => {
 
 @mixin set-pulse-anmiation($color) {
   @keyframes pulse-animation {
-  0% {
-    color: color.adjust($color, $alpha: 0);
-    transform: scale(0.9)
-  }
+    0% {
+      color: color.adjust($color, $alpha: 0);
+      transform: scale(0.9);
+    }
 
-  50% {
-    color: color.adjust($color, $alpha: -0.4);
-    transform: scale(1.1)
-  }
+    50% {
+      color: color.adjust($color, $alpha: -0.4);
+      transform: scale(1.1);
+    }
 
-  100% {
-    color: color.adjust($color, $alpha: 0);
-    transform: scale(0.9)
+    100% {
+      color: color.adjust($color, $alpha: 0);
+      transform: scale(0.9);
+    }
   }
-}
 }
 
 /* unfortunatly we can't use our css variables here as the rgba conversion is done during build process and there is no css native possibility */

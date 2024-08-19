@@ -6,27 +6,25 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/ens"
-
+	ensContracts "github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-
 	gcp_bigtable "cloud.google.com/go/bigtable"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/coocood/freecache"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-
 	go_ens "github.com/wealdtech/go-ens/v3"
+	"golang.org/x/sync/errgroup"
 )
 
 // https://etherscan.io/tx/0x9fec76750a504e5610643d1882e3b07f4fc786acf7b9e6680697bb7165de1165#eventlog
@@ -78,221 +76,179 @@ import (
 // ==================================================
 
 func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache *freecache.Cache) (bulkData *types.BulkMutations, bulkMetadataUpdates *types.BulkMutations, err error) {
+	startTime := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("bt_transform_ens").Observe(time.Since(startTime).Seconds())
+	}()
+
+	var ensCrontractAddresses map[string]string
+	switch bigtable.chainId {
+	case "1":
+		ensCrontractAddresses = ensContracts.ENSCrontractAddressesEthereum
+	case "17000":
+		ensCrontractAddresses = ensContracts.ENSCrontractAddressesHolesky
+	case "11155111":
+		ensCrontractAddresses = ensContracts.ENSCrontractAddressesSepolia
+	default:
+		return nil, nil, nil
+	}
+
 	bulkData = &types.BulkMutations{}
 	bulkMetadataUpdates = &types.BulkMutations{}
-
-	filterer, err := ens.NewEnsRegistrarFilterer(common.Address{}, nil)
-	if err != nil {
-		log.Error(err, "error creating filterer", 0)
-		return nil, nil, err
-	}
 	keys := make(map[string]bool)
+	ethLog := gethtypes.Log{}
 
 	for i, tx := range blk.GetTransactions() {
-		if i > 9999 {
-			return nil, nil, fmt.Errorf("unexpected number of transactions in block expected at most 9999 but got: %v, tx: %x", i, tx.GetHash())
+		if i >= TX_PER_BLOCK_LIMIT {
+			return nil, nil, fmt.Errorf("unexpected number of transactions in block expected at most %d but got: %v, tx: %x", TX_PER_BLOCK_LIMIT-1, i, tx.GetHash())
 		}
-
-		// We look for the different ENS events,
-		// 	most will be triggered by a main registrar contract,
-		//  but some are triggered on a different contracts (like a resolver contract), these will be validated when loading the related events
-		var isRegistarContract = len(utils.Config.Indexer.EnsTransformer.ValidRegistrarContracts) > 0 && utils.SliceContains(utils.Config.Indexer.EnsTransformer.ValidRegistrarContracts, common.BytesToAddress(tx.To).String())
-		foundNameIndex := -1
-		foundResolverIndex := -1
-		foundNameRenewedIndex := -1
-		foundAddressChangedIndices := []int{}
-		foundNameChangedIndex := -1
-		foundNewOwnerIndex := -1
-		logs := tx.GetLogs()
-		for j, log := range logs {
-			if j > 99999 {
-				return nil, nil, fmt.Errorf("unexpected number of logs in block expected at most 99999 but got: %v tx: %x", j, tx.GetHash())
+		for j, txLog := range tx.GetLogs() {
+			if j >= ITX_PER_TX_LIMIT {
+				return nil, nil, fmt.Errorf("unexpected number of logs in block expected at most %d but got: %v tx: %x", ITX_PER_TX_LIMIT-1, j, tx.GetHash())
 			}
-			for _, lTopic := range log.GetTopics() {
-				if isRegistarContract {
-					if bytes.Equal(lTopic, ens.NameRegisteredTopic) || bytes.Equal(lTopic, ens.NameRegisteredV2Topic) {
-						foundNameIndex = j
-					} else if bytes.Equal(lTopic, ens.NewResolverTopic) {
-						foundResolverIndex = j
-					} else if bytes.Equal(lTopic, ens.NameRenewedTopic) {
-						foundNameRenewedIndex = j
+			ensContract := ensCrontractAddresses[common.BytesToAddress(txLog.Address).String()]
+
+			topics := txLog.GetTopics()
+			ethTopics := make([]common.Hash, 0, len(topics))
+			for _, t := range topics {
+				ethTopics = append(ethTopics, common.BytesToHash(t))
+			}
+
+			ethLog.Address = common.BytesToAddress(txLog.GetAddress())
+			ethLog.Data = txLog.Data
+			ethLog.Topics = ethTopics
+			ethLog.BlockNumber = blk.GetNumber()
+			ethLog.TxHash = common.BytesToHash(tx.GetHash())
+			ethLog.TxIndex = uint(i)
+			ethLog.BlockHash = common.BytesToHash(blk.GetHash())
+			ethLog.Index = uint(j)
+			ethLog.Removed = txLog.GetRemoved()
+
+			for _, lTopic := range topics {
+				logFields := map[string]interface{}{
+					"block":       blk.GetNumber(),
+					"tx":          tx.GetHash(),
+					"logIndex":    j,
+					"ensContract": ensContract,
+				}
+
+				if ensContract == "Registry" {
+					if bytes.Equal(lTopic, ensContracts.ENSRegistryParsedABI.Events["NewResolver"].ID.Bytes()) {
+						logFields["event"] = "NewResolver"
+						r := &ensContracts.ENSRegistryNewResolver{}
+						err = ensContracts.ENSRegistryContract.UnpackLog(r, "NewResolver", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:H:%x", bigtable.chainId, r.Node)] = true
+					} else if bytes.Equal(lTopic, ensContracts.ENSRegistryParsedABI.Events["NewOwner"].ID.Bytes()) {
+						logFields["event"] = "NewOwner"
+						r := &ensContracts.ENSRegistryNewOwner{}
+						err = ensContracts.ENSRegistryContract.UnpackLog(r, "NewOwner", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, r.Owner)] = true
+					} else if bytes.Equal(lTopic, ensContracts.ENSRegistryParsedABI.Events["NewTTL"].ID.Bytes()) {
+						logFields["event"] = "NewTTL"
+						r := &ensContracts.ENSRegistryNewTTL{}
+						err = ensContracts.ENSRegistryContract.UnpackLog(r, "NewTTL", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:H:%x", bigtable.chainId, r.Node)] = true
 					}
-				} else if bytes.Equal(lTopic, ens.AddressChangedTopic) {
-					foundAddressChangedIndices = append(foundAddressChangedIndices, j)
-				} else if bytes.Equal(lTopic, ens.NameChangedTopic) {
-					foundNameChangedIndex = j
-				} else if bytes.Equal(lTopic, ens.NewOwnerTopic) {
-					foundNewOwnerIndex = j
+				} else if ensContract == "ETHRegistrarController" {
+					if bytes.Equal(lTopic, ensContracts.ENSETHRegistrarControllerParsedABI.Events["NameRegistered"].ID.Bytes()) {
+						logFields["event"] = "NameRegistered"
+						r := &ensContracts.ENSETHRegistrarControllerNameRegistered{}
+						err = ensContracts.ENSETHRegistrarControllerContract.UnpackLog(r, "NameRegistered", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, r.Name)] = true
+						keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, r.Owner)] = true
+					} else if bytes.Equal(lTopic, ensContracts.ENSETHRegistrarControllerParsedABI.Events["NameRenewed"].ID.Bytes()) {
+						logFields["event"] = "NameRenewed"
+						r := &ensContracts.ENSETHRegistrarControllerNameRenewed{}
+						err = ensContracts.ENSETHRegistrarControllerContract.UnpackLog(r, "NameRenewed", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, r.Name)] = true
+					}
+				} else if ensContract == "OldEnsRegistrarController" {
+					if bytes.Equal(lTopic, ensContracts.ENSOldRegistrarControllerParsedABI.Events["NameRegistered"].ID.Bytes()) {
+						logFields["event"] = "NameRegistered"
+						r := &ensContracts.ENSOldRegistrarControllerNameRegistered{}
+						err = ensContracts.ENSOldRegistrarControllerContract.UnpackLog(r, "NameRegistered", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						if err = verifyName(r.Name); err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error verifying ens-name")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, r.Name)] = true
+						keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, r.Owner)] = true
+					} else if bytes.Equal(lTopic, ensContracts.ENSOldRegistrarControllerParsedABI.Events["NameRenewed"].ID.Bytes()) {
+						logFields["event"] = "NameRenewed"
+						r := &ensContracts.ENSOldRegistrarControllerNameRenewed{}
+						err = ensContracts.ENSOldRegistrarControllerContract.UnpackLog(r, "NameRenewed", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						if err = verifyName(r.Name); err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error verifying ens-name")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, r.Name)] = true
+					}
+				} else {
+					if bytes.Equal(lTopic, ensContracts.ENSPublicResolverParsedABI.Events["NameChanged"].ID.Bytes()) {
+						logFields["event"] = "NameChanged"
+						r := &ensContracts.ENSPublicResolverNameChanged{}
+						err = ensContracts.ENSPublicResolverContract.UnpackLog(r, "NameChanged", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						if err = verifyName(r.Name); err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error verifying ens-name")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, r.Name)] = true
+					} else if bytes.Equal(lTopic, ensContracts.ENSPublicResolverParsedABI.Events["AddressChanged"].ID.Bytes()) {
+						logFields["event"] = "AddressChanged"
+						r := &ensContracts.ENSPublicResolverAddressChanged{}
+						err = ensContracts.ENSPublicResolverContract.UnpackLog(r, "AddressChanged", ethLog)
+						if err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						keys[fmt.Sprintf("%s:ENS:V:H:%x", bigtable.chainId, r.Node)] = true
+					}
 				}
 			}
-		}
-		// We found a register name event
-		if foundNameIndex > -1 && foundResolverIndex > -1 {
-			txLog := logs[foundNameIndex]
-			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
-
-			for _, lTopic := range txLog.GetTopics() {
-				topics = append(topics, common.BytesToHash(lTopic))
-			}
-
-			nameLog := gethtypes.Log{
-				Address:     common.BytesToAddress(txLog.GetAddress()),
-				Data:        txLog.Data,
-				Topics:      topics,
-				BlockNumber: blk.GetNumber(),
-				TxHash:      common.BytesToHash(tx.GetHash()),
-				TxIndex:     uint(i),
-				BlockHash:   common.BytesToHash(blk.GetHash()),
-				Index:       uint(foundNameIndex),
-				Removed:     txLog.GetRemoved(),
-			}
-
-			txLog = logs[foundResolverIndex]
-			topics = make([]common.Hash, 0, len(txLog.GetTopics()))
-
-			for _, lTopic := range txLog.GetTopics() {
-				topics = append(topics, common.BytesToHash(lTopic))
-			}
-
-			resolverLog := gethtypes.Log{
-				Address:     common.BytesToAddress(txLog.GetAddress()),
-				Data:        txLog.Data,
-				Topics:      topics,
-				BlockNumber: blk.GetNumber(),
-				TxHash:      common.BytesToHash(tx.GetHash()),
-				TxIndex:     uint(i),
-				BlockHash:   common.BytesToHash(blk.GetHash()),
-				Index:       uint(foundResolverIndex),
-				Removed:     txLog.GetRemoved(),
-			}
-
-			var owner common.Address
-			var name string
-
-			nameRegistered, err := filterer.ParseNameRegistered(nameLog)
-			if err != nil {
-				nameRegisteredV2, err := filterer.ParseNameRegisteredV2(nameLog)
-				if err != nil {
-					log.Error(err, fmt.Sprintf("indexing of register event failed parse register event at tx [%v] index [%v] on block [%v]", i, foundNameIndex, blk.Number), 0)
-					continue
-				}
-				owner = nameRegisteredV2.Owner
-				name = nameRegisteredV2.Name
-			} else {
-				owner = nameRegistered.Owner
-				name = nameRegistered.Name
-			}
-
-			if err = verifyName(name); err != nil {
-				log.Warnf("indexing of register event failed because of invalid name at tx [%v] index [%v] on block [%v]: %v", i, foundNameIndex, blk.Number, err)
-				continue
-			}
-
-			resolver, err := filterer.ParseNewResolver(resolverLog)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("indexing of register event failed parse resolver event at tx [%v] index [%v] on block [%v]", i, foundNameIndex, blk.Number), 0)
-				continue
-			}
-
-			keys[fmt.Sprintf("%s:ENS:I:H:%x:%x", bigtable.chainId, resolver.Node, tx.GetHash())] = true
-			keys[fmt.Sprintf("%s:ENS:I:A:%x:%x", bigtable.chainId, owner, tx.GetHash())] = true
-			keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, owner)] = true
-			keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, name)] = true
-		} else if foundNameRenewedIndex > -1 { // We found a renew name event
-			txLog := logs[foundNameRenewedIndex]
-			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
-
-			for _, lTopic := range txLog.GetTopics() {
-				topics = append(topics, common.BytesToHash(lTopic))
-			}
-
-			nameRenewedLog := gethtypes.Log{
-				Address:     common.BytesToAddress(txLog.GetAddress()),
-				Data:        txLog.Data,
-				Topics:      topics,
-				BlockNumber: blk.GetNumber(),
-				TxHash:      common.BytesToHash(tx.GetHash()),
-				TxIndex:     uint(i),
-				BlockHash:   common.BytesToHash(blk.GetHash()),
-				Index:       uint(foundNameRenewedIndex),
-				Removed:     txLog.GetRemoved(),
-			}
-
-			nameRenewed, err := filterer.ParseNameRenewed(nameRenewedLog)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("indexing of renew event failed parse event at tx [%v] index [%v] on block [%v]", i, foundNameRenewedIndex, blk.Number), 0)
-				continue
-			}
-
-			if err = verifyName(nameRenewed.Name); err != nil {
-				log.Warnf("indexing of renew event failed because of invalid name at tx [%v] index [%v] on block [%v]: %v", i, foundNameIndex, blk.Number, err)
-				continue
-			}
-
-			nameHash, err := go_ens.NameHash(nameRenewed.Name)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("error hashing ens name [%v] at tx [%v] index [%v] on block [%v]", nameRenewed.Name, i, foundNameRenewedIndex, blk.Number), 0)
-				continue
-			}
-			keys[fmt.Sprintf("%s:ENS:I:H:%x:%x", bigtable.chainId, nameHash, tx.GetHash())] = true
-			keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, nameRenewed.Name)] = true
-		} else if foundNameChangedIndex > -1 && foundNewOwnerIndex > -1 { // we found a name change event
-			txLog := logs[foundNewOwnerIndex]
-			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
-
-			for _, lTopic := range txLog.GetTopics() {
-				topics = append(topics, common.BytesToHash(lTopic))
-			}
-			newOwnerLog := gethtypes.Log{
-				Address:     common.BytesToAddress(txLog.GetAddress()),
-				Data:        txLog.Data,
-				Topics:      topics,
-				BlockNumber: blk.GetNumber(),
-				TxHash:      common.BytesToHash(tx.GetHash()),
-				TxIndex:     uint(i),
-				BlockHash:   common.BytesToHash(blk.GetHash()),
-				Index:       uint(foundNewOwnerIndex),
-				Removed:     txLog.GetRemoved(),
-			}
-
-			newOwner, err := filterer.ParseNewOwner(newOwnerLog)
-			if err != nil {
-				log.Error(err, fmt.Errorf("indexing of new owner event failed parse event at index %v on block [%v]", foundNewOwnerIndex, blk.Number), 0)
-				continue
-			}
-
-			keys[fmt.Sprintf("%s:ENS:I:A:%x:%x", bigtable.chainId, newOwner.Owner, tx.GetHash())] = true
-			keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, newOwner.Owner)] = true
-		}
-		// We found a change address event, there can be multiple within one transaction
-		for _, addressChangeIndex := range foundAddressChangedIndices {
-			txLog := logs[addressChangeIndex]
-			topics := make([]common.Hash, 0, len(txLog.GetTopics()))
-
-			for _, lTopic := range txLog.GetTopics() {
-				topics = append(topics, common.BytesToHash(lTopic))
-			}
-
-			addressChangedLog := gethtypes.Log{
-				Address:     common.BytesToAddress(txLog.GetAddress()),
-				Data:        txLog.Data,
-				Topics:      topics,
-				BlockNumber: blk.GetNumber(),
-				TxHash:      common.BytesToHash(tx.GetHash()),
-				TxIndex:     uint(i),
-				BlockHash:   common.BytesToHash(blk.GetHash()),
-				Index:       uint(addressChangeIndex),
-				Removed:     txLog.GetRemoved(),
-			}
-
-			addressChanged, err := filterer.ParseAddressChanged(addressChangedLog)
-			if err != nil {
-				log.Error(err, fmt.Sprintf("indexing of address change event failed parse event at index [%v] on block [%v]", addressChangeIndex, blk.Number), 0)
-				continue
-			}
-
-			keys[fmt.Sprintf("%s:ENS:I:H:%x:%x", bigtable.chainId, addressChanged.Node, tx.GetHash())] = true
-			keys[fmt.Sprintf("%s:ENS:V:H:%x", bigtable.chainId, addressChanged.Node)] = true
 		}
 	}
 	for key := range keys {
@@ -407,7 +363,7 @@ func (bigtable *Bigtable) ImportEnsUpdates(client *ethclient.Client, readBatchSi
 
 			g.Go(func() error {
 				if name != "" {
-					err := validateEnsName(client, name, &alreadyChecked, nil)
+					err := validateEnsName(client, name, &alreadyChecked)
 					if err != nil {
 						return fmt.Errorf("error validating new name [%v]: %w", name, err)
 					}
@@ -451,37 +407,45 @@ func validateEnsAddress(client *ethclient.Client, address common.Address, alread
 	alreadyChecked.address[address] = true
 	alreadyChecked.mux.Unlock()
 
-	name, err := go_ens.ReverseResolve(client, address)
-	if err != nil {
-		if err.Error() == "not a resolver" || err.Error() == "no resolution" {
-			log.Warnf("reverse resolving address [%v] resulted in a skippable error [%s], skipping it", address, err.Error())
-			return nil
-		}
-
-		return fmt.Errorf("error could not reverse resolve address [%v]: %w", address, err)
-	}
-
-	currentName, err := GetEnsNameForAddress(address)
+	names := []string{}
+	err := ReaderDb.Select(&names, `SELECT ens_name FROM ens WHERE address = $1 AND is_primary_name AND valid_to >= now()`, address.Bytes())
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	isPrimary := false
-	if currentName != nil {
-		if *currentName == name {
-			return nil
+
+	for _, name := range names {
+		if name != "" {
+			err = validateEnsName(client, name, alreadyChecked)
+			if err != nil {
+				return err
+			}
 		}
-		log.Infof("Address [%x] has a new main name from %x to: %v", address, *currentName, name)
-		err := validateEnsName(client, *currentName, alreadyChecked, &isPrimary)
+		reverseName, err := go_ens.ReverseResolve(client, address)
 		if err != nil {
-			return fmt.Errorf("error validating new name [%v]: %w", *currentName, err)
+			if err.Error() == "not a resolver" ||
+				err.Error() == "no resolution" ||
+				err.Error() == "execution reverted" ||
+				strings.HasPrefix(err.Error(), "name is not valid") {
+				log.Warnf("reverse resolving address [%v] resulted in a skippable error [%s], skipping it", address, err.Error())
+			} else {
+				return fmt.Errorf("error could not reverse resolve address [%v]: %w", address, err)
+			}
+		}
+
+		if reverseName != name {
+			err = validateEnsName(client, reverseName, alreadyChecked)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	isPrimary = true
-	log.Infof("Address [%x] has a primary name: %v", address, name)
-	return validateEnsName(client, name, alreadyChecked, &isPrimary)
+	return nil
 }
 
-func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsCheckedDictionary, isPrimaryName *bool) error {
+func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsCheckedDictionary) error {
+	if name == "" || name == ".eth" {
+		return nil
+	}
 	// For now only .eth is supported other ens domains use different techniques and require and individual implementation
 	if !strings.HasSuffix(name, ".eth") {
 		name = fmt.Sprintf("%s.eth", name)
@@ -494,22 +458,23 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 	alreadyChecked.name[name] = true
 	alreadyChecked.mux.Unlock()
 
+	startTime := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("ens_validate_ens_name").Observe(time.Since(startTime).Seconds())
+	}()
+
 	nameHash, err := go_ens.NameHash(name)
 	if err != nil {
-		log.Error(err, "error could not hash name -> removing ens entry", 0, map[string]interface{}{"name": name})
-
+		log.Warnf("error could not hash name [%v]: %v -> removing ens entry", name, err)
 		err = removeEnsName(name)
 		if err != nil {
 			return fmt.Errorf("error removing ens name [%v]: %w", name, err)
 		}
 		return nil
-
-		//return fmt.Errorf("error could not hash name [%v]: %w", name, err)
 	}
 
 	addr, err := go_ens.Resolve(client, name)
 	if err != nil {
-		log.Error(err, "error, could not resolve name", 0, map[string]interface{}{"name": name})
 		if err.Error() == "unregistered name" ||
 			err.Error() == "no address" ||
 			err.Error() == "no resolver" ||
@@ -518,6 +483,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 			err.Error() == "invalid jump destination" ||
 			err.Error() == "invalid opcode: INVALID" {
 			// the given name is not available anymore or resolving it did not work properly => we can remove it from the db (if it is there)
+			log.Warnf("could not resolve name [%v]: %v -> removing ens entry", name, err)
 			err = removeEnsName(name)
 			if err != nil {
 				return fmt.Errorf("error removing ens name after resolve failed [%v]: %w", name, err)
@@ -530,42 +496,36 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 	// we need to get the main domain to get the expiration date
 	parts := strings.Split(name, ".")
 	mainName := strings.Join(parts[len(parts)-2:], ".")
-	ensName, err := go_ens.NewName(client, mainName)
-	if err != nil {
-		return fmt.Errorf("error could not create name via go_ens.NewName for [%v]: %w", name, err)
-	}
 
-	expires, err := ensName.Expires()
+	expires, err := GetEnsExpiration(client, mainName)
 	if err != nil {
 		return fmt.Errorf("error could not get ens expire date for [%v]: %w", name, err)
 	}
+
 	isPrimary := false
-	if isPrimaryName == nil {
-		reverseName, err := go_ens.ReverseResolve(client, addr)
-		if err != nil {
-			if err.Error() == "not a resolver" || err.Error() == "no resolution" {
-				log.Warnf("reverse resolving address [%v] for name [%v] resulted in an error [%s], marking entry as not primary", addr, name, err.Error())
-			} else {
-				return fmt.Errorf("error could not reverse resolve address [%v]: %w", addr, err)
-			}
+	reverseName, err := go_ens.ReverseResolve(client, addr)
+	if err != nil {
+		if err.Error() == "not a resolver" || err.Error() == "no resolution" || err.Error() == "execution reverted" {
+			log.Warnf("reverse resolving address [%v] for name [%v] resulted in an error [%s], marking entry as not primary", addr, name, err.Error())
+		} else {
+			return fmt.Errorf("error could not reverse resolve address [%v]: %w", addr, err)
 		}
-		if reverseName == name {
-			isPrimary = true
-		}
-	} else if *isPrimaryName {
+	}
+	if reverseName == name {
 		isPrimary = true
 	}
+
 	_, err = WriterDb.Exec(`
 	INSERT INTO ens (
-		name_hash,
-		ens_name,
+		name_hash, 
+		ens_name, 
 		address,
-		is_primary_name,
+		is_primary_name, 
 		valid_to)
-	VALUES ($1, $2, $3, $4, $5)
-	ON CONFLICT
-		(name_hash)
-	DO UPDATE SET
+	VALUES ($1, $2, $3, $4, $5) 
+	ON CONFLICT 
+		(name_hash) 
+	DO UPDATE SET 
 		ens_name = excluded.ens_name,
 		address = excluded.address,
 		is_primary_name = excluded.is_primary_name,
@@ -579,8 +539,48 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 		return fmt.Errorf("error writing ens data for name [%v]: %w", name, err)
 	}
 
-	log.Infof("Name [%v] resolved -> %x, expires: %v, is primary: %v", name, addr, expires, isPrimary)
+	log.InfoWithFields(log.Fields{
+		"name":        name,
+		"address":     addr,
+		"expires":     expires,
+		"reverseName": reverseName,
+	}, "validated ens name")
 	return nil
+}
+
+func GetEnsExpiration(client *ethclient.Client, name string) (time.Time, error) {
+	startTime := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("ens_get_expiration").Observe(time.Since(startTime).Seconds())
+	}()
+
+	normName, err := go_ens.NormaliseDomain(name)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error calling go_ens.NormaliseDomain: %w", err)
+	}
+	domain := go_ens.Domain(normName)
+	label, err := go_ens.DomainPart(normName, 1)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error calling go_ens.DomainPart: %w", err)
+	}
+	registrar, err := go_ens.NewBaseRegistrar(client, domain)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error calling go_ens.NewBaseRegistrar: %w", err)
+	}
+	uqName, err := go_ens.UnqualifiedName(label, domain)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error calling go_ens.UnqualifiedName: %w", err)
+	}
+	labelHash, err := go_ens.LabelHash(uqName)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error calling go_ens.LabelHash: %w", err)
+	}
+	id := new(big.Int).SetBytes(labelHash[:])
+	ts, err := registrar.Contract.NameExpires(&bind.CallOpts{}, id)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(ts.Int64(), 0), nil
 }
 
 func GetAddressForEnsName(name string) (address *common.Address, err error) {
@@ -599,7 +599,7 @@ func GetAddressForEnsName(name string) (address *common.Address, err error) {
 	return address, err
 }
 
-func GetEnsNameForAddress(address common.Address) (name *string, err error) {
+func GetEnsNameForAddress(address common.Address) (name string, err error) {
 	err = ReaderDb.Get(&name, `
 	SELECT ens_name
 	FROM ens

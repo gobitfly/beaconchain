@@ -1,26 +1,33 @@
 <script lang="ts" setup>
 import {
-  faAdd,
-  faTrash
+  faAdd, faTrash,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { BcDialogConfirm, BcPremiumModal } from '#components'
+import {
+  BcDialogConfirm, BcPremiumModal,
+} from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
-import type { Cursor, SortOrder } from '~/types/datatable'
+import type {
+  Cursor, SortOrder,
+} from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
 import { API_PATH } from '~/types/customFetch'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const dialog = useDialog()
 
-const { dashboardKey, isPublic } = useDashboardKey()
+const {
+  dashboardKey, isPublic,
+} = useDashboardKey()
 
-const { width, isMobile } = useWindowSize()
+const {
+  isMobile, width,
+} = useWindowSize()
 
 const visible = defineModel<boolean>()
 
@@ -41,33 +48,42 @@ const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
   let processedGroups = groups.value
   if (search.value?.length) {
     const s = search.value.toLowerCase()
-    processedGroups = processedGroups.filter(g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id)
+    processedGroups = processedGroups.filter(
+      g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id,
+    )
   }
   if (sortField.value?.length && sortOrder.value) {
     if (sortField.value === 'name') {
       // lodash needs some help when sorting strings alphabetically
-      processedGroups = orderBy(processedGroups, [g => g.name.toLowerCase()], getSortOrder(sortOrder.value))
-    } else {
-      processedGroups = orderBy(processedGroups, sortField.value, getSortOrder(sortOrder.value))
+      processedGroups = orderBy(
+        processedGroups,
+        [ g => g.name.toLowerCase() ],
+        getSortOrder(sortOrder.value),
+      )
+    }
+    else {
+      processedGroups = orderBy(
+        processedGroups,
+        sortField.value,
+        getSortOrder(sortOrder.value),
+      )
     }
   }
   const totalCount = processedGroups.length
   const index = cursor.value as number
   return {
-    paging: {
-      total_count: totalCount
-    },
-    data: processedGroups.slice(index, index + pageSize.value)
+    data: processedGroups.slice(index, index + pageSize.value),
+    paging: { total_count: totalCount },
   }
 })
 
 const size = computed(() => {
-  return {
-    showSubTitle: width.value >= 760
-  }
+  return { showSubTitle: width.value >= 760 }
 })
 
-const newGroupDisabled = computed(() => !REGEXP_VALID_NAME.test(newGroupName.value))
+const newGroupDisabled = computed(
+  () => !REGEXP_VALID_NAME.test(newGroupName.value),
+)
 
 const resetData = () => {
   search.value = ''
@@ -91,32 +107,56 @@ const addGroup = async () => {
     return
   }
 
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUPS, { method: 'POST', body: { name: newGroupName.value } }, { dashboardKey: dashboardKey.value })
+  await fetch(
+    API_PATH.DASHBOARD_VALIDATOR_GROUPS,
+    {
+      body: { name: newGroupName.value },
+      method: 'POST',
+    },
+    { dashboardKey: dashboardKey.value },
+  )
   await refreshOverview(dashboardKey.value)
   newGroupName.value = ''
 }
 
 const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'PUT', body: { name: newName } }, { dashboardKey: dashboardKey.value, groupId: row.id })
+  await fetch(
+    API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY,
+    {
+      body: { name: newName },
+      method: 'PUT',
+    },
+    {
+      dashboardKey: dashboardKey.value,
+      groupId: row.id,
+    },
+  )
   refreshOverview(dashboardKey.value)
 }
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY, { method: 'DELETE' }, { dashboardKey: dashboardKey.value, groupId: row.id })
+  await fetch(
+    API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY,
+    { method: 'DELETE' },
+    {
+      dashboardKey: dashboardKey.value,
+      groupId: row.id,
+    },
+  )
   refreshOverview(dashboardKey.value)
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {
   hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
+    data: {
+      question: $t('dashboard.validator.group_management.remove_text', { group: row.name }),
+      title: $t('dashboard.validator.group_management.remove_title'),
+    },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
       response?.data && removeGroupConfirmed(row)
     },
-    data: {
-      title: $t('dashboard.validator.group_management.remove_title'),
-      question: $t('dashboard.validator.group_management.remove_text', { group: row.name })
-    }
   })
 }
 
@@ -138,14 +178,27 @@ const setSearch = (value?: string) => {
 }
 
 const dashboardName = computed(() => {
-  return dashboards.value?.validator_dashboards?.find(d => `${d.id}` === dashboardKey.value)?.name || dashboardKey.value
+  return (
+    dashboards.value?.validator_dashboards?.find(
+      d => `${d.id}` === dashboardKey.value,
+    )?.name || dashboardKey.value
+  )
 })
 
-const maxGroupsPerDashboard = computed(() => (isPublic.value || !user.value?.premium_perks?.validator_groups_per_dashboard) ? 1 : user.value.premium_perks.validator_groups_per_dashboard)
-const premiumLimit = computed(() => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value)
+const maxGroupsPerDashboard = computed(() =>
+  isPublic.value || !user.value?.premium_perks?.validator_groups_per_dashboard
+    ? 1
+    : user.value.premium_perks.validator_groups_per_dashboard,
+)
+const premiumLimit = computed(
+  () => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value,
+)
 
-const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getSortOrder(sortOrder.value)}` : undefined)
-
+const selectedSort = computed(() =>
+  sortOrder.value
+    ? `${sortField.value}:${getSortOrder(sortOrder.value)}`
+    : undefined,
+)
 </script>
 
 <template>
@@ -156,18 +209,32 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
     class="validator-group-managment-modal-container"
     @update:visible="(visible: boolean) => !visible && resetData()"
   >
-    <template v-if="!size.showSubTitle" #header>
+    <template
+      v-if="!size.showSubTitle"
+      #header
+    >
       <span />
     </template>
     <BcTableControl
-      :search-placeholder="$t('dashboard.validator.group_management.search_placeholder')"
+      :search-placeholder="
+        $t('dashboard.validator.group_management.search_placeholder')
+      "
       :disabled-filter="isPublic"
       @set-search="setSearch"
     >
       <template #header-left>
-        <span v-if="size.showSubTitle"> {{ $t('dashboard.validator.group_management.sub_title', { dashboardName })
+        <span v-if="size.showSubTitle">
+          {{
+            $t("dashboard.validator.group_management.sub_title", {
+              dashboardName,
+            })
+          }}</span>
+        <span
+          v-else
+          class="small-title"
+        >{{
+          $t("dashboard.validator.group_management.title")
         }}</span>
-        <span v-else class="small-title">{{ $t('dashboard.validator.group_management.title') }}</span>
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
@@ -175,10 +242,16 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
             v-model="newGroupName"
             class="search-input"
             maxlength="20"
-            :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')"
+            :placeholder="
+              $t('dashboard.validator.group_management.new_group_placeholder')
+            "
             @keypress.enter="addGroup"
           />
-          <Button style="display: inline;" :disabled="newGroupDisabled" @click="addGroup">
+          <Button
+            style="display: inline"
+            :disabled="newGroupDisabled"
+            @click="addGroup"
+          >
             <FontAwesomeIcon :icon="faAdd" />
           </Button>
         </div>
@@ -186,11 +259,11 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="data"
+            :data
             class="management-table"
-            :cursor="cursor"
-            :page-size="pageSize"
-            :selected-sort="selectedSort"
+            :cursor
+            :page-size
+            :selected-sort
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -205,7 +278,11 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
                 <BcInputLabel
                   class="edit-group truncate-text"
                   :value="slotProps.data.name"
-                  :default="slotProps.data.id === 0 ? $t('dashboard.group.selection.default') : ''"
+                  :default="
+                    slotProps.data.id === 0
+                      ? $t('dashboard.group.selection.default')
+                      : ''
+                  "
                   :can-be-empty="slotProps.data.id === 0"
                   :disabled="isPublic"
                   :pattern="REGEXP_VALID_NAME"
@@ -215,16 +292,27 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
                 />
               </template>
             </Column>
-            <Column field="id" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.id')">
+            <Column
+              field="id"
+              :sortable="!isMobile"
+              :header="$t('dashboard.validator.group_management.col.id')"
+            >
               <template #body="slotProps">
                 <div class="id-cell">
                   {{ slotProps.data.id }}
                 </div>
               </template>
             </Column>
-            <Column field="count" :sortable="!isMobile" :header="$t('dashboard.validator.group_management.col.count')">
+            <Column
+              field="count"
+              :sortable="!isMobile"
+              :header="$t('dashboard.validator.group_management.col.count')"
+            >
               <template #body="slotProps">
-                <BcFormatNumber :value="slotProps.data.count" default="0" />
+                <BcFormatNumber
+                  :value="slotProps.data.count"
+                  default="0"
+                />
               </template>
             </Column>
             <Column field="action">
@@ -242,9 +330,16 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
 
             <template #bc-table-footer-left>
               <div class="left">
-                <div class="labels" :class="{ premiumLimit }">
+                <div
+                  class="labels"
+                  :class="{ premiumLimit }"
+                >
                   <span>
-                    <BcFormatNumber :value="data.paging.total_count" default="0" /> /
+                    <BcFormatNumber
+                      :value="data.paging.total_count"
+                      default="0"
+                    />
+                    /
                     <BcFormatNumber :value="maxGroupsPerDashboard" />
                   </span>
                 </div>
@@ -253,7 +348,10 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
             </template>
 
             <template #bc-table-footer-right>
-              <Button :label="$t('navigation.done')" @click="onClose" />
+              <Button
+                :label="$t('navigation.done')"
+                @click="onClose"
+              />
             </template>
           </BcTable>
         </ClientOnly>
@@ -263,14 +361,13 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/utils.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/utils.scss";
+@use "~/assets/css/fonts.scss";
 
 :global(.validator-group-managment-modal-container) {
   width: 960px;
   height: 800px;
-
 }
 
 :global(.validator-group-managment-modal-container .p-dialog-content) {
@@ -285,7 +382,11 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
   @include fonts.subtitle_text;
 }
 
-:global(.validator-group-managment-modal-container .bc-table-header .side:first-child) {
+:global(
+    .validator-group-managment-modal-container
+      .bc-table-header
+      .side:first-child
+  ) {
   display: contents;
 }
 
@@ -376,7 +477,6 @@ const selectedSort = computed(() => sortOrder.value ? `${sortField.value}:${getS
 }
 
 @media (max-width: 560px) {
-
   .edit-group {
     max-width: 100px;
   }
