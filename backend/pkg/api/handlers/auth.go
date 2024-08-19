@@ -128,7 +128,7 @@ func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint
 		return errors.New("error updating confirmation hash")
 	}
 
-	// 3. send confirmation email
+	// 3. send confirmation emaildasdasda
 	subject := fmt.Sprintf("%s: Reset your passsword", utils.Config.Frontend.SiteDomain)
 	msg := fmt.Sprintf(`Please reset your password on %[1]s by clicking this link:
 
