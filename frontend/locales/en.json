@@ -1,0 +1,1132 @@
+{
+  "block": {
+    "col": {
+      "graffiti": "Graffiti",
+      "proposer": "Proposer",
+      "tx_hash": "Tx Hash"
+    },
+    "status": {
+      "missed": "Missed",
+      "orphaned": "Orphaned",
+      "probably_missed": "Missed *",
+      "scheduled": "Scheduled",
+      "success": "Proposed"
+    },
+    "status_might_change_on_reorg": "This block's status may change if a chain reorganization occurs."
+  },
+  "clipboard": {
+    "copied": "Copied!",
+    "copy": "Copy to clipboard"
+  },
+  "common": {
+    "account": "Account | Accounts",
+    "address": "Address | Addresses",
+    "age": "Age",
+    "and_more": "and {count} more",
+    "average": "Average",
+    "batch": "Batch | Batches",
+    "block": "Block | Blocks",
+    "block_root": "Block root | Block roots",
+    "coming_soon": "Coming soon",
+    "consensus_layer": "Consensus Layer",
+    "contract": "Contract | Contracts",
+    "current": "Current",
+    "deselected": "Not selected",
+    "earned": "Earned",
+    "edit": "Edit",
+    "ens_address": "ENS address | ENS addresses",
+    "epoch": "Epoch | Epochs",
+    "erc20token": "ERC-20 Token | ERC-20 Tokens",
+    "every_day": "Every day | Every {count} days",
+    "every_x": "Every {duration}",
+    "execution_layer": "Execution Layer",
+    "expected": "Expected",
+    "false": "False",
+    "graffiti": "Graffiti | Graffitis",
+    "id": "ID",
+    "in_day": "In one day | In {count} days",
+    "index": "Index",
+    "last_x": "Last {duration}",
+    "live": "Live",
+    "luck": "Luck",
+    "nft": "NFT | NFTs",
+    "nft_as_token": "ERC-721 & ERC-1155 token (NFT) | ERC-721 & ERC-1155 tokens (NFTs)",
+    "overview_of_ens": "Overview of ENS domain | Overview of ENS domains",
+    "past": "Past",
+    "penalty": "Penalty",
+    "protocol": "Protocol | Protocols",
+    "selected": "Selected",
+    "send": "Send",
+    "slot": "Slot | Slots",
+    "slot_block": "Slot/Block | Slots/Blocks",
+    "soon": "Soon",
+    "state_batch": "State Batch | State Batches",
+    "state_root": "State root | State roots",
+    "token": "Token | Tokens",
+    "total": "Total",
+    "transaction": "Transaction | Transactions",
+    "true": "True",
+    "tx_batch": "Tx Batch | Tx Batches",
+    "unavailable": "Unavailable",
+    "upcoming": "Upcoming",
+    "validator": "Validator | Validators"
+  },
+  "cookies": {
+    "accept_all": "Accept All",
+    "only_necessary": "Only Necessary",
+    "text": [
+      "By using our site you agree to our use of",
+      "cookies",
+      "to deliver a better user experience."
+    ]
+  },
+  "currency": {
+    "label": {
+      "AUD": "Australian Dollar",
+      "CAD": "Canadian Dollar",
+      "DAI": "DAI Stablecoin",
+      "ETH": "Ether",
+      "EUR": "Euro",
+      "GBP": "Pound Sterling",
+      "GNO": "Gnosis",
+      "JPY": "Japanese Yen",
+      "NAT": "Native",
+      "RUB": "Russian Ruble",
+      "USD": "United States Dollar",
+      "mGNO": "mGnosis",
+      "xDAI": "xDAI Stablecoin"
+    }
+  },
+  "dashboard": {
+    "account_dashboard": "Account Dashboard",
+    "creation": {
+      "network": {
+        "subtitle": "What network are your validators on?"
+      },
+      "title": "Add a new dashboard",
+      "type": {
+        "accounts": "Accounts",
+        "placeholder": "Name",
+        "subtitle": "What would you like to monitor?",
+        "validators": "Validators"
+      }
+    },
+    "delete_dashboard": "Delete Dashboard",
+    "deletion": {
+      "clear": {
+        "text": "Do you want to clear this {dashboard}?",
+        "title": "Clear Dashboard"
+      },
+      "delete": {
+        "no_label": "Cancel",
+        "text": "This will permanently delete the dashboard {dashboard}.",
+        "title": "Delete Dashboard",
+        "yes_label": "Delete Dashboard"
+      }
+    },
+    "empty": {
+        "empty_table": "Nothing to see here... yet"
+    },
+    "group": {
+      "selection": {
+        "all": "All groups",
+        "default": "Default",
+        "dialog": {
+          "assign_group": "Assign to group",
+          "title": "Edit Groups",
+          "validators_selected": "1/{total} validator selected | {count}/{total} validators selected"
+        },
+        "placeholder": "Select group"
+      }
+    },
+    "header": {
+      "account": "Accounts",
+      "manage": "Manage",
+      "validator": "Validators"
+    },
+    "public_account_dashboard": "Dashboard",
+    "public_validator_dashboard": "Dashboard",
+    "rename": {
+      "title": "Rename Dashboard"
+    },
+    "rename_dashboard": "Rename Dashboard",
+    "share": "Share",
+    "share_dashboard": "Share Dashboard",
+    "share_dialog": {
+      "edit": "Edit Settings",
+      "only_viewing_permission": "People who access this dashboard through the link will only have viewing permissions.",
+      "public_dashboard_url": "Public dashboard URL",
+      "setting": {
+        "group": {
+          "label": "Share groups",
+          "tooltip": [
+            "Checking this shows others",
+            "your groups",
+            "on the dashboard."
+          ]
+        },
+        "name": {
+          "label": "Dashboard name",
+          "placeholder": "Shared Dashboard name"
+        }
+      },
+      "share_public_disclaimer": "Sharing this link will share the validator indices from your dashboard. Any modifications made by those who open the link will not affect your dashboard.",
+      "upgrade": "Upgrade to beaconcha.in premium to share custom validator groups and show updates to users instantly."
+    },
+    "shared": "Shared",
+    "shared_dashboard": "Shared Dashboard",
+    "shared_modal_with_own": {
+      "button": "Go to Dashboard",
+      "text": "Access your personalized dashboard"
+    },
+    "shared_modal_without_own": {
+      "button": "Get started",
+      "text": "Create your own dashboard to get the most out of beaconcha.in"
+    },
+    "title": "Dashboard",
+    "validator": {
+      "blocks": {
+        "cl_pending": "CL Pending",
+        "cl_rewards": "Consensus Layer Reward",
+        "el_rewards": "Execution Layer Reward",
+        "pending": "Pending",
+        "search_placeholder": "Index, Public Key, Group",
+        "search_placeholder_public": "Index, Public Key",
+        "title": "Blocks"
+      },
+      "cl_deposits": {
+        "title": "Consensus Layer"
+      },
+      "col": {
+        "amount": "Amount",
+        "balance": "Balance",
+        "cl_rewards": "Cl Rewards",
+        "depositor": "Depositor",
+        "duty": "Duty",
+        "efficiency": "Efficiency",
+        "el_rewards": "El Rewards",
+        "group": "Group",
+        "index": "Index",
+        "proposer_rewards": "Proposer Rewards",
+        "public_key": "Public Key",
+        "recipient": "Recipient",
+        "reward_recipient": "Rewards Recipient",
+        "rewards": "Rewards",
+        "signature": "Signature",
+        "status": "Status",
+        "validators": "Validators",
+        "withdrawal_credential": "Withdrawal Credential"
+      },
+      "duties": {
+        "col": {
+          "duties": "Duties",
+          "result": "Result",
+          "rewards": "Rewards",
+          "validator": "Validator"
+        },
+        "search_placeholder": "Index, Public Key",
+        "title": "Epoch"
+      },
+      "el_deposits": {
+        "title": "Execution Layer"
+      },
+      "group_management": {
+        "col": {
+          "count": "Amount",
+          "id": "Group Id",
+          "name": "Name"
+        },
+        "new_group_placeholder": "New group name",
+        "remove_text": "Do you want to remove group {group} from your dashboard?",
+        "remove_title": "Remove Groups",
+        "search_placeholder": "Name, Id",
+        "sub_title": "Add or remove validator groups for {dashboardName}",
+        "title": "Manage Groups"
+      },
+      "manage_groups": "Manage Groups",
+      "manage_validators": "Manage Validators",
+      "management": {
+        "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?",
+        "remove_title": "Remove Validators",
+        "sub_title": "Add or remove validators from your dashboard",
+        "title": "Manage"
+      },
+      "overview": {
+        "24h_efficiency": "24h Efficiency",
+        "30d_apr": "30d APR",
+        "30d_rewards": "30d Rewards",
+        "your_online_validators": "Your Online Validators"
+      },
+      "rewards": {
+        "attestation": "Attestation",
+        "attestation_head": "Att.: Head",
+        "attestation_source": "Att.: Source",
+        "attestation_target": "Att.: Target",
+        "block": "Block",
+        "chart": {
+          "cl": "Consensus Rewards",
+          "el": "Execution Rewards",
+          "total": "Total Rewards"
+        },
+        "inactivity": "Inactivity Leak",
+        "proposal": "Proposal",
+        "proposer_rewards_cl_att": "Proposer Att. Reward (CL)",
+        "proposer_rewards_cl_slash": "Proposer Slashing Reward (CL)",
+        "proposer_rewards_cl_sync": "Proposer Sync. Reward (CL)",
+        "proposer_rewards_el": "Proposer Reward (EL)",
+        "proposer_rewards_total": "Total Proposer Reward",
+        "search_placeholder": "Epoch, Index, Pubkey, Group",
+        "search_placeholder_public": "Epoch, Index, Pubkey",
+        "slashing": "Slashing",
+        "sync": "Sync",
+        "sync_committee": "Sync Committee",
+        "title": "Rewards",
+        "tooltip": {
+          "slashing": [
+            "Amount of validators you slashed",
+            "Amount of your slashed validators"
+          ],
+          "sync": ["Participated / Missed"]
+        },
+        "total": "Total"
+      },
+      "subset_dialog": {
+        "category": {
+          "all": "All",
+          "deposited": "Deposited",
+          "depositing": "Depositing",
+          "exited": "Exited",
+          "exited_withdrawing": "Exited [Withdrawing]",
+          "exited_withdrawn": "Exited [Withdrawn]",
+          "exiting": "Exiting",
+          "got_slashed": "Got slashed",
+          "has_slashed": "Slashed",
+          "offline": "Offline",
+          "online": "Online",
+          "pending": "Pending",
+          "proposal_missed": "Missed",
+          "proposal_proposed": "Proposed",
+          "slashed": "Slashed",
+          "slashed_withdrawing": "Slashed [Withdrawing]",
+          "slashed_withdrawn": "Slashed [Withdrawn]",
+          "slashing": "Slashing",
+          "sync_current": "Current Sync Committee",
+          "sync_past": "Past Sync Committee",
+          "sync_upcoming": "Upcoming Sync Committee",
+          "withdrawing": "Withdrawing",
+          "withdrawn": "Withdrawn"
+        },
+        "got_slashed": "Slashed by",
+        "slashed": "Slashed"
+      },
+      "summary": {
+        "add_validator": "Click here to add a validator",
+        "chart": {
+          "all_groups": "All Groups",
+          "average": "Network Average",
+          "efficiency": {
+            "all": "Efficiency",
+            "attestation": "Attestation Eff.",
+            "proposal": "Proposal Eff.",
+            "sync": "Sync Eff."
+          },
+          "groups": "Groups ({count})",
+          "no_data": "No chart data",
+          "total": "Total"
+        },
+        "row": {
+          "apr": "APR",
+          "attestation_avg_incl_dist": "Avg. Incl. Distance",
+          "attestation_efficiency": "Att. Efficiency",
+          "attestations": "Attestations",
+          "attestations_head": "Head",
+          "attestations_source": "Source",
+          "attestations_target": "Target",
+          "efficiency": "Efficiency",
+          "luck": "Luck",
+          "missed_rewards": "Missed rewards",
+          "proposals": "Proposals",
+          "reward": "Reward",
+          "slashings": "Slashings",
+          "sync": "Sync Committee Efficiency ",
+          "sync_committee": "Sync Committee",
+          "validators_proposal": "Validators",
+          "validators_slashings": "Validators",
+          "validators_sync": "Validators"
+        },
+        "search_placeholder": "Index, Public Key, Group",
+        "search_placeholder_public": "Index, Public Key",
+        "status": {
+          "current_sync": "No active sync participation | One validator is in the current sync committee | {count} validators are in the current sync committee",
+          "scheduled_sync": "No scheduled sync participation | One validator is scheduled to be part of a sync committee | {count} validators are scheduled to be part of a sync committee",
+          "slashing": "No slashed validators | One slashed validator | {count} slashed validators"
+        },
+        "title": "Summary",
+        "tooltip": {
+          "amount_of_rounds": "(amount of rounds)",
+          "amount_of_validators": "(amount of validators)",
+          "equal": "{name}'s efficiency is at the network average of {average}",
+          "estimated_loss": "Estimated loss based on avg. network performance.",
+          "higher": "{name}'s efficiency is above the network average of {average}",
+          "live": "Validators missing two consecutive attestations are considered offline.",
+          "lower": "{name}'s efficiency is below the network average of {average}"
+        },
+        "total_group_name": "Total Efficiency"
+      },
+      "tabs": {
+        "blocks": "Blocks",
+        "deposits": "Deposits",
+        "heatmap": "Heatmap",
+        "rewards": "Rewards",
+        "summary": "Summary",
+        "withdrawals": "CL Withdrawals"
+      },
+      "tooltip": {
+        "attestation_efficiency": {
+          "text": "Indicates the percentage of rewards in relation to the theoretical maximum value",
+          "title": "Attestation Efficiency: "
+        },
+        "block_proposal": "Block Proposal",
+        "sync": {
+          "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1",
+          "title": "Sync Committee Efficiency: "
+        },
+        "sync_committee": "Sync Committee"
+      },
+      "withdrawals": {
+        "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn",
+        "pending": "Pending",
+        "pending_tooltip": "Estimation for next withdrawal currently unavailable",
+        "search_placeholder": "Index, Public Key, Address",
+        "title": "Consensus Layer Withdrawals"
+      }
+    },
+    "validator_dashboard": "Validator Dashboard"
+  },
+  "error": {
+    "multiple_times": "The error {error} happened {count} times",
+    "ws_error": "Webservice error"
+  },
+  "faq": {
+    "playground": {
+      "0": {
+        "answer": [
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+          "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+        ],
+        "link": {
+          "label": "...more infos",
+          "path": "https://beaconcha.in/"
+        },
+        "question": "What is your first question"
+      },
+      "1": {
+        "answer": [
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+          "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+        ],
+        "question": "This is a second question"
+      }
+    }
+  },
+  "filter": {
+    "close": "Open Filter.",
+    "disabled": "Filter disabled.",
+    "enabled": "Filter enabled.",
+    "open": "Close Filter."
+  },
+  "footer": {
+    "advertise": "Advertise",
+    "api_docs": "API Docs",
+    "api_pricing": "API Pricing",
+    "imprint": "Imprint",
+    "legal_notices": "Legal Notices",
+    "links": "Links",
+    "premium": "beaconcha.in Premium",
+    "press_kit": "Press Kit",
+    "privacy": "Privacy",
+    "resources": "Resources",
+    "shop": "Swag Shop",
+    "status": "Site Status",
+    "terms": "Terms"
+  },
+  "header": {
+    "current_epoch": "Current Epoch",
+    "current_slot": "Current Slot",
+    "login": "Log in",
+    "logout": "Log out",
+    "megamenu": {
+      "api_docs": "API Docs",
+      "api_pricing": "API Pricing",
+      "beaconchain_app": "Beaconchain App",
+      "beaconchain_premium": "Beaconchain Premium",
+      "block_viz": "Block Viz",
+      "blockchain": "Blockchain",
+      "blocks": "Blocks",
+      "broadcast_signed_messages": "Broadcast Signed Messages",
+      "charts": "Charts",
+      "community": "Community",
+      "correlations": "Correlations",
+      "dashboard": "Dashboard",
+      "deposit_leaderboard": "Deposit Leaderboard",
+      "deposits": "Deposits",
+      "eip1599_burn": "EIP-1599 Burn",
+      "epochs": "Epochs",
+      "eth_store": "ETH.STORE",
+      "ethereum_clients": "Ethereum Clients",
+      "eversteel": "Eversteel",
+      "gasnow": "GasNow",
+      "graffiti_wall": "Graffiti Wall",
+      "knowledge_base": "Knowledge Base",
+      "mempool": "Mempool",
+      "notifications": "Notifications",
+      "overview": "Overview",
+      "pool_benchmarks": "Pool Blockchain",
+      "pricing": "Pricing",
+      "profit_calculator": "Profit Calculator",
+      "relays": "Relays",
+      "reward_history": "Reward History",
+      "rocket_pool_stats": "Rocket Pool Stats",
+      "run_a_validator": "Run a validator!",
+      "select_currency": "Select currency",
+      "services": "Services",
+      "slashings": "Slashings",
+      "slot_finder": "Slot Finder",
+      "slots": "Slots",
+      "staking_pools": "Staking Pools",
+      "staking_services": "Staking Services",
+      "stats": "Stats",
+      "tools": "Tools",
+      "txs": "Txs",
+      "txs_l1_l2": "Txs (L1 to L2)",
+      "txs_l2_l1": "Txs (L2 to L1)",
+      "unit_converter": "Unit Converter",
+      "validator_leaderboard": "Validator Leaderboard",
+      "validators": "Validators",
+      "webhooks": "Webhooks",
+      "withdrawals": "Withdrawals"
+    },
+    "register": "Sign up",
+    "settings": "Account Settings"
+  },
+  "locales": {
+    "currency": "en-US",
+    "date": "en-US"
+  },
+  "login_and_register": {
+    "already_have_account": "Already have an account?",
+    "choose_password": "Choose a password",
+    "confirm_password": "Confirm your password",
+    "dont_have_account": "Don't have an account?",
+    "email": "Email address",
+    "error_login_group": "Cannot log in",
+    "error_login_message": "your email or your password is unknown.",
+    "error_register_group": "Cannot sign up",
+    "error_register_message": "An error of communication with the served happened.",
+    "error_title": "Error",
+    "forgotten": "Forgot password?",
+    "login_here": "Log in",
+    "password": "Password",
+    "please_agree": ["I agree to the", "T&C", "and", "Privacy Policy"],
+    "signup_here": "Register",
+    "submit_login": "Log in",
+    "submit_register": "Sign up",
+    "title_login": "Sign in",
+    "title_register": "Sign up"
+  },
+  "maintenance": {
+    "ongoing": "Maintenance: Some features are unavailable",
+    "planned": "Maintenance is scheduled ({date})"
+  },
+  "navigation": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "delete": "Delete",
+    "dismiss": "Dismiss",
+    "done": "Done",
+    "no": "No",
+    "publish": "Publish",
+    "remove": "Remove",
+    "save": "Save",
+    "unpublish": "Unpublish",
+    "update": "Update",
+    "yes": "Yes"
+  },
+  "notifications": {
+    "col": {
+      "dashboard": "Dashboard",
+      "group": "Group",
+      "networks": "Networks",
+      "notification": "Notification",
+      "subscriptions": "Subscriptions",
+      "webhook": "Webhook"
+    },
+    "dashboards": {
+      "col": {
+        "entity": "Entity",
+        "notification": "Notification"
+      },
+      "dialog": {
+        "button_webhook_test": "Send Test Notification",
+        "heading_webhook": "Edit Webhook",
+        "info_send_via_discord": {
+          "_link": "Discord webhook",
+          "template": "Enable this to receive notifications via Discord. Ensure you have a {_link} set up."
+        },
+        "label_send_via_discord": "Send via Discord",
+        "label_webhook_url": "Webhook URL",
+        "placeholder_webhook": "https://webhook.example.com/id"
+      },
+      "empty": {
+        "login": "Login to set notifications",
+        "no_dashboards": "Create a dashboard to set notifications",
+        "with_dashboards": "Click here to set notifications"
+      },
+      "entity": {
+        "accounts": "account | accounts",
+        "validators": "validator | validators"
+      },
+      "expansion": {
+        "label_dashboard": "Dashboard:",
+        "label_group": "Group:",
+        "label_notification": "Notification:"
+      },
+      "footer": {
+        "subscriptions": {
+          "accounts": "Accounts ({count} Subscription) |Accounts ({count} Subscriptions)",
+          "accounts_shortened": "Accounts ({count} Sub) |Accounts ({count} Subs)",
+          "validators": "Validators ({count} Subscription) |Validators ({count} Subscriptions)",
+          "validators_shortened": "Validators ({count} Sub) |Validators ({count} Subs)"
+        }
+      },
+      "search_placeholder": "Dashboard, Group",
+      "title": "Dashboards",
+      "toast": {
+        "error": {
+          "discord": "Discord webhook could not be sent successfully.",
+          "webhook_url": "Webhook could not be sent successfully"
+        },
+        "success": {
+          "test_discord": "Discord webhook send successfully",
+          "test_webhook_url": "Webhook send successfully"
+        }
+      }
+    },
+    "general": {
+      "do_not_disturb": "Do not disturb",
+      "download_app": ["Download the", "mobile app", "to activate"],
+      "email_notifications": "Email Notifications",
+      "mute": {
+        "all": "Mutes all notifications",
+        "hours": "{count} hour|{count} hours",
+        "select_duration": "Select mute duration",
+        "unmute": "Unmute",
+        "until": "Muted until {date}",
+        "until_i_turn_on": "Until I turn it back on",
+        "until_turned_on": "Muted until turned back on"
+      },
+      "paired_devices": {
+        "device": "Device",
+        "grant_account_access": "Grant account access (required)",
+        "mobile_notifications": "Mobile notifications",
+        "paired_date": "Paired: {date}",
+        "title": "Paired Devices",
+        "unknown": "Unknown"
+      },
+      "push_notifications": "Push Notifications",
+      "send_test_email": "Send Test E-Mail",
+      "send_test_push": "Send Test Push Notification",
+      "test_notification_error": {
+        "toast_group": "An error occurred while sending the test notification",
+        "toast_message": "Please try again.",
+        "toast_title": "Error"
+      }
+    },
+    "login_question": "Do you want to login to set notifications?",
+    "machine": {
+      "col": {
+        "event_type": "Event",
+        "machine_name": "Machine",
+        "threshold": "Threshold"
+      },
+      "event_type": {
+        "is_machine_offline": "Machine is offline",
+        "machine_cpu_usage": "CPU overheated",
+        "machine_memory_usage": "High memory usage",
+        "machine_storage_usage": "No storage left"
+      },
+      "footer": {
+        "subscriptions": "Machines (1 Subscription) |Machines ({count} Subscriptions)"
+      }
+    },
+    "manage": "Manage Notifications",
+    "management": {
+      "title": "Manage Notifications"
+    },
+    "network": {
+      "event_type": {
+        "gas_above": "Gas price > {_value}",
+        "gas_below": "Gas price < {_value}",
+        "participation_rate": "Participation rate < {_value}"
+      },
+      "footer": {
+        "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
+      }
+    },
+    "subscriptions": {
+      "accounts": {
+        "all": {
+          "option": "All events"
+        },
+        "erc20_token_transfers_value_threshold": {
+          "option": "ERC20 token transfers",
+          "placeholder": "value ≥ $0"
+        },
+        "explanation": "",
+        "is_erc20_token_transfers_subscribed": {
+          "option": "ERC20 token transfers"
+        },
+        "is_erc721_token_transfers_subscribed": {
+          "option": "ERC721 token transfers"
+        },
+        "is_erc1155_token_transfers_subscribed": {
+          "option": "ERC1155 token transfers"
+        },
+        "is_ignore_spam_transactions_enabled": {
+          "hint": [
+            "Ignores",
+            "zero value transfer tx's",
+            "and token tx's that have the",
+            "\"hidden\" token label",
+            "."
+          ],
+          "option": "Ignore spam transactions"
+        },
+        "is_incoming_transactions_subscribed": {
+          "option": "Incoming transactions"
+        },
+        "is_outgoing_transactions_subscribed": {
+          "option": "Outgoing transactions"
+        },
+        "subscribed_chain_ids": {
+          "option": "Networks"
+        }
+      },
+      "button": "Close",
+      "dialog_title": "Edit Subscriptions",
+      "error_group": "Notification subscriptions",
+      "error_message": "We could not save your preferences.",
+      "error_title": "Error",
+      "validators": {
+        "all": {
+          "option": "All events"
+        },
+        "explanation": "All notifications are sent after network finality (~{count} min).",
+        "group_offline_threshold": {
+          "hint": [
+            "We will trigger a notification:",
+            "Once validators in your group are offline. | Once {count}% of your group is offline. | Once {count}% of your group is offline.",
+            "Once you have been offline for 3 epochs.",
+            "Every 32 Epochs (~3 hours) during your downtime.",
+            "Once you are back online.",
+            "Note:",
+            "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
+          ],
+          "option": "Group is offline",
+          "placeholder": ""
+        },
+        "is_attestations_missed_subscribed": {
+          "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime.",
+          "option": "Attestations missed"
+        },
+        "is_block_proposal_subscribed": {
+          "option": "Block proposal (missed & success)"
+        },
+        "is_real_time_mode_enabled": {
+          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications.",
+          "option": "Realtime mode"
+        },
+        "is_slashed_subscribed": {
+          "option": "Validator got slashed"
+        },
+        "is_sync_subscribed": {
+          "option": "Sync committee"
+        },
+        "is_upcoming_block_proposal_subscribed": {
+          "hint": "May trigger false positive notifications during reorgs.",
+          "option": "Upcoming block proposal"
+        },
+        "is_validator_offline_subscribed": {
+          "hint": [
+            "We will trigger a notification:",
+            "Once the validator has been offline for 3 epochs.",
+            "Every 32 Epochs (~3 hours) during your downtime.",
+            "Once you are back online again."
+          ],
+          "option": "Validator is offline"
+        },
+        "is_withdrawal_processed_subscribed": {
+          "option": "Withdrawal processed"
+        }
+      }
+    },
+    "tabs": {
+      "clients": "Clients",
+      "dashboards": "Dashboards",
+      "general": "General",
+      "machines": "Machines",
+      "network": "Network",
+      "rocketpool": "Rocket Pool"
+    },
+    "title": "Notifications"
+  },
+  "premium": {
+    "description": "Monitoring without limits on web and mobile.",
+    "subscribe": "Subscribe to Premium",
+    "title": "beaconcha.in Premium",
+    "unlock": "Unlock Full Features"
+  },
+  "pricing": {
+    "addons": {
+      "button": {
+        "manage_addon": "Manage Add-On",
+        "select_addon": "Select Add-On"
+      },
+      "contact_support": ["Contact", "support", "for a higher limit"],
+      "currently_active": "Currently active: {amount}",
+      "per_dashboard": "per Dashboard",
+      "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
+      "title": "Premium Add-Ons",
+      "validator_amount": "+{amount} Validators"
+    },
+    "amount_per_year": "{amount} yearly",
+    "api_keys": "API Keys",
+    "compare": "Compare Plans",
+    "excluding_vat": "* All prices are excluding VAT",
+    "full_history": "Full history",
+    "get_started": "Get started now",
+    "groups": {
+      "dashboard": "Dashboard",
+      "dashboard_charts": "Validator Dashboard Charts",
+      "general": "General",
+      "mobille_app": "Mobile App",
+      "notification": "v2 Notification"
+    },
+    "hide_feature": "Hide Features",
+    "monthly": "Monthly",
+    "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
+    "per_month": "per month",
+    "per_validator": "{amount} per validator",
+    "percs": {
+      "ad_free": "Ad free",
+      "bulk_adding": "Bulk adding",
+      "bulk_adding_subtext": "(deposit address, withdrawal credentials, graffiti)",
+      "configure_notifications_via_api": "Configure notifications via API",
+      "custom_machine_alerts": "Custom machine alerts",
+      "custom_machine_alerts_subtext": "(CPU, RAM,...)",
+      "email_notifications_per_day": "Email notifications per day",
+      "heatmap_history": "Heatmap history",
+      "machine_monitoring_history_seconds": "Machine monitoring history",
+      "manage_dashboard_via_api": "Manage dashboard via API",
+      "mobile_app_custom_themes": "Custom themes",
+      "mobile_app_widget": "App widget",
+      "monitor_machines": "Monitor machines",
+      "share_custom_dashboards": "Share custom dashboards",
+      "summary_chart_history": "Summary chart history",
+      "support_us": "Support us",
+      "validator_dashboards": "Validator dashboards",
+      "validator_group_notifications": "Validator group notifications",
+      "validator_groups_per_dashboard": "Validator groups per dashboard",
+      "validators_per_dashboard": "Validators per dashboard",
+      "webhook_endpoints": "Webhook endpoints"
+    },
+    "premium": "beaconcha.in Premium",
+    "premium_product": {
+      "button": {
+        "downgrade": "Downgrade",
+        "manage_plan": "Manage Plan",
+        "select_plan": "Select Plan",
+        "upgrade": "Upgrade"
+      },
+      "coming_soon": "(coming soon)",
+      "manage_dashboard_via_api": "Manage Dashboard via API",
+      "mobile_app_widget": "Mobile App Widget",
+      "no_ads": "No Ads",
+      "popular": "Popular!",
+      "share_dashboard": "Share Dashboard",
+      "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
+      "timeframe_dashboard_chart_no_timeframe": "Dashboard chart history",
+      "timeframe_heatmap_chart": "{timeframe} heatmap chart history",
+      "timeframe_heatmap_chart_no_timeframe": "Heatmap chart history",
+      "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
+      "validators": "{amount} Validators",
+      "validators_per_dashboard": "{amount} Validators per Dashboard"
+    },
+    "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
+    "promo_code": "Promocode {_code} will be applied during checkout",
+    "save_up_to": "SAVE UP TO {percentage}%",
+    "savings": "You save {amount} a year",
+    "savings_tooltip": "Compared to paying monthly. The full monthly price is {monthly}. The monthly price within the yearly subscription is {monthly_yearly}.",
+    "seo_title": "Premium Pricing",
+    "show_feature": "Show Features",
+    "subtitle": "Monitoring without limits on web and mobile.",
+    "view_addons": "View Add-Ons",
+    "yearly": "Yearly"
+  },
+  "rocketpool": {
+    "mode": "RP Mode",
+    "tooltip": "Enables Rocket Pool stats for this dashboard"
+  },
+  "search_bar": {
+    "account_placeholder": "Address or ENS name",
+    "all_networks": "All",
+    "block_graffiti": "Block graffiti",
+    "blocks_with": "Blocks with",
+    "by_your_filters": "by your filters",
+    "credential": "Credential | Credentials",
+    "deposited_by": "Deposited by",
+    "ens_overview": "ENS Overview | ENS Overviews",
+    "general_placeholder": "Search the blockchain",
+    "named": "Named",
+    "network_filter_label": "Networks:",
+    "no_result_matches": "No result matches",
+    "one_result_hidden": "result hidden",
+    "or": " or ",
+    "searching": "Searching...",
+    "several_results_hidden": "results hidden",
+    "something_wrong": "Something went wrong",
+    "try_again": "Try again in a few moments.",
+    "validator_by_credential": "Validator by withdrawal credential",
+    "validator_by_deposit_address": "Validator by deposit address",
+    "validator_by_deposit_ens": "Validator by ENS of the deposit address",
+    "validator_by_graffiti": "Validator by graffiti",
+    "validator_by_index": "Validator by index",
+    "validator_by_name": "Validator by name",
+    "validator_by_public_key": "Validator by public key",
+    "validator_by_withdrawal_address": "Validator by withdrawal address",
+    "validator_by_withdrawal_ens": "Validator by ENS of the withdrawal address",
+    "validator_placeholder": "Index, Public key, Deposit or Withdrawal address or ENS, Graffiti, ...",
+    "withdrawn_to": "Withdrawn to",
+    "your_filters": "your filters",
+    "your_input": "your input"
+  },
+  "seo": {
+    "description": "beaconcha.in makes Ethereum accessible to non-technical end users",
+    "image_alt": "The beaconcha.in logo is a satellite dish expanding its signal.",
+    "keywords": "open source ethereum block explorer, ethereum block explorer, beacon chain explorer, ethereum blockchain explorer",
+    "title": "Open Source Ethereum Blockchain Explorer"
+  },
+  "slot_state": {
+    "missed": "Missed",
+    "orphaned": "Orphaned",
+    "proposed": "Proposed",
+    "scheduled": "Scheduled"
+  },
+  "slot_viz": {
+    "filter": {
+      "attestation": "If enabled, attestations will be shown.",
+      "proposal": "If enabled, blocks will be shown.",
+      "slashing": "If enabled, slashings will be shown.",
+      "sync": "If enabled, sync committees will be shown.",
+      "visible": "If enabled, all duty icons for the duties selected to the left will be shown."
+    },
+    "head": "Head",
+    "info_tootlip": "Click here for an extended information on how the slot visualization works",
+    "tooltip": {
+      "attestation": "Attestation",
+      "network": {
+        "missed": "Network missed slot {slot}",
+        "orphaned": "Network orphaned slot {slot}",
+        "proposed": "Network proposed slot {slot}",
+        "scheduled": "Slot {slot} is scheduled",
+        "scheduled_past": "Slot {slot} is being queried from our database"
+      },
+      "proposal": {
+        "missed": {
+          "main": "Block",
+          "sub": "missed"
+        },
+        "orphaned": {
+          "main": "Block",
+          "sub": "missed"
+        },
+        "proposed": {
+          "main": "Block",
+          "sub": "proposed"
+        },
+        "scheduled": {
+          "main": "Block",
+          "sub": "will propose"
+        }
+      },
+      "slashing": {
+        "failed": {
+          "main": "You got slashed",
+          "sub": "slashed"
+        },
+        "success": {
+          "main": "You slashed",
+          "sub": "slashed"
+        }
+      },
+      "status": {
+        "duties_failed": ["All of your duties were", "missed", ""],
+        "duties_some": ["You missed", "some", "duties"],
+        "duties_success": ["All of your duties were", "successful", ""],
+        "no_duties": ["You had", "no", "duties"],
+        "scheduled": {
+          "has_duties": ["You have", "scheduled", "duties"],
+          "no_duties": ["You have", "no scheduled", "duties"]
+        }
+      },
+      "sync": "Sync Committee"
+    }
+  },
+  "statistics": {
+    "all": "All Time",
+    "all_time": "All time",
+    "last_7d": "7d",
+    "last_24h": "24h",
+    "last_30d": "30d",
+    "last_365d": "365d",
+    "total": "All Time"
+  },
+  "table": {
+    "age": "Age",
+    "amount": "Amount",
+    "first": "First",
+    "from": "From",
+    "last": "Last",
+    "of": "of",
+    "showing": "Showing {from} to {to} of {total}",
+    "valid": "Valid"
+  },
+  "time_duration": {
+    "days": "{amount} day | {amount} days",
+    "hours": "{amount} hour | {amount} hours",
+    "minutes": "{amount} minute | {amount} minutes",
+    "seconds": "{amount} second | {amount} seconds",
+    "years": "{amount} year | {amount} years"
+  },
+  "time_frames": {
+    "all_time": "All time",
+    "daily": "Daily",
+    "epoch": "Epoch",
+    "hourly": "Hourly",
+    "last_1h": "Last 1h",
+    "last_7d": "Last 7d",
+    "last_24h": "Last 24h",
+    "last_30d": "Last 30d",
+    "weekly": "Weekly"
+  },
+  "user_settings": {
+    "delete_account": {
+      "button": "Delete My Account",
+      "dialog": {
+        "no_label": "Cancel",
+        "title": "Delete Account",
+        "warning": "This will permanently delete your account: {email}",
+        "yes_label": "Delete Account"
+      },
+      "title": "Delete Account",
+      "warning": "Warning! You will not be able to recover your account!"
+    },
+    "email": {
+      "confirm": "Confirm Email Address",
+      "error": {
+        "toast_group": "Could not update your email address",
+        "toast_message": "Please try again.",
+        "toast_title": "Error"
+      },
+      "new": "New Email Address",
+      "password": "Password",
+      "success": {
+        "toast_group": "Email success",
+        "toast_message": "Your email address has been updated.",
+        "toast_title": "Success"
+      },
+      "title": "Email"
+    },
+    "password": {
+      "confirm": "Confirm new password",
+      "error": {
+        "toast_group": "Could not update your password",
+        "toast_message": "Please try again.",
+        "toast_title": "Error"
+      },
+      "new": "New password",
+      "old": "Old password",
+      "success": {
+        "toast_group": "Password success",
+        "toast_message": "Your password has been updated.",
+        "toast_title": "Success"
+      },
+      "title": "Password"
+    },
+    "subscriptions": {
+      "explanation": "Premium features for web and beaconcha.in mobile app experience.",
+      "title": "Subscriptions"
+    },
+    "title": "User Settings"
+  },
+  "validation": {
+    "email": {
+      "empty": "Please provide your email address.",
+      "invalid": "Please provide a valid email address.",
+      "no_match": "The email addresses do not match."
+    },
+    "password": {
+      "empty": "Please enter your password.",
+      "max": "Please provide at most {amount} characters.",
+      "min": "Please provide at least {amount} characters.",
+      "no_match": "The passwords do not match yet.",
+      "not_new": "The new password must differ from the old one."
+    },
+    "url": {
+      "invalid": "Please enter a valid URL."
+    },
+    "webhook": {
+      "discord_empty": "Please provide a webhook URL for discord.",
+      "empty": "Please provide a webhook URL."
+    }
+  },
+  "validator": {
+    "duty": {
+      "attestation_included": "Attestation included",
+      "attestation_missed": "Attestation missed",
+      "head": "Head",
+      "proposal_failed": "You missed a block",
+      "proposal_orphaned": "Your block was orphaned",
+      "proposal_partial": "You proposed a block and you missed a block",
+      "proposal_success": "You proposed a block",
+      "slashing_failed": "You got slashed",
+      "slashing_partial": "You slashed a validator and got slashed",
+      "slashing_success": "You slashed a validator",
+      "source": "Source",
+      "target": "Target"
+    },
+    "rewards": {
+      "attestation_head": "Attestation Head",
+      "attestation_source": "Attestation Source",
+      "attestation_target": "Attestation Target",
+      "proposer_attestation": "Proposer Att. Reward",
+      "proposer_el": "Proposer EL Reward",
+      "proposer_slashing": "Proposer Slashing Reward",
+      "proposer_sync": "Proposer Sync. Reward",
+      "total": "Total"
+    }
+  },
+  "validator_state": {
+    "active_offline": "active",
+    "active_online": "active",
+    "deposited": "deposited",
+    "exited": "exited",
+    "exiting_offline": "exiting",
+    "exiting_online": "exiting",
+    "pending": "pending",
+    "slashed": "slashed",
+    "slashing_offline": "slashing",
+    "slashing_online": "slashing"
+  }
+}

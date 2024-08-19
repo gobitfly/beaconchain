@@ -3,21 +3,32 @@ import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
 import { API_PATH } from '~/types/customFetch'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const { handleSubmit, errors, defineField } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
-    password: passwordValidation($t),
+    confirmEmail: confirmEmailValidation($t, 'newEmail'),
     newEmail: emailValidation($t),
-    confirmEmail: confirmEmailValidation($t, 'newEmail')
-  })
+    password: passwordValidation($t),
+  }),
 })
 
-const [password, passwordAttrs] = defineField('password')
-const [newEmail, newEmailAttrs] = defineField('newEmail')
-const [confirmEmail, confirmEmailAttrs] = defineField('confirmEmail')
+const [
+  password,
+  passwordAttrs,
+] = defineField('password')
+const [
+  newEmail,
+  newEmailAttrs,
+] = defineField('newEmail')
+const [
+  confirmEmail,
+  confirmEmailAttrs,
+] = defineField('confirmEmail')
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })
 
@@ -30,39 +41,48 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
   try {
     await fetch(API_PATH.USER_CHANGE_EMAIL, {
       body: {
+        email: values.newEmail,
         password: values.password,
-        email: values.newEmail
-      }
+      },
     })
-    toast.showSuccess(
-      {
-        summary: $t('user_settings.email.success.toast_title'),
-        group: $t('user_settings.email.success.toast_group'),
-        detail: $t('user_settings.email.success.toast_message')
-      })
+    toast.showSuccess({
+      detail: $t('user_settings.email.success.toast_message'),
+      group: $t('user_settings.email.success.toast_group'),
+      summary: $t('user_settings.email.success.toast_title'),
+    })
     resetForm()
-  } catch (error) {
-    toast.showError(
-      {
-        summary: $t('user_settings.email.error.toast_title'),
-        group: $t('user_settings.email.error.toast_group'),
-        detail: $t('user_settings.email.error.toast_message')
-      })
+  }
+  catch (error) {
+    toast.showError({
+      detail: $t('user_settings.email.error.toast_message'),
+      group: $t('user_settings.email.error.toast_group'),
+      summary: $t('user_settings.email.error.toast_title'),
+    })
   }
   buttonsDisabled.value = false
 })
 
-const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && confirmEmail.value && newEmail.value === confirmEmail.value && password.value && !Object.keys(errors.value).length)
-
+const canSubmit = computed(
+  () =>
+    !buttonsDisabled.value
+    && newEmail.value
+    && confirmEmail.value
+    && newEmail.value === confirmEmail.value
+    && password.value
+    && !Object.keys(errors.value).length,
+)
 </script>
 
 <template>
-  <form class="email-container" @submit="onSubmit">
+  <form
+    class="email-container"
+    @submit="onSubmit"
+  >
     <div class="title">
-      {{ $t('user_settings.email.title') }}
+      {{ $t("user_settings.email.title") }}
     </div>
     <label for="password">
-      {{ $t('user_settings.email.password') }}
+      {{ $t("user_settings.email.password") }}
     </label>
     <div class="input-row">
       <InputText
@@ -78,7 +98,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
       </div>
     </div>
     <label for="new-email">
-      {{ $t('user_settings.email.new') }}
+      {{ $t("user_settings.email.new") }}
     </label>
     <div class="input-row">
       <InputText
@@ -94,7 +114,7 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
       </div>
     </div>
     <label for="confirm-email">
-      {{ $t('user_settings.email.confirm') }}
+      {{ $t("user_settings.email.confirm") }}
     </label>
     <div class="input-row">
       <InputText
@@ -110,14 +130,18 @@ const canSubmit = computed(() => !buttonsDisabled.value && newEmail.value && con
       </div>
     </div>
     <div class="button-row">
-      <Button type="submit" :disabled="!canSubmit" :label="$t('navigation.save')" />
+      <Button
+        type="submit"
+        :disabled="!canSubmit"
+        :label="$t('navigation.save')"
+      />
     </div>
   </form>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/fonts.scss";
 
 .email-container {
   display: flex;

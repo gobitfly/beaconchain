@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCirclePlus, faRightFromBracket } from '@fortawesome/pro-regular-svg-icons'
+import {
+  faCirclePlus,
+  faRightFromBracket,
+} from '@fortawesome/pro-regular-svg-icons'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
-const emit = defineEmits<{(e: 'openDialog'): void }>()
+const emit = defineEmits<{ (e: 'openDialog'): void }>()
 
 const handleClick = () => {
   if (!isLoggedIn.value) {
@@ -18,7 +21,10 @@ const handleClick = () => {
 const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
 const hasDashboards = computed(() => {
-  return dashboards.value?.account_dashboards?.length || dashboards.value?.validator_dashboards?.length
+  return (
+    dashboards.value?.account_dashboards?.length
+    || dashboards.value?.validator_dashboards?.length
+  )
 })
 
 const text = computed(() => {
@@ -30,13 +36,22 @@ const text = computed(() => {
   }
   return $t('notifications.dashboards.empty.with_dashboards')
 })
-
 </script>
+
 <template>
-  <div class="empty delayed-fadein-animation" @click="handleClick">
+  <div
+    class="empty delayed-fadein-animation"
+    @click="handleClick"
+  >
     <span class="big_text">{{ text }}</span>
-    <FontAwesomeIcon v-if="isLoggedIn" :icon="faCirclePlus" />
-    <FontAwesomeIcon v-else :icon="faRightFromBracket" />
+    <FontAwesomeIcon
+      v-if="isLoggedIn"
+      :icon="faCirclePlus"
+    />
+    <FontAwesomeIcon
+      v-else
+      :icon="faRightFromBracket"
+    />
   </div>
 </template>
 
