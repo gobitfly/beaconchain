@@ -360,6 +360,7 @@ export function mockLatestState(..._: any): InternalGetLatestStateResponse {
   }
   return {
     data: {
+      finalized_epoch: Math.floor(mockSlot / 32),
       current_slot: ++mockSlot,
       exchange_rates: [
         {
