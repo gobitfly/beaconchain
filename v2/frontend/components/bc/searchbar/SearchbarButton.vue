@@ -1,31 +1,40 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faMagnifyingGlass, faPlus } from '@fortawesome/pro-solid-svg-icons'
 import {
-  type SearchbarShape,
+  faMagnifyingGlass, faPlus,
+} from '@fortawesome/pro-solid-svg-icons'
+import {
   type SearchbarColors,
   type SearchbarPurpose,
-  SearchbarPurposeInfo
+  SearchbarPurposeInfo,
+  type SearchbarShape,
 } from '~/types/searchbar'
 
 defineProps<{
+  barPurpose: SearchbarPurpose,
   barShape: SearchbarShape,
   colorTheme: SearchbarColors,
-  barPurpose: SearchbarPurpose
 }>()
 </script>
 
 <template>
-  <Button v-if="SearchbarPurposeInfo[barPurpose].button === 'add'" class="p-button-icon-only plus">
+  <Button
+    v-if="SearchbarPurposeInfo[barPurpose].button === 'add'"
+    class="p-button-icon-only plus"
+  >
     <FontAwesomeIcon :icon="faPlus" />
   </Button>
-  <span v-else-if="SearchbarPurposeInfo[barPurpose].button === 'search'" class="magnifier-button" :class="[barShape,colorTheme]">
+  <span
+    v-else-if="SearchbarPurposeInfo[barPurpose].button === 'search'"
+    class="magnifier-button"
+    :class="[barShape, colorTheme]"
+  >
     <FontAwesomeIcon :icon="faMagnifyingGlass" />
   </span>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 
 .plus {
   font-size: 18px;

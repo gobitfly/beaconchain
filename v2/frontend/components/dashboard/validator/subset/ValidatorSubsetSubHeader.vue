@@ -1,29 +1,46 @@
 <script lang="ts" setup>
-import type { VDBGroupSummaryData, VDBSummaryTableRow } from '~/types/api/validator_dashboard'
+import type {
+  VDBGroupSummaryData,
+  VDBSummaryTableRow,
+} from '~/types/api/validator_dashboard'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 import type { DashboardValidatorContext } from '~/types/dashboard/summary'
-import type { SummaryValidatorsIconRowInfo, ValidatorSubset, ValidatorSubsetCategory } from '~/types/validator'
+import type {
+  SummaryValidatorsIconRowInfo,
+  ValidatorSubset,
+  ValidatorSubsetCategory,
+} from '~/types/validator'
 import { countSubsetDuties } from '~/utils/dashboard/validator'
 
 interface Props {
   context: DashboardValidatorContext,
+  subsets?: ValidatorSubset[],
   subTitle?: string,
   summary?: {
     data?: VDBGroupSummaryData,
-    row: VDBSummaryTableRow
+    row: VDBSummaryTableRow,
   },
-  subsets?: ValidatorSubset[]
 }
 const props = defineProps<Props>()
 
 const infos = computed(() => {
   const validatorIcons: SummaryValidatorsIconRowInfo[] = []
-  const list: { value: number | string, slotVizCategory?: SlotVizCategories, className?: string }[] = []
+  const list: {
+    className?: string,
+    slotVizCategory?: SlotVizCategories,
+    value: number | string,
+  }[] = []
   const percent = {
     total: 0,
-    value: 0
+    value: 0,
   }
-  const addSuccessFailed = (category: SlotVizCategories, success?: number, failed?: number, successCategories?: ValidatorSubsetCategory[], failedCategories?: ValidatorSubsetCategory[]) => {
+  const addSuccessFailed = (
+    category: SlotVizCategories,
+    success?: number,
+    failed?: number,
+    successCategories?: ValidatorSubsetCategory[],
+    failedCategories?: ValidatorSubsetCategory[],
+  ) => {
     if (props.subsets?.length && successCategories) {
       success = countSubsetDuties(props.subsets, successCategories)
     }
@@ -34,25 +51,53 @@ const infos = computed(() => {
     if (percent.total > 0) {
       if (success !== undefined) {
         percent.value = success
-        list.push({ slotVizCategory: category, value: success, className: 'text-positive' })
+        list.push({
+          className: 'text-positive',
+          slotVizCategory: category,
+          value: success,
+        })
       }
       if (failed) {
-        list.push({ slotVizCategory: category, value: failed, className: 'text-negative' })
+        list.push({
+          className: 'text-negative',
+          slotVizCategory: category,
+          value: failed,
+        })
       }
     }
   }
   switch (props.context) {
     case 'attestation':
-      addSuccessFailed('attestation', props.summary?.row.attestations?.success, props.summary?.row.attestations?.failed)
+      addSuccessFailed(
+        'attestation',
+        props.summary?.row.attestations?.success,
+        props.summary?.row.attestations?.failed,
+      )
       break
     case 'sync':
-      addSuccessFailed('sync', props.summary?.data?.sync.status_count.success, props.summary?.data?.sync.status_count.failed)
+      addSuccessFailed(
+        'sync',
+        props.summary?.data?.sync.status_count.success,
+        props.summary?.data?.sync.status_count.failed,
+      )
       break
     case 'slashings':
-      addSuccessFailed('slashing', props.summary?.data?.slashings.status_count.success, props.summary?.data?.slashings.status_count.failed, ['has_slashed'], ['got_slashed'])
+      addSuccessFailed(
+        'slashing',
+        props.summary?.data?.slashings.status_count.success,
+        props.summary?.data?.slashings.status_count.failed,
+        [ 'has_slashed' ],
+        [ 'got_slashed' ],
+      )
       break
     case 'proposal':
-      addSuccessFailed('proposal', props.summary?.row.proposals.success, props.summary?.row.proposals.failed, ['proposal_proposed'], ['proposal_missed'])
+      addSuccessFailed(
+        'proposal',
+        props.summary?.row.proposals.success,
+        props.summary?.row.proposals.failed,
+        [ 'proposal_proposed' ],
+        [ 'proposal_missed' ],
+      )
       break
     case 'dashboard':
     case 'group': {
@@ -60,22 +105,35 @@ const infos = computed(() => {
       let offline = 0
       let exited = 0
       if (props.subsets?.length) {
-        online = countSubsetDuties(props.subsets, ['online'])
-        offline = countSubsetDuties(props.subsets, ['offline'])
-        exited = countSubsetDuties(props.subsets, ['exited', 'slashed'])
-      } else if (props.summary?.row.validators) {
+        online = countSubsetDuties(props.subsets, [ 'online' ])
+        offline = countSubsetDuties(props.subsets, [ 'offline' ])
+        exited = countSubsetDuties(props.subsets, [
+          'exited',
+          'slashed',
+        ])
+      }
+      else if (props.summary?.row.validators) {
         online = props.summary.row.validators.online
         offline = props.summary.row.validators.offline
         exited = props.summary.row.validators.exited
       }
       if (online) {
-        validatorIcons.push({ count: online, key: 'online' })
+        validatorIcons.push({
+          count: online,
+          key: 'online',
+        })
       }
       if (offline) {
-        validatorIcons.push({ count: offline, key: 'offline' })
+        validatorIcons.push({
+          count: offline,
+          key: 'offline',
+        })
       }
       if (exited) {
-        validatorIcons.push({ count: exited, key: 'exited' })
+        validatorIcons.push({
+          count: exited,
+          key: 'exited',
+        })
       }
       // for the total percentage we ignore the exited validators
       percent.total = online + offline
@@ -83,9 +141,12 @@ const infos = computed(() => {
     }
   }
 
-  return { list, percent, validatorIcons }
+  return {
+    list,
+    percent,
+    validatorIcons,
+  }
 })
-
 </script>
 
 <template>
@@ -95,8 +156,16 @@ const infos = computed(() => {
       :icons="infos.validatorIcons"
       :absolute="true"
     />
-    <div v-for="(info, index) in infos.list" :key="index" :class="info.className" class="info">
-      <SlotVizIcon v-if="info.slotVizCategory" :icon="info.slotVizCategory" />
+    <div
+      v-for="(info, index) in infos.list"
+      :key="index"
+      :class="info.className"
+      class="info"
+    >
+      <SlotVizIcon
+        v-if="info.slotVizCategory"
+        :icon="info.slotVizCategory"
+      />
       <BcFormatNumber :value="info.value" />
     </div>
     <BcFormatPercent
@@ -120,7 +189,7 @@ const infos = computed(() => {
 
   .sub-title {
     @include fonts.subtitle_text;
-    @include utils.truncate-text
+    @include utils.truncate-text;
   }
 
   .info {

@@ -4,17 +4,19 @@ import { useFormat } from '~/composables/useFormat'
 import { type AgeFormat } from '~/types/settings'
 import { formatGoTimestamp } from '~/utils/format'
 
-const { formatEpochToDateTime, formatSlotToDateTime } = useFormat()
+const {
+  formatEpochToDateTime, formatSlotToDateTime,
+} = useFormat()
 
 interface Props {
-  value?: number | string,
-  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
-  format?: 'global-setting' | AgeFormat
+  format?: 'global-setting' | AgeFormat,
   noUpdate?: boolean,
-  unitLength?: StringUnitLength
+  type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
+  unitLength?: StringUnitLength,
+  value?: number | string,
 }
 const props = defineProps<Props>()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { timestamp } = useDate()
 const { setting } = useGlobalSetting<AgeFormat>('age-format')
 
@@ -33,23 +35,44 @@ const label = computed(() => {
   }
 
   const ts: number = props.noUpdate ? initTs.value : timestamp.value
-  let text: string | null | undefined = ''
+  let text: null | string | undefined = ''
   switch (props.type) {
     case 'go-timestamp':
-      text = formatGoTimestamp(props.value, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatGoTimestamp(
+        props.value,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
       break
     case 'slot':
-      text = formatSlotToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatSlotToDateTime(
+        props.value as number,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
       break
     case 'epoch':
     default:
-      text = formatEpochToDateTime(props.value as number, ts, mappedSetting.value, props.unitLength, $t('locales.date'))
+      text = formatEpochToDateTime(
+        props.value as number,
+        ts,
+        mappedSetting.value,
+        props.unitLength,
+        $t('locales.date'),
+      )
   }
 
   if (text && mappedSetting.value === 'absolute') {
     const lastComma = text.lastIndexOf(',')
     if (lastComma > 0) {
-      return { text: text.slice(0, lastComma), subtext: text.slice(lastComma + 1) }
+      return {
+        subtext: text.slice(lastComma + 1),
+        text: text.slice(0, lastComma),
+      }
     }
   }
 
@@ -58,14 +81,20 @@ const label = computed(() => {
 </script>
 
 <template>
-  <span v-if="label" class="text">
+  <span
+    v-if="label"
+    class="text"
+  >
     <div>{{ label.text }}</div>
-    <div v-if="label.subtext" class="subtext">{{ label.subtext }}</div>
+    <div
+      v-if="label.subtext"
+      class="subtext"
+    >{{ label.subtext }}</div>
   </span>
 </template>
 
 <style lang="scss" scoped>
-.text{
+.text {
   display: flex;
   flex-direction: column;
 

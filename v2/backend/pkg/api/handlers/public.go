@@ -22,12 +22,8 @@ func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicPostOauthToken(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
 func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.GetUserIdByApiKey(r)
+	userId, err := GetUserIdByContext(r)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -172,9 +168,9 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnNotFound(w, errors.New("group not found"))
 		return
 	}
-	userId, ok := ctx.Value(ctxUserIdKey).(uint64)
-	if !ok {
-		handleErr(w, errors.New("error getting user id from context"))
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(ctx, userId)
@@ -183,7 +179,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
-	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding {
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
 		returnConflict(w, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
@@ -327,19 +323,11 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicGetValidatorDashboardEpochHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
-func (h *HandlerService) PublicGetValidatorDashboardDailyHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
-func (h *HandlerService) PublicGetValidatorDashboardGroupEpochHeatmap(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
-}
-
-func (h *HandlerService) PublicGetValidatorDashboardGroupDailyHeatmap(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 
@@ -647,6 +635,10 @@ func (h *HandlerService) PublicGetNetworkAverageGasLimitHistory(w http.ResponseW
 }
 
 func (h *HandlerService) PublicGetNetworkGasUsedHistory(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, nil)
+}
+
+func (h *HandlerService) PublicGetRocketPool(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
 

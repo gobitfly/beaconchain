@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import {
   faDesktop,
+  faMoneyBill,
   faPowerOff,
-  faMoneyBill
 } from '@fortawesome/pro-solid-svg-icons'
 import {
   faClock,
-  type IconDefinition
+  type IconDefinition,
 } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorSubsetCategory } from '~/types/validator'
@@ -20,7 +20,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
 const icon = computed(() => {
   let icon: IconDefinition | undefined
@@ -74,18 +74,33 @@ const icon = computed(() => {
       break
   }
 
-  return { icon, className, slotVizCategory }
+  return {
+    className,
+    icon,
+    slotVizCategory,
+  }
 })
 
-const count = computed(() => countSummaryValidatorDuties(props.validators, props.category))
-
+const count = computed(() =>
+  countSummaryValidatorDuties(props.validators, props.category),
+)
 </script>
 
 <template>
   <div class="subset--list-header">
-    <FontAwesomeIcon v-if="icon.icon" :icon="icon.icon" :class="icon.className" />
-    <SlotVizIcon v-else-if="icon.slotVizCategory" :icon="icon.slotVizCategory" :class="icon.className" />
-    <span>{{ $t(`dashboard.validator.subset_dialog.category.${category}`) }}</span>
+    <FontAwesomeIcon
+      v-if="icon.icon"
+      :icon="icon.icon"
+      :class="icon.className"
+    />
+    <SlotVizIcon
+      v-else-if="icon.slotVizCategory"
+      :icon="icon.slotVizCategory"
+      :class="icon.className"
+    />
+    <span>{{
+      $t(`dashboard.validator.subset_dialog.category.${category}`)
+    }}</span>
     <span> (<BcFormatNumber :value="count" />)</span>
   </div>
 </template>

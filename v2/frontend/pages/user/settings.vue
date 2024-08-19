@@ -3,16 +3,22 @@ const { isLoggedIn } = useUserStore()
 
 useBcSeo('user_settings.title')
 const { stripeInit } = useStripeProvider()
-const { products, getProducts } = useProductsStore()
+const {
+  getProducts, products,
+} = useProductsStore()
 
 const buttonsDisabled = ref(false)
 
 await useAsyncData('get_products', () => getProducts())
-watch(products, () => {
-  if (products.value?.stripe_public_key) {
-    stripeInit(products.value.stripe_public_key)
-  }
-}, { immediate: true })
+watch(
+  products,
+  () => {
+    if (products.value?.stripe_public_key) {
+      stripeInit(products.value.stripe_public_key)
+    }
+  },
+  { immediate: true },
+)
 
 if (!isLoggedIn.value) {
   // only users that are logged in can view this page

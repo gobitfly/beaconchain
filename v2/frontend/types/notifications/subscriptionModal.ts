@@ -1,10 +1,10 @@
 import type { ChainIDs } from '../network'
 
 export interface InternalEntry {
-  type: 'binary' | 'amount' | 'percent' | 'networks'
-  networks?: ChainIDs[]
   check?: boolean,
-  num?: number
+  networks?: ChainIDs[],
+  num?: number,
+  type: 'amount' | 'binary' | 'networks' | 'percent',
 }
 
-export type APIentry = boolean | number | undefined | null | ChainIDs[]
+export type APIentry = boolean | ChainIDs[] | null | number | undefined

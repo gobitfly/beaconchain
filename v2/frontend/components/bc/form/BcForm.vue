@@ -1,10 +1,8 @@
-<script lang="ts" setup>
-
-</script>
+<script lang="ts" setup></script>
 
 <template>
   <form class="bc-form">
-    <slot/>
+    <slot />
   </form>
 </template>
 

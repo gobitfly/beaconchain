@@ -7,15 +7,18 @@ export default defineNuxtPlugin((_nuxtApp) => {
   return {
     provide: {
       bcLogger: {
-        warn: (msg: string, ...rest:any) => {
+        warn: (msg: string, ...rest: any) => {
           const ts = new Date().toISOString()
-          if (isServer && logFile) {
+          if (isServerSide && logFile) {
             const filePath = path.resolve(logFile)
-            fs.appendFileSync(filePath, `${ts}: ${msg} | ${JSON.stringify(rest)}\n`)
+            fs.appendFileSync(
+              filePath,
+              `${ts}: ${msg} | ${JSON.stringify(rest)}\n`,
+            )
           }
           warn(`${ts}: ${msg}`, ...rest)
-        }
-      }
-    }
+        },
+      },
+    },
   }
 })

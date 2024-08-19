@@ -4,11 +4,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import BcTooltip from '../BcTooltip.vue'
 
 interface Props {
-  icon?: IconDefinition,
+  disabled?: boolean,
   falseIcon?: IconDefinition,
-  disabled?:boolean,
+  icon?: IconDefinition,
+  readonlyClass?: string,
   tooltip?: string,
-  readonlyClass?: string
 }
 
 const props = defineProps<Props>()
@@ -21,14 +21,29 @@ const icon = computed(() => {
 </script>
 
 <template>
-  <BcTooltip :dont-open-permanently="true" :hover-delay="350">
+  <BcTooltip
+    :dont-open-permanently="true"
+    :hover-delay="350"
+  >
     <template #tooltip>
-      <div class="button-tooltip" :class="readonlyClass">
-        <div v-if="tooltip" class="individual">
+      <div
+        class="button-tooltip"
+        :class="readonlyClass"
+      >
+        <div
+          v-if="tooltip"
+          class="individual"
+        >
           {{ tooltip }}
         </div>
         <div v-if="readonlyClass !== 'read-only'">
-          {{ disabled ? $t('common.unavailable') : (selected ? $t('filter.enabled'): $t('filter.disabled')) }}
+          {{
+            disabled
+              ? $t("common.unavailable")
+              : selected
+                ? $t("filter.enabled")
+                : $t("filter.disabled")
+          }}
         </div>
       </div>
     </template>
@@ -41,8 +56,14 @@ const icon = computed(() => {
       :disabled="disabled || readonlyClass === 'read-only'"
     >
       <template #icon="slotProps">
-        <slot name="icon" v-bind="slotProps">
-          <FontAwesomeIcon v-if="icon" :icon="icon" />
+        <slot
+          name="icon"
+          v-bind="slotProps"
+        >
+          <FontAwesomeIcon
+            v-if="icon"
+            :icon
+          />
         </slot>
       </template>
     </ToggleButton>

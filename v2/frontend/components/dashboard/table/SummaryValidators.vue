@@ -1,27 +1,31 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faArrowUpRightFromSquare
-} from '@fortawesome/pro-solid-svg-icons'
-import type { DashboardValidatorContext, SummaryTimeFrame } from '~/types/dashboard/summary'
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
+import type {
+  DashboardValidatorContext,
+  SummaryTimeFrame,
+} from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import type { DashboardKey } from '~/types/dashboard'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import type { SummaryValidatorsIconRowInfo, ValidatorSummaryIconRowKey } from '~/types/validator'
+import type {
+  SummaryValidatorsIconRowInfo,
+  ValidatorSummaryIconRowKey,
+} from '~/types/validator'
 
 interface Props {
-  row: VDBSummaryTableRow,
   absolute: boolean,
-  groupId?: number,
-  timeFrame?: SummaryTimeFrame
   context: DashboardValidatorContext,
   dashboardKey?: DashboardKey,
-  isTooltip?: boolean
+  groupId?: number,
+  isTooltip?: boolean,
+  row: VDBSummaryTableRow,
+  timeFrame?: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { groups } = useValidatorDashboardGroups()
 
 const dialog = useDialog()
@@ -30,14 +34,12 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: props.context,
-      timeFrame: props.timeFrame,
-      groupName: groupName.value,
-      groupId: props.groupId,
       dashboardKey: props.dashboardKey,
-      summary: {
-        row: props.row
-      }
-    }
+      groupId: props.groupId,
+      groupName: groupName.value,
+      summary: { row: props.row },
+      timeFrame: props.timeFrame,
+    },
   })
 }
 
@@ -50,7 +52,10 @@ const mapped = computed(() => {
   const validatorIcons: SummaryValidatorsIconRowInfo[] = []
   const addCount = (key: ValidatorSummaryIconRowKey, count?: number) => {
     if (count) {
-      list.push({ count, key })
+      list.push({
+        count,
+        key,
+      })
     }
   }
 
@@ -65,21 +70,31 @@ const mapped = computed(() => {
   return {
     list,
     total,
-    validatorIcons
+    validatorIcons,
   }
 })
-
 </script>
+
 <template>
-  <div v-if="mapped.list.length" class="validator-status-column">
+  <div
+    v-if="mapped.list.length"
+    class="validator-status-column"
+  >
     <BcTooltip class="status-list">
-      <template v-if="!isTooltip" #tooltip>
-        <DashboardTableSummaryValidators v-bind="props" :absolute="!props.absolute" :is-tooltip="true" />
+      <template
+        v-if="!isTooltip"
+        #tooltip
+      >
+        <DashboardTableSummaryValidators
+          v-bind="props"
+          :absolute="!props.absolute"
+          :is-tooltip="true"
+        />
       </template>
       <DashboardTableSummaryValidatorsIconRow
         :icons="mapped.list"
         :total="mapped.total"
-        :absolute="absolute"
+        :absolute
       />
     </BcTooltip>
     <FontAwesomeIcon
@@ -95,7 +110,7 @@ const mapped = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .validator-status-column {
   display: flex;

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 defineProps<{
-    layoutAdaptability: 'low' | 'high'
-  }>()
+  layoutAdaptability: 'high' | 'low',
+}>()
 </script>
 
 <template>
-  <BcLink to="/" :class="`${layoutAdaptability}-adaptability`">
+  <BcLink
+    to="/"
+    :class="`${layoutAdaptability}-adaptability`"
+  >
     <IconBeaconchainLogo alt="Beaconcha.in logo" />
     <span class="name">beaconcha.in</span>
   </BcLink>

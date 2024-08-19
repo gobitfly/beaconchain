@@ -1,24 +1,26 @@
 <script setup lang="ts">
 import {
   type Category,
-  type SearchbarShape,
+  type CategoryFilter,
   CategoryInfo,
   type SearchbarColors,
   type SearchbarDropdownLayout,
-  type CategoryFilter
-} from '~/types/searchbar';
+  type SearchbarShape,
+} from '~/types/searchbar'
 
-const emit = defineEmits<{(e: 'change') : void}>()
+const emit = defineEmits<{ (e: 'change'): void }>()
 defineProps<{
   barShape: SearchbarShape,
   colorTheme: SearchbarColors,
-  dropdownLayout : SearchbarDropdownLayout
+  dropdownLayout: SearchbarDropdownLayout,
 }>()
-const liveState = defineModel<CategoryFilter>({ required: true }) // each entry has a Category as key and the state of the option as value. The component will write directly into it, so the data of the parent is always up-to-date.
+// each entry has a Category as key and the state of the option as value.
+// The component will write directly into it, so the data of the parent is always up-to-date.
+const liveState = defineModel<CategoryFilter>({ required: true })
 
-const { t } = useI18n()
+const { t } = useTranslation()
 
-function selectionHasChanged (category : Category, selected : boolean) {
+function selectionHasChanged(category: Category, selected: boolean) {
   liveState.value.set(category, selected)
   emit('change')
 }
@@ -31,10 +33,10 @@ function selectionHasChanged (category : Category, selected : boolean) {
       :key="filter[0]"
       :state="filter[1]"
       class="button"
-      :bar-shape="barShape"
-      :color-theme="colorTheme"
-      :dropdown-layout="dropdownLayout"
-      @change="(selected : boolean) => selectionHasChanged(filter[0], selected)"
+      :bar-shape
+      :color-theme
+      :dropdown-layout
+      @change="(selected: boolean) => selectionHasChanged(filter[0], selected)"
     >
       {{ t(...CategoryInfo[filter[0]].filterLabel) }}
     </BcSearchbarFilterButton>

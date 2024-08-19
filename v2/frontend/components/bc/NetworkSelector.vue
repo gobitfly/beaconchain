@@ -1,28 +1,38 @@
 <script setup lang="ts">
 import type { MultiBarItem } from '~/types/multiBar'
 import { IconNetwork } from '#components'
-import { ChainInfo, type ChainIDs } from '~/types/network'
+import {
+  type ChainIDs, ChainInfo,
+} from '~/types/network'
 
 const props = defineProps<{
-  readonlyNetworks?: ChainIDs[]
+  readonlyNetworks?: ChainIDs[],
 }>()
 
-const { availableNetworks, isNetworkDisabled } = useNetworkStore()
+const {
+  availableNetworks, isNetworkDisabled,
+} = useNetworkStore()
 
 /** If prop `:readonly-networks` is given:
  *   the networks in array `:readonly-networks` are shown to the user and they are unclickable,
  *  Otherwise, give a v-model. If the v-model is
  *   a ChainIDs: only one network can be selected by the user,
  *   an array of ChainIDs: several networks can be selected by the user */
-const selection = defineModel<ChainIDs|ChainIDs[]>({ required: false })
+const selection = defineModel<ChainIDs | ChainIDs[]>({ required: false })
 
 let barSelection: Ref<string> | Ref<string[]>
 if (props.readonlyNetworks) {
   barSelection = ref<string[]>([])
-} else if (Array.isArray(selection.value)) {
-  barSelection = useArrayRefBridge<ChainIDs, string>(selection as Ref<ChainIDs[]>)
-} else {
-  barSelection = usePrimitiveRefBridge<ChainIDs, string>(selection as Ref<ChainIDs>)
+}
+else if (Array.isArray(selection.value)) {
+  barSelection = useArrayRefBridge<ChainIDs, string>(
+    selection as Ref<ChainIDs[]>,
+  )
+}
+else {
+  barSelection = usePrimitiveRefBridge<ChainIDs, string>(
+    selection as Ref<ChainIDs>,
+  )
 }
 
 const buttons = computed(() => {
@@ -31,11 +41,15 @@ const buttons = computed(() => {
   for (const chainId of source) {
     list.push({
       component: IconNetwork,
-      componentProps: { chainId, harmonizePerceivedSize: true, colored: true },
       componentClass: 'maximum',
-      value: String(chainId),
+      componentProps: {
+        chainId,
+        colored: true,
+        harmonizePerceivedSize: true,
+      },
       disabled: isNetworkDisabled(chainId),
-      tooltip: ChainInfo[chainId].name
+      tooltip: ChainInfo[chainId].name,
+      value: String(chainId),
     })
   }
   return list
@@ -43,8 +57,18 @@ const buttons = computed(() => {
 </script>
 
 <template>
-  <BcToggleMultiBar v-if="Array.isArray(barSelection)" v-model="barSelection" :buttons="buttons" :readonly-mode="!!readonlyNetworks" />
-  <BcToggleSingleBar v-else v-model="barSelection" :buttons="buttons" layout="minimal" />
+  <BcToggleMultiBar
+    v-if="Array.isArray(barSelection)"
+    v-model="barSelection"
+    :buttons
+    :readonly-mode="!!readonlyNetworks"
+  />
+  <BcToggleSingleBar
+    v-else
+    v-model="barSelection"
+    :buttons
+    layout="minimal"
+  />
 </template>
 
 <style lang="scss">

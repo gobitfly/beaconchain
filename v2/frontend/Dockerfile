@@ -1,5 +1,5 @@
 # this is meant to be built with the root of this repo as build-context
-FROM node:18-alpine AS build
+FROM node:22-alpine AS build
 
 RUN mkdir -p /usr/src/nuxt-app
 WORKDIR /usr/src/nuxt-app
@@ -10,7 +10,7 @@ RUN --mount=type=secret,id=NPMRC_FILE,target=/usr/src/nuxt-app/.npmrc \
     npm ci && npm cache clean --force
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /usr/src/nuxt-app
 COPY --from=build /usr/src/nuxt-app /usr/src/nuxt-app
 

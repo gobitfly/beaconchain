@@ -1,11 +1,14 @@
 <script lang="ts" setup>
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { isPremiumSubscribedViaApp } = useProductsStore()
 </script>
 
 <template>
-  <div v-if="isPremiumSubscribedViaApp" class="banner">
-    {{ $t('pricing.premium_via_app_banner') }}
+  <div
+    v-if="isPremiumSubscribedViaApp"
+    class="banner"
+  >
+    {{ $t("pricing.premium_via_app_banner") }}
   </div>
 </template>
 

@@ -3,34 +3,68 @@ import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 import { Target } from '~/types/links'
+import {
+  handleMobileAuth, provideMobileAuthParams,
+} from '~/utils/mobileAuth'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { doLogin } = useUserStore()
 const toast = useBcToast()
+const route = useRoute()
+const { promoCode } = usePromoCode()
 
 useBcSeo('login_and_register.title_login')
 
-const { handleSubmit, errors, defineField } = useForm({
+const {
+  defineField, errors, handleSubmit,
+} = useForm({
   validationSchema: yupObject({
     email: emailValidation($t),
-    password: passwordValidation($t)
-  })
+    password: passwordValidation($t),
+  }),
 })
 
-const [email, emailAttrs] = defineField('email')
-const [password, passwordAttrs] = defineField('password')
+const [
+  email,
+  emailAttrs,
+] = defineField('email')
+const [
+  password,
+  passwordAttrs,
+] = defineField('password')
 
 const onSubmit = handleSubmit(async (values) => {
   try {
     await doLogin(values.email, values.password)
-    await navigateTo('/')
-  } catch (error) {
+
+    if (handleMobileAuth(route.query)) {
+      return
+    }
+
+    if (promoCode) {
+      await navigateTo({
+        path: '/pricing', query: { promoCode },
+      })
+    }
+    else {
+      await navigateTo('/')
+    }
+  }
+  catch (error) {
     password.value = ''
-    toast.showError({ summary: $t('login_and_register.error_title'), group: $t('login_and_register.error_login_group'), detail: $t('login_and_register.error_login_message') })
+    toast.showError({
+      detail: $t('login_and_register.error_login_message'),
+      group: $t('login_and_register.error_login_group'),
+      summary: $t('login_and_register.error_title'),
+    })
   }
 })
 
 const canSubmit = computed(() => email.value && password.value && !Object.keys(errors.value).length)
+
+const registerLink = computed(() => {
+  return provideMobileAuthParams(route.query, '/register')
+})
 </script>
 
 <template>
@@ -38,11 +72,16 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
     <div class="page">
       <div class="container">
         <div class="title">
-          {{ $t('login_and_register.title_login') }}
+          {{ $t("login_and_register.title_login") }}
         </div>
         <form @submit="onSubmit">
           <div class="input-row">
-            <label for="email" class="label">{{ $t('login_and_register.email') }}</label>
+            <label
+              for="email"
+              class="label"
+            >{{
+              $t("login_and_register.email")
+            }}</label>
             <InputText
               id="email"
               v-model="email"
@@ -56,11 +95,18 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
             </div>
           </div>
           <div class="input-row">
-            <label for="password" class="label">
-              <div>{{ $t('login_and_register.password') }}</div>
+            <label
+              for="password"
+              class="label"
+            >
+              <div>{{ $t("login_and_register.password") }}</div>
               <div class="right-cell">
-                <BcLink to="/requestReset" :target="Target.Internal" class="link">
-                  {{ $t('login_and_register.forgotten') }}
+                <BcLink
+                  to="/requestReset"
+                  :target="Target.Internal"
+                  class="link"
+                >
+                  {{ $t("login_and_register.forgotten") }}
                 </BcLink>
               </div>
             </label>
@@ -78,12 +124,21 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
           </div>
           <div class="last-row">
             <div class="account-invitation">
-              {{ $t('login_and_register.dont_have_account') }}
-              <BcLink to="/register" :target="Target.Internal" class="link">
-                {{ $t('login_and_register.signup_here') }}
+              {{ $t("login_and_register.dont_have_account") }}
+              <BcLink
+                :to="registerLink"
+                :target="Target.Internal"
+                class="link"
+              >
+                {{ $t("login_and_register.signup_here") }}
               </BcLink>
             </div>
-            <Button class="button" type="submit" :label="$t('login_and_register.submit_login')" :disabled="!canSubmit" />
+            <Button
+              class="button"
+              type="submit"
+              :label="$t('login_and_register.submit_login')"
+              :disabled="!canSubmit"
+            />
           </div>
         </form>
       </div>
@@ -103,7 +158,8 @@ const canSubmit = computed(() => email.value && password.value && !Object.keys(e
     padding: var(--padding-large);
     box-sizing: border-box;
     width: min(530px, 100%);
-    @media (max-width: 600px) { // mobile
+    @media (max-width: 600px) {
+      // mobile
       margin-top: 0px;
     }
 

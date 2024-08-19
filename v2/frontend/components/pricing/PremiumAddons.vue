@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 
 interface Props {
-  isYearly: boolean
+  isYearly: boolean,
 }
 defineProps<Props>()
 </script>
@@ -12,18 +12,18 @@ defineProps<Props>()
   <div class="addons-container">
     <div class="text-container">
       <div class="title">
-        {{ $t('pricing.addons.title') }}
+        {{ $t("pricing.addons.title") }}
       </div>
       <div class="subtitle">
-        {{ $t('pricing.addons.subtitle') }}
+        {{ $t("pricing.addons.subtitle") }}
       </div>
     </div>
     <div class="addons-row">
       <PricingPremiumAddonBox
         v-for="addon in products?.extra_dashboard_validators_premium_addons"
         :key="addon.product_id_yearly"
-        :addon="addon"
-        :is-yearly="isYearly"
+        :addon
+        :is-yearly
         :maximum-validator-limit="products?.validators_per_dashboard_limit"
       />
     </div>
@@ -69,11 +69,11 @@ defineProps<Props>()
     .text-container {
       gap: 8px;
 
-      .title{
+      .title {
         font-size: 16px;
       }
 
-      .subtitle{
+      .subtitle {
         font-size: 18px;
       }
     }

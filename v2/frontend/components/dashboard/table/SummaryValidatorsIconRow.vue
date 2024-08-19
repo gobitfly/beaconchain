@@ -1,32 +1,45 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faPowerOff
-} from '@fortawesome/pro-solid-svg-icons'
+import { faPowerOff } from '@fortawesome/pro-solid-svg-icons'
 import type { SummaryValidatorsIconRowInfo } from '~/types/validator'
 
 interface Props {
-  icons: SummaryValidatorsIconRowInfo[]
-  total?: number
-  absolute: boolean
+  absolute: boolean,
+  icons: SummaryValidatorsIconRowInfo[],
+  total?: number,
 }
 const props = defineProps<Props>()
 
-const combinedTotal = computed<number>(() => props.total ?? props.icons?.reduce((sum, icon) => sum + icon.count, 0) ?? 0)
-
+const combinedTotal = computed<number>(
+  () =>
+    props.total ?? props.icons?.reduce((sum, icon) => sum + icon.count, 0) ?? 0,
+)
 </script>
+
 <template>
-  <div v-for="status in icons" :key="status.key" class="status" :class="status.key">
+  <div
+    v-for="status in icons"
+    :key="status.key"
+    class="status"
+    :class="status.key"
+  >
     <div class="icon">
       <FontAwesomeIcon :icon="faPowerOff" />
     </div>
-    <BcFormatNumber v-if="absolute" :value="status.count" />
-    <BcFormatPercent v-else :value="status.count" :base="combinedTotal" />
+    <BcFormatNumber
+      v-if="absolute"
+      :value="status.count"
+    />
+    <BcFormatPercent
+      v-else
+      :value="status.count"
+      :base="combinedTotal"
+    />
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .status {
   display: flex;
@@ -66,7 +79,6 @@ const combinedTotal = computed<number>(() => props.total ?? props.icons?.reduce(
     }
 
     span {
-
       color: var(--negative-color);
     }
   }
