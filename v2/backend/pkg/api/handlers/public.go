@@ -1,21 +1,149 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gorilla/mux"
+	"golang.org/x/sync/errgroup"
 )
+
+type StatusReports struct {
+	StatusReports []StatusReport `json:"status_reports"`
+	IsOk          bool           `json:"is_ok"`
+}
+
+type StatusReport struct {
+	IsOk        bool     `json:"is_ok"`
+	Tags        []string `json:"tags"`
+	Id          string   `json:"id"`
+	Description string   `json:"description"`
+}
 
 // All handler function names must include the HTTP method and the path they handle
 // Public handlers may only be authenticated by an API key
 // Public handlers must never call internal handlers
 
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	s := StatusReports{
+		IsOk: true,
+	}
+	// errgroup
+	ch := make(chan StatusReport, 100)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		sr := StatusReport{
+			Tags: []string{"clickhouse", "database"},
+			Id:   "ch_connection",
+		}
+		var version string
+		err := db.ClickHouseReader.GetContext(ctx, &version, "SELECT version()")
+		if err != nil {
+			sr.IsOk = false
+			sr.Description = "clickhouse is not healthy"
+			ch <- sr
+			return nil
+		}
+		sr.IsOk = true
+		sr.Description = "clickhouse is healthy, version: " + version
+		ch <- sr
+		return nil
+	})
+
+	g.Go(func() error {
+		sr := StatusReport{
+			Tags: []string{"clickhouse", "exporter", "validator_dashboard"},
+			Id:   "ch_latest_epoch",
+		}
+		var t time.Time
+		err := db.ClickHouseReader.GetContext(ctx, &t, "SELECT MAX(epoch_timestamp) FROM validator_dashboard_data_epoch")
+		if err != nil {
+			sr.IsOk = false
+			sr.Description = "failed to get latest epoch from clickhouse: " + err.Error()
+			ch <- sr
+			return nil
+		}
+		if time.Since(t) > 1*time.Hour {
+			sr.IsOk = false
+			sr.Description = fmt.Sprintf("latest exported epoch is older than 1 hour: %s", time.Since(t))
+			ch <- sr
+			return nil
+		}
+		sr.IsOk = true
+		sr.Description = fmt.Sprintf("latest exported epoch is %s old", time.Since(t))
+		ch <- sr
+		return nil
+	})
+
+	target_rollings := []string{"1h", "24h", "7d", "30d", "90d", "total"}
+	for _, target_rolling := range target_rollings {
+		target_rolling := target_rolling
+		g.Go(func() error {
+			sr := StatusReport{
+				Tags: []string{"clickhouse", "exporter", "validator_dashboard", target_rolling},
+				Id:   "ch_rolling_rolling_" + target_rolling,
+			}
+			var delta int
+			err := db.ClickHouseReader.GetContext(ctx, &delta, fmt.Sprintf(`
+				SELECT
+				    coalesce((
+				        SELECT
+				            max(epoch)
+				        FROM holesky.validator_dashboard_data_epoch
+				        WHERE
+				            epoch_timestamp = (
+				                SELECT
+				                    max(epoch_timestamp)
+				                FROM holesky.validator_dashboard_data_epoch)) - MAX(epoch_end), 255) AS delta
+				FROM
+				    holesky.validator_dashboard_data_rolling_%s
+				WHERE
+				    validator_index = 0`, target_rolling))
+			if err != nil {
+				sr.IsOk = false
+				sr.Description = fmt.Sprintf("failed to get epoch delta from clickhouse for rolling %s: %s", target_rolling, err.Error())
+				ch <- sr
+				return nil
+			}
+			threshold := 2
+			if delta > threshold {
+				sr.IsOk = false
+				sr.Description = fmt.Sprintf("epoch delta for rolling %s is %d, threshold is %d", target_rolling, delta, threshold)
+				ch <- sr
+				return nil
+			}
+			sr.IsOk = true
+			sr.Description = fmt.Sprintf("epoch delta for rolling %s is %d", target_rolling, delta)
+			ch <- sr
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		returnInternalServerError(w, err)
+	}
+	close(ch)
+
+	for report := range ch {
+		s.StatusReports = append(s.StatusReports, report)
+		if !report.IsOk && s.IsOk {
+			s.IsOk = false
+		}
+	}
+	if s.IsOk {
+		returnOk(w, s)
+	} else {
+		writeResponse(w, http.StatusInternalServerError, s)
+	}
 }
 
 func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *http.Request) {
