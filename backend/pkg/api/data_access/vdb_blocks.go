@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/shopspring/decimal"
 )
@@ -344,6 +345,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 	data := make([]t.VDBBlocksTableRow, len(proposals))
 	ensMapping := make(map[string]string)
+	contractStatusRequests := make([]db.ContractInteractionAtRequest, len(proposals))
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
 		if dashboardId.AggregateGroups {
@@ -381,6 +383,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			}
 			data[i].RewardRecipient = &rewardRecp
 			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
+			contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
+				Address:  string(proposal.FeeRecipient),
+				Block:    proposal.Block.Int64,
+				TxIdx:    -1,
+				TraceIdx: -1,
+			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
 		if proposal.ClReward.Valid {
@@ -399,6 +407,14 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		if data[i].RewardRecipient != nil {
 			data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
 		}
+	}
+	// determine contract statuses
+	contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i, status := range contractStatuses {
+		data[i].RewardRecipient.IsContract = status == types.CONTRACT_CREATION || status == types.CONTRACT_PRESENT
 	}
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// No paging required

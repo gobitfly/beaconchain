@@ -3215,11 +3215,11 @@ type isContractInfo struct {
 	ts     gcp_bigtable.Timestamp
 }
 
-type contractInteractionAtRequest struct {
-	address  string
-	block    int64
-	txIdx    int64
-	traceIdx int64
+type ContractInteractionAtRequest struct {
+	Address  string
+	Block    int64
+	TxIdx    int64
+	TraceIdx int64
 }
 
 func (bigtable *Bigtable) getAddressIsContractHistories(histories map[string][]isContractInfo) error {
@@ -3270,7 +3270,7 @@ func (bigtable *Bigtable) getAddressIsContractHistories(histories map[string][]i
 
 // returns account state after the given execution state
 // -1 is latest (e.g. "txIdx" = -1 returns the contract state after execution of "block", "block" = -1 returns the state at chain head)
-func (bigtable *Bigtable) GetAddressContractInteractionsAt(requests []contractInteractionAtRequest) ([]types.ContractInteractionType, error) {
+func (bigtable *Bigtable) GetAddressContractInteractionsAt(requests []ContractInteractionAtRequest) ([]types.ContractInteractionType, error) {
 	results := make([]types.ContractInteractionType, len(requests))
 	if len(requests) == 0 {
 		return results, nil
@@ -3279,7 +3279,7 @@ func (bigtable *Bigtable) GetAddressContractInteractionsAt(requests []contractIn
 	// get histories
 	histories := make(map[string][]isContractInfo, len(requests))
 	for _, request := range requests {
-		histories[request.address] = nil
+		histories[request.Address] = nil
 	}
 	err := bigtable.getAddressIsContractHistories(histories)
 	if err != nil {
@@ -3288,22 +3288,22 @@ func (bigtable *Bigtable) GetAddressContractInteractionsAt(requests []contractIn
 
 	// evaluate requests; CONTRACT_NONE is default
 	for i, request := range requests {
-		history, ok := histories[request.address]
+		history, ok := histories[request.Address]
 		if !ok || history == nil || len(history) == 0 {
 			continue
 		}
 		latestUpdateIdxBeforeReq := 0
-		if request.block != -1 {
+		if request.Block != -1 {
 			var block, tx, itx uint64
-			if request.txIdx == -1 {
-				block = uint64(request.block + 1)
-			} else if request.traceIdx == -1 {
-				block = uint64(request.block)
-				tx = uint64(request.txIdx + 1)
+			if request.TxIdx == -1 {
+				block = uint64(request.Block + 1)
+			} else if request.TraceIdx == -1 {
+				block = uint64(request.Block)
+				tx = uint64(request.TxIdx + 1)
 			} else {
-				block = uint64(request.block)
-				tx = uint64(request.txIdx)
-				itx = uint64(request.traceIdx + 1)
+				block = uint64(request.Block)
+				tx = uint64(request.TxIdx)
+				itx = uint64(request.TraceIdx + 1)
 			}
 			req_ts, err := encodeIsContractUpdateTs(block, tx, itx)
 			if err != nil {
@@ -3319,7 +3319,7 @@ func (bigtable *Bigtable) GetAddressContractInteractionsAt(requests []contractIn
 		}
 
 		b, tx, trace := decodeIsContractUpdateTs(history[latestUpdateIdxBeforeReq].ts)
-		exact_match := request.block == -1 || request.block == int64(b) && (request.txIdx == -1 || request.txIdx == int64(tx) && (request.traceIdx == -1 || request.traceIdx == int64(trace)))
+		exact_match := request.Block == -1 || request.Block == int64(b) && (request.TxIdx == -1 || request.TxIdx == int64(tx) && (request.TraceIdx == -1 || request.TraceIdx == int64(trace)))
 
 		if exact_match {
 			results[i] = types.CONTRACT_DESTRUCTION
@@ -3343,17 +3343,17 @@ func (bigtable *Bigtable) GetAddressContractInteractionsAt(requests []contractIn
 
 // convenience function to get contract interaction status per transaction of a block
 func (bigtable *Bigtable) GetAddressContractInteractionsAtBlock(block *types.Eth1Block) ([]types.ContractInteractionType, error) {
-	requests := make([]contractInteractionAtRequest, len(block.GetTransactions()))
+	requests := make([]ContractInteractionAtRequest, len(block.GetTransactions()))
 	for i, tx := range block.GetTransactions() {
 		address := tx.GetTo()
 		if len(address) == 0 {
 			address = tx.GetContractAddress()
 		}
-		requests[i] = contractInteractionAtRequest{
-			address:  fmt.Sprintf("%x", address),
-			block:    int64(block.GetNumber()),
-			txIdx:    int64(i),
-			traceIdx: -1,
+		requests[i] = ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", address),
+			Block:    int64(block.GetNumber()),
+			TxIdx:    int64(i),
+			TraceIdx: -1,
 		}
 	}
 
@@ -3363,19 +3363,19 @@ func (bigtable *Bigtable) GetAddressContractInteractionsAtBlock(block *types.Eth
 // convenience function to get contract interaction status per subtransaction of a transaction
 // 2nd parameter specifies [tx_idx, trace_idx] for each internal tx
 func (bigtable *Bigtable) GetAddressContractInteractionsAtITransactions(itransactions []*types.Eth1InternalTransactionIndexed, idxs [][2]int64) ([][2]types.ContractInteractionType, error) {
-	requests := make([]contractInteractionAtRequest, 0, len(itransactions)*2)
+	requests := make([]ContractInteractionAtRequest, 0, len(itransactions)*2)
 	for i, tx := range itransactions {
-		requests = append(requests, contractInteractionAtRequest{
-			address:  fmt.Sprintf("%x", tx.GetFrom()),
-			block:    int64(tx.GetBlockNumber()),
-			txIdx:    idxs[i][0],
-			traceIdx: idxs[i][1],
+		requests = append(requests, ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", tx.GetFrom()),
+			Block:    int64(tx.GetBlockNumber()),
+			TxIdx:    idxs[i][0],
+			TraceIdx: idxs[i][1],
 		})
-		requests = append(requests, contractInteractionAtRequest{
-			address:  fmt.Sprintf("%x", tx.GetTo()),
-			block:    int64(tx.GetBlockNumber()),
-			txIdx:    idxs[i][0],
-			traceIdx: idxs[i][1],
+		requests = append(requests, ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", tx.GetTo()),
+			Block:    int64(tx.GetBlockNumber()),
+			TxIdx:    idxs[i][0],
+			TraceIdx: idxs[i][1],
 		})
 	}
 	results, err := bigtable.GetAddressContractInteractionsAt(requests)
@@ -3392,20 +3392,20 @@ func (bigtable *Bigtable) GetAddressContractInteractionsAtITransactions(itransac
 
 // convenience function to get contract interaction status per parity trace
 func (bigtable *Bigtable) GetAddressContractInteractionsAtParityTraces(traces []*rpc.ParityTraceResult) ([][2]types.ContractInteractionType, error) {
-	requests := make([]contractInteractionAtRequest, 0, len(traces)*2)
+	requests := make([]ContractInteractionAtRequest, 0, len(traces)*2)
 	for i, itx := range traces {
 		from, to, _, _ := itx.ConvertFields()
-		requests = append(requests, contractInteractionAtRequest{
-			address:  fmt.Sprintf("%x", from),
-			block:    int64(itx.BlockNumber),
-			txIdx:    int64(itx.TransactionPosition),
-			traceIdx: int64(i),
+		requests = append(requests, ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", from),
+			Block:    int64(itx.BlockNumber),
+			TxIdx:    int64(itx.TransactionPosition),
+			TraceIdx: int64(i),
 		})
-		requests = append(requests, contractInteractionAtRequest{
-			address:  fmt.Sprintf("%x", to),
-			block:    int64(itx.BlockNumber),
-			txIdx:    int64(itx.TransactionPosition),
-			traceIdx: int64(i),
+		requests = append(requests, ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", to),
+			Block:    int64(itx.BlockNumber),
+			TxIdx:    int64(itx.TransactionPosition),
+			TraceIdx: int64(i),
 		})
 	}
 	results, err := bigtable.GetAddressContractInteractionsAt(requests)
@@ -3422,13 +3422,13 @@ func (bigtable *Bigtable) GetAddressContractInteractionsAtParityTraces(traces []
 
 // convenience function to get contract interaction status per transaction
 func (bigtable *Bigtable) GetAddressContractInteractionsAtTransactions(transactions []*types.Eth1TransactionIndexed, idxs []int64) ([]types.ContractInteractionType, error) {
-	requests := make([]contractInteractionAtRequest, len(transactions))
+	requests := make([]ContractInteractionAtRequest, len(transactions))
 	for i, tx := range transactions {
-		requests[i] = contractInteractionAtRequest{
-			address:  fmt.Sprintf("%x", tx.GetTo()),
-			block:    int64(tx.GetBlockNumber()),
-			txIdx:    idxs[i],
-			traceIdx: -1,
+		requests[i] = ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", tx.GetTo()),
+			Block:    int64(tx.GetBlockNumber()),
+			TxIdx:    idxs[i],
+			TraceIdx: -1,
 		}
 	}
 	return bigtable.GetAddressContractInteractionsAt(requests)
