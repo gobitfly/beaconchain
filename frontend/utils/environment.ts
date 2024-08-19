@@ -1,2 +1,2 @@
-export const isServer = import.meta.server
-export const isClient = import.meta.client
+export const isServerSide = import.meta.server
+export const isClientSide = import.meta.client

@@ -1,39 +1,52 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faBars,
-  faCircleUser
+  faBars, faCircleUser,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import { SearchbarShape, SearchbarColors } from '~/types/searchbar'
-import { mobileHeaderThreshold, smallHeaderThreshold } from '~/types/header'
+import {
+  SearchbarColors, SearchbarShape,
+} from '~/types/searchbar'
+import {
+  mobileHeaderThreshold, smallHeaderThreshold,
+} from '~/types/header'
 
 defineProps<{
   isHomePage: boolean,
-  minimalist: boolean
+  minimalist: boolean,
 }>()
 const { latestState } = useLatestStateStore()
-const { slotToEpoch, currentNetwork, networkInfo } = useNetworkStore()
-const { doLogout, isLoggedIn } = useUserStore()
-const { currency, available, rates } = useCurrency()
+const {
+  currentNetwork, networkInfo, slotToEpoch,
+} = useNetworkStore()
+const {
+  doLogout, isLoggedIn,
+} = useUserStore()
+const {
+  available, currency, rates,
+} = useCurrency()
 const { width } = useWindowSize()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
+const { promoCode } = usePromoCode()
 
 const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 const isMobileScreen = computed(() => width.value < mobileHeaderThreshold)
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-const hideInDevelopmentClass = showInDevelopment ? '' : 'hide-because-it-is-unfinished' // TODO: once the searchbar is enabled in production, delete this line
+const hideInDevelopmentClass = showInDevelopment
+  ? ''
+  : 'hide-because-it-is-unfinished' // TODO: once the searchbar is enabled in production, delete this line
 
-const megaMenu = ref<typeof BcHeaderMegaMenu | null>(null)
+const megaMenu = ref<null | typeof BcHeaderMegaMenu>(null)
 
 const rate = computed(() => {
   if (isFiat(currency.value) && rates.value?.[currency.value]) {
     return rates.value[currency.value]
-  } else if (rates.value?.USD) {
+  }
+  else if (rates.value?.USD) {
     return rates.value.USD
   }
   const fiat = available.value?.find(c => isFiat(c))
@@ -43,7 +56,11 @@ const rate = computed(() => {
   return undefined
 })
 
-const currentEpoch = computed(() => latestState.value?.current_slot !== undefined ? slotToEpoch(latestState.value.current_slot) : undefined)
+const currentEpoch = computed(() =>
+  latestState.value?.current_slot !== undefined
+    ? slotToEpoch(latestState.value.current_slot)
+    : undefined,
+)
 
 const toggleMegaMenu = (evt: Event) => {
   megaMenu.value?.toggleMegaMenu(evt)
@@ -54,45 +71,75 @@ const isMobileMegaMenuOpen = computed(() => megaMenu.value?.isMobileMenuOpen)
 const userMenu = computed(() => {
   return [
     {
+      command: async () => {
+        await navigateTo('../user/settings')
+      },
       label: $t('header.settings'),
-      command: async () => { await navigateTo('../user/settings') }
     },
     {
+      command: () => doLogout(),
       label: $t('header.logout'),
-      command: () => doLogout()
-    }
+    },
   ]
 })
 </script>
 
 <template>
-  <div v-if="minimalist" class="minimalist">
+  <div
+    v-if="minimalist"
+    class="minimalist"
+  >
     <div class="top-background" />
     <div class="rows">
       <BcHeaderLogo layout-adaptability="low" />
     </div>
   </div>
 
-  <div v-else class="complete" :class="hideInDevelopmentClass">
+  <div
+    v-else
+    class="complete"
+    :class="hideInDevelopmentClass"
+  >
     <div class="top-background" />
     <div class="rows">
       <div class="grid-cell blockchain-info">
-        <span v-if="latestState?.current_slot"><span>{{ $t('header.current_slot') }}</span>:
-          <BcLink :to="`/slot/${latestState.current_slot}`" :disabled="!showInDevelopment || null">
-            <BcFormatNumber class="bold" :value="latestState.current_slot" />
+        <span v-if="latestState?.current_slot"><span>{{ $t("header.current_slot") }}</span>:
+          <BcLink
+            :to="`/slot/${latestState.current_slot}`"
+            :disabled="!showInDevelopment || null"
+          >
+            <BcFormatNumber
+              class="bold"
+              :value="latestState.current_slot"
+            />
           </BcLink>
         </span>
-        <span v-if="currentEpoch !== undefined"><span>{{ $t('header.current_epoch') }}</span>:
-          <BcLink :to="`/epoch/${currentEpoch}`" :disabled="!showInDevelopment || null">
-            <BcFormatNumber class="bold" :value="currentEpoch" />
+        <span v-if="currentEpoch !== undefined"><span>{{ $t("header.current_epoch") }}</span>:
+          <BcLink
+            :to="`/epoch/${currentEpoch}`"
+            :disabled="!showInDevelopment || null"
+          >
+            <BcFormatNumber
+              class="bold"
+              :value="currentEpoch"
+            />
           </BcLink>
         </span>
         <span v-if="rate">
           <span>
-            <IconNetwork :chain-id="currentNetwork" class="network-icon" :harmonize-perceived-size="true" :colored="false" />{{ networkInfo.elCurrency }}
-          </span>:
-          <span> {{ rate.symbol }}
-            <BcFormatNumber class="bold" :value="rate.rate" :max-decimals="2" />
+            <IconNetwork
+              :chain-id="currentNetwork"
+              class="network-icon"
+              :harmonize-perceived-size="true"
+              :colored="false"
+            />{{ networkInfo.elCurrency }} </span>:
+          <span>
+            {{ rate.symbol }}
+            <BcFormatNumber
+              class="bold"
+              :value="rate.rate"
+              :max-decimals="2"
+            />
           </span>
         </span>
       </div>
@@ -102,22 +149,48 @@ const userMenu = computed(() => {
           v-if="showInDevelopment && !isHomePage"
           class="bar"
           :bar-shape="SearchbarShape.Medium"
-          :color-theme="isSmallScreen && colorMode.value != 'dark' ? SearchbarColors.LightBlue : SearchbarColors.DarkBlue"
+          :color-theme="
+            isSmallScreen && colorMode.value != 'dark'
+              ? SearchbarColors.LightBlue
+              : SearchbarColors.DarkBlue
+          "
           :screen-width-causing-sudden-change="smallHeaderThreshold"
         />
       </div>
 
       <div class="grid-cell controls">
-        <BcCurrencySelection class="currency" :show-currency-icon="!isMobileScreen" />
-        <div v-if="!isLoggedIn" class="logged-out">
-          <BcLink to="/login">
-            <Button class="login" :label="$t('header.login')" />
+        <BcCurrencySelection
+          class="currency"
+          :show-currency-icon="!isMobileScreen"
+        />
+        <div
+          v-if="!isLoggedIn"
+          class="logged-out"
+        >
+          <BcLink
+            :to="{ path: '/login',
+                   query: { promoCode },
+            }"
+          >
+            <Button
+              class="login"
+              :label="$t('header.login')"
+            />
           </BcLink>
         </div>
         <div v-else-if="!isSmallScreen" class="user-menu">
-          <BcDropdown :options="userMenu" variant="header" option-label="label" class="menu-component">
+          <BcDropdown
+            :options="userMenu"
+            variant="header"
+            option-label="label"
+            class="menu-component"
+            panel-class="user-menu-panel"
+          >
             <template #value>
-              <FontAwesomeIcon class="menu-icon" :icon="faCircleUser" />
+              <FontAwesomeIcon
+                class="menu-icon"
+                :icon="faCircleUser"
+              />
             </template>
             <template #option="slotProps">
               <span @click="slotProps.command?.()">
@@ -126,7 +199,11 @@ const userMenu = computed(() => {
             </template>
           </BcDropdown>
         </div>
-        <FontAwesomeIcon :icon="faBars" class="burger" @click.stop.prevent="toggleMegaMenu" />
+        <FontAwesomeIcon
+          :icon="faBars"
+          class="burger"
+          @click.stop.prevent="toggleMegaMenu"
+        />
       </div>
 
       <div class="grid-cell explorer-info">
@@ -140,7 +217,10 @@ const userMenu = computed(() => {
 
       <div class="grid-cell mega-menu">
         <BcHeaderMegaMenu ref="megaMenu" />
-        <div v-if="isMobileMegaMenuOpen" class="decoration" />
+        <div
+          v-if="isMobileMegaMenuOpen"
+          class="decoration"
+        />
       </div>
     </div>
   </div>
@@ -184,7 +264,8 @@ $smallHeaderThreshold: 1024px;
   border-bottom: 1px solid var(--container-border-color);
   background-color: var(--container-background);
   @include common();
-  &.hide-because-it-is-unfinished {  // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
+  &.hide-because-it-is-unfinished {
+    // TODO: once the searchbar is enabled in production, delete this block (because border-bottom is always needed, due to the fact that the lower header is always visible (it contains the search bar when the screeen is narrow, otherwise the logo and mega menu))
     @media (max-width: $smallHeaderThreshold) {
       border-bottom: none;
     }
@@ -193,8 +274,11 @@ $smallHeaderThreshold: 1024px;
   .rows {
     position: relative;
     display: grid;
-    grid-template-columns: 0px min-content min-content auto min-content 0px;  // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
-    grid-template-rows: var(--navbar-height) minmax(var(--navbar2-height), min-content);
+    grid-template-columns: 0px min-content min-content auto min-content 0px; // the 0px are paddings, useless now but they exist in the structure of the grid so ready to be set if they are wanted one day
+    grid-template-rows: var(--navbar-height) minmax(
+        var(--navbar2-height),
+        min-content
+      );
     width: var(--content-width);
     color: var(--header-top-font-color);
     font-family: var(--main_header_font_family);
@@ -202,7 +286,7 @@ $smallHeaderThreshold: 1024px;
     font-weight: var(--main_header_font_weight);
     color: var(--header-top-font-color);
     @media (max-width: $smallHeaderThreshold) {
-      grid-template-columns: 0px min-content auto min-content 0px;  // same remark about the 0px
+      grid-template-columns: 0px min-content auto min-content 0px; // same remark about the 0px
       grid-template-rows: var(--navbar-height) min-content;
     }
     @mixin bottom-cell($row) {
@@ -297,6 +381,14 @@ $smallHeaderThreshold: 1024px;
           }
         }
       }
+      :global(.user-menu-panel) {
+        // hack: panel should always get opened to the left, but this is not possible with component props
+        $widthThePanelHasEnoughSpaceToOpenToTheRight: 1558px;
+        $widthOfUserMenu: 43px;
+        @media screen and (min-width: $widthThePanelHasEnoughSpaceToOpenToTheRight) {
+          translate: calc(-100% + $widthOfUserMenu);
+        }
+      }
       .burger {
         height: 24px;
         cursor: pointer;
@@ -321,16 +413,24 @@ $smallHeaderThreshold: 1024px;
         font-size: var(--tiny_text_font_size);
         color: var(--megamenu-text-color);
         line-height: 10px;
-        .large-screen { display: inline }
-        .mobile { display: none }
+        .large-screen {
+          display: inline;
+        }
+        .mobile {
+          display: none;
+        }
         @media (max-width: $smallHeaderThreshold) {
           color: var(--grey);
         }
         @media (max-width: $mobileHeaderThreshold) {
           margin-bottom: auto;
           font-size: var(--button_font_size);
-          .large-screen { display: none }
-          .mobile { display: inline }
+          .large-screen {
+            display: none;
+          }
+          .mobile {
+            display: inline;
+          }
         }
       }
     }

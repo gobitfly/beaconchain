@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"math/rand/v2"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
 )
 
@@ -58,6 +60,12 @@ func (d *DummyService) Close() {
 }
 
 func (d *DummyService) GetLatestSlot() (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetLatestFinalizedEpoch() (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
@@ -111,7 +119,21 @@ func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint
 	return r, err
 }
 
+func (d *DummyService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+	r := time.Time{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
+	return nil
+}
+
+func (d *DummyService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
+	return true, nil
+}
+
+func (d *DummyService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
 	return nil
 }
 
@@ -122,6 +144,10 @@ func (d *DummyService) GetEmailConfirmationHash(ctx context.Context, userId uint
 }
 
 func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
+	return nil
+}
+
+func (d *DummyService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
 	return nil
 }
 
@@ -143,7 +169,13 @@ func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (ui
 	return r, err
 }
 
-func (d *DummyService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+func (d *DummyService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
@@ -396,25 +428,13 @@ func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboar
 	return r, &p, err
 }
 
-func (d *DummyService) GetValidatorDashboardEpochHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
+func (d *DummyService) GetValidatorDashboardHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.VDBHeatmap, error) {
 	r := t.VDBHeatmap{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardDailyHeatmap(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBHeatmap, error) {
-	r := t.VDBHeatmap{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) GetValidatorDashboardGroupEpochHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
-	r := t.VDBHeatmapTooltipData{}
-	err := commonFakeData(&r)
-	return &r, err
-}
-
-func (d *DummyService) GetValidatorDashboardGroupDailyHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, day time.Time, protocolModes t.VDBProtocolModes) (*t.VDBHeatmapTooltipData, error) {
+func (d *DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, timestamp uint64) (*t.VDBHeatmapTooltipData, error) {
 	r := t.VDBHeatmapTooltipData{}
 	err := commonFakeData(&r)
 	return &r, err
@@ -674,10 +694,44 @@ func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) er
 	return nil
 }
 
-func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
-	r := t.BlockSummary{}
+func (d *DummyService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
+	r := t.OAuthAppData{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+	return nil
+}
+
+func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
+	return nil
+}
+
+func (d *DummyService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
+	return nil
 }
 
 func (d *DummyService) GetBlockOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
@@ -690,6 +744,12 @@ func (d *DummyService) GetBlockTransactions(ctx context.Context, chainId, block 
 	r := []t.BlockTransactionTableRow{}
 	err := commonFakeData(&r)
 	return r, err
+}
+
+func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
+	r := t.BlockSummary{}
+	err := commonFakeData(&r)
+	return &r, err
 }
 
 func (d *DummyService) GetBlockVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
@@ -780,4 +840,10 @@ func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) 
 	r := []t.BlockBlobTableRow{}
 	err := commonFakeData(&r)
 	return r, err
+}
+
+func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPoolData, error) {
+	r := t.RocketPoolData{}
+	err := commonFakeData(&r)
+	return &r, err
 }

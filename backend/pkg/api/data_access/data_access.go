@@ -23,12 +23,15 @@ type DataAccessor interface {
 	SearchRepository
 	NetworkRepository
 	UserRepository
+	AppRepository
 	NotificationsRepository
 	AdminRepository
 	BlockRepository
+	ProtocolRepository
 
 	Close()
 
+	GetLatestFinalizedEpoch() (uint64, error)
 	GetLatestSlot() (uint64, error)
 	GetLatestBlock() (uint64, error)
 	GetBlockHeightAt(slot uint64) (uint64, error)

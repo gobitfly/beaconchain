@@ -1,58 +1,96 @@
 <script lang="ts" setup>
-
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle, faMinus, faPlus } from '@fortawesome/pro-regular-svg-icons'
-import { type ExtraDashboardValidatorsPremiumAddon, ProductCategoryPremiumAddon } from '~/types/api/user'
+import {
+  faInfoCircle,
+  faMinus,
+  faPlus,
+} from '@fortawesome/pro-regular-svg-icons'
+import {
+  type ExtraDashboardValidatorsPremiumAddon,
+  ProductCategoryPremiumAddon,
+} from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 import { Target } from '~/types/links'
 
-const { t: $t } = useI18n()
-const { user, isLoggedIn } = useUserStore()
-const { stripeCustomerPortal, stripePurchase, isStripeDisabled } = useStripe()
+const { t: $t } = useTranslation()
+const {
+  isLoggedIn, user,
+} = useUserStore()
+const {
+  isStripeDisabled, stripeCustomerPortal, stripePurchase,
+} = useStripe()
+const { promoCode } = usePromoCode()
 
 interface Props {
   addon: ExtraDashboardValidatorsPremiumAddon,
   isYearly: boolean,
-  maximumValidatorLimit?: number
+  maximumValidatorLimit?: number,
 }
 const props = defineProps<Props>()
 
 const quantityForPurchase = ref(1)
 
 const prices = computed(() => {
-  const mainPrice = props.isYearly ? props.addon.price_per_year_eur / 12 : props.addon.price_per_month_eur
+  const mainPrice = props.isYearly
+    ? props.addon.price_per_year_eur / 12
+    : props.addon.price_per_month_eur
   const quantity = quantityForPurchase.value || 1
-  const savingAmount = (props.addon.price_per_month_eur * 12 - props.addon.price_per_year_eur) * quantity
+  const savingAmount
+    = (props.addon.price_per_month_eur * 12 - props.addon.price_per_year_eur)
+    * quantity
   const savingDigits = savingAmount % 100 === 0 ? 0 : 2
 
   return {
     main: formatPremiumProductPrice($t, mainPrice * quantity),
-    monthly: formatPremiumProductPrice($t, props.addon.price_per_month_eur * quantity),
-    monthly_based_on_yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur / 12 * quantity),
-    yearly: formatPremiumProductPrice($t, props.addon.price_per_year_eur * quantity),
+    monthly: formatPremiumProductPrice(
+      $t,
+      props.addon.price_per_month_eur * quantity,
+    ),
+    monthly_based_on_yearly: formatPremiumProductPrice(
+      $t,
+      (props.addon.price_per_year_eur / 12) * quantity,
+    ),
+    perValidator: formatPremiumProductPrice(
+      $t,
+      mainPrice / props.addon.extra_dashboard_validators,
+      5,
+    ),
     saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    perValidator: formatPremiumProductPrice($t, mainPrice / props.addon.extra_dashboard_validators, 5)
+    yearly: formatPremiumProductPrice(
+      $t,
+      props.addon.price_per_year_eur * quantity,
+    ),
   }
 })
 
 const boxText = computed(() => {
   return {
+    perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator }),
     validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
-    perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator })
   }
 })
 
 const addonSubscriptionCount = computed(() => {
-  return user.value?.subscriptions?.filter(sub => sub.product_category === ProductCategoryPremiumAddon && (sub.product_id === props.addon.product_id_monthly || sub.product_id === props.addon.product_id_yearly)).length || 0
+  return (
+    user.value?.subscriptions?.filter(
+      sub =>
+        sub.product_category === ProductCategoryPremiumAddon
+        && (sub.product_id === props.addon.product_id_monthly
+        || sub.product_id === props.addon.product_id_yearly),
+    ).length || 0
+  )
 })
 
 const addonButton = computed(() => {
   let text = $t('pricing.get_started')
   if (isLoggedIn.value) {
-    text = addonSubscriptionCount.value > 0 ? $t('pricing.addons.button.manage_addon') : $t('pricing.addons.button.select_addon')
+    text
+      = addonSubscriptionCount.value > 0
+        ? $t('pricing.addons.button.manage_addon')
+        : $t('pricing.addons.button.select_addon')
   }
 
-  async function callback () {
+  async function callback() {
     if (isStripeDisabled.value) {
       return
     }
@@ -60,23 +98,36 @@ const addonButton = computed(() => {
     if (isLoggedIn.value) {
       if (addonSubscriptionCount.value > 0) {
         await stripeCustomerPortal()
-      } else {
-        await stripePurchase(props.isYearly ? props.addon.stripe_price_id_yearly : props.addon.stripe_price_id_monthly, quantityForPurchase.value)
       }
-    } else {
-      await navigateTo('/login')
+      else {
+        await stripePurchase(
+          props.isYearly
+            ? props.addon.stripe_price_id_yearly
+            : props.addon.stripe_price_id_monthly,
+          quantityForPurchase.value,
+        )
+      }
+    }
+    else {
+      await navigateTo({
+        path: '/login', query: { promoCode },
+      })
     }
   }
 
   return {
-    text,
+    callback,
     disabled: isStripeDisabled.value,
-    callback
+    text,
   }
 })
 
 const maximumQuantity = computed(() => {
-  return Math.floor(((props.maximumValidatorLimit || 10000) - (user.value?.premium_perks.validators_per_dashboard || 0)) / props.addon.extra_dashboard_validators)
+  return Math.floor(
+    ((props.maximumValidatorLimit || 10000)
+    - (user.value?.premium_perks.validators_per_dashboard || 0))
+    / props.addon.extra_dashboard_validators,
+  )
 })
 
 const limitReached = computed(() => {
@@ -86,24 +137,23 @@ const limitReached = computed(() => {
 const purchaseQuantityButtons = computed(() => {
   return {
     minus: {
-      disabled: quantityForPurchase.value <= 1,
       callback: () => {
         if (quantityForPurchase.value > 1) {
           quantityForPurchase.value--
         }
-      }
+      },
+      disabled: quantityForPurchase.value <= 1,
     },
     plus: {
-      disabled: limitReached.value,
       callback: () => {
         if (quantityForPurchase.value < maximumQuantity.value) {
           quantityForPurchase.value++
         }
-      }
-    }
+      },
+      disabled: limitReached.value,
+    },
   }
 })
-
 </script>
 
 <template>
@@ -112,12 +162,24 @@ const purchaseQuantityButtons = computed(() => {
       <div class="validator-count">
         {{ boxText.validatorCount }}
         <div class="subtext">
-          {{ $t('pricing.addons.per_dashboard') }}
-          <BcTooltip position="top" :fit-content="true">
-            <FontAwesomeIcon :icon="faInfoCircle" class="tooltip-icon" />
+          {{ $t("pricing.addons.per_dashboard") }}
+          <BcTooltip
+            position="top"
+            :fit-content="true"
+          >
+            <FontAwesomeIcon
+              :icon="faInfoCircle"
+              class="tooltip-icon"
+            />
             <template #tooltip>
               <div class="saving-tooltip-container">
-                {{ $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(props.addon?.extra_dashboard_validators * 32) }) }}
+                {{
+                  $t("pricing.pectra_tooltip", {
+                    effectiveBalance: formatNumber(
+                      props.addon?.extra_dashboard_validators * 32,
+                    ),
+                  })
+                }}
               </div>
             </template>
           </BcTooltip>
@@ -133,11 +195,14 @@ const purchaseQuantityButtons = computed(() => {
           <div>
             {{ prices.monthly_based_on_yearly }}
           </div>
-          <div class="month" yearly>
-            {{ $t('pricing.per_month') }}
+          <div
+            class="month"
+            yearly
+          >
+            {{ $t("pricing.per_month") }}
           </div>
           <div class="year">
-            {{ $t('pricing.amount_per_year', {amount: prices.yearly}) }}*
+            {{ $t("pricing.amount_per_year", { amount: prices.yearly }) }}*
           </div>
         </template>
         <template v-else>
@@ -145,28 +210,49 @@ const purchaseQuantityButtons = computed(() => {
             {{ prices.monthly }}
           </div>
           <div class="month">
-            {{ $t('pricing.per_month') }}*
+            {{ $t("pricing.per_month") }}*
           </div>
         </template>
       </div>
-      <div v-if="isYearly" class="saving-info">
+      <div
+        v-if="isYearly"
+        class="saving-info"
+      >
         <div>
-          {{ $t('pricing.savings', {amount: prices.saving}) }}
+          {{ $t("pricing.savings", { amount: prices.saving }) }}
         </div>
-        <BcTooltip position="top" :fit-content="true">
+        <BcTooltip
+          position="top"
+          :fit-content="true"
+        >
           <FontAwesomeIcon :icon="faInfoCircle" />
           <template #tooltip>
             <div class="saving-tooltip-container">
-              {{ $t('pricing.savings_tooltip', {monthly: prices.monthly, monthly_yearly: prices.monthly_based_on_yearly}) }}
+              {{
+                $t("pricing.savings_tooltip", {
+                  monthly: prices.monthly,
+                  monthly_yearly: prices.monthly_based_on_yearly,
+                })
+              }}
             </div>
           </template>
         </BcTooltip>
       </div>
       <div class="quantity-row">
-        <div v-if="addonSubscriptionCount" class="quantity-label">
-          {{ $t('pricing.addons.currently_active', { amount: addonSubscriptionCount }) }}
+        <div
+          v-if="addonSubscriptionCount"
+          class="quantity-label"
+        >
+          {{
+            $t("pricing.addons.currently_active", {
+              amount: addonSubscriptionCount,
+            })
+          }}
         </div>
-        <div v-else class="quantity-setter">
+        <div
+          v-else
+          class="quantity-setter"
+        >
           <Button
             class="p-button-icon-only"
             :disabled="purchaseQuantityButtons.minus.disabled"
@@ -192,20 +278,29 @@ const purchaseQuantityButtons = computed(() => {
       </div>
       <div class="limit-reached-row">
         <div v-if="limitReached">
-          {{ tOf($t, 'pricing.addons.contact_support', 0) }}
-          <BcLink to="https://dsc.gg/beaconchain  " :target="Target.External" class="link">
-            {{ tOf($t, 'pricing.addons.contact_support', 1) }}
+          {{ tOf($t, "pricing.addons.contact_support", 0) }}
+          <BcLink
+            to="https://dsc.gg/beaconchain  "
+            :target="Target.External"
+            class="link"
+          >
+            {{ tOf($t, "pricing.addons.contact_support", 1) }}
           </BcLink>
-          {{ tOf($t, 'pricing.addons.contact_support', 2) }}
+          {{ tOf($t, "pricing.addons.contact_support", 2) }}
         </div>
       </div>
-      <Button :label="addonButton.text" :disabled="addonButton.disabled" class="select-button" @click="addonButton.callback" />
+      <Button
+        :label="addonButton.text"
+        :disabled="addonButton.disabled"
+        class="select-button"
+        @click="addonButton.callback"
+      />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/pricing.scss';
+@use "~/assets/css/pricing.scss";
 
 .box-container {
   width: 290px;
@@ -405,7 +500,6 @@ const purchaseQuantityButtons = computed(() => {
             width: 20px;
           }
         }
-
       }
 
       .limit-reached-row {

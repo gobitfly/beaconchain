@@ -24,18 +24,17 @@
   align-items: center;
 
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-  
+
   &:not([data-secondary]) {
     color: var(--primary-contrast-color);
     background: var(--button-color-active);
   }
 
-  &[data-secondary]{
+  &[data-secondary] {
     color: var(--button-secondary-color);
     background: var(--button-secondary-background-color);
     border-color: var(--button-secondary-border-color);
   }
-
 
   &.p-disabled {
     color: var(--button-text-color-disabled);
@@ -57,15 +56,16 @@
   &.p-button-icon-only {
     padding: 8px;
     width: var(--default-button-height);
+    flex-shrink: 1;
   }
 
   &.p-button-danger {
     color: var(--button-text-color-dangerous);
-  
+
     &:not(:disabled) {
       background-color: var(--button-color-dangerous);
       border-color: var(--button-color-dangerous);
-  
+
       &:hover {
         background-color: var(--button-color-dangerous-hover);
         border-color: var(--button-color-dangerous-hover);
@@ -81,7 +81,7 @@
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
-  min-width: 375px; 
+  min-width: 375px;
   max-height: calc(100% - 60px);
   touch-action: pan-x pan-y;
 
@@ -347,7 +347,6 @@
   }
 }
 
-
 // Multiselect drop-down
 
 .p-multiselect {
@@ -361,11 +360,30 @@
   justify-content: center;
   width: 100%;
 
+  &.small {
+    height: 30px;
+
+    .p-multiselect-label-container {
+      margin-left: var(--padding-small);
+
+      .p-multiselect-label {
+        font-size: var(--tiny_text_font_size);
+        font-weight: var(--standard_text_font_weight);
+      }  
+    }
+    .p-multiselect-trigger {
+      width: 7px;
+      margin-left: var(--padding-small);
+      margin-right: var(--padding-small);
+    }
+  }
+
   .p-disabled {
     opacity: 0.5;
   }
   .p-multiselect-trigger {
     margin-right: var(--padding);
+    width: 12px;
   }
   .p-multiselect-label-container {
     margin-top: auto;
@@ -442,8 +460,17 @@
   align-items: center;
 
   &.small {
-    padding: var(--padding-small) var(--padding);
+    padding: var(--padding-small);
     height: 30px;
+    
+    .p-dropdown-label {
+      font-size: var(--tiny_text_font_size);
+    }
+
+    .p-dropdown-trigger {
+      margin-left: var(--padding-small);
+      width: 7px;
+    }
   }
 
   &.table {
@@ -477,10 +504,8 @@
     }
   }
   .p-dropdown-trigger {
+    width: 12px;
     margin-left: var(--padding);
-    background: transparent;
-    border-top-right-radius: var(--border-radius);
-    border-bottom-right-radius: var(--border-radius);
   }
 }
 
