@@ -59,11 +59,13 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       { storesDirs: [ './stores/**' ] },
     ],
-    'nuxt-primevue',
+    '@primevue/nuxt-module',
     '@nuxt/eslint',
   ],
   nitro: { compressPublicAssets: true },
   postcss: { plugins: { autoprefixer: {} } },
+  primevue: {
+  },
   routeRules: { '/': { redirect: '/dashboard' } },
   runtimeConfig: {
     private: {
