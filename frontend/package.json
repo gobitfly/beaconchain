@@ -50,12 +50,14 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nuxt dev --host=local.beaconcha.in",
+    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nuxt dev",
     "generate": "nuxt generate",
     "lint": "eslint . --report-unused-disable-directives",
     "lint:fix": "npm run lint -- --fix",
     "postinstall": "nuxt prepare",
-    "preview": "nuxt preview"
+    "preview": "nuxt preview",
+    "typecheck": "npx nuxi typecheck",
+    "validate": "npm run lint:fix && npm run typecheck"
   },
   "type": "module"
 }

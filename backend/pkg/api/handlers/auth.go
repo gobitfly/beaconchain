@@ -30,6 +30,7 @@ const (
 )
 
 const authConfirmEmailRateLimit = time.Minute * 2
+const authResetEmailRateLimit = time.Minute * 2
 const authEmailExpireTime = time.Minute * 30
 
 type ctxKet string
@@ -65,7 +66,7 @@ func (h *HandlerService) sendConfirmationEmail(ctx context.Context, userId uint6
 		return errors.New("error getting confirmation-ts")
 	}
 	if lastTs.Add(authConfirmEmailRateLimit).After(time.Now()) {
-		return errors.New("rate limit reached, try again later")
+		return newTooManyRequestsErr("rate limit reached, try again later")
 	}
 
 	// 2. update confirmation hash (before sending so there's no hash mismatch on failure)
@@ -95,6 +96,58 @@ Best regards,
 	if err != nil {
 		// shouldn't present this as error to user, confirmation works fine
 		log.Error(err, "error updating email confirmation time, rate limiting won't be enforced", 0, nil)
+	}
+	return nil
+}
+
+// TODO move to service?
+func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint64, email string) error {
+	// 0. check if email resets are allowed
+	// (can be forbidden by admin (not yet in v2))
+	passwordResetAllowed, err := h.dai.IsPasswordResetAllowed(ctx, userId)
+	if err != nil {
+		return err
+	}
+	if !passwordResetAllowed {
+		return newForbiddenErr("password reset not allowed")
+	}
+
+	// 1. check last confirmation time to enforce ratelimit
+	lastTs, err := h.dai.GetPasswordResetTime(ctx, userId)
+	if err != nil {
+		return errors.New("error getting confirmation-ts")
+	}
+	if lastTs.Add(authResetEmailRateLimit).After(time.Now()) {
+		return newTooManyRequestsErr("rate limit reached, try again later")
+	}
+
+	// 2. update reset hash (before sending so there's no hash mismatch on failure)
+	resetHash := utils.RandomString(40)
+	err = h.dai.UpdatePasswordResetHash(ctx, userId, resetHash)
+	if err != nil {
+		return errors.New("error updating confirmation hash")
+	}
+
+	// 3. send confirmation email
+	subject := fmt.Sprintf("%s: Reset your passsword", utils.Config.Frontend.SiteDomain)
+	msg := fmt.Sprintf(`Please reset your password on %[1]s by clicking this link:
+
+https://%[1]s/api/i/users/password-resets/%[2]s
+
+Best regards,
+
+%[1]s
+`, utils.Config.Frontend.SiteDomain, resetHash)
+	err = mail.SendTextMail(email, subject, msg, []commonTypes.EmailAttachment{})
+	if err != nil {
+		return errors.New("error sending reset email, try again later")
+	}
+
+	// 4. update reset time (only after mail was sent)
+	err = h.dai.UpdatePasswordResetTime(ctx, userId)
+	if err != nil {
+		// shouldn't present this as error to user, reset works fine
+		log.Error(err, "error updating password reset time, rate limiting won't be enforced", 0, nil)
 	}
 	return nil
 }
@@ -209,13 +262,13 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 // email confirmations + changes
 func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	confirmationHash := v.checkConfirmationHash(mux.Vars(r)["token"])
+	confirmationHash := v.checkUserEmailToken(mux.Vars(r)["token"])
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
 
-	userId, err := h.dai.GetUserIdByConfirmationHash(confirmationHash)
+	userId, err := h.dai.GetUserIdByConfirmationHash(r.Context(), confirmationHash)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -226,7 +279,7 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		return
 	}
 	if confirmationTime.Add(authEmailExpireTime).Before(time.Now()) {
-		handleErr(w, errors.New("confirmation link expired"))
+		handleErr(w, newGoneErr("confirmation link expired"))
 		return
 	}
 
@@ -238,7 +291,94 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 
 	// TODO: purge all user sessions
 
+	returnNoContent(w)
+}
+
+func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		Email string `json:"email"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// validate email
+	email := v.checkEmail(req.Email)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	userId, err := h.dai.GetUserByEmail(r.Context(), email)
+	if err != nil {
+		if err == dataaccess.ErrNotFound {
+			// don't leak if email is registered
+			returnOk(w, nil)
+		} else {
+			handleErr(w, err)
+		}
+		return
+	}
+
+	// send password reset email
+	err = h.sendPasswordResetEmail(r.Context(), userId, email)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
 	returnOk(w, nil)
+}
+
+func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	resetToken := v.checkUserEmailToken(mux.Vars(r)["token"])
+	req := struct {
+		Password string `json:"password"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	password := v.checkPassword(req.Password)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	// check token validity
+	userId, err := h.dai.GetUserIdByResetHash(r.Context(), resetToken)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	resetTime, err := h.dai.GetPasswordResetTime(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if resetTime.Add(authEmailExpireTime).Before(time.Now()) {
+		handleErr(w, newGoneErr("reset link expired"))
+		return
+	}
+
+	// change password
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		handleErr(w, errors.New("error hashing password"))
+		return
+	}
+	err = h.dai.UpdateUserPassword(r.Context(), userId, string(passwordHash))
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	// TODO: purge all user sessions
+
+	returnNoContent(w)
 }
 
 func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Request) {
@@ -571,7 +711,7 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 	returnNoContent(w)
 }
 
-func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Request) {
 	// validate user
 	user, err := h.getUserBySession(r)
 	if err != nil {
@@ -639,7 +779,7 @@ func (h *HandlerService) InternalPutUserEmail(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	response := types.InternalPutUserEmailResponse{
+	response := types.InternalPostUserEmailResponse{
 		Data: types.EmailUpdate{
 			Id:           userInfo.Id,
 			CurrentEmail: userInfo.Email,
@@ -675,15 +815,19 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		handleErr(w, v)
 		return
 	}
-
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
 	if err != nil {
 		handleErr(w, errors.New("invalid password"))
 		return
 	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		handleErr(w, errors.New("error hashing password"))
+		return
+	}
 
 	// change password
-	err = h.dai.UpdateUserPassword(r.Context(), user.Id, newPassword)
+	err = h.dai.UpdateUserPassword(r.Context(), user.Id, string(passwordHash))
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -774,6 +918,27 @@ func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Han
 		}
 		if !userInfo.PremiumPerks.ManageDashboardViaApi {
 			handleErr(w, newForbiddenErr("user does not have access to public validator dashboard endpoints"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// middleware check to return if specified dashboard is not archived (and accessible)
+func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		dashboard, err := h.dai.GetValidatorDashboard(r.Context(), *dashboardId)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+		if dashboard.IsArchived {
+			handleErr(w, newForbiddenErr("dashboard with id %v is archived", dashboardId))
 			return
 		}
 		next.ServeHTTP(w, r)

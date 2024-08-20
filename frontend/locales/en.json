@@ -124,6 +124,9 @@
         "yes_label": "Delete Dashboard"
       }
     },
+    "empty": {
+        "empty_table": "Nothing to see here... yet"
+    },
     "group": {
       "selection": {
         "all": "All groups",
@@ -137,9 +140,9 @@
       }
     },
     "header": {
-      "account": "Account",
+      "account": "Accounts",
       "manage": "Manage",
-      "validator": "Validator"
+      "validator": "Validators"
     },
     "public_account_dashboard": "Dashboard",
     "public_validator_dashboard": "Dashboard",

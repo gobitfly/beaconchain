@@ -32,7 +32,7 @@ const tabs: HashTabs = {
 
 const {
   activeIndex, setActiveIndex,
-} = useHashTabs(tabs)
+} = useHashTabs(tabs, 'summary')
 
 const {
   dashboardKey, setDashboardKey,
@@ -215,7 +215,8 @@ watch(
               :icon="faFire"
             />
           </template>
-          Heatmap coming soon!
+          <!-- TODO: add heatmap -->
+          <DashboardTableEmpty />
         </TabPanel>
         <TabPanel>
           <template #header>

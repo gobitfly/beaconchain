@@ -275,7 +275,7 @@ var VDBManageValidatorsColumns = struct {
 
 type VDBArchivedReason int
 
-var _ EnumFactory[VDBArchivedReason] = VDBArchivedReason(0)
+var _ Enum = VDBArchivedReason(0)
 
 const (
 	VDBArchivedUser VDBArchivedReason = iota
@@ -286,21 +286,6 @@ const (
 
 func (r VDBArchivedReason) Int() int {
 	return int(r)
-}
-
-func (VDBArchivedReason) NewFromString(s string) VDBArchivedReason {
-	switch s {
-	case "user":
-		return VDBArchivedUser
-	case "dashboard_limit":
-		return VDBArchivedDashboards
-	case "group_limit":
-		return VDBArchivedGroups
-	case "validator_limit":
-		return VDBArchivedValidators
-	default:
-		return VDBArchivedReason(-1)
-	}
 }
 
 func (r VDBArchivedReason) ToString() string {
