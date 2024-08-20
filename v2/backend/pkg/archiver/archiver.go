@@ -106,7 +106,8 @@ func (a *Archiver) updateArchivedStatus() error {
 				// The dashboard will immediately be deleted, so no need to archive it
 				continue
 			}
-			_, err := a.das.UpdateValidatorDashboardArchiving(ctx, t.VDBIdPrimary(dashboard.DashboardId), &dashboard.ArchivedReason)
+			archivedReason := dashboard.ArchivedReason
+			_, err := a.das.UpdateValidatorDashboardArchiving(ctx, t.VDBIdPrimary(dashboard.DashboardId), &archivedReason)
 			if err != nil {
 				return err
 			}
