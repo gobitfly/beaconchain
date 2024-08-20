@@ -493,12 +493,12 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 	}
 	if !isUserAdmin(userInfo) {
 		if req.IsArchived {
-			if dashboardCount >= maxArchivedDashboardsCount {
+			if dashboardCount >= MaxArchivedDashboardsCount {
 				returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
 				return
 			}
 		} else {
-			if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+			if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
 				returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
 				return
 			}

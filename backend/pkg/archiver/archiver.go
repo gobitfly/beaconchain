@@ -7,13 +7,10 @@ import (
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/handlers"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-)
-
-const (
-	maxArchivedDashboardsCount = 10
 )
 
 type Archiver struct {
@@ -31,7 +28,7 @@ func (a *Archiver) Start() {
 	for {
 		err := a.updateArchivedStatus()
 		if err != nil {
-			log.Error(err, "failed indexing blobs", 0)
+			log.Error(err, "failed updating dashboard archive status", 0)
 		}
 		time.Sleep(utils.Day)
 	}
@@ -92,7 +89,7 @@ func (a *Archiver) updateArchivedStatus() error {
 		}
 
 		// Check if the user exceeds the maximum number of archived dashboards
-		archivedLimit := maxArchivedDashboardsCount
+		archivedLimit := handlers.MaxArchivedDashboardsCount
 		if len(archivedDashboards)+len(dashboardsToBeArchived) > archivedLimit {
 			dashboardsToBeDeleted = archivedDashboards
 			for _, dashboard := range dashboardsToBeArchived {
