@@ -20,19 +20,12 @@ linters:
     - importas
     - unparam
   disable:
-    - exhaustivestruct
-    - golint
-    - ifshort
-    - interfacer
-    - maligned
-    - nosnakecase
-    - scopelint
-    - structcheck
-    - varcheck
     - dupword
     - gocognit
     - dupl
-    # - mnd
+    - mnd
+    - copyloopvar
+    - intrange
 
     # Disabled for now:
     - asasalint
@@ -53,7 +46,7 @@ linters:
     - gocyclo
     - godot
     - godox
-    - goerr113
+    - err113
     - gofumpt
     - gomnd
     - gomoddirectives

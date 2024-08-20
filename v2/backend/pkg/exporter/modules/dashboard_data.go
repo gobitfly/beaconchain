@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -1214,7 +1215,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 					_, err := cl.GetBlockHeader(slot)
 					if err != nil {
 						httpErr := network.SpecificError(err)
-						if httpErr != nil && httpErr.StatusCode == 404 {
+						if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 							result.missedslots[slot] = true
 							continue // missed
 						}
@@ -1236,7 +1237,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			block, err := cl.GetSlot(slot)
 			if err != nil {
 				httpErr := network.SpecificError(err)
-				if httpErr != nil && httpErr.StatusCode == 404 {
+				if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 					mutex.Lock()
 					result.missedslots[slot] = true
 					mutex.Unlock()
@@ -1835,7 +1836,7 @@ func refreshMaterializedSlashedByCounts() error {
 // 					blockReward, err := d.CL.GetPropoalRewards(slot)
 // 					if err != nil {
 // 						httpErr := network.SpecificError(err)
-// 						if httpErr != nil && httpErr.StatusCode == 404 {
+// 						if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 // 							return nil
 // 						}
 
