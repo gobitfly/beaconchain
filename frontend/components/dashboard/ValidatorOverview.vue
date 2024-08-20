@@ -125,6 +125,7 @@ const dataList = computed(() => {
   align-items: center;
   justify-content: space-between;
   overflow-x: auto;
+  margin-top: var(--padding-large);
   gap: 50px;
   height: 101px;
   padding-left: var(--padding-xl);

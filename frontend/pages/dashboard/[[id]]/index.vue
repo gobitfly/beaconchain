@@ -32,7 +32,7 @@ const tabs: HashTabs = {
 
 const {
   activeIndex, setActiveIndex,
-} = useHashTabs(tabs)
+} = useHashTabs(tabs, 'summary')
 
 const {
   dashboardKey, setDashboardKey,

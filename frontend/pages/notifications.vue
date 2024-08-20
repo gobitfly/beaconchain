@@ -42,7 +42,7 @@ const tabs: HashTabs = {
 
 const {
   activeIndex, setActiveIndex,
-} = useHashTabs(tabs)
+} = useHashTabs(tabs, 'dashboards')
 
 useBcSeo('notifications.title')
 
@@ -50,7 +50,7 @@ const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
       data: { question: $t('notifications.login_question') },
-      onClose: async (response) => {
+      onClose: async (response: { data?: boolean }) => {
         if (response?.data) {
           await navigateTo('/login')
         }
