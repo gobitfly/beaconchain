@@ -21,19 +21,10 @@ const icon = computed(() => {
 </script>
 
 <template>
-  <BcTooltip
-    :dont-open-permanently="true"
-    :hover-delay="350"
-  >
+  <BcTooltip :dont-open-permanently="true" :hover-delay="350">
     <template #tooltip>
-      <div
-        class="button-tooltip"
-        :class="readonlyClass"
-      >
-        <div
-          v-if="tooltip"
-          class="individual"
-        >
+      <div class="button-tooltip" :class="readonlyClass">
+        <div v-if="tooltip" class="individual">
           {{ tooltip }}
         </div>
         <div v-if="readonlyClass !== 'read-only'">
@@ -48,20 +39,12 @@ const icon = computed(() => {
       </div>
     </template>
     <ToggleButton
-      v-model="selected"
-      class="bc-toggle"
-      :class="readonlyClass"
+      v-model="selected" class="bc-toggle" :class="readonlyClass"
       :disabled="disabled || readonlyClass === 'read-only'"
     >
       <template #icon="slotProps">
-        <slot
-          name="icon"
-          v-bind="slotProps"
-        >
-          <FontAwesomeIcon
-            v-if="icon"
-            :icon
-          />
+        <slot name="icon" v-bind="slotProps">
+          <FontAwesomeIcon v-if="icon" :icon />
         </slot>
       </template>
     </ToggleButton>
@@ -72,35 +55,45 @@ const icon = computed(() => {
 .button-tooltip {
   width: max-content;
   text-align: left;
+
   .individual::not(.read-only) {
     margin-bottom: var(--padding);
   }
 }
+
 .bc-toggle {
   min-width: 30px;
   min-height: 30px;
-    &.p-togglebutton {
-      padding: 2px;
-      border-style: none;
-      color: var(--container-color);
-      background-color: var(--container-border-color);
-      border-radius: var(--border-radius);
 
-      &:not(.p-togglebutton-checked),
-      &.read-only {
-        background-color: var(--container-background);
-      }
+  &.p-togglebutton {
+    padding: 2px;
+    border-style: none;
+    color: var(--container-color);
+    background-color: var(--container-border-color);
+    border-radius: var(--border-radius);
 
-      // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
-      :deep(.p-togglebutton-label) {
-        display: none;
-      }
-      &.p-disabled {
-        cursor: default;
-        &:not(.read-only) {
-          opacity: 0.5;
-        }
+    &:not(.p-togglebutton-checked),
+    &.read-only {
+      background-color: var(--container-background);
+    }
+
+    :deep(.p-togglebutton-content) {
+      width: 24px;
+      height: 24px;
+    }
+
+    // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
+    :deep(.p-togglebutton-label) {
+      display: none;
+    }
+
+    &.p-disabled {
+      cursor: default;
+
+      &:not(.read-only) {
+        opacity: 0.5;
       }
     }
+  }
 }
 </style>
