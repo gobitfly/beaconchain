@@ -448,7 +448,7 @@
 * - 'header' : used when it is in the header of the website
 ***/
 
-.p-dropdown {
+.p-select {
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
@@ -463,11 +463,11 @@
     padding: var(--padding-small);
     height: 30px;
     
-    .p-dropdown-label {
+    .p-select-label {
       font-size: var(--tiny_text_font_size);
     }
 
-    .p-dropdown-trigger {
+    .p-select-dropdown {
       margin-left: var(--padding-small);
       width: 7px;
     }
@@ -490,7 +490,7 @@
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }
-  .p-dropdown-label {
+  .p-select-label {
     background: transparent;
     border: 0 none;
     padding: 0;
@@ -503,13 +503,13 @@
       box-shadow: none;
     }
   }
-  .p-dropdown-trigger {
+  .p-select-dropdown {
     width: 12px;
     margin-left: var(--padding);
   }
 }
 
-.p-dropdown-panel {
+.p-select-overlay {
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
@@ -521,16 +521,16 @@
   &.table {
     background: var(--background-color);
   }
-  .p-dropdown-items {
+  .p-select-list {
     padding: var(--padding-small);
-    .p-dropdown-item {
+    .p-select-option {
       @include utils.truncate-text;
       padding: var(--padding-small) 4px;
       border-radius: var(--border-radius);
       .discreet {
         color: var(--text-color-discreet);
       }
-      &.p-highlight:not(:hover) {
+      &.p-select-option-selected:not(:hover) {
         background: var(--list-highlight-background);
         color: var(--primary-contrast-color);
         .discreet {

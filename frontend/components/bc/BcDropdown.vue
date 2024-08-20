@@ -8,7 +8,7 @@ defineProps<Props>()
 </script>
 
 <template>
-  <Dropdown
+  <Select
     :class="variant"
     :panel-class="[variant, panelClass]"
   >
@@ -27,5 +27,5 @@ defineProps<Props>()
         v-bind="slotProps.option"
       />
     </template>
-  </Dropdown>
+  </Select>
 </template>
