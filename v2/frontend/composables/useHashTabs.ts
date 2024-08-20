@@ -1,10 +1,13 @@
 import type { HashTabs } from '~/types/hashTabs'
 
-export function useHashTabs(tabs: HashTabs) {
+export function useHashTabs(tabs: HashTabs, defaultTab: string) {
   const activeIndex = ref(-1)
   const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
+    if (tabs[defaultTab] && !tabs[defaultTab].disabled) {
+      return tabs[defaultTab].index
+    }
     const list = Object.values(tabs)
     for (let i = 0; i < list.length; i++) {
       const tab = list[i]
