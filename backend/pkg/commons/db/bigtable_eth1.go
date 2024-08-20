@@ -3138,7 +3138,7 @@ func (bigtable *Bigtable) GetAddressName(address []byte) (string, error) {
 
 	add := common.Address{}
 	add.SetBytes(address)
-	name, err := GetEnsNameForAddress(add)
+	name, err := GetEnsNameForAddress(add, time.Time{})
 	if err == nil && len(name) > 0 {
 		return name, nil
 	}

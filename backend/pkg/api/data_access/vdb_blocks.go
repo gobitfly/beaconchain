@@ -345,7 +345,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 	data := make([]t.VDBBlocksTableRow, len(proposals))
 	ensMapping := make(map[string]string)
-	contractStatusRequests := make([]db.ContractInteractionAtRequest, len(proposals))
+	contractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(proposals))
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
 		if dashboardId.AggregateGroups {
@@ -403,18 +403,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		return nil, nil, err
 	}
 	log.Debugf("=== getting ens names took %s", time.Since(startTime))
-	for i := range data {
-		if data[i].RewardRecipient != nil {
-			data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
-		}
-	}
 	// determine contract statuses
 	contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
 	if err != nil {
 		return nil, nil, err
 	}
-	for i, status := range contractStatuses {
-		data[i].RewardRecipient.IsContract = status == types.CONTRACT_CREATION || status == types.CONTRACT_PRESENT
+	var contractIdx int
+	for _, resultRow := range data {
+		if resultRow.RewardRecipient != nil {
+			resultRow.RewardRecipient.Ens = ensMapping[string(resultRow.RewardRecipient.Hash)]
+			resultRow.RewardRecipient.IsContract = contractStatuses[contractIdx] == types.CONTRACT_CREATION || contractStatuses[contractIdx] == types.CONTRACT_PRESENT
+			contractIdx += 1
+		}
 	}
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// No paging required

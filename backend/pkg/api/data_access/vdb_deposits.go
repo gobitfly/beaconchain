@@ -185,11 +185,10 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		responseData[i].From.Ens = ensMapping[string(responseData[i].From.Hash)]
 		responseData[i].Depositor.Ens = ensMapping[string(responseData[i].Depositor.Hash)]
 		responseData[i].From.IsContract = fromContractStatuses[i] == types.CONTRACT_CREATION || fromContractStatuses[i] == types.CONTRACT_PRESENT
+		responseData[i].Depositor.IsContract = responseData[i].From.IsContract
 		if responseData[i].Depositor.Hash != responseData[i].From.Hash {
-			depositorIdx += 1
 			responseData[i].Depositor.IsContract = depositorContractStatuses[depositorIdx] == types.CONTRACT_CREATION || depositorContractStatuses[depositorIdx] == types.CONTRACT_PRESENT
-		} else {
-			responseData[i].Depositor.IsContract = fromContractStatuses[i] == types.CONTRACT_CREATION || fromContractStatuses[i] == types.CONTRACT_PRESENT
+			depositorIdx += 1
 		}
 	}
 
