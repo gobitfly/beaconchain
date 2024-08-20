@@ -5,6 +5,7 @@ import {
   faMonitorWaveform,
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
+import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 
@@ -50,7 +51,7 @@ const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
       data: { question: $t('notifications.login_question') },
-      onClose: async (response: { data?: boolean }) => {
+      onClose: async (response: DynamicDialogCloseOptions) => {
         if (response?.data) {
           await navigateTo('/login')
         }
