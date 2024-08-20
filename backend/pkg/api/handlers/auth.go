@@ -932,6 +932,12 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 			handleErr(w, err)
 			return
 		}
+
+		if len(dashboardId.Validators) > 0 {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		dashboard, err := h.dai.GetValidatorDashboard(r.Context(), *dashboardId)
 		if err != nil {
 			handleErr(w, err)
