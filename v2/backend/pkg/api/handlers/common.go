@@ -80,7 +80,7 @@ const (
 	gnosis                            = "gnosis"
 	allowEmpty                        = true
 	forbidEmpty                       = false
-	maxArchivedDashboardsCount        = 10
+	MaxArchivedDashboardsCount        = 10
 )
 
 var (
