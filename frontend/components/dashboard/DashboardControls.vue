@@ -389,7 +389,6 @@ const editDashboard = () => {
   height: 30px;
   display: flex;
   gap: var(--padding);
-  margin-bottom: var(--padding-large);
   @media (max-width: 519px) {
     gap: var(--padding-small);
   }
