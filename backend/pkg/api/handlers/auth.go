@@ -399,6 +399,20 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 		return
 	}
 
+	// if email is not confirmed, confirm since they clicked a link emailed to them
+	userInfo, err := h.dai.GetUserCredentialInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if !userInfo.EmailConfirmed {
+		err = h.dai.UpdateUserEmail(r.Context(), userId)
+		if err != nil {
+			handleErr(w, err)
+			return
+		}
+	}
+
 	err = h.purgeAllSessionsForUser(r.Context(), userId)
 	if err != nil {
 		handleErr(w, err)
