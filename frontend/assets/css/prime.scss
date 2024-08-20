@@ -199,49 +199,54 @@
 
 // Input Switch
 // https://primevue.org/inputswitch/
-.p-inputswitch {
-  width: 43px;
-  height: 22px;
+.toggle-container {
+  .p-toggleswitch {
+    width: 43px;
+    height: 22px;
 
-  .p-inputswitch-slider {
-    background: var(--button-color-active);
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s,
-      box-shadow 0.2s;
-    border-radius: 30px;
+    .p-toggleswitch-slider {
+      background: var(--button-color-active) !important; 
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s,
+        box-shadow 0.2s;
+      border-radius: 30px;
+      border-width: 0 !important;
 
-    &:not(.p-inputswitch-checked) {
-      background: var(--switch-color-disabled);
+      &:not(.p-toggleswitch-checked) {
+        background: var(--switch-color-disabled) !important; 
+      }
     }
-  }
 
-  .p-inputswitch-slider:before {
-    background: var(--switch-slider-color);
-    width: 20px;
-    height: 20px;
-    left: 0.3px;
-    margin-top: -10px;
-    border-radius: 50%;
-    transition-duration: 0.2s;
-  }
+    .p-toggleswitch-slider:before {
+      background: var(--switch-slider-color) !important; 
+      width: 20px;
+      height: 20px;
+      left: 0.3px !important;
+      margin-top: -10px;
+      border-radius: 50%;
+      transition-duration: 0.2s;
+    }
 
-  &.p-inputswitch-checked .p-inputswitch-slider:before {
-    transform: translateX(20.6px);
-  }
+    &.p-toggleswitch-checked .p-toggleswitch-slider:before {
+      transform: translateX(20.6px);
+    }
 
-  &:not(.p-disabled):hover.p-inputswitch-checked .p-inputswitch-slider {
-    background: var(--button-color-hover);
-  }
+    &:not(.p-disabled):hover.p-toggleswitch-checked .p-toggleswitch-slider {
+      background: var(--button-color-hover) !important; 
+    }
 
-  &:not(.p-disabled):hover:not(.p-inputswitch-checked) .p-inputswitch-slider {
-    background: var(--switch-color-disabled-hover);
-  }
+    &:not(.p-disabled):hover:not(.p-toggleswitch-checked)
+      .p-toggleswitch-slider {
+      background: var(--switch-color-disabled-hover) !important; 
+    }
 
-  &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {
-    background: var(--primary-color);
-  }
+    &:not(.p-disabled):not(:hover).p-toggleswitch-checked
+      .p-toggleswitch-slider {
+      background: var(--primary-color) !important; 
+    }
 
-  &.p-disabled .p-inputswitch-slider {
-    background: var(--button-color-disabled);
+    &.p-disabled .p-toggleswitch-slider {
+      background: var(--button-color-disabled) !important; 
+    }
   }
 }
 
