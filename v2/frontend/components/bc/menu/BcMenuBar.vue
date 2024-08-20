@@ -28,7 +28,7 @@ defineProps<Props>()
         class="button-content"
         @click.stop.prevent="() => undefined"
       >
-        <span class="text-disabled">{{ item.label }}</span>
+        <span class="text-disabled text">{{ item.label }}</span>
       </BcTooltip>
       <BcLink
         v-else-if="item.route && !item.command"

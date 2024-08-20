@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -59,8 +60,96 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Cont
 }
 
 func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetValidatorDashboard(ctx, dashboardId)
+	result := &t.ValidatorDashboard{}
+
+	wg := errgroup.Group{}
+	mutex := &sync.RWMutex{}
+
+	wg.Go(func() error {
+		dbReturn := []struct {
+			Name         string         `db:"name"`
+			IsArchived   sql.NullString `db:"is_archived"`
+			PublicId     sql.NullString `db:"public_id"`
+			PublicName   sql.NullString `db:"public_name"`
+			SharedGroups sql.NullBool   `db:"shared_groups"`
+		}{}
+
+		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
+			uvd.name,
+			uvd.is_archived,
+			uvds.public_id,
+			uvds.name AS public_name,
+			uvds.shared_groups
+		FROM users_val_dashboards uvd
+		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
+		WHERE uvd.id = $1
+	`, dashboardId.Id)
+		if err != nil {
+			return err
+		}
+
+		if len(dbReturn) == 0 {
+			return fmt.Errorf("error dashboard with id %v not found", dashboardId)
+		}
+
+		mutex.Lock()
+		result.Id = uint64(dashboardId.Id)
+		result.Name = dbReturn[0].Name
+		result.IsArchived = dbReturn[0].IsArchived.Valid
+		result.ArchivedReason = dbReturn[0].IsArchived.String
+
+		for _, row := range dbReturn {
+			if row.PublicId.Valid {
+				publicId := t.VDBPublicId{}
+				publicId.PublicId = row.PublicId.String
+				publicId.Name = row.PublicName.String
+				publicId.ShareSettings.ShareGroups = row.SharedGroups.Bool
+
+				result.PublicIds = append(result.PublicIds, publicId)
+			}
+		}
+		mutex.Unlock()
+
+		return nil
+	})
+
+	wg.Go(func() error {
+		dbReturn := struct {
+			GroupCount     uint64 `db:"group_count"`
+			ValidatorCount uint64 `db:"validator_count"`
+		}{}
+
+		err := d.alloyReader.GetContext(ctx, &dbReturn, `
+			WITH dashboards_groups AS
+				(SELECT COUNT(uvdg.id) AS group_count FROM users_val_dashboards_groups uvdg WHERE uvdg.dashboard_id = $1),
+			dashboards_validators AS
+				(SELECT COUNT(uvdv.validator_index) AS validator_count FROM users_val_dashboards_validators uvdv WHERE uvdv.dashboard_id = $1)
+			SELECT
+			    dashboards_groups.group_count,
+			    dashboards_validators.validator_count
+			FROM 
+			    dashboards_groups,
+			    dashboards_validators
+		`, dashboardId.Id)
+		if err != nil {
+			return err
+		}
+
+		mutex.Lock()
+		result.GroupCount = dbReturn.GroupCount
+		result.ValidatorCount = dbReturn.ValidatorCount
+		mutex.Unlock()
+
+		return nil
+	})
+
+	err := wg.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
+	}
+
+	return result, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {

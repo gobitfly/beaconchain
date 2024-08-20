@@ -65,7 +65,7 @@ var (
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
-	reEmailConfirmationHash        = regexp.MustCompile(`^[a-z0-9]{40}$`)
+	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
 )
 
 const (
@@ -84,11 +84,13 @@ const (
 )
 
 var (
-	errMsgParsingId = errors.New("error parsing parameter 'dashboard_id'")
-	errBadRequest   = errors.New("bad request")
-	errUnauthorized = errors.New("unauthorized")
-	errForbidden    = errors.New("forbidden")
-	errConflict     = errors.New("conflict")
+	errMsgParsingId    = errors.New("error parsing parameter 'dashboard_id'")
+	errBadRequest      = errors.New("bad request")
+	errUnauthorized    = errors.New("unauthorized")
+	errForbidden       = errors.New("forbidden")
+	errConflict        = errors.New("conflict")
+	errTooManyRequests = errors.New("too many requests")
+	errGone            = errors.New("gone")
 )
 
 type Paging struct {
@@ -172,8 +174,8 @@ func (v *validationError) checkPassword(password string) string {
 	return v.checkRegex(rePassword, password, "password")
 }
 
-func (v *validationError) checkConfirmationHash(hash string) string {
-	return v.checkRegex(reEmailConfirmationHash, hash, "token")
+func (v *validationError) checkUserEmailToken(token string) string {
+	return v.checkRegex(reEmailUserToken, token, "token")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -216,13 +218,13 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 		log.Error(err, "error validating json", 0, nil)
 		return errors.New("couldn't validate JSON request")
 	}
-	if !result.Valid() {
+	isSchemaValid := result.Valid()
+	if !isSchemaValid {
 		v.add("request body", "invalid schema, check the API documentation for the expected format")
-		return nil
 	}
 
-	// Unmarshal into the target struct
-	if err := json.Unmarshal(bodyBytes, data); err != nil {
+	// Unmarshal into the target struct, only log error if it's a valid JSON
+	if err := json.Unmarshal(bodyBytes, data); err != nil && isSchemaValid {
 		log.Error(err, "error decoding json into target structure", 0, nil)
 		return errors.New("couldn't decode JSON request into target structure")
 	}
@@ -789,6 +791,14 @@ func returnForbidden(w http.ResponseWriter, err error) {
 	returnError(w, http.StatusForbidden, err)
 }
 
+func returnTooManyRequests(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusTooManyRequests, err)
+}
+
+func returnGone(w http.ResponseWriter, err error) {
+	returnError(w, http.StatusGone, err)
+}
+
 func returnInternalServerError(w http.ResponseWriter, err error) {
 	log.Error(err, "internal server error", 2, nil)
 	// TODO: don't return the error message to the user in production
@@ -810,6 +820,10 @@ func handleErr(w http.ResponseWriter, err error) {
 		returnConflict(w, err)
 	case errors.Is(err, services.ErrWaiting):
 		returnError(w, http.StatusServiceUnavailable, err)
+	case errors.Is(err, errTooManyRequests):
+		returnTooManyRequests(w, err)
+	case errors.Is(err, errGone):
+		returnGone(w, err)
 	default:
 		returnInternalServerError(w, err)
 	}
@@ -833,7 +847,6 @@ func newUnauthorizedErr(format string, args ...interface{}) error {
 	return errWithMsg(errUnauthorized, format, args...)
 }
 
-//nolint:unparam
 func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
@@ -847,6 +860,14 @@ func newConflictErr(format string, args ...interface{}) error {
 //nolint:unparam
 func newNotFoundErr(format string, args ...interface{}) error {
 	return errWithMsg(dataaccess.ErrNotFound, format, args...)
+}
+
+func newTooManyRequestsErr(format string, args ...interface{}) error {
+	return errWithMsg(errTooManyRequests, format, args...)
+}
+
+func newGoneErr(format string, args ...interface{}) error {
+	return errWithMsg(errGone, format, args...)
 }
 
 // --------------------------------------
@@ -877,7 +898,7 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 	case *types.VDBSyncSummaryValidators:
 		return []types.VDBSummaryValidatorsData{
 			mapUintSlice("sync_current", v.Current),
-			mapUintSlice("sync_upcoming", v.Current),
+			mapUintSlice("sync_upcoming", v.Upcoming),
 			mapSlice("sync_past", v.Past,
 				func(v types.VDBValidatorSyncPast) (uint64, []uint64) { return v.Index, []uint64{v.Count} },
 			),

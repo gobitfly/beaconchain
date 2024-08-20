@@ -171,7 +171,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		return nil, nil, fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
 	}
 
-	epochMin := int64(math.MaxInt64)
+	if len(queryResult) == 0 {
+		// No groups to show
+		return result, &paging, nil
+	}
+
+	epochMin := int64(math.MaxInt32)
 	epochMax := int64(0)
 
 	for _, row := range queryResult {

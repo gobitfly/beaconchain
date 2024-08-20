@@ -1,10 +1,13 @@
 import type { HashTabs } from '~/types/hashTabs'
 
-export function useHashTabs(tabs: HashTabs) {
+export function useHashTabs(tabs: HashTabs, defaultTab: string) {
   const activeIndex = ref(-1)
   const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
+    if (tabs[defaultTab] && !tabs[defaultTab].disabled) {
+      return tabs[defaultTab].index
+    }
     const list = Object.values(tabs)
     for (let i = 0; i < list.length; i++) {
       const tab = list[i]
@@ -37,7 +40,7 @@ export function useHashTabs(tabs: HashTabs) {
   })
 
   const updateHash = (index: number) => {
-    if (isServer) {
+    if (isServerSide) {
       return
     }
     window.location.hash = findHashForIndex(index)
@@ -46,7 +49,7 @@ export function useHashTabs(tabs: HashTabs) {
   watch(
     activeIndex,
     (index) => {
-      if (isServer && index < 0) {
+      if (isServerSide && index < 0) {
         return
       }
       updateHash(index)
@@ -55,7 +58,7 @@ export function useHashTabs(tabs: HashTabs) {
   )
 
   const setActiveIndex = (index: number) => {
-    if (isServer) {
+    if (isServerSide) {
       return
     }
     activeIndex.value = index
