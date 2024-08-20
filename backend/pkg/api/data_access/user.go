@@ -106,7 +106,7 @@ func (d *DataAccessService) IsPasswordResetAllowed(ctx context.Context, userId u
 		FROM users
 		WHERE id = $1`, userId)
 
-	return result, err
+	return !result, err
 }
 
 func (d *DataAccessService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
