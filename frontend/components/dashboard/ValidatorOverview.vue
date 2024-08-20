@@ -126,7 +126,7 @@ const dataList = computed(() => {
   justify-content: space-between;
   overflow-x: auto;
   margin-top: var(--padding-large);
-  transform: translateY(0px); // Needed to show top border on IOS
+  transform: translateY(0px); // hack: on safari top-border is not shown
   gap: 50px;
   height: 101px;
   padding-left: var(--padding-xl);
