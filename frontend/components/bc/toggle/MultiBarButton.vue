@@ -51,8 +51,6 @@ const icon = computed(() => {
       v-model="selected"
       class="bc-toggle"
       :class="readonlyClass"
-      on-label="''"
-      off-icon="''"
       :disabled="disabled || readonlyClass === 'read-only'"
     >
       <template #icon="slotProps">
@@ -81,20 +79,20 @@ const icon = computed(() => {
 .bc-toggle {
   min-width: 30px;
   min-height: 30px;
-  &.p-button {
     &.p-togglebutton {
       padding: 2px;
       border-style: none;
       color: var(--container-color);
       background-color: var(--container-border-color);
+      border-radius: var(--border-radius);
 
-      &:not(.p-highlight),
+      &:not(.p-togglebutton-checked),
       &.read-only {
         background-color: var(--container-background);
       }
 
       // this is needed as the primvevue ToggleButton adds a yes/no label if none is provided
-      :deep(.p-button-label) {
+      :deep(.p-togglebutton-label) {
         display: none;
       }
       &.p-disabled {
@@ -104,6 +102,5 @@ const icon = computed(() => {
         }
       }
     }
-  }
 }
 </style>
