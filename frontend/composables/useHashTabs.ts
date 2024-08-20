@@ -1,7 +1,7 @@
 import type { HashTabs } from '~/types/hashTabs'
 
-export function useHashTabs(tabs: HashTabs, defaultTab: string) {
-  const activeIndex = ref(-1)
+export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = false) {
+  const activeIndex = ref<string>('-1')
   const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
@@ -15,9 +15,9 @@ export function useHashTabs(tabs: HashTabs, defaultTab: string) {
         return tab.index
       }
     }
-    return -1
+    return '-1'
   }
-  const findHashForIndex = (index: number) => {
+  const findHashForIndex = (index: string) => {
     const entries = Object.entries(tabs)
     for (let i = 0; i < entries.length; i++) {
       const [
@@ -32,15 +32,15 @@ export function useHashTabs(tabs: HashTabs, defaultTab: string) {
   }
 
   onMounted(() => {
-    const hash = initialHash?.replace('#', '')
+    const hash = useRouteHash ? initialHash?.replace('#', '') : ''
     activeIndex.value
       = hash && tabs[hash] && !tabs[hash].disabled
         ? tabs[hash].index
         : findFirstValidIndex()
   })
 
-  const updateHash = (index: number) => {
-    if (isServerSide) {
+  const updateHash = (index: string) => {
+    if (isServerSide || !useRouteHash) {
       return
     }
     window.location.hash = findHashForIndex(index)
@@ -49,7 +49,7 @@ export function useHashTabs(tabs: HashTabs, defaultTab: string) {
   watch(
     activeIndex,
     (index) => {
-      if (isServerSide && index < 0) {
+      if (isServerSide && index === '-1') {
         return
       }
       updateHash(index)
@@ -57,16 +57,7 @@ export function useHashTabs(tabs: HashTabs, defaultTab: string) {
     { immediate: true },
   )
 
-  const setActiveIndex = (index: number) => {
-    if (isServerSide) {
-      return
-    }
-    activeIndex.value = index
-    updateHash(index)
-  }
-
   return {
     activeIndex,
-    setActiveIndex,
   }
 }

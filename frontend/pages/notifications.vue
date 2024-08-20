@@ -6,7 +6,9 @@ import {
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import { BcDialogConfirm } from '#components'
+import {
+  BcDialogConfirm, NotificationsNetworkTable,
+} from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 
 useDashboardKeyProvider('notifications')
@@ -24,26 +26,37 @@ const manageNotificationsModalVisisble = ref(false)
 const tabs: HashTabs = {
   clients: {
     disabled: !showInDevelopment,
-    index: 2,
+    icon: faBolt,
+    index: '2',
+    placeholder: 'Clients coming soon!',
+    title: $t('notifications.tabs.clients'),
   },
-  dashboards: { index: 0 },
+  dashboards: {
+    icon: faGaugeSimpleMax,
+    index: '0',
+    title: $t('notifications.tabs.dashboards'),
+  },
   machines: {
     disabled: !showInDevelopment,
-    index: 1,
+    icon: faMonitorWaveform,
+    index: '1',
+    placeholder: 'Machines coming soon!',
+    title: $t('notifications.tabs.machines'),
   },
   network: {
+    component: NotificationsNetworkTable,
     disabled: !showInDevelopment,
-    index: 4,
+    icon: faNetworkWired,
+    index: '4',
+    title: $t('notifications.tabs.network'),
   },
   rocketpool: {
     disabled: !showInDevelopment,
-    index: 3,
+    index: '3',
+    placeholder: 'Rocketpool coming soon!',
+    title: $t('notifications.tabs.rocketpool'),
   },
 }
-
-const {
-  activeIndex, setActiveIndex,
-} = useHashTabs(tabs, 'dashboards')
 
 useBcSeo('notifications.title')
 
@@ -83,76 +96,35 @@ const openManageNotifications = () => {
           @click="openManageNotifications"
         />
       </div>
-      <TabView
-        lazy
+      <BcTabList
+        :tabs default-tab="dashboards"
+        :use-route-hash="true"
         class="notifications-tab-view"
-        :active-index
-        @update:active-index="setActiveIndex"
+        panels-class="notifications-tab-panels"
       >
-        <TabPanel>
-          <template #header>
-            <BcTabHeader
-              :header="$t('notifications.tabs.dashboards')"
-              :icon="faGaugeSimpleMax"
-            />
-          </template>
+        <template #tab-header-icon-rocketpool>
+          <IconRocketPool />
+        </template>
+        <template #tab-panel-dashboards>
           <NotificationsDashboardsTable
             @open-dialog="openManageNotifications"
           />
-        </TabPanel>
-        <TabPanel :disabled="tabs.machines.disabled">
-          <template #header>
-            <BcTabHeader
-              :header="$t('notifications.tabs.machines')"
-              :icon="faMonitorWaveform"
-            />
-          </template>
-          <NotificationsMachinesTable />
-        </TabPanel>
-        <TabPanel :disabled="tabs.clients.disabled">
-          <template #header>
-            <BcTabHeader
-              :header="$t('notifications.tabs.clients')"
-              :icon="faBolt"
-            />
-          </template>
-          Clients coming soon!
-        </TabPanel>
-        <TabPanel :disabled="tabs.rocketpool.disabled">
-          <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.rocketpool')">
-              <template #icon>
-                <IconRocketPool />
-              </template>
-            </BcTabHeader>
-          </template>
-          Rocketpool coming soon!
-        </TabPanel>
-        <TabPanel :disabled="tabs.network.disabled">
-          <template #header>
-            <BcTabHeader
-              :header="$t('notifications.tabs.network')"
-              :icon="faNetworkWired"
-            />
-          </template>
-          <NotificationsNetworkTable />
-        </TabPanel>
-      </TabView>
+        </template>
+      </BcTabList>
     </BcPageWrapper>
   </div>
 </template>
 
 <style lang="scss" scoped>
-:global(.notifications-tab-view > .p-tabview-panels) {
-  min-height: 699px;
-}
-
 .overview {
   margin-bottom: var(--padding-large);
 }
 
-.p-tabview {
+.notifications-tab-view {
   margin-top: var(--padding-large);
+  :deep(.notifications-tab-panels) {
+    min-height: 699px;
+  }
 }
 
 .button-row {

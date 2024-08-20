@@ -130,37 +130,37 @@
   }
 }
 
-// TabView
-// https://primevue.org/tabview/
-.p-tabview {
-  .p-tabview-nav {
-    li {
-      margin-right: 0;
+// Tabs
+// https://primevue.org/tabs/
+.p-tabs {
+  .p-tablist-tab-list {
+    margin-right: 0;
+    border: none;
+    white-space: nowrap;
 
-      .p-tabview-nav-link {
-        border: solid transparent 1px;
-        border-top-right-radius: var(--border-radius);
-        border-top-left-radius: var(--border-radius);
-        padding: 10px 25px;
-        color: var(--link-color);
-      }
-      &:not(.p-highlight):not(.p-disabled):hover .p-tabview-nav-link {
-        color: var(--link-color);
-      }
-      &.p-highlight .p-tabview-nav-link {
+    .p-tab {
+      border: solid transparent 1px;
+      border-top-right-radius: var(--border-radius);
+      border-top-left-radius: var(--border-radius);
+      padding: 10px 25px;
+      color: var(--link-color);
+
+      &.p-tab-active {
         background: var(--container-background);
         border-color: var(--container-border-color);
         color: var(--container-color);
       }
-      &.p-disabled .p-tabview-nav-link {
+
+      &:not(.p-tab-active):not(.p-disabled):hover {
+        color: var(--link-color);
+      }
+
+      &.p-disabled {
         color: var(--text-color-disabled);
       }
     }
-    .p-tabview-header {
-      white-space: nowrap;
-    }
   }
-  .p-tabview-panels {
+  .p-tabpanels {
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
   }
@@ -369,7 +369,7 @@
       .p-multiselect-label {
         font-size: var(--tiny_text_font_size);
         font-weight: var(--standard_text_font_weight);
-      }  
+      }
     }
     .p-multiselect-trigger {
       width: 7px;
@@ -440,9 +440,9 @@
 }
 
 /***
-*  Dropdown
-* https://primevue.org/dropdown/
-* different Dropdown variant's:
+*  Select
+* https://primevue.org/select/
+* different Select variant's:
 * - 'default' (=default) : default style for dropdown
 * - 'table' : dropdown style within a data table
 * - 'header' : used when it is in the header of the website
@@ -462,7 +462,7 @@
   &.small {
     padding: var(--padding-small);
     height: 30px;
-    
+
     .p-select-label {
       font-size: var(--tiny_text_font_size);
     }
