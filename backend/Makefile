@@ -8,7 +8,7 @@ LDFLAGS="-X ${PACKAGE}/version.Version=${VERSION} -X ${PACKAGE}/version.BuildDat
 CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
 
-all: exporter blobindexer misc ethstore-exporter api rewards-exporter eth1indexer stats user-service notification-sender notification-collector node-jobs-processor signatures
+all: exporter blobindexer misc ethstore-exporter api api-docs rewards-exporter eth1indexer stats user-service notification-sender notification-collector node-jobs-processor signatures
 
 clean:
 	rm -rf bin
@@ -63,3 +63,6 @@ frontend-types:
 
 addhooks:
 	git config core.hooksPath hooks
+
+api-docs:
+	go run cmd/api_docs/main.go

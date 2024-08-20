@@ -14,6 +14,25 @@ import (
 // Public handlers may only be authenticated by an API key
 // Public handlers must never call internal handlers
 
+//	@title			beaconcha.in API
+//	@version		2.0
+//	@description	To authenticate your API request beaconcha.in uses API Keys. Set your API Key either by:
+//	@description	- Setting the `Authorization` header in the following format: `Authorization: Bearer <your-api-key>`. (recommended)
+//	@description	- Setting the URL query parameter in the following format: `api_key={your_api_key}`.\
+//	@description	Example: `https://beaconcha.in/api/v2/example?field=value&api_key={your_api_key}`
+
+// @host      beaconcha.in
+// @BasePath  /api/v2
+
+// @securitydefinitions.apikey ApiKeyInHeader
+// @in header
+// @name Authorization
+// @description Use your API key as a Bearer token, e.g. `Bearer <your-api-key>`
+
+// @securitydefinitions.apikey ApiKeyInQuery
+// @in query
+// @name api_key
+
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
 	returnOk(w, nil)
 }
@@ -95,8 +114,65 @@ func (h *HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Re
 	returnOk(w, nil)
 }
 
+// PublicPostValidatorDashboards godoc
+//
+//	@Description	Create a new validator dashboard. **Note**: New dashboards will automatically have a default group created.
+//	@Security 		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboards
+//	@Accept			json
+//	@Produce		json
+//	@Param			request		body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
+//	@Failure		400			{object}	types.ApiErrorResponse
+//	@Failure		409			{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
+//	@Router			/validator-dashboards [post]
 func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
-	returnCreated(w, nil)
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	type request struct {
+		Name    string      `json:"name"`
+		Network intOrString `json:"network" swaggertype:"string" enums:"ethereum,gnosis"`
+	}
+	req := request{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, err)
+		return
+	}
+	name := v.checkNameNotEmpty(req.Name)
+	chainId := v.checkNetwork(req.Network)
+	if v.hasErrors() {
+		handleErr(w, v)
+		return
+	}
+
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, true)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
+		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
+		return
+	}
+
+	data, err := h.dai.CreateValidatorDashboard(r.Context(), userId, name, chainId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	response := types.PostValidatorDashboardsResponse{
+		Data: *data,
+	}
+	returnCreated(w, response)
 }
 
 func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {

@@ -54,7 +54,7 @@ const (
 	FallbackRateLimitSecond = 20 // RateLimit per second for when redis is offline
 	FallbackRateLimitBurst  = 20 // RateLimit burst for when redis is offline
 
-	defaultBucket = "default" // if no bucket is set for a route, use this one
+	DefaultBucket = "default" // if no bucket is set for a route, use this one
 
 	statsTruncateDuration = time.Hour * 1 // ratelimit-stats are truncated to this duration
 )
@@ -364,7 +364,7 @@ func updateWeights(firstRun bool) error {
 		}
 		buckets[w.Endpoint] = strings.ReplaceAll(w.Bucket, ":", "_")
 		if buckets[w.Endpoint] == "" {
-			buckets[w.Endpoint] = defaultBucket
+			buckets[w.Endpoint] = DefaultBucket
 		}
 		if !firstRun && oldBuckets[w.Endpoint] != buckets[w.Endpoint] {
 			log.InfoWithFields(log.Fields{"endpoint": w.Endpoint, "bucket": w.Weight, "oldBucket": oldBuckets[w.Endpoint]}, "bucket changed")
@@ -934,7 +934,7 @@ func getWeight(r *http.Request) (cost int64, identifier, bucket string) {
 		weight = 1
 	}
 	if !bucketOk {
-		bucket = defaultBucket
+		bucket = DefaultBucket
 	}
 	return weight, route, bucket
 }

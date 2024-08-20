@@ -847,3 +847,9 @@ func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPool
 	err := commonFakeData(&r)
 	return &r, err
 }
+
+func (d *DummyService) GetApiWeights(ctx context.Context) ([]t.ApiWeightItem, error) {
+	r := []t.ApiWeightItem{}
+	err := commonFakeData(&r)
+	return r, err
+}

@@ -367,6 +367,7 @@ type VDBPostReturnData struct {
 	Network   uint64 `db:"network" json:"network"`
 	CreatedAt int64  `db:"created_at" json:"created_at"`
 }
+type PostValidatorDashboardsResponse ApiDataResponse[VDBPostReturnData]
 
 type VDBPostCreateGroupData struct {
 	Id   uint64 `db:"id" json:"id"`
