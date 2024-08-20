@@ -255,7 +255,13 @@
         "24h_efficiency": "24h Efficiency",
         "30d_apr": "30d APR",
         "30d_rewards": "30d Rewards",
-        "your_online_validators": "Your Online Validators"
+        "online_validators": "Online Validators",
+        "open_validator_overview_modal": "Open Validator Overview",
+        "validators_balance": {
+          "balance_effective": "Effective Balance",
+          "balance_staked": "Stacked ETH",
+          "balance_total": "Balance"
+        }
       },
       "rewards": {
         "attestation": "Attestation",
