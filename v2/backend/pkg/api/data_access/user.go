@@ -76,8 +76,20 @@ func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId
 }
 
 func (d *DataAccessService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetPasswordResetTime(ctx, userId)
+	result := time.Time{}
+
+	var queryResult sql.NullTime
+	err := d.userWriter.GetContext(ctx, &queryResult, `
+    	SELECT
+			password_reset_ts
+		FROM users
+		WHERE id = $1`, userId)
+
+	if queryResult.Valid {
+		result = queryResult.Time
+	}
+
+	return result, err
 }
 
 func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
@@ -86,12 +98,26 @@ func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, use
 }
 
 func (d *DataAccessService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
-	return d.dummy.IsPasswordResetAllowed(ctx, userId)
+	var result bool
+
+	err := d.userWriter.GetContext(ctx, &result, `
+    	SELECT
+			password_reset_not_allowed
+		FROM users
+		WHERE id = $1`, userId)
+
+	return result, err
 }
 
 func (d *DataAccessService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
-	// TODO @DATA-ACCESS
-	return d.dummy.UpdatePasswordResetTime(ctx, userId)
+	_, err := d.userWriter.ExecContext(ctx, `
+		UPDATE users 
+		SET 
+			password_reset_ts = NOW()
+		WHERE id = $1
+	`, userId)
+
+	return err
 }
 
 func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
@@ -105,9 +131,14 @@ func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, use
 }
 
 func (d *DataAccessService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
-	// TODO @DATA-ACCESS
-	// this method refers to updating the `password_reset_hash` in the db
-	return d.dummy.UpdatePasswordResetHash(ctx, userId, confirmationHash)
+	_, err := d.userWriter.ExecContext(ctx, `
+		UPDATE users 
+		SET 
+			password_reset_hash = $1
+		WHERE id = $2
+	`, confirmationHash, userId)
+
+	return err
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
@@ -158,8 +189,15 @@ func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, has
 }
 
 func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetUserIdByResetHash(ctx, hash)
+	var result uint64
+
+	err := d.userWriter.GetContext(ctx, &result, `
+    	SELECT
+			id
+		FROM users
+		WHERE password_reset_hash = $1`, hash)
+
+	return result, err
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
