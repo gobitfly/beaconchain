@@ -37,7 +37,7 @@ type NotificationDashboardsTableRow struct {
 	GroupName          string   `json:"group_name"`
 	NotificationId     uint64   `json:"notification_id"` // may be string? db schema is not defined afaik
 	EntityCount        uint64   `json:"entity_count"`
-	EventTypes         []string `json:"event_types"`
+	EventTypes         []string `json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"oneof: validator_offline, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, sync, withdrawal, slashed_own, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
@@ -100,7 +100,7 @@ type InternalGetUserNotificationsAccountDashboardResponse ApiDataResponse[Notifi
 type NotificationMachinesTableRow struct {
 	MachineName string  `json:"machine_name"`
 	Threshold   float64 `json:"threshold" faker:"boundary_start=0, boundary_end=1"`
-	EventType   string  `json:"event_type"`
+	EventType   string  `json:"event_type" tstype:"'offline' | 'storage' | 'cpu' | 'memory'" faker:"oneof: offline, storage, cpu, memory"`
 	Timestamp   int64   `json:"timestamp"`
 }
 
@@ -120,7 +120,7 @@ type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationCl
 // Rocket Pool Table
 type NotificationRocketPoolTableRow struct {
 	Timestamp   int64   `json:"timestamp"`
-	EventType   string  `json:"event_type"`
+	EventType   string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
 	AlertValue  float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
 	NodeAddress Hash    `json:"node_address"`
 }
@@ -132,7 +132,7 @@ type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[Notificatio
 type NotificationNetworksTableRow struct {
 	ChainId    uint64          `json:"chain_id"`
 	Timestamp  int64           `json:"timestamp"`
-	EventType  string          `json:"event_type"`
+	EventType  string          `json:"event_type" tstype:"'gas_above' | 'gas_below' | 'participation_rate'" faker:"oneof: gas_above, gas_below, participation_rate"`
 	AlertValue decimal.Decimal `json:"alert_value"` // wei string for gas alerts, otherwise percentage (0-1) for participation rate
 }
 
