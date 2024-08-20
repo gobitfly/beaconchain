@@ -628,12 +628,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		}
 
 		for _, row := range dbReturn {
-			entry := DashboardCount{
-				Id:             row.Id,
-				GroupCount:     row.GroupCount,
-				ValidatorCount: row.ValidatorCount,
-			}
-			validatorDashboardCountMap[row.Id] = entry
+			validatorDashboardCountMap[row.Id] = row
 		}
 
 		return nil
