@@ -19,7 +19,7 @@ useDateProvider()
 </script>
 
 <template>
-  <div class="min-h-full">
+  <div>
     <BcDataWrapper>
       <NuxtLoadingIndicator color="var(--primary-color)" />
       <NuxtPage />
@@ -28,5 +28,3 @@ useDateProvider()
     </BcDataWrapper>
   </div>
 </template>
-
-<style lang="scss"></style>

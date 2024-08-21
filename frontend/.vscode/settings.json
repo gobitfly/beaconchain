@@ -1,18 +1,19 @@
 {
   "conventionalCommits.scopes": [
-    "checkout",
-    "ci",
-    "customFetch",
-    "DashboardChartSummaryChartFilter",
-    "DashboardGroupManagementModal",
-    "eslint",
-    "git",
-    "i18n",
-    "mainHeader",
-    "qrCode",
-    "vscode",
-    "DashboardValidatorManagmentModal"
-  ],
+  "checkout",
+  "ci",
+  "customFetch",
+  "DashboardChartSummaryChartFilter",
+  "DashboardGroupManagementModal",
+  "DashboardValidatorManagmentModal",
+  "eslint",
+  "git",
+  "i18n",
+  "MainFooter",
+  "MainHeader",
+  "qrCode",
+  "vscode"
+],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
 },

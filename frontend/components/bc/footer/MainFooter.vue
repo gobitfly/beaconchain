@@ -20,6 +20,9 @@
   flex-direction: column;
   gap: var(--padding-large);
   padding-top: var(--padding-large);
+  padding-bottom: var(--padding-large);
+  padding-left: var(--padding);
+  padding-right: var(--padding);
   margin-top: 64px;
   background-color: var(--container-background);
 
@@ -31,7 +34,6 @@
   @media (max-width: 599.9px) {
     // mobile
     justify-content: flex-start;
-    padding-left: var(--padding-large);
   }
 
   .links {
