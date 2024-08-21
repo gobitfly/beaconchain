@@ -1,8 +1,9 @@
-package main
+package user_service
 
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"net/http"
@@ -22,10 +23,10 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "config.yml", "path to config")
+	_ = fs.Parse(os.Args[2:])
 
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)

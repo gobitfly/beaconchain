@@ -1,7 +1,8 @@
-package main
+package signatures
 
 import (
 	"encoding/json"
+	"os"
 
 	"flag"
 	"fmt"
@@ -26,13 +27,14 @@ import (
 * This function is for indexing smart contract function names from www.4byte.directory
 * so that we can label the transction function calls instead of the "id"
 **/
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	metricsAddr := flag.String("metrics.address", "localhost:9090", "serve metrics on that addr")
-	metricsEnabled := flag.Bool("metrics.enabled", false, "enable serving metrics")
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	metricsAddr := fs.String("metrics.address", "localhost:9090", "serve metrics on that addr")
+	metricsEnabled := fs.Bool("metrics.enabled", false, "enable serving metrics")
 
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)

@@ -18,7 +18,7 @@ func Run() {
 
 	configFlag := fs.String("config", "config.yml", "path to config")
 	versionFlag := fs.Bool("version", false, "print version and exit")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 	if *versionFlag {
 		log.Info(version.Version)
 		return

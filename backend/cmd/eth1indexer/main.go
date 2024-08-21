@@ -75,7 +75,7 @@ func Run() {
 	enableEnsUpdater := fs.Bool("ens.enabled", false, "Enable ens update process")
 	ensBatchSize := fs.Int64("ens.batch", 200, "Batch size for ens updates")
 
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	log.Info(*configPath)
 	if *versionFlag {
