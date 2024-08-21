@@ -10,6 +10,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 type UserRepository interface {
@@ -577,22 +578,26 @@ func (d *DataAccessService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPer
 }
 
 func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
-	// TODO @DATA-ACCESS Adjust to api changes: return archival related fields
 	result := &t.UserDashboardsData{}
 
-	dbReturn := []struct {
-		Id           uint64         `db:"id"`
-		Name         string         `db:"name"`
-		PublicId     sql.NullString `db:"public_id"`
-		PublicName   sql.NullString `db:"public_name"`
-		SharedGroups sql.NullBool   `db:"shared_groups"`
-	}{}
+	wg := errgroup.Group{}
 
-	// Get the validator dashboards including the public ones
-	err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
+	wg.Go(func() error {
+		dbReturn := []struct {
+			Id           uint64         `db:"id"`
+			Name         string         `db:"name"`
+			IsArchived   sql.NullString `db:"is_archived"`
+			PublicId     sql.NullString `db:"public_id"`
+			PublicName   sql.NullString `db:"public_name"`
+			SharedGroups sql.NullBool   `db:"shared_groups"`
+		}{}
+
+		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
 		SELECT
 			uvd.id,
 			uvd.name,
+			uvd.is_archived,
 			uvds.public_id,
 			uvds.name AS public_name,
 			uvds.shared_groups
@@ -600,30 +605,75 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
 		WHERE uvd.user_id = $1
 	`, userId)
+		if err != nil {
+			return err
+		}
+
+		for _, row := range dbReturn {
+			if _, ok := validatorDashboardMap[row.Id]; !ok {
+				validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
+					Id:             row.Id,
+					Name:           row.Name,
+					PublicIds:      []t.VDBPublicId{},
+					IsArchived:     row.IsArchived.Valid,
+					ArchivedReason: row.IsArchived.String,
+				}
+			}
+			if row.PublicId.Valid {
+				publicId := t.VDBPublicId{}
+				publicId.PublicId = row.PublicId.String
+				publicId.Name = row.PublicName.String
+				publicId.ShareSettings.ShareGroups = row.SharedGroups.Bool
+
+				validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, publicId)
+			}
+		}
+
+		return nil
+	})
+
+	type DashboardCount struct {
+		Id             uint64 `db:"id"`
+		GroupCount     uint64 `db:"group_count"`
+		ValidatorCount uint64 `db:"validator_count"`
+	}
+
+	validatorDashboardCountMap := make(map[uint64]DashboardCount, 0)
+	wg.Go(func() error {
+		dbReturn := []DashboardCount{}
+
+		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
+			uvd.id,
+			COUNT(DISTINCT(uvdg.id)) AS group_count,
+			COUNT(DISTINCT(uvdv.validator_index)) AS validator_count
+		FROM users_val_dashboards uvd
+		LEFT JOIN users_val_dashboards_groups uvdg ON uvd.id = uvdg.dashboard_id
+		LEFT JOIN users_val_dashboards_validators uvdv ON uvd.id = uvdv.dashboard_id
+		WHERE uvd.user_id = $1
+		GROUP BY uvd.id
+	`, userId)
+		if err != nil {
+			return err
+		}
+
+		for _, row := range dbReturn {
+			validatorDashboardCountMap[row.Id] = row
+		}
+
+		return nil
+	})
+
+	err := wg.Wait()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
 	}
 
 	// Fill the result
-	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
-	for _, row := range dbReturn {
-		if _, ok := validatorDashboardMap[row.Id]; !ok {
-			validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
-				Id:        row.Id,
-				Name:      row.Name,
-				PublicIds: []t.VDBPublicId{},
-			}
-		}
-		if row.PublicId.Valid {
-			result := t.VDBPublicId{}
-			result.PublicId = row.PublicId.String
-			result.Name = row.PublicName.String
-			result.ShareSettings.ShareGroups = row.SharedGroups.Bool
-
-			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
-		}
-	}
 	for _, validatorDashboard := range validatorDashboardMap {
+		validatorDashboard.GroupCount = validatorDashboardCountMap[validatorDashboard.Id].GroupCount
+		validatorDashboard.ValidatorCount = validatorDashboardCountMap[validatorDashboard.Id].ValidatorCount
+
 		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
 	}
 
@@ -644,11 +694,11 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 
 // return number of active / archived dashboards
 func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
-	// @DATA-ACCESS return number of dashboards depending on archival status (see comment above)
 	var count uint64
 	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
-		WHERE user_id = $1
-	`, userId)
+		WHERE user_id = $1 AND (($2 AND is_archived IS NULL) OR (NOT $2 AND is_archived IS NOT NULL))
+	`, userId, active)
+
 	return count, err
 }
