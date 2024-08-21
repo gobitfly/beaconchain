@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/sirupsen/logrus"
 )
 
@@ -89,6 +90,7 @@ func Debugf(format string, args ...interface{}) {
 func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.Entry {
 	logFields := logrus.NewEntry(logrus.New())
 
+	metricName := err.Error()
 	pc, fullFilePath, line, ok := runtime.Caller(callerSkip + 2)
 	if ok {
 		logFields = logFields.WithFields(logrus.Fields{
@@ -96,9 +98,15 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 			"_function": runtime.FuncForPC(pc).Name(),
 			"_line":     line,
 		})
+		file := filepath.Base(fullFilePath)
+		if len(file) > 20 {
+			file = file[len(file)-20:]
+		}
+		metricName = fmt.Sprintf("%s:%d", file, line)
 	} else {
 		logFields = logFields.WithField("runtime", "Callstack cannot be read")
 	}
+	metrics.Errors.WithLabelValues(metricName).Inc()
 
 	errColl := []string{}
 	for {
