@@ -38,14 +38,14 @@ func NewDummyService() *DummyService {
 		rand.Shuffle(len(possibleChainIds), func(i, j int) {
 			possibleChainIds[i], possibleChainIds[j] = possibleChainIds[j], possibleChainIds[i]
 		})
-		return possibleChainIds[:rand.IntN(len(possibleChainIds))], nil
+		return possibleChainIds[:rand.IntN(len(possibleChainIds))], nil //nolint:gosec
 	})
 	return &DummyService{}
 }
 
 // generate random decimal.Decimal, should result in somewhere around 0.001 ETH (+/- a few decimal places) in Wei
 func randomEthDecimal() decimal.Decimal {
-	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int64N(10000000)))
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int64N(10000000))) //nolint:gosec
 	return decimal
 }
 
@@ -193,19 +193,19 @@ func (d *DummyService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, e
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
-	r := t.DashboardInfo{}
+func (d *DummyService) GetValidatorDashboardUser(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardUser, error) {
+	r := t.DashboardUser{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardInfoByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
-	r := t.DashboardInfo{}
+func (d *DummyService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
+	var r t.VDBIdPrimary
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+func (d *DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
 	r := t.ValidatorDashboard{}
 	// return semi-valid data to not break staging
 	//nolint:errcheck

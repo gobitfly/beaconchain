@@ -1,5 +1,5 @@
 # this is meant to be built with the root of this repo as build-context
-FROM golang:1.22.0 AS build-env
+FROM golang:1.23.0 AS build-env
 COPY backend/go.mod backend/go.sum /src/backend/
 WORKDIR /src/backend
 RUN go mod download

@@ -40,7 +40,7 @@ func InfoWithFields(additionalInfos Fields, msg string) {
 		logFields = logFields.WithField(name, info)
 	}
 
-	logFields.Infof(msg)
+	logFields.Info(msg)
 }
 
 func Warn(args ...interface{}) {
@@ -57,7 +57,7 @@ func WarnWithFields(additionalInfos Fields, msg string) {
 		logFields = logFields.WithField(name, info)
 	}
 
-	logFields.Warnf(msg)
+	logFields.Warn(msg)
 }
 
 func Tracef(format string, args ...interface{}) {
@@ -70,7 +70,7 @@ func TraceWithFields(additionalInfos Fields, msg string) {
 		logFields = logFields.WithField(name, info)
 	}
 
-	logFields.Tracef(msg)
+	logFields.Trace(msg)
 }
 
 func DebugWithFields(additionalInfos Fields, msg string) {
@@ -79,7 +79,7 @@ func DebugWithFields(additionalInfos Fields, msg string) {
 		logFields = logFields.WithField(name, info)
 	}
 
-	logFields.Debugf(msg)
+	logFields.Debug(msg)
 }
 
 func Debugf(format string, args ...interface{}) {
