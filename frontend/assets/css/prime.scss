@@ -25,12 +25,11 @@
 
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 
-  &:not([data-secondary]) {
+  &:not([ddata-p-severity="secondary"]) {
     color: var(--primary-contrast-color);
     background: var(--button-color-active);
   }
-
-  &[data-secondary] {
+  &[data-p-severity="secondary"] {
     color: var(--button-secondary-color);
     background: var(--button-secondary-background-color);
     border-color: var(--button-secondary-border-color);
@@ -41,11 +40,11 @@
     background: var(--button-color-disabled);
     border-color: var(--button-color-disabled);
   }
-  &:not(:disabled):not([data-secondary]):hover {
+  &:not(:disabled):not([data-data-p-severity="secondary"]):hover {
     background: var(--button-color-hover);
     border-color: var(--button-color-hover);
   }
-  &:not(:disabled)[data-secondary]:hover {
+  &:not(:disabled)[data-p-severity="secondary"]:hover {
     background: var(--button-secondary-hover-color);
   }
   &:not(:disabled):active {
@@ -90,7 +89,7 @@
     .p-dialog-title {
       @include fonts.dialog_header;
     }
-    .p-dialog-header-close {
+    .p-dialog-close-button {
       display: none;
     }
   }
@@ -173,26 +172,33 @@
     width: 20px;
     height: 20px;
     border-radius: var(--border-radius);
-    border: 1px solid var(--checkbox-border-color);
-    background: var(--checkbox-background-color);
-    &.p-highlight:not(:hover) {
-      background: var(--primary-color);
-      color: var(--primary-contrast-color);
-    }
-    &:hover {
-      background: var(--button-color-hover);
-      color: var(--primary-contrast-color);
-    }
-    &.p-disabled {
-      background: var(--button-color-disabled);
-    }
+    border: 1px solid var(--checkbox-border-color) !important;
+    background: var(--checkbox-background-color) !important;
+
     .p-checkbox-icon {
       transition-duration: 0.2s;
       pointer-events: none; // prevents the checkbox from letting click events pass through (like a hole) when unchecking
-      .p-icon {
+      &.p-icon {
         width: 14px;
         height: 14px;
       }
+    }
+  }
+  &.p-checkbox-checked:not(:hover) {
+    .p-checkbox-box {
+      background: var(--primary-color) !important;
+      color: var(--primary-contrast-color) !important;
+    }
+  }
+  &:hover {
+    .p-checkbox-box {
+      background: var(--button-color-hover) !important;
+      color: var(--primary-contrast-color) !important;
+    }
+  }
+  &.p-disabled {
+    .p-checkbox-box {
+      background: var(--button-color-disabled) !important;
     }
   }
 }

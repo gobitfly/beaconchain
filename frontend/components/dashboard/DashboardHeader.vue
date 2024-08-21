@@ -113,9 +113,9 @@ const items = computed<MenuBarEntry[]>(() => {
       class="menu-bar"
       :buttons="items"
     />
-    <Button
+    <BcButton
       v-if="!isShared"
-      data-secondary
+      variant="secondary"
       class="p-button-icon-only"
       @click="emit('showCreation')"
     >
@@ -124,7 +124,7 @@ const items = computed<MenuBarEntry[]>(() => {
         width="100%"
         height="100%"
       />
-    </Button>
+    </BcButton>
   </div>
 </template>
 

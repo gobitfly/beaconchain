@@ -64,8 +64,6 @@ export default defineNuxtConfig({
   ],
   nitro: { compressPublicAssets: true },
   postcss: { plugins: { autoprefixer: {} } },
-  primevue: {
-  },
   routeRules: { '/': { redirect: '/dashboard' } },
   runtimeConfig: {
     private: {
