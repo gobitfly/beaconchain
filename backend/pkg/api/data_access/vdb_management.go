@@ -43,9 +43,9 @@ func (d *DataAccessService) GetValidatorDashboardUser(ctx context.Context, dashb
 }
 
 func (d *DataAccessService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
-	var result *t.VDBIdPrimary
+	var result t.VDBIdPrimary
 
-	err := d.alloyReader.GetContext(ctx, result, `
+	err := d.alloyReader.GetContext(ctx, &result, `
 		SELECT
 			uvd.id
 		FROM users_val_dashboards_sharing uvds
@@ -55,7 +55,7 @@ func (d *DataAccessService) GetValidatorDashboardIdByPublicId(ctx context.Contex
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: public id %v not found", ErrNotFound, publicDashboardId)
 	}
-	return result, err
+	return &result, err
 }
 
 func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {

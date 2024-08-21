@@ -890,7 +890,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		Name          string `json:"name"`
+		Name          string `json:"name,omitempty"`
 		ShareSettings struct {
 			ShareGroups bool `json:"share_groups"`
 		} `json:"share_settings"`
@@ -899,7 +899,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 		handleErr(w, err)
 		return
 	}
-	name := v.checkNameNotEmpty(req.Name)
+	name := v.checkName(req.Name, 0)
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
 	if v.hasErrors() {
 		handleErr(w, v)
