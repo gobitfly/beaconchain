@@ -79,7 +79,7 @@ func (d *DataAccessService) GetPasswordResetTime(ctx context.Context, userId uin
 	result := time.Time{}
 
 	var queryResult sql.NullTime
-	err := d.userWriter.GetContext(ctx, &queryResult, `
+	err := d.userReader.GetContext(ctx, &queryResult, `
     	SELECT
 			password_reset_ts
 		FROM users
@@ -100,7 +100,7 @@ func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, use
 func (d *DataAccessService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
 	var result bool
 
-	err := d.userWriter.GetContext(ctx, &result, `
+	err := d.userReader.GetContext(ctx, &result, `
     	SELECT
 			password_reset_not_allowed
 		FROM users
@@ -191,7 +191,7 @@ func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, has
 func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
 	var result uint64
 
-	err := d.userWriter.GetContext(ctx, &result, `
+	err := d.userReader.GetContext(ctx, &result, `
     	SELECT
 			id
 		FROM users
