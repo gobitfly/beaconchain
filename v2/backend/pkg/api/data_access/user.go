@@ -24,7 +24,6 @@ type UserRepository interface {
 	IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error)
 	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
 	UpdatePasswordResetTime(ctx context.Context, userId uint64) error
-	GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error)
 	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
 	UpdatePasswordResetHash(ctx context.Context, userId uint64, passwordHash string) error
 	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
@@ -80,7 +79,8 @@ func (d *DataAccessService) UpdateUserEmail(ctx context.Context, userId uint64) 
 			email = email_change_to_value,
 			email_change_to_value = NULL,
 			email_confirmed = true,
-			email_confirmation_hash = NULL
+			email_confirmation_hash = NULL,
+			stripe_email_pending = true
 		WHERE id = $1
 	`, userId)
 
@@ -93,7 +93,8 @@ func (d *DataAccessService) UpdateUserPassword(ctx context.Context, userId uint6
 	_, err := d.userWriter.ExecContext(ctx, `
 		UPDATE users 
 		SET 
-			password = $1
+			password = $1,
+			password_reset_hash = NULL
 		WHERE id = $2
 	`, password, userId)
 
@@ -140,18 +141,6 @@ func (d *DataAccessService) IsPasswordResetAllowed(ctx context.Context, userId u
 func (d *DataAccessService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
 	// TODO @DATA-ACCESS
 	return d.dummy.UpdatePasswordResetTime(ctx, userId)
-}
-
-func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
-	var result string
-
-	err := d.userReader.GetContext(ctx, &result, `
-    	SELECT
-			email_confirmation_hash
-		FROM users
-		WHERE id = $1`, userId)
-
-	return result, err
 }
 
 func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
