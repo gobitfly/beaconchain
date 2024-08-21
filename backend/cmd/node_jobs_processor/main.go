@@ -17,8 +17,6 @@ import (
 
 func main() {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	metricsAddr := flag.String("metrics.address", "localhost:9090", "serve metrics on that addr")
-	metricsEnabled := flag.Bool("metrics.enabled", false, "enable serving metrics")
 	versionFlag := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 
@@ -72,15 +70,6 @@ func main() {
 
 	nrp := NewNodeJobsProcessor(utils.Config.NodeJobsProcessor.ClEndpoint, utils.Config.NodeJobsProcessor.ElEndpoint)
 	go nrp.Run()
-
-	if *metricsEnabled {
-		go func() {
-			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
-				log.Fatal(err, "error serving metrics", 0)
-			}
-		}()
-	}
 
 	utils.WaitForCtrlC()
 	log.Infof("exiting …")

@@ -28,8 +28,6 @@ import (
 **/
 func main() {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	metricsAddr := flag.String("metrics.address", "localhost:9090", "serve metrics on that addr")
-	metricsEnabled := flag.Bool("metrics.enabled", false, "enable serving metrics")
 
 	versionFlag := flag.Bool("version", false, "Show version and exit")
 	flag.Parse()
@@ -80,15 +78,6 @@ func main() {
 	}, "pgx", "postgres")
 	defer db.ReaderDb.Close()
 	defer db.WriterDb.Close()
-
-	if *metricsEnabled {
-		go func() {
-			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
-				log.Fatal(err, "error serving metrics", 0)
-			}
-		}()
-	}
 
 	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, "1", utils.Config.RedisCacheEndpoint)
 	if err != nil {

@@ -192,15 +192,6 @@ func main() {
 
 	go modules.StartAll(context)
 
-	if utils.Config.Metrics.Enabled {
-		go func() {
-			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
-				log.Fatal(err, "error serving metrics", 0)
-			}
-		}()
-	}
-
 	// Keep the program alive until Ctrl+C is pressed
 	utils.WaitForCtrlC()
 }

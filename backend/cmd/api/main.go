@@ -55,7 +55,7 @@ func main() {
 	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
 
-	if cfg.Metrics.Enabled {
+	if utils.Config.Metrics.Enabled {
 		router.Use(metrics.HttpMiddleware)
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
