@@ -44,12 +44,12 @@ func Run() {
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	wg := &sync.WaitGroup{}
@@ -194,15 +194,6 @@ func Run() {
 	}
 
 	go modules.StartAll(context)
-
-	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
-				log.Error(err, "error serving metrics", 0)
-			}
-		}(utils.Config.Metrics.Address)
-	}
 
 	// Keep the program alive until Ctrl+C is pressed
 	utils.WaitForCtrlC()

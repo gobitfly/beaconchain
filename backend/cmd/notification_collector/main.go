@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -54,12 +53,12 @@ func Run() {
 	}
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	if utils.Config.Pprof.Enabled {
@@ -160,27 +159,6 @@ func Run() {
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
 	defer db.BigtableClient.Close()
-
-	if utils.Config.Metrics.Enabled {
-		go metrics.MonitorDB(db.WriterDb)
-		DBInfo := []string{
-			cfg.WriterDatabase.Username,
-			cfg.WriterDatabase.Password,
-			cfg.WriterDatabase.Host,
-			cfg.WriterDatabase.Port,
-			cfg.WriterDatabase.Name}
-		DBStr := strings.Join(DBInfo, "-")
-		frontendDBInfo := []string{
-			cfg.Frontend.WriterDatabase.Username,
-			cfg.Frontend.WriterDatabase.Password,
-			cfg.Frontend.WriterDatabase.Host,
-			cfg.Frontend.WriterDatabase.Port,
-			cfg.Frontend.WriterDatabase.Name}
-		frontendDBStr := strings.Join(frontendDBInfo, "-")
-		if DBStr != frontendDBStr {
-			go metrics.MonitorDB(db.FrontendWriterDB)
-		}
-	}
 
 	log.Infof("database connection established")
 

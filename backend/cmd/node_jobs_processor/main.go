@@ -19,8 +19,6 @@ import (
 func Run() {
 	fs := flag.NewFlagSet("fs", flag.ExitOnError)
 	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
-	metricsAddr := fs.String("metrics.address", "localhost:9090", "serve metrics on that addr")
-	metricsEnabled := fs.Bool("metrics.enabled", false, "enable serving metrics")
 	versionFlag := fs.Bool("version", false, "Print version and exit")
 	_ = fs.Parse(os.Args[2:])
 
@@ -42,12 +40,12 @@ func Run() {
 		"chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
@@ -74,15 +72,6 @@ func Run() {
 
 	nrp := NewNodeJobsProcessor(utils.Config.NodeJobsProcessor.ClEndpoint, utils.Config.NodeJobsProcessor.ElEndpoint)
 	go nrp.Run()
-
-	if *metricsEnabled {
-		go func() {
-			log.InfoWithFields(log.Fields{"addr": *metricsAddr}, "Serving metrics")
-			if err := metrics.Serve(*metricsAddr); err != nil {
-				log.Fatal(err, "error serving metrics", 0)
-			}
-		}()
-	}
 
 	utils.WaitForCtrlC()
 	log.Infof("exiting …")

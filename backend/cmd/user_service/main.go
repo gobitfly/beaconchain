@@ -44,12 +44,12 @@ func Run() {
 	}
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	if utils.Config.Pprof.Enabled {
@@ -99,10 +99,6 @@ func Run() {
 
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
-
-	if utils.Config.Metrics.Enabled {
-		go metrics.MonitorDB(db.FrontendWriterDB)
-	}
 
 	log.Infof("database connection established")
 
