@@ -86,6 +86,7 @@ const (
 var (
 	errMsgParsingId    = errors.New("error parsing parameter 'dashboard_id'")
 	errBadRequest      = errors.New("bad request")
+	errInternalServer  = errors.New("internal server error")
 	errUnauthorized    = errors.New("unauthorized")
 	errForbidden       = errors.New("forbidden")
 	errConflict        = errors.New("conflict")
@@ -188,8 +189,7 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Error(err, "error reading request body", 0, nil)
-		return errors.New("can't read request body")
+		return newInternalServerErr("error reading request body")
 	}
 
 	// First check: Unmarshal into an empty interface to check JSON format
@@ -203,20 +203,17 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	sc := jsonschema.Reflect(data)
 	b, err := json.Marshal(sc)
 	if err != nil {
-		log.Error(err, "error marshalling schema", 0, nil)
-		return errors.New("can't marshal schema for validation")
+		return newInternalServerErr("error creating expected schema")
 	}
 	loader := gojsonschema.NewBytesLoader(b)
 	documentLoader := gojsonschema.NewBytesLoader(bodyBytes)
 	schema, err := gojsonschema.NewSchema(loader)
 	if err != nil {
-		log.Error(err, "error creating schema", 0, nil)
-		return errors.New("can't create expected format")
+		return newInternalServerErr("error creating schema")
 	}
 	result, err := schema.Validate(documentLoader)
 	if err != nil {
-		log.Error(err, "error validating json", 0, nil)
-		return errors.New("couldn't validate JSON request")
+		return newInternalServerErr("error validating schema")
 	}
 	isSchemaValid := result.Valid()
 	if !isSchemaValid {
@@ -225,8 +222,7 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 
 	// Unmarshal into the target struct, only log error if it's a valid JSON
 	if err := json.Unmarshal(bodyBytes, data); err != nil && isSchemaValid {
-		log.Error(err, "error decoding json into target structure", 0, nil)
-		return errors.New("couldn't decode JSON request into target structure")
+		return newInternalServerErr("error unmarshalling request body")
 	}
 
 	// Proceed with additional validation or processing as necessary
@@ -724,7 +720,7 @@ func isUserAdmin(user *types.UserInfo) bool {
 // --------------------------------------
 //   Response handling
 
-func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) {
+func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, response interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if response == nil {
 		w.WriteHeader(statusCode)
@@ -732,100 +728,111 @@ func writeResponse(w http.ResponseWriter, statusCode int, response interface{}) 
 	}
 	jsonData, err := json.Marshal(response)
 	if err != nil {
-		log.Error(err, "error encoding json data", 2, nil)
+		logApiError(r, fmt.Errorf("error encoding json data: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		response = types.ApiErrorResponse{
 			Error: "error encoding json data",
 		}
 		if err = json.NewEncoder(w).Encode(response); err != nil {
 			// there seems to be an error with the lib
-			log.Error(err, "error writing response", 0, nil)
+			logApiError(r, fmt.Errorf("error encoding error response after failed encoding: %w", err))
 		}
 		return
 	}
 	w.WriteHeader(statusCode)
 	if _, err = w.Write(jsonData); err != nil {
 		// already returned wrong status code to user, can't prevent that
-		log.Error(err, "error writing response", 0, nil)
+		logApiError(r, fmt.Errorf("error writing response data: %w", err))
 	}
 }
 
-func returnError(w http.ResponseWriter, code int, err error) {
+func returnError(w http.ResponseWriter, r *http.Request, code int, err error) {
 	response := types.ApiErrorResponse{
 		Error: err.Error(),
 	}
-	writeResponse(w, code, response)
+	writeResponse(w, r, code, response)
 }
 
-func returnOk(w http.ResponseWriter, data interface{}) {
-	writeResponse(w, http.StatusOK, data)
+func returnOk(w http.ResponseWriter, r *http.Request, data interface{}) {
+	writeResponse(w, r, http.StatusOK, data)
 }
 
-func returnCreated(w http.ResponseWriter, data interface{}) {
-	writeResponse(w, http.StatusCreated, data)
+func returnCreated(w http.ResponseWriter, r *http.Request, data interface{}) {
+	writeResponse(w, r, http.StatusCreated, data)
 }
 
-func returnNoContent(w http.ResponseWriter) {
-	writeResponse(w, http.StatusNoContent, nil)
+func returnNoContent(w http.ResponseWriter, r *http.Request) {
+	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
 // Errors
 
-func returnBadRequest(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusBadRequest, err)
+func returnBadRequest(w http.ResponseWriter, r *http.Request, err error) {
+	returnError(w, r, http.StatusBadRequest, err)
 }
 
-func returnUnauthorized(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusUnauthorized, err)
+func returnUnauthorized(w http.ResponseWriter, r *http.Request, err error) {
+	returnError(w, r, http.StatusUnauthorized, err)
 }
 
-func returnNotFound(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusNotFound, err)
+func returnNotFound(w http.ResponseWriter, r *http.Request, err error) {
+	returnError(w, r, http.StatusNotFound, err)
 }
 
-func returnConflict(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusConflict, err)
+func returnConflict(w http.ResponseWriter, r *http.Request, err error) {
+	returnError(w, r, http.StatusConflict, err)
 }
 
-func returnForbidden(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusForbidden, err)
+func returnForbidden(w http.ResponseWriter, r *http.Request, err error) {
+	returnError(w, r, http.StatusForbidden, err)
 }
 
-func returnTooManyRequests(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusTooManyRequests, err)
+func returnTooManyRequests(w http.ResponseWriter, r *http.Request, err error) {
+	returnError(w, r, http.StatusTooManyRequests, err)
 }
 
-func returnGone(w http.ResponseWriter, err error) {
-	returnError(w, http.StatusGone, err)
+func returnGone(w http.ResponseWriter, r *http.Request, err error) {
+	returnError(w, r, http.StatusGone, err)
 }
 
-func returnInternalServerError(w http.ResponseWriter, err error) {
-	log.Error(err, "internal server error", 2, nil)
+func logApiError(r *http.Request, err error) {
+	log.Error(err, "error handling request", 3, nil,
+		map[string]interface{}{
+			"path":        r.URL.Path,
+			"method":      r.Method,
+			"path_params": fmt.Sprintf("%v", mux.Vars(r)),
+			"query":       r.URL.RawQuery,
+		},
+	)
+}
+
+func returnInternalServerError(w http.ResponseWriter, r *http.Request, err error) {
+	logApiError(r, err)
 	// TODO: don't return the error message to the user in production
-	returnError(w, http.StatusInternalServerError, err)
+	returnError(w, r, http.StatusInternalServerError, err)
 }
 
-func handleErr(w http.ResponseWriter, err error) {
+func handleErr(w http.ResponseWriter, r *http.Request, err error) {
 	_, isValidationError := err.(validationError)
 	switch {
 	case isValidationError || errors.Is(err, errBadRequest):
-		returnBadRequest(w, err)
+		returnBadRequest(w, r, err)
 	case errors.Is(err, dataaccess.ErrNotFound):
-		returnNotFound(w, err)
+		returnNotFound(w, r, err)
 	case errors.Is(err, errUnauthorized):
-		returnUnauthorized(w, err)
+		returnUnauthorized(w, r, err)
 	case errors.Is(err, errForbidden):
-		returnForbidden(w, err)
+		returnForbidden(w, r, err)
 	case errors.Is(err, errConflict):
-		returnConflict(w, err)
+		returnConflict(w, r, err)
 	case errors.Is(err, services.ErrWaiting):
-		returnError(w, http.StatusServiceUnavailable, err)
+		returnError(w, r, http.StatusServiceUnavailable, err)
 	case errors.Is(err, errTooManyRequests):
-		returnTooManyRequests(w, err)
+		returnTooManyRequests(w, r, err)
 	case errors.Is(err, errGone):
-		returnGone(w, err)
+		returnGone(w, r, err)
 	default:
-		returnInternalServerError(w, err)
+		returnInternalServerError(w, r, err)
 	}
 }
 
@@ -840,6 +847,10 @@ func errWithMsg(err error, format string, args ...interface{}) error {
 //nolint:unparam
 func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
+}
+
+func newInternalServerErr(format string, args ...interface{}) error {
+	return errWithMsg(errInternalServer, format, args...)
 }
 
 //nolint:unparam
