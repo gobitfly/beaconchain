@@ -31,6 +31,8 @@ defineProps<{
   flex-direction: column;
   align-items: center;
   overflow-x: clip;
+  min-height: 100svh;
+  justify-content: space-between;
 }
 
 .content {

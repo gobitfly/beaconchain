@@ -26,7 +26,7 @@ if (exchangeRates.value.length === exchangeRateLengthOnTestNetworks) {
 </script>
 
 <template>
-  <div class="min-h-full">
+  <div>
     <BcDataWrapper>
       <NuxtLoadingIndicator color="var(--primary-color)" />
       <NuxtPage />
@@ -35,5 +35,3 @@ if (exchangeRates.value.length === exchangeRateLengthOnTestNetworks) {
     </BcDataWrapper>
   </div>
 </template>
-
-<style lang="scss"></style>
