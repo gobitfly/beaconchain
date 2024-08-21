@@ -189,8 +189,7 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	}
 
 	bodyBytes, err := io.ReadAll(r.Body)
-	const kilobyte = 1024
-	r.Body = io.NopCloser(io.LimitReader(bytes.NewReader(bodyBytes), 10*kilobyte)) // unconsume body for error logging, but limit body size to 10KB
+	r.Body = io.NopCloser(bytes.NewReader(bodyBytes)) // unconsume body for error logging
 	if err != nil {
 		return newInternalServerErr("error reading request body")
 	}
@@ -798,8 +797,10 @@ func returnGone(w http.ResponseWriter, r *http.Request, err error) {
 	returnError(w, r, http.StatusGone, err)
 }
 
+const maxBodySize = 10 * 1024
+
 func logApiError(r *http.Request, err error) {
-	body, _ := io.ReadAll(r.Body)
+	body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 	log.Error(err, "error handling request", 3, nil,
 		map[string]interface{}{
 			"endpoint": r.Method + " " + r.URL.Path,
