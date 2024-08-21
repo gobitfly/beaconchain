@@ -104,7 +104,7 @@ func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId
 	result := time.Time{}
 
 	var queryResult sql.NullTime
-	err := d.userWriter.GetContext(ctx, &queryResult, `
+	err := d.userReader.GetContext(ctx, &queryResult, `
     	SELECT
 			email_confirmation_ts
 		FROM users
@@ -145,7 +145,7 @@ func (d *DataAccessService) UpdatePasswordResetTime(ctx context.Context, userId 
 func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
 	var result string
 
-	err := d.userWriter.GetContext(ctx, &result, `
+	err := d.userReader.GetContext(ctx, &result, `
     	SELECT
 			email_confirmation_hash
 		FROM users
@@ -217,7 +217,7 @@ func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string
 func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
 	var result uint64
 
-	err := d.userWriter.GetContext(ctx, &result, `
+	err := d.userReader.GetContext(ctx, &result, `
     	SELECT
 			id
 		FROM users
