@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"log"
+	"log" //nolint:depguard
 	"net/http"
 	"net/http/pprof"
 	"strconv"
@@ -137,7 +137,7 @@ func Serve(addr string, servePprof bool) error {
 	}))
 
 	if servePprof {
-		log.Printf("serving pprof on %v/debug/pprof/", addr) // nolint:forbidigo
+		log.Printf("serving pprof on %v/debug/pprof/", addr)
 		router.HandleFunc("/debug/pprof/", pprof.Index)
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		router.HandleFunc("/debug/pprof/profile", pprof.Profile)
