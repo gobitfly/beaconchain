@@ -189,7 +189,8 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	}
 
 	bodyBytes, err := io.ReadAll(r.Body)
-	r.Body = io.NopCloser(io.LimitReader(bytes.NewReader(bodyBytes), 1024)) // unconsume body for error logging, but limit body size to 1KB
+	const kilobyte = 1024
+	r.Body = io.NopCloser(io.LimitReader(bytes.NewReader(bodyBytes), 10*kilobyte)) // unconsume body for error logging, but limit body size to 10KB
 	if err != nil {
 		return newInternalServerErr("error reading request body")
 	}
