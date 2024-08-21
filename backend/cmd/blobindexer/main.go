@@ -20,7 +20,7 @@ func Run() {
 	versionFlag := fs.Bool("version", false, "print version and exit")
 	fs.Parse(os.Args[2:])
 	if *versionFlag {
-		log.Infof(version.Version)
+		log.Info(version.Version)
 		return
 	}
 	utils.Config = &types.Config{}
