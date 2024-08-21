@@ -5,6 +5,7 @@ import type { ApiDataResponse, ChartHistorySeconds } from './common'
 //////////
 // source: user.go
 
+export const UserGroupAdmin = "ADMIN";
 export interface UserInfo {
   id: number /* uint64 */;
   email: string;
@@ -27,7 +28,20 @@ export interface EmailUpdate {
   current_email: string;
   pending_email: string;
 }
-export type InternalPutUserEmailResponse = ApiDataResponse<EmailUpdate>;
+export type InternalPostUserEmailResponse = ApiDataResponse<EmailUpdate>;
+export interface AdConfigurationUpdateData {
+  jquery_selector: string;
+  insert_mode: string;
+  refresh_interval: number /* uint64 */;
+  for_all_users: boolean;
+  banner_id: number /* uint64 */;
+  html_content: string;
+  enabled: boolean;
+}
+export interface AdConfigurationData {
+  key: string;
+  AdConfigurationUpdateData?: AdConfigurationUpdateData;
+}
 export type ProductCategory = string;
 export const ProductCategoryApi: ProductCategory = "api";
 export const ProductCategoryPremium: ProductCategory = "premium";
@@ -112,4 +126,11 @@ export interface StripeCreateCheckoutSession {
 }
 export interface StripeCustomerPortal {
   url: string;
+}
+export interface OAuthAppData {
+  ID: number /* uint64 */;
+  Owner: number /* uint64 */;
+  AppName: string;
+  RedirectURI: string;
+  Active: boolean;
 }

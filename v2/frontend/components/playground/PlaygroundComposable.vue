@@ -1,8 +1,16 @@
 <script setup lang="ts">
-
-const { value: isTrue, temp: isTrueTemp, bounce: bounceTrue, instant: instantTrue } = useDebounceValue<boolean>(false, 2000)
-const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = useDebounceValue<number>(1, 2000)
-
+const {
+  bounce: bounceTrue,
+  instant: instantTrue,
+  temp: isTrueTemp,
+  value: isTrue,
+} = useDebounceValue<boolean>(false, 2000)
+const {
+  bounce: bounceNum,
+  instant: instantNum,
+  temp: numTemp,
+  value: num,
+} = useDebounceValue<number>(1, 2000)
 </script>
 
 <template>
@@ -28,19 +36,19 @@ const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = us
       </div>
       <div class="element_container">
         Num: {{ num }} Temp: {{ numTemp }}
-        <Button @click="bounceNum(numTemp+1)">
+        <Button @click="bounceNum(numTemp + 1)">
           Add
         </Button>
-        <Button @click="bounceNum(numTemp+1, false, true)">
+        <Button @click="bounceNum(numTemp + 1, false, true)">
           Add endles
         </Button>
-        <Button @click="bounceNum(numTemp+1, true)">
+        <Button @click="bounceNum(numTemp + 1, true)">
           Add if no timer
         </Button>
-        <Button @click="bounceNum(numTemp+1, true, true)">
+        <Button @click="bounceNum(numTemp + 1, true, true)">
           Add if no timer endles
         </Button>
-        <Button @click="instantNum(numTemp+1)">
+        <Button @click="instantNum(numTemp + 1)">
           Instant Toggle
         </Button>
       </div>

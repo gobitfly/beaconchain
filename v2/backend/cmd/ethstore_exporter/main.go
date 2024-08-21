@@ -8,6 +8,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -46,6 +47,15 @@ func main() {
 	utils.Config = cfg
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+
+	if utils.Config.Metrics.Enabled {
+		go func(addr string) {
+			log.Infof("serving metrics on %v", addr)
+			if err := metrics.Serve(addr); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}(utils.Config.Metrics.Address)
+	}
 
 	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,

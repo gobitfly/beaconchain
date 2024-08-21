@@ -193,8 +193,8 @@
         "validators": [1, 213, 1245, 453, 345, 23]
       },
       "attestation_count": {
-          "success": 0,
-          "failed": 32
+        "success": 0,
+        "failed": 32
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,
@@ -275,8 +275,8 @@
         "validators": [1, 213, 1245, 453, 345, 23]
       },
       "attestation_count": {
-          "success": 5111,
-          "failed": 3223
+        "success": 5111,
+        "failed": 3223
       },
       "attestation_efficiency": 87.1234412,
       "attestation_avg_incl_dist": 12,

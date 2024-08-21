@@ -7,21 +7,24 @@ import { getCSRFHeader } from '~/utils/fetch'
 **/
 
 const csrfStore = defineStore('csrf_store', () => {
-  const header = ref<[string, string] | undefined | null>()
+  const header = ref<[string, string] | null | undefined>()
   return { header }
 })
 
-export function useCsrfStore () {
+export function useCsrfStore() {
   const { header } = storeToRefs(csrfStore())
 
   const csrfHeader = computed(() => header.value)
 
-  function setCsrfHeader (headers: Headers) {
+  function setCsrfHeader(headers: Headers) {
     const h = getCSRFHeader(headers)
     if (h) {
       header.value = h
     }
   }
 
-  return { csrfHeader, setCsrfHeader }
+  return {
+    csrfHeader,
+    setCsrfHeader,
+  }
 }

@@ -2,35 +2,36 @@
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
-  faArrowUp,
   faArrowDown,
-  faArrowsLeftRight
+  faArrowsLeftRight,
+  faArrowUp,
 } from '@fortawesome/pro-solid-svg-icons'
 import { type CompareResult } from '~/types/value'
 
 interface Props {
-  percent?: number
-  base?: number
-  value?: number
-  comparePercent?: number // if set it adds the compare sign in front and colors the values accordingly
-  hideEmptyValue?: boolean
-  precision?: number
-  fixed?: number
-  fullOnEmptyBase?: boolean
-  addPositiveSign?: boolean
-  colorBreakPoint?: number // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
+  addPositiveSign?: boolean,
+  base?: number,
+  // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
+  colorBreakPoint?: number,
+  comparePercent?: number, // if set it adds the compare sign in front and colors the values accordingly
+  fixed?: number,
+  fullOnEmptyBase?: boolean,
+  hideEmptyValue?: boolean,
+  percent?: number,
+  precision?: number,
+  value?: number,
 }
 
 const props = defineProps<Props>()
 
 const data = computed(() => {
-  let label: string | null = null
+  let label: null | string = null
   let compareResult: CompareResult | null = null
   let className = ''
   if (props.base === 0 && props.fullOnEmptyBase) {
     return {
+      className: 'text-positive',
       label: '100%',
-      className: 'text-positive'
     }
   }
   let leadingIcon: IconDefinition | undefined
@@ -38,45 +39,76 @@ const data = computed(() => {
     if (!props.hideEmptyValue) {
       label = '0%'
     }
-    return { label, className }
+    return {
+      className,
+      label,
+    }
   }
   const percent = props.percent ?? calculatePercent(props.value, props.base)
-  const config = { precision: props.precision ?? 2, fixed: props.fixed ?? 2, addPositiveSign: props.addPositiveSign }
+  const config = {
+    addPositiveSign: props.addPositiveSign,
+    fixed: props.fixed ?? 2,
+    precision: props.precision ?? 2,
+  }
   label = formatPercent(percent, config)
   if (props.comparePercent !== undefined) {
     if (Math.abs(props.comparePercent - percent) <= 0.5) {
       className = 'text-equal'
       leadingIcon = faArrowsLeftRight
       compareResult = 'equal'
-    } else if (percent > props.comparePercent) {
+    }
+    else if (percent > props.comparePercent) {
       className = 'text-positive'
       leadingIcon = faArrowUp
       compareResult = 'higher'
-    } else {
+    }
+    else {
       className = 'text-negative'
       leadingIcon = faArrowDown
       compareResult = 'lower'
     }
-  } else if (props.colorBreakPoint) {
-    if ((props.base === 0 && percent === 0) || percent >= props.colorBreakPoint) {
+  }
+  else if (props.colorBreakPoint) {
+    if (
+      (props.base === 0 && percent === 0)
+      || percent >= props.colorBreakPoint
+    ) {
       className = 'text-positive'
-    } else {
+    }
+    else {
       className = 'text-negative'
     }
   }
-  return { label, className, leadingIcon, compareResult }
+  return {
+    className,
+    compareResult,
+    label,
+    leadingIcon,
+  }
 })
-
 </script>
+
 <template>
-  <span :class="data.className" class="format-percent">
-    <BcTooltip v-if="data.leadingIcon" class="direction-icon">
+  <span
+    :class="data.className"
+    class="format-percent"
+  >
+    <BcTooltip
+      v-if="data.leadingIcon"
+      class="direction-icon"
+    >
       <template #tooltip>
-        <slot name="leading-tooltip" v-bind="{compare: data.compareResult}" />
+        <slot
+          name="leading-tooltip"
+          v-bind="{ compare: data.compareResult }"
+        />
       </template>
       <FontAwesomeIcon :icon="data.leadingIcon" />
     </BcTooltip>
-    <BcFormatNumber v-if="data.label" :text="data.label" />
+    <BcFormatNumber
+      v-if="data.label"
+      :text="data.label"
+    />
   </span>
 </template>
 
