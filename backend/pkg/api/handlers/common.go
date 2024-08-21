@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -188,6 +189,7 @@ func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	}
 
 	bodyBytes, err := io.ReadAll(r.Body)
+	r.Body = io.NopCloser(io.LimitReader(bytes.NewReader(bodyBytes), 1<<20)) // set body for error logging, but limit body size to 1MB
 	if err != nil {
 		return newInternalServerErr("error reading request body")
 	}
@@ -796,12 +798,12 @@ func returnGone(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func logApiError(r *http.Request, err error) {
+	body, _ := io.ReadAll(r.Body)
 	log.Error(err, "error handling request", 3, nil,
 		map[string]interface{}{
-			"path":        r.URL.Path,
-			"method":      r.Method,
-			"path_params": fmt.Sprintf("%v", mux.Vars(r)),
-			"query":       r.URL.RawQuery,
+			"endpoint": r.Method + " " + r.URL.Path,
+			"query":    r.URL.RawQuery,
+			"body":     string(body),
 		},
 	)
 }
