@@ -40,12 +40,12 @@ func main() {
 		"chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
@@ -75,8 +75,8 @@ func main() {
 
 	if *metricsEnabled {
 		go func() {
-			log.InfoWithFields(log.Fields{"addr": *metricsAddr}, "Serving metrics")
-			if err := metrics.Serve(*metricsAddr); err != nil {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()
