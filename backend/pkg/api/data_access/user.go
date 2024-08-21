@@ -10,6 +10,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 type UserRepository interface {
@@ -19,15 +20,20 @@ type UserRepository interface {
 	UpdateUserEmail(ctx context.Context, userId uint64) error
 	UpdateUserPassword(ctx context.Context, userId uint64, password string) error
 	GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error)
+	GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error)
+	IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error)
 	UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error
+	UpdatePasswordResetTime(ctx context.Context, userId uint64) error
 	GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error)
 	UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error
+	UpdatePasswordResetHash(ctx context.Context, userId uint64, passwordHash string) error
 	GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error)
 	GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error)
 	GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error)
+	GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error)
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
-	GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error)
+	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -111,6 +117,11 @@ func (d *DataAccessService) GetEmailConfirmationTime(ctx context.Context, userId
 	return result, err
 }
 
+func (d *DataAccessService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetPasswordResetTime(ctx, userId)
+}
+
 func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
 	_, err := d.userWriter.ExecContext(ctx, `
 		UPDATE users 
@@ -120,6 +131,15 @@ func (d *DataAccessService) UpdateEmailConfirmationTime(ctx context.Context, use
 	`, userId)
 
 	return err
+}
+
+func (d *DataAccessService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
+	return d.dummy.IsPasswordResetAllowed(ctx, userId)
+}
+
+func (d *DataAccessService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
+	// TODO @DATA-ACCESS
+	return d.dummy.UpdatePasswordResetTime(ctx, userId)
 }
 
 func (d *DataAccessService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
@@ -144,6 +164,12 @@ func (d *DataAccessService) UpdateEmailConfirmationHash(ctx context.Context, use
 	`, confirmationHash, email, userId)
 
 	return err
+}
+
+func (d *DataAccessService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
+	// TODO @DATA-ACCESS
+	// this method refers to updating the `password_reset_hash` in the db
+	return d.dummy.UpdatePasswordResetHash(ctx, userId, confirmationHash)
 }
 
 func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
@@ -181,7 +207,7 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId ui
 
 func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
 	var userId uint64
-	err := d.userReader.Get(&userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
+	err := d.userReader.GetContext(ctx, &userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
 	}
@@ -198,6 +224,11 @@ func (d *DataAccessService) GetUserIdByConfirmationHash(ctx context.Context, has
 		WHERE email_confirmation_hash = $1`, hash)
 
 	return result, err
+}
+
+func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
+	// TODO @DATA-ACCESS
+	return d.dummy.GetUserIdByResetHash(ctx, hash)
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
@@ -223,12 +254,20 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		return nil, fmt.Errorf("error getting productSummary: %w", err)
 	}
 
-	err = d.userReader.Get(&userInfo.Email, `SELECT email FROM users WHERE id = $1`, userId)
+	result := struct {
+		Email     string `db:"email"`
+		UserGroup string `db:"user_group"`
+	}{}
+	err = d.userReader.GetContext(ctx, &result, `SELECT email, COALESCE(user_group, '') as user_group FROM users WHERE id = $1`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting userEmail: %w", err)
 	}
+	userInfo.Email = result.Email
+	userInfo.UserGroup = result.UserGroup
 
-	err = d.userReader.Select(&userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
+	userInfo.Email = utils.CensorEmail(userInfo.Email)
+
+	err = d.userReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
 	}
@@ -239,11 +278,11 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		Start     time.Time `db:"start"`
 		End       time.Time `db:"end"`
 	}{}
-	err = d.userReader.Get(&premiumProduct, `
-		SELECT 
-			COALESCE(uas.product_id, '') AS product_id, 
+	err = d.userReader.GetContext(ctx, &premiumProduct, `
+		SELECT
+			COALESCE(uas.product_id, '') AS product_id,
 			COALESCE(uas.store, '') AS store,
-			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start, 
+			COALESCE(to_timestamp((uss.payload->>'current_period_start')::bigint),uas.created_at) AS start,
 			COALESCE(to_timestamp((uss.payload->>'current_period_end')::bigint),uas.expires_at) AS end
 		FROM users_app_subscriptions uas
 		LEFT JOIN users_stripe_subscriptions uss ON uss.subscription_id = uas.subscription_id
@@ -323,13 +362,13 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		End      time.Time `db:"end"`
 		Quantity int       `db:"quantity"`
 	}{}
-	err = d.userReader.Select(&premiumAddons, `
-		SELECT 
+	err = d.userReader.SelectContext(ctx, &premiumAddons, `
+		SELECT
 			price_id,
-			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start, 
+			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start,
 			to_timestamp((uss.payload->>'current_period_end')::bigint) AS end,
 			COALESCE((uss.payload->>'quantity')::int,1) AS quantity
-		FROM users_stripe_subscriptions uss		
+		FROM users_stripe_subscriptions uss
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
@@ -609,19 +648,24 @@ func (d *DataAccessService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPer
 func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
 	result := &t.UserDashboardsData{}
 
-	dbReturn := []struct {
-		Id           uint64         `db:"id"`
-		Name         string         `db:"name"`
-		PublicId     sql.NullString `db:"public_id"`
-		PublicName   sql.NullString `db:"public_name"`
-		SharedGroups sql.NullBool   `db:"shared_groups"`
-	}{}
+	wg := errgroup.Group{}
 
-	// Get the validator dashboards including the public ones
-	err := d.alloyReader.Select(&dbReturn, `
-		SELECT 
+	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
+	wg.Go(func() error {
+		dbReturn := []struct {
+			Id           uint64         `db:"id"`
+			Name         string         `db:"name"`
+			IsArchived   sql.NullString `db:"is_archived"`
+			PublicId     sql.NullString `db:"public_id"`
+			PublicName   sql.NullString `db:"public_name"`
+			SharedGroups sql.NullBool   `db:"shared_groups"`
+		}{}
+
+		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
 			uvd.id,
 			uvd.name,
+			uvd.is_archived,
 			uvds.public_id,
 			uvds.name AS public_name,
 			uvds.shared_groups
@@ -629,36 +673,81 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
 		WHERE uvd.user_id = $1
 	`, userId)
+		if err != nil {
+			return err
+		}
+
+		for _, row := range dbReturn {
+			if _, ok := validatorDashboardMap[row.Id]; !ok {
+				validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
+					Id:             row.Id,
+					Name:           row.Name,
+					PublicIds:      []t.VDBPublicId{},
+					IsArchived:     row.IsArchived.Valid,
+					ArchivedReason: row.IsArchived.String,
+				}
+			}
+			if row.PublicId.Valid {
+				publicId := t.VDBPublicId{}
+				publicId.PublicId = row.PublicId.String
+				publicId.Name = row.PublicName.String
+				publicId.ShareSettings.ShareGroups = row.SharedGroups.Bool
+
+				validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, publicId)
+			}
+		}
+
+		return nil
+	})
+
+	type DashboardCount struct {
+		Id             uint64 `db:"id"`
+		GroupCount     uint64 `db:"group_count"`
+		ValidatorCount uint64 `db:"validator_count"`
+	}
+
+	validatorDashboardCountMap := make(map[uint64]DashboardCount, 0)
+	wg.Go(func() error {
+		dbReturn := []DashboardCount{}
+
+		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
+			uvd.id,
+			COUNT(DISTINCT(uvdg.id)) AS group_count,
+			COUNT(DISTINCT(uvdv.validator_index)) AS validator_count
+		FROM users_val_dashboards uvd
+		LEFT JOIN users_val_dashboards_groups uvdg ON uvd.id = uvdg.dashboard_id
+		LEFT JOIN users_val_dashboards_validators uvdv ON uvd.id = uvdv.dashboard_id
+		WHERE uvd.user_id = $1
+		GROUP BY uvd.id
+	`, userId)
+		if err != nil {
+			return err
+		}
+
+		for _, row := range dbReturn {
+			validatorDashboardCountMap[row.Id] = row
+		}
+
+		return nil
+	})
+
+	err := wg.Wait()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
 	}
 
 	// Fill the result
-	validatorDashboardMap := make(map[uint64]*t.ValidatorDashboard, 0)
-	for _, row := range dbReturn {
-		if _, ok := validatorDashboardMap[row.Id]; !ok {
-			validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
-				Id:        row.Id,
-				Name:      row.Name,
-				PublicIds: []t.VDBPublicId{},
-			}
-		}
-		if row.PublicId.Valid {
-			result := t.VDBPublicId{}
-			result.PublicId = row.PublicId.String
-			result.Name = row.PublicName.String
-			result.ShareSettings.ShareGroups = row.SharedGroups.Bool
-
-			validatorDashboardMap[row.Id].PublicIds = append(validatorDashboardMap[row.Id].PublicIds, result)
-		}
-	}
 	for _, validatorDashboard := range validatorDashboardMap {
+		validatorDashboard.GroupCount = validatorDashboardCountMap[validatorDashboard.Id].GroupCount
+		validatorDashboard.ValidatorCount = validatorDashboardCountMap[validatorDashboard.Id].ValidatorCount
+
 		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
 	}
 
 	// Get the account dashboards
-	err = d.alloyReader.Select(&result.AccountDashboards, `
-		SELECT 
+	err = d.alloyReader.SelectContext(ctx, &result.AccountDashboards, `
+		SELECT
 			id,
 			name
 		FROM users_acc_dashboards
@@ -671,11 +760,13 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	return result, nil
 }
 
-func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64) (uint64, error) {
+// return number of active / archived dashboards
+func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.Get(&count, `
+	err := d.alloyReader.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
-		WHERE user_id = $1
-	`, userId)
+		WHERE user_id = $1 AND (($2 AND is_archived IS NULL) OR (NOT $2 AND is_archived IS NOT NULL))
+	`, userId, active)
+
 	return count, err
 }

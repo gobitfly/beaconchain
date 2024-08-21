@@ -1,12 +1,21 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { Cursor, TableQueryParams } from '~/types/datatable'
+import type {
+  Cursor, TableQueryParams,
+} from '~/types/datatable'
 
-export function useTableQuery (initialQuery?: TableQueryParams, initialPageSize = 10) {
+export function useTableQuery(
+  initialQuery?: TableQueryParams,
+  initialPageSize = 10,
+) {
   const cursor = ref<Cursor>()
   const pageSize = ref<number>(initialPageSize)
   const storedQuery = ref<TableQueryParams | undefined>()
 
-  const { value: query, temp: pendingQuery, bounce: setQuery } = useDebounceValue<TableQueryParams | undefined>(initialQuery, 500)
+  const {
+    bounce: setQuery,
+    temp: pendingQuery,
+    value: query,
+  } = useDebounceValue<TableQueryParams | undefined>(initialQuery, 500)
 
   const onSort = (sort: DataTableSortEvent) => {
     setQuery(setQuerySort(sort, pendingQuery.value))
@@ -34,5 +43,16 @@ export function useTableQuery (initialQuery?: TableQueryParams, initialPageSize 
     return JSON.stringify(storedQuery.value) === JSON.stringify(q)
   }
 
-  return { query, pendingQuery, cursor, pageSize, onSort, setCursor, setPageSize, setSearch, setStoredQuery, isStoredQuery }
+  return {
+    cursor,
+    isStoredQuery,
+    onSort,
+    pageSize,
+    pendingQuery,
+    query,
+    setCursor,
+    setPageSize,
+    setSearch,
+    setStoredQuery,
+  }
 }

@@ -1,45 +1,107 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import { type SummaryDetailsEfficiencyCombinedProp, type SummaryRow, type SummaryTableVisibility, type SummaryTimeFrame } from '~/types/dashboard/summary'
+import {
+  type SummaryDetailsEfficiencyCombinedProp,
+  type SummaryRow,
+  type SummaryTableVisibility,
+  type SummaryTimeFrame,
+} from '~/types/dashboard/summary'
 
 interface Props {
-  row: VDBSummaryTableRow
-  timeFrame: SummaryTimeFrame
   absolute: boolean,
-  tableVisibility: SummaryTableVisibility
+  row: VDBSummaryTableRow,
+  tableVisibility: SummaryTableVisibility,
+  timeFrame: SummaryTimeFrame,
 }
 const props = defineProps<Props>()
 
 const { dashboardKey } = useDashboardKey()
 
-const { t: $t } = useI18n()
-const { details: summary, getDetails } = useValidatorDashboardSummaryDetailsStore(dashboardKey.value, props.row.group_id)
+const { t: $t } = useTranslation()
+const {
+  details: summary, getDetails,
+}
+  = useValidatorDashboardSummaryDetailsStore(
+    dashboardKey.value,
+    props.row.group_id,
+  )
 
-watch(() => props.timeFrame, () => {
-  getDetails(props.timeFrame)
-}, { deep: true, immediate: true })
+watch(
+  () => props.timeFrame,
+  () => {
+    getDetails(props.timeFrame)
+  },
+  {
+    deep: true,
+    immediate: true,
+  },
+)
+
+type CombinedPropOrUndefined = SummaryDetailsEfficiencyCombinedProp | undefined
 
 const data = computed<SummaryRow[][]>(() => {
-  const list: SummaryRow[][] = [[], [], []]
+  const list: SummaryRow[][] = [
+    [],
+    [],
+    [],
+  ]
 
-  const addToList = (index: number, prop?: SummaryDetailsEfficiencyCombinedProp, titleKey?: string) => {
-    const title = $t(`dashboard.validator.summary.row.${prop || titleKey}`)
-    const row = { title, prop }
+  const addToList = (
+    index: number,
+    prop?: SummaryDetailsEfficiencyCombinedProp,
+  ) => {
+    if (!prop) {
+      return
+    }
+    const title = $t(`dashboard.validator.summary.row.${prop}`)
+    const row = {
+      prop,
+      title,
+    }
     list[index].push(row)
   }
 
-  const addPropsTolist = (index: number, props: SummaryDetailsEfficiencyCombinedProp[]) => {
+  const addPropsTolist = (
+    index: number,
+    props: CombinedPropOrUndefined[],
+  ) => {
     props.forEach(p => addToList(index, p))
   }
 
-  const rewardCols: SummaryDetailsEfficiencyCombinedProp[] = ['reward', 'missed_rewards']
-  let addCols: SummaryDetailsEfficiencyCombinedProp[] = props.tableVisibility.attestations ? [] : rewardCols
-  addPropsTolist(0, ['efficiency', ...addCols, 'attestations', 'attestations_head', 'attestations_source', 'attestations_target', 'attestation_efficiency', 'attestation_avg_incl_dist'])
+  const rewardCols: CombinedPropOrUndefined[] = [
+    (!props.tableVisibility.reward ? 'reward' : undefined),
+    'missed_rewards',
+  ]
+  let addCols: CombinedPropOrUndefined[] = props.tableVisibility
+    .attestations
+    ? []
+    : rewardCols
+  addPropsTolist(0, [
+    (!props.tableVisibility.efficiency ? 'efficiency' : undefined),
+    ...addCols,
+    'attestations',
+    'attestations_source',
+    'attestations_target',
+    'attestations_head',
+    'attestation_efficiency',
+    'attestation_avg_incl_dist',
+  ])
 
-  addPropsTolist(1, ['sync', 'validators_sync', 'proposals', 'validators_proposal', 'slashings', 'validators_slashings'])
+  addPropsTolist(1, [
+    'sync',
+    'validators_sync',
+    'proposals',
+    'validators_proposal',
+    'slashings',
+    'validators_slashings',
+  ])
 
   addCols = !props.tableVisibility.attestations ? [] : rewardCols
-  addPropsTolist(2, ['apr', 'luck', ...addCols])
+  addPropsTolist(2, [
+    'apr',
+    'luck',
+    ...addCols,
+  ])
 
   return list
 })
@@ -48,24 +110,39 @@ const rowClass = (data: SummaryRow) => {
   if (!data.prop) {
     return 'bold' // headline without prop
   }
-  const classNames: Partial<Record<SummaryDetailsEfficiencyCombinedProp, string>> = {
-    efficiency: 'bold',
-    attestations: 'bold',
-    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
-    proposals: 'bold spacing-top',
-    slashings: 'bold spacing-top',
+  const classNames: Partial<
+    Record<SummaryDetailsEfficiencyCombinedProp, string>
+  > = {
     apr: props.tableVisibility.attestations ? '' : 'spacing-top',
+    attestations: 'bold',
+    attestations_head: 'spacing-top',
+    efficiency: 'bold',
     luck: 'spacing-top',
-    attestations_head: 'spacing-top'
+    proposals: 'bold spacing-top',
+    reward: 'bold',
+    slashings: 'bold spacing-top',
+    sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
   }
   return classNames[data.prop]
 }
-
 </script>
+
 <template>
-  <div v-if="summary" class="details-container">
-    <div v-for="(list, index) in data" :key="index" class="group">
-      <div v-for="(prop, pIndex) in list" :key="pIndex" :class="rowClass(prop)" class="row">
+  <div
+    v-if="summary"
+    class="details-container"
+  >
+    <div
+      v-for="(list, index) in data"
+      :key="index"
+      class="group"
+    >
+      <div
+        v-for="(prop, pIndex) in list"
+        :key="pIndex"
+        :class="rowClass(prop)"
+        class="row"
+      >
         <div class="label">
           {{ prop.title }}
         </div>
@@ -73,9 +150,9 @@ const rowClass = (data: SummaryRow) => {
           v-if="prop.prop"
           class="value"
           :data="summary"
-          :absolute="absolute"
+          :absolute
           :property="prop.prop"
-          :time-frame="timeFrame"
+          :time-frame
           :row="props.row"
           :in-detail-view="true"
         />
@@ -83,12 +160,16 @@ const rowClass = (data: SummaryRow) => {
     </div>
   </div>
   <div v-else>
-    <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
+    <BcLoadingSpinner
+      class="spinner"
+      :loading="true"
+      alignment="center"
+    />
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .details-container {
   display: flex;
@@ -115,7 +196,7 @@ const rowClass = (data: SummaryRow) => {
       border-left: var(--container-border);
     }
 
-    .spacing-top{
+    .spacing-top {
       margin-top: var(--padding-small);
     }
 
@@ -134,7 +215,7 @@ const rowClass = (data: SummaryRow) => {
     }
 
     @media (max-width: 729px) {
-      width: 100%;
+      width: 340px;
 
       &:not(:first-child) {
         border-left: unset;
@@ -154,7 +235,6 @@ const rowClass = (data: SummaryRow) => {
         @media (max-width: 729px) {
           width: 151px;
         }
-
       }
 
       .value {

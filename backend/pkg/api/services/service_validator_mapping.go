@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -30,16 +31,24 @@ var _cachedValidatorMapping = new(types.RedisCachedValidatorsMapping)
 
 var currentMappingMutex = &sync.RWMutex{}
 
+var lastEpochUpdate = uint64(0)
+
 func (s *Services) startIndexMappingService() {
 	for {
 		startTime := time.Now()
-		err := s.updateValidatorMapping() // TODO: only update data if something has changed (new head epoch)
-		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-		if err != nil {
-			log.Error(err, "error updating validator mapping", 0)
-			delay = 10 * time.Second
-		} else {
-			log.Infof("=== validator mapping updated in %s", time.Since(startTime))
+		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
+
+		latestEpoch := cache.LatestEpoch.Get()
+		if currentValidatorMapping == nil || latestEpoch != lastEpochUpdate {
+			err := s.updateValidatorMapping()
+			if err != nil {
+				log.Error(err, "error updating validator mapping", 0)
+				delay = 10 * time.Second
+			} else {
+				log.Infof("=== validator mapping updated in %s", time.Since(startTime))
+			}
+
+			lastEpochUpdate = latestEpoch
 		}
 		utils.ConstantTimeDelay(startTime, delay)
 	}
@@ -150,7 +159,7 @@ func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, func(), erro
 	currentMappingMutex.RLock()
 
 	if currentValidatorMapping == nil {
-		return nil, currentMappingMutex.RUnlock, errors.New("waiting for validator mapping to be initialized")
+		return nil, currentMappingMutex.RUnlock, fmt.Errorf("%w: validator mapping", ErrWaiting)
 	}
 
 	return currentValidatorMapping, currentMappingMutex.RUnlock, nil

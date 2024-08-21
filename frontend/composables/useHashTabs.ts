@@ -1,10 +1,13 @@
 import type { HashTabs } from '~/types/hashTabs'
 
-export function useHashTabs (tabs: HashTabs) {
+export function useHashTabs(tabs: HashTabs, defaultTab: string) {
   const activeIndex = ref(-1)
   const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
+    if (tabs[defaultTab] && !tabs[defaultTab].disabled) {
+      return tabs[defaultTab].index
+    }
     const list = Object.values(tabs)
     for (let i = 0; i < list.length; i++) {
       const tab = list[i]
@@ -17,7 +20,10 @@ export function useHashTabs (tabs: HashTabs) {
   const findHashForIndex = (index: number) => {
     const entries = Object.entries(tabs)
     for (let i = 0; i < entries.length; i++) {
-      const [hash, tab] = entries[i]
+      const [
+        hash,
+        tab,
+      ] = entries[i]
       if (!tab.disabled && tab.index === index) {
         return `#${hash}`
       }
@@ -27,30 +33,40 @@ export function useHashTabs (tabs: HashTabs) {
 
   onMounted(() => {
     const hash = initialHash?.replace('#', '')
-    activeIndex.value = hash && tabs[hash] && !tabs[hash].disabled ? tabs[hash].index : findFirstValidIndex()
+    activeIndex.value
+      = hash && tabs[hash] && !tabs[hash].disabled
+        ? tabs[hash].index
+        : findFirstValidIndex()
   })
 
   const updateHash = (index: number) => {
-    if (process.server) {
+    if (isServerSide) {
       return
     }
     window.location.hash = findHashForIndex(index)
   }
 
-  watch(activeIndex, (index) => {
-    if (process.server && index < 0) {
-      return
-    }
-    updateHash(index)
-  }, { immediate: true })
+  watch(
+    activeIndex,
+    (index) => {
+      if (isServerSide && index < 0) {
+        return
+      }
+      updateHash(index)
+    },
+    { immediate: true },
+  )
 
   const setActiveIndex = (index: number) => {
-    if (process.server) {
+    if (isServerSide) {
       return
     }
     activeIndex.value = index
     updateHash(index)
   }
 
-  return { activeIndex, setActiveIndex }
+  return {
+    activeIndex,
+    setActiveIndex,
+  }
 }

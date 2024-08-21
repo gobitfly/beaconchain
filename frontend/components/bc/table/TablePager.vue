@@ -3,42 +3,69 @@ import type { Paging } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
-  cursor: Cursor
-  pageSize: number
-  paging?: Paging
-  stepperOnly?: boolean
+  cursor: Cursor,
+  pageSize: number,
+  paging?: Paging,
+  stepperOnly?: boolean,
 }
 const props = defineProps<Props>()
 
-const emit = defineEmits<{(e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void }>()
+const emit = defineEmits<{
+  (e: 'setCursor', value: Cursor): void,
+  (e: 'setPageSize', value: number): void,
+}>()
 
-const pageSizes = [5, 10, 25, 50, 100]
+const pageSizes = [
+  5,
+  10,
+  25,
+  50,
+  100,
+]
 
-const currentOffset = computed<number>(() => typeof props.cursor === 'number' ? props.cursor : 0)
+const currentOffset = computed<number>(() =>
+  typeof props.cursor === 'number' ? props.cursor : 0,
+)
 
 const data = computed(() => {
   if (!props.paging) {
-    return {
-      mode: 'waiting'
-    }
+    return { mode: 'waiting' }
   }
   if (props.paging.total_count === undefined) {
     return {
       mode: 'cursor',
+      next_cursor: props.paging.next_cursor,
       prev_cursor: props.paging.prev_cursor,
-      next_cursor: props.paging.next_cursor
     }
   }
-  const page = props.paging.total_count > 0 ? 1 + Math.floor(currentOffset.value / props.pageSize) : 0
+  const page
+    = props.paging.total_count > 0
+      ? 1 + Math.floor(currentOffset.value / props.pageSize)
+      : 0
   const from = props.paging.total_count > 0 ? currentOffset.value + 1 : 0
-  const to = Math.min(currentOffset.value + props.pageSize, props.paging.total_count)
+  const to = Math.min(
+    currentOffset.value + props.pageSize,
+    props.paging.total_count,
+  )
   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
-  return { mode: 'offset', page, from, to, lastPage }
+  return {
+    from,
+    lastPage,
+    mode: 'offset',
+    page,
+    to,
+  }
 })
 
 const next = () => {
-  emit('setCursor', Math.min(currentOffset.value + props.pageSize, ((data.value.lastPage ?? 1) - 1) * props.pageSize))
+  emit(
+    'setCursor',
+    Math.min(
+      currentOffset.value + props.pageSize,
+      ((data.value.lastPage ?? 1) - 1) * props.pageSize,
+    ),
+  )
 }
 
 const prev = () => {
@@ -65,48 +92,85 @@ const setPageSize = (size: number) => {
 }
 
 // in case the totalCount decreased
-watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match) => {
-  if (data.value.lastPage !== undefined && match) {
-    last()
-  }
-})
-
+watch(
+  () => data.value.lastPage && data.value.lastPage < data.value.page,
+  (match) => {
+    if (data.value.lastPage !== undefined && match) {
+      last()
+    }
+  },
+)
 </script>
+
 <template>
   <div class="bc-pageinator">
     <div class="pager">
       <template v-if="data.mode === 'offset'">
-        <div class="item button" :disabled="!currentOffset" @click="first">
-          {{ $t('table.first') }}
+        <div
+          class="item button"
+          :disabled="!currentOffset"
+          @click="first"
+        >
+          {{ $t("table.first") }}
         </div>
-        <div class="item button" :disabled="!currentOffset" @click="prev">
-          <IconChevron class="toggle" direction="left" />
+        <div
+          class="item button"
+          :disabled="!currentOffset"
+          @click="prev"
+        >
+          <IconChevron
+            class="toggle"
+            direction="left"
+          />
         </div>
         <div class="item current-page">
-          {{ data.page }} {{ $t('table.of') }} {{ data.lastPage }}
+          {{ data.page }} {{ $t("table.of") }} {{ data.lastPage }}
         </div>
-        <div class="item button" :disabled="data.page! >= data.lastPage!" @click="next">
-          <IconChevron class="toggle" direction="right" />
+        <div
+          class="item button"
+          :disabled="data.page! >= data.lastPage!"
+          @click="next"
+        >
+          <IconChevron
+            class="toggle"
+            direction="right"
+          />
         </div>
-        <div class="item button" :disabled="data.page! >= data.lastPage!" @click="last">
-          {{ $t('table.last') }}
+        <div
+          class="item button"
+          :disabled="data.page! >= data.lastPage!"
+          @click="last"
+        >
+          {{ $t("table.last") }}
         </div>
       </template>
       <template v-else-if="data.mode === 'cursor'">
         <div
-          class="
-          item
-          button"
+          class="item button"
           :disabled="!data.prev_cursor"
           @click="first"
         >
-          {{ $t('table.first') }}
+          {{ $t("table.first") }}
         </div>
-        <div class="item button" :disabled="!data.prev_cursor" @click="emit('setCursor', data.prev_cursor)">
-          <IconChevron class="toggle" direction="left" />
+        <div
+          class="item button"
+          :disabled="!data.prev_cursor"
+          @click="emit('setCursor', data.prev_cursor)"
+        >
+          <IconChevron
+            class="toggle"
+            direction="left"
+          />
         </div>
-        <div class="item button" :disabled="!data.next_cursor" @click="emit('setCursor', data.next_cursor)">
-          <IconChevron class="toggle" direction="right" />
+        <div
+          class="item button"
+          :disabled="!data.next_cursor"
+          @click="emit('setCursor', data.next_cursor)"
+        >
+          <IconChevron
+            class="toggle"
+            direction="right"
+          />
         </div>
       </template>
       <Dropdown
@@ -118,14 +182,26 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       />
     </div>
     <div class="very-last">
-      <div v-if="!stepperOnly" class="left-info">
+      <div
+        v-if="!stepperOnly"
+        class="left-info"
+      >
         <slot name="bc-table-footer-left">
           <span v-if="props.paging?.total_count">
-            {{ $t('table.showing', { from: data.from, to: data.to, total: props.paging?.total_count }) }}
+            {{
+              $t("table.showing", {
+                from: data.from,
+                to: data.to,
+                total: props.paging?.total_count,
+              })
+            }}
           </span>
         </slot>
       </div>
-      <div v-if="$slots['bc-table-footer-right']" class="right-info">
+      <div
+        v-if="$slots['bc-table-footer-right']"
+        class="right-info"
+      >
         <slot name="bc-table-footer-right" />
       </div>
     </div>
@@ -133,7 +209,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 
 .bc-pageinator {
   position: relative;
@@ -149,6 +225,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
     position: absolute;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     width: 100%;
     .left-info {
       margin-right: auto;
@@ -181,6 +258,7 @@ watch(() => data.value.lastPage && data.value.lastPage < data.value.page, (match
       height: 30px;
       padding: 0 22px;
       border-radius: 0;
+      white-space: nowrap;
 
       &:has(svg) {
         padding: 0 15px;

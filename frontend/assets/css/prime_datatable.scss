@@ -4,13 +4,17 @@
   --expander-col-width: 53px;
   --table-header-background: var(--grey-4);
   &.dark-mode {
-
     --table-header-background: var(--very-dark-grey);
   }
 }
 
 .p-datatable {
   --table-background-color: var(--background-color);
+
+  .p-datatable-loading-overlay {
+    height: min(100%, 300px);
+    pointer-events: none;
+  }
 
   &.no-header {
     .p-datatable-thead {
@@ -136,12 +140,11 @@
         > .p-column-title {
           font-weight: var(--standard_text_medium_font_weight);
         }
-
       }
       &.bold > td,
       .bold > td,
-      > td.bold{
-          font-weight: var(--standard_text_medium_font_weight);
+      > td.bold {
+        font-weight: var(--standard_text_medium_font_weight);
       }
     }
   }
