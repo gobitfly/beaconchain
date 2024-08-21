@@ -27,6 +27,11 @@ const (
 	apiPrefix = "/api/v2"
 )
 
+// Expects the following flags:
+// --config: (optional) Path to the config file to add endpoint weights to the swagger docs
+
+// Standard usage (execute in backend folder): go run cmd/api_docs/main.go --config <path-to-config-file>
+
 func main() {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
 	versionFlag := flag.Bool("version", false, "Show version and exit")
