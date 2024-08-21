@@ -462,7 +462,7 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 	}
 
 	// check conditions for changing archival status
-	dashboardInfo, err := h.dai.GetValidatorDashboard(r.Context(), types.VDBId{Id: dashboardId})
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(r.Context(), dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -905,12 +905,12 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 		handleErr(w, v)
 		return
 	}
-	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(r.Context(), publicDashboardId)
+	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	if dashboardInfo.Id != dashboardId {
+	if *fetchedId != dashboardId {
 		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
 	}
 
@@ -935,12 +935,12 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 		handleErr(w, v)
 		return
 	}
-	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(r.Context(), publicDashboardId)
+	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	if dashboardInfo.Id != dashboardId {
+	if *fetchedId != dashboardId {
 		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
 	}
 
