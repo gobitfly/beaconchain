@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"net"
 	"net/http"
@@ -69,12 +71,31 @@ func main() {
 		router.Use(ratelimit.HttpMiddleware)
 	}
 
-	srv := &http.Server{
-		Handler:      router,
-		Addr:         net.JoinHostPort(cfg.Frontend.Server.Host, cfg.Frontend.Server.Port),
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+	var srv *http.Server
+	go func() {
+		srv = &http.Server{
+			Handler:      router,
+			Addr:         net.JoinHostPort(cfg.Frontend.Server.Host, cfg.Frontend.Server.Port),
+			WriteTimeout: 15 * time.Second,
+			ReadTimeout:  15 * time.Second,
+		}
+		log.Infof("serving on %s:%s", cfg.Frontend.Server.Host, cfg.Frontend.Server.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err, "error serving", 0)
+		}
+	}()
+
+	utils.WaitForCtrlC()
+
+	log.Info("shutting down server")
+	if srv != nil {
+		shutDownCtx, cancelShutDownCtx := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelShutDownCtx()
+		err = srv.Shutdown(shutDownCtx)
+		if err != nil {
+			log.Error(err, "error shutting down server", 0)
+		} else {
+			log.Info("server shut down")
+		}
 	}
-	log.Infof("Serving on %s:%s", cfg.Frontend.Server.Host, cfg.Frontend.Server.Port)
-	log.Fatal(srv.ListenAndServe(), "Error while serving", 0)
 }
