@@ -852,6 +852,7 @@ func newBadRequestErr(format string, args ...interface{}) error {
 	return errWithMsg(errBadRequest, format, args...)
 }
 
+//nolint:unparam
 func newInternalServerErr(format string, args ...interface{}) error {
 	return errWithMsg(errInternalServer, format, args...)
 }
