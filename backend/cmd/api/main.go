@@ -55,14 +55,14 @@ func main() {
 	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
 
-	if cfg.Metrics.Enabled {
+	if utils.Config.Metrics.Enabled {
 		router.Use(metrics.HttpMiddleware)
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(cfg.Metrics.Address)
+		}()
 	}
 
 	if cfg.Frontend.RatelimitEnabled {
