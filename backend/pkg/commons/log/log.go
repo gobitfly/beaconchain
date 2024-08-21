@@ -99,12 +99,12 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 			"_line":     line,
 		})
 		file := filepath.Base(fullFilePath)
-		if len(file) > 20 {
-			file = file[len(file)-20:]
-		}
 		metricName = fmt.Sprintf("%s:%d", file, line)
 	} else {
 		logFields = logFields.WithField("runtime", "Callstack cannot be read")
+	}
+	if len(metricName) > 30 {
+		metricName = metricName[len(metricName)-30:]
 	}
 	metrics.Errors.WithLabelValues(metricName).Inc()
 
