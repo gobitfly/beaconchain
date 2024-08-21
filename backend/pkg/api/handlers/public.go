@@ -122,6 +122,7 @@ func (h *HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Re
 //	@Accept			json
 //	@Produce		json
 //	@Param			request		body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
+//	@Success		201			{object}	types.PostValidatorDashboardsResponse
 //	@Failure		400			{object}	types.ApiErrorResponse
 //	@Failure		409			{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
 //	@Router			/validator-dashboards [post]

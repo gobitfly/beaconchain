@@ -12,7 +12,6 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/ratelimit"
 	commonTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -50,7 +49,12 @@ func main() {
 		log.Fatal(err, "error generating swagger docs", 0)
 	}
 
-	log.Info("swagger docs generated successfully, now loading endpoint weights from db", 0)
+	log.Info("\n-------------\nswagger docs generated successfully, now loading endpoint weights from db\n-------------")
+
+	if *configPath == "" {
+		log.Warn("no config file provided, weights will not be inserted into swagger docs", 0)
+		os.Exit(0)
+	}
 
 	// load endpoint weights from db
 	cfg := &commonTypes.Config{}
@@ -82,7 +86,7 @@ func main() {
 		log.Fatal(err, "error writing new swagger docs", 0)
 	}
 
-	log.Info("api weights inserted successfully", 0)
+	log.Info("\n-------------\napi weights inserted successfully\n-------------")
 }
 
 func insertApiWeights(data []byte, apiWeightItems []types.ApiWeightItem) ([]byte, error) {
@@ -100,7 +104,7 @@ func insertApiWeights(data []byte, apiWeightItems []types.ApiWeightItem) ([]byte
 			}
 			// get weight and bucket for each endpoint
 			weight := 1
-			bucket := ratelimit.DefaultBucket
+			bucket := ""
 			for _, apiWeightItem := range apiWeightItems {
 				// ignore endpoints that don't belong to v2
 				if !strings.HasPrefix(apiWeightItem.Endpoint, apiPrefix) {
@@ -109,7 +113,7 @@ func insertApiWeights(data []byte, apiWeightItems []types.ApiWeightItem) ([]byte
 				// compare endpoint and method
 				if pathString == strings.TrimPrefix(apiWeightItem.Endpoint, apiPrefix) && methodString == apiWeightItem.Method {
 					weight = apiWeightItem.Weight
-					bucket = apiWeightItem.Bucket
+					bucket = apiWeightItem.Bucket + " "
 					break
 				}
 			}
@@ -118,7 +122,7 @@ func insertApiWeights(data []byte, apiWeightItems []types.ApiWeightItem) ([]byte
 			if weight > 1 {
 				plural = "s"
 			}
-			operation.Summary = fmt.Sprintf("(%d %s credit%s) %s", weight, bucket, plural, operation.Summary)
+			operation.Summary = fmt.Sprintf("(%d %scredit%s) %s", weight, bucket, plural, operation.Summary)
 		}
 	}
 

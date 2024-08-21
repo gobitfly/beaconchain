@@ -251,6 +251,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 		"mainCurrency":           cfg.Frontend.MainCurrency,
 	}, "did init config")
 
+	Config = cfg
 	return nil
 }
 
