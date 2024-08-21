@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gobitfly/beaconchain/cmd/api"
@@ -57,6 +58,6 @@ func main() {
 	case "user-service":
 		user_service.Run()
 	default:
-		log.Fatal(nil, "unknown target", 0)
+		log.Fatal(nil, fmt.Sprintf("unknown target: %s", target), 0)
 	}
 }
