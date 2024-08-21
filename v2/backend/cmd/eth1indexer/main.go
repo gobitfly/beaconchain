@@ -77,8 +77,8 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
+		log.Info(version.Version)
+		log.Info(version.GoVersion)
 		return
 	}
 
@@ -731,7 +731,7 @@ func ImportMainnetERC20TokenMetadataFromTokenDirectory(bt *db.Bigtable) {
 		if len(token.LogoURI) > 0 {
 			resp, err := client.Get(token.LogoURI)
 
-			if err == nil && resp.StatusCode == 200 {
+			if err == nil && resp.StatusCode == http.StatusOK {
 				body, err := io.ReadAll(resp.Body)
 
 				if err != nil {

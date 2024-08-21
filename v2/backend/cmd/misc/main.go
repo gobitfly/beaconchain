@@ -97,7 +97,7 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		log.Infof(version.Version)
+		log.Info(version.Version)
 		return
 	}
 
@@ -763,7 +763,7 @@ func migrateAppPurchases(appStoreSecret string) error {
 			return errors.Wrap(err, "error verifying receipt")
 		}
 
-		if resp.LatestReceiptInfo == nil || len(resp.LatestReceiptInfo) == 0 {
+		if len(resp.LatestReceiptInfo) == 0 {
 			log.Infof("no receipt info for purchase id %v", receipt.ID)
 			if receipt.Active && receipt.ValidateRemotely { // sanity, if there is an active subscription without receipt info we cam't delete it.
 				return fmt.Errorf("no receipt info for active purchase id %v", receipt.ID)

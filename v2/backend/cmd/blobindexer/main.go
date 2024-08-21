@@ -17,7 +17,7 @@ func main() {
 	versionFlag := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 	if *versionFlag {
-		log.Infof(version.Version)
+		log.Info(version.Version)
 		return
 	}
 	utils.Config = &types.Config{}
