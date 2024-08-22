@@ -586,6 +586,7 @@ div.p-accordion {
       display: flex;
       align-items: center;
       gap: var(--padding);
+      border: none;
       .p-accordionheader-toggle-icon {
         display: none;
       }
