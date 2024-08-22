@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import {
+  PlaygroundConversion, PlaygroundEncryption, PlaygroundToasts,
+} from '#components'
+import type { HashTabs } from '~/types/hashTabs'
+
 const {
   bounce: bounceTrue,
   instant: instantTrue,
@@ -11,11 +16,35 @@ const {
   temp: numTemp,
   value: num,
 } = useDebounceValue<number>(1, 2000)
+
+const tabs: HashTabs = [
+  {
+    key: 'bounce',
+    title: 'Bounce',
+  },
+  {
+    component: PlaygroundConversion,
+    key: 'conversion',
+    title: 'Conversion',
+  },
+  {
+    component: PlaygroundToasts,
+    key: 'toasts',
+    title: 'Toasts',
+  },
+  {
+    component: PlaygroundEncryption,
+    key: 'encryption',
+    title: 'Encryption',
+  },
+]
 </script>
 
 <template>
-  <TabView lazy>
-    <TabPanel header="Bounce">
+  <BcTabList
+    :tabs default-tab="summary"
+  >
+    <template #tab-panel-bounce>
       <div class="element_container">
         Is true: {{ isTrue }} Temp: {{ isTrueTemp }}
         <Button @click="bounceTrue(!isTrueTemp)">
@@ -52,17 +81,8 @@ const {
           Instant Toggle
         </Button>
       </div>
-    </TabPanel>
-    <TabPanel header="Conversion">
-      <PlaygroundConversion />
-    </TabPanel>
-    <TabPanel header="Toasts">
-      <PlaygroundToasts />
-    </TabPanel>
-    <TabPanel header="Encryption">
-      <PlaygroundEncryption />
-    </TabPanel>
-  </TabView>
+    </template>
+  </BcTabList>
 </template>
 
 <style lang="scss" scoped>

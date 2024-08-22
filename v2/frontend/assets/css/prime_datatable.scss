@@ -29,9 +29,13 @@
     border-width: 0 0 1px 0;
     border-radius: 0;
   }
+  .p-datatable-footer{
+    border: none;
+  }
   .p-datatable-thead {
     > tr {
       > th {
+        border: none;
         text-align: left;
         color: var(--container-color);
         background-color: var(--table-header-background);
@@ -44,6 +48,10 @@
         }
         &:last-child {
           padding-right: 14px;
+        }
+        &:hover{
+          background-color: var(--table-header-background);
+          color: var(--container-color);
         }
 
         [data-pc-section="sort"] {
@@ -72,7 +80,7 @@
               color: inherit;
             }
           }
-          .p-sortable-column-icon {
+          .p-datatable-sort-icon {
             opacity: 0;
             width: 0.25em;
           }

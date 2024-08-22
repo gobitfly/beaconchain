@@ -192,11 +192,6 @@ const userMenu = computed(() => {
                 :icon="faCircleUser"
               />
             </template>
-            <template #option="slotProps">
-              <span @click="slotProps.command?.()">
-                {{ slotProps.label }}
-              </span>
-            </template>
           </BcDropdown>
         </div>
         <FontAwesomeIcon
