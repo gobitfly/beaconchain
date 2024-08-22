@@ -21,4 +21,4 @@ ENV NUXT_PORT=3000
 
 EXPOSE 3000 
 
-ENTRYPOINT ["node", ".output/server/index.mjs"]
+CMD [".output/server/index.mjs"]
