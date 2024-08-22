@@ -8,12 +8,6 @@ ARG target=all
 RUN make -B $target
 
 # final stage
-FROM ubuntu:22.04
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends \
-  libssl-dev \
-  ca-certificates \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
-WORKDIR /usr/local/bin
+FROM gcr.io/distroless/base-debian12
 COPY --from=build-env /src/backend/bin /usr/local/bin/
-CMD ["./exporter"]
+CMD ["bc","exporter"]

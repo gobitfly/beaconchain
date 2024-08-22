@@ -1,8 +1,9 @@
-package main
+package notification_collector
 
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"net/http"
@@ -24,11 +25,11 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "config.yml", "path to config")
+	versionFlag := fs.Bool("version", false, "print version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)
