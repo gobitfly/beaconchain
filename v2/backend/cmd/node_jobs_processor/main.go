@@ -1,8 +1,9 @@
-package main
+package node_jobs_processor
 
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -15,10 +16,11 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Print version and exit")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	versionFlag := fs.Bool("version", false, "Print version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)

@@ -1,4 +1,4 @@
-package main
+package rewards_exporter
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -24,19 +25,20 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	bnAddress := flag.String("beacon-node-address", "", "Url of the beacon node api")
-	enAddress := flag.String("execution-node-address", "", "Url of the execution node api")
-	epoch := flag.Int64("epoch", -1, "epoch to export (use -1 to export latest finalized epoch)")
-	batchConcurrency := flag.Int("batch-concurrency", 5, "epoch to export at the same time (only for historic)")
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	bnAddress := fs.String("beacon-node-address", "", "Url of the beacon node api")
+	enAddress := fs.String("execution-node-address", "", "Url of the execution node api")
+	epoch := fs.Int64("epoch", -1, "epoch to export (use -1 to export latest finalized epoch)")
+	batchConcurrency := fs.Int("batch-concurrency", 5, "epoch to export at the same time (only for historic)")
 
-	epochStart := flag.Uint64("epoch-start", 0, "start epoch to export")
-	epochEnd := flag.Uint64("epoch-end", 0, "end epoch to export")
-	sleepDuration := flag.Duration("sleep", time.Minute, "duration to sleep between export runs")
+	epochStart := fs.Uint64("epoch-start", 0, "start epoch to export")
+	epochEnd := fs.Uint64("epoch-end", 0, "end epoch to export")
+	sleepDuration := fs.Duration("sleep", time.Minute, "duration to sleep between export runs")
 
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)

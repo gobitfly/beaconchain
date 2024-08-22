@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"flag"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api"
@@ -24,10 +25,12 @@ const (
 	dummyApi = false
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)

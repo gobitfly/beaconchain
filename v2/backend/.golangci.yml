@@ -181,3 +181,5 @@ linters-settings:
             desc: "DB must not import"
 issues:
   max-same-issues: 0
+  exclude-dirs:
+    - cmd/playground
