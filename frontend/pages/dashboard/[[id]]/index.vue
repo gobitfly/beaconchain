@@ -22,45 +22,45 @@ const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { t: $t } = useTranslation()
 
-const tabs: HashTabs = {
-  blocks: {
+const tabs: HashTabs = [
+  {
+    component: DashboardTableSummary,
+    icon: faChartLineUp,
+    key: 'summary',
+    title: $t('dashboard.validator.tabs.summary'),
+  },
+  {
+    component: DashboardTableRewards,
+    icon: faCubes,
+    key: 'rewards',
+    title: $t('dashboard.validator.tabs.rewards'),
+  },
+  {
     component: DashboardTableBlocks,
     icon: faCube,
-    index: '2',
+    key: 'blocks',
     title: $t('dashboard.validator.tabs.blocks'),
 
   },
-  deposits: {
-    icon: faWallet,
-    index: '4',
-    title: $t('dashboard.validator.tabs.deposits'),
-  },
-  heatmap: {
+  {
     component: DashboardTableEmpty,
     disabled: !showInDevelopment,
     icon: faFire,
-    index: '3',
+    key: 'heatmap',
     title: $t('dashboard.validator.tabs.heatmap'),
   },
-  rewards: {
-    component: DashboardTableRewards,
-    icon: faCubes,
-    index: '1',
-    title: $t('dashboard.validator.tabs.rewards'),
+  {
+    icon: faWallet,
+    key: 'deposits',
+    title: $t('dashboard.validator.tabs.deposits'),
   },
-  summary: {
-    component: DashboardTableSummary,
-    icon: faChartLineUp,
-    index: '0',
-    title: $t('dashboard.validator.tabs.summary'),
-  },
-  withdrawals: {
+  {
     component: DashboardTableWithdrawals,
     icon: faMoneyBill,
-    index: '5',
+    key: 'withdrawals',
     title: $t('dashboard.validator.tabs.withdrawals'),
   },
-}
+]
 
 const {
   dashboardKey, setDashboardKey,

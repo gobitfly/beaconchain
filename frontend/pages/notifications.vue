@@ -23,40 +23,40 @@ const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const manageNotificationsModalVisisble = ref(false)
 
-const tabs: HashTabs = {
-  clients: {
-    disabled: !showInDevelopment,
-    icon: faBolt,
-    index: '2',
-    placeholder: 'Clients coming soon!',
-    title: $t('notifications.tabs.clients'),
-  },
-  dashboards: {
+const tabs: HashTabs = [
+  {
     icon: faGaugeSimpleMax,
-    index: '0',
+    key: 'dashboards',
     title: $t('notifications.tabs.dashboards'),
   },
-  machines: {
+  {
     disabled: !showInDevelopment,
     icon: faMonitorWaveform,
-    index: '1',
+    key: 'machines',
     placeholder: 'Machines coming soon!',
     title: $t('notifications.tabs.machines'),
   },
-  network: {
-    component: NotificationsNetworkTable,
+  {
     disabled: !showInDevelopment,
-    icon: faNetworkWired,
-    index: '4',
-    title: $t('notifications.tabs.network'),
+    icon: faBolt,
+    key: 'clients',
+    placeholder: 'Clients coming soon!',
+    title: $t('notifications.tabs.clients'),
   },
-  rocketpool: {
+  {
     disabled: !showInDevelopment,
-    index: '3',
+    key: 'rocketpool',
     placeholder: 'Rocketpool coming soon!',
     title: $t('notifications.tabs.rocketpool'),
   },
-}
+  {
+    component: NotificationsNetworkTable,
+    disabled: !showInDevelopment,
+    icon: faNetworkWired,
+    key: 'network',
+    title: $t('notifications.tabs.network'),
+  },
+]
 
 useBcSeo('notifications.title')
 

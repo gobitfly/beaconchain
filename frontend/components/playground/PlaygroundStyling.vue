@@ -69,46 +69,45 @@ const dropdownList = [
   },
 ]
 
-const tabs: HashTabs = {
-  buttons: {
-    index: '0',
+const tabs: HashTabs = [
+  {
+    key: 'buttons',
     title: 'Buttons',
   },
-  checkbox: {
-    index: '4',
-    title: 'Checkbox',
-  },
-  disabled: {
-    disabled: true,
-    index: '8',
-    title: 'Disabled Tab',
-  },
-  dropdown: {
-    index: '6',
-    title: 'Dropdown',
-  },
-  hashes: {
-    index: '1',
+  {
+    key: 'hashes',
     title: 'Hashes',
   },
-  input: {
-    index: '3',
-    title: 'Input',
-  },
-  scroll: {
-    index: '2',
+  {
+    key: 'scroll',
     title: 'Scroll Box',
   },
-  spinner: {
-    index: '7',
-    title: 'Spinner',
+  {
+    key: 'input',
+    title: 'Input',
   },
-  toggle: {
-    index: '5',
+  {
+    key: 'checkbox',
+    title: 'Checkbox',
+  },
+  {
+    key: 'toggle',
     title: 'Toggle',
   },
-
-}
+  {
+    key: 'dropdown',
+    title: 'Dropdown',
+  },
+  {
+    key: 'spinner',
+    title: 'Spinner',
+  },
+  {
+    disabled: true,
+    key: 'disabled',
+    title: 'Disabled Tab',
+  },
+]
 </script>
 
 <template>

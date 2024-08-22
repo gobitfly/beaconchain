@@ -45,42 +45,42 @@ onMounted(async () => {
   slotVizData.value = res.data
 })
 
-const tabs: HashTabs = {
-  addSafe: {
-    component: PlaygroundAds,
-    index: '3',
-    title: 'Ads',
-  },
-  components: {
+const tabs: HashTabs = [
+  {
     component: PlaygroundComponents,
-    index: '0',
+    key: 'components',
     title: 'Components',
   },
-  composables: {
-    component: PlaygroundComposable,
-    index: '2',
-    title: 'Composables',
-  },
-  manage: {
-    component: PlaygroundDashboardValidatorManageValidators,
-    index: '6',
-    title: 'Manage Validators',
-  },
-  slotviz: {
-    index: '4',
-    title: 'Slot Viz',
-  },
-  styling: {
+  {
     component: PlaygroundStyling,
-    index: '1',
+    key: 'styling',
     title: 'Styling',
   },
-  subset: {
+  {
+    component: PlaygroundComposable,
+    key: 'composables',
+    title: 'Composables',
+  },
+  {
+    key: 'slotviz',
+    title: 'Slot Viz',
+  },
+  {
+    component: PlaygroundAds,
+    key: 'addSafe',
+    title: 'Ads',
+  },
+  {
     component: PlaygroundSubsetList,
-    index: '5',
+    key: 'subset',
     title: 'Subset Validators',
   },
-}
+  {
+    component: PlaygroundDashboardValidatorManageValidators,
+    key: 'manage',
+    title: 'Manage Validators',
+  },
+]
 </script>
 
 <template>

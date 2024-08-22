@@ -17,28 +17,27 @@ const {
   value: num,
 } = useDebounceValue<number>(1, 2000)
 
-const tabs: HashTabs = {
-  bounce: {
-    index: '0',
+const tabs: HashTabs = [
+  {
+    key: 'bounce',
     title: 'Bounce',
   },
-  conversion: {
+  {
     component: PlaygroundConversion,
-    index: '1',
+    key: 'conversion',
     title: 'Conversion',
   },
-  encryption: {
-    component: PlaygroundEncryption,
-    index: '3',
-    title: 'Encryption',
-  },
-  toasts: {
+  {
     component: PlaygroundToasts,
-    index: '2',
+    key: 'toasts',
     title: 'Toasts',
   },
-
-}
+  {
+    component: PlaygroundEncryption,
+    key: 'encryption',
+    title: 'Encryption',
+  },
+]
 </script>
 
 <template>

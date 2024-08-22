@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { orderBy } from 'lodash-es'
 import type { HashTabs } from '~/types/hashTabs'
 
 interface Props {
@@ -10,29 +9,19 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const sortedTabs = computed(() => orderBy(Object.entries(props.tabs).map(([
-  key,
-  tab,
-]) => {
-  return {
-    key,
-    ...tab,
-  }
-}), tab => parseInt(tab.index)))
-
 const {
-  activeIndex,
+  activeTab,
 } = useHashTabs(props.tabs, props.defaultTab, props.useRouteHash)
 </script>
 
 <template>
   <Tabs
-    v-model:value="activeIndex"
+    v-model:value="activeTab"
     lazy
     class="dashboard-tab-view"
   >
     <TabList>
-      <Tab v-for="tab in sortedTabs" :key="tab.index" :value="tab.index" :disabled="tab.disabled">
+      <Tab v-for="tab in tabs" :key="tab.key" :value="tab.key" :disabled="tab.disabled">
         <BcTabHeader
           :header="tab.title"
           :icon="tab.icon"
@@ -45,7 +34,7 @@ const {
     </TabList>
 
     <TabPanels :class="panelsClass">
-      <TabPanel v-for="tab in sortedTabs" :key="tab.index" :value="tab.index">
+      <TabPanel v-for="tab in tabs" :key="tab.key" :value="tab.key">
         <slot :name="`tab-panel-${tab.key}`">
           <component :is="tab.component" v-if="tab.component" />
           <div v-else-if="tab.placeholder">

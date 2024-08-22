@@ -11,48 +11,48 @@ import {
 } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 
-const tabs: HashTabs = {
-  accordeon: {
-    component: PlaygroundAccordeon,
-    index: '1',
-    title: 'Accordeon',
-  },
-  dialog: {
+const tabs: HashTabs = [
+  {
     component: PlaygroundDialog,
-    index: '0',
+    key: 'dialog',
     title: 'Dialog',
   },
-  duty: {
-    component: PlaygroundDutyStatus,
-    index: '4',
-    title: 'Duty Status',
+  {
+    component: PlaygroundAccordeon,
+    key: 'accordeon',
+    title: 'Accordeon',
   },
-  icons: {
-    component: PlaygroundIcons,
-    index: '6',
-    title: 'Icons',
-  },
-  input: {
-    component: PlaygroundInput,
-    index: '7',
-    title: 'Input',
-  },
-  middle: {
+  {
     component: PlaygroundMiddleEllipsisTests,
-    index: '2',
+    key: 'middle',
     title: 'Middle Ellipsis',
   },
-  table: {
-    component: PlaygroundTable,
-    index: '5',
-    title: 'Table',
-  },
-  tags: {
+  {
     component: PlaygroundTags,
-    index: '3',
+    key: 'tags',
     title: 'Tags',
   },
-}
+  {
+    component: PlaygroundDutyStatus,
+    key: 'duty',
+    title: 'Duty Status',
+  },
+  {
+    component: PlaygroundTable,
+    key: 'table',
+    title: 'Table',
+  },
+  {
+    component: PlaygroundIcons,
+    key: 'icons',
+    title: 'Icons',
+  },
+  {
+    component: PlaygroundInput,
+    key: 'input',
+    title: 'Input',
+  },
+]
 </script>
 
 <template>

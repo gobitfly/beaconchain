@@ -16,47 +16,47 @@ const visible = defineModel<boolean>()
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const tabs: HashTabs = {
-  clients: {
-    disabled: !showInDevelopment,
-    icon: faBolt,
-    index: '3',
-    placeholder: 'Clients coming soon!',
-    title: $t('notifications.tabs.clients'),
+const tabs: HashTabs = [
+  {
+    icon: faCog,
+    key: 'general',
+    title: $t('notifications.tabs.general'),
   },
-  dashboards: {
+  {
     component: NotificationsManagementDashboards,
     disabled: !showInDevelopment,
     icon: faGaugeSimpleMax,
-    index: '1',
+    key: 'dashboards',
     title: $t('notifications.tabs.dashboards'),
   },
-  general: {
-    icon: faCog,
-    index: '0',
-    title: $t('notifications.tabs.general'),
-  },
-  machines: {
+  {
     disabled: !showInDevelopment,
     icon: faMonitorWaveform,
-    index: '2',
+    key: 'machines',
     placeholder: 'Machines coming soon!',
     title: $t('notifications.tabs.machines'),
   },
-  network: {
+  {
+    disabled: !showInDevelopment,
+    icon: faBolt,
+    key: 'clients',
+    placeholder: 'Clients coming soon!',
+    title: $t('notifications.tabs.clients'),
+  },
+  {
+    disabled: !showInDevelopment,
+    icon: faCog,
+    key: 'rocketpool',
+    title: $t('notifications.tabs.rocketpool'),
+  },
+  {
     disabled: !showInDevelopment,
     icon: faNetworkWired,
-    index: '5',
+    key: 'network',
     placeholder: 'Network coming soon!',
     title: $t('notifications.tabs.network'),
   },
-  rocketpool: {
-    disabled: !showInDevelopment,
-    icon: faCog,
-    index: '4',
-    title: $t('notifications.tabs.rocketpool'),
-  },
-}
+]
 
 const {
   isLoading, refreshSettings,
@@ -73,8 +73,8 @@ refreshSettings()
   >
     <div id="notifications-management-search-placholder" />
     <BcTabList
-      :tabs default-tab="summary"
-      :use-route-hash="true"
+      :tabs
+      default-tab="summary"
       class="notifications-management-tab-view"
       oanels-class="notifications-management-tab-panels"
     >

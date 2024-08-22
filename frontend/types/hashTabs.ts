@@ -5,8 +5,8 @@ export type HashTab = {
   component?: Component,
   disabled?: boolean,
   icon?: IconDefinition,
-  index: string,
+  key: string,
   placeholder?: string,
   title?: string,
 }
-export type HashTabs = Record<string, HashTab>
+export type HashTabs = HashTab[]

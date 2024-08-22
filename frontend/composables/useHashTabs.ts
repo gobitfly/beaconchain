@@ -1,63 +1,52 @@
 import type { HashTabs } from '~/types/hashTabs'
 
 export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = false) {
-  const activeIndex = ref<string>('-1')
+  const activeTab = ref<string>('-1')
   const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
-    if (tabs[defaultTab] && !tabs[defaultTab].disabled) {
-      return tabs[defaultTab].index
+    const defaultKey = tabs.find(t => t.key === defaultTab)
+    if (defaultKey) {
+      return defaultKey.key
     }
-    const list = Object.values(tabs)
-    for (let i = 0; i < list.length; i++) {
-      const tab = list[i]
+
+    for (let i = 0; i < tabs.length; i++) {
+      const tab = tabs[i]
       if (!tab.disabled) {
-        return tab.index
+        return tab.key
       }
     }
     return '-1'
   }
-  const findHashForIndex = (index: string) => {
-    const entries = Object.entries(tabs)
-    for (let i = 0; i < entries.length; i++) {
-      const [
-        hash,
-        tab,
-      ] = entries[i]
-      if (!tab.disabled && tab.index === index) {
-        return `#${hash}`
-      }
-    }
-    return ''
-  }
 
   onMounted(() => {
     const hash = useRouteHash ? initialHash?.replace('#', '') : ''
-    activeIndex.value
-      = hash && tabs[hash] && !tabs[hash].disabled
-        ? tabs[hash].index
+    const matchedTab = tabs.find(t => t.key === hash)
+    activeTab.value
+      = hash && matchedTab && !matchedTab.disabled
+        ? matchedTab.key
         : findFirstValidIndex()
   })
 
-  const updateHash = (index: string) => {
+  const updateHash = (key: string) => {
     if (isServerSide || !useRouteHash) {
       return
     }
-    window.location.hash = findHashForIndex(index)
+    window.location.hash = key
   }
 
   watch(
-    activeIndex,
-    (index) => {
-      if (isServerSide && index === '-1') {
+    activeTab,
+    (key) => {
+      if (isServerSide || key === '-1') {
         return
       }
-      updateHash(index)
+      updateHash(key)
     },
     { immediate: true },
   )
 
   return {
-    activeIndex,
+    activeTab,
   }
 }
