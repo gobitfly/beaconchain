@@ -18,8 +18,15 @@
     "source.fixAll.eslint": "always"
 },
 "editor.formatOnSave": false,
+"editor.quickSuggestions": {
+    "strings": true
+},
   "editor.rulers": [
     80,
     120
-]
+],
+"files.associations": {
+    "*.css": "tailwindcss"
+}
+
 }

@@ -5,6 +5,7 @@
     "eamodio.gitlens",
     "usernamehw.errorlens",
     "nuxtr.nuxt-vscode-extentions",
-    "vue.volar"
+    "vue.volar",
+    "bradlc.vscode-tailwindcss"
   ]
 }

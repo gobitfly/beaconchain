@@ -1,3 +1,4 @@
+import tailwind from 'eslint-plugin-tailwindcss'
 // @ts-check
 import perfectionist from 'eslint-plugin-perfectionist'
 import eslintPluginJsonc from 'eslint-plugin-jsonc'
@@ -109,6 +110,12 @@ export default withNuxt({
         'perfectionist/sort-vue-attributes': 'off',
       },
     },
+  )
+  .append(
+    ...tailwind.configs['flat/recommended'].map(config => ({
+      ...config,
+      files: [ 'components/base/**/*.vue' ],
+    })),
   )
   .append(
     ...eslintPluginJsonc.configs['flat/recommended-with-json'],
