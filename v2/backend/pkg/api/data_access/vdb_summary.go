@@ -790,6 +790,10 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
+	if rewardsResultTable.ValidatorCount == 0 {
+		return decimal.Zero, 0, decimal.Zero, 0, nil
+	}
+
 	aprDivisor := hours
 	if hours == -1 { // for all time APR
 		aprDivisor = 90 * 24
@@ -853,6 +857,9 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	}
 	elIncomeFloat, _ := elIncome.Float64()
 	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
+	if math.IsNaN(elAPR) {
+		elAPR = 0
+	}
 
 	if hours == -1 {
 		elTotalDs := elDs.
