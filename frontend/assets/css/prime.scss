@@ -148,10 +148,14 @@ input.p-inputtext {
 
     .p-tab {
       border: solid transparent 1px;
+      border-bottom-width: 0;
       border-top-right-radius: var(--border-radius);
       border-top-left-radius: var(--border-radius);
       padding: 10px 25px;
       color: var(--link-color);
+      font-weight: inherit;
+      font-size: inherit;
+      font-family: inherit;
 
       &.p-tab-active {
         background: var(--container-background);
@@ -161,6 +165,9 @@ input.p-inputtext {
 
       &:not(.p-tab-active):not(.p-disabled):hover {
         color: var(--link-color);
+        border: solid transparent 1px;
+        border-bottom-width: 0;
+        opacity: 0.8;
       }
 
       &.p-disabled {
@@ -200,7 +207,7 @@ div.p-checkbox {
     }
   }
 
-  &.p-checkbox-checked:not(.p-disabled):has(.p-checkbox-input:hover), 
+  &.p-checkbox-checked:not(.p-disabled):has(.p-checkbox-input:hover),
   &:hover {
     .p-checkbox-box {
       background: var(--button-color-hover);
@@ -222,19 +229,19 @@ div.p-checkbox {
     height: 22px;
 
     .p-toggleswitch-slider {
-      background: var(--button-color-active) !important; 
+      background: var(--button-color-active) !important;
       transition: background-color 0.2s, color 0.2s, border-color 0.2s,
         box-shadow 0.2s;
       border-radius: 30px;
       border-width: 0 !important;
 
       &:not(.p-toggleswitch-checked) {
-        background: var(--switch-color-disabled) !important; 
+        background: var(--switch-color-disabled) !important;
       }
     }
 
     .p-toggleswitch-slider:before {
-      background: var(--switch-slider-color) !important; 
+      background: var(--switch-slider-color) !important;
       width: 20px;
       height: 20px;
       left: 0.3px !important;
@@ -248,21 +255,21 @@ div.p-checkbox {
     }
 
     &:not(.p-disabled):hover.p-toggleswitch-checked .p-toggleswitch-slider {
-      background: var(--button-color-hover) !important; 
+      background: var(--button-color-hover) !important;
     }
 
     &:not(.p-disabled):hover:not(.p-toggleswitch-checked)
       .p-toggleswitch-slider {
-      background: var(--switch-color-disabled-hover) !important; 
+      background: var(--switch-color-disabled-hover) !important;
     }
 
     &:not(.p-disabled):not(:hover).p-toggleswitch-checked
       .p-toggleswitch-slider {
-      background: var(--primary-color) !important; 
+      background: var(--primary-color) !important;
     }
 
     &.p-disabled .p-toggleswitch-slider {
-      background: var(--button-color-disabled) !important; 
+      background: var(--button-color-disabled) !important;
     }
   }
 }
@@ -570,19 +577,24 @@ div.p-select-overlay {
   }
 }
 
-.p-accordion {
-  .p-accordion-tab {
-    .p-accordion-header {
+div.p-accordion {
+  .p-accordionpanel {
+    border: none;
+    .p-accordionheader {
       padding: 16px 16px 16px 2px;
-      .p-accordion-header-link {
-        display: flex;
-        align-items: center;
-        gap: var(--padding);
+      display: flex;
+      align-items: center;
+      gap: var(--padding);
+      .p-accordionheader-toggle-icon {
+        display: none;
       }
     }
+    .p-accordioncontent-content {
+      border: none;
+    }
 
-    &.p-accordion-tab-active {
-      .p-accordion-header {
+    &.p-accordionpanel-active {
+      .p-accordionheader {
         .fa-caret-right {
           transform: rotate(90deg);
         }
@@ -590,17 +602,15 @@ div.p-select-overlay {
     }
   }
   &:not(.basic) {
-    .p-accordion-tab {
-      .p-accordion-header {
+    .p-accordionpanel {
+      .p-accordionheader {
         padding: 16px;
         color: var(--container-color);
         background-color: var(--container-background);
         border: 1px solid var(--container-border-color);
         border-radius: var(--border-radius);
-        .p-accordion-header-link {
-          justify-content: space-between;
-          flex-direction: row-reverse;
-        }
+        justify-content: space-between;
+        flex-direction: row-reverse;
       }
     }
   }
