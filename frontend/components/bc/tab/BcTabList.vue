@@ -18,6 +18,7 @@ const {
   <Tabs
     v-model:value="activeTab"
     lazy
+    scrollable
     class="dashboard-tab-view"
   >
     <TabList>
