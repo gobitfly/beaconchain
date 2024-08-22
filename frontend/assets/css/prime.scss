@@ -26,7 +26,7 @@ button.p-button,
 
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 
-  &:not([ddata-p-severity="secondary"]) {
+  &:not([data-p-severity="secondary"]) {
     color: var(--primary-contrast-color);
     background: var(--button-color-active);
   }
