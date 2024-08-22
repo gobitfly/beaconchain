@@ -264,6 +264,7 @@ const selectedSort = computed(() =>
             :cursor
             :page-size
             :selected-sort
+            data-key="id"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
