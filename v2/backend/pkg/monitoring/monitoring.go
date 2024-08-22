@@ -23,7 +23,6 @@ func Init(full bool) {
 			SSL:          true,
 			MaxIdleConns: utils.Config.ClickHouse.WriterDatabase.MaxIdleConns,
 		})
-
 	}
 	monitoredServices = []services.Service{
 		&services.ServerDbConnections{},

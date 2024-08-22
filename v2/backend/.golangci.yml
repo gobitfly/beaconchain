@@ -111,9 +111,6 @@ linters-settings:
         msg: Use log.Infof instead
       - p: ^fmt\.Printf.*$
         msg: Use log.Infof instead
-      # ban usage of db.ClickHouseWriter
-      - p: ^db\.ClickHouseWriter.*$
-        msg: Use db.ClickHouseNativeWriter instead
   gocognit:
     min-complexity: 65
   depguard:

@@ -55,7 +55,7 @@ func (s *ServiceClickhouseEpoch) runChecks() {
 	}
 	// check if delta is out of bounds
 	threshold := 1 * time.Hour
-	md := map[string]string{"delta": fmt.Sprintf("%s", time.Since(t)), "threshold": threshold.String()}
+	md := map[string]string{"delta": time.Since(t).String(), "threshold": threshold.String()}
 	if time.Since(t) > threshold {
 		ReportStatus(s.ctx, id, fmt.Errorf("delta is over threshold %d", threshold), &expiry, md)
 		return
