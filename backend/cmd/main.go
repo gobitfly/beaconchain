@@ -10,6 +10,7 @@ import (
 	"github.com/gobitfly/beaconchain/cmd/ethstore_exporter"
 	"github.com/gobitfly/beaconchain/cmd/exporter"
 	"github.com/gobitfly/beaconchain/cmd/misc"
+	"github.com/gobitfly/beaconchain/cmd/monitoring"
 	"github.com/gobitfly/beaconchain/cmd/node_jobs_processor"
 	"github.com/gobitfly/beaconchain/cmd/notification_collector"
 	"github.com/gobitfly/beaconchain/cmd/notification_sender"
@@ -57,6 +58,8 @@ func main() {
 		typescript_converter.Run()
 	case "user-service":
 		user_service.Run()
+	case "monitoring":
+		monitoring.Run()
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown target: %s", target), 0)
 	}

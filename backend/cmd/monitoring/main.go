@@ -1,4 +1,4 @@
-package main
+package monitoring
 
 import (
 	"flag"
@@ -12,7 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/monitoring"
 )
 
-func main() {
+func Run() {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
 	versionFlag := flag.Bool("version", false, "Show version and exit")
 	flag.Parse()
