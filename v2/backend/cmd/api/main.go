@@ -11,6 +11,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/monitoring"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -57,6 +58,12 @@ func Run() {
 
 	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
+	if !cfg.Frontend.Debug {
+		// enable light-weight db connection monitoring
+		monitoring.Init(false)
+		monitoring.Start()
+		defer monitoring.Stop()
+	}
 
 	if utils.Config.Metrics.Enabled {
 		router.Use(metrics.HttpMiddleware)

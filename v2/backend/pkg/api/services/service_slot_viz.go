@@ -16,6 +16,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/juliangruber/go-intersect"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -30,11 +31,14 @@ func (s *Services) startSlotVizDataService() {
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
+		go services.ReportStatus(context.Background(), "api_service_slot_viz", nil, nil, map[string]string{"status": "running"})
 		err := s.updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {
 			log.Error(err, "error updating slotviz data", 0)
+			go services.ReportStatus(context.Background(), "api_service_slot_viz", err, nil, nil)
 		}
 		log.Infof("=== slotviz data updated in %s", time.Since(startTime))
+		go services.ReportStatus(context.Background(), "api_service_slot_viz", nil, nil, map[string]string{"status": "done", "took": time.Since(startTime).String()})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
