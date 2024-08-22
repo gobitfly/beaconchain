@@ -156,6 +156,7 @@ input.p-inputtext {
       font-weight: inherit;
       font-size: inherit;
       font-family: inherit;
+      background: transparent;
 
       &.p-tab-active {
         background: var(--container-background);
