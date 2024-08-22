@@ -35,10 +35,14 @@ func (a *Archiver) Start() {
 }
 
 func (a *Archiver) updateArchivedStatus() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	var dashboardsToBeArchived []t.ArchiverDashboardArchiveReason
+	var dashboardsToBeDeleted []uint64
 
 	// Get all dashboards for all users
-	userDashboards, err := a.das.GetValidatorDashboardsInfo(ctx)
+	userDashboards, err := a.das.GetValidatorDashboardsCountInfo(ctx)
 	if err != nil {
 		return err
 	}
@@ -57,22 +61,15 @@ func (a *Archiver) updateArchivedStatus() error {
 		var archivedDashboards []uint64
 		var activeDashboards []uint64
 
-		type ArchivedDashboard struct {
-			DashboardId    uint64
-			ArchivedReason enums.VDBArchivedReason
-		}
-		var dashboardsToBeArchived []ArchivedDashboard
-		var dashboardsToBeDeleted []uint64
-
 		// Check if the active user dashboard exceeds the maximum number of groups, or validators
 		for _, dashboardInfo := range dashboards {
 			if dashboardInfo.IsArchived {
 				archivedDashboards = append(archivedDashboards, dashboardInfo.DashboardId)
 			} else {
 				if dashboardInfo.GroupCount > userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
-					dashboardsToBeArchived = append(dashboardsToBeArchived, ArchivedDashboard{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Groups})
+					dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Groups})
 				} else if dashboardInfo.ValidatorCount > userInfo.PremiumPerks.ValidatorsPerDashboard {
-					dashboardsToBeArchived = append(dashboardsToBeArchived, ArchivedDashboard{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Validators})
+					dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Validators})
 				} else {
 					activeDashboards = append(activeDashboards, dashboardInfo.DashboardId)
 				}
@@ -84,41 +81,45 @@ func (a *Archiver) updateArchivedStatus() error {
 		if len(activeDashboards) > dashboardLimit {
 			slices.Sort(activeDashboards)
 			for id := 0; id < len(activeDashboards)-dashboardLimit; id++ {
-				dashboardsToBeArchived = append(dashboardsToBeArchived, ArchivedDashboard{DashboardId: activeDashboards[id], ArchivedReason: enums.VDBArchivedReasons.Dashboards})
+				dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: activeDashboards[id], ArchivedReason: enums.VDBArchivedReasons.Dashboards})
 			}
 		}
 
 		// Check if the user exceeds the maximum number of archived dashboards
 		archivedLimit := handlers.MaxArchivedDashboardsCount
 		if len(archivedDashboards)+len(dashboardsToBeArchived) > archivedLimit {
-			dashboardsToBeDeleted = archivedDashboards
+			dashboardsToBeDeletedForUser := archivedDashboards
 			for _, dashboard := range dashboardsToBeArchived {
-				dashboardsToBeDeleted = append(dashboardsToBeDeleted, dashboard.DashboardId)
+				dashboardsToBeDeletedForUser = append(dashboardsToBeDeletedForUser, dashboard.DashboardId)
 			}
-			slices.Sort(dashboardsToBeDeleted)
-			dashboardsToBeDeleted = dashboardsToBeDeleted[:len(dashboardsToBeDeleted)-archivedLimit]
+			slices.Sort(dashboardsToBeDeletedForUser)
+			dashboardsToBeDeletedForUser = dashboardsToBeDeletedForUser[:len(dashboardsToBeDeletedForUser)-archivedLimit]
+			dashboardsToBeDeleted = append(dashboardsToBeDeleted, dashboardsToBeDeletedForUser...)
 		}
+	}
 
-		// Archive dashboards
-		dashboardsToBeDeletedMap := utils.SliceToMap(dashboardsToBeDeleted)
-		for _, dashboard := range dashboardsToBeArchived {
-			if _, ok := dashboardsToBeDeletedMap[dashboard.DashboardId]; ok {
-				// The dashboard will immediately be deleted, so no need to archive it
-				continue
-			}
-			archivedReason := dashboard.ArchivedReason
-			_, err := a.das.UpdateValidatorDashboardArchiving(ctx, t.VDBIdPrimary(dashboard.DashboardId), &archivedReason)
-			if err != nil {
-				return err
-			}
+	// Remove dashboards that should be deleted from the to be archived list
+	dashboardsToBeDeletedMap := utils.SliceToMap(dashboardsToBeDeleted)
+	for i := 0; i < len(dashboardsToBeArchived); i++ {
+		if _, ok := dashboardsToBeDeletedMap[dashboardsToBeArchived[i].DashboardId]; ok {
+			dashboardsToBeArchived = append(dashboardsToBeArchived[:i], dashboardsToBeArchived[i+1:]...)
+			i--
 		}
+	}
 
-		// Delete dashboards
-		for _, dashboardId := range dashboardsToBeDeleted {
-			err := a.das.RemoveValidatorDashboard(ctx, t.VDBIdPrimary(dashboardId))
-			if err != nil {
-				return err
-			}
+	// Archive dashboards
+	if len(dashboardsToBeArchived) > 0 {
+		err = a.das.UpdateValidatorDashboardsArchiving(ctx, dashboardsToBeArchived)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete dashboards
+	if len(dashboardsToBeDeleted) > 0 {
+		err = a.das.RemoveValidatorDashboards(ctx, dashboardsToBeDeleted)
+		if err != nil {
+			return err
 		}
 	}
 
