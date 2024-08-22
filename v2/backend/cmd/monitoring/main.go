@@ -2,7 +2,7 @@ package monitoring
 
 import (
 	"flag"
-	"time"
+	"os"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -13,9 +13,10 @@ import (
 )
 
 func Run() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+	fs := flag.NewFlagSet("monitoring", flag.ExitOnError)
+	configPath := fs.String("config", "config.yml", "path to config")
+	versionFlag := fs.Bool("version", false, "print version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Infof("%s", version.Version)
@@ -57,7 +58,5 @@ func Run() {
 	defer monitoring.Stop()
 
 	// gotta wait forever
-	for {
-		time.Sleep(1 * time.Second)
-	}
+	utils.WaitForCtrlC()
 }
