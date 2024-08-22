@@ -126,7 +126,9 @@ func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request
 			}
 		}
 	}
-	response.TotalOkPercentage = 1 - float64(failures)/float64(len(results))
+	if len(results) > 0 {
+		response.TotalOkPercentage = 1 - float64(failures)/float64(len(results))
+	}
 
 	if !r.URL.Query().Has("show_all") {
 		// we will filter out all reports that arent failure
