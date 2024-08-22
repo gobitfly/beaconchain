@@ -18,8 +18,8 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
+		log.Infof("%s", version.Version)
+		log.Infof("%s", version.GoVersion)
 		return
 	}
 
