@@ -252,10 +252,18 @@ func (d *DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId
 	return nil
 }
 
+func (d *DummyService) RemoveValidatorDashboards(ctx context.Context, dashboardIds []uint64) error {
+	return nil
+}
+
 func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
 	r := t.VDBPostArchivingReturnData{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) UpdateValidatorDashboardsArchiving(ctx context.Context, dashboards []t.ArchiverDashboardArchiveReason) error {
+	return nil
 }
 
 func (d *DummyService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
@@ -846,7 +854,7 @@ func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) 
 	return r, err
 }
 
-func (d *DummyService) GetValidatorDashboardsInfo(ctx context.Context) (map[uint64][]t.ArchiverDashboard, error) {
+func (d *DummyService) GetValidatorDashboardsCountInfo(ctx context.Context) (map[uint64][]t.ArchiverDashboard, error) {
 	r := make(map[uint64][]t.ArchiverDashboard)
 	err := commonFakeData(&r)
 	return r, err
