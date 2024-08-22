@@ -342,10 +342,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			return nil
 		})
 	}
-	validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-	}
 
 	// Validator Status
 	wg.Go(func() error {
@@ -367,7 +363,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			FROM validators
 			WHERE validatorindex = ANY($1)
 			GROUP BY status`
-			params = append(params, validators)
+			params = append(params, dashboardId.Validators)
 		}
 		err := d.alloyReader.SelectContext(ctx, &queryResult, query, params...)
 		if err != nil {
@@ -423,13 +419,13 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
 					goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
 
-			if len(dashboardId.Validators) > 0 {
-				ds = ds.
-					Where(goqu.L("r.validator_index IN ?", validators))
-			} else {
+			if len(dashboardId.Validators) == 0 {
 				ds = ds.
 					InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 					Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
+			} else {
+				ds = ds.
+					Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 			}
 
 			var queryResult struct {
