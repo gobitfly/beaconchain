@@ -49,6 +49,10 @@
         &:last-child {
           padding-right: 14px;
         }
+        &:hover{
+          background-color: var(--table-header-background);
+          color: var(--container-color);
+        }
 
         [data-pc-section="sort"] {
           font-family: var(--inter-family);
@@ -76,7 +80,7 @@
               color: inherit;
             }
           }
-          .p-sortable-column-icon {
+          .p-datatable-sort-icon {
             opacity: 0;
             width: 0.25em;
           }

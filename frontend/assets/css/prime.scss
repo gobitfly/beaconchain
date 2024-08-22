@@ -10,6 +10,7 @@
 
 // Button
 // https://primevue.org/button/
+button.p-button,
 .p-button {
   @include fonts.button_text;
 
@@ -40,16 +41,18 @@
     background: var(--button-color-disabled);
     border-color: var(--button-color-disabled);
   }
+
   &:not(:disabled):not([data-data-p-severity="secondary"]):hover {
+    border: 1px solid var(--button-color-hover);
     background: var(--button-color-hover);
-    border-color: var(--button-color-hover);
   }
   &:not(:disabled)[data-p-severity="secondary"]:hover {
     background: var(--button-secondary-hover-color);
+    border: 1px solid var(--button-color-active);
   }
   &:not(:disabled):active {
     background: var(--button-color-pressed);
-    border-color: var(--button-color-pressed);
+    border: 1px solid var(--button-color-pressed);
   }
 
   &.p-button-icon-only {
@@ -67,7 +70,7 @@
 
       &:hover {
         background-color: var(--button-color-dangerous-hover);
-        border-color: var(--button-color-dangerous-hover);
+        border: 1px solid var(--button-color-dangerous-hover);
       }
     }
   }
@@ -75,7 +78,7 @@
 
 // Dialog
 // https://primevue.org/dialog/
-.p-dialog {
+div.p-dialog {
   background: var(--container-background);
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
@@ -109,7 +112,7 @@
 
 // InputText
 // https://primevue.org/inputtext/
-.p-inputtext {
+input.p-inputtext {
   @include fonts.standard_text;
   color: var(--input-active-text-color);
   background: var(--input-background);
@@ -123,7 +126,13 @@
     color: var(--input-placeholder-text-color);
   }
 
+  &:enabled:hover,
+  &.p-invalid {
+    border-color: var(--input-border-color);
+  }
+
   &:enabled:focus {
+    border-color: var(--input-border-color);
     outline: 0 none;
     outline-offset: 0;
   }
@@ -167,13 +176,13 @@
 
 // Checkbox
 // https://primevue.org/checkbox/
-.p-checkbox {
+div.p-checkbox {
   .p-checkbox-box {
     width: 20px;
     height: 20px;
     border-radius: var(--border-radius);
-    border: 1px solid var(--checkbox-border-color) !important;
-    background: var(--checkbox-background-color) !important;
+    border: 1px solid var(--checkbox-border-color);
+    background: var(--checkbox-background-color);
 
     .p-checkbox-icon {
       transition-duration: 0.2s;
@@ -186,19 +195,21 @@
   }
   &.p-checkbox-checked:not(:hover) {
     .p-checkbox-box {
-      background: var(--primary-color) !important;
-      color: var(--primary-contrast-color) !important;
+      background: var(--primary-color);
+      color: var(--primary-contrast-color);
     }
   }
+
+  &.p-checkbox-checked:not(.p-disabled):has(.p-checkbox-input:hover), 
   &:hover {
     .p-checkbox-box {
-      background: var(--button-color-hover) !important;
-      color: var(--primary-contrast-color) !important;
+      background: var(--button-color-hover);
+      color: var(--primary-contrast-color);
     }
   }
   &.p-disabled {
     .p-checkbox-box {
-      background: var(--button-color-disabled) !important;
+      background: var(--button-color-disabled);
     }
   }
 }
@@ -520,7 +531,7 @@
   }
 }
 
-.p-select-overlay {
+div.p-select-overlay {
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
