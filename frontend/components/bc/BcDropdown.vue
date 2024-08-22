@@ -1,28 +1,14 @@
 <script setup lang="ts">
-import type { SelectChangeEvent } from 'primevue/select'
-
 interface Props {
   panelClass?: string,
   variant?: 'default' | 'header' | 'table',
 }
 
 defineProps<Props>()
-
-const onChange = (event: SelectChangeEvent) => {
-  console.log('event', event)
-}
-const onValueChange = (value: any) => {
-  console.log('value change', value)
-}
 </script>
 
 <template>
-  <Select
-    :class="variant"
-    :panel-class="[variant, panelClass]"
-    @change="onChange"
-    @update:model-value="onValueChange"
-  >
+  <Select :class="variant" :panel-class="[variant, panelClass]">
     <template #dropdownicon>
       <IconChevron direction="bottom" />
     </template>
