@@ -30,7 +30,7 @@ func (s *Services) startEfficiencyDataService() {
 		go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, map[string]string{"status": "running"})
 		if err != nil {
 			log.Error(err, "error updating average network efficiency data", 0)
-			go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, &delay, nil)
+			go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, nil)
 			delay = 10 * time.Second
 		} else {
 			log.Infof("=== average network efficiency data updated in %s", time.Since(startTime))
