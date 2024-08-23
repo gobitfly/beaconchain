@@ -48,6 +48,7 @@ func (a *Archiver) updateArchivedStatus() error {
 	}
 
 	for userId, dashboards := range userDashboards {
+		// TODO: For better performance there should exist a method to get all user info at once
 		userInfo, err := a.das.GetUserInfo(ctx, userId)
 		if err != nil {
 			return err
