@@ -1,9 +1,10 @@
-package main
+package statistics
 
 import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 
 	"math/big"
 	"strconv"
@@ -37,21 +38,22 @@ type options struct {
 
 var opt = &options{}
 
-func main() {
-	flag.StringVar(&opt.configPath, "config", "", "Path to the config file")
-	flag.Int64Var(&opt.statisticsDayToExport, "statistics.day", -1, "Day to export statistics (will export the day independent if it has been already exported or not")
-	flag.StringVar(&opt.statisticsDaysToExport, "statistics.days", "", "Days to export statistics (will export the day independent if it has been already exported or not")
-	flag.BoolVar(&opt.statisticsValidatorToggle, "validators.enabled", false, "Toggle exporting validator statistics")
-	flag.BoolVar(&opt.statisticsChartToggle, "charts.enabled", false, "Toggle exporting chart series")
-	flag.BoolVar(&opt.statisticsGraffitiToggle, "graffiti.enabled", false, "Toggle exporting graffiti statistics")
-	flag.BoolVar(&opt.resetStatus, "validators.reset", false, "Export stats independent if they have already been exported previously")
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	fs.StringVar(&opt.configPath, "config", "", "Path to the config file")
+	fs.Int64Var(&opt.statisticsDayToExport, "statistics.day", -1, "Day to export statistics (will export the day independent if it has been already exported or not")
+	fs.StringVar(&opt.statisticsDaysToExport, "statistics.days", "", "Days to export statistics (will export the day independent if it has been already exported or not")
+	fs.BoolVar(&opt.statisticsValidatorToggle, "validators.enabled", false, "Toggle exporting validator statistics")
+	fs.BoolVar(&opt.statisticsChartToggle, "charts.enabled", false, "Toggle exporting chart series")
+	fs.BoolVar(&opt.statisticsGraffitiToggle, "graffiti.enabled", false, "Toggle exporting graffiti statistics")
+	fs.BoolVar(&opt.resetStatus, "validators.reset", false, "Export stats independent if they have already been exported previously")
 
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
-		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
+		log.Info(version.Version)
+		log.Info(version.GoVersion)
 		return
 	}
 
@@ -72,12 +74,12 @@ func main() {
 	}
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{

@@ -33,7 +33,7 @@ type VDBId struct {
 // could replace if we want the import in all files
 type VDBValidator = types.ValidatorIndex
 
-type DashboardInfo struct {
+type DashboardUser struct {
 	Id     VDBIdPrimary `db:"id"` // this must be the bigint id
 	UserId uint64       `db:"user_id"`
 }

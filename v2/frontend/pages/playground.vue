@@ -1,10 +1,19 @@
 <script setup lang="ts">
+import {
+  PlaygroundAds,
+  PlaygroundComponents,
+  PlaygroundComposable,
+  PlaygroundDashboardValidatorManageValidators,
+  PlaygroundStyling,
+  PlaygroundSubsetList,
+} from '#components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import {
   type InternalGetValidatorDashboardSlotVizResponse,
   type SlotVizEpoch,
 } from '~/types/api/slot_viz'
 import { formatNumber } from '~/utils/format'
+import type { HashTabs } from '~/types/hashTabs'
 
 const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
 
@@ -35,15 +44,49 @@ onMounted(async () => {
   )
   slotVizData.value = res.data
 })
+
+const tabs: HashTabs = [
+  {
+    component: PlaygroundComponents,
+    key: 'components',
+    title: 'Components',
+  },
+  {
+    component: PlaygroundStyling,
+    key: 'styling',
+    title: 'Styling',
+  },
+  {
+    component: PlaygroundComposable,
+    key: 'composables',
+    title: 'Composables',
+  },
+  {
+    key: 'slotviz',
+    title: 'Slot Viz',
+  },
+  {
+    component: PlaygroundAds,
+    key: 'addSafe',
+    title: 'Ads',
+  },
+  {
+    component: PlaygroundSubsetList,
+    key: 'subset',
+    title: 'Subset Validators',
+  },
+  {
+    component: PlaygroundDashboardValidatorManageValidators,
+    key: 'manage',
+    title: 'Manage Validators',
+  },
+]
 </script>
 
 <template>
   <div class="content">
     <h1>Playground for testing UI components</h1>
-    <BcLink
-      to="/"
-      class="row"
-    >
+    <BcLink to="/" class="row">
       <Button class="row">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
       </Button>
@@ -52,33 +95,11 @@ onMounted(async () => {
       Latest Slot: {{ formatNumber(latestState?.current_slot) }}
     </div>
 
-    <TabView :lazy="true">
-      <TabPanel header="Components">
-        <PlaygroundComponents />
-      </TabPanel>
-      <TabPanel header="Styling">
-        <PlaygroundStyling />
-      </TabPanel>
-      <TabPanel header="Composable">
-        <PlaygroundComposable />
-      </TabPanel>
-      <TabPanel header="Ads">
-        <PlaygroundAds />
-      </TabPanel>
-      <TabPanel header="Slot Viz">
-        <SlotVizViewer
-          v-if="slotVizData"
-          :data="slotVizData"
-        />
-      </TabPanel>
-      <TabPanel header="Subset Validators">
-        <PlaygroundSubsetList />
-      </TabPanel>
-      <TabPanel header="Manage Validators">
-        <PlaygroundDashboardValidatorManageValidators />
-      </TabPanel>
-    </TabView>
-
+    <BcTabList :tabs default-tab="components" :use-route-hash="true">
+      <template #tab-panel-slotviz>
+        <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
+      </template>
+    </BcTabList>
     <BcFooterMainFooter />
   </div>
 </template>

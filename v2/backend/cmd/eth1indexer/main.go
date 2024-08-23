@@ -1,4 +1,4 @@
-package main
+package eth1indexer
 
 import (
 	"bytes"
@@ -36,49 +36,51 @@ import (
 	_ "net/http/pprof"
 )
 
-func main() {
-	erigonEndpoint := flag.String("erigon", "", "Erigon archive node enpoint")
-	block := flag.Int64("block", 0, "Index a specific block")
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	erigonEndpoint := fs.String("erigon", "", "Erigon archive node enpoint")
+	block := fs.Int64("block", 0, "Index a specific block")
 
-	reorgDepth := flag.Int("reorg.depth", 20, "Lookback to check and handle chain reorgs")
+	reorgDepth := fs.Int("reorg.depth", 20, "Lookback to check and handle chain reorgs")
 
-	concurrencyBlocks := flag.Int64("blocks.concurrency", 30, "Concurrency to use when indexing blocks from erigon")
-	startBlocks := flag.Int64("blocks.start", 0, "Block to start indexing")
-	endBlocks := flag.Int64("blocks.end", 0, "Block to finish indexing")
-	bulkBlocks := flag.Int64("blocks.bulk", 8000, "Maximum number of blocks to be processed before saving")
-	offsetBlocks := flag.Int64("blocks.offset", 100, "Blocks offset")
-	checkBlocksGaps := flag.Bool("blocks.gaps", false, "Check for gaps in the blocks table")
-	checkBlocksGapsLookback := flag.Int("blocks.gaps.lookback", 1000000, "Lookback for gaps check of the blocks table")
-	traceMode := flag.String("blocks.tracemode", "parity/geth", "Trace mode to use, can bei either 'parity', 'geth' or 'parity/geth' for both")
+	concurrencyBlocks := fs.Int64("blocks.concurrency", 30, "Concurrency to use when indexing blocks from erigon")
+	startBlocks := fs.Int64("blocks.start", 0, "Block to start indexing")
+	endBlocks := fs.Int64("blocks.end", 0, "Block to finish indexing")
+	bulkBlocks := fs.Int64("blocks.bulk", 8000, "Maximum number of blocks to be processed before saving")
+	offsetBlocks := fs.Int64("blocks.offset", 100, "Blocks offset")
+	checkBlocksGaps := fs.Bool("blocks.gaps", false, "Check for gaps in the blocks table")
+	checkBlocksGapsLookback := fs.Int("blocks.gaps.lookback", 1000000, "Lookback for gaps check of the blocks table")
+	traceMode := fs.String("blocks.tracemode", "parity/geth", "Trace mode to use, can bei either 'parity', 'geth' or 'parity/geth' for both")
 
-	concurrencyData := flag.Int64("data.concurrency", 30, "Concurrency to use when indexing data from bigtable")
-	startData := flag.Int64("data.start", 0, "Block to start indexing")
-	endData := flag.Int64("data.end", 0, "Block to finish indexing")
-	bulkData := flag.Int64("data.bulk", 8000, "Maximum number of blocks to be processed before saving")
-	offsetData := flag.Int64("data.offset", 1000, "Data offset")
-	checkDataGaps := flag.Bool("data.gaps", false, "Check for gaps in the data table")
-	checkDataGapsLookback := flag.Int("data.gaps.lookback", 1000000, "Lookback for gaps check of the blocks table")
+	concurrencyData := fs.Int64("data.concurrency", 30, "Concurrency to use when indexing data from bigtable")
+	startData := fs.Int64("data.start", 0, "Block to start indexing")
+	endData := fs.Int64("data.end", 0, "Block to finish indexing")
+	bulkData := fs.Int64("data.bulk", 8000, "Maximum number of blocks to be processed before saving")
+	offsetData := fs.Int64("data.offset", 1000, "Data offset")
+	checkDataGaps := fs.Bool("data.gaps", false, "Check for gaps in the data table")
+	checkDataGapsLookback := fs.Int("data.gaps.lookback", 1000000, "Lookback for gaps check of the blocks table")
 
-	enableBalanceUpdater := flag.Bool("balances.enabled", false, "Enable balance update process")
-	enableFullBalanceUpdater := flag.Bool("balances.full.enabled", false, "Enable full balance update process")
-	balanceUpdaterBatchSize := flag.Int("balances.batch", 1000, "Batch size for balance updates")
+	enableBalanceUpdater := fs.Bool("balances.enabled", false, "Enable balance update process")
+	enableFullBalanceUpdater := fs.Bool("balances.full.enabled", false, "Enable full balance update process")
+	balanceUpdaterBatchSize := fs.Int("balances.batch", 1000, "Batch size for balance updates")
 
-	tokenPriceExport := flag.Bool("token.price.enabled", false, "Enable token export process")
-	tokenPriceExportList := flag.String("token.price.list", "", "Tokenlist path to use for the token price export")
-	tokenPriceExportFrequency := flag.Duration("token.price.frequency", time.Hour, "Token price export interval")
+	tokenPriceExport := fs.Bool("token.price.enabled", false, "Enable token export process")
+	tokenPriceExportList := fs.String("token.price.list", "", "Tokenlist path to use for the token price export")
+	tokenPriceExportFrequency := fs.Duration("token.price.frequency", time.Hour, "Token price export interval")
 
-	versionFlag := flag.Bool("version", false, "Print version and exit")
+	versionFlag := fs.Bool("version", false, "Print version and exit")
 
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
 
-	enableEnsUpdater := flag.Bool("ens.enabled", false, "Enable ens update process")
-	ensBatchSize := flag.Int64("ens.batch", 200, "Batch size for ens updates")
+	enableEnsUpdater := fs.Bool("ens.enabled", false, "Enable ens update process")
+	ensBatchSize := fs.Int64("ens.batch", 200, "Batch size for ens updates")
 
-	flag.Parse()
+	_ = fs.Parse(os.Args[2:])
 
+	log.Info(*configPath)
 	if *versionFlag {
-		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
+		log.Info(version.Version)
+		log.Info(version.GoVersion)
 		return
 	}
 
@@ -92,12 +94,12 @@ func main() {
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	// enable pprof endpoint if requested
@@ -731,7 +733,7 @@ func ImportMainnetERC20TokenMetadataFromTokenDirectory(bt *db.Bigtable) {
 		if len(token.LogoURI) > 0 {
 			resp, err := client.Get(token.LogoURI)
 
-			if err == nil && resp.StatusCode == 200 {
+			if err == nil && resp.StatusCode == http.StatusOK {
 				body, err := io.ReadAll(resp.Body)
 
 				if err != nil {

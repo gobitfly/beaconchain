@@ -7,6 +7,7 @@ import type { AgeFormat } from '~/types/settings'
 import {
   type ChainIDs, epochToTs, slotToTs,
 } from '~/types/network'
+import type { NumberOrString } from '~/types/value'
 
 export const ONE_MINUTE = 60
 export const ONE_HOUR = ONE_MINUTE * 60
@@ -367,4 +368,16 @@ export const formatPremiumProductPrice = (
     digits ?? 2,
     digits ?? 2,
   )
+}
+
+export function formatToPercent(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: 'unit',
+    unit: 'percent',
+  }).format(Number(value))
 }

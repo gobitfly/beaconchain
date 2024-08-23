@@ -102,7 +102,7 @@ Best regards,
 
 // TODO move to service?
 func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint64, email string) error {
-	// 0. check if email resets are allowed
+	// 0. check if password resets are allowed
 	// (can be forbidden by admin (not yet in v2))
 	passwordResetAllowed, err := h.dai.IsPasswordResetAllowed(ctx, userId)
 	if err != nil {
@@ -884,13 +884,13 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 		r = r.WithContext(ctx)
 
-		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
+		dashboardUser, err := h.dai.GetValidatorDashboardUser(r.Context(), types.VDBIdPrimary(dashboardId))
 		if err != nil {
 			handleErr(w, err)
 			return
 		}
 
-		if dashboard.UserId != userId {
+		if dashboardUser.UserId != userId {
 			// user does not have access to dashboard
 			// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
 			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
@@ -932,7 +932,11 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 			handleErr(w, err)
 			return
 		}
-		dashboard, err := h.dai.GetValidatorDashboard(r.Context(), *dashboardId)
+		if len(dashboardId.Validators) > 0 {
+			next.ServeHTTP(w, r)
+			return
+		}
+		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), dashboardId.Id)
 		if err != nil {
 			handleErr(w, err)
 			return
