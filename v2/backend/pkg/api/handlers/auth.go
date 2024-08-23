@@ -102,7 +102,7 @@ Best regards,
 
 // TODO move to service?
 func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint64, email string) error {
-	// 0. check if email resets are allowed
+	// 0. check if password resets are allowed
 	// (can be forbidden by admin (not yet in v2))
 	passwordResetAllowed, err := h.dai.IsPasswordResetAllowed(ctx, userId)
 	if err != nil {
