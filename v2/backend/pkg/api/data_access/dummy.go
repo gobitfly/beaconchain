@@ -137,12 +137,6 @@ func (d *DummyService) UpdatePasswordResetTime(ctx context.Context, userId uint6
 	return nil
 }
 
-func (d *DummyService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
-	r := ""
-	err := commonFakeData(&r)
-	return r, err
-}
-
 func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
 	return nil
 }
