@@ -256,6 +256,9 @@ const option = computed<ECBasicOption | undefined>(() => {
         lineStyle: { color: colors.value.label },
       },
       end: 100,
+      labelFormatter: (_value: number, valueStr: string) => {
+        return formatEpochToDate(parseInt(valueStr), $t('locales.date'))
+      },
       start: 60,
       type: 'slider',
     },

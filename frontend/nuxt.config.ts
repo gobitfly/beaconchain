@@ -59,7 +59,7 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       { storesDirs: [ './stores/**' ] },
     ],
-    'nuxt-primevue',
+    '@primevue/nuxt-module',
     '@nuxt/eslint',
   ],
   nitro: { compressPublicAssets: true },
@@ -104,6 +104,9 @@ export default defineNuxtConfig({
           commonjs(),
         ],
       },
+    },
+    esbuild: {
+      drop: [ 'console' ],
     },
   },
 })

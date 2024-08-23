@@ -26,8 +26,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
-	result := &t.DashboardInfo{}
+func (d *DataAccessService) GetValidatorDashboardUser(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardUser, error) {
+	result := &t.DashboardUser{}
 
 	err := d.alloyReader.GetContext(ctx, result, `
 		SELECT
@@ -42,13 +42,12 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 	return result, err
 }
 
-func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
-	result := &t.DashboardInfo{}
+func (d *DataAccessService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
+	var result t.VDBIdPrimary
 
-	err := d.alloyReader.GetContext(ctx, result, `
+	err := d.alloyReader.GetContext(ctx, &result, `
 		SELECT
-			uvd.id,
-			uvd.user_id
+			uvd.id
 		FROM users_val_dashboards_sharing uvds
 		LEFT JOIN users_val_dashboards uvd ON uvd.id = uvds.dashboard_id
 		WHERE uvds.public_id = $1
@@ -56,10 +55,10 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Cont
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: public id %v not found", ErrNotFound, publicDashboardId)
 	}
-	return result, err
+	return &result, err
 }
 
-func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
 	result := &t.ValidatorDashboard{}
 
 	wg := errgroup.Group{}
@@ -84,7 +83,7 @@ func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboard
 		FROM users_val_dashboards uvd
 		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
 		WHERE uvd.id = $1
-	`, dashboardId.Id)
+	`, dashboardId)
 		if err != nil {
 			return err
 		}
@@ -94,7 +93,7 @@ func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboard
 		}
 
 		mutex.Lock()
-		result.Id = uint64(dashboardId.Id)
+		result.Id = uint64(dashboardId)
 		result.Name = dbReturn[0].Name
 		result.IsArchived = dbReturn[0].IsArchived.Valid
 		result.ArchivedReason = dbReturn[0].IsArchived.String
@@ -131,7 +130,7 @@ func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboard
 			FROM 
 			    dashboards_groups,
 			    dashboards_validators
-		`, dashboardId.Id)
+		`, dashboardId)
 		if err != nil {
 			return err
 		}
@@ -343,10 +342,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			return nil
 		})
 	}
-	validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-	}
 
 	// Validator Status
 	wg.Go(func() error {
@@ -368,7 +363,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			FROM validators
 			WHERE validatorindex = ANY($1)
 			GROUP BY status`
-			params = append(params, validators)
+			params = append(params, dashboardId.Validators)
 		}
 		err := d.alloyReader.SelectContext(ctx, &queryResult, query, params...)
 		if err != nil {
@@ -424,13 +419,13 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
 					goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
 
-			if len(dashboardId.Validators) > 0 {
-				ds = ds.
-					Where(goqu.L("r.validator_index IN ?", validators))
-			} else {
+			if len(dashboardId.Validators) == 0 {
 				ds = ds.
 					InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 					Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
+			} else {
+				ds = ds.
+					Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 			}
 
 			var queryResult struct {

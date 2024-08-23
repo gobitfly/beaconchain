@@ -1,12 +1,13 @@
 {
   "conventionalCommits.scopes": [
-    "i18n",
-    "vscode",
-    "eslint",
-    "mainHeader",
-    "checkout",
-    "ci"
-  ],
+  "checkout",
+  "ci",
+  "eslint",
+  "git",
+  "i18n",
+  "mainHeader",
+  "vscode"
+],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
 },

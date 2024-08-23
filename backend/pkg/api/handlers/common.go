@@ -385,11 +385,11 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 		return perk, nil
 	}
 	// could be made into a single query if needed
-	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(ctx, id.Id)
+	dashboardUser, err := h.dai.GetValidatorDashboardUser(ctx, id.Id)
 	if err != nil {
 		return nil, err
 	}
-	userInfo, err := h.dai.GetUserInfo(ctx, dashboardInfo.UserId)
+	userInfo, err := h.dai.GetUserInfo(ctx, dashboardUser.UserId)
 	if err != nil {
 		return nil, err
 	}
