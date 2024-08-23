@@ -438,11 +438,13 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		}
 
 		// Get the total cl deposits for non-rocketpool validators
-		totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
-		if err != nil {
-			return fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
+		if len(nonRpDashboardId.Validators) > 0 {
+			totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
+			if err != nil {
+				return fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
+			}
+			data.Balances.StakedEth = data.Balances.StakedEth.Add(totalNonRpDeposits.TotalAmount)
 		}
-		data.Balances.StakedEth = data.Balances.StakedEth.Add(totalNonRpDeposits.TotalAmount)
 
 		return nil
 	})
