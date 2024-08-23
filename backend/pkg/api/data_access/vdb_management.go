@@ -310,8 +310,6 @@ func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, da
 }
 
 func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
-	// @DATA-ACCESS incorporate poolmode
-	// @DATA-ACCESS return VDBOverviewBalances
 	data := t.VDBOverviewData{}
 	wg := errgroup.Group{}
 	var err error
