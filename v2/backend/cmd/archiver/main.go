@@ -1,7 +1,8 @@
-package main
+package archiver
 
 import (
 	"flag"
+	"os"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 
@@ -13,10 +14,11 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/archiver"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Infof(version.Version)

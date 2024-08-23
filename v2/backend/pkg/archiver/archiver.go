@@ -35,7 +35,7 @@ func (a *Archiver) Start() {
 }
 
 func (a *Archiver) updateArchivedStatus() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
 	defer cancel()
 
 	var dashboardsToBeArchived []t.ArchiverDashboardArchiveReason
