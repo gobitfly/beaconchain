@@ -418,8 +418,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
 
 				base := decimal.Min(decimal.Max(decimal.Zero, validatorBalance.Sub(*rpValidator.UserDepositBalance)), *rpValidator.NodeDepositBalance)
-				comission := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(invOperatorShare).Mul(decimal.NewFromFloat(rpValidator.NodeFee)))
-				reward := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(operatorShare).Add(comission))
+				commission := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(invOperatorShare).Mul(decimal.NewFromFloat(rpValidator.NodeFee)))
+				reward := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(operatorShare).Add(commission))
 
 				operatorBalance := base.Add(reward)
 
