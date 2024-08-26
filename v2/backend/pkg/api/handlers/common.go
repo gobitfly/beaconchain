@@ -249,6 +249,17 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 	return num
 }
 
+func (v *validationError) checkBool(param, paramName string) bool {
+	if param == "" {
+		return false
+	}
+	boolVar, err := strconv.ParseBool(param)
+	if err != nil {
+		v.add(paramName, fmt.Sprintf("given value '%s' is not a boolean", param))
+	}
+	return boolVar
+}
+
 func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 	if keysString == "" {
 		return []string{}
@@ -808,7 +819,7 @@ func returnInternalServerError(w http.ResponseWriter, err error) {
 func handleErr(w http.ResponseWriter, err error) {
 	_, isValidationError := err.(validationError)
 	switch {
-	case isValidationError || errors.Is(err, errBadRequest):
+	case isValidationError, errors.Is(err, errBadRequest):
 		returnBadRequest(w, err)
 	case errors.Is(err, dataaccess.ErrNotFound):
 		returnNotFound(w, err)

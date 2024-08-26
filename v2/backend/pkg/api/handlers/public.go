@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"slices"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gorilla/mux"
 )
 
@@ -19,134 +17,21 @@ import (
 // Public handlers must never call internal handlers
 
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	query := `
-		WITH sub AS
-			(
-				SELECT
-					emitter,
-					event_id,
-					max(inserted_at) AS inserted_at,
-					max(expires_at) AS expires_at,
-					any(status) AS status,
-					any(mapSort(metadata)) AS metadata
-				FROM status_reports AS s
-				WHERE s.expires_at > now()
-				GROUP BY
-					1,
-					2,
-					s.status
-				ORDER BY
-					inserted_at DESC,
-					1 ASC,
-					2 ASC
-			)
-		SELECT
-			event_id,
-			status,
-			groupArray(
-				map(
-					'emitter',
-					CAST(emitter, 'String'),
-					'inserted_at',
-					CAST(inserted_at, 'String'),
-					'expires_at',
-					CAST(expires_at, 'String'),
-					'metadata',
-					CAST(metadata, 'String')
-				)
-			) AS result
-		FROM sub
-		GROUP BY
-			event_id,
-			status
-		ORDER BY event_id, max(inserted_at) DESC
-	`
-
-	type Result struct {
-		EventId string              `db:"event_id" json:"-"`
-		Status  string              `db:"status" json:"status"`
-		Result  []map[string]string `db:"result" json:"reports"`
-	}
-	var results []Result
-	var response struct {
-		TotalOkPercentage float64             `json:"total_ok_percentage"`
-		Reports           map[string][]Result `json:"status_reports"`
-	}
-	response.Reports = make(map[string][]Result)
-	err := db.ClickHouseReader.SelectContext(ctx, &results, query)
-	if err != nil {
-		response.Reports["response_error"] = []Result{
-			{
-				EventId: "response_error",
-				Status:  "failure",
-				Result:  []map[string]string{{"error": "failed to fetch status reports"}},
-			},
-		}
-
-		writeResponse(w, http.StatusInternalServerError, response)
+	var v validationError
+	showAll := v.checkBool(r.URL.Query().Get("show_all"), "show_all")
+	if v.hasErrors() {
+		handleErr(w, v)
 		return
 	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	data := h.dai.GetHealthz(ctx, showAll)
 
-	mustExist := []string{
-		"ch_rolling_1h",
-		"ch_rolling_24h",
-		"ch_rolling_7d",
-		"ch_rolling_30d",
-		"ch_rolling_90d",
-		"ch_rolling_total",
-		"ch_dashboard_epoch",
-		"api_service_avg_efficiency",
-		"api_service_validator_mapping",
-		"api_service_slot_viz",
+	responseCode := http.StatusOK
+	if data.TotalOkPercentage != 1 {
+		responseCode = http.StatusInternalServerError
 	}
-	for _, result := range results {
-		response.Reports[result.EventId] = append(response.Reports[result.EventId], result)
-	}
-	for _, id := range mustExist {
-		if _, ok := response.Reports[id]; !ok {
-			response.Reports[id] = []Result{
-				{
-					EventId: id,
-					Status:  "failure",
-					Result: []map[string]string{
-						{"error": "no status report found"},
-					},
-				},
-			}
-		}
-	}
-	failures := 0
-	for _, r := range response.Reports {
-		for _, report := range r {
-			if report.Status == "failure" {
-				failures++
-			}
-		}
-	}
-	if len(results) > 0 {
-		response.TotalOkPercentage = 1 - float64(failures)/float64(len(results))
-	}
-
-	if !r.URL.Query().Has("show_all") {
-		// we will filter out all reports that arent failure
-		for id, result := range response.Reports {
-			response.Reports[id] = slices.DeleteFunc(result, func(r Result) bool {
-				return r.Status != "failure"
-			})
-			if len(response.Reports[id]) == 0 {
-				delete(response.Reports, id)
-			}
-		}
-	}
-
-	if response.TotalOkPercentage == 1 {
-		returnOk(w, response)
-	} else {
-		writeResponse(w, http.StatusInternalServerError, response)
-	}
+	writeResponse(w, responseCode, data)
 }
 
 func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *http.Request) {

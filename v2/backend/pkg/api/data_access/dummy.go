@@ -11,6 +11,7 @@ import (
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
@@ -840,4 +841,10 @@ func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPool
 	r := t.RocketPoolData{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) types.HealthzData {
+	r := types.HealthzData{}
+	_ = commonFakeData(&r)
+	return r
 }
