@@ -45,7 +45,7 @@ export function useCustomFetch() {
 
     const url = useRequestURL()
     const runtimeConfig = useRuntimeConfig()
-    const showInDevelopment = Boolean(runtimeConfig.showInDevelopment)
+    const showInDevelopment = Boolean(runtimeConfig.public.showInDevelopment)
     const {
       private: pConfig,
       public: {
