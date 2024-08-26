@@ -1,12 +1,12 @@
-package main
+package notification_collector
 
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -25,11 +25,11 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "config.yml", "path to config")
+	versionFlag := fs.Bool("version", false, "print version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)
@@ -53,12 +53,12 @@ func main() {
 	}
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	if utils.Config.Pprof.Enabled {
@@ -159,27 +159,6 @@ func main() {
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
 	defer db.BigtableClient.Close()
-
-	if utils.Config.Metrics.Enabled {
-		go metrics.MonitorDB(db.WriterDb)
-		DBInfo := []string{
-			cfg.WriterDatabase.Username,
-			cfg.WriterDatabase.Password,
-			cfg.WriterDatabase.Host,
-			cfg.WriterDatabase.Port,
-			cfg.WriterDatabase.Name}
-		DBStr := strings.Join(DBInfo, "-")
-		frontendDBInfo := []string{
-			cfg.Frontend.WriterDatabase.Username,
-			cfg.Frontend.WriterDatabase.Password,
-			cfg.Frontend.WriterDatabase.Host,
-			cfg.Frontend.WriterDatabase.Port,
-			cfg.Frontend.WriterDatabase.Name}
-		frontendDBStr := strings.Join(frontendDBInfo, "-")
-		if DBStr != frontendDBStr {
-			go metrics.MonitorDB(db.FrontendWriterDB)
-		}
-	}
 
 	log.Infof("database connection established")
 

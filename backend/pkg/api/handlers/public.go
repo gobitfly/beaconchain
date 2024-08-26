@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gorilla/mux"
@@ -15,7 +17,21 @@ import (
 // Public handlers must never call internal handlers
 
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, r, nil)
+	var v validationError
+	showAll := v.checkBool(r.URL.Query().Get("show_all"), "show_all")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	data := h.dai.GetHealthz(ctx, showAll)
+
+	responseCode := http.StatusOK
+	if data.TotalOkPercentage != 1 {
+		responseCode = http.StatusInternalServerError
+	}
+	writeResponse(w, r, responseCode, data)
 }
 
 func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *http.Request) {

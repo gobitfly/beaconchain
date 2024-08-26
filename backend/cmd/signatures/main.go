@@ -1,7 +1,8 @@
-package main
+package signatures
 
 import (
 	"encoding/json"
+	"os"
 
 	"flag"
 	"fmt"
@@ -26,13 +27,12 @@ import (
 * This function is for indexing smart contract function names from www.4byte.directory
 * so that we can label the transction function calls instead of the "id"
 **/
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	metricsAddr := flag.String("metrics.address", "localhost:9090", "serve metrics on that addr")
-	metricsEnabled := flag.Bool("metrics.enabled", false, "enable serving metrics")
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
 
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)
@@ -51,12 +51,12 @@ func main() {
 	log.InfoWithFields(log.Fields{"config": *configPath, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 
 	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
@@ -80,15 +80,6 @@ func main() {
 	}, "pgx", "postgres")
 	defer db.ReaderDb.Close()
 	defer db.WriterDb.Close()
-
-	if *metricsEnabled {
-		go func() {
-			log.InfoWithFields(log.Fields{"addr": *metricsAddr}, "Serving metrics")
-			if err := metrics.Serve(*metricsAddr); err != nil {
-				log.Fatal(err, "error serving metrics", 0)
-			}
-		}()
-	}
 
 	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, "1", utils.Config.RedisCacheEndpoint)
 	if err != nil {

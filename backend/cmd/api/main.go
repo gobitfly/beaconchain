@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"context"
@@ -6,10 +6,12 @@ import (
 	"flag"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/monitoring"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -24,10 +26,12 @@ const (
 	dummyApi = false
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Info(version.Version)
@@ -54,15 +58,21 @@ func main() {
 
 	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
+	if !cfg.Frontend.Debug {
+		// enable light-weight db connection monitoring
+		monitoring.Init(false)
+		monitoring.Start()
+		defer monitoring.Stop()
+	}
 
-	if cfg.Metrics.Enabled {
+	if utils.Config.Metrics.Enabled {
 		router.Use(metrics.HttpMiddleware)
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(cfg.Metrics.Address)
+		}()
 	}
 
 	if cfg.Frontend.RatelimitEnabled {

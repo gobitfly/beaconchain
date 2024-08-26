@@ -1,7 +1,8 @@
-package main
+package blobindexer
 
 import (
 	"flag"
+	"os"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -12,10 +13,12 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/blobindexer"
 )
 
-func main() {
-	configFlag := flag.String("config", "config.yml", "path to config")
-	versionFlag := flag.Bool("version", false, "print version and exit")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+
+	configFlag := fs.String("config", "config.yml", "path to config")
+	versionFlag := fs.Bool("version", false, "print version and exit")
+	_ = fs.Parse(os.Args[2:])
 	if *versionFlag {
 		log.Info(version.Version)
 		return
@@ -26,12 +29,12 @@ func main() {
 		log.Fatal(err, "error reading config file", 0)
 	}
 	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
-		}(utils.Config.Metrics.Address)
+		}()
 	}
 	blobIndexer, err := blobindexer.NewBlobIndexer()
 	if err != nil {
