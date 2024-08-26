@@ -2,6 +2,7 @@
   "conventionalCommits.scopes": [
   "checkout",
   "ci",
+  "customFetch",
   "eslint",
   "git",
   "i18n",
