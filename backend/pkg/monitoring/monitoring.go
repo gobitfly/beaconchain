@@ -12,6 +12,7 @@ var monitoredServices []services.Service
 
 func Init(full bool) {
 	metrics.UUID.WithLabelValues(utils.GetUUID()).Set(1) // so we can find out where the uuid is set
+	metrics.DeploymentType.WithLabelValues(utils.Config.DeploymentType).Set(1)
 	if db.ClickHouseNativeWriter == nil {
 		db.ClickHouseNativeWriter = db.MustInitClickhouseNative(&types.DatabaseConfig{
 			Username:     utils.Config.ClickHouse.WriterDatabase.Username,
