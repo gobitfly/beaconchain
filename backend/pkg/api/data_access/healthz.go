@@ -32,7 +32,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				timeouts_at,
 				status,
 				metadata
-			FROM status_reports2
+			FROM status_reports
 			WHERE expires_at > now() and deployment_type = ?
 			ORDER BY
 				event_id ASC,

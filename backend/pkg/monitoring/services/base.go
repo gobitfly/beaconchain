@@ -71,7 +71,7 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 		if db.ClickHouseNativeWriter != nil {
 			err = db.ClickHouseNativeWriter.AsyncInsert(
 				ctx,
-				"INSERT INTO status_reports2 (emitter, event_id, deployment_type, insert_id, expires_at, timeouts_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
+				"INSERT INTO status_reports (emitter, event_id, deployment_type, insert_id, expires_at, timeouts_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
 				true,
 				utils.GetUUID(),
 				id,
