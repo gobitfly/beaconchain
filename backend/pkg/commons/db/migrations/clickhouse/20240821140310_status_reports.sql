@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE status_reports2
+CREATE TABLE status_reports
 (
     `insert_id` Int64 CODEC(Delta, ZSTD(1)),
     `inserted_at` DateTime Materialized snowflakeToDateTime(insert_id), -- twitter snowflake epoch
