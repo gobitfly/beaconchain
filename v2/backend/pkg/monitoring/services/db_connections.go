@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -73,9 +74,7 @@ func (s *ServerDbConnections) checkDBConnections() {
 		n("db_conn_clickhouse_writer", db.ClickHouseWriter),
 		n("db_conn_clickhouse_native_writer", db.ClickHouseNativeWriter),
 		n("db_conn_persistent_redis_db_client", db.PersistentRedisDbClient),
-	}
-	if cache.TieredCache != nil {
-		entries = append(entries, n("db_conn_tiered_cache", cache.TieredCache))
+		n("db_conn_tiered_cache", cache.TieredCache),
 	}
 	wg := sync.WaitGroup{}
 	for _, entry := range entries {
@@ -90,34 +89,53 @@ func (s *ServerDbConnections) checkDBConnections() {
 			// context with deadline
 			ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 			defer cancel()
+			r := NewStatusReport(entry.ID, constants.Default, 10*time.Second)
 			switch edb := entry.DB.(type) {
 			case *sqlx.DB:
 				err := edb.PingContext(ctx)
-				ReportStatus(s.ctx, entry.ID, err, nil, nil)
+				if err != nil {
+					r(constants.Failure, map[string]string{"error": err.Error()})
+				} else {
+					r(constants.Success, nil)
+				}
 			case *redis.Client:
 				err := edb.Ping(ctx).Err()
-				ReportStatus(s.ctx, entry.ID, err, nil, nil)
+				if err != nil {
+					r(constants.Failure, map[string]string{"error": err.Error()})
+				} else {
+					r(constants.Success, nil)
+				}
 			case *cache.TieredCacheBase:
 				// have to use reflection cause nothing is public. this is a hack. but it works
 				val := reflect.ValueOf(edb).Elem().FieldByName("remoteCache")
 				if !val.IsValid() {
 					log.Error(fmt.Errorf("failed to get remoteCache"), "failed to get remoteCache", 0)
+					r(constants.Failure, map[string]string{"error": "failed to get remoteCache"})
 					return
 				}
 				// its a pointer to a pointer that is cache.RemoteCache compliant. convert it so we can call Get() on it
-				rf := reflect.NewAt(val.Type(), unsafe.Pointer(val.UnsafeAddr())).Elem()
+				rf := reflect.NewAt(val.Type(), unsafe.Pointer(uintptr(val.Addr().UnsafePointer()))).Elem()
 				vals := rf.MethodByName("GetBool").Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf("test")})
 				err := vals[1].Interface().(error)
 				// check if its redis nil, if yes ignore
 				if err != nil && errors.Is(err, redis.Nil) {
 					err = nil
 				}
-				ReportStatus(s.ctx, entry.ID, err, nil, nil)
+				if err != nil {
+					r(constants.Failure, map[string]string{"error": err.Error()})
+				} else {
+					r(constants.Success, nil)
+				}
 			case ch.Conn: // its an interface
 				err := edb.Ping(ctx)
-				ReportStatus(s.ctx, entry.ID, err, nil, nil)
+				if err != nil {
+					r(constants.Failure, map[string]string{"error": err.Error()})
+				} else {
+					r(constants.Success, nil)
+				}
 			default:
 				log.Error(fmt.Errorf("unknown db type"), "unknown db type", 0, map[string]interface{}{"entry": entry})
+				r(constants.Failure, map[string]string{"error": "unknown db type"})
 			}
 		}(entry)
 	}

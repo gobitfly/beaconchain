@@ -9,7 +9,8 @@ import (
 
 // Config is a struct to hold the configuration data
 type Config struct {
-	JustV2         bool `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
+	JustV2         bool   `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
+	DeploymentType string `yaml:"deploymentType" envconfig:"DEPLOYMENT_TYPE"`
 	ReaderDatabase struct {
 		Username     string `yaml:"user" envconfig:"READER_DB_USERNAME"`
 		Password     string `yaml:"password" envconfig:"READER_DB_PASSWORD"`
