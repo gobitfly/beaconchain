@@ -741,21 +741,24 @@ func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, respo
 	}
 	jsonData, err := json.Marshal(response)
 	if err != nil {
-		logApiError(r, fmt.Errorf("error encoding json data: %w", err))
+		logApiError(r, fmt.Errorf("error encoding json data: %w", err), 0,
+			log.Fields{
+				"data": fmt.Sprintf("%+v", response),
+			})
 		w.WriteHeader(http.StatusInternalServerError)
 		response = types.ApiErrorResponse{
 			Error: "error encoding json data",
 		}
 		if err = json.NewEncoder(w).Encode(response); err != nil {
 			// there seems to be an error with the lib
-			logApiError(r, fmt.Errorf("error encoding error response after failed encoding: %w", err))
+			logApiError(r, fmt.Errorf("error encoding error response after failed encoding: %w", err), 0)
 		}
 		return
 	}
 	w.WriteHeader(statusCode)
 	if _, err = w.Write(jsonData); err != nil {
 		// already returned wrong status code to user, can't prevent that
-		logApiError(r, fmt.Errorf("error writing response data: %w", err))
+		logApiError(r, fmt.Errorf("error writing response data: %w", err), 0)
 	}
 }
 
@@ -810,21 +813,14 @@ func returnGone(w http.ResponseWriter, r *http.Request, err error) {
 
 const maxBodySize = 10 * 1024
 
-func logApiError(r *http.Request, err error) {
+func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...log.Fields) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
-	log.Error(err, "error handling request", 3, nil,
-		map[string]interface{}{
-			"endpoint": r.Method + " " + r.URL.Path,
-			"query":    r.URL.RawQuery,
-			"body":     string(body),
-		},
-	)
-}
-
-func returnInternalServerError(w http.ResponseWriter, r *http.Request, err error) {
-	logApiError(r, err)
-	// TODO: don't return the error message to the user in production
-	returnError(w, r, http.StatusInternalServerError, err)
+	requestFields := log.Fields{
+		"endpoint": r.Method + " " + r.URL.Path,
+		"query":    r.URL.RawQuery,
+		"body":     string(body),
+	}
+	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
 }
 
 func handleErr(w http.ResponseWriter, r *http.Request, err error) {
@@ -847,7 +843,9 @@ func handleErr(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, errGone):
 		returnGone(w, r, err)
 	default:
-		returnInternalServerError(w, r, err)
+		logApiError(r, err, 1)
+		// TODO: don't return the error message to the user in production
+		returnError(w, r, http.StatusInternalServerError, err)
 	}
 }
 
