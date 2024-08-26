@@ -210,3 +210,17 @@ type VDBValidatorSummaryChartRow struct {
 	SyncExecuted           float64   `db:"sync_executed"`
 	SyncScheduled          float64   `db:"sync_scheduled"`
 }
+
+// -------------------------
+// healthz structs
+
+type HealthzResult struct {
+	EventId string              `db:"event_id" json:"-"`
+	Status  string              `db:"status" json:"status"`
+	Result  []map[string]string `db:"result" json:"reports"`
+}
+
+type HealthzData struct {
+	TotalOkPercentage float64                    `json:"total_ok_percentage"`
+	Reports           map[string][]HealthzResult `json:"status_reports"`
+}
