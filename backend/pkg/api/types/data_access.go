@@ -5,6 +5,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/shopspring/decimal"
 )
 
@@ -215,12 +216,14 @@ type VDBValidatorSummaryChartRow struct {
 // healthz structs
 
 type HealthzResult struct {
-	EventId string              `db:"event_id" json:"-"`
-	Status  string              `db:"status" json:"status"`
-	Result  []map[string]string `db:"result" json:"reports"`
+	EventId string               `db:"event_id" json:"-"`
+	Status  constants.StatusType `db:"status" json:"status"`
+	Result  []map[string]string  `db:"result" json:"reports"`
 }
 
 type HealthzData struct {
 	TotalOkPercentage float64                    `json:"total_ok_percentage"`
+	ReportingUUID     string                     `json:"reporting_uuid"`
+	DeploymentType    string                     `json:"deployment_type"`
 	Reports           map[string][]HealthzResult `json:"status_reports"`
 }

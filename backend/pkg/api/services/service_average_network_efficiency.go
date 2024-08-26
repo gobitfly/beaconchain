@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -11,6 +10,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -26,16 +26,17 @@ func (s *Services) startEfficiencyDataService() {
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
+		r := services.NewStatusReport("api_service_avg_efficiency", constants.Default, delay)
 		err := s.updateEfficiencyData() // TODO: only update data if something has changed (new head epoch)
-		go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, map[string]string{"status": "running"})
+		r(constants.Running, nil)
 		if err != nil {
 			log.Error(err, "error updating average network efficiency data", 0)
-			go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, nil)
+			r(constants.Failure, map[string]string{"error": err.Error()})
 			delay = 10 * time.Second
 		} else {
 			log.Infof("=== average network efficiency data updated in %s", time.Since(startTime))
 		}
-		go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, map[string]string{"status": "done", "took": time.Since(startTime).String()})
+		r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }

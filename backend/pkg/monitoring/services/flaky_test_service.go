@@ -3,6 +3,8 @@ package services
 import (
 	"fmt"
 	"time"
+
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
 type FlakyTestService struct {
@@ -26,7 +28,7 @@ func (s *FlakyTestService) internalProcess() {
 			return
 		case <-time.After(10 * time.Second):
 			err := fmt.Errorf("random error")
-			ReportStatus(s.ctx, "flaky_test", err, nil, nil)
+			NewStatusReport("flaky_test", constants.Default, constants.Default)(constants.Failure, map[string]string{"error": err.Error()})
 		}
 	}
 }
