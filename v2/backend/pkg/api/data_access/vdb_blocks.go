@@ -323,8 +323,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	LEFT JOIN blocks on r.slot = blocks.slot
 	LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
 	LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
+	GROUP BY r.proposer, group_id, r.epoch, r.slot, r.status, block, r.graffiti_text, fee_recipient, el_reward, cl_reward
 	`
-
 	startTime := time.Now()
 	err = d.alloyReader.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
