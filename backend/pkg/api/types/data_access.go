@@ -224,5 +224,3 @@ type HealthzData struct {
 	TotalOkPercentage float64                    `json:"total_ok_percentage"`
 	Reports           map[string][]HealthzResult `json:"status_reports"`
 }
-
-type GetHealthzResponse ApiDataResponse[HealthzData]
