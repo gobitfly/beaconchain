@@ -57,12 +57,12 @@ func autoGracefulStop() {
 
 func NewStatusReport(id string, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
+	// run if it hasnt started yet
+	once.Do(func() { go autoGracefulStop() })
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake
 		flake := utils.GetSnowflake()
 
-		// run if it hasnt started yet
-		go once.Do(autoGracefulStop)
 		// check if we are alive
 		if isShuttingDown.Load() {
 			log.Info("shutting down, not reporting status")
