@@ -4,6 +4,8 @@
 # in order to work execute once:
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+# style(eslint): add `typescript delimiter` rule
+d6b42edb3f687cad3082a9044bcb71fc39a46176
 # style(eslint): apply `max-len` rule
 28ab0888e8ac63e39197cb47b6c269a3ebf9b09a
 # chore(eslint): add `quote rule` to enforce `single quotes`
