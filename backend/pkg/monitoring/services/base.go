@@ -3,8 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -42,11 +45,30 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
+var isShuttingDown atomic.Bool
+var once sync.Once
+
+func autoGracefulStop() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-c
+	isShuttingDown.Store(true)
+}
+
 func NewStatusReport(id string, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake
 		flake := utils.GetSnowflake()
+
+		// run if it hasnt started yet
+		go once.Do(autoGracefulStop)
+		// check if we are alive
+		if isShuttingDown.Load() {
+			log.Info("shutting down, not reporting status")
+			return
+		}
+
 		if metadata == nil {
 			metadata = make(map[string]string)
 		}
