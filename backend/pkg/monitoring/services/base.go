@@ -87,7 +87,7 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 				timeouts_at = time.Now().Add(timeout)
 			}
 			expires_at := timeouts_at.Add(5 * time.Minute)
-			if check_interval != constants.Default {
+			if check_interval >= 5*time.Minute {
 				expires_at = timeouts_at.Add(check_interval)
 			}
 			var err error
