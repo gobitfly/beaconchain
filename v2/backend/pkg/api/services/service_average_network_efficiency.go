@@ -35,8 +35,8 @@ func (s *Services) startEfficiencyDataService() {
 			delay = 10 * time.Second
 		} else {
 			log.Infof("=== average network efficiency data updated in %s", time.Since(startTime))
+			r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
 		}
-		r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
