@@ -1,14 +1,21 @@
 <script setup lang="ts">
+import type { SelectChangeEvent } from 'primevue/select'
+
 interface Props {
   panelClass?: string,
   variant?: 'default' | 'header' | 'table',
 }
-
 defineProps<Props>()
+
+const emit = defineEmits<{ (e: 'select', value: SelectChangeEvent['value']): void }>()
 </script>
 
 <template>
-  <Select :class="variant" :panel-class="[variant, panelClass]">
+  <Select
+    :class="variant"
+    :panel-class="[variant, panelClass]"
+    @change="emit('select', $event.value)"
+  >
     <template #dropdownicon>
       <IconChevron direction="bottom" />
     </template>
@@ -27,8 +34,9 @@ defineProps<Props>()
           v-if="slotProps.option.command"
           class="p-select-option-label"
           data-pc-section="optionlabel"
-          @click.stop.prevent="slotProps.option.command"
-        >{{ slotProps.option.label }}</span>
+        >
+          {{ slotProps.option.label }}
+        </span>
       </slot>
     </template>
   </Select>
