@@ -1068,7 +1068,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, err)
+		handleErr(w, v)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
