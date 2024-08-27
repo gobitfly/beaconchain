@@ -241,7 +241,8 @@
         "remove_title": "Remove Groups",
         "search_placeholder": "Name, Id",
         "sub_title": "Add or remove validator groups for {dashboardName}",
-        "title": "Manage Groups"
+        "title": "Manage Groups",
+        "your_dashboard": "your dashboard"
       },
       "manage_groups": "Manage Groups",
       "manage_validators": "Manage Validators",

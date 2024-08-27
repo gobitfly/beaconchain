@@ -181,7 +181,7 @@ const dashboardName = computed(() => {
   return (
     dashboards.value?.validator_dashboards?.find(
       d => `${d.id}` === dashboardKey.value,
-    )?.name || dashboardKey.value
+    )?.name || $t('dashboard.validator.group_management.your_dashboard')
   )
 })
 

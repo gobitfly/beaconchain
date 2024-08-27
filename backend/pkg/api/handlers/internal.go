@@ -1068,7 +1068,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, r, err)
+		handleErr(w, r, v)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
@@ -1295,7 +1295,7 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, r, err)
+		handleErr(w, r, v)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
@@ -1327,7 +1327,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
 	if v.hasErrors() {
-		handleErr(w, r, err)
+		handleErr(w, r, v)
 		return
 	}
 	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
