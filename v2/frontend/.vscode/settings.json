@@ -1,15 +1,16 @@
 {
   "conventionalCommits.scopes": [
-    "checkout",
-    "ci",
-    "customFetch",
-    "eslint",
-    "git",
-    "i18n",
-    "mainHeader",
-    "vscode",
-    "qrCode"
-  ],
+  "checkout",
+  "ci",
+  "customFetch",
+  "DashboardGroupManagementModal",
+  "eslint",
+  "git",
+  "i18n",
+  "mainHeader",
+  "qrCode",
+  "vscode"
+],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
 },
