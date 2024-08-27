@@ -1124,6 +1124,9 @@ func (d *DataAccessService) GetValidatorDashboardPublicId(ctx context.Context, p
 		WHERE public_id = $1
 	`, publicDashboardId)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: public dashboard id %v not found", ErrNotFound, publicDashboardId)
+		}
 		return nil, err
 	}
 
