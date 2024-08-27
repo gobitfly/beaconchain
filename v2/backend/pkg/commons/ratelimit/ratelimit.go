@@ -68,6 +68,7 @@ var apiProductsMu = &sync.RWMutex{}
 
 var redisClient *redis.Client
 var redisIsHealthy atomic.Bool
+var redisTimeout = time.Second * 1
 
 var lastRateLimitUpdateKeys = time.Unix(0, 0)       // guarded by lastRateLimitUpdateMu
 var lastRateLimitUpdateRateLimits = time.Unix(0, 0) // guarded by lastRateLimitUpdateMu
@@ -220,6 +221,12 @@ func Init() {
 	if updateInterval < time.Second {
 		log.Warnf("updateInterval is below 1s, setting to 60s")
 		updateInterval = time.Second * 60
+	}
+
+	redisTimeout = utils.Config.Frontend.RatelimitRedisTimeout
+	if redisTimeout < time.Millisecond*100 {
+		log.Warnf("redisTimeout is below 100ms, setting to 1s")
+		redisTimeout = time.Millisecond * 1000
 	}
 
 	initializedWg.Add(3)
@@ -382,7 +389,7 @@ func updateWeights(firstRun bool) error {
 func updateRedisStatus() {
 	oldStatus := redisIsHealthy.Load()
 	newStatus := true
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*1))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(redisTimeout))
 	defer cancel()
 	err := redisClient.Ping(ctx).Err()
 	if err != nil {
@@ -684,7 +691,7 @@ func postRateLimit(rl *RateLimitResult, status int) error {
 		// any statuscode but 5xx or 429 will count towards the ratelimit
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), redisTimeout)
 	defer cancel()
 	pipe := redisClient.Pipeline()
 
@@ -713,7 +720,7 @@ func rateLimitRequest(r *http.Request) (*RateLimitResult, error) {
 		metrics.TaskDuration.WithLabelValues("ratelimit_rateLimitRequest").Observe(time.Since(start).Seconds())
 	}()
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*1000)
+	ctx, cancel := context.WithTimeout(r.Context(), redisTimeout)
 	defer cancel()
 
 	res := &RateLimitResult{}
