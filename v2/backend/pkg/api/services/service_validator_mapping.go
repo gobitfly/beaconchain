@@ -40,13 +40,13 @@ func (s *Services) startIndexMappingService() {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		r := services.NewStatusReport("api_service_validator_mapping", constants.Default, delay)
-		go r(constants.Running, nil)
+		r(constants.Running, nil)
 		latestEpoch := cache.LatestEpoch.Get()
 		if currentValidatorMapping == nil || latestEpoch != lastEpochUpdate {
 			err := s.updateValidatorMapping()
 			if err != nil {
 				log.Error(err, "error updating validator mapping", 0)
-				go r(constants.Failure, map[string]string{"error": err.Error()})
+				r(constants.Failure, map[string]string{"error": err.Error()})
 				delay = 10 * time.Second
 			} else {
 				log.Infof("=== validator mapping updated in %s", time.Since(startTime))
@@ -54,7 +54,7 @@ func (s *Services) startIndexMappingService() {
 
 			lastEpochUpdate = latestEpoch
 		}
-		go r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
+		r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
