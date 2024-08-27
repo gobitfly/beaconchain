@@ -912,6 +912,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 	}
 	if *fetchedId != dashboardId {
 		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
+		return
 	}
 
 	data, err := h.dai.UpdateValidatorDashboardPublicId(r.Context(), publicDashboardId, name, req.ShareSettings.ShareGroups)
@@ -942,6 +943,7 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 	}
 	if *fetchedId != dashboardId {
 		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
+		return
 	}
 
 	err = h.dai.RemoveValidatorDashboardPublicId(r.Context(), publicDashboardId)
@@ -1294,6 +1296,7 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
 		handleErr(w, err)
+		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
 		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
@@ -1325,6 +1328,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
 	if v.hasErrors() {
 		handleErr(w, err)
+		return
 	}
 	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
 	if err != nil {
