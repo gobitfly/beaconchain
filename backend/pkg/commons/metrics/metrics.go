@@ -24,6 +24,10 @@ var (
 		Name: "uuid",
 		Help: "Gauge with uuid-string in label",
 	}, []string{"uuid"})
+	DeploymentType = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "deployment_type",
+		Help: "Gauge with deployment-type in label",
+	}, []string{"deployment_type"})
 	HttpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_requests_total",
 		Help: "Total number of requests by path, method and status_code.",

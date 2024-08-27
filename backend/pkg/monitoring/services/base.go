@@ -11,6 +11,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/google/uuid"
 )
 
 // go interface for basic service
@@ -40,47 +42,50 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func ReportStatus(ctx context.Context, id string, err error, expires_in *time.Duration, metadata map[string]string) {
-	if metadata == nil {
-		metadata = make(map[string]string)
-	}
-	// if "status" is not set set it to "failure" if err is not nil or "heartbeat" if err is nil
-	if _, ok := metadata["status"]; !ok {
-		if err != nil {
-			metadata["status"] = "failure"
-		} else {
-			metadata["status"] = "heartbeat"
+func NewStatusReport(id string, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	runId := uuid.New().String()
+	return func(status constants.StatusType, metadata map[string]string) {
+		// acquire snowflake
+		flake := utils.GetSnowflake()
+		if metadata == nil {
+			metadata = make(map[string]string)
 		}
-	}
-	metadata["executable_version"] = fmt.Sprintf("%s (%s)", version.Version, version.GoVersion)
 
-	if err != nil {
-		metadata["error"] = err.Error()
-	}
+		metadata["run_id"] = runId
+		metadata["status"] = string(status)
+		metadata["executable_version"] = fmt.Sprintf("%s (%s)", version.Version, version.GoVersion)
 
-	// report status to monitoring
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	//log.Infof("new status report at %v", time.Now())
-	if db.ClickHouseNativeWriter == nil {
-		log.Error(nil, "clickhouse native writer is nil", 0)
-		return
-	}
-	expires_at := time.Now().Add(1 * time.Minute)
-	if expires_in != nil {
-		expires_at = time.Now().Add(*expires_in)
-	}
-	err = db.ClickHouseNativeWriter.AsyncInsert(
-		ctx,
-		"INSERT INTO status_reports (emitter, event_id, inserted_at, expires_at, metadata) VALUES (?, ?, ?, ?, ?)",
-		false,
-		utils.GetUUID(),
-		id,
-		time.Now().UnixMilli(),
-		expires_at,
-		metadata,
-	)
-	if err != nil {
-		log.Error(err, "error inserting status report", 0)
+		// report status to monitoring
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		timeouts_at := time.Now().Add(1 * time.Minute)
+		if timeout != constants.Default {
+			timeouts_at = time.Now().Add(timeout)
+		}
+		expires_at := timeouts_at.Add(5 * time.Minute)
+		if check_interval != constants.Default {
+			expires_at = timeouts_at.Add(check_interval)
+		}
+		var err error
+		if db.ClickHouseNativeWriter != nil {
+			err = db.ClickHouseNativeWriter.AsyncInsert(
+				ctx,
+				"INSERT INTO status_reports (emitter, event_id, deployment_type, insert_id, expires_at, timeouts_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
+				true,
+				utils.GetUUID(),
+				id,
+				utils.Config.DeploymentType,
+				flake,
+				expires_at,
+				timeouts_at,
+				metadata,
+			)
+		} else if utils.Config.DeploymentType != "development" {
+			log.Error(nil, "clickhouse native writer is nil", 0)
+		}
+		if err != nil && utils.Config.DeploymentType != "development" {
+			log.Error(err, "error inserting status report", 0)
+		}
 	}
 }
