@@ -182,8 +182,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		sortOrder += ` NULLS LAST`
 	}
 	orderBy += sortColName + sortOrder
+	secSort := `DESC`
 	if !onlyPrimarySort {
-		secSort := `DESC`
 		if currentCursor.IsReverse() {
 			secSort = `ASC`
 		}
@@ -243,7 +243,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		COALESCE(rb.value / 1e18, ep.fee_recipient_reward) AS el_reward,
 		cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9 as cl_reward,
 		r.graffiti_text`, groupIdCol)
-	query := fmt.Sprintf(`SELECT
+	query := fmt.Sprintf(`SELECT distinct on (slot)
 			%s
 		FROM ( SELECT * FROM (`, selectFields)
 	// supply scheduled proposals, if any
@@ -323,10 +323,14 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	LEFT JOIN blocks on r.slot = blocks.slot
 	LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
 	LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
-	GROUP BY r.proposer, group_id, r.epoch, r.slot, r.status, block, r.graffiti_text, fee_recipient, el_reward, cl_reward
 	`
+	// relay bribe deduplication; select most likely (=max) relay bribe value for each block
+	relayOrder := ``
+	if colSort.Column != enums.VDBBlockProposerReward {
+		relayOrder += `,  rb.value ` + secSort
+	}
 	startTime := time.Now()
-	err = d.alloyReader.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
+	err = d.alloyReader.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy+relayOrder, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
