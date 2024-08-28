@@ -376,10 +376,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		// Find rocketpool validators
 		type RpOperatorInfo struct {
-			Pubkey             []byte           `db:"pubkey"`
-			NodeFee            float64          `db:"node_fee"`
-			NodeDepositBalance *decimal.Decimal `db:"node_deposit_balance"`
-			UserDepositBalance *decimal.Decimal `db:"user_deposit_balance"`
+			Pubkey             []byte          `db:"pubkey"`
+			NodeFee            float64         `db:"node_fee"`
+			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
+			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
 		}
 		var queryResult []RpOperatorInfo
 		query := `
@@ -389,7 +389,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				node_deposit_balance,
 				user_deposit_balance
 			FROM rocketpool_minipools
-			WHERE pubkey = ANY($1)`
+			WHERE pubkey = ANY($1)
+				AND node_deposit_balance is not null
+				AND user_deposit_balance is not null
+			`
 
 		err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
 		if err != nil {
@@ -398,9 +401,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		rpValidators := make(map[string]RpOperatorInfo)
 		for _, res := range queryResult {
-			if res.NodeDepositBalance != nil && res.UserDepositBalance != nil {
-				rpValidators[hexutil.Encode(res.Pubkey)] = res
-			}
+			rpValidators[hexutil.Encode(res.Pubkey)] = res
 		}
 
 		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
@@ -412,23 +413,23 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
 
 			if rpValidator, ok := rpValidators[hexutil.Encode(metadata.PublicKey)]; ok {
-				// Calculate the balance of the operator
-				fullDeposit := rpValidator.UserDepositBalance.Add(*rpValidator.NodeDepositBalance)
-				operatorShare := rpValidator.NodeDepositBalance.Div(fullDeposit)
-				invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
-
-				base := decimal.Min(decimal.Max(decimal.Zero, validatorBalance.Sub(*rpValidator.UserDepositBalance)), *rpValidator.NodeDepositBalance)
-				commission := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(invOperatorShare).Mul(decimal.NewFromFloat(rpValidator.NodeFee)))
-				reward := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(operatorShare).Add(commission))
-
-				operatorBalance := base.Add(reward)
-
 				if protocolModes.RocketPool {
+					// Calculate the balance of the operator
+					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
+					operatorShare := rpValidator.NodeDepositBalance.Div(fullDeposit)
+					invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
+
+					base := decimal.Min(decimal.Max(decimal.Zero, validatorBalance.Sub(rpValidator.UserDepositBalance)), rpValidator.NodeDepositBalance)
+					commission := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(invOperatorShare).Mul(decimal.NewFromFloat(rpValidator.NodeFee)))
+					reward := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(operatorShare).Add(commission))
+
+					operatorBalance := base.Add(reward)
+
 					data.Balances.Total = data.Balances.Total.Add(operatorBalance)
 				} else {
 					data.Balances.Total = data.Balances.Total.Add(validatorBalance)
 				}
-				data.Balances.StakedEth = data.Balances.StakedEth.Add(*rpValidator.NodeDepositBalance)
+				data.Balances.StakedEth = data.Balances.StakedEth.Add(rpValidator.NodeDepositBalance)
 			} else {
 				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
 
