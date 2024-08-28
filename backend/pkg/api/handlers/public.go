@@ -177,7 +177,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		return
 	}
 	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
-		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
+		returnConflict(w, r, errors.New("maximum number of validator dashboards reached"))
 		return
 	}
 
