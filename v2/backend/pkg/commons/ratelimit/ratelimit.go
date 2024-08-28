@@ -179,7 +179,15 @@ var DefaultRequestFilter = func(req *http.Request) bool {
 	if req.Method == http.MethodOptions {
 		return false
 	}
-	if req.URL == nil || !strings.HasPrefix(req.URL.Path, "/api") || strings.HasPrefix(req.URL.Path, "/api/i/") || strings.HasPrefix(req.URL.Path, "/api/v1/docs/") || strings.HasPrefix(req.URL.Path, "/api/v2/docs/") {
+	if req.URL == nil ||
+		!strings.HasPrefix(req.URL.Path, "/api") ||
+		strings.HasPrefix(req.URL.Path, "/api/i/") ||
+		strings.HasPrefix(req.URL.Path, "/api/v1/docs/") ||
+		strings.HasPrefix(req.URL.Path, "/api/v2/docs/") ||
+		req.URL.Path == "/api/v1/healthz" ||
+		req.URL.Path == "/api/v1/healthz-loadbalancer" ||
+		req.URL.Path == "/api/v2/healthz" ||
+		req.URL.Path == "/api/v2/healthz-loadbalancer" {
 		return false
 	}
 	return true
