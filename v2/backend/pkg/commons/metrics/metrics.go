@@ -1,20 +1,15 @@
 package metrics
 
 import (
-	"database/sql"
-
+	"log" //nolint:depguard
 	"net/http"
 	"net/http/pprof"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -25,6 +20,14 @@ var (
 		Name: "version",
 		Help: "Gauge with version-string in label",
 	}, []string{"version"})
+	UUID = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "uuid",
+		Help: "Gauge with uuid-string in label",
+	}, []string{"uuid"})
+	DeploymentType = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "deployment_type",
+		Help: "Gauge with deployment-type in label",
+	}, []string{"deployment_type"})
 	HttpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_requests_total",
 		Help: "Total number of requests by path, method and status_code.",
@@ -80,28 +83,6 @@ func init() {
 	Version.WithLabelValues(version.Version).Set(1)
 }
 
-func MonitorDB(db *sqlx.DB) {
-	var multiWhitespaceRE = regexp.MustCompile(`[\t\r\n\s{2,}]+`)
-	t := time.NewTicker(time.Minute)
-	defer t.Stop()
-	for ; true; <-t.C {
-		longRunningQueries := []struct {
-			Datname  sql.NullString
-			Duration sql.NullFloat64
-			Query    sql.NullString
-		}{}
-		err := db.Select(&longRunningQueries, `select datname, extract(epoch from clock_timestamp()) - extract(epoch from query_start) as duration, query from pg_stat_activity where query != '<IDLE>' and query not ilike '%pg_stat_activity%' and query_start is not null and state = 'active' and age(clock_timestamp(), query_start) >= interval '1 minutes'`)
-		if err != nil {
-			log.Error(err, "error when monitoring db", 0)
-			continue
-		}
-		for _, q := range longRunningQueries {
-			normedQuery := multiWhitespaceRE.ReplaceAllString(strings.Trim(q.Query.String, "\t\r\n "), " ")
-			DBSLongRunningQueries.WithLabelValues(q.Datname.String, normedQuery).Inc()
-		}
-	}
-}
-
 // HttpMiddleware implements mux.MiddlewareFunc.
 // This middleware uses the path template, so the label value will be /obj/{id} rather than /obj/123 which would risk a cardinality explosion.
 // See https://www.robustperception.io/prometheus-middleware-for-gorilla-mux
@@ -147,7 +128,7 @@ func (r *responseWriterDelegator) Write(b []byte) (int, error) {
 }
 
 // Serve serves prometheus metrics on the given address under /metrics
-func Serve(addr string) error {
+func Serve(addr string, servePprof bool) error {
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -158,14 +139,13 @@ func Serve(addr string) error {
 <p><a href='/metrics'>metrics</a></p>
 </body>
 </html>`))
-
 		if err != nil {
-			log.Error(err, "error writing to response buffer: %v", 0)
+			log.Println(err, "error writing to response buffer: %v", 0)
 		}
 	}))
 
-	if utils.Config.Metrics.Pprof {
-		log.InfoWithFields(log.Fields{"addr": addr}, "serving pprof")
+	if servePprof {
+		log.Printf("serving pprof on %v/debug/pprof/", addr)
 		router.HandleFunc("/debug/pprof/", pprof.Index)
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		router.HandleFunc("/debug/pprof/profile", pprof.Profile)

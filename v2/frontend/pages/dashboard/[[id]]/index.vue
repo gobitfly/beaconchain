@@ -8,7 +8,10 @@ import {
   faWallet,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { DashboardCreationController } from '#components'
+import {
+  DashboardCreationController, DashboardTableBlocks, DashboardTableEmpty, DashboardTableRewards, DashboardTableSummary,
+  DashboardTableWithdrawals,
+} from '#components'
 import type { CookieDashboard } from '~/types/dashboard'
 import {
   isPublicDashboardKey, isSharedKey,
@@ -17,22 +20,47 @@ import type { HashTabs } from '~/types/hashTabs'
 
 const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const { t: $t } = useTranslation()
 
-const tabs: HashTabs = {
-  blocks: { index: 2 },
-  deposits: { index: 4 },
-  heatmap: {
-    disabled: !showInDevelopment,
-    index: 3,
+const tabs: HashTabs = [
+  {
+    component: DashboardTableSummary,
+    icon: faChartLineUp,
+    key: 'summary',
+    title: $t('dashboard.validator.tabs.summary'),
   },
-  rewards: { index: 1 },
-  summary: { index: 0 },
-  withdrawals: { index: 5 },
-}
+  {
+    component: DashboardTableRewards,
+    icon: faCubes,
+    key: 'rewards',
+    title: $t('dashboard.validator.tabs.rewards'),
+  },
+  {
+    component: DashboardTableBlocks,
+    icon: faCube,
+    key: 'blocks',
+    title: $t('dashboard.validator.tabs.blocks'),
 
-const {
-  activeIndex, setActiveIndex,
-} = useHashTabs(tabs)
+  },
+  {
+    component: DashboardTableEmpty,
+    disabled: !showInDevelopment,
+    icon: faFire,
+    key: 'heatmap',
+    title: $t('dashboard.validator.tabs.heatmap'),
+  },
+  {
+    icon: faWallet,
+    key: 'deposits',
+    title: $t('dashboard.validator.tabs.deposits'),
+  },
+  {
+    component: DashboardTableWithdrawals,
+    icon: faMoneyBill,
+    key: 'withdrawals',
+    title: $t('dashboard.validator.tabs.withdrawals'),
+  },
+]
 
 const {
   dashboardKey, setDashboardKey,
@@ -152,17 +180,12 @@ watch(
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
-      <DashboardCreationController
-        class="panel-controller"
-        :display-mode="'panel'"
-        :initially-visible="true"
-      />
+      <DashboardCreationController class="panel-controller" :display-mode="'panel'" :initially-visible="true" />
     </BcPageWrapper>
   </div>
   <div v-else>
     <DashboardCreationController
-      ref="dashboardCreationControllerModal"
-      class="modal-controller"
+      ref="dashboardCreationControllerModal" class="modal-controller"
       :display-mode="'modal'"
     />
     <BcPageWrapper>
@@ -175,75 +198,20 @@ watch(
       <div>
         <DashboardValidatorSlotViz />
       </div>
-      <TabView
-        lazy
+      <BcTabList
+        :tabs default-tab="summary"
+        :use-route-hash="true"
         class="dashboard-tab-view"
-        :active-index
-        @update:active-index="setActiveIndex"
+        panels-class="dashboard-tab-panels"
       >
-        <TabPanel>
-          <template #header>
-            <BcTabHeader
-              :header="$t('dashboard.validator.tabs.summary')"
-              :icon="faChartLineUp"
-            />
-          </template>
-          <DashboardTableSummary />
-        </TabPanel>
-        <TabPanel>
-          <template #header>
-            <BcTabHeader
-              :header="$t('dashboard.validator.tabs.rewards')"
-              :icon="faCubes"
-            />
-          </template>
-          <DashboardTableRewards />
-        </TabPanel>
-        <TabPanel>
-          <template #header>
-            <BcTabHeader
-              :header="$t('dashboard.validator.tabs.blocks')"
-              :icon="faCube"
-            />
-          </template>
-          <DashboardTableBlocks />
-        </TabPanel>
-        <TabPanel :disabled="tabs.heatmap.disabled">
-          <template #header>
-            <BcTabHeader
-              :header="$t('dashboard.validator.tabs.heatmap')"
-              :icon="faFire"
-            />
-          </template>
-          <!-- TODO: add heatmap -->
-          <DashboardTableEmpty />
-        </TabPanel>
-        <TabPanel>
-          <template #header>
-            <BcTabHeader
-              :header="$t('dashboard.validator.tabs.deposits')"
-              :icon="faWallet"
-            />
-          </template>
+        <template #tab-panel-deposits>
           <div class="deposits">
             <DashboardTableElDeposits />
-            <FontAwesomeIcon
-              :icon="faArrowDown"
-              class="down_icon"
-            />
+            <FontAwesomeIcon :icon="faArrowDown" class="down_icon" />
             <DashboardTableClDeposits />
           </div>
-        </TabPanel>
-        <TabPanel>
-          <template #header>
-            <BcTabHeader
-              :header="$t('dashboard.validator.tabs.withdrawals')"
-              :icon="faMoneyBill"
-            />
-          </template>
-          <DashboardTableWithdrawals />
-        </TabPanel>
-      </TabView>
+        </template>
+      </BcTabList>
     </BcPageWrapper>
   </div>
 </template>
@@ -257,10 +225,6 @@ watch(
   overflow: hidden;
 }
 
-:global(.dashboard-tab-view > .p-tabview-panels) {
-  min-height: 699px;
-}
-
 :global(.modal-controller) {
   max-width: 100%;
   width: 460px;
@@ -270,8 +234,12 @@ watch(
   margin-bottom: var(--padding-large);
 }
 
-.p-tabview {
+.dashboard-tab-view {
   margin-top: var(--padding-large);
+
+  :deep(.dashboard-tab-panels) {
+    min-height: 699px;
+  }
 }
 
 .down_icon {

@@ -238,7 +238,7 @@ func (bi *BlobIndexer) IndexBlobsAtSlot(slot uint64) error {
 			if err != nil {
 				// Only put the object if it does not exist yet
 				var httpResponseErr *awshttp.ResponseError
-				if errors.As(err, &httpResponseErr) && (httpResponseErr.HTTPStatusCode() == 404 || httpResponseErr.HTTPStatusCode() == 403) {
+				if errors.As(err, &httpResponseErr) && (httpResponseErr.HTTPStatusCode() == http.StatusNotFound || httpResponseErr.HTTPStatusCode() == 403) {
 					tS3PutObj := time.Now()
 					_, putErr := bi.S3Client.PutObject(gCtx, &s3.PutObjectInput{
 						Bucket: &utils.Config.BlobIndexer.S3.Bucket,

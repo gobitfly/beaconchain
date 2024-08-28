@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -25,8 +26,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
-	result := &t.DashboardInfo{}
+func (d *DataAccessService) GetValidatorDashboardUser(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardUser, error) {
+	result := &t.DashboardUser{}
 
 	err := d.alloyReader.GetContext(ctx, result, `
 		SELECT
@@ -41,13 +42,12 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 	return result, err
 }
 
-func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
-	result := &t.DashboardInfo{}
+func (d *DataAccessService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
+	var result t.VDBIdPrimary
 
-	err := d.alloyReader.GetContext(ctx, result, `
+	err := d.alloyReader.GetContext(ctx, &result, `
 		SELECT
-			uvd.id,
-			uvd.user_id
+			uvd.id
 		FROM users_val_dashboards_sharing uvds
 		LEFT JOIN users_val_dashboards uvd ON uvd.id = uvds.dashboard_id
 		WHERE uvds.public_id = $1
@@ -55,12 +55,100 @@ func (d *DataAccessService) GetValidatorDashboardInfoByPublicId(ctx context.Cont
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: public id %v not found", ErrNotFound, publicDashboardId)
 	}
-	return result, err
+	return &result, err
 }
 
-func (d *DataAccessService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.GetValidatorDashboard(ctx, dashboardId)
+func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
+	result := &t.ValidatorDashboard{}
+
+	wg := errgroup.Group{}
+	mutex := &sync.RWMutex{}
+
+	wg.Go(func() error {
+		dbReturn := []struct {
+			Name         string         `db:"name"`
+			IsArchived   sql.NullString `db:"is_archived"`
+			PublicId     sql.NullString `db:"public_id"`
+			PublicName   sql.NullString `db:"public_name"`
+			SharedGroups sql.NullBool   `db:"shared_groups"`
+		}{}
+
+		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		SELECT
+			uvd.name,
+			uvd.is_archived,
+			uvds.public_id,
+			uvds.name AS public_name,
+			uvds.shared_groups
+		FROM users_val_dashboards uvd
+		LEFT JOIN users_val_dashboards_sharing uvds ON uvd.id = uvds.dashboard_id
+		WHERE uvd.id = $1
+	`, dashboardId)
+		if err != nil {
+			return err
+		}
+
+		if len(dbReturn) == 0 {
+			return fmt.Errorf("error dashboard with id %v not found", dashboardId)
+		}
+
+		mutex.Lock()
+		result.Id = uint64(dashboardId)
+		result.Name = dbReturn[0].Name
+		result.IsArchived = dbReturn[0].IsArchived.Valid
+		result.ArchivedReason = dbReturn[0].IsArchived.String
+
+		for _, row := range dbReturn {
+			if row.PublicId.Valid {
+				publicId := t.VDBPublicId{}
+				publicId.PublicId = row.PublicId.String
+				publicId.Name = row.PublicName.String
+				publicId.ShareSettings.ShareGroups = row.SharedGroups.Bool
+
+				result.PublicIds = append(result.PublicIds, publicId)
+			}
+		}
+		mutex.Unlock()
+
+		return nil
+	})
+
+	wg.Go(func() error {
+		dbReturn := struct {
+			GroupCount     uint64 `db:"group_count"`
+			ValidatorCount uint64 `db:"validator_count"`
+		}{}
+
+		err := d.alloyReader.GetContext(ctx, &dbReturn, `
+			WITH dashboards_groups AS
+				(SELECT COUNT(uvdg.id) AS group_count FROM users_val_dashboards_groups uvdg WHERE uvdg.dashboard_id = $1),
+			dashboards_validators AS
+				(SELECT COUNT(uvdv.validator_index) AS validator_count FROM users_val_dashboards_validators uvdv WHERE uvdv.dashboard_id = $1)
+			SELECT
+			    dashboards_groups.group_count,
+			    dashboards_validators.validator_count
+			FROM 
+			    dashboards_groups,
+			    dashboards_validators
+		`, dashboardId)
+		if err != nil {
+			return err
+		}
+
+		mutex.Lock()
+		result.GroupCount = dbReturn.GroupCount
+		result.ValidatorCount = dbReturn.ValidatorCount
+		mutex.Unlock()
+
+		return nil
+	})
+
+	err := wg.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
+	}
+
+	return result, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
@@ -188,8 +276,23 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 }
 
 func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
-	// TODO @DATA-ACCESS
-	return d.dummy.UpdateValidatorDashboardArchiving(ctx, dashboardId, archived)
+	result := &t.VDBPostArchivingReturnData{}
+
+	var archivedReason *string
+	if archived {
+		reason := enums.VDBArchivedReasons.User.ToString()
+		archivedReason = &reason
+	}
+
+	err := d.alloyWriter.GetContext(ctx, result, `
+		UPDATE users_val_dashboards SET is_archived = $1 WHERE id = $2
+		RETURNING id, is_archived IS NOT NULL AS is_archived
+	`, archivedReason, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
@@ -239,10 +342,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			return nil
 		})
 	}
-	validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-	}
 
 	// Validator Status
 	wg.Go(func() error {
@@ -264,7 +363,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			FROM validators
 			WHERE validatorindex = ANY($1)
 			GROUP BY status`
-			params = append(params, validators)
+			params = append(params, dashboardId.Validators)
 		}
 		err := d.alloyReader.SelectContext(ctx, &queryResult, query, params...)
 		if err != nil {
@@ -320,13 +419,13 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
 					goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
 
-			if len(dashboardId.Validators) > 0 {
-				ds = ds.
-					Where(goqu.L("r.validator_index IN ?", validators))
-			} else {
+			if len(dashboardId.Validators) == 0 {
 				ds = ds.
 					InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 					Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
+			} else {
+				ds = ds.
+					Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 			}
 
 			var queryResult struct {
@@ -1025,6 +1124,9 @@ func (d *DataAccessService) GetValidatorDashboardPublicId(ctx context.Context, p
 		WHERE public_id = $1
 	`, publicDashboardId)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: public dashboard id %v not found", ErrNotFound, publicDashboardId)
+		}
 		return nil, err
 	}
 
