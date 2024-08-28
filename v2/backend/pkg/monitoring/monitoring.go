@@ -32,6 +32,7 @@ func Init(full bool) {
 		monitoredServices = append(monitoredServices,
 			&services.ServiceClickhouseRollings{},
 			&services.ServiceClickhouseEpoch{},
+			&services.ServiceTimeoutDetector{},
 		)
 	}
 
