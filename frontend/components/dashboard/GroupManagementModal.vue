@@ -181,7 +181,7 @@ const dashboardName = computed(() => {
   return (
     dashboards.value?.validator_dashboards?.find(
       d => `${d.id}` === dashboardKey.value,
-    )?.name || dashboardKey.value
+    )?.name || $t('dashboard.validator.group_management.your_dashboard')
   )
 })
 
@@ -264,6 +264,7 @@ const selectedSort = computed(() =>
             :cursor
             :page-size
             :selected-sort
+            data-key="id"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

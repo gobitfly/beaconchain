@@ -6,7 +6,7 @@ interface Props {
   addSpacer?: boolean,
   cursor?: Cursor,
   data?: ApiPagingResponse<any>,
-  dataKey?: string, // Unique identifier for a data row
+  dataKey: string, // Required Unique identifier for a data row
   expandable?: boolean,
   hidePager?: boolean,
   isRowExpandable?: (item: any) => boolean,
@@ -164,8 +164,9 @@ const sort = computed(() => {
       <slot
         v-if="!loading"
         name="empty"
-      />
-      <DashboardTableEmpty />
+      >
+        <DashboardTableEmpty />
+      </slot>
     </template>
 
     <template #expansion="slotProps">

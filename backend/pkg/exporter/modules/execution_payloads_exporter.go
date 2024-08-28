@@ -98,7 +98,8 @@ func (d *executionPayloadsExporter) updateCachedView() (err error) {
 		ORDER BY
 			dashboard_id,
 			group_id,
-			slot DESC;
+			slot DESC,
+			rb.value DESC;
 	`, "cached_proposal_rewards", []string{"dashboard_id", "slot"}, []string{"dashboard_id", "reward"}, []string{"dashboard_id"})
 	return err
 }
