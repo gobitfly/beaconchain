@@ -89,6 +89,11 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 			event_id, 
 			status
 		ORDER BY event_id ASC, max(inserted_at) DESC
+		SETTINGS
+			use_query_cache = true,
+			query_cache_compress_entries = false,
+			query_cache_nondeterministic_function_handling='save',
+			query_cache_ttl=10
 	`
 
 	response.Reports = make(map[string][]types.HealthzResult)
