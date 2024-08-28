@@ -1,4 +1,4 @@
-package main
+package api_docs
 
 import (
 	"context"
@@ -32,10 +32,12 @@ const (
 
 // Standard usage (execute in backend folder): go run cmd/api_docs/main.go --config <path-to-config-file>
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
 		log.Infof(version.Version)

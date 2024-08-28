@@ -51,13 +51,13 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 		log.Fatal(err, "Error connecting to clickhouse native writer", 0)
 	}
 	// verify connection
-	ClickHouseTestConnection(&dbWriter, writer.Name)
+	ClickHouseTestConnection(dbWriter, writer.Name)
 
 	return dbWriter
 }
 
-func ClickHouseTestConnection(db *ch.Conn, dataBaseName string) {
-	v, err := (*db).ServerVersion()
+func ClickHouseTestConnection(db ch.Conn, dataBaseName string) {
+	v, err := db.ServerVersion()
 	if err != nil {
 		log.Fatal(fmt.Errorf("failed to ping clickhouse database %s: %w", dataBaseName, err), "", 0)
 	}

@@ -28,6 +28,7 @@ type DataAccessor interface {
 	BlockRepository
 	ProtocolRepository
 	RatelimitRepository
+	HealthzRepository
 
 	Close()
 

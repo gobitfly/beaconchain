@@ -462,7 +462,7 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 	}
 
 	// check conditions for changing archival status
-	dashboardInfo, err := h.dai.GetValidatorDashboard(r.Context(), types.VDBId{Id: dashboardId})
+	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(r.Context(), dashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
@@ -472,6 +472,7 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		returnOk(w, types.ApiDataResponse[types.VDBPostArchivingReturnData]{
 			Data: types.VDBPostArchivingReturnData{Id: uint64(dashboardId), IsArchived: req.IsArchived},
 		})
+		return
 	}
 
 	userId, err := GetUserIdByContext(r)
@@ -484,28 +485,31 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		handleErr(w, err)
 		return
 	}
-	if req.IsArchived {
-		if dashboardCount >= maxArchivedDashboardsCount {
-			returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
-			return
-		}
-	} else {
-		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
-		if err != nil {
-			handleErr(w, err)
-			return
-		}
-		if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
-			returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
-			return
-		}
-		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
-			returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
-			return
-		}
-		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard && !isUserAdmin(userInfo) {
-			returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
-			return
+
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, err)
+		return
+	}
+	if !isUserAdmin(userInfo) {
+		if req.IsArchived {
+			if dashboardCount >= maxArchivedDashboardsCount {
+				returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
+				return
+			}
+		} else {
+			if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+				returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
+				return
+			}
+			if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+				returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
+				return
+			}
+			if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+				returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
+				return
+			}
 		}
 	}
 
@@ -886,7 +890,7 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	req := struct {
-		Name          string `json:"name"`
+		Name          string `json:"name,omitempty"`
 		ShareSettings struct {
 			ShareGroups bool `json:"share_groups"`
 		} `json:"share_settings"`
@@ -895,19 +899,20 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 		handleErr(w, err)
 		return
 	}
-	name := v.checkNameNotEmpty(req.Name)
+	name := v.checkName(req.Name, 0)
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
 	if v.hasErrors() {
 		handleErr(w, v)
 		return
 	}
-	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(r.Context(), publicDashboardId)
+	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	if dashboardInfo.Id != dashboardId {
+	if *fetchedId != dashboardId {
 		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
+		return
 	}
 
 	data, err := h.dai.UpdateValidatorDashboardPublicId(r.Context(), publicDashboardId, name, req.ShareSettings.ShareGroups)
@@ -931,13 +936,14 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 		handleErr(w, v)
 		return
 	}
-	dashboardInfo, err := h.dai.GetValidatorDashboardInfoByPublicId(r.Context(), publicDashboardId)
+	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
 		handleErr(w, err)
 		return
 	}
-	if dashboardInfo.Id != dashboardId {
+	if *fetchedId != dashboardId {
 		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
+		return
 	}
 
 	err = h.dai.RemoveValidatorDashboardPublicId(r.Context(), publicDashboardId)
@@ -1062,7 +1068,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, err)
+		handleErr(w, v)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
@@ -1289,7 +1295,8 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, err)
+		handleErr(w, v)
+		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
 		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
@@ -1320,7 +1327,8 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
 	if v.hasErrors() {
-		handleErr(w, err)
+		handleErr(w, v)
+		return
 	}
 	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
 	if err != nil {

@@ -29,11 +29,13 @@ const (
 	HourTimeWindow   = "hour"
 	MonthTimeWindow  = "month"
 
-	HeaderRateLimitLimit     = "ratelimit-limit"     // the rate limit ceiling that is applicable for the current request
-	HeaderRateLimitRemaining = "ratelimit-remaining" // the number of requests left for the current rate-limit window
-	HeaderRateLimitReset     = "ratelimit-reset"     // the number of seconds until the quota resets
-	HeaderRateLimitWindow    = "ratelimit-window"    // what window the ratelimit represents
-	HeaderRetryAfter         = "retry-after"         // the number of seconds until the quota resets, same as HeaderRateLimitReset, RFC 7231, 7.1.3
+	HeaderRateLimitLimit       = "ratelimit-limit"       // the rate limit ceiling that is applicable for the current request
+	HeaderRateLimitRemaining   = "ratelimit-remaining"   // the number of requests left for the current rate-limit window
+	HeaderRateLimitReset       = "ratelimit-reset"       // the number of seconds until the quota resets
+	HeaderRateLimitWindow      = "ratelimit-window"      // what window the ratelimit represents
+	HeaderRateLimitBucket      = "ratelimit-bucket"      // bucket for the rate limit
+	HeaderRateLimitValidApiKey = "ratelimit-validapikey" // if the apikey is valid
+	HeaderRetryAfter           = "retry-after"           // the number of seconds until the quota resets, same as HeaderRateLimitReset, RFC 7231, 7.1.3
 
 	HeaderRateLimitRemainingSecond = "x-ratelimit-remaining-second" // the number of requests left for the current rate-limit window
 	HeaderRateLimitRemainingMinute = "x-ratelimit-remaining-minute" // the number of requests left for the current rate-limit window
@@ -66,6 +68,7 @@ var apiProductsMu = &sync.RWMutex{}
 
 var redisClient *redis.Client
 var redisIsHealthy atomic.Bool
+var redisTimeout = time.Second * 1
 
 var lastRateLimitUpdateKeys = time.Unix(0, 0)       // guarded by lastRateLimitUpdateMu
 var lastRateLimitUpdateRateLimits = time.Unix(0, 0) // guarded by lastRateLimitUpdateMu
@@ -220,6 +223,12 @@ func Init() {
 		updateInterval = time.Second * 60
 	}
 
+	redisTimeout = utils.Config.Frontend.RatelimitRedisTimeout
+	if redisTimeout < time.Millisecond*100 {
+		log.Warnf("redisTimeout is below 100ms, setting to 1s")
+		redisTimeout = time.Millisecond * 1000
+	}
+
 	initializedWg.Add(3)
 
 	go func() {
@@ -314,6 +323,9 @@ func HttpMiddleware(next http.Handler) http.Handler {
 		w.Header().Set(HeaderRateLimitRemainingMinute, strconv.FormatInt(rl.RemainingMinute, 10))
 		w.Header().Set(HeaderRateLimitRemainingSecond, strconv.FormatInt(rl.RemainingSecond, 10))
 
+		w.Header().Set(HeaderRateLimitBucket, rl.Bucket)
+		w.Header().Set(HeaderRateLimitValidApiKey, strconv.FormatBool(rl.IsValidKey))
+
 		if rl.BlockRequest {
 			metrics.Counter.WithLabelValues("ratelimit_block").Inc()
 			w.Header().Set(HeaderRetryAfter, strconv.FormatInt(rl.Reset, 10))
@@ -377,7 +389,7 @@ func updateWeights(firstRun bool) error {
 func updateRedisStatus() {
 	oldStatus := redisIsHealthy.Load()
 	newStatus := true
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*1))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(redisTimeout))
 	defer cancel()
 	err := redisClient.Ping(ctx).Err()
 	if err != nil {
@@ -679,7 +691,7 @@ func postRateLimit(rl *RateLimitResult, status int) error {
 		// any statuscode but 5xx or 429 will count towards the ratelimit
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), redisTimeout)
 	defer cancel()
 	pipe := redisClient.Pipeline()
 
@@ -708,7 +720,7 @@ func rateLimitRequest(r *http.Request) (*RateLimitResult, error) {
 		metrics.TaskDuration.WithLabelValues("ratelimit_rateLimitRequest").Observe(time.Since(start).Seconds())
 	}()
 
-	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*1000)
+	ctx, cancel := context.WithTimeout(r.Context(), redisTimeout)
 	defer cancel()
 
 	res := &RateLimitResult{}

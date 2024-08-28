@@ -15,7 +15,7 @@
     @media (max-width: 519px) {
       gap: var(--padding-small);
     }
-    > .p-menuitem {
+    > .p-menubar-item {
       background: var(--list-background);
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
@@ -31,7 +31,7 @@
         color: var(--primary-color);
         border-color: var(--primary-color);
       }
-      > .p-menuitem-content {
+      > .p-menubar-item-content {
         padding: var(--padding-small) var(--padding);
         border-radius: var(--border-radius);
         height: 27px;
@@ -44,10 +44,10 @@
         }
       }
 
-      &:has(> .p-menuitem-content .text-disabled) {
+      &:has(> .p-menubar-item-content .text-disabled) {
         cursor: default;
 
-        > .p-menuitem-content {
+        > .p-menubar-item-content {
           opacity: 0.5;
         }
       }
@@ -80,6 +80,7 @@
 
     .text {
       @include utils.truncate-text;
+      position: relative;
 
       // this hack is necessary to make the clickable area as big as the parent
       &::before {
@@ -101,7 +102,7 @@
     }
   }
 
-  .p-submenu-list {
+  .p-menubar-submenu {
     margin-top: var(--padding-tiny);
     padding: var(--padding-small);
     background: var(--background-color);
@@ -110,7 +111,7 @@
     cursor: default;
     font-weight: var(--standard_text_font_weight);
 
-    .p-menuitem {
+    .p-menubar-item {
       border-radius: var(--border-radius);
       padding: var(--padding);
       white-space: nowrap;
@@ -148,7 +149,7 @@
     }
   }
 
-  &.right-aligned-submenu .p-submenu-list {
+  &.right-aligned-submenu .p-menubar-submenu {
     right: 0;
   }
 }

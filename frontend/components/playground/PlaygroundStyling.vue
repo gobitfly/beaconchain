@@ -2,8 +2,11 @@
 import { faTable } from '@fortawesome/pro-solid-svg-icons'
 import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
 import {
-  IconAccount, IconSlotBlockProposal, IconValidator,
+  IconAccount,
+  IconSlotBlockProposal,
+  IconValidator,
 } from '#components'
+import type { HashTabs } from '~/types/hashTabs'
 
 const emptyModalVisibility = ref(false)
 const headerPropModalVisibility = ref(false)
@@ -65,6 +68,46 @@ const dropdownList = [
     value: 'maybe',
   },
 ]
+
+const tabs: HashTabs = [
+  {
+    key: 'buttons',
+    title: 'Buttons',
+  },
+  {
+    key: 'hashes',
+    title: 'Hashes',
+  },
+  {
+    key: 'scroll',
+    title: 'Scroll Box',
+  },
+  {
+    key: 'input',
+    title: 'Input',
+  },
+  {
+    key: 'checkbox',
+    title: 'Checkbox',
+  },
+  {
+    key: 'toggle',
+    title: 'Toggle',
+  },
+  {
+    key: 'dropdown',
+    title: 'Dropdown',
+  },
+  {
+    key: 'spinner',
+    title: 'Spinner',
+  },
+  {
+    disabled: true,
+    key: 'disabled',
+    title: 'Disabled Tab',
+  },
+]
 </script>
 
 <template>
@@ -108,8 +151,10 @@ const dropdownList = [
     </template>
   </BcDialog>
 
-  <TabView lazy>
-    <TabPanel header="Buttons">
+  <BcTabList
+    :tabs default-tab="buttons"
+  >
+    <template #tab-panel-buttons>
       <div class="element_container">
         <Button> Text Button </Button>
         <Button
@@ -140,16 +185,17 @@ const dropdownList = [
           />
         </Button>
       </div>
-    </TabPanel>
-    <TabPanel header="Hashes">
+    </template>
+
+    <template #tab-panel-hashes>
       <PlaygroundHashes />
-    </TabPanel>
-    <TabPanel header="Scroll box">
+    </template>
+    <template #tab-panel-scroll>
       <div class="scroll-box">
         <div>Scroll me</div>
       </div>
-    </TabPanel>
-    <TabPanel header="Input">
+    </template>
+    <template #tab-panel-input>
       <div class="element_container">
         <InputText placeholder="Input" />
         <InputText
@@ -157,8 +203,8 @@ const dropdownList = [
           disabled
         />
       </div>
-    </TabPanel>
-    <TabPanel header="Checkbox">
+    </template>
+    <template #tab-panel-checkbox>
       <div class="element_container">
         default checkbox:
         <Checkbox
@@ -167,8 +213,8 @@ const dropdownList = [
         /> disabled:
         <Checkbox disabled />
       </div>
-    </TabPanel>
-    <TabPanel header="Toggle">
+    </template>
+    <template #tab-panel-toggle>
       <h1>Multi Toggle</h1>
       <div class="element_container">
         <div>
@@ -228,8 +274,8 @@ const dropdownList = [
           :allow-deselect="true"
         />
       </div>
-    </TabPanel>
-    <TabPanel header="Dropdown">
+    </template>
+    <template #tab-panel-dropdown>
       <div
         class="element_container"
         style="background-color: darkred; padding: 5px"
@@ -254,8 +300,8 @@ const dropdownList = [
         />
         Selected: {{ dropodownSelection }}
       </div>
-    </TabPanel>
-    <TabPanel header="Spinner">
+    </template>
+    <template #tab-panel-spinner>
       <Button @click="toggleLoading">
         Toggle loading
       </Button>
@@ -283,12 +329,8 @@ const dropdownList = [
           />
         </div>
       </div>
-    </TabPanel>
-    <TabPanel
-      :disabled="true"
-      header="Disabled Tab"
-    />
-  </TabView>
+    </template>
+  </BcTabList>
 </template>
 
 <style lang="scss" scoped>

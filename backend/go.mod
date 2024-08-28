@@ -1,6 +1,6 @@
 module github.com/gobitfly/beaconchain
 
-go 1.22
+go 1.23
 
 require (
 	cloud.google.com/go/bigtable v1.21.0
@@ -15,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.25.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.43
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.49.0
+	github.com/bwmarrin/snowflake v0.3.0
 	github.com/coocood/freecache v1.2.4
 	github.com/davecgh/go-spew v1.1.1
 	github.com/donovanhide/eventsource v0.0.0-20210830082556-c59027999da0

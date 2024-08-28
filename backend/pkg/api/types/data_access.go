@@ -5,6 +5,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/shopspring/decimal"
 )
 
@@ -33,7 +34,7 @@ type VDBId struct {
 // could replace if we want the import in all files
 type VDBValidator = types.ValidatorIndex
 
-type DashboardInfo struct {
+type DashboardUser struct {
 	Id     VDBIdPrimary `db:"id"` // this must be the bigint id
 	UserId uint64       `db:"user_id"`
 }
@@ -219,4 +220,19 @@ type ApiWeightItem struct {
 	Endpoint string `db:"endpoint"`
 	Method   string `db:"method"`
 	Weight   int    `db:"weight"`
+}
+
+// healthz structs
+
+type HealthzResult struct {
+	EventId string               `db:"event_id" json:"-"`
+	Status  constants.StatusType `db:"status" json:"status"`
+	Result  []map[string]string  `db:"result" json:"reports"`
+}
+
+type HealthzData struct {
+	TotalOkPercentage float64                    `json:"total_ok_percentage"`
+	ReportingUUID     string                     `json:"reporting_uuid"`
+	DeploymentType    string                     `json:"deployment_type"`
+	Reports           map[string][]HealthzResult `json:"status_reports"`
 }
