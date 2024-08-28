@@ -56,7 +56,7 @@ const (
 	FallbackRateLimitSecond = 20 // RateLimit per second for when redis is offline
 	FallbackRateLimitBurst  = 20 // RateLimit burst for when redis is offline
 
-	DefaultWeight = 1         // if no bucket is set for a route, use this one
+	DefaultWeight = 1         // if no weight is set for a route, use this one
 	DefaultBucket = "default" // if no bucket is set for a route, use this one
 
 	statsTruncateDuration = time.Hour * 1 // ratelimit-stats are truncated to this duration
