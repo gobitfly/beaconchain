@@ -79,7 +79,7 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			metadata["executable_version"] = fmt.Sprintf("%s (%s)", version.Version, version.GoVersion)
 
 			// report status to monitoring
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			timeouts_at := time.Now().Add(1 * time.Minute)
