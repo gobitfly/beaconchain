@@ -108,7 +108,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")))
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value")).As("value").
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		)
 
 	if dashboardId.Validators == nil {
 		rewardsDs = rewardsDs.
@@ -555,7 +563,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		From(goqu.L("users_val_dashboards_validators v")).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value")).As("value").
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.epoch = ?", epoch))
 
 	// handle the case when we have a list of validators
@@ -722,7 +738,15 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		From(goqu.L("users_val_dashboards_validators v")).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value")).As("value").
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.epoch >= ?", startEpoch))
 
 	if dashboardId.Validators == nil {
@@ -968,7 +992,15 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
 		From(goqu.L("blocks b")).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value")).As("value").
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.epoch = ?", epoch)).
 		Where(goqu.L("b.status = '1'")).
 		GroupBy(goqu.L("b.proposer"))
