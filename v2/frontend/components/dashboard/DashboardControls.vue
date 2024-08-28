@@ -360,7 +360,7 @@ const editDashboard = () => {
     </div>
     <div class="action-button-container">
       <Button
-        data-secondary
+        severity="secondary"
         class="share-button"
         :class="{ 'p-button-icon-only': !shareButtonOptions.label }"
         :disabled="shareButtonOptions.disabled"

@@ -9,7 +9,8 @@ import (
 
 // Config is a struct to hold the configuration data
 type Config struct {
-	JustV2         bool `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
+	JustV2         bool   `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
+	DeploymentType string `yaml:"deploymentType" envconfig:"DEPLOYMENT_TYPE"`
 	ReaderDatabase struct {
 		Username     string `yaml:"user" envconfig:"READER_DB_USERNAME"`
 		Password     string `yaml:"password" envconfig:"READER_DB_PASSWORD"`
@@ -213,6 +214,7 @@ type Config struct {
 		} `yaml:"ratelimits"`
 		RatelimitUpdateInterval time.Duration `yaml:"ratelimitUpdateInterval" envconfig:"FRONTEND_RATELIMIT_UPDATE_INTERVAL"`
 		RatelimitEnabled        bool          `yaml:"ratelimitEnabled" envconfig:"FRONTEND_RATELIMIT_ENABLED"`
+		RatelimitRedisTimeout   time.Duration `yaml:"ratelimitRedisTimeout" envconfig:"FRONTEND_RATELIMIT_REDIS_TIMEOUT"`
 		SessionSecret           string        `yaml:"sessionSecret" envconfig:"FRONTEND_SESSION_SECRET"`
 		SessionSameSiteNone     bool          `yaml:"sessionSameSiteNone" envconfig:"FRONTEND_SESSION_SAMESITE_NONE"`
 		SessionCookieDomain     string        `yaml:"sessionCookieDomain" envconfig:"FRONTEND_SESSION_COOKIE_DOMAIN"`

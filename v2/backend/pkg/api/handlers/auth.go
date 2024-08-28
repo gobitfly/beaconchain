@@ -48,7 +48,7 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 	userGroup := h.scs.GetString(r.Context(), userGroupKey)
 	userId, ok := h.scs.Get(r.Context(), userIdKey).(uint64)
 	if !ok {
-		return types.UserCredentialInfo{}, errors.New("error parsind user id from session, not a uint64")
+		return types.UserCredentialInfo{}, errors.New("error parsing user id from session, not a uint64")
 	}
 
 	return types.UserCredentialInfo{
@@ -56,6 +56,25 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 		ProductId: subscription,
 		UserGroup: userGroup,
 	}, nil
+}
+
+func (h *HandlerService) purgeAllSessionsForUser(ctx context.Context, userId uint64) error {
+	// invalidate all sessions for this user
+	err := h.scs.Iterate(ctx, func(ctx context.Context) error {
+		sessionUserID, ok := h.scs.Get(ctx, userIdKey).(uint64)
+		if !ok {
+			log.Error(nil, "error parsing user id from session, not a uint64", 0, nil)
+			return nil
+		}
+
+		if userId == sessionUserID {
+			return h.scs.Destroy(ctx)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // TODO move to service?
@@ -102,7 +121,7 @@ Best regards,
 
 // TODO move to service?
 func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint64, email string) error {
-	// 0. check if email resets are allowed
+	// 0. check if password resets are allowed
 	// (can be forbidden by admin (not yet in v2))
 	passwordResetAllowed, err := h.dai.IsPasswordResetAllowed(ctx, userId)
 	if err != nil {
@@ -132,7 +151,7 @@ func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint
 	subject := fmt.Sprintf("%s: Reset your passsword", utils.Config.Frontend.SiteDomain)
 	msg := fmt.Sprintf(`Please reset your password on %[1]s by clicking this link:
 
-https://%[1]s/api/i/users/password-resets/%[2]s
+https://%[1]s/reset-password/%[2]s
 
 Best regards,
 
@@ -190,15 +209,15 @@ func GetUserIdByContext(r *http.Request) (uint64, error) {
 // Handlers
 
 func (h *HandlerService) InternalPostOauthAuthorize(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostOauthToken(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostApiKeys(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Request) {
@@ -209,23 +228,23 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 		Password string `json:"password"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	// validate email
 	email := v.checkEmail(req.Email)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	_, err := h.dai.GetUserByEmail(r.Context(), email)
 	if !errors.Is(err, dataaccess.ErrNotFound) {
 		if err == nil {
-			returnConflict(w, errors.New("email already registered"))
+			returnConflict(w, r, errors.New("email already registered"))
 		} else {
-			handleErr(w, err)
+			handleErr(w, r, err)
 		}
 		return
 	}
@@ -233,30 +252,30 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 	// validate password
 	password := v.checkPassword(req.Password)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-		handleErr(w, errors.New("error hashing password"))
+		handleErr(w, r, errors.New("error hashing password"))
 		return
 	}
 
 	// add user
 	userId, err := h.dai.CreateUser(r.Context(), email, string(passwordHash))
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	// email confirmation
 	err = h.sendConfirmationEmail(r.Context(), userId, email)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 // email confirmations + changes
@@ -264,34 +283,38 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 	var v validationError
 	confirmationHash := v.checkUserEmailToken(mux.Vars(r)["token"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	userId, err := h.dai.GetUserIdByConfirmationHash(r.Context(), confirmationHash)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	confirmationTime, err := h.dai.GetEmailConfirmationTime(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if confirmationTime.Add(authEmailExpireTime).Before(time.Now()) {
-		handleErr(w, newGoneErr("confirmation link expired"))
+		handleErr(w, r, newGoneErr("confirmation link expired"))
 		return
 	}
 
 	err = h.dai.UpdateUserEmail(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	// TODO: purge all user sessions
+	err = h.purgeAllSessionsForUser(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r *http.Request) {
@@ -300,14 +323,14 @@ func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r 
 		Email string `json:"email"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	// validate email
 	email := v.checkEmail(req.Email)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
@@ -315,9 +338,9 @@ func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r 
 	if err != nil {
 		if err == dataaccess.ErrNotFound {
 			// don't leak if email is registered
-			returnOk(w, nil)
+			returnOk(w, r, nil)
 		} else {
-			handleErr(w, err)
+			handleErr(w, r, err)
 		}
 		return
 	}
@@ -325,11 +348,11 @@ func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r 
 	// send password reset email
 	err = h.sendPasswordResetEmail(r.Context(), userId, email)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter, r *http.Request) {
@@ -339,46 +362,64 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 		Password string `json:"password"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	password := v.checkPassword(req.Password)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	// check token validity
 	userId, err := h.dai.GetUserIdByResetHash(r.Context(), resetToken)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	resetTime, err := h.dai.GetPasswordResetTime(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if resetTime.Add(authEmailExpireTime).Before(time.Now()) {
-		handleErr(w, newGoneErr("reset link expired"))
+		handleErr(w, r, newGoneErr("reset link expired"))
 		return
 	}
 
 	// change password
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-		handleErr(w, errors.New("error hashing password"))
+		handleErr(w, r, errors.New("error hashing password"))
 		return
 	}
 	err = h.dai.UpdateUserPassword(r.Context(), userId, string(passwordHash))
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	// TODO: purge all user sessions
+	// if email is not confirmed, confirm since they clicked a link emailed to them
+	userInfo, err := h.dai.GetUserCredentialInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if !userInfo.EmailConfirmed {
+		err = h.dai.UpdateUserEmail(r.Context(), userId)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+	}
 
-	returnNoContent(w)
+	err = h.purgeAllSessionsForUser(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Request) {
@@ -389,20 +430,20 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		Password string `json:"password"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	email := v.checkEmail(req.Email)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	// fetch user
 	userId, err := h.dai.GetUserByEmail(r.Context(), email)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	user, err := h.dai.GetUserCredentialInfo(r.Context(), userId)
@@ -410,25 +451,25 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		if errors.Is(err, dataaccess.ErrNotFound) {
 			err = errBadCredentials
 		}
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if !user.EmailConfirmed {
-		handleErr(w, newUnauthorizedErr("email not confirmed"))
+		handleErr(w, r, newUnauthorizedErr("email not confirmed"))
 		return
 	}
 
 	// validate password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		handleErr(w, errBadCredentials)
+		handleErr(w, r, errBadCredentials)
 		return
 	}
 
 	// change privileges
 	err = h.scs.RenewToken(r.Context())
 	if err != nil {
-		handleErr(w, errors.New("error creating session"))
+		handleErr(w, r, errors.New("error creating session"))
 		return
 	}
 
@@ -437,7 +478,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	h.scs.Put(r.Context(), subscriptionKey, user.ProductId)
 	h.scs.Put(r.Context(), userGroupKey, user.UserGroup)
 
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 // Can be used to login on mobile, requires an authenticated session
@@ -521,18 +562,18 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 		DeviceID     string `json:"client_id"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	// get user id by refresh token
 	userID, refreshTokenHashed, err := h.getTokenByRefresh(r, req.RefreshToken)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -542,18 +583,18 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 		if errors.Is(err, dataaccess.ErrNotFound) {
 			err = errBadCredentials
 		}
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if !user.EmailConfirmed {
-		handleErr(w, newUnauthorizedErr("email not confirmed"))
+		handleErr(w, r, newUnauthorizedErr("email not confirmed"))
 		return
 	}
 
 	// create new session
 	err = h.scs.RenewToken(r.Context())
 	if err != nil {
-		handleErr(w, errors.New("error creating session"))
+		handleErr(w, r, errors.New("error creating session"))
 		return
 	}
 	session := h.scs.Token(r.Context())
@@ -562,7 +603,7 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 	sanitizedDeviceName := html.EscapeString(req.DeviceName)
 	err = h.dai.MigrateMobileSession(refreshTokenHashed, utils.HashAndEncode(session+session), req.DeviceID, sanitizedDeviceName) // salted with session
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -573,7 +614,7 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 	h.scs.Put(r.Context(), userGroupKey, user.UserGroup)
 	h.scs.Put(r.Context(), mobileAuthKey, true)
 
-	returnOk(w, struct {
+	returnOk(w, r, struct {
 		Session string
 	}{
 		Session: session,
@@ -587,27 +628,27 @@ func (h *HandlerService) InternalPostUsersMeNotificationSettingsPairedDevicesTok
 		Token string `json:"token"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	err = h.dai.AddMobileNotificationToken(user.Id, deviceID, req.Token)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 const USER_SUBSCRIPTION_LIMIT = 8
@@ -616,38 +657,38 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 	var v validationError
 	req := types.MobileSubscription{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	if req.ProductIDUnverified == "plankton" {
-		handleErr(w, newForbiddenErr("plankton subscription has been discontinued"))
+		handleErr(w, r, newForbiddenErr("plankton subscription has been discontinued"))
 		return
 	}
 
 	// Only allow ios and android purchases to be registered via this endpoint
 	if req.Transaction.Type != "ios-appstore" && req.Transaction.Type != "android-playstore" {
-		handleErr(w, newForbiddenErr("only ios-appstore and android-playstore purchases are allowed"))
+		handleErr(w, r, newForbiddenErr("only ios-appstore and android-playstore purchases are allowed"))
 		return
 	}
 
 	subscriptionCount, err := h.dai.GetAppSubscriptionCount(user.Id)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if subscriptionCount >= USER_SUBSCRIPTION_LIMIT {
-		handleErr(w, newForbiddenErr("user has reached the subscription limit"))
+		handleErr(w, r, newForbiddenErr("user has reached the subscription limit"))
 		return
 	}
 
@@ -666,65 +707,71 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 		log.Warn(err, "could not verify receipt %v", 0, map[string]interface{}{"receipt": verifyPackage.Receipt})
 		if errors.Is(err, userservice.ErrClientInit) {
 			log.Error(err, "Apple or Google client is NOT initialized. Did you provide their configuration?", 0, nil)
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 	}
 
 	err = h.dai.AddMobilePurchase(nil, user.Id, req, validationResult, "")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	if !validationResult.Valid {
-		handleErr(w, newForbiddenErr("receipt is not valid"))
+		handleErr(w, r, newForbiddenErr("receipt is not valid"))
 		return
 	}
 
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Request) {
 	err := h.scs.Destroy(r.Context())
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Request) {
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	// TODO allow if user has any subsciptions etc?
 	err = h.dai.RemoveUser(r.Context(), user.Id)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnNoContent(w)
+	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Request) {
 	// validate user
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserCredentialInfo(r.Context(), user.Id)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if !userInfo.EmailConfirmed {
-		handleErr(w, newConflictErr("email not confirmed"))
+		handleErr(w, r, newConflictErr("email not confirmed"))
 		return
 	}
 
@@ -735,27 +782,27 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 		Password string `json:"password"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	// validate new email
 	newEmail := v.checkEmail(req.Email)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	if newEmail == userInfo.Email {
-		handleErr(w, newConflictErr("can't reuse current email"))
+		handleErr(w, r, newConflictErr("can't reuse current email"))
 		return
 	}
 
 	_, err = h.dai.GetUserByEmail(r.Context(), newEmail)
 	if !errors.Is(err, dataaccess.ErrNotFound) {
 		if err == nil {
-			handleErr(w, newConflictErr("email already registered"))
+			handleErr(w, r, newConflictErr("email already registered"))
 		} else {
-			handleErr(w, err)
+			handleErr(w, r, err)
 		}
 		return
 	}
@@ -763,19 +810,19 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 	// validate password
 	password := v.checkPassword(req.Password)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		handleErr(w, newUnauthorizedErr("invalid password"))
+		handleErr(w, r, newUnauthorizedErr("invalid password"))
 		return
 	}
 
 	// email confirmation
 	err = h.sendConfirmationEmail(r.Context(), userInfo.Id, newEmail)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -786,14 +833,20 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 			PendingEmail: newEmail,
 		},
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.Request) {
 	// validate user
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
+		return
+	}
+	// user doesn't contain password, fetch from db
+	userData, err := h.dai.GetUserCredentialInfo(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -804,7 +857,7 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		NewPassword string `json:"new_password"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -812,30 +865,34 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 	oldPassword := v.checkPassword(req.OldPassword)
 	newPassword := v.checkPassword(req.NewPassword)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
+	err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(oldPassword))
 	if err != nil {
-		handleErr(w, errors.New("invalid password"))
+		handleErr(w, r, errors.New("invalid password"))
 		return
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
 	if err != nil {
-		handleErr(w, errors.New("error hashing password"))
+		handleErr(w, r, errors.New("error hashing password"))
 		return
 	}
 
 	// change password
 	err = h.dai.UpdateUserPassword(r.Context(), user.Id, string(passwordHash))
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	// TODO: purge all user sessions
+	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 // Middlewares
@@ -850,7 +907,7 @@ func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) 
 					// if next handler requires authentication, it should return 'unauthorized' itself
 					next.ServeHTTP(w, r)
 				} else {
-					handleErr(w, err)
+					handleErr(w, r, err)
 				}
 				return
 			}
@@ -876,7 +933,7 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 
 		userId, err := GetUserIdByContext(r)
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 		// store user id in context
@@ -884,16 +941,16 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 		r = r.WithContext(ctx)
 
-		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), types.VDBIdPrimary(dashboardId))
+		dashboardUser, err := h.dai.GetValidatorDashboardUser(r.Context(), types.VDBIdPrimary(dashboardId))
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 
-		if dashboard.UserId != userId {
+		if dashboardUser.UserId != userId {
 			// user does not have access to dashboard
 			// the proper error would be 403 Forbidden, but we don't want to leak information so we return 404 Not Found
-			handleErr(w, newNotFoundErr("dashboard with id %v not found", dashboardId))
+			handleErr(w, r, newNotFoundErr("dashboard with id %v not found", dashboardId))
 			return
 		}
 
@@ -908,16 +965,16 @@ func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Han
 		// get user id from context
 		userId, err := GetUserIdByContext(r)
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 		if !userInfo.PremiumPerks.ManageDashboardViaApi {
-			handleErr(w, newForbiddenErr("user does not have access to public validator dashboard endpoints"))
+			handleErr(w, r, newForbiddenErr("user does not have access to public validator dashboard endpoints"))
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -929,22 +986,20 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
-
 		if len(dashboardId.Validators) > 0 {
 			next.ServeHTTP(w, r)
 			return
 		}
-
-		dashboard, err := h.dai.GetValidatorDashboard(r.Context(), *dashboardId)
+		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), dashboardId.Id)
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 		if dashboard.IsArchived {
-			handleErr(w, newForbiddenErr("dashboard with id %v is archived", dashboardId))
+			handleErr(w, r, newForbiddenErr("dashboard with id %v is archived", dashboardId))
 			return
 		}
 		next.ServeHTTP(w, r)

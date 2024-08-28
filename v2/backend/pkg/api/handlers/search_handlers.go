@@ -52,14 +52,14 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 		Types    []searchTypeKey `json:"types,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	// if the input slices are empty, the sets will contain all possible values
 	chainIdSet := v.checkNetworkSlice(req.Networks)
 	searchTypeSet := v.checkSearchTypes(req.Types)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
@@ -104,14 +104,14 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalPostSearchResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 // --------------------------------------

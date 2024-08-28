@@ -14,6 +14,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/klauspost/pgzip"
 	"github.com/pkg/errors"
 )
@@ -34,20 +36,24 @@ var currentMappingMutex = &sync.RWMutex{}
 var lastEpochUpdate = uint64(0)
 
 func (s *Services) startIndexMappingService() {
+	var err error
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-
+		err = nil // clear error
+		r := services.NewStatusReport("api_service_validator_mapping", constants.Default, delay)
+		r(constants.Running, nil)
 		latestEpoch := cache.LatestEpoch.Get()
 		if currentValidatorMapping == nil || latestEpoch != lastEpochUpdate {
-			err := s.updateValidatorMapping()
-			if err != nil {
-				log.Error(err, "error updating validator mapping", 0)
-				delay = 10 * time.Second
-			} else {
-				log.Infof("=== validator mapping updated in %s", time.Since(startTime))
-			}
-
+			err = s.updateValidatorMapping()
+		}
+		if err != nil {
+			log.Error(err, "error updating validator mapping", 0)
+			r(constants.Failure, map[string]string{"error": err.Error()})
+			delay = 10 * time.Second
+		} else {
+			log.Infof("=== validator mapping updated in %s", time.Since(startTime))
+			r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
 			lastEpochUpdate = latestEpoch
 		}
 		utils.ConstantTimeDelay(startTime, delay)
