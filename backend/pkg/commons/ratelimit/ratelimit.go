@@ -56,6 +56,7 @@ const (
 	FallbackRateLimitSecond = 20 // RateLimit per second for when redis is offline
 	FallbackRateLimitBurst  = 20 // RateLimit burst for when redis is offline
 
+	DefaultWeight = 1         // if no bucket is set for a route, use this one
 	DefaultBucket = "default" // if no bucket is set for a route, use this one
 
 	statsTruncateDuration = time.Hour * 1 // ratelimit-stats are truncated to this duration
@@ -943,7 +944,7 @@ func getWeight(r *http.Request) (cost int64, identifier, bucket string) {
 	bucket, bucketOk := buckets[route]
 	weightsMu.RUnlock()
 	if !weightOk {
-		weight = 1
+		weight = DefaultWeight
 	}
 	if !bucketOk {
 		bucket = DefaultBucket

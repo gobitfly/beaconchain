@@ -6,12 +6,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
+	"slices"
+	"time"
 
 	"github.com/go-openapi/spec"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/ratelimit"
 	commonTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -22,15 +24,15 @@ const (
 	searchDir  = "./pkg/api"
 	mainAPI    = "handlers/public.go"
 	outputDir  = "./docs"
-	outputType = "json" // can also be yaml
+	outputType = "json" // can also be "yaml"
 
-	apiPrefix = "/api/v2"
+	apiPrefix = "/api/v2/"
 )
 
 // Expects the following flags:
 // --config: (optional) Path to the config file to add endpoint weights to the swagger docs
 
-// Standard usage (execute in backend folder): go run cmd/api_docs/main.go --config <path-to-config-file>
+// Standard usage (execute in backend folder): go run cmd/main.go api-docs --config <path-to-config-file>
 
 func Run() {
 	fs := flag.NewFlagSet("fs", flag.ExitOnError)
@@ -40,8 +42,8 @@ func Run() {
 	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
-		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
+		log.Info(version.Version)
+		log.Info(version.GoVersion)
 		return
 	}
 	// generate swagger doc
@@ -72,7 +74,9 @@ func Run() {
 
 	da := dataaccess.NewDataAccessService(cfg)
 	defer da.Close()
-	apiWeights, err := da.GetApiWeights(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	apiWeights, err := da.GetApiWeights(ctx)
 	if err != nil {
 		log.Fatal(err, "error loading endpoint weights from db", 0)
 	}
@@ -82,7 +86,7 @@ func Run() {
 	if err != nil {
 		log.Fatal(err, "error reading swagger docs", 0)
 	}
-	newData, err := insertApiWeights(data, apiWeights)
+	newData, err := getDataWithWeights(data, apiWeights)
 	if err != nil {
 		log.Fatal(err, "error inserting api weights", 0)
 	}
@@ -96,7 +100,7 @@ func Run() {
 	log.Info("\n-------------\napi weights inserted successfully\n-------------")
 }
 
-func insertApiWeights(data []byte, apiWeightItems []types.ApiWeightItem) ([]byte, error) {
+func getDataWithWeights(data []byte, apiWeightItems []types.ApiWeightItem) ([]byte, error) {
 	// unmarshal swagger file
 	var swagger *spec.Swagger
 	if err := json.Unmarshal(data, &swagger); err != nil {
@@ -105,31 +109,27 @@ func insertApiWeights(data []byte, apiWeightItems []types.ApiWeightItem) ([]byte
 
 	// iterate endpoints from swagger file
 	for pathString, pathItem := range swagger.Paths.Paths {
+		pathString = apiPrefix + pathString
 		for methodString, operation := range getPathItemOperationMap(pathItem) {
 			if operation == nil {
 				continue
 			}
 			// get weight and bucket for each endpoint
-			weight := 1
-			bucket := ""
-			for _, apiWeightItem := range apiWeightItems {
-				// ignore endpoints that don't belong to v2
-				if !strings.HasPrefix(apiWeightItem.Endpoint, apiPrefix) {
-					continue
-				}
-				// compare endpoint and method
-				if pathString == strings.TrimPrefix(apiWeightItem.Endpoint, apiPrefix) && methodString == apiWeightItem.Method {
-					weight = apiWeightItem.Weight
-					bucket = apiWeightItem.Bucket + " "
-					break
-				}
+			weight := ratelimit.DefaultWeight
+			bucket := ratelimit.DefaultBucket
+			index := slices.IndexFunc(apiWeightItems, func(item types.ApiWeightItem) bool {
+				return pathString == item.Endpoint && methodString == item.Method
+			})
+			if index != -1 {
+				weight = apiWeightItems[index].Weight
+				bucket = apiWeightItems[index].Bucket
 			}
 			// insert weight and bucket into endpoint summary
 			plural := ""
 			if weight > 1 {
 				plural = "s"
 			}
-			operation.Summary = fmt.Sprintf("(%d %scredit%s) %s", weight, bucket, plural, operation.Summary)
+			operation.Summary = fmt.Sprintf("(%d %s credit%s) %s", weight, bucket, plural, operation.Summary)
 		}
 	}
 
