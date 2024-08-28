@@ -33,14 +33,14 @@ func (s *Services) startSlotVizDataService() {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		r := services.NewStatusReport("api_service_slot_viz", constants.Default, delay)
-		go r(constants.Running, nil)
+		r(constants.Running, nil)
 		err := s.updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {
 			log.Error(err, "error updating slotviz data", 0)
-			go r(constants.Failure, map[string]string{"error": err.Error()})
+			r(constants.Failure, map[string]string{"error": err.Error()})
 		}
 		log.Infof("=== slotviz data updated in %s", time.Since(startTime))
-		go r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
+		r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
