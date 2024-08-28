@@ -48,7 +48,7 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 	userGroup := h.scs.GetString(r.Context(), userGroupKey)
 	userId, ok := h.scs.Get(r.Context(), userIdKey).(uint64)
 	if !ok {
-		return types.UserCredentialInfo{}, errors.New("error parsind user id from session, not a uint64")
+		return types.UserCredentialInfo{}, errors.New("error parsing user id from session, not a uint64")
 	}
 
 	return types.UserCredentialInfo{
@@ -56,6 +56,25 @@ func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredential
 		ProductId: subscription,
 		UserGroup: userGroup,
 	}, nil
+}
+
+func (h *HandlerService) purgeAllSessionsForUser(ctx context.Context, userId uint64) error {
+	// invalidate all sessions for this user
+	err := h.scs.Iterate(ctx, func(ctx context.Context) error {
+		sessionUserID, ok := h.scs.Get(ctx, userIdKey).(uint64)
+		if !ok {
+			log.Error(nil, "error parsing user id from session, not a uint64", 0, nil)
+			return nil
+		}
+
+		if userId == sessionUserID {
+			return h.scs.Destroy(ctx)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // TODO move to service?
@@ -132,7 +151,7 @@ func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint
 	subject := fmt.Sprintf("%s: Reset your passsword", utils.Config.Frontend.SiteDomain)
 	msg := fmt.Sprintf(`Please reset your password on %[1]s by clicking this link:
 
-https://%[1]s/api/i/users/password-resets/%[2]s
+https://%[1]s/reset-password/%[2]s
 
 Best regards,
 
@@ -289,7 +308,11 @@ func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// TODO: purge all user sessions
+	err = h.purgeAllSessionsForUser(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 
 	returnNoContent(w, r)
 }
@@ -376,7 +399,25 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 		return
 	}
 
-	// TODO: purge all user sessions
+	// if email is not confirmed, confirm since they clicked a link emailed to them
+	userInfo, err := h.dai.GetUserCredentialInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if !userInfo.EmailConfirmed {
+		err = h.dai.UpdateUserEmail(r.Context(), userId)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+	}
+
+	err = h.purgeAllSessionsForUser(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 
 	returnNoContent(w, r)
 }
@@ -708,6 +749,12 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
 	returnNoContent(w, r)
 }
 
@@ -796,6 +843,12 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		handleErr(w, r, err)
 		return
 	}
+	// user doesn't contain password, fetch from db
+	userData, err := h.dai.GetUserCredentialInfo(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 
 	// validate request
 	var v validationError
@@ -815,7 +868,7 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		handleErr(w, r, v)
 		return
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword))
+	err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(oldPassword))
 	if err != nil {
 		handleErr(w, r, errors.New("invalid password"))
 		return
@@ -833,7 +886,11 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// TODO: purge all user sessions
+	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 
 	returnNoContent(w, r)
 }
