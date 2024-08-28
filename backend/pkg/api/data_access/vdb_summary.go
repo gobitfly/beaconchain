@@ -171,7 +171,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		return nil, nil, fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
 	}
 
-	epochMin := int64(math.MaxInt64)
+	if len(queryResult) == 0 {
+		// No groups to show
+		return result, &paging, nil
+	}
+
+	epochMin := int64(math.MaxInt32)
 	epochMax := int64(0)
 
 	for _, row := range queryResult {
@@ -516,65 +521,44 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, err
 	}
 
-	query := `
-			WITH validators AS (
-				SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE (dashboard_id = $1 and (group_id = $2 OR $2 = -1))
-			)
-			select
-			validator_index,
-			epoch_start,
-			attestations_reward,
-			attestations_ideal_reward,
-			attestations_scheduled,
-			attestations_executed,
-			attestation_head_executed,
-			attestation_source_executed,
-			attestation_target_executed,
-			blocks_scheduled,
-			blocks_proposed,
-			sync_scheduled,
-			sync_executed,
-			slashed AS slashed_in_period,
-			blocks_slashing_count AS slashed_amount,
-			blocks_expected,
-			inclusion_delay_sum,
-			sync_committees_expected
-		from %[1]s FINAL
-		inner join validators v on %[1]s.validator_index = v.validator_index
-		where validator_index IN (select validator_index FROM validators)
-		`
-
-	if dashboardId.Validators != nil {
-		query = `select
-			validator_index,
-			epoch_start,
-			attestations_reward,
-			attestations_ideal_reward,
-			attestations_scheduled,
-			attestations_executed,
-			attestation_head_executed,
-			attestation_source_executed,
-			attestation_target_executed,
-			blocks_scheduled,
-			blocks_proposed,
-			sync_scheduled,
-			sync_executed,
-			slashed AS slashed_in_period,
-			blocks_slashing_count AS slashed_amount,
-			blocks_expected,
-			inclusion_delay_sum,
-			sync_committees_expected
-		from %[1]s FINAL
-		where %[1]s.validator_index IN ($1)
-	`
-	}
-
 	validators := make([]t.VDBValidator, 0)
 	if dashboardId.Validators != nil {
 		validators = dashboardId.Validators
 	}
 
-	type queryResult struct {
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("validator_index"),
+			goqu.L("epoch_start"),
+			goqu.L("attestations_reward"),
+			goqu.L("attestations_ideal_reward"),
+			goqu.L("attestations_scheduled"),
+			goqu.L("attestations_executed"),
+			goqu.L("attestation_head_executed"),
+			goqu.L("attestation_source_executed"),
+			goqu.L("attestation_target_executed"),
+			goqu.L("blocks_scheduled"),
+			goqu.L("blocks_proposed"),
+			goqu.L("sync_scheduled"),
+			goqu.L("sync_executed"),
+			goqu.L("slashed AS slashed_in_period"),
+			goqu.L("blocks_slashing_count AS slashed_amount"),
+			goqu.L("blocks_expected"),
+			goqu.L("inclusion_delay_sum"),
+			goqu.L("sync_committees_expected")).
+		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
+
+	if dashboardId.Validators == nil {
+		ds = ds.
+			With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
+	} else {
+		ds = ds.
+			Where(goqu.L("validator_index IN ?", validators))
+	}
+
+	type QueryResult struct {
 		ValidatorIndex         uint32 `db:"validator_index"`
 		EpochStart             uint64 `db:"epoch_start"`
 		AttestationReward      int64  `db:"attestations_reward"`
@@ -601,16 +585,19 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	var rows []*queryResult
-
-	if len(validators) > 0 {
-		err = d.clickhouseReader.SelectContext(ctx, &rows, fmt.Sprintf(query, clickhouseTable), validators)
-	} else {
-		err = d.clickhouseReader.SelectContext(ctx, &rows, fmt.Sprintf(query, clickhouseTable), dashboardId.Id, groupId)
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
 	}
 
+	var rows []*QueryResult
+	err = d.clickhouseReader.SelectContext(ctx, &rows, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
+	}
+
+	if len(rows) == 0 {
+		return ret, nil
 	}
 
 	totalAttestationRewards := int64(0)
@@ -803,6 +790,10 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
+	if rewardsResultTable.ValidatorCount == 0 {
+		return decimal.Zero, 0, decimal.Zero, 0, nil
+	}
+
 	aprDivisor := hours
 	if hours == -1 { // for all time APR
 		aprDivisor = 90 * 24
@@ -866,6 +857,9 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	}
 	elIncomeFloat, _ := elIncome.Float64()
 	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
+	if math.IsNaN(elAPR) {
+		elAPR = 0
+	}
 
 	if hours == -1 {
 		elTotalDs := elDs.

@@ -5,6 +5,7 @@ import type { ApiDataResponse, ChartHistorySeconds } from './common'
 //////////
 // source: user.go
 
+export const UserGroupAdmin = "ADMIN";
 export interface UserInfo {
   id: number /* uint64 */;
   email: string;
@@ -125,4 +126,11 @@ export interface StripeCreateCheckoutSession {
 }
 export interface StripeCustomerPortal {
   url: string;
+}
+export interface OAuthAppData {
+  ID: number /* uint64 */;
+  Owner: number /* uint64 */;
+  AppName: string;
+  RedirectURI: string;
+  Active: boolean;
 }

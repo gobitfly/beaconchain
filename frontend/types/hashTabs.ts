@@ -1,5 +1,12 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import type { Component } from 'vue'
+
 export type HashTab = {
+  component?: Component,
   disabled?: boolean,
-  index: number,
+  icon?: IconDefinition,
+  key: string,
+  placeholder?: string,
+  title?: string,
 }
-export type HashTabs = Record<string, HashTab>
+export type HashTabs = HashTab[]
