@@ -151,7 +151,7 @@ func (h *HandlerService) sendPasswordResetEmail(ctx context.Context, userId uint
 	subject := fmt.Sprintf("%s: Reset your passsword", utils.Config.Frontend.SiteDomain)
 	msg := fmt.Sprintf(`Please reset your password on %[1]s by clicking this link:
 
-https://%[1]s/api/i/users/password-resets/%[2]s
+https://%[1]s/reset-password/%[2]s
 
 Best regards,
 
