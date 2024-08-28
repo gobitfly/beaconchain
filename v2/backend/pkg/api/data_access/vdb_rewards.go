@@ -113,7 +113,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
-					goqu.MAX("value")).As("value").
+					goqu.MAX("value").As("value")).
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		)
@@ -568,7 +568,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
-					goqu.MAX("value")).As("value").
+					goqu.MAX("value").As("value")).
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
@@ -743,7 +743,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
-					goqu.MAX("value")).As("value").
+					goqu.MAX("value").As("value")).
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
@@ -997,7 +997,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
-					goqu.MAX("value")).As("value").
+					goqu.MAX("value").As("value")).
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).

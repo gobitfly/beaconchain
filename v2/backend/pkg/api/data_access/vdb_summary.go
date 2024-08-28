@@ -200,7 +200,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
-					goqu.MAX("value")).As("value").
+					goqu.MAX("value").As("value")).
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
@@ -839,7 +839,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
-					goqu.MAX("value")).As("value").
+					goqu.MAX("value").As("value")).
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
