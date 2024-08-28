@@ -19,13 +19,13 @@ import (
 func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *http.Request) {
 	data, err := h.dai.GetProductSummary(r.Context())
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetProductSummaryResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 // --------------------------------------
@@ -34,19 +34,19 @@ func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *htt
 func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
 	latestSlot, err := h.dai.GetLatestSlot()
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	finalizedEpoch, err := h.dai.GetLatestFinalizedEpoch()
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	exchangeRates, err := h.dai.GetLatestExchangeRates()
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data := types.LatestStateData{
@@ -58,20 +58,20 @@ func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.R
 	response := types.InternalGetLatestStateResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetRocketPool(w http.ResponseWriter, r *http.Request) {
 	data, err := h.dai.GetRocketPoolOverview(r.Context())
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetRocketPoolResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 // All handler function names must include the HTTP method and the path they handle
@@ -84,17 +84,17 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 	var v validationError
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnForbidden(w, errors.New("user is not an admin"))
+		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
 
 	var req types.AdConfigurationData
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	key := v.checkKeyNotEmpty(req.Key)
@@ -106,72 +106,72 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		v.add("refresh_interval", "must be greater than 0")
 	}
 	if (req.BannerId == 0) == (req.HtmlContent == "") {
-		returnBadRequest(w, errors.New("provide either banner_id or html_content"))
+		returnBadRequest(w, r, errors.New("provide either banner_id or html_content"))
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	err = h.dai.CreateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.ApiDataResponse[types.AdConfigurationData]{
 		Data: req,
 	}
-	returnCreated(w, response)
+	returnCreated(w, r, response)
 }
 
 func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnForbidden(w, errors.New("user is not an admin"))
+		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
 
 	keys := v.checkAdConfigurationKeys(r.URL.Query().Get("keys"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, err := h.dai.GetAdConfigurations(r.Context(), keys)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.ApiDataResponse[[]types.AdConfigurationData]{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnForbidden(w, errors.New("user is not an admin"))
+		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
 
 	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
 	var req types.AdConfigurationUpdateData
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if len(req.JQuerySelector) == 0 {
@@ -182,51 +182,51 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 		v.add("refresh_interval", "must be greater than 0")
 	}
 	if (req.BannerId == 0) == (req.HtmlContent == "") {
-		returnConflict(w, errors.New("provide either banner_id or html_content"))
+		returnConflict(w, r, errors.New("provide either banner_id or html_content"))
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	err = h.dai.UpdateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.ApiDataResponse[types.AdConfigurationData]{
 		Data: types.AdConfigurationData{Key: key, AdConfigurationUpdateData: &req},
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if user.UserGroup != "ADMIN" {
-		returnForbidden(w, errors.New("user is not an admin"))
+		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
 
 	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	err = h.dai.RemoveAdConfiguration(r.Context(), key)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 // --------------------------------------
@@ -236,18 +236,18 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 	// TODO patrick
 	user, err := h.getUserBySession(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(r.Context(), user.Id)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserInfoResponse{
 		Data: *userInfo,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 // --------------------------------------
@@ -256,77 +256,77 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 func (h *HandlerService) InternalGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.dai.GetUserDashboards(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.ApiDataResponse[types.UserDashboardsData]{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 // --------------------------------------
 // Account Dashboards
 
 func (h *HandlerService) InternalPostAccountDashboards(w http.ResponseWriter, r *http.Request) {
-	returnCreated(w, nil)
+	returnCreated(w, r, nil)
 }
 
 func (h *HandlerService) InternalGetAccountDashboard(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalDeleteAccountDashboard(w http.ResponseWriter, r *http.Request) {
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPostAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	returnCreated(w, nil)
+	returnCreated(w, r, nil)
 }
 
 func (h *HandlerService) InternalDeleteAccountDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPostAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
-	returnCreated(w, nil)
+	returnCreated(w, r, nil)
 }
 
 func (h *HandlerService) InternalGetAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalDeleteAccountDashboardAccounts(w http.ResponseWriter, r *http.Request) {
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPutAccountDashboardAccount(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostAccountDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
-	returnCreated(w, nil)
+	returnCreated(w, r, nil)
 }
 
 func (h *HandlerService) InternalPutAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalDeleteAccountDashboardPublicId(w http.ResponseWriter, r *http.Request) {
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalGetAccountDashboardTransactions(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPutAccountDashboardTransactionsSettings(w http.ResponseWriter, r *http.Request) {
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 // --------------------------------------
@@ -336,7 +336,7 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	req := struct {
@@ -344,40 +344,40 @@ func (h *HandlerService) InternalPostValidatorDashboards(w http.ResponseWriter, 
 		Network intOrString `json:"network"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
 	chainId := v.checkNetwork(req.Network)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, true)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
-		returnConflict(w, errors.New("maximum number of validator dashboards reached"))
+		returnConflict(w, r, errors.New("maximum number of validator dashboards reached"))
 		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboard(r.Context(), userId, name, chainId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.ApiDataResponse[types.VDBPostReturnData]{
 		Data: *data,
 	}
-	returnCreated(w, response)
+	returnCreated(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
@@ -385,14 +385,14 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 	dashboardIdParam := mux.Vars(r)["dashboard_id"]
 	dashboardId, err := h.handleDashboardId(r.Context(), dashboardIdParam)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	q := r.URL.Query()
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
@@ -406,19 +406,19 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 		name = publicIdInfo.Name
 	}
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	// add premium chart perk info for shared dashboards
 	premiumPerks, err := h.getDashboardPremiumPerks(r.Context(), *dashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardOverview(r.Context(), *dashboardId, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data.ChartHistorySeconds = premiumPerks.ChartHistorySeconds
@@ -428,22 +428,22 @@ func (h *HandlerService) InternalGetValidatorDashboard(w http.ResponseWriter, r 
 		Data: *data,
 	}
 
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	err := h.dai.RemoveValidatorDashboard(r.Context(), dashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
@@ -453,23 +453,23 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 		IsArchived bool `json:"is_archived"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	// check conditions for changing archival status
 	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(r.Context(), dashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if dashboardInfo.IsArchived == req.IsArchived {
 		// nothing to do
-		returnOk(w, types.ApiDataResponse[types.VDBPostArchivingReturnData]{
+		returnOk(w, r, types.ApiDataResponse[types.VDBPostArchivingReturnData]{
 			Data: types.VDBPostArchivingReturnData{Id: uint64(dashboardId), IsArchived: req.IsArchived},
 		})
 		return
@@ -477,37 +477,37 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, !req.IsArchived)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if !isUserAdmin(userInfo) {
 		if req.IsArchived {
 			if dashboardCount >= maxArchivedDashboardsCount {
-				returnConflict(w, errors.New("maximum number of archived validator dashboards reached"))
+				returnConflict(w, r, errors.New("maximum number of archived validator dashboards reached"))
 				return
 			}
 		} else {
 			if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
-				returnConflict(w, errors.New("maximum number of active validator dashboards reached"))
+				returnConflict(w, r, errors.New("maximum number of active validator dashboards reached"))
 				return
 			}
 			if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
-				returnConflict(w, errors.New("maximum number of groups in dashboards reached"))
+				returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
 				return
 			}
 			if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
-				returnConflict(w, errors.New("maximum number of validators in dashboards reached"))
+				returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
 				return
 			}
 		}
@@ -515,13 +515,13 @@ func (h *HandlerService) InternalPutValidatorDashboardArchiving(w http.ResponseW
 
 	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, req.IsArchived)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.ApiDataResponse[types.VDBPostArchivingReturnData]{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter, r *http.Request) {
@@ -531,23 +531,23 @@ func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter
 		Name string `json:"name"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, err := h.dai.UpdateValidatorDashboardName(r.Context(), dashboardId, name)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.ApiDataResponse[types.VDBPostReturnData]{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
@@ -557,39 +557,39 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 		Name string `json:"name"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	ctx := r.Context()
 	// check if user has reached the maximum number of groups
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(ctx, userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	groupCount, err := h.dai.GetValidatorDashboardGroupCount(ctx, dashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
-		returnConflict(w, errors.New("maximum number of validator dashboard groups reached"))
+		returnConflict(w, r, errors.New("maximum number of validator dashboard groups reached"))
 		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboardGroup(ctx, dashboardId, name)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -597,7 +597,7 @@ func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWri
 		Data: data,
 	}
 
-	returnCreated(w, response)
+	returnCreated(w, r, response)
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
@@ -609,26 +609,26 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 		Name string `json:"name"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if !groupExists {
-		returnNotFound(w, errors.New("group not found"))
+		returnNotFound(w, r, errors.New("group not found"))
 		return
 	}
 	data, err := h.dai.UpdateValidatorDashboardGroup(r.Context(), dashboardId, groupId, name)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -636,7 +636,7 @@ func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWrit
 		Data: data,
 	}
 
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardGroup(w http.ResponseWriter, r *http.Request) {
@@ -645,29 +645,29 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroup(w http.ResponseWr
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	if groupId == types.DefaultGroupId {
-		returnBadRequest(w, errors.New("cannot delete default group"))
+		returnBadRequest(w, r, errors.New("cannot delete default group"))
 		return
 	}
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if !groupExists {
-		returnNotFound(w, errors.New("group not found"))
+		returnNotFound(w, r, errors.New("group not found"))
 		return
 	}
 	err = h.dai.RemoveValidatorDashboardGroup(r.Context(), dashboardId, groupId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
@@ -681,11 +681,11 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		Graffiti          string        `json:"graffiti,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	// check if exactly one of validators, deposit_address, withdrawal_address, graffiti is set
@@ -700,7 +700,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 		v.add("request body", "exactly one of `validators`, `deposit_address`, `withdrawal_address`, `graffiti` must be set. please check the API documentation for more information")
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
@@ -708,26 +708,26 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	ctx := r.Context()
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(ctx, dashboardId, groupId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if !groupExists {
-		returnNotFound(w, errors.New("group not found"))
+		returnNotFound(w, r, errors.New("group not found"))
 		return
 	}
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	userInfo, err := h.dai.GetUserInfo(ctx, userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
 	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
-		returnConflict(w, errors.New("bulk adding not allowed with current subscription plan"))
+		returnConflict(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
 	var data []types.VDBPostValidatorsData
@@ -736,22 +736,22 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	case req.Validators != nil:
 		indices, pubkeys := v.checkValidators(req.Validators, forbidEmpty)
 		if v.hasErrors() {
-			handleErr(w, v)
+			handleErr(w, r, v)
 			return
 		}
 		validators, err := h.dai.GetValidatorsFromSlices(indices, pubkeys)
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 		// check if adding more validators than allowed
 		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(ctx, dashboardId, validators)
 		if err != nil {
-			handleErr(w, err)
+			handleErr(w, r, err)
 			return
 		}
 		if uint64(len(validators)) > existingValidatorCount+limit {
-			returnConflict(w, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
+			returnConflict(w, r, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
 			return
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
@@ -759,7 +759,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	case req.DepositAddress != "":
 		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
 		if v.hasErrors() {
-			handleErr(w, v)
+			handleErr(w, r, v)
 			return
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
@@ -767,7 +767,7 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	case req.WithdrawalAddress != "":
 		withdrawalAddress := v.checkRegex(reWithdrawalCredential, req.WithdrawalAddress, "withdrawal_address")
 		if v.hasErrors() {
-			handleErr(w, v)
+			handleErr(w, r, v)
 			return
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
@@ -775,28 +775,28 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	case req.Graffiti != "":
 		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
 		if v.hasErrors() {
-			handleErr(w, v)
+			handleErr(w, r, v)
 			return
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByGraffiti(ctx, dashboardId, groupId, graffiti, limit)
 	}
 
 	if dataErr != nil {
-		handleErr(w, dataErr)
+		handleErr(w, r, dataErr)
 		return
 	}
 	response := types.ApiResponse{
 		Data: data,
 	}
 
-	returnCreated(w, response)
+	returnCreated(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -804,19 +804,19 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, paging, err := h.dai.GetValidatorDashboardValidators(r.Context(), *dashboardId, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardValidatorsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
@@ -827,22 +827,22 @@ func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.Respo
 	if validatorsParam := r.URL.Query().Get("validators"); validatorsParam != "" {
 		indices, publicKeys = v.checkValidatorList(validatorsParam, allowEmpty)
 		if v.hasErrors() {
-			handleErr(w, v)
+			handleErr(w, r, v)
 			return
 		}
 	}
 	validators, err := h.dai.GetValidatorsFromSlices(indices, publicKeys)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	err = h.dai.RemoveValidatorDashboardValidators(r.Context(), dashboardId, validators)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
@@ -855,34 +855,34 @@ func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.Response
 		} `json:"share_settings"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	name := v.checkName(req.Name, 0)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	publicIdCount, err := h.dai.GetValidatorDashboardPublicIdCount(r.Context(), dashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if publicIdCount >= 1 {
-		returnConflict(w, errors.New("cannot create more than one public id"))
+		returnConflict(w, r, errors.New("cannot create more than one public id"))
 		return
 	}
 
 	data, err := h.dai.CreateValidatorDashboardPublicId(r.Context(), dashboardId, name, req.ShareSettings.ShareGroups)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.ApiResponse{
 		Data: data,
 	}
 
-	returnCreated(w, response)
+	returnCreated(w, r, response)
 }
 
 func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
@@ -896,35 +896,35 @@ func (h *HandlerService) InternalPutValidatorDashboardPublicId(w http.ResponseWr
 		} `json:"share_settings"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	name := v.checkName(req.Name, 0)
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if *fetchedId != dashboardId {
-		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
+		handleErr(w, r, newNotFoundErr("public id %v not found", publicDashboardId))
 		return
 	}
 
 	data, err := h.dai.UpdateValidatorDashboardPublicId(r.Context(), publicDashboardId, name, req.ShareSettings.ShareGroups)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.ApiResponse{
 		Data: data,
 	}
 
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
@@ -933,58 +933,58 @@ func (h *HandlerService) InternalDeleteValidatorDashboardPublicId(w http.Respons
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if *fetchedId != dashboardId {
-		handleErr(w, newNotFoundErr("public id %v not found", publicDashboardId))
+		handleErr(w, r, newNotFoundErr("public id %v not found", publicDashboardId))
 		return
 	}
 
 	err = h.dai.RemoveValidatorDashboardPublicId(r.Context(), publicDashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	groupIds := v.checkExistingGroupIdList(r.URL.Query().Get("group_ids"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardSlotViz(r.Context(), *dashboardId, groupIds)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSlotVizResponse{
 		Data: data,
 	}
 
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -997,20 +997,20 @@ func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWri
 	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardSummary(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSummaryResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
@@ -1020,11 +1020,11 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 	q := r.URL.Query()
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
@@ -1033,19 +1033,19 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.Respon
 	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardGroupSummary(r.Context(), *dashboardId, groupId, period, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupSummaryResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
@@ -1053,7 +1053,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	ctx := r.Context()
 	dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1063,35 +1063,35 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.Respon
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
 	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(ctx, dashboardId, aggregation)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
-		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
+		returnConflict(w, r, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardSummaryChart(ctx, *dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardSummaryChartResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	groupId := v.checkGroupId(r.URL.Query().Get("group_id"), allowEmpty)
@@ -1102,7 +1102,7 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.R
 	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 	v.checkEnumIsAllowed(period, allowedPeriods, "period")
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
@@ -1120,13 +1120,13 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.R
 		indices, err = h.dai.GetValidatorDashboardProposalSummaryValidators(r.Context(), *dashboardId, groupId, period)
 	}
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	// map indices to response format
 	data, err := mapVDBIndices(indices)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1134,14 +1134,14 @@ func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.R
 		Data: data,
 	}
 
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1149,20 +1149,20 @@ func (h *HandlerService) InternalGetValidatorDashboardRewards(w http.ResponseWri
 	sort := checkSort[enums.VDBRewardsColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardRewards(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRewardsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
@@ -1171,26 +1171,26 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respon
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	epoch := v.checkUint(vars["epoch"], "epoch")
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardGroupRewards(r.Context(), *dashboardId, groupId, epoch, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupRewardsResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
@@ -1199,24 +1199,24 @@ func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.Respon
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardRewardsChart(r.Context(), *dashboardId, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRewardsChartResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
@@ -1224,7 +1224,7 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1234,27 +1234,27 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 	sort := checkSort[enums.VDBDutiesColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardDuties(r.Context(), *dashboardId, epoch, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardDutiesResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1262,27 +1262,27 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 	sort := checkSort[enums.VDBBlocksColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardBlocksResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1290,28 +1290,28 @@ func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWri
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
 	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
-		returnConflict(w, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
+		returnConflict(w, r, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardHeatmap(r.Context(), *dashboardId, protocolModes, aggregation, afterTs, beforeTs)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardHeatmapResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
@@ -1319,7 +1319,7 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	groupId := v.checkExistingGroupId(vars["group_id"])
@@ -1327,71 +1327,71 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.Respon
 	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if requestedTimestamp < chartLimits.MinAllowedTs || requestedTimestamp > chartLimits.LatestExportedTs {
-		handleErr(w, newConflictErr("requested timestamp is outside of allowed chart history for dashboard owner's premium subscription"))
+		handleErr(w, r, newConflictErr("requested timestamp is outside of allowed chart history for dashboard owner's premium subscription"))
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardGroupHeatmap(r.Context(), *dashboardId, groupId, protocolModes, aggregation, requestedTimestamp)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardGroupHeatmapResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	pagingParams := v.checkPagingParams(r.URL.Query())
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardElDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardExecutionLayerDepositsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	pagingParams := v.checkPagingParams(r.URL.Query())
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardClDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1399,45 +1399,45 @@ func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w h
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardTotalClDeposits(r.Context(), *dashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetValidatorDashboardTotalConsensusDepositsResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardTotalElDeposits(r.Context(), *dashboardId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetValidatorDashboardTotalExecutionDepositsResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
@@ -1445,27 +1445,27 @@ func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.Respons
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBWithdrawalsColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardWithdrawals(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardWithdrawalsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
@@ -1473,26 +1473,26 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.Re
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	pagingParams := v.checkPagingParams(q)
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(r.Context(), *dashboardId, pagingParams.search, protocolModes)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetValidatorDashboardTotalWithdrawalsResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
@@ -1500,26 +1500,26 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPool(w http.Response
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBRocketPoolColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardRocketPool(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRocketPoolResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
@@ -1527,24 +1527,24 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalRocketPool(w http.Res
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	pagingParams := v.checkPagingParams(q)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardTotalRocketPool(r.Context(), *dashboardId, pagingParams.search)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardTotalRocketPoolResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
@@ -1552,25 +1552,25 @@ func (h *HandlerService) InternalGetValidatorDashboardNodeRocketPool(w http.Resp
 	vars := mux.Vars(r)
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	// support ENS names ?
 	nodeAddress := v.checkAddress(vars["node_address"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, err := h.dai.GetValidatorDashboardNodeRocketPool(r.Context(), *dashboardId, nodeAddress)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardNodeRocketPoolResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
@@ -1579,7 +1579,7 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	// support ENS names ?
@@ -1587,20 +1587,20 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBRocketPoolMinipoolsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 
 	data, paging, err := h.dai.GetValidatorDashboardRocketPoolMinipools(r.Context(), *dashboardId, nodeAddress, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetValidatorDashboardRocketPoolMinipoolsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 // --------------------------------------
@@ -1609,25 +1609,25 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.dai.GetNotificationOverview(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationsResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
@@ -1635,188 +1635,188 @@ func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWr
 	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
 	chainId := v.checkNetworkParameter(q.Get("network"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), notificationId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationsValidatorDashboardResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), notificationId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationsAccountDashboardResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationMachinesColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, paging, err := h.dai.GetMachineNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationMachinesResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationClientsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, paging, err := h.dai.GetClientNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationClientsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationRocketPoolColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, paging, err := h.dai.GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationRocketPoolResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationNetworksColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationNetworksResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.dai.GetNotificationSettings(r.Context(), userId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationSettingsResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	var req types.NotificationSettingsGeneral
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
@@ -1826,42 +1826,42 @@ func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.Respo
 	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
 	// TODO: check validity of clients
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalPutUserNotificationSettingsGeneralResponse{
 		Data: req,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	var req types.NotificationSettingsNetwork
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	checkMinMax(&v, req.ParticipationRateThreshold, 0, 1, "participation_rate_threshold")
 
 	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalPutUserNotificationSettingsNetworksResponse{
@@ -1870,7 +1870,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.Resp
 			Settings: req,
 		},
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
@@ -1880,19 +1880,19 @@ func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http
 		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
 	name := v.checkNameNotEmpty(req.Name)
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	err := h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, name, req.IsNotificationsEnabled)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	// TODO timestamp
@@ -1904,7 +1904,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http
 		},
 	}
 
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
@@ -1912,48 +1912,48 @@ func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w h
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	err := h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
-	returnNoContent(w)
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) InternalGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationSettingsDashboardColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	data, paging, err := h.dai.GetNotificationSettingsDashboards(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	var req types.NotificationSettingsValidatorDashboard
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	checkMinMax(&v, req.GroupOfflineThreshold, 0, 1, "group_offline_threshold")
@@ -1961,18 +1961,18 @@ func (h *HandlerService) InternalPutUserNotificationSettingsValidatorDashboard(w
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalPutUserNotificationSettingsValidatorDashboardResponse{
 		Data: req,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
@@ -1991,7 +1991,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w h
 		IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	chainIdMap := v.checkNetworkSlice(req.SubscribedChainIds)
@@ -2007,7 +2007,7 @@ func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w h
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	settings := types.NotificationSettingsAccountDashboard{
@@ -2025,23 +2025,23 @@ func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w h
 	}
 	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalPutUserNotificationSettingsAccountDashboardResponse{
 		Data: settings,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
 	// TODO
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
 	// TODO
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
@@ -2051,15 +2051,15 @@ func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.Respons
 		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	if v.hasErrors() {
-		handleErr(w, v)
+		handleErr(w, r, v)
 		return
 	}
 	// TODO
-	returnOk(w, nil)
+	returnOk(w, r, nil)
 }
 
 // --------------------------------------
@@ -2068,171 +2068,171 @@ func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.Respons
 func (h *HandlerService) InternalGetBlock(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlock(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockOverview(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockOverview(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetBlockOverviewResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockTransactions(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockTransactions(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockTransactionsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockVotes(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockVotes(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockVotesResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockAttestations(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockAttestationsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockWithdrawals(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockWithdrawals(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockWtihdrawalsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockBlsChanges(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockBlsChanges(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockBlsChangesResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockVoluntaryExits(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockVoluntaryExitsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetBlockBlobs(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetBlockBlobs(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockBlobsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 // --------------------------------------
@@ -2241,169 +2241,169 @@ func (h *HandlerService) InternalGetBlockBlobs(w http.ResponseWriter, r *http.Re
 func (h *HandlerService) InternalGetSlot(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlot(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotOverview(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotOverview(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 	response := types.InternalGetBlockOverviewResponse{
 		Data: *data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotTransactions(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotTransactions(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockTransactionsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotVotes(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotVotes(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockVotesResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotAttestations(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotAttestations(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockAttestationsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotWithdrawals(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotWithdrawals(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockWtihdrawalsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotBlsChanges(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotBlsChanges(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockBlsChangesResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotVoluntaryExits(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockVoluntaryExitsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalGetSlotBlobs(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "slot")
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	data, err := h.dai.GetSlotBlobs(r.Context(), chainId, block)
 	if err != nil {
-		handleErr(w, err)
+		handleErr(w, r, err)
 		return
 	}
 
 	response := types.InternalGetBlockBlobsResponse{
 		Data: data,
 	}
-	returnOk(w, response)
+	returnOk(w, r, response)
 }
