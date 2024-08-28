@@ -47,7 +47,10 @@ export default defineNuxtConfig({
   ],
   devServer: {
     host: 'local.beaconcha.in',
-    https: true,
+    https: {
+      cert: 'server.crt',
+      key: 'server.key',
+    },
   },
   devtools: { enabled: true },
   eslint: { config: { stylistic: true } },
