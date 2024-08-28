@@ -25,8 +25,7 @@ const (
 	mainAPI    = "handlers/public.go"
 	outputDir  = "./docs"
 	outputType = "json" // can also be "yaml"
-
-	apiPrefix = "/api/v2/"
+	apiPrefix  = "/api/v2/"
 )
 
 // Expects the following flags:
@@ -92,7 +91,7 @@ func Run() {
 	}
 
 	// write updated swagger doc
-	err = os.WriteFile(outputDir+"/swagger."+outputType, newData, os.ModePerm)
+	err = os.WriteFile(outputDir+"/swagger."+outputType, newData, 0600)
 	if err != nil {
 		log.Fatal(err, "error writing new swagger docs", 0)
 	}
