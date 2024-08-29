@@ -359,6 +359,7 @@ onUnmounted(() => {
   @include fonts.tooltip_text;
   pointer-events: none;
   max-width: 300px;
+  box-sizing: content-box;
 
   &.special {
     --tt-bg-color: var(--light-grey-5);

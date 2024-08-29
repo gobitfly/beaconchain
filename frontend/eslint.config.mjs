@@ -60,6 +60,11 @@ export default withNuxt({
       'error',
       { allowAllPropertiesOnSameLine: true },
     ],
+    '@stylistic/quotes': [
+      'error',
+      'single',
+    ],
+    'no-console': 'warn',
     'vue/max-attributes-per-line': 'off',
     'vue/max-len': [
       'error',

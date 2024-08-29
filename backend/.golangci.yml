@@ -20,19 +20,12 @@ linters:
     - importas
     - unparam
   disable:
-    - exhaustivestruct
-    - golint
-    - ifshort
-    - interfacer
-    - maligned
-    - nosnakecase
-    - scopelint
-    - structcheck
-    - varcheck
     - dupword
     - gocognit
     - dupl
-    # - mnd
+    - mnd
+    - copyloopvar
+    - intrange
 
     # Disabled for now:
     - asasalint
@@ -53,7 +46,7 @@ linters:
     - gocyclo
     - godot
     - godox
-    - goerr113
+    - err113
     - gofumpt
     - gomnd
     - gomoddirectives
@@ -118,9 +111,6 @@ linters-settings:
         msg: Use log.Infof instead
       - p: ^fmt\.Printf.*$
         msg: Use log.Infof instead
-      # ban usage of db.ClickHouseWriter
-      - p: ^db\.ClickHouseWriter.*$
-        msg: Use db.ClickHouseNativeWriter instead
   gocognit:
     min-complexity: 65
   depguard:
@@ -188,3 +178,5 @@ linters-settings:
             desc: "DB must not import"
 issues:
   max-same-issues: 0
+  exclude-dirs:
+    - cmd/playground
