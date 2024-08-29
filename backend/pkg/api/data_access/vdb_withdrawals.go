@@ -199,11 +199,11 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	// Prepare the ENS map
-	addressEns := make(map[string]string)
+	addressMapping := make(map[string]*t.Address)
 	contractStatusRequests := make([]db.ContractInteractionAtRequest, len(queryResult))
 	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
-		addressEns[address] = ""
+		addressMapping[address] = nil
 		contractStatusRequests[i] = db.ContractInteractionAtRequest{
 			Address:  string(withdrawal.Address),
 			Block:    int64(withdrawal.BlockNumber),
@@ -213,7 +213,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	// Get the ENS names for the addresses
-	if err := db.GetEnsNamesForAddresses(addressEns); err != nil {
+	if err := d.GetLabelsAndEnsForAddresses(ctx, addressMapping); err != nil {
 		return nil, nil, err
 	}
 
@@ -228,17 +228,14 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
 		result = append(result, t.VDBWithdrawalsTableRow{
-			Epoch:   withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
-			Slot:    withdrawal.BlockSlot,
-			Index:   withdrawal.ValidatorIndex,
-			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
-			Recipient: t.Address{
-				Hash:       t.Hash(address),
-				Ens:        addressEns[address],
-				IsContract: contractStatuses[i] == types.CONTRACT_CREATION || contractStatuses[i] == types.CONTRACT_PRESENT,
-			},
-			Amount: utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
+			Epoch:     withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+			Slot:      withdrawal.BlockSlot,
+			Index:     withdrawal.ValidatorIndex,
+			Recipient: *addressMapping[address],
+			GroupId:   validatorGroupMap[withdrawal.ValidatorIndex],
+			Amount:    utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
 		})
+		result[i].Recipient.IsContract = contractStatuses[i] == types.CONTRACT_CREATION || contractStatuses[i] == types.CONTRACT_PRESENT
 		cursorData = append(cursorData, t.WithdrawalsCursor{
 			Slot:            withdrawal.BlockSlot,
 			WithdrawalIndex: withdrawal.WithdrawalIndex,
@@ -273,7 +270,8 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		if nextData != nil {
 			// Complete the next data
 			nextData.GroupId = validatorGroupMap[nextData.Index]
-			nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
+			// TODO integrate label/ens data for "next" row
+			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
 		} else {
 			// If there is no next data, add a missing estimate row
 			nextData = &t.VDBWithdrawalsTableRow{

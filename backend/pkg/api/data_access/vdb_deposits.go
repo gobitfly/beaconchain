@@ -123,7 +123,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	responseData := make([]t.VDBExecutionDepositsTableRow, len(data))
-	ensMapping := make(map[string]string)
+	addressMapping := make(map[string]*t.Address)
 	fromContractStatusRequests := make([]db.ContractInteractionAtRequest, len(data))
 	depositorContractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(data))
 	for i, row := range data {
@@ -131,13 +131,12 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			PublicKey:            t.PubKey(pubkeys[i]),
 			Block:                uint64(row.BlockNumber),
 			Timestamp:            row.Timestamp.Unix(),
-			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
 			TxHash:               t.Hash(hexutil.Encode(row.TxHash)),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
 			Valid:                row.Valid,
 		}
-		ensMapping[hexutil.Encode(row.From)] = ""
+		addressMapping[hexutil.Encode(row.From)] = nil
 		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
 			Address: string(row.From),
 			Block:   row.BlockNumber,
@@ -156,7 +155,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		}
 		if len(row.Depositor) > 0 {
 			responseData[i].Depositor = t.Address{Hash: t.Hash(hexutil.Encode(row.Depositor))}
-			ensMapping[hexutil.Encode(row.Depositor)] = ""
+			addressMapping[hexutil.Encode(row.Depositor)] = nil
 			depositorReq := fromContractStatusRequests[i]
 			depositorReq.Address = string(row.Depositor)
 			depositorContractStatusRequests = append(depositorContractStatusRequests, depositorReq)
@@ -169,7 +168,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	// populate address data
-	if err := db.GetEnsNamesForAddresses(ensMapping); err != nil {
+	if err := d.GetLabelsAndEnsForAddresses(ctx, addressMapping); err != nil {
 		return nil, nil, err
 	}
 	fromContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(fromContractStatusRequests)
@@ -182,8 +181,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 	var depositorIdx int
 	for i := range data {
-		responseData[i].From.Ens = ensMapping[string(responseData[i].From.Hash)]
-		responseData[i].Depositor.Ens = ensMapping[string(responseData[i].Depositor.Hash)]
+		responseData[i].From = *addressMapping[string(responseData[i].From.Hash)]
 		responseData[i].From.IsContract = fromContractStatuses[i] == types.CONTRACT_CREATION || fromContractStatuses[i] == types.CONTRACT_PRESENT
 		responseData[i].Depositor.IsContract = responseData[i].From.IsContract
 		if responseData[i].Depositor.Hash != responseData[i].From.Hash {

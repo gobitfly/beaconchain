@@ -348,7 +348,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	data := make([]t.VDBBlocksTableRow, len(proposals))
-	ensMapping := make(map[string]string)
+	addressMapping := make(map[string]*t.Address)
 	contractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(proposals))
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
@@ -386,7 +386,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				Hash: t.Hash(hexutil.Encode(proposal.FeeRecipient)),
 			}
 			data[i].RewardRecipient = &rewardRecp
-			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
+			addressMapping[hexutil.Encode(proposal.FeeRecipient)] = nil
 			contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
 				Address:  string(proposal.FeeRecipient),
 				Block:    proposal.Block.Int64,
@@ -403,10 +403,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	// determine reward recipient ENS names
 	startTime = time.Now()
-	if err := db.GetEnsNamesForAddresses(ensMapping); err != nil {
+	// determine ens/tags
+	if err := d.GetLabelsAndEnsForAddresses(ctx, addressMapping); err != nil {
 		return nil, nil, err
 	}
-	log.Debugf("=== getting ens names took %s", time.Since(startTime))
+	log.Debugf("=== getting ens + labels names took %s", time.Since(startTime))
 	// determine contract statuses
 	contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
 	if err != nil {
@@ -415,7 +416,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	var contractIdx int
 	for _, resultRow := range data {
 		if resultRow.RewardRecipient != nil {
-			resultRow.RewardRecipient.Ens = ensMapping[string(resultRow.RewardRecipient.Hash)]
+			resultRow.RewardRecipient = addressMapping[string(resultRow.RewardRecipient.Hash)]
 			resultRow.RewardRecipient.IsContract = contractStatuses[contractIdx] == types.CONTRACT_CREATION || contractStatuses[contractIdx] == types.CONTRACT_PRESENT
 			contractIdx += 1
 		}
