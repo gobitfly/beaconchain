@@ -72,7 +72,6 @@ export default defineNuxtConfig({
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,
       legacyApiServer: process.env.PRIVATE_LEGACY_API_SERVER,
-      ssrSecret: process.env.PRIVATE_SSR_SECRET || '',
     },
     public: {
       apiClient: process.env.PUBLIC_API_CLIENT,
@@ -88,6 +87,7 @@ export default defineNuxtConfig({
       stripeBaseUrl: process.env.PUBLIC_STRIPE_BASE_URL,
       v1Domain: process.env.PUBLIC_V1_DOMAIN,
     },
+    ssrSecret: process.env.PRIVATE_SSR_SECRET || '',
   },
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   vite: {

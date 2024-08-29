@@ -45,12 +45,13 @@ export function useCustomFetch() {
 
     const url = useRequestURL()
     const runtimeConfig = useRuntimeConfig()
-    const showInDevelopment = Boolean(runtimeConfig.public.showInDevelopment)
+    const showInDevelopment = Boolean(runtimeConfig.showInDevelopment)
     const {
       private: pConfig,
       public: {
         apiClient, apiKey, domain, legacyApiClient, logIp,
       },
+      ssrSecret,
     } = runtimeConfig
     const path = map.mock
       ? `${pathName}.json`
@@ -60,7 +61,6 @@ export function useCustomFetch() {
       : map.legacy
         ? legacyApiClient
         : apiClient
-    const ssrSecret = pConfig?.ssrSecret
 
     if (isServerSide) {
       baseURL = map.mock
