@@ -101,12 +101,17 @@ func (a *Archiver) updateArchivedStatus() error {
 
 	// Remove dashboards that should be deleted from the to be archived list
 	dashboardsToBeDeletedMap := utils.SliceToMap(dashboardsToBeDeleted)
-	for i := 0; i < len(dashboardsToBeArchived); i++ {
+	n := len(dashboardsToBeArchived)
+	for i := 0; i < n; {
 		if _, ok := dashboardsToBeDeletedMap[dashboardsToBeArchived[i].DashboardId]; ok {
-			dashboardsToBeArchived = append(dashboardsToBeArchived[:i], dashboardsToBeArchived[i+1:]...)
-			i--
+			// Remove the element by shifting the last element to the current index
+			dashboardsToBeArchived[i] = dashboardsToBeArchived[n-1]
+			n--
+		} else {
+			i++
 		}
 	}
+	dashboardsToBeArchived = dashboardsToBeArchived[:n]
 
 	// Archive dashboards
 	if len(dashboardsToBeArchived) > 0 {
