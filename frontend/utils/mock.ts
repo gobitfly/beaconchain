@@ -375,6 +375,7 @@ export function mockLatestState(..._: any): InternalGetLatestStateResponse {
           symbol: '€',
         },
       ],
+      finalized_epoch: Math.floor(mockSlot / 32),
     },
   }
 }

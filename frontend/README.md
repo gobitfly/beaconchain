@@ -43,6 +43,14 @@ Set the following mapping in your `/etc/hosts` file:
 127.0.0.1 local.beaconcha.in
 ```
 
+Create server certificates for locally running on https, by runing these comands in the console
+
+```bash
+openssl genrsa 2048 > server.key
+sudo chmod 400 server.key
+sudo openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
+```
+
 Navigate to folder `beaconchain/frontend` and run
 
 ```bash
