@@ -227,11 +227,14 @@ watch(
     flex-direction: row;
     flex-wrap: wrap;
     width: 100%;
+    pointer-events: none;
     .left-info {
       margin-right: auto;
+      pointer-events: all;
     }
     .right-info {
       margin-left: auto;
+      pointer-events: all;
     }
   }
 

@@ -18,6 +18,7 @@ import (
 var errRowMissmatch = errors.New("number of rows in current table and destination table do not match, aborting renaming")
 
 type StatsMigratorCommand struct {
+	FlagSet                        *flag.FlagSet
 	Config                         statsMigratorConfig
 	CurrentTable, DestinationTable string
 	NumberOfPartitions             int
@@ -32,14 +33,14 @@ type statsMigratorConfig struct {
 }
 
 func (s *StatsMigratorCommand) ParseCommandOptions() {
-	flag.Int64Var(&s.Config.BatchSize, "batch-size", 20000, "How many rows should be copied at once")
-	flag.DurationVar(&s.Config.SleepInBetween, "sleep-between-batches", 1*time.Second, "How long to sleep between data moving batches to reduce/increase speed and load of moving operation")
-	flag.BoolVar(&s.Config.DropExisting, "drop-existing", false, "Drop existing destination table before creating it")
-	flag.BoolVar(&s.Config.RenameDestinationOnComplete, "rename-destination-on-complete", false, "Rename destination table to current-table after copying data. current-table will be backed up under current-table_backup")
+	s.FlagSet.Int64Var(&s.Config.BatchSize, "batch-size", 20000, "How many rows should be copied at once")
+	s.FlagSet.DurationVar(&s.Config.SleepInBetween, "sleep-between-batches", 1*time.Second, "How long to sleep between data moving batches to reduce/increase speed and load of moving operation")
+	s.FlagSet.BoolVar(&s.Config.DropExisting, "drop-existing", false, "Drop existing destination table before creating it")
+	s.FlagSet.BoolVar(&s.Config.RenameDestinationOnComplete, "rename-destination-on-complete", false, "Rename destination table to current-table after copying data. current-table will be backed up under current-table_backup")
 
-	flag.StringVar(&s.CurrentTable, "current-table", "", "The current validator_stats table that you want to be partitioned")
-	flag.StringVar(&s.DestinationTable, "destination-table", "", "The destination table name for the partitioned table")
-	flag.IntVar(&s.NumberOfPartitions, "partitions", 0, "Number of partitions. Recommended 2 - 128 for PostgreSQL 15")
+	s.FlagSet.StringVar(&s.CurrentTable, "current-table", "", "The current validator_stats table that you want to be partitioned")
+	s.FlagSet.StringVar(&s.DestinationTable, "destination-table", "", "The destination table name for the partitioned table")
+	s.FlagSet.IntVar(&s.NumberOfPartitions, "partitions", 0, "Number of partitions. Recommended 2 - 128 for PostgreSQL 15")
 }
 
 func (s *StatsMigratorCommand) StartStatsPartitionCommand() error {

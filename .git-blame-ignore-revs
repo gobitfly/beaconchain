@@ -1,0 +1,18 @@
+# commits that are added to this file are ignored by `line blaming`
+# e.g. add `styling commit` (plz add earliest commit at the beginning)
+# 
+# in order to work execute once:
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style(eslint): add `typescript delimiter` rule
+d6b42edb3f687cad3082a9044bcb71fc39a46176
+# style(eslint): apply `max-len` rule
+28ab0888e8ac63e39197cb47b6c269a3ebf9b09a
+# chore(eslint): add `quote rule` to enforce `single quotes`
+393c8f2cc067cb23b2beb1def544c1b86303cc59
+# style(eslint): add `object` and `array`  formatting rules
+7ab710417cb4b818923b55c41c84c27becab8d98
+# style(eslint): apply `stylistic` rules
+912de0d0a2326dd9fe9ddec70be28d20b8d8c73f
+# style(eslint): add `plugin perfectionist`
+566fac9a71103cc9ae4084c08fb23095c1c0003b

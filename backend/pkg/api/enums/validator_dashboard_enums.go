@@ -271,6 +271,51 @@ var VDBManageValidatorsColumns = struct {
 }
 
 // ----------------
+// Validator Dashboard Archived Reasons
+
+type VDBArchivedReason int
+
+var _ Enum = VDBArchivedReason(0)
+
+const (
+	VDBArchivedUser VDBArchivedReason = iota
+	VDBArchivedDashboards
+	VDBArchivedGroups
+	VDBArchivedValidators
+)
+
+func (r VDBArchivedReason) Int() int {
+	return int(r)
+}
+
+func (r VDBArchivedReason) ToString() string {
+	switch r {
+	case VDBArchivedUser:
+		return "user"
+	case VDBArchivedDashboards:
+		return "dashboard_limit"
+	case VDBArchivedGroups:
+		return "group_limit"
+	case VDBArchivedValidators:
+		return "validator_limit"
+	default:
+		return ""
+	}
+}
+
+var VDBArchivedReasons = struct {
+	User       VDBArchivedReason
+	Dashboards VDBArchivedReason
+	Groups     VDBArchivedReason
+	Validators VDBArchivedReason
+}{
+	VDBArchivedUser,
+	VDBArchivedDashboards,
+	VDBArchivedGroups,
+	VDBArchivedValidators,
+}
+
+// ----------------
 // Validator Reward Chart Efficiency Filter
 
 type VDBSummaryChartEfficiencyType int

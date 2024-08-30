@@ -47,7 +47,10 @@ export default defineNuxtConfig({
   ],
   devServer: {
     host: 'local.beaconcha.in',
-    https: true,
+    https: {
+      cert: 'server.crt',
+      key: 'server.key',
+    },
   },
   devtools: { enabled: true },
   eslint: { config: { stylistic: true } },
@@ -59,7 +62,7 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       { storesDirs: [ './stores/**' ] },
     ],
-    'nuxt-primevue',
+    '@primevue/nuxt-module',
     '@nuxt/eslint',
   ],
   nitro: { compressPublicAssets: true },
@@ -87,7 +90,6 @@ export default defineNuxtConfig({
     },
   },
   ssr: process.env.ENABLE_SSR !== 'FALSE',
-  typescript: { typeCheck: true },
   vite: {
     build: {
       minify: true,
@@ -105,6 +107,9 @@ export default defineNuxtConfig({
           commonjs(),
         ],
       },
+    },
+    esbuild: {
+      drop: [ 'console' ],
     },
   },
 })

@@ -76,7 +76,7 @@ const innerElements = {
 }
 const frameSpan = ref<HTMLSpanElement>(null as unknown as HTMLSpanElement)
 let frameStyle: CSSStyleDeclaration
-let frameText = props.text || '' // After mounting, this variable will always mirror the text in the frame. Before mounting, it contains the full text so that <template> can display it during isServer.
+let frameText = props.text || '' // After mounting, this variable will always mirror the text in the frame. Before mounting, it contains the full text so that <template> can display it during isServerSide.
 
 let mediaqueryWidthListener: MediaQueryList
 let delayedForcedUpdateIncoming = false
@@ -95,7 +95,7 @@ let lastMeasuredFrameWidth = 0
 let currentAdditionalWidthAvailable = 0
 let currentText = ''
 const canvasContextToCalculateTextWidths = (
-  isServer ? null : document.createElement('canvas').getContext('2d')
+  isServerSide ? null : document.createElement('canvas').getContext('2d')
 ) as CanvasRenderingContext2D
 const lastTextWidthCalculation: TextProperties = {
   text: '',
@@ -285,7 +285,7 @@ watch(
     The first resizing is approximate for some reason and triggers the resizeObserver.
     The second resizing is definitive and accurate but does not trigger the resizeObserver, so MiddleEllipsis stays with a wrong clipping.
   */
-    if (isServer || !navigator.userAgent.includes('Chrom')) {
+    if (isServerSide || !navigator.userAgent.includes('Chrom')) {
       return
     }
     if (mediaqueryWidthListener) {
@@ -323,7 +323,7 @@ function catchResizingCausedByMediaquery() {
 }
 
 let resizingObserver: ResizeObserver
-if (!isServer) {
+if (!isServerSide) {
   resizingObserver = new ResizeObserver(() => {
     // will react to changes of width
     if (!didTheResizingObserverFireSinceMount) {
@@ -1122,7 +1122,7 @@ const frameClassList = computed(
   >
     {{ frameText }}
     <!--
-      The text above is not reactive because its only purpose is to provide a content during isServer. During CSR,
+      The text above is not reactive because its only purpose is to provide a content during isServerSide. During CSR,
       MiddleEllipsis clips and overwrites the text
       of the frame with a direct assignment (frameSpan.value.textContent = ...), which has an immediate effect within
       one reflow unlike reactive properties.

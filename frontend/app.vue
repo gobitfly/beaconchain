@@ -21,6 +21,7 @@ useDateProvider()
 <template>
   <div class="min-h-full">
     <BcDataWrapper>
+      <NuxtLoadingIndicator color="var(--primary-color)" />
       <NuxtPage />
       <DynamicDialog />
       <Toast />

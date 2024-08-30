@@ -21,9 +21,9 @@ type VDBOverviewGroup struct {
 }
 
 type VDBOverviewBalances struct {
-	Total     uint64 `json:"total"`
-	Effective uint64 `json:"effective"`
-	StakedEth uint64 `json:"staked_eth"`
+	Total     decimal.Decimal `json:"total"`
+	Effective decimal.Decimal `json:"effective"`
+	StakedEth decimal.Decimal `json:"staked_eth"`
 }
 
 type VDBOverviewData struct {
@@ -40,8 +40,8 @@ type VDBOverviewData struct {
 type InternalGetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
 
 type VDBPostArchivingReturnData struct {
-	Id         uint64 `json:"id"`
-	IsArchived bool   `json:"is_archived"`
+	Id         uint64 `db:"id" json:"id"`
+	IsArchived bool   `db:"is_archived" json:"is_archived"`
 }
 
 // ------------------------------------------------------------

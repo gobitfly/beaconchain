@@ -25,7 +25,7 @@ const accountAccessToggle = ref(false)
         }}
       </div>
       <Button
-        data-secondary
+        severity="secondary"
         class="p-button-icon-only"
       >
         <FontAwesomeIcon :icon="faTrash" />

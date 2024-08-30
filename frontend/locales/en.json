@@ -124,6 +124,9 @@
         "yes_label": "Delete Dashboard"
       }
     },
+    "empty": {
+        "empty_table": "Nothing to see here... yet"
+    },
     "group": {
       "selection": {
         "all": "All groups",
@@ -137,9 +140,9 @@
       }
     },
     "header": {
-      "account": "Account",
+      "account": "Accounts",
       "manage": "Manage",
-      "validator": "Validator"
+      "validator": "Validators"
     },
     "public_account_dashboard": "Dashboard",
     "public_validator_dashboard": "Dashboard",
@@ -238,7 +241,8 @@
         "remove_title": "Remove Groups",
         "search_placeholder": "Name, Id",
         "sub_title": "Add or remove validator groups for {dashboardName}",
-        "title": "Manage Groups"
+        "title": "Manage Groups",
+        "your_dashboard": "your dashboard"
       },
       "manage_groups": "Manage Groups",
       "manage_validators": "Manage Validators",
@@ -252,7 +256,13 @@
         "24h_efficiency": "24h Efficiency",
         "30d_apr": "30d APR",
         "30d_rewards": "30d Rewards",
-        "your_online_validators": "Your Online Validators"
+        "online_validators": "Online Validators",
+        "open_validator_overview_modal": "Open Validator Overview",
+        "validators_balance": {
+          "balance_effective": "Effective Balance",
+          "balance_staked": "Staked ETH",
+          "balance_total": "Balance"
+        }
       },
       "rewards": {
         "attestation": "Attestation",

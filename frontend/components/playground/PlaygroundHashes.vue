@@ -36,7 +36,9 @@ const data = {
       type: 'root',
     },
     { hash: '0x910fc508a2d992748628d9fa800a4055828fa3bb200069dc00f0f29eb1d607e20dd645c4339f48a5dd468fb51f15c9d20c5a161b1219fa9ed2d48aa8140eca56ceafd691df2d1037411ff2fb8b9912ca215ebff15d41a40eebb496b76fe403f4' },
-  ],
+  ].map((item, index) => ({
+    ...item, index,
+  })),
   paging: { total_count: 1000 },
 }
 </script>
@@ -45,6 +47,7 @@ const data = {
   <BcTable
     class="hash-table"
     :data
+    data-key="index"
     :page-size="50"
   >
     <Column

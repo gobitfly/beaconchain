@@ -7,13 +7,13 @@
     outline: none;
   }
 
-  .p-menuitem-active {
+  .p-megamenu-item-active {
     .p-submenu-icon {
       transform: rotate(90deg);
     }
   }
 
-  .p-menuitem > .p-menuitem-content .p-menuitem-link {
+  .p-megamenu-item > .p-megamenu-item-content .p-menuitem-link {
     display: flex;
     align-items: center;
     padding: 0 16px;
@@ -28,17 +28,17 @@
       }
     }
   }
-  .p-menuitem:not(.orange-box) > .p-menuitem-content .p-menuitem-link {
+  .p-megamenu-item:not(.orange-box) > .p-megamenu-item-content .p-menuitem-link {
     .p-menuitem-text,
     .p-menuitem-icon {
       color: var(--text-color);
       white-space: nowrap;
     }
   }
-  .p-menuitem:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+  .p-megamenu-item:not(.p-highlight):not(.p-disabled) > .p-megamenu-item-content:hover {
     background: var(--megamenu-hover-color);
   }
-  .p-megamenu-panel {
+  .p-megamenu-overlay {
     background: var(--megamenu-panel-color);
     min-width: fit-content;
     right: 0;
@@ -46,50 +46,50 @@
     top: calc(var(--navbar2-height) - 7px);
     border-radius: var(--border-radius);
   }
-  .p-submenu-header {
+  .p-megamenu-submenu-label {
     margin: 0;
     padding: 12px 20px;
     color: var(--text-color);
     font-weight: var(--big_text_label_font_weight);
     font-size: var(--big_text_label_font_size);
   }
-  .p-submenu-list {
+  .p-megamenu-submenu {
     padding: 8px 0;
     min-width: fit-content;
   }
   &.p-megamenu-horizontal {
     &:not(.p-megamenu-mobile) {
       .p-megamenu-root-list
-        > .p-menuitem:not(.p-highlight)
-        > .p-menuitem-content
+        > .p-megamenu-item:not(.p-highlight)
+        > .p-megamenu-item-content
         .p-menuitem-link {
         .p-menuitem-text,
         .p-submenu-icon {
           color: var(--megamenu-text-color);
         }
       }
-      .p-megamenu-root-list > .p-menuitem {
+      .p-megamenu-root-list > .p-megamenu-item {
         &:last-child {
-          > .p-menuitem-content .p-menuitem-link {
+          > .p-megamenu-item-content .p-menuitem-link {
             padding-right: 0;
           }
         }
       }
 
-      > .p-menuitem {
+      > .p-megamenu-item {
         &:last-child {
-          > .p-menuitem-content .p-menuitem-link {
+          > .p-megamenu-item-content .p-menuitem-link {
             padding-right: 0;
           }
         }
       }
     }
     .p-megamenu-root-list {
-      > .p-menuitem {
-        > .p-menuitem-content .p-menuitem-link .p-submenu-icon {
+      > .p-megamenu-item {
+        > .p-megamenu-item-content .p-menuitem-link .p-submenu-icon {
           margin-left: 8px;
         }
-        &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+        &:not(.p-highlight):not(.p-disabled) > .p-megamenu-item-content:hover {
           background: var(--container-background);
           .p-menuitem-link > .p-menuitem-text {
             opacity: 0.8;
@@ -116,13 +116,13 @@
       border-bottom-left-radius: var(--border-radius);
       border-bottom-right-radius: var(--border-radius);
     }
-    .p-megamenu-root-list > .p-menuitem > .p-megamenu-panel {
+    .p-megamenu-root-list > .p-megamenu-item > .p-megamenu-overlay {
       position: static;
       border-radius: 8px;
       padding: 0 var(--padding);
       margin: var(--padding-small);
     }
-    .p-megamenu-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-link {
+    .p-megamenu-root-list > .p-megamenu-item > .p-megamenu-item-content .p-menuitem-link {
       left: -10px;
       .p-menuitem-text,
       .p-submenu-icon {
@@ -132,7 +132,7 @@
   }
 
   &:not(.p-megamenu-mobile) {
-    .p-megamenu-panel {
+    .p-megamenu-overlay {
       .p-megamenu-col-2,
       .p-megamenu-col-3,
       .p-megamenu-col-12 {
@@ -140,14 +140,14 @@
       }
     }
   }
-  .p-megamenu-panel {
+  .p-megamenu-overlay {
     .p-megamenu-col-2,
     .p-megamenu-col-3,
     .p-megamenu-col-12 {
       padding: 0;
     }
   }
-  .p-menuitem {
+  .p-megamenu-item {
     &.orange-box {
       .p-menuitem-link {
         background-color: var(--primary-orange);

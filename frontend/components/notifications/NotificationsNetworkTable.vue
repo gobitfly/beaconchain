@@ -84,7 +84,7 @@ const {
                   scope="global"
                   tag="span"
                 >
-                  <template #_link>
+                  <template #_value>
                     <BcFormatValue
                       v-if="slotProps.data.event_type.includes('gas')"
                       :value="slotProps.data.alert_value"

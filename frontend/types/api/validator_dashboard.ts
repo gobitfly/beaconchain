@@ -22,9 +22,9 @@ export interface VDBOverviewGroup {
   count: number /* uint64 */;
 }
 export interface VDBOverviewBalances {
-  total: number /* uint64 */;
-  effective: number /* uint64 */;
-  staked_eth: number /* uint64 */;
+  total: string /* decimal.Decimal */;
+  effective: string /* decimal.Decimal */;
+  staked_eth: string /* decimal.Decimal */;
 }
 export interface VDBOverviewData {
   name?: string;

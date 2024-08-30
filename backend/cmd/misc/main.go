@@ -1,8 +1,9 @@
-package main
+package misc
 
 import (
 	"bytes"
 	"context"
+	"os"
 
 	"database/sql"
 	"encoding/base64"
@@ -66,38 +67,42 @@ var opts = struct {
 	DryRun              bool
 }{}
 
-func main() {
-	statsPartitionCommand := commands.StatsMigratorCommand{}
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
 
-	configPath := flag.String("config", "config/default.config.yml", "Path to the config file")
-	flag.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases")
-	flag.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
-	flag.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
-	flag.Uint64Var(&opts.User, "user", 0, "user id")
-	flag.Uint64Var(&opts.StartDay, "day-start", 0, "start day to debug")
-	flag.Uint64Var(&opts.EndDay, "day-end", 0, "end day to debug")
-	flag.Uint64Var(&opts.Validator, "validator", 0, "validator to check for")
-	flag.Int64Var(&opts.TargetVersion, "target-version", 0, "Db migration target version. `-3` downgrades the database by one version, `-2` upgrades to the latest version, `-1` upgrades by one version, other negative numbers downgrade to their absolute value, and positive numbers upgrade to their specified version.")
-	flag.StringVar(&opts.TargetDatabase, "target-database", "", "Database to apply the schema to")
-	flag.StringVar(&opts.Table, "table", "", "bigtable table")
-	flag.StringVar(&opts.Family, "family", "", "big table family")
-	flag.StringVar(&opts.Key, "key", "", "big table key")
-	flag.Uint64Var(&opts.StartBlock, "blocks.start", 0, "Block to start indexing")
-	flag.Uint64Var(&opts.EndBlock, "blocks.end", 0, "Block to finish indexing")
-	flag.Uint64Var(&opts.DataConcurrency, "data.concurrency", 30, "Concurrency to use when indexing data from bigtable")
-	flag.Uint64Var(&opts.BatchSize, "data.batchSize", 1000, "Batch size")
-	flag.StringVar(&opts.Transformers, "transformers", "", "Comma separated list of transformers used by the eth1 indexer")
-	flag.StringVar(&opts.ValidatorNameRanges, "validator-name-ranges", "https://config.dencun-devnet-8.ethpandaops.io/api/v1/nodes/validator-ranges", "url to or json of validator-ranges (format must be: {'ranges':{'X-Y':'name'}})")
-	flag.StringVar(&opts.Addresses, "addresses", "", "Comma separated list of addresses that should be processed by the command")
-	flag.StringVar(&opts.Columns, "columns", "", "Comma separated list of columns that should be affected by the command")
-	dryRun := flag.String("dry-run", "true", "if 'false' it deletes all rows starting with the key, per default it only logs the rows that would be deleted, but does not really delete them")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
+	statsPartitionCommand := commands.StatsMigratorCommand{
+		FlagSet: fs,
+	}
+
+	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases")
+	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
+	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
+	fs.Uint64Var(&opts.User, "user", 0, "user id")
+	fs.Uint64Var(&opts.StartDay, "day-start", 0, "start day to debug")
+	fs.Uint64Var(&opts.EndDay, "day-end", 0, "end day to debug")
+	fs.Uint64Var(&opts.Validator, "validator", 0, "validator to check for")
+	fs.Int64Var(&opts.TargetVersion, "target-version", 0, "Db migration target version. `-3` downgrades the database by one version, `-2` upgrades to the latest version, `-1` upgrades by one version, other negative numbers downgrade to their absolute value, and positive numbers upgrade to their specified version.")
+	fs.StringVar(&opts.TargetDatabase, "target-database", "", "Database to apply the schema to")
+	fs.StringVar(&opts.Table, "table", "", "bigtable table")
+	fs.StringVar(&opts.Family, "family", "", "big table family")
+	fs.StringVar(&opts.Key, "key", "", "big table key")
+	fs.Uint64Var(&opts.StartBlock, "blocks.start", 0, "Block to start indexing")
+	fs.Uint64Var(&opts.EndBlock, "blocks.end", 0, "Block to finish indexing")
+	fs.Uint64Var(&opts.DataConcurrency, "data.concurrency", 30, "Concurrency to use when indexing data from bigtable")
+	fs.Uint64Var(&opts.BatchSize, "data.batchSize", 1000, "Batch size")
+	fs.StringVar(&opts.Transformers, "transformers", "", "Comma separated list of transformers used by the eth1 indexer")
+	fs.StringVar(&opts.ValidatorNameRanges, "validator-name-ranges", "https://config.dencun-devnet-8.ethpandaops.io/api/v1/nodes/validator-ranges", "url to or json of validator-ranges (format must be: {'ranges':{'X-Y':'name'}})")
+	fs.StringVar(&opts.Addresses, "addresses", "", "Comma separated list of addresses that should be processed by the command")
+	fs.StringVar(&opts.Columns, "columns", "", "Comma separated list of columns that should be affected by the command")
+	dryRun := fs.String("dry-run", "true", "if 'false' it deletes all rows starting with the key, per default it only logs the rows that would be deleted, but does not really delete them")
+	versionFlag := fs.Bool("version", false, "Show version and exit")
 
 	statsPartitionCommand.ParseCommandOptions()
-	flag.Parse()
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
-		log.Infof(version.Version)
+		log.Info(version.Version)
 		return
 	}
 
@@ -176,7 +181,6 @@ func main() {
 	defer db.FrontendWriterDB.Close()
 
 	// clickhouse
-	//nolint:forbidigo
 	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.ClickHouse.WriterDatabase.Username,
 		Password:     cfg.ClickHouse.WriterDatabase.Password,
@@ -197,7 +201,7 @@ func main() {
 		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
 	}, "clickhouse", "clickhouse")
 	defer db.ClickHouseReader.Close()
-	defer db.ClickHouseWriter.Close() //nolint:forbidigo
+	defer db.ClickHouseWriter.Close()
 
 	// Initialize the persistent redis client
 	rdc := redis.NewClient(&redis.Options{
@@ -763,7 +767,7 @@ func migrateAppPurchases(appStoreSecret string) error {
 			return errors.Wrap(err, "error verifying receipt")
 		}
 
-		if resp.LatestReceiptInfo == nil || len(resp.LatestReceiptInfo) == 0 {
+		if len(resp.LatestReceiptInfo) == 0 {
 			log.Infof("no receipt info for purchase id %v", receipt.ID)
 			if receipt.Active && receipt.ValidateRemotely { // sanity, if there is an active subscription without receipt info we cam't delete it.
 				return fmt.Errorf("no receipt info for active purchase id %v", receipt.ID)

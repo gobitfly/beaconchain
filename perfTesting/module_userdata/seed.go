@@ -83,6 +83,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			network 	SMALLINT 		NOT NULL, -- indicate gnosis/eth mainnet and potentially testnets
 			name 		VARCHAR(50) 	NOT NULL,
 			created_at  TIMESTAMP 		DEFAULT(NOW()),
+			is_archived TEXT,
 			primary key (id)
 		);
 

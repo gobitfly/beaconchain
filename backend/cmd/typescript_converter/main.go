@@ -1,4 +1,4 @@
-package main
+package typescript_converter
 
 import (
 	"flag"
@@ -33,10 +33,11 @@ var typeMappings = map[string]string{
 
 // Standard usage (execute in backend folder): go run cmd/typescript_converter/main.go -out ../frontend/types/api
 
-func main() {
+func Run() {
 	var out string
-	flag.StringVar(&out, "out", "", "Output folder for the generated TypeScript file")
-	flag.Parse()
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	fs.StringVar(&out, "out", "", "Output folder for the generated TypeScript file")
+	_ = fs.Parse(os.Args[2:])
 
 	if out == "" {
 		log.Fatal(nil, "Output folder not provided", 0)

@@ -16,6 +16,7 @@ export interface EthConversionRate {
 }
 export interface LatestStateData {
   current_slot: number /* uint64 */;
+  finalized_epoch: number /* uint64 */;
   exchange_rates: EthConversionRate[];
 }
 export type InternalGetLatestStateResponse = ApiDataResponse<LatestStateData>;

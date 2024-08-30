@@ -34,7 +34,9 @@ const isShared = computed(() => isSharedKey(sharedKey.value))
 const path = computed(() => {
   const newRoute = router.resolve({
     name: 'dashboard-id',
-    params: { id: sharedKey.value },
+    query: {
+      validators: fromBase64Url(sharedKey.value ?? ''),
+    },
   })
   return url.origin + newRoute.fullPath
 })
@@ -78,6 +80,7 @@ const unpublish = async () => {
         class="qr-code"
         :value="path"
         :size="330"
+        level="L"
       />
       <label class="title">{{
         $t("dashboard.share_dialog.public_dashboard_url")

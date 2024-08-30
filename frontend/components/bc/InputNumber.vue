@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { Nullable } from 'primevue/ts-helpers'
 import InputNumber from 'primevue/inputnumber'
 
 const props = defineProps<{
@@ -9,13 +8,13 @@ const props = defineProps<{
 }>()
 
 const parentVmodel = defineModel<number>({ required: true })
-const bridgedVmodel = usePrimitiveRefBridge<number, Nullable<number>>(
+const bridgedVmodel = usePrimitiveRefBridge<number, null | number>(
   parentVmodel,
   n => (isNaN(n) ? null : n),
   n => n ?? NaN,
 )
 
-function sendValue(input: Nullable<number>): void {
+function sendValue(input?: null | number): void {
   if (
     input === undefined
     || input === null

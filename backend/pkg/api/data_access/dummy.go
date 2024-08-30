@@ -11,6 +11,7 @@ import (
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
@@ -38,14 +39,14 @@ func NewDummyService() *DummyService {
 		rand.Shuffle(len(possibleChainIds), func(i, j int) {
 			possibleChainIds[i], possibleChainIds[j] = possibleChainIds[j], possibleChainIds[i]
 		})
-		return possibleChainIds[:rand.IntN(len(possibleChainIds))], nil
+		return possibleChainIds[:rand.IntN(len(possibleChainIds))], nil //nolint:gosec
 	})
 	return &DummyService{}
 }
 
 // generate random decimal.Decimal, should result in somewhere around 0.001 ETH (+/- a few decimal places) in Wei
 func randomEthDecimal() decimal.Decimal {
-	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int64N(10000000)))
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int64N(10000000))) //nolint:gosec
 	return decimal
 }
 
@@ -119,17 +120,29 @@ func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint
 	return r, err
 }
 
-func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
-	return nil
-}
-
-func (d *DummyService) GetEmailConfirmationHash(ctx context.Context, userId uint64) (string, error) {
-	r := ""
+func (d *DummyService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+	r := time.Time{}
 	err := commonFakeData(&r)
 	return r, err
 }
 
+func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
+	return nil
+}
+
+func (d *DummyService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
+	return true, nil
+}
+
+func (d *DummyService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
+	return nil
+}
+
 func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
+	return nil
+}
+
+func (d *DummyService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
 	return nil
 }
 
@@ -151,7 +164,13 @@ func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (ui
 	return r, err
 }
 
-func (d *DummyService) GetUserIdByConfirmationHash(hash string) (uint64, error) {
+func (d *DummyService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
+	r := uint64(0)
+	err := commonFakeData(&r)
+	return r, err
+}
+
+func (d *DummyService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
 	r := uint64(0)
 	err := commonFakeData(&r)
 	return r, err
@@ -169,19 +188,19 @@ func (d *DummyService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, e
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardInfo, error) {
-	r := t.DashboardInfo{}
+func (d *DummyService) GetValidatorDashboardUser(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardUser, error) {
+	r := t.DashboardUser{}
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboardInfoByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.DashboardInfo, error) {
-	r := t.DashboardInfo{}
+func (d *DummyService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
+	var r t.VDBIdPrimary
 	err := commonFakeData(&r)
 	return &r, err
 }
 
-func (d *DummyService) GetValidatorDashboard(ctx context.Context, dashboardId t.VDBId) (*t.ValidatorDashboard, error) {
+func (d *DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
 	r := t.ValidatorDashboard{}
 	// return semi-valid data to not break staging
 	//nolint:errcheck
@@ -822,4 +841,10 @@ func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPool
 	r := t.RocketPoolData{}
 	err := commonFakeData(&r)
 	return &r, err
+}
+
+func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) types.HealthzData {
+	r := types.HealthzData{}
+	_ = commonFakeData(&r)
+	return r
 }

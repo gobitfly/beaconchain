@@ -1,4 +1,4 @@
-name: Frontend Linter
+name: Frontend Check
 
 on:
   push:
@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  frontend-lint:
-    name: lint
+  frontend-check:
+    name: lint and typecheck
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
@@ -27,7 +27,7 @@ jobs:
     - name: Setup Node Environment
       uses: actions/setup-node@v4
       with:
-        node-version: 21
+        node-version-file: 'frontend/.nvmrc'
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
     - name: Install Dependencies
@@ -38,3 +38,6 @@ jobs:
     - name: Lint Files
       working-directory: frontend
       run: npm run lint
+    - name: Typecheck Files
+      working-directory: frontend
+      run: npm run typecheck

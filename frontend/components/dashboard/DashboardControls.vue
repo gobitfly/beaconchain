@@ -360,7 +360,7 @@ const editDashboard = () => {
     </div>
     <div class="action-button-container">
       <Button
-        data-secondary
+        severity="secondary"
         class="share-button"
         :class="{ 'p-button-icon-only': !shareButtonOptions.label }"
         :disabled="shareButtonOptions.disabled"
@@ -389,7 +389,6 @@ const editDashboard = () => {
   height: 30px;
   display: flex;
   gap: var(--padding);
-  margin-bottom: var(--padding-large);
   @media (max-width: 519px) {
     gap: var(--padding-small);
   }

@@ -328,6 +328,7 @@ const option = computed(() => {
     },
     tooltip: {
       borderColor: colors.value.background,
+      confine: true,
       formatter(params: any): HTMLElement {
         const ts = parseInt(params[0].axisValue)
         let lastDif = 0
@@ -411,7 +412,11 @@ const option = computed(() => {
         ],
       },
       silent: true,
-      splitLine: { lineStyle: { color: colors.value.label } },
+      splitLine: {
+        lineStyle: {
+          color: colors.value.label, opacity: 0.3,
+        },
+      },
       type: 'value',
     },
   }
@@ -475,6 +480,8 @@ const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
         targetPoints = 8
         break
     }
+    // for dashboards with a large amount of time frames we show at least 3%
+    targetPoints = Math.max(targetPoints, Math.ceil(max * 0.03))
     timestamps.toIndex = firstTime ? max : Math.max(Math.ceil(max / 100 * timestamps.end), targetPoints)
     timestamps.fromIndex = timestamps.toIndex - targetPoints
   }
