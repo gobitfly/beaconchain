@@ -28,6 +28,7 @@ export interface VDBOverviewBalances {
 }
 export interface VDBOverviewData {
   name?: string;
+  network: string;
   groups: VDBOverviewGroup[];
   validators: VDBOverviewValidators;
   efficiency: PeriodicValues<number /* float64 */>;

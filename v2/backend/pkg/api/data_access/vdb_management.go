@@ -67,7 +67,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 	wg.Go(func() error {
 		dbReturn := []struct {
 			Name         string         `db:"name"`
-			Network      string         `db:"network"`
+			Network      uint64         `db:"network"`
 			IsArchived   sql.NullString `db:"is_archived"`
 			PublicId     sql.NullString `db:"public_id"`
 			PublicName   sql.NullString `db:"public_name"`
@@ -97,6 +97,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 		mutex.Lock()
 		result.Id = uint64(dashboardId)
 		result.Name = dbReturn[0].Name
+		result.Network = dbReturn[0].Network
 		result.IsArchived = dbReturn[0].IsArchived.Valid
 		result.ArchivedReason = dbReturn[0].IsArchived.String
 
@@ -315,6 +316,20 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	data := t.VDBOverviewData{}
 	wg := errgroup.Group{}
 	var err error
+
+	// Network
+	if dashboardId.Validators == nil {
+		wg.Go(func() error {
+			query := `SELECT network
+			FROM
+				users_val_dashboards
+			WHERE
+				id = $1`
+			return d.alloyReader.GetContext(ctx, &data.Network, query, dashboardId.Id)
+		})
+	}
+	// TODO handle network of validator set dashboards
+
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
