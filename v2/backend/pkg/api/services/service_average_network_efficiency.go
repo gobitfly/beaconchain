@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -19,8 +21,7 @@ import (
 // TODO: As a service this will not scale well as it is running once on every instance of the api.
 // Instead of service this should be moved to the exporter.
 
-var currentEfficiencyInfo *EfficiencyData
-var currentEfficiencyMutex = &sync.RWMutex{}
+var currentEfficiencyInfo unsafe.Pointer
 
 func (s *Services) startEfficiencyDataService() {
 	for {
@@ -128,26 +129,22 @@ func (s *Services) updateEfficiencyData() error {
 	}
 
 	// update currentEfficiencyInfo
-	currentEfficiencyMutex.Lock()
 	if currentEfficiencyInfo == nil { // info on first iteration
 		log.Infof("== average network efficiency data updater initialized ==")
 	}
-	currentEfficiencyInfo = efficiencyInfo
-	currentEfficiencyMutex.Unlock()
+	atomic.StorePointer(&currentEfficiencyInfo, unsafe.Pointer(efficiencyInfo))
 
 	return nil
 }
 
 // GetCurrentEfficiencyInfo returns the current efficiency info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the efficiency service from updating
-func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, func(), error) {
-	currentEfficiencyMutex.RLock()
-
+func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, error) {
 	if currentEfficiencyInfo == nil {
-		return nil, currentEfficiencyMutex.RUnlock, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
+		return nil, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
 	}
 
-	return currentEfficiencyInfo, currentEfficiencyMutex.RUnlock, nil
+	return (*EfficiencyData)(atomic.LoadPointer(&currentEfficiencyInfo)), nil
 }
 
 func (s *Services) initEfficiencyInfo() *EfficiencyData {
