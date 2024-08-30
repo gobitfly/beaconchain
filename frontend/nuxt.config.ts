@@ -56,16 +56,20 @@ export default defineNuxtConfig({
   eslint: { config: { stylistic: true } },
   i18n: { vueI18n: './i18n.config.ts' },
   modules: [
-    '@nuxtjs/i18n',
-    '@nuxtjs/color-mode',
-    [
-      '@pinia/nuxt',
-      { storesDirs: [ './stores/**' ] },
-    ],
-    '@primevue/nuxt-module',
-    '@nuxt/eslint',
-    '@nuxtjs/tailwindcss',
+  '@nuxt/eslint',
+  '@nuxtjs/color-mode',
+  '@nuxtjs/i18n',
+  '@nuxtjs/tailwindcss',
+  [
+    '@pinia/nuxt',
+    {
+      storesDirs: [
+        './stores/**',
+      ],
+    },
   ],
+  '@primevue/nuxt-module',
+],
   nitro: { compressPublicAssets: true },
   postcss: { plugins: { autoprefixer: {} } },
   routeRules: { '/': { redirect: '/dashboard' } },
