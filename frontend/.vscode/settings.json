@@ -12,6 +12,7 @@
   "MainFooter",
   "MainHeader",
   "qrCode",
+  "validation",
   "vscode"
 ],
 "editor.codeActionsOnSave": {
