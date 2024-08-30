@@ -68,20 +68,20 @@ const toggleMegaMenu = (evt: Event) => {
 
 const isMobileMegaMenuOpen = computed(() => megaMenu.value?.isMobileMenuOpen)
 
-const userMenu = computed(() => {
-  return [
-    {
-      command: async () => {
-        await navigateTo('../user/settings')
-      },
-      label: $t('header.settings'),
-    },
-    {
-      command: () => doLogout(),
-      label: $t('header.logout'),
-    },
-  ]
-})
+type UserMenuItem = { command: () => Promise<void>, label: string }
+const userMenu: UserMenuItem[] = [
+  {
+    command: async () => { await navigateTo('/user/settings') },
+    label: $t('header.settings'),
+  },
+  {
+    command: () => doLogout(),
+    label: $t('header.logout'),
+  },
+]
+const handleUserMenuSelect = async (value: UserMenuItem) => {
+  await value.command?.()
+}
 </script>
 
 <template>
@@ -185,17 +185,13 @@ const userMenu = computed(() => {
             option-label="label"
             class="menu-component"
             panel-class="user-menu-panel"
+            @select="handleUserMenuSelect"
           >
             <template #value>
               <FontAwesomeIcon
                 class="menu-icon"
                 :icon="faCircleUser"
               />
-            </template>
-            <template #option="slotProps">
-              <span @click="slotProps.command?.()">
-                {{ slotProps.label }}
-              </span>
             </template>
           </BcDropdown>
         </div>

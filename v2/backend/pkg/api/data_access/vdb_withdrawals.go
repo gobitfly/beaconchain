@@ -428,51 +428,43 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		Amount         int64          `db:"acc_withdrawals_amount"`
 	}{}
 
-	queryParams := []interface{}{}
 	withdrawalsQuery := `
-		SELECT
-			t.validator_index,
-			MAX(t.epoch_end) AS epoch_end,
-			SUM(COALESCE(t.withdrawals_amount, 0)) AS acc_withdrawals_amount
-		FROM validator_dashboard_data_rolling_total t
-		%s
-		GROUP BY t.validator_index
+			WITH validators AS (
+				SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = $1)
+			)
+			SELECT
+				validator_index,
+				SUM(withdrawals_amount) AS acc_withdrawals_amount,
+				MAX(epoch_end) AS epoch_end
+			FROM validator_dashboard_data_rolling_total FINAL
+			INNER JOIN validators v ON validator_dashboard_data_rolling_total.validator_index = v.validator_index
+			WHERE validator_index IN (select validator_index FROM validators)
+			GROUP BY validator_index
 		`
 
-	if dashboardId.Validators == nil {
-		queryParams = append(queryParams, dashboardId.Id)
-		dashboardIdQuery := fmt.Sprintf(`
-			INNER JOIN users_val_dashboards_validators v ON v.validator_index = t.validator_index
-			WHERE v.dashboard_id = $%d`, len(queryParams))
-
-		if len(validatorSearch) > 0 {
-			queryParams = append(queryParams, pq.Array(validatorSearch))
-			dashboardIdQuery += fmt.Sprintf(" AND t.validator_index = ANY ($%d)", len(queryParams))
-		}
-
-		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, dashboardIdQuery)
-	} else {
-		validatorSearchMap := utils.SliceToMap(validatorSearch)
-
-		var validators []t.VDBValidator
-		for _, validator := range dashboardId.Validators {
-			if _, ok := validatorSearchMap[validator]; len(validatorSearchMap) == 0 || ok {
-				validators = append(validators, validator)
-			}
-		}
-		if len(validators) == 0 {
-			// No validators to search for
-			return result, nil
-		}
-
-		queryParams = append(queryParams, pq.Array(validators))
-		validatorsQuery := fmt.Sprintf(`
-			WHERE t.validator_index = ANY ($%d)`, len(queryParams))
-
-		withdrawalsQuery = fmt.Sprintf(withdrawalsQuery, validatorsQuery)
+	if dashboardId.Validators != nil {
+		withdrawalsQuery = `
+			SELECT
+				validator_index,
+				SUM(withdrawals_amount) AS acc_withdrawals_amount,
+				MAX(epoch_end) AS epoch_end
+			from validator_dashboard_data_rolling_total FINAL
+			where validator_index IN ($1)
+			group by validator_index
+		`
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
+	dashboardValidators := make([]t.VDBValidator, 0)
+	if dashboardId.Validators != nil {
+		dashboardValidators = dashboardId.Validators
+	}
+
+	if len(dashboardValidators) > 0 {
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardValidators)
+	} else {
+		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardId.Id)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}

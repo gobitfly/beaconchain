@@ -21,9 +21,9 @@ type VDBOverviewGroup struct {
 }
 
 type VDBOverviewBalances struct {
-	Total     uint64 `json:"total"`
-	Effective uint64 `json:"effective"`
-	StakedEth uint64 `json:"staked_eth"`
+	Total     decimal.Decimal `json:"total"`
+	Effective decimal.Decimal `json:"effective"`
+	StakedEth decimal.Decimal `json:"staked_eth"`
 }
 
 type VDBOverviewData struct {

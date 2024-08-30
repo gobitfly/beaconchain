@@ -20,7 +20,7 @@ const selected = defineModel<boolean>({ required: true })
         {{ falseOption }}
       </div>
     </slot>
-    <InputSwitch
+    <ToggleSwitch
       v-model="selected"
       :disabled
     />

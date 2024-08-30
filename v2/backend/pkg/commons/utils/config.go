@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/params"
@@ -103,6 +104,16 @@ func ReadConfig(cfg *types.Config, path string) error {
 	}
 
 	cfg.Chain.Name = cfg.Chain.ClConfig.ConfigName
+
+	// match DeploymentType to development, staging, production. if its empty fallback to development
+	validTypes := []string{"development", "development_noisy", "staging", "production"}
+	if cfg.DeploymentType == "" {
+		log.Warn("DeploymentType not set, defaulting to development")
+		cfg.DeploymentType = validTypes[0]
+	}
+	if !slices.Contains(validTypes, cfg.DeploymentType) {
+		log.Fatal(fmt.Errorf("invalid DeploymentType: %v (valid types: %v)", cfg.DeploymentType, validTypes), "", 0)
+	}
 
 	if cfg.Chain.GenesisTimestamp == 0 {
 		switch cfg.Chain.Name {
