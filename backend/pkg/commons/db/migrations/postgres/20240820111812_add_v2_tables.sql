@@ -113,37 +113,39 @@ CREATE TABLE IF NOT EXISTS users_not_dashboards (
 
 -- +goose Down
 -- +goose StatementBegin
-SELECT 'delete users_val_dashboards table';
-DROP TABLE IF EXISTS users_val_dashboards;
+SELECT 'delete users_val_dashboards_validators table';
+DROP TABLE IF EXISTS users_val_dashboards_validators;
 -- +goose StatementEnd
 -- +goose StatementBegin
 SELECT 'delete users_val_dashboards_groups table';
 DROP TABLE IF EXISTS users_val_dashboards_groups;
 -- +goose StatementEnd
 -- +goose StatementBegin
-SELECT 'delete users_val_dashboards_validators table';
-DROP TABLE IF EXISTS users_val_dashboards_validators;
--- +goose StatementEnd
--- +goose StatementBegin
 SELECT 'delete users_val_dashboards_sharing table';
 DROP TABLE IF EXISTS users_val_dashboards_sharing;
 -- +goose StatementEnd
 -- +goose StatementBegin
-SELECT 'delete users_acc_dashboards table';
-DROP TABLE IF EXISTS users_acc_dashboards;
+SELECT 'delete users_val_dashboards table';
+DROP TABLE IF EXISTS users_val_dashboards;
+-- +goose StatementEnd
+
+-- +goose StatementBegin
+SELECT 'delete users_acc_dashboards_accounts table';
+DROP TABLE IF EXISTS users_acc_dashboards_accounts;
 -- +goose StatementEnd
 -- +goose StatementBegin
 SELECT 'delete users_acc_dashboards_groups table';
 DROP TABLE IF EXISTS users_acc_dashboards_groups;
 -- +goose StatementEnd
 -- +goose StatementBegin
-SELECT 'delete users_acc_dashboards_accounts table';
-DROP TABLE IF EXISTS users_acc_dashboards_accounts;
--- +goose StatementEnd
--- +goose StatementBegin
 SELECT 'delete users_acc_dashboards_sharing table';
 DROP TABLE IF EXISTS users_acc_dashboards_sharing;
 -- +goose StatementEnd
+-- +goose StatementBegin
+SELECT 'delete users_acc_dashboards table';
+DROP TABLE IF EXISTS users_acc_dashboards;
+-- +goose StatementEnd
+
 -- +goose StatementBegin
 SELECT 'delete users_not_dashboards table';
 DROP TABLE IF EXISTS users_not_dashboards;
