@@ -7,7 +7,8 @@ export const createSchemaObject = (schema: Record<string, AnySchema>) => {
 }
 
 export const validation = {
-  // exopose thirdparty validation here, when needed
+  // expose thirdparty validation here, when needed
   boolean,
+  email: (message: string) => string().email(message),
   url: (message: string) => string().url(message),
 }
