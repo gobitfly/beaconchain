@@ -166,7 +166,7 @@ func notificationSender() {
 		if err != nil {
 			log.Error(err, "error getting advisory lock from db", 0)
 
-			conn.Close()
+			err := conn.Close()
 			if err != nil {
 				log.Error(err, "error returning connection to connection pool", 0)
 			}
