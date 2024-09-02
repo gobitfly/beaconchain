@@ -271,9 +271,10 @@ type Config struct {
 		MainCurrency       string        `yaml:"mainCurrency" envconfig:"FRONTEND_MAIN_CURRENCY"`
 	} `yaml:"frontend"`
 	Metrics struct {
-		Enabled bool   `yaml:"enabled" envconfig:"METRICS_ENABLED"`
-		Address string `yaml:"address" envconfig:"METRICS_ADDRESS"`
-		Pprof   bool   `yaml:"pprof" envconfig:"METRICS_PPROF"`
+		Enabled    bool   `yaml:"enabled" envconfig:"METRICS_ENABLED"`
+		Address    string `yaml:"address" envconfig:"METRICS_ADDRESS"`
+		Pprof      bool   `yaml:"pprof" envconfig:"METRICS_PPROF"`
+		PprofExtra bool   `yaml:"pprofExtra" envconfig:"METRICS_PPROF_EXTRA"`
 	} `yaml:"metrics"`
 	Notifications struct {
 		UserDBNotifications                           bool    `yaml:"userDbNotifications" envconfig:"USERDB_NOTIFICATIONS_ENABLED"`
