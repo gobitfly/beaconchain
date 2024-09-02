@@ -4,6 +4,7 @@ import (
 	"log" //nolint:depguard
 	"net/http"
 	"net/http/pprof"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -146,6 +147,9 @@ func Serve(addr string, servePprof bool) error {
 
 	if servePprof {
 		log.Printf("serving pprof on %v/debug/pprof/", addr)
+		// enable some more aggressive pprof
+		runtime.SetBlockProfileRate(1)
+		runtime.SetMutexProfileFraction(1)
 		router.HandleFunc("/debug/pprof/", pprof.Index)
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		router.HandleFunc("/debug/pprof/profile", pprof.Profile)
