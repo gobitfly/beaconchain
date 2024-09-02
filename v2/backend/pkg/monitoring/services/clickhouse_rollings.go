@@ -62,7 +62,7 @@ func (s *ServiceClickhouseRollings) runChecks() {
 				// ignore
 				return
 			}
-			log.Debugf("checking clickhouse rolling %s", rolling)
+			log.Tracef("checking clickhouse rolling %s", rolling)
 			// context with deadline
 			ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 			defer cancel()
