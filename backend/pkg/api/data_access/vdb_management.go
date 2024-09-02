@@ -170,8 +170,7 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, pu
 		return []t.VDBValidator{}, nil
 	}
 
-	mapping, release, err := d.services.GetCurrentValidatorMapping()
-	defer release()
+	mapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -310,21 +309,19 @@ func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, da
 }
 
 func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
-	// @DATA-ACCESS incorporate poolmode
-	// @DATA-ACCESS return VDBOverviewBalances
 	data := t.VDBOverviewData{}
-	wg := errgroup.Group{}
+	eg := errgroup.Group{}
 	var err error
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
-		wg.Go(func() error {
+		eg.Go(func() error {
 			var queryResult []struct {
 				Id    uint32 `db:"id"`
 				Name  string `db:"name"`
 				Count uint64 `db:"count"`
 			}
-			query := `SELECT id, name, COUNT(validator_index)
+			query := `SELECT groups.id, groups.name, COUNT(validators.validator_index)
 			FROM
 				users_val_dashboards_groups groups
 			LEFT JOIN users_val_dashboards_validators validators
@@ -343,62 +340,117 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	}
 
-	// Validator Status
-	wg.Go(func() error {
-		var query string
-		var queryResult []struct {
-			Name  string `db:"statename"`
-			Count uint64 `db:"statecount"`
-		}
-		params := []interface{}{}
-		if dashboardId.Validators == nil {
-			query = `SELECT status AS statename, COUNT(*) AS statecount
-			FROM validators v
-			INNER JOIN users_val_dashboards_validators uvdv ON uvdv.validator_index = v.validatorindex
-			WHERE uvdv.dashboard_id = $1
-			GROUP BY status`
-			params = append(params, dashboardId.Id)
-		} else {
-			query = `SELECT status AS statename, COUNT(*) AS statecount
-			FROM validators
-			WHERE validatorindex = ANY($1)
-			GROUP BY status`
-			params = append(params, dashboardId.Validators)
-		}
-		err := d.alloyReader.SelectContext(ctx, &queryResult, query, params...)
+	// Validator status and balance
+	eg.Go(func() error {
+		validatorMapping, err := d.services.GetCurrentValidatorMapping()
 		if err != nil {
-			return fmt.Errorf("error retrieving validators data: %v", err)
+			return err
 		}
-		for _, state := range queryResult {
-			switch constypes.ValidatorDbStatus(state.Name) {
-			case constypes.DbExitingOnline:
-				fallthrough
-			case constypes.DbSlashingOnline:
-				fallthrough
-			case constypes.DbActiveOnline:
-				data.Validators.Online += state.Count
-			case constypes.DbExitingOffline:
-				fallthrough
-			case constypes.DbSlashingOffline:
-				fallthrough
-			case constypes.DbActiveOffline:
-				data.Validators.Offline += state.Count
-			case constypes.DbDeposited:
-				fallthrough
-			case constypes.DbPending:
-				data.Validators.Pending += state.Count
+
+		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
+		if err != nil {
+			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		// Status
+		pubKeyList := make([][]byte, 0, len(validators))
+		for _, validator := range validators {
+			metadata := validatorMapping.ValidatorMetadata[validator]
+			pubKeyList = append(pubKeyList, metadata.PublicKey)
+
+			switch constypes.ValidatorDbStatus(metadata.Status) {
+			case constypes.DbExitingOnline, constypes.DbSlashingOnline, constypes.DbActiveOnline:
+				data.Validators.Online++
+			case constypes.DbExitingOffline, constypes.DbSlashingOffline, constypes.DbActiveOffline:
+				data.Validators.Offline++
+			case constypes.DbDeposited, constypes.DbPending:
+				data.Validators.Pending++
 			case constypes.DbSlashed:
-				data.Validators.Slashed += state.Count
+				data.Validators.Slashed++
 			case constypes.DbExited:
-				data.Validators.Exited += state.Count
+				data.Validators.Exited++
 			}
 		}
+
+		// Find rocketpool validators
+		type RpOperatorInfo struct {
+			Pubkey             []byte          `db:"pubkey"`
+			NodeFee            float64         `db:"node_fee"`
+			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
+			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
+		}
+		var queryResult []RpOperatorInfo
+		query := `
+			SELECT 
+				pubkey,
+				node_fee,
+				node_deposit_balance,
+				user_deposit_balance
+			FROM rocketpool_minipools
+			WHERE pubkey = ANY($1)
+				AND node_deposit_balance is not null
+				AND user_deposit_balance is not null
+			`
+
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
+		if err != nil {
+			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
+		}
+
+		rpValidators := make(map[string]RpOperatorInfo)
+		for _, res := range queryResult {
+			rpValidators[hexutil.Encode(res.Pubkey)] = res
+		}
+
+		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
+		var nonRpDashboardId t.VDBId
+
+		for _, validator := range validators {
+			metadata := validatorMapping.ValidatorMetadata[validator]
+			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
+			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
+
+			if rpValidator, ok := rpValidators[hexutil.Encode(metadata.PublicKey)]; ok {
+				if protocolModes.RocketPool {
+					// Calculate the balance of the operator
+					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
+					operatorShare := rpValidator.NodeDepositBalance.Div(fullDeposit)
+					invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
+
+					base := decimal.Min(decimal.Max(decimal.Zero, validatorBalance.Sub(rpValidator.UserDepositBalance)), rpValidator.NodeDepositBalance)
+					commission := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(invOperatorShare).Mul(decimal.NewFromFloat(rpValidator.NodeFee)))
+					reward := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(operatorShare).Add(commission))
+
+					operatorBalance := base.Add(reward)
+
+					data.Balances.Total = data.Balances.Total.Add(operatorBalance)
+				} else {
+					data.Balances.Total = data.Balances.Total.Add(validatorBalance)
+				}
+				data.Balances.StakedEth = data.Balances.StakedEth.Add(rpValidator.NodeDepositBalance)
+			} else {
+				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
+
+				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
+			}
+			data.Balances.Effective = data.Balances.Effective.Add(effectiveBalance)
+		}
+
+		// Get the total cl deposits for non-rocketpool validators
+		if len(nonRpDashboardId.Validators) > 0 {
+			totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
+			if err != nil {
+				return fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
+			}
+			data.Balances.StakedEth = data.Balances.StakedEth.Add(totalNonRpDeposits.TotalAmount)
+		}
+
 		return nil
 	})
 
 	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
-		wg.Go(func() error {
+		eg.Go(func() error {
 			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, hours)
 			if err != nil {
 				return err
@@ -407,7 +459,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 
 		// Efficiency
-		wg.Go(func() error {
+		eg.Go(func() error {
 			ds := goqu.Dialect("postgres").
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
@@ -472,7 +524,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", 30*24, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
 	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
-	err = wg.Wait()
+	err = eg.Wait()
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
@@ -637,8 +689,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 	}
 
 	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1124,6 +1175,9 @@ func (d *DataAccessService) GetValidatorDashboardPublicId(ctx context.Context, p
 		WHERE public_id = $1
 	`, publicDashboardId)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: public dashboard id %v not found", ErrNotFound, publicDashboardId)
+		}
 		return nil, err
 	}
 

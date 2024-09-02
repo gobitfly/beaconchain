@@ -287,7 +287,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 	}{}
 	err = d.userReader.GetContext(ctx, &result, `SELECT email, COALESCE(user_group, '') as user_group FROM users WHERE id = $1`, userId)
 	if err != nil {
-		return nil, fmt.Errorf("error getting userEmail: %w", err)
+		return nil, fmt.Errorf("error getting userEmail for user %v: %w", userId, err)
 	}
 	userInfo.Email = result.Email
 	userInfo.UserGroup = result.UserGroup
@@ -296,7 +296,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 
 	err = d.userReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("error getting userApiKeys: %w", err)
+		return nil, fmt.Errorf("error getting userApiKeys for user %v: %w", userId, err)
 	}
 
 	premiumProduct := struct {
@@ -329,7 +329,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		LIMIT 1`, userId)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			return nil, fmt.Errorf("error getting premiumProduct: %w", err)
+			return nil, fmt.Errorf("error getting premiumProduct for userId %v: %w", userId, err)
 		}
 		premiumProduct.ProductId = "premium_free"
 		premiumProduct.Store = ""
@@ -399,7 +399,7 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		INNER JOIN users u ON u.stripe_customer_id = uss.customer_id
 		WHERE u.id = $1 AND uss.active = true AND uss.purchase_group = 'addon'`, userId)
 	if err != nil {
-		return nil, fmt.Errorf("error getting premiumAddons: %w", err)
+		return nil, fmt.Errorf("error getting premiumAddons for userId %v: %w", userId, err)
 	}
 	for _, addon := range premiumAddons {
 		foundAddon := false

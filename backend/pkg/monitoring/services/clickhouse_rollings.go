@@ -8,6 +8,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
 // create db connection service that checks for the status of db connections
@@ -48,19 +49,20 @@ func (s *ServiceClickhouseRollings) runChecks() {
 		"total",
 	}
 	wg := sync.WaitGroup{}
-	expiry := 5 * time.Minute
 	for _, rolling := range rollings {
 		rolling := rolling
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			id := fmt.Sprintf("ch_rolling_%s", rolling)
+			r := NewStatusReport(id, constants.Default, 30*time.Second)
+			r(constants.Running, nil)
 			if db.ClickHouseReader == nil {
-				ReportStatus(s.ctx, id, fmt.Errorf("clickhouse reader is nil"), &expiry, nil)
+				r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 				// ignore
 				return
 			}
-			log.Debugf("checking clickhouse rolling %s", rolling)
+			log.Tracef("checking clickhouse rolling %s", rolling)
 			// context with deadline
 			ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 			defer cancel()
@@ -81,17 +83,18 @@ func (s *ServiceClickhouseRollings) runChecks() {
 					WHERE
 						validator_index = 0`, rolling))
 			if err != nil {
-				ReportStatus(s.ctx, id, err, &expiry, nil)
+				r(constants.Failure, map[string]string{"error": err.Error()})
 				return
 			}
 			// check if delta is out of bounds
-			threshold := 2
+			threshold := 4
 			md := map[string]string{"delta": fmt.Sprintf("%d", delta), "threshold": fmt.Sprintf("%d", threshold)}
 			if delta > uint64(threshold) {
-				ReportStatus(s.ctx, id, fmt.Errorf("delta is over threshold %d", threshold), &expiry, md)
+				md["error"] = fmt.Sprintf("delta is over threshold %d", threshold)
+				r(constants.Failure, md)
 				return
 			}
-			ReportStatus(s.ctx, id, nil, &expiry, md)
+			r(constants.Success, md)
 		}()
 	}
 	wg.Wait()

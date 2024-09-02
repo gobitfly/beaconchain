@@ -29,6 +29,7 @@ type DataAccessor interface {
 	BlockRepository
 	ArchiverRepository
 	ProtocolRepository
+	HealthzRepository
 
 	StartDataAccessServices()
 	Close()

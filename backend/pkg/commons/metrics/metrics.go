@@ -4,6 +4,7 @@ import (
 	"log" //nolint:depguard
 	"net/http"
 	"net/http/pprof"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +25,10 @@ var (
 		Name: "uuid",
 		Help: "Gauge with uuid-string in label",
 	}, []string{"uuid"})
+	DeploymentType = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "deployment_type",
+		Help: "Gauge with deployment-type in label",
+	}, []string{"deployment_type"})
 	HttpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_requests_total",
 		Help: "Total number of requests by path, method and status_code.",
@@ -124,7 +129,7 @@ func (r *responseWriterDelegator) Write(b []byte) (int, error) {
 }
 
 // Serve serves prometheus metrics on the given address under /metrics
-func Serve(addr string, servePprof bool) error {
+func Serve(addr string, servePprof bool, enableExtraPprof bool) error {
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +147,12 @@ func Serve(addr string, servePprof bool) error {
 
 	if servePprof {
 		log.Printf("serving pprof on %v/debug/pprof/", addr)
+		if enableExtraPprof {
+			// enables some extra pprof endpoints
+			runtime.SetCPUProfileRate(1)
+			runtime.SetBlockProfileRate(1)
+			runtime.SetMutexProfileFraction(1)
+		}
 		router.HandleFunc("/debug/pprof/", pprof.Index)
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		router.HandleFunc("/debug/pprof/profile", pprof.Profile)

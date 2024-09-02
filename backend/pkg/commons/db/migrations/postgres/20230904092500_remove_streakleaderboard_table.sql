@@ -32,8 +32,8 @@ CREATE INDEX IF NOT EXISTS idx_validator_attestation_streaks_length ON validator
 CREATE INDEX IF NOT EXISTS idx_validator_attestation_streaks_start ON validator_attestation_streaks (START);
 -- +goose StatementEnd
 -- +goose StatementBegin
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_validator_attestation_streaks_status_longest ON public.validator_attestation_streaks USING btree (status, longest);
+CREATE INDEX IF NOT EXISTS idx_validator_attestation_streaks_status_longest ON public.validator_attestation_streaks USING btree (status, longest);
 -- +goose StatementEnd
 -- +goose StatementBegin
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_validator_attestation_streaks_status_current ON public.validator_attestation_streaks USING btree (status, current);
+CREATE INDEX IF NOT EXISTS idx_validator_attestation_streaks_status_current ON public.validator_attestation_streaks USING btree (status, current);
 -- +goose StatementEnd
