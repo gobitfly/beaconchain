@@ -44,7 +44,7 @@ func (s *ServiceClickhouseEpoch) runChecks() {
 		// ignore
 		return
 	}
-	log.Debugf("checking clickhouse epoch")
+	log.Tracef("checking clickhouse epoch")
 	// context with deadline
 	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 	defer cancel()
