@@ -20,8 +20,7 @@ type SearchRepository interface {
 
 func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
 	// TODO: implement handling of chainid
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +37,7 @@ func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chain
 
 func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
 	// TODO: implement handling of chainid
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}

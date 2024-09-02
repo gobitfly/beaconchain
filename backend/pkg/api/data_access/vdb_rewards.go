@@ -54,19 +54,16 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
-			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
-				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
-				releaseLock()
 				return result, &paging, nil
 			}
-			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
 			epochSearch = int64(number)
@@ -934,19 +931,16 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
-			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
-				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
-				releaseLock()
 				return result, &paging, nil
 			}
-			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
 		} else {

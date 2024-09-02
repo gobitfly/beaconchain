@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -24,9 +26,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var currentDutiesInfo *SyncData
-
-var currentDataMutex = &sync.RWMutex{}
+var currentDutiesInfo unsafe.Pointer
 
 func (s *Services) startSlotVizDataService() {
 	for {
@@ -86,8 +86,10 @@ func (s *Services) updateSlotVizData() error {
 
 		// if we have fetched epoch assignments before
 		// dont load for this epoch again
-		if currentDutiesInfo != nil && currentDutiesInfo.AssignmentsFetchedForEpoch > 0 {
-			minEpoch = currentDutiesInfo.AssignmentsFetchedForEpoch + 1
+		if v := (*SyncData)(atomic.LoadPointer(&currentDutiesInfo)); v != nil {
+			if v.AssignmentsFetchedForEpoch > 0 {
+				minEpoch = v.AssignmentsFetchedForEpoch + 1
+			}
 		}
 
 		maxEpoch := headEpoch + 1
@@ -270,26 +272,23 @@ func (s *Services) updateSlotVizData() error {
 	log.Debugf("process slotduties extra data: %s", time.Since(startTime))
 
 	// update currentDutiesInfo and hence frontend data
-	currentDataMutex.Lock()
 	if currentDutiesInfo == nil { // info on first iteration
 		log.Infof("== slot-viz data updater initialized ==")
 	}
-	currentDutiesInfo = dutiesInfo
-	currentDataMutex.Unlock()
+
+	atomic.StorePointer(&currentDutiesInfo, unsafe.Pointer(dutiesInfo))
 
 	return nil
 }
 
 // GetCurrentDutiesInfo returns the current duties info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the slot viz service from updating
-func (s *Services) GetCurrentDutiesInfo() (*SyncData, func(), error) {
-	currentDataMutex.RLock()
-
+func (s *Services) GetCurrentDutiesInfo() (*SyncData, error) {
 	if currentDutiesInfo == nil {
-		return nil, currentDataMutex.RUnlock, fmt.Errorf("%w: dutiesInfo", ErrWaiting)
+		return nil, fmt.Errorf("%w: dutiesInfo", ErrWaiting)
 	}
 
-	return currentDutiesInfo, currentDataMutex.RUnlock, nil
+	return (*SyncData)(atomic.LoadPointer(&currentDutiesInfo)), nil
 }
 
 func (s *Services) initDutiesInfo() *SyncData {
@@ -314,23 +313,27 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	if headSlot > 2*utils.Config.Chain.ClConfig.SlotsPerEpoch {
 		dropBelowSlot = headSlot - 2*utils.Config.Chain.ClConfig.SlotsPerEpoch
 	}
+	p, err := s.GetCurrentDutiesInfo()
+	if err != nil {
+		panic("error getting current duties info")
+	}
 
 	dutiesInfo := &SyncData{
-		LatestSlot:                   currentDutiesInfo.LatestSlot,
-		SlotStatus:                   make(map[uint64]int8, len(currentDutiesInfo.SlotStatus)),
-		SlotBlock:                    make(map[uint64]uint64, len(currentDutiesInfo.SlotBlock)),
-		SlotSyncParticipated:         make(map[uint64]map[constypes.ValidatorIndex]bool, len(currentDutiesInfo.SlotSyncParticipated)),
-		SlotValiPropSlashed:          make(map[uint64][]constypes.ValidatorIndex, len(currentDutiesInfo.SlotValiPropSlashed)),
-		SlotValiAttSlashed:           make(map[uint64][]constypes.ValidatorIndex, len(currentDutiesInfo.SlotValiAttSlashed)),
-		PropAssignmentsForSlot:       make(map[uint64]constypes.ValidatorIndex, len(currentDutiesInfo.PropAssignmentsForSlot)),
-		SyncAssignmentsForEpoch:      make(map[uint64]map[constypes.ValidatorIndex]bool, len(currentDutiesInfo.SyncAssignmentsForEpoch)),
-		TotalSyncAssignmentsForEpoch: make(map[uint64][]uint64, len(currentDutiesInfo.TotalSyncAssignmentsForEpoch)),
-		EpochAttestationDuties:       make(map[constypes.ValidatorIndex]map[uint32]bool, len(currentDutiesInfo.EpochAttestationDuties)),
-		AssignmentsFetchedForEpoch:   currentDutiesInfo.AssignmentsFetchedForEpoch,
+		LatestSlot:                   p.LatestSlot,
+		SlotStatus:                   make(map[uint64]int8, len(p.SlotStatus)),
+		SlotBlock:                    make(map[uint64]uint64, len(p.SlotBlock)),
+		SlotSyncParticipated:         make(map[uint64]map[constypes.ValidatorIndex]bool, len(p.SlotSyncParticipated)),
+		SlotValiPropSlashed:          make(map[uint64][]constypes.ValidatorIndex, len(p.SlotValiPropSlashed)),
+		SlotValiAttSlashed:           make(map[uint64][]constypes.ValidatorIndex, len(p.SlotValiAttSlashed)),
+		PropAssignmentsForSlot:       make(map[uint64]constypes.ValidatorIndex, len(p.PropAssignmentsForSlot)),
+		SyncAssignmentsForEpoch:      make(map[uint64]map[constypes.ValidatorIndex]bool, len(p.SyncAssignmentsForEpoch)),
+		TotalSyncAssignmentsForEpoch: make(map[uint64][]uint64, len(p.TotalSyncAssignmentsForEpoch)),
+		EpochAttestationDuties:       make(map[constypes.ValidatorIndex]map[uint32]bool, len(p.EpochAttestationDuties)),
+		AssignmentsFetchedForEpoch:   p.AssignmentsFetchedForEpoch,
 	}
 
 	// copy SlotStatus
-	for slot, v := range currentDutiesInfo.SlotStatus {
+	for slot, v := range p.SlotStatus {
 		if slot < dropBelowSlot {
 			continue
 		}
@@ -338,7 +341,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	}
 
 	// copy SlotBlock
-	for slot, v := range currentDutiesInfo.SlotBlock {
+	for slot, v := range p.SlotBlock {
 		if slot < dropBelowSlot {
 			continue
 		}
@@ -346,7 +349,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	}
 
 	// copy SlotSyncParticipated
-	for slot, v := range currentDutiesInfo.SlotSyncParticipated {
+	for slot, v := range p.SlotSyncParticipated {
 		if slot < dropBelowSlot {
 			continue
 		}
@@ -358,25 +361,25 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	}
 
 	// copy SlotValiPropSlashed
-	for slot, v := range currentDutiesInfo.SlotValiPropSlashed {
+	for slot, v := range p.SlotValiPropSlashed {
 		if slot < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.SlotValiPropSlashed[slot] = make([]constypes.ValidatorIndex, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
+		dutiesInfo.SlotValiPropSlashed[slot] = make([]constypes.ValidatorIndex, 0, len(p.SlotValiAttSlashed[slot]))
 		dutiesInfo.SlotValiPropSlashed[slot] = append(dutiesInfo.SlotValiAttSlashed[slot], v...)
 	}
 
 	// copy SlotValiAttSlashed
-	for slot, v := range currentDutiesInfo.SlotValiAttSlashed {
+	for slot, v := range p.SlotValiAttSlashed {
 		if slot < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.SlotValiAttSlashed[slot] = make([]constypes.ValidatorIndex, 0, len(currentDutiesInfo.SlotValiAttSlashed[slot]))
+		dutiesInfo.SlotValiAttSlashed[slot] = make([]constypes.ValidatorIndex, 0, len(p.SlotValiAttSlashed[slot]))
 		dutiesInfo.SlotValiAttSlashed[slot] = append(dutiesInfo.SlotValiAttSlashed[slot], v...)
 	}
 
 	// copy PropAssignmentsForSlot
-	for slot, v := range currentDutiesInfo.PropAssignmentsForSlot {
+	for slot, v := range p.PropAssignmentsForSlot {
 		if slot < dropBelowSlot {
 			continue
 		}
@@ -384,7 +387,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	}
 
 	// copy SyncAssignmentsForEpoch
-	for epoch, v := range currentDutiesInfo.SyncAssignmentsForEpoch {
+	for epoch, v := range p.SyncAssignmentsForEpoch {
 		if epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch < dropBelowSlot {
 			continue
 		}
@@ -396,16 +399,16 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 	}
 
 	// copy TotalSyncAssignmentsForEpoch
-	for epoch, v := range currentDutiesInfo.TotalSyncAssignmentsForEpoch {
+	for epoch, v := range p.TotalSyncAssignmentsForEpoch {
 		if epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch < dropBelowSlot {
 			continue
 		}
-		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = make([]constypes.ValidatorIndex, 0, len(currentDutiesInfo.TotalSyncAssignmentsForEpoch[epoch]))
+		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = make([]constypes.ValidatorIndex, 0, len(p.TotalSyncAssignmentsForEpoch[epoch]))
 		dutiesInfo.TotalSyncAssignmentsForEpoch[epoch] = append(dutiesInfo.TotalSyncAssignmentsForEpoch[epoch], v...)
 	}
 
 	// copy EpochAttestationDuties
-	for validator, v := range currentDutiesInfo.EpochAttestationDuties {
+	for validator, v := range p.EpochAttestationDuties {
 		dutiesInfo.EpochAttestationDuties[validator] = make(map[uint32]bool, len(v))
 
 		for slot, v2 := range v {
@@ -430,6 +433,7 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 	if headEpoch > 1 {
 		minEpoch = headEpoch - 2
 	}
+	p, err := s.GetCurrentDutiesInfo()
 
 	/*
 		Why reduce minEpoch to headEpoch - 1 after first iteration?
@@ -438,7 +442,7 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 		- Other fields used by slotviz do not change as well (sync bits, exec block). If we at some point include changing fields for headEpoch -2
 		  we should consider making this a separate call to avoid loading all attestation data again
 	*/
-	if currentDutiesInfo != nil && currentDutiesInfo.AssignmentsFetchedForEpoch > 0 && headEpoch > 0 { // if we have fetched epoch assignments before
+	if err == nil && p.AssignmentsFetchedForEpoch > 0 && headEpoch > 0 { // if we have fetched epoch assignments before
 		minEpoch = headEpoch - 1
 	}
 
