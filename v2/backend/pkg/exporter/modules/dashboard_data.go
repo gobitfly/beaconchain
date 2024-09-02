@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -64,6 +65,8 @@ const epochWriteParallelism = 4
 
 // How many epoch aggregations will be executed in parallel (e.g. total, hour, day, each rolling table)
 const databaseAggregationParallelism = 4
+
+const nonRollingdatabaseAggregationParallelism = 1 // 1 for now to see if this fixes the "deadlocks"
 
 // How many epochFetchParallelism iterations will be written before a new aggregation will be triggered during backfill. This can speed up backfill as writing epochs to db is fast and we can delay
 // aggregation for a couple iterations. Don't set too high or else epoch table will grow to large and will be a bottleneck.
@@ -823,7 +826,7 @@ func (d *dashboardData) aggregatePerEpoch(updateRollingWindows bool, preventClea
 
 	// important to do this before hour aggregate as hour aggregate deletes old epochs
 	errGroup := &errgroup.Group{}
-	errGroup.SetLimit(databaseAggregationParallelism)
+	errGroup.SetLimit(nonRollingdatabaseAggregationParallelism)
 	errGroup.Go(func() error {
 		err := d.epochToTotal.aggregateTotal(currentExportedEpoch)
 		if err != nil {
@@ -1212,7 +1215,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 					_, err := cl.GetBlockHeader(slot)
 					if err != nil {
 						httpErr := network.SpecificError(err)
-						if httpErr != nil && httpErr.StatusCode == 404 {
+						if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 							result.missedslots[slot] = true
 							continue // missed
 						}
@@ -1234,7 +1237,7 @@ func (d *dashboardData) getData(epoch, slotsPerEpoch uint64, skipSerialCalls boo
 			block, err := cl.GetSlot(slot)
 			if err != nil {
 				httpErr := network.SpecificError(err)
-				if httpErr != nil && httpErr.StatusCode == 404 {
+				if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 					mutex.Lock()
 					result.missedslots[slot] = true
 					mutex.Unlock()
@@ -1833,7 +1836,7 @@ func refreshMaterializedSlashedByCounts() error {
 // 					blockReward, err := d.CL.GetPropoalRewards(slot)
 // 					if err != nil {
 // 						httpErr := network.SpecificError(err)
-// 						if httpErr != nil && httpErr.StatusCode == 404 {
+// 						if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 // 							return nil
 // 						}
 

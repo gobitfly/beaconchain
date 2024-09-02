@@ -1,8 +1,6 @@
 <script lang="ts" setup>
 import { warn } from 'vue'
-import {
-  faCopy
-} from '@fortawesome/pro-solid-svg-icons'
+import { faCopy } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Paging } from '~/types/api/common'
 import { type Cursor } from '~/types/datatable'
@@ -15,26 +13,30 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
-const paging = ref<Paging | null>(null)
+const paging = ref<null | Paging>(null)
 const cursor = ref<Cursor>(undefined)
 const VALIDATORS_PER_PAGE = 100
 
-watch(props, (p) => {
-  cursor.value = undefined
-  if (p?.validators?.length) {
-    if (p.validators.length > VALIDATORS_PER_PAGE) {
-      paging.value = {
-        total_count: p.validators.length
+watch(
+  props,
+  (p) => {
+    cursor.value = undefined
+    if (p?.validators?.length) {
+      if (p.validators.length > VALIDATORS_PER_PAGE) {
+        paging.value = { total_count: p.validators.length }
       }
-    } else {
+      else {
+        paging.value = null
+      }
+    }
+    else {
       paging.value = null
     }
-  } else {
-    paging.value = null
-  }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 const currentPage = computed<VDBSummaryValidator[]>(() => {
   if (!props.validators?.length) {
@@ -44,17 +46,18 @@ const currentPage = computed<VDBSummaryValidator[]>(() => {
   return props.validators.slice(start, start + VALIDATORS_PER_PAGE)
 })
 
-function copyValidatorsToClipboard (): void {
+function copyValidatorsToClipboard(): void {
   if (!props.validators?.length) {
     return
   }
-  navigator.clipboard.writeText(props.validators.map(v => v.index).join(','))
+  navigator.clipboard
+    .writeText(props.validators.map(v => v.index).join(','))
     .catch((error) => {
       warn('Error copying text to clipboard:', error)
     })
 }
 
-function mapDutyLabel (dutyObjects?: number[]) {
+function mapDutyLabel(dutyObjects?: number[]) {
   if (!dutyObjects) {
     return
   }
@@ -64,18 +67,29 @@ function mapDutyLabel (dutyObjects?: number[]) {
     case 'proposal_missed':
       return $t('common.slot', dutyObjects.length) + ':'
     case 'pending':
-      return formatGoTimestamp(dutyObjects[0], undefined, 'relative', 'short', $t('locales.date'), true)
+      return formatGoTimestamp(
+        dutyObjects[0],
+        undefined,
+        'relative',
+        'short',
+        $t('locales.date'),
+        true,
+      )
     case 'has_slashed':
       return $t('dashboard.validator.subset_dialog.slashed') + ':'
     case 'got_slashed':
       return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
   }
 }
-function mapDutyLinks (dutyObjects?: number[]) {
+function mapDutyLinks(
+  dutyObjects?: number[],
+): {
+    label: string,
+    to?: string,
+  }[] {
   if (!dutyObjects) {
-    return
+    return []
   }
-  const links: { to: string, label: string }[] = []
   let path = ''
   let formatValue = true
   switch (props.category) {
@@ -93,57 +107,79 @@ function mapDutyLinks (dutyObjects?: number[]) {
   }
   if (path) {
     return dutyObjects.map(o => ({
+      label: `${formatValue ? formatNumber(o) : o}`,
       to: `${path}${o}`,
-      label: `${formatValue ? formatNumber(o) : o}`
     }))
   }
-  return links
+  else {
+    return dutyObjects.map(o => ({ label: `${formatValue ? formatNumber(o) : o}` }))
+  }
 }
-
 </script>
 
 <template>
   <div class="validator-list">
-    <div class="copy_button" @click="copyValidatorsToClipboard">
-      <FontAwesomeIcon :icon="faCopy" />
-    </div>
     <div class="list">
-      <template v-for="v in currentPage" :key="v.index">
-        <BcLink :to="`/validator/${v.index}`" target="_blank" class="link">
+      <div
+        class="copy_button"
+        @click="copyValidatorsToClipboard"
+      >
+        <FontAwesomeIcon :icon="faCopy" />
+      </div>
+      <template
+        v-for="v in currentPage"
+        :key="v.index"
+      >
+        <BcLink
+          :to="`/validator/${v.index}`"
+          target="_blank"
+          class="link"
+        >
           {{ v.index }}
         </BcLink>
-        <template v-if="mapDutyLabel(v.duty_objects)">
+        <template v-if="v.duty_objects?.length">
           <span class="round-brackets">
             <span class="label">{{ mapDutyLabel(v.duty_objects) }}</span>
-            <template v-for="link in mapDutyLinks(v.duty_objects)" :key="link.label">
-              <BcLink :to="link.to" target="_blank" class="link">
+            <template
+              v-for="link in mapDutyLinks(v.duty_objects)"
+              :key="link.label"
+            >
+              <BcLink
+                v-if="link.to"
+                :to="link.to"
+                target="_blank"
+                class="link"
+              >
                 {{ link.label }}
               </BcLink>
+              <span v-else>{{ link.label }}</span>
               <span>, </span>
-
             </template>
           </span>
         </template>
         <span>, </span>
       </template>
     </div>
-    <div v-if="paging" class="page-row">
+    <div
+      v-if="paging"
+      class="page-row"
+    >
       <BcTablePager
-        :cursor="cursor"
+        class="pager"
+        :cursor
         :page-size="VALIDATORS_PER_PAGE"
-        :paging="paging"
+        :paging
         :stepper-only="true"
-        @set-cursor="(c: Cursor) => cursor = c"
+        @set-cursor="(c: Cursor) => (cursor = c)"
       />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
+@use "~/assets/css/main.scss";
 
 .validator-list {
-  position: relative;
   flex-grow: 1;
   background-color: var(--subcontainer-background);
   padding: var(--padding) var(--padding) 7px var(--padding);
@@ -153,10 +189,15 @@ function mapDutyLinks (dutyObjects?: number[]) {
 
   .list {
     min-height: 30px;
+    position: relative;
   }
 
-  .round-brackets>span:last-child:not(.label),
-  .list>span:last-child {
+  .pager {
+    margin: 0;
+  }
+
+  .round-brackets > span:last-child:not(.label),
+  .list > span:last-child {
     display: none;
   }
 
@@ -189,8 +230,8 @@ function mapDutyLinks (dutyObjects?: number[]) {
     display: flex;
     justify-content: center;
     align-items: center;
-    bottom: var(--padding);
-    right: var(--padding);
+    bottom: var(--padding-small);
+    right: var(--padding-small);
 
     cursor: pointer;
 

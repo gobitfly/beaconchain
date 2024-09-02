@@ -28,11 +28,14 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
 
-	debug := cfg.Frontend.Debug
-	if !debug {
+	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
 	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
+
+	// store user id in context, if available
+	publicRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdByApiKey))
+	internalRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdBySession))
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
@@ -80,27 +83,38 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 
 func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
 	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, cfg)
+	addNotificationRoutes(hs, publicRouter, internalRouter, cfg.Frontend.Debug)
 	endpoints := []endpoint{
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
 
 		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
-		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
-		{http.MethodPost, "/oauth/token", hs.PublicPostOauthToken, nil},
+		{http.MethodGet, "/mobile/authorize", nil, hs.InternalPostMobileAuthorize},
+		{http.MethodPost, "/mobile/equivalent-exchange", nil, hs.InternalPostMobileEquivalentExchange},
+		{http.MethodPost, "/mobile/purchase", nil, hs.InternalHandleMobilePurchase},
+
+		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
 		{http.MethodGet, "/latest-state", nil, hs.InternalGetLatestState},
 
 		{http.MethodGet, "/product-summary", nil, hs.InternalGetProductSummary},
 
+		{http.MethodPost, "/ad-configurations", nil, hs.InternalPostAdConfigurations},
+		{http.MethodGet, "/ad-configurations", nil, hs.InternalGetAdConfigurations},
+		{http.MethodPut, "/ad-configurations/{key}", nil, hs.InternalPutAdConfiguration},
+		{http.MethodDelete, "/ad-configurations/{key}", nil, hs.InternalDeleteAdConfiguration},
+
 		{http.MethodPost, "/users", nil, hs.InternalPostUsers},
 		{http.MethodPost, "/users/email-confirmations/{token}", nil, hs.InternalPostUserConfirm},
+		{http.MethodPost, "/users/password-resets", nil, hs.InternalPostUserPasswordReset},
+		{http.MethodPost, "/users/password-resets/{token}", nil, hs.InternalPostUserPasswordResetHash},
 		{http.MethodGet, "/users/me", nil, hs.InternalGetUserInfo},
 		{http.MethodDelete, "/users/me", nil, hs.InternalDeleteUser},
-		{http.MethodPut, "/users/me/email", nil, hs.InternalPutUserEmail},
+		{http.MethodPost, "/users/me/email", nil, hs.InternalPostUserEmail},
 		{http.MethodPut, "/users/me/password", nil, hs.InternalPutUserPassword},
-		// TODO reset password
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
+		{http.MethodPut, "/users/me/notifications/settings/paired-devices/{client_id}/token", nil, hs.InternalPostUsersMeNotificationSettingsPairedDevicesToken},
 
 		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
 
@@ -132,9 +146,13 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/epochs/{epoch}", hs.PublicGetNetworkEpoch, nil},
 
 		{http.MethodGet, "/networks/{network}/blocks", hs.PublicGetNetworkBlocks, nil},
-		{http.MethodGet, "/networks/{network}/blocks/{block}", hs.PublicGetNetworkBlock, nil},
+		{http.MethodGet, "/networks/{network}/blocks/{block}", nil, hs.InternalGetBlock},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/overview", hs.PublicGetNetworkBlock, hs.InternalGetBlockOverview},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/votes", hs.PublicGetNetworkBlockVotes, hs.InternalGetBlockVotes},
 		{http.MethodGet, "/networks/{network}/slots", hs.PublicGetNetworkSlots, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}", hs.PublicGetNetworkSlot, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}", nil, hs.InternalGetSlot},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/overview", hs.PublicGetNetworkSlot, hs.InternalGetSlotOverview},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/votes", hs.PublicGetNetworkSlotVotes, hs.InternalGetSlotVotes},
 		{http.MethodGet, "/networks/{network}/validators/{validator}/blocks", hs.PublicGetNetworkValidatorBlocks, nil},
 		{http.MethodGet, "/networks/{network}/addresses/{address}/priority-fee-blocks", hs.PublicGetNetworkAddressPriorityFeeBlocks, nil},
 		{http.MethodGet, "/networks/{network}/addresses/{address}/proposer-reward-blocks", hs.PublicGetNetworkAddressProposerRewardBlocks, nil},
@@ -145,8 +163,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 
 		{http.MethodGet, "/networks/{network}/validators/{validator}/attestations", hs.PublicGetNetworkValidatorAttestations, nil},
 		{http.MethodGet, "/networks/{network}/epochs/{epoch}/attestations", hs.PublicGetNetworkEpochAttestations, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/attestations", hs.PublicGetNetworkSlotAttestations, nil},
-		{http.MethodGet, "/networks/{network}/blocks/{block}/attestations", hs.PublicGetNetworkBlockAttestations, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/attestations", hs.PublicGetNetworkSlotAttestations, hs.InternalGetSlotAttestations},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/attestations", hs.PublicGetNetworkBlockAttestations, hs.InternalGetBlockAttestations},
 		{http.MethodGet, "/networks/{network}/aggregated-attestations", hs.PublicGetNetworkAggregatedAttestations, nil},
 
 		{http.MethodGet, "/networks/{network}/ethstore/{day}", hs.PublicGetNetworkEthStore, nil},
@@ -162,15 +180,15 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/transactions/{hash}/deposits", hs.PublicGetNetworkTransactionDeposits, nil},
 
 		{http.MethodGet, "/networks/{network}/withdrawals", hs.PublicGetNetworkWithdrawals, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/withdrawals", hs.PublicGetNetworkSlotWithdrawals, nil},
-		{http.MethodGet, "/networks/{network}/blocks/{block}/withdrawals", hs.PublicGetNetworkBlockWithdrawals, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/withdrawals", hs.PublicGetNetworkSlotWithdrawals, hs.InternalGetSlotWithdrawals},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/withdrawals", hs.PublicGetNetworkBlockWithdrawals, hs.InternalGetBlockWithdrawals},
 		{http.MethodGet, "/networks/{network}/validators/{validator}/withdrawals", hs.PublicGetNetworkValidatorWithdrawals, nil},
 		{http.MethodGet, "/networks/{network}/withdrawal-credentials/{credential}/withdrawals", hs.PublicGetNetworkWithdrawalCredentialWithdrawals, nil},
 
 		{http.MethodGet, "/networks/{network}/voluntary-exits", hs.PublicGetNetworkVoluntaryExits, nil},
 		{http.MethodGet, "/networks/{network}/epochs/{epoch}/voluntary-exits", hs.PublicGetNetworkEpochVoluntaryExits, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/voluntary-exits", hs.PublicGetNetworkSlotVoluntaryExits, nil},
-		{http.MethodGet, "/networks/{network}/blocks/{block}/voluntary-exits", hs.PublicGetNetworkBlockVoluntaryExits, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/voluntary-exits", hs.PublicGetNetworkSlotVoluntaryExits, hs.InternalGetSlotVoluntaryExits},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/voluntary-exits", hs.PublicGetNetworkBlockVoluntaryExits, hs.InternalGetBlockVoluntaryExits},
 
 		{http.MethodGet, "/networks/{network}/addresses/{address}/balance-history", hs.PublicGetNetworkAddressBalanceHistory, nil},
 		{http.MethodGet, "/networks/{network}/addresses/{address}/token-supply-history", hs.PublicGetNetworkAddressTokenSupplyHistory, nil},
@@ -179,14 +197,14 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/transactions", hs.PublicGetNetworkTransactions, nil},
 		{http.MethodGet, "/networks/{network}/transactions/{hash}", hs.PublicGetNetworkTransaction, nil},
 		{http.MethodGet, "/networks/{network}/addresses/{address}/transactions", hs.PublicGetNetworkAddressTransactions, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/transactions", hs.PublicGetNetworkSlotTransactions, nil},
-		{http.MethodGet, "/networks/{network}/blocks/{block}/transactions", hs.PublicGetNetworkBlockTransactions, nil},
-		{http.MethodGet, "/networks/{network}/blocks/{block}/blobs", hs.PublicGetNetworkBlockBlobs, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/transactions", hs.PublicGetNetworkSlotTransactions, hs.InternalGetSlotTransactions},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/transactions", hs.PublicGetNetworkBlockTransactions, hs.InternalGetBlockTransactions},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/blobs", hs.PublicGetNetworkBlockBlobs, hs.InternalGetBlockBlobs},
 
 		{http.MethodGet, "/networks/{network}/handlerService-changes", hs.PublicGetNetworkBlsChanges, nil},
 		{http.MethodGet, "/networks/{network}/epochs/{epoch}/handlerService-changes", hs.PublicGetNetworkEpochBlsChanges, nil},
-		{http.MethodGet, "/networks/{network}/slots/{slot}/handlerService-changes", hs.PublicGetNetworkSlotBlsChanges, nil},
-		{http.MethodGet, "/networks/{network}/blocks/{block}/handlerService-changes", hs.PublicGetNetworkBlockBlsChanges, nil},
+		{http.MethodGet, "/networks/{network}/slots/{slot}/handlerService-changes", hs.PublicGetNetworkSlotBlsChanges, hs.InternalGetSlotBlsChanges},
+		{http.MethodGet, "/networks/{network}/blocks/{block}/handlerService-changes", hs.PublicGetNetworkBlockBlsChanges, hs.InternalGetBlockBlsChanges},
 		{http.MethodGet, "/networks/{network}/validators/{validator}/handlerService-changes", hs.PublicGetNetworkValidatorBlsChanges, nil},
 
 		{http.MethodGet, "/networks/ethereum/addresses/{address}/ens", hs.PublicGetNetworkAddressEns, nil},
@@ -203,6 +221,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/networks/{network}/average-gas-limit-history", hs.PublicGetNetworkAverageGasLimitHistory, nil},
 		{http.MethodGet, "/networks/{network}/gas-used-history", hs.PublicGetNetworkGasUsedHistory, nil},
 
+		{http.MethodGet, "/rocket-pool", hs.PublicGetRocketPool, hs.InternalGetRocketPool},
 		{http.MethodGet, "/rocket-pool/nodes", hs.PublicGetRocketPoolNodes, nil},
 		{http.MethodGet, "/rocket-pool/minipools", hs.PublicGetRocketPoolMinipools, nil},
 
@@ -222,19 +241,34 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 
 	publicDashboardRouter := publicRouter.PathPrefix(vdbPath).Subrouter()
 	internalDashboardRouter := internalRouter.PathPrefix(vdbPath).Subrouter()
+
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdByApiKey), hs.VDBPublicApiCheckMiddleware)
-		internalDashboardRouter.Use(hs.GetVDBAuthMiddleware(hs.GetUserIdBySession), GetAuthMiddleware(cfg.ApiKeySecret))
+		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
+		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
+	}
+
+	archivalEndpoints := []endpoint{
+		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
+		{http.MethodPut, "/{dashboard_id}/archiving", hs.PublicPutValidatorDashboardArchiving, hs.InternalPutValidatorDashboardArchiving},
+	}
+
+	addEndpointsToRouters(archivalEndpoints, publicDashboardRouter, internalDashboardRouter)
+
+	// create new subrouters for archived check middleware, will be used for all endpoints added after this
+	if !cfg.Frontend.Debug {
+		publicDashboardRouter = publicDashboardRouter.NewRoute().Subrouter()
+		internalDashboardRouter = internalDashboardRouter.NewRoute().Subrouter()
+		publicDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
+		internalDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
 	}
 
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
-		{http.MethodDelete, "/{dashboard_id}", hs.PublicDeleteValidatorDashboard, hs.InternalDeleteValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", nil, hs.InternalPutValidatorDashboardName},
 		{http.MethodPost, "/{dashboard_id}/groups", hs.PublicPostValidatorDashboardGroups, hs.InternalPostValidatorDashboardGroups},
 		{http.MethodPut, "/{dashboard_id}/groups/{group_id}", hs.PublicPutValidatorDashboardGroups, hs.InternalPutValidatorDashboardGroups},
-		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroups, hs.InternalDeleteValidatorDashboardGroups},
+		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroup, hs.InternalDeleteValidatorDashboardGroup},
 		{http.MethodPost, "/{dashboard_id}/validators", hs.PublicPostValidatorDashboardValidators, hs.InternalPostValidatorDashboardValidators},
 		{http.MethodGet, "/{dashboard_id}/validators", hs.PublicGetValidatorDashboardValidators, hs.InternalGetValidatorDashboardValidators},
 		{http.MethodDelete, "/{dashboard_id}/validators", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
@@ -251,18 +285,62 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
 		{http.MethodGet, "/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
 		{http.MethodGet, "/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
-		{http.MethodGet, "/{dashboard_id}/epoch-heatmap", hs.PublicGetValidatorDashboardEpochHeatmap, hs.InternalGetValidatorDashboardEpochHeatmap},
-		{http.MethodGet, "/{dashboard_id}/daily-heatmap", hs.PublicGetValidatorDashboardDailyHeatmap, hs.InternalGetValidatorDashboardDailyHeatmap},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/epoch-heatmap/{epoch}", hs.PublicGetValidatorDashboardGroupEpochHeatmap, hs.InternalGetValidatorDashboardGroupEpochHeatmap},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/daily-heatmap/{date}", hs.PublicGetValidatorDashboardGroupDailyHeatmap, hs.InternalGetValidatorDashboardGroupDailyHeatmap},
+		{http.MethodGet, "/{dashboard_id}/heatmap", hs.PublicGetValidatorDashboardHeatmap, hs.InternalGetValidatorDashboardHeatmap},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/heatmap/{timestamp}", hs.PublicGetValidatorDashboardGroupHeatmap, hs.InternalGetValidatorDashboardGroupHeatmap},
 		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/total-execution-layer-deposits", nil, hs.InternalGetValidatorDashboardTotalExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/total-consensus-layer-deposits", nil, hs.InternalGetValidatorDashboardTotalConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/withdrawals", hs.PublicGetValidatorDashboardWithdrawals, hs.InternalGetValidatorDashboardWithdrawals},
 		{http.MethodGet, "/{dashboard_id}/total-withdrawals", nil, hs.InternalGetValidatorDashboardTotalWithdrawals},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool", hs.PublicGetValidatorDashboardRocketPool, hs.InternalGetValidatorDashboardRocketPool},
+		{http.MethodGet, "/{dashboard_id}/total-rocket-pool", hs.PublicGetValidatorDashboardTotalRocketPool, hs.InternalGetValidatorDashboardTotalRocketPool},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}", hs.PublicGetValidatorDashboardNodeRocketPool, hs.InternalGetValidatorDashboardNodeRocketPool},
+		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}/minipools", hs.PublicGetValidatorDashboardRocketPoolMinipools, hs.InternalGetValidatorDashboardRocketPoolMinipools},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
+}
+
+func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
+	path := "/users/me/notifications"
+	publicNotificationRouter := publicRouter.PathPrefix(path).Subrouter()
+	internalNotificationRouter := internalRouter.PathPrefix(path).Subrouter()
+
+	if !debug {
+		publicNotificationRouter.Use(hs.ManageViaApiCheckMiddleware)
+	}
+	endpoints := []endpoint{
+		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
+		{http.MethodGet, "/dashboards", nil, hs.InternalGetUserNotificationDashboards},
+		{http.MethodGet, "/validator-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsValidatorDashboard},
+		{http.MethodGet, "/account-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsAccountDashboard},
+		{http.MethodGet, "/machines", nil, hs.InternalGetUserNotificationMachines},
+		{http.MethodGet, "/clients", nil, hs.InternalGetUserNotificationClients},
+		{http.MethodGet, "/rocket-pool", nil, hs.InternalGetUserNotificationRocketPool},
+		{http.MethodGet, "/networks", nil, hs.InternalGetUserNotificationNetworks},
+		{http.MethodGet, "/settings", nil, hs.InternalGetUserNotificationSettings},
+		{http.MethodPut, "/settings/general", nil, hs.InternalPutUserNotificationSettingsGeneral},
+		{http.MethodPut, "/settings/networks/{network}", nil, hs.InternalPutUserNotificationSettingsNetworks},
+		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalPutUserNotificationSettingsPairedDevices},
+		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalDeleteUserNotificationSettingsPairedDevices},
+		{http.MethodGet, "/settings/dashboards", nil, hs.InternalGetUserNotificationSettingsDashboards},
+		{http.MethodPost, "/test-email", nil, hs.InternalPostUserNotificationsTestEmail},
+		{http.MethodPost, "/test-push", nil, hs.InternalPostUserNotificationsTestPush},
+		{http.MethodPost, "/test-webhook", nil, hs.InternalPostUserNotificationsTestWebhook},
+	}
+	addEndpointsToRouters(endpoints, publicNotificationRouter, internalNotificationRouter)
+
+	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
+	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
+	if !debug {
+		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
+		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
+	}
+	dashboardSettingsEndpoints := []endpoint{
+		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
+		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsAccountDashboard},
+	}
+	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
 }
 
 func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {

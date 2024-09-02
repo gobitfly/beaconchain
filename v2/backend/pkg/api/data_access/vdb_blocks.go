@@ -19,7 +19,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+	// @DATA-ACCESS incorporate protocolModes
 	var err error
 	var currentCursor t.BlocksCursor
 
@@ -38,8 +39,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	validatorMap := make(map[t.VDBValidator]bool)
 	params := []interface{}{}
 	filteredValidatorsQuery := ""
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -181,8 +181,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		sortOrder += ` NULLS LAST`
 	}
 	orderBy += sortColName + sortOrder
+	secSort := `DESC`
 	if !onlyPrimarySort {
-		secSort := `DESC`
 		if currentCursor.IsReverse() {
 			secSort = `ASC`
 		}
@@ -199,8 +199,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if !onlyPrimarySort || !currentCursor.IsValid() ||
 		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
 		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
-		dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
-		defer releaseLock()
+		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
 		if err == nil {
 			for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
 				// only gather scheduled slots
@@ -242,7 +241,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		COALESCE(rb.value / 1e18, ep.fee_recipient_reward) AS el_reward,
 		cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9 as cl_reward,
 		r.graffiti_text`, groupIdCol)
-	query := fmt.Sprintf(`SELECT
+	query := fmt.Sprintf(`SELECT distinct on (slot)
 			%s
 		FROM ( SELECT * FROM (`, selectFields)
 	// supply scheduled proposals, if any
@@ -256,7 +255,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		params = append(params, scheduledProposers)
 		params = append(params, scheduledEpochs)
 		params = append(params, scheduledSlots)
-		query = fmt.Sprintf(`SELECT distinct on (%s) 
+		query = fmt.Sprintf(`SELECT distinct on (%s)
 			%s
 		FROM ( SELECT * FROM (WITH scheduled_proposals (
 			proposer,
@@ -266,7 +265,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			block,
 			reward,
 			graffiti_text
-		) AS (SELECT 
+		) AS (SELECT
 			*,
 			'0',
 			null::int,
@@ -323,9 +322,13 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
 	LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
 	`
-
+	// relay bribe deduplication; select most likely (=max) relay bribe value for each block
+	relayOrder := ``
+	if colSort.Column != enums.VDBBlockProposerReward {
+		relayOrder += `,  rb.value ` + secSort
+	}
 	startTime := time.Now()
-	err = d.alloyReader.Select(&proposals, query+where+orderBy+limitStr+rewardsStr+orderBy, params...)
+	err = d.alloyReader.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy+relayOrder, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err

@@ -1,52 +1,57 @@
 <script setup lang="ts">
-import {
-  faPowerOff
-} from '@fortawesome/pro-solid-svg-icons'
+import { faPowerOff } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorStatus } from '~/types/validator'
 
 interface Props {
-  status: ValidatorStatus,
+  hideLabel?: boolean,
   position?: number,
-  hideLabel?: boolean
+  status: ValidatorStatus,
 }
-defineProps<Props>()
+const props = defineProps<Props>()
 
+const iconColor = computed(() => {
+  if (props.status.includes('online')) return 'green'
+  if (props.status.includes('offline')) return 'red'
+  return 'orange'
+})
 </script>
+
 <template>
   <div class="wrapper">
-    <span v-if="!hideLabel" class="status">
-      <!--TODO: remove .replaceAll once backend data is fixed-->
-      {{ $t(`validator_state.${status.replaceAll('\'', '')}`) }}
+    <FontAwesomeIcon
+      :icon="faPowerOff"
+      :class="iconColor"
+    />
+    <span
+      v-if="!hideLabel"
+      class="status"
+    >
+      {{ $t(`validator_state.${status}`) }}
       <span v-if="position"> #<BcFormatNumber :value="position" /></span>
     </span>
-    <!--TODO: remove .replaceAll once backend data is fixed-->
-    <FontAwesomeIcon :icon="faPowerOff" :class="status.replaceAll('\'', '')" />
   </div>
 </template>
+
 <style lang="scss" scoped>
 .wrapper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--padding-small);
-  .status{
+  .status {
     text-transform: capitalize;
     text-wrap: nowrap;
   }
 
-  .online{
+  .green {
     color: var(--positive-color);
   }
-  .pending {
-    color: var(--orange-color);
-  }
-  .exiting,
-  .withdrawn,
-  .offline,
-  .exited,
-  .slashed{
+  .red {
     color: var(--negative-color);
+  }
+  .orange {
+    color: var(--orange-color);
   }
 }
 </style>

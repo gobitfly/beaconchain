@@ -1,14 +1,16 @@
 <script setup lang="ts">
-
 interface Props {
   graffiti?: string,
-  noCopy?: boolean
+  noCopy?: boolean,
 }
 const props = defineProps<Props>()
-
 </script>
+
 <template>
-  <div v-if="props.graffiti" class="format-graffiti">
+  <div
+    v-if="props.graffiti"
+    class="format-graffiti"
+  >
     <BcTooltip class="tt-container">
       <template #tooltip>
         <div class="tt">
@@ -17,7 +19,11 @@ const props = defineProps<Props>()
       </template>
       {{ props.graffiti }}
     </BcTooltip>
-    <BcCopyToClipboard v-if="!props.noCopy" :value="props.graffiti" class="copy" />
+    <BcCopyToClipboard
+      v-if="!props.noCopy"
+      :value="props.graffiti"
+      class="copy"
+    />
   </div>
   <div v-else>
     -
@@ -25,7 +31,7 @@ const props = defineProps<Props>()
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/utils.scss';
+@use "~/assets/css/utils.scss";
 
 .format-graffiti {
   width: 100%;
@@ -39,7 +45,6 @@ const props = defineProps<Props>()
     margin-left: var(--padding);
     line-height: 100%;
   }
-
 }
 
 .tt {

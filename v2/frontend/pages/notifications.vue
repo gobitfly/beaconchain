@@ -1,72 +1,81 @@
 <script setup lang="ts">
 import {
+  faBolt,
   faGaugeSimpleMax,
   faMonitorWaveform,
-  faBolt,
-  faNetworkWired
+  faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
-import { BcDialogConfirm } from '#components'
+import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
+import {
+  BcDialogConfirm, NotificationsNetworkTable,
+} from '#components'
 import type { HashTabs } from '~/types/hashTabs'
-import NotificationsManagementModal from '~/components/dashboard/notifications/NotificationsManagementModal.vue'
 
 useDashboardKeyProvider('notifications')
 const { refreshDashboards } = useUserDashboardStore()
 const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 
-await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [isLoggedIn] })
+await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const manageNotificationsModalVisisble = ref(false)
 
-const tabs: HashTabs = {
-  dashboards: {
-    index: 0
+const tabs: HashTabs = [
+  {
+    icon: faGaugeSimpleMax,
+    key: 'dashboards',
+    title: $t('notifications.tabs.dashboards'),
   },
-  machines: {
-    index: 1,
-    disabled: !showInDevelopment
+  {
+    disabled: !showInDevelopment,
+    icon: faMonitorWaveform,
+    key: 'machines',
+    placeholder: 'Machines coming soon!',
+    title: $t('notifications.tabs.machines'),
   },
-  clients: {
-    index: 2,
-    disabled: !showInDevelopment
+  {
+    disabled: !showInDevelopment,
+    icon: faBolt,
+    key: 'clients',
+    placeholder: 'Clients coming soon!',
+    title: $t('notifications.tabs.clients'),
   },
-  rocketpool: {
-    index: 3,
-    disabled: !showInDevelopment
+  {
+    disabled: !showInDevelopment,
+    key: 'rocketpool',
+    placeholder: 'Rocketpool coming soon!',
+    title: $t('notifications.tabs.rocketpool'),
   },
-  network: {
-    index: 4,
-    disabled: !showInDevelopment
-  }
-}
-
-const { activeIndex, setActiveIndex } = useHashTabs(tabs)
+  {
+    component: NotificationsNetworkTable,
+    disabled: !showInDevelopment,
+    icon: faNetworkWired,
+    key: 'network',
+    title: $t('notifications.tabs.network'),
+  },
+]
 
 useBcSeo('notifications.title')
 
 const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
-      props: {
-        header: $t('notifications.title')
-      },
-      onClose: async (response) => {
+      data: { question: $t('notifications.login_question') },
+      onClose: async (response: DynamicDialogCloseOptions) => {
         if (response?.data) {
           await navigateTo('/login')
         }
       },
-      data: {
-        question: $t('notifications.login_question')
-      }
+      props: { header: $t('notifications.title') },
     })
-  } else {
+  }
+  else {
     manageNotificationsModalVisisble.value = true
   }
 }
-
 </script>
 
 <template>
@@ -78,65 +87,47 @@ const openManageNotifications = () => {
           TODO: Overview
         </div>
       </template>
-      <NotificationsManagementModal v-model="manageNotificationsModalVisisble" />
+      <NotificationsManagementModal
+        v-model="manageNotificationsModalVisisble"
+      />
       <div class="button-row">
-        <Button :label="$t('notifications.manage')" @click="openManageNotifications" />
+        <Button
+          :label="$t('notifications.manage')"
+          @click="openManageNotifications"
+        />
       </div>
-      <TabView lazy class="notifications-tab-view" :active-index="activeIndex" @update:active-index="setActiveIndex">
-        <TabPanel>
-          <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.dashboards')" :icon="faGaugeSimpleMax" />
-          </template>
-          <div>TODO: Dashboards Table</div>
-        </TabPanel>
-        <TabPanel :disabled="tabs.machines.disabled">
-          <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.machines')" :icon="faMonitorWaveform" />
-          </template>
-          Machines coming soon!
-        </TabPanel>
-        <TabPanel :disabled="tabs.clients.disabled">
-          <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.clients')" :icon="faBolt" />
-          </template>
-          Clients coming soon!
-        </TabPanel>
-        <TabPanel :disabled="tabs.rocketpool.disabled">
-          <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.rocketpool')">
-              <template #icon>
-                <IconRocketPool />
-              </template>
-            </BcTabHeader>
-          </template>
-          Rocketpool coming soon!
-        </TabPanel>
-        <TabPanel :disabled="tabs.network.disabled">
-          <template #header>
-            <BcTabHeader :header="$t('notifications.tabs.network')" :icon="faNetworkWired" />
-          </template>
-          Network coming soon!
-        </TabPanel>
-      </TabView>
+      <BcTabList
+        :tabs default-tab="dashboards"
+        :use-route-hash="true"
+        class="notifications-tab-view"
+        panels-class="notifications-tab-panels"
+      >
+        <template #tab-header-icon-rocketpool>
+          <IconRocketPool />
+        </template>
+        <template #tab-panel-dashboards>
+          <NotificationsDashboardsTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+      </BcTabList>
     </BcPageWrapper>
   </div>
 </template>
 
 <style lang="scss" scoped>
-
-:global(.notifications-tab-view >.p-tabview-panels) {
-  min-height: 699px;
-}
-
 .overview {
   margin-bottom: var(--padding-large);
 }
 
-.p-tabview {
+.notifications-tab-view {
   margin-top: var(--padding-large);
+  :deep(.notifications-tab-panels) {
+    min-height: 699px;
+  }
 }
 
-.button-row{
+.button-row {
   display: flex;
   justify-content: flex-end;
 }

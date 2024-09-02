@@ -20,8 +20,7 @@ type SearchRepository interface {
 
 func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
 	// TODO: implement handling of chainid
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +37,7 @@ func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chain
 
 func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
 	// TODO: implement handling of chainid
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +58,7 @@ func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Cont
 	ret := &t.SearchValidatorsByDepositAddress{
 		Address: address,
 	}
-	err := db.ReaderDb.Get(&ret.Count, "select count(validatorindex) from validators where pubkey in (select publickey from eth1_deposits where from_address = $1);", address)
+	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(validatorindex) from validators where pubkey in (select publickey from eth1_deposits where from_address = $1);", address)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +79,7 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx contex
 	ret := &t.SearchValidatorsByWithdrwalCredential{
 		WithdrawalCredential: credential,
 	}
-	err := db.ReaderDb.Get(&ret.Count, "select count(validatorindex) from validators where withdrawalcredentials = $1;", credential)
+	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(validatorindex) from validators where withdrawalcredentials = $1;", credential)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +100,7 @@ func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, c
 	ret := &t.SearchValidatorsByGraffiti{
 		Graffiti: graffiti,
 	}
-	err := db.ReaderDb.Get(&ret.Count, "select count(distinct proposer) from blocks where graffiti_text = $1;", graffiti)
+	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(distinct proposer) from blocks where graffiti_text = $1;", graffiti)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,9 @@
-package main
+package typescript_converter
 
 import (
 	"flag"
 	"go/ast"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -32,10 +33,11 @@ var typeMappings = map[string]string{
 
 // Standard usage (execute in backend folder): go run cmd/typescript_converter/main.go -out ../frontend/types/api
 
-func main() {
+func Run() {
 	var out string
-	flag.StringVar(&out, "out", "", "Output folder for the generated TypeScript file")
-	flag.Parse()
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	fs.StringVar(&out, "out", "", "Output folder for the generated TypeScript file")
+	_ = fs.Parse(os.Args[2:])
 
 	if out == "" {
 		log.Fatal(nil, "Output folder not provided", 0)
@@ -43,6 +45,12 @@ func main() {
 
 	if !strings.HasSuffix(out, "/") {
 		out += "/"
+	}
+
+	// delete everything in the output folder
+	err := deleteFiles(out)
+	if err != nil {
+		log.Fatal(err, "Failed to delete files in output folder", 0)
 	}
 
 	// Load package
@@ -82,6 +90,20 @@ func main() {
 	}
 
 	log.Infof("Juhu!")
+}
+
+func deleteFiles(out string) error {
+	files, err := filepath.Glob(out + "*.ts")
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		err = os.Remove(file)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func getTygoConfig(out, file, frontmatter string) *tygo.Config {

@@ -111,12 +111,10 @@
   --standard_text_medium_font_weight: var(--roboto-medium);
   --standard_text_bold_font_weight: var(--roboto-bold);
 
-  --main_header_font_family:var(--roboto-family);
+  --main_header_font_family: var(--roboto-family);
   --main_header_font_size: 16px;
   --main_header_font_weight: var(--roboto-regular);
   --main_header_bold_font_weight: var(--roboto-bold);
-
-
 
   --small_text_font_family: var(--roboto-family);
   --small_text_font_size: 14px;
@@ -130,7 +128,7 @@
 
   --tooltip_text_font_family: var(--inter-family);
   --tooltip_text_font_size: 12px;
-  --tooltip_text_font_weight: var(--inter-light);
+  --tooltip_text_font_weight: var(--inter-regular);
   --tooltip_text_bold_font_weight: var(--inter-medium);
 
   --logo_font_family: var(--inter-family);
@@ -171,14 +169,14 @@ h1 {
   @include subtitle_text;
 }
 
-@mixin big_text(){
+@mixin big_text() {
   font-family: var(--big_text_font_family);
   font-size: var(--big_text_font_size);
   font-weight: var(--big_text_font_weight);
 }
 
-.big_text{
-  @include big_text
+.big_text {
+  @include big_text;
 }
 
 @mixin big_text_label() {
@@ -188,95 +186,115 @@ h1 {
 }
 
 .big_text_label {
-  @include big_text_label
+  @include big_text_label;
 }
 
-@mixin standard_text(){
+@mixin standard_text() {
   font-family: var(--standard_text_font_family);
   font-size: var(--standard_text_font_size);
   font-weight: var(--standard_text_font_weight);
 }
 
-.standard_text{
-  @include standard_text
+.standard_text {
+  @include standard_text;
 }
 
-@mixin standard_text_bold(){
+@mixin standard_text_bold() {
   font-family: var(--standard_text_font_family);
   font-size: var(--standard_text_font_size);
   font-weight: var(--standard_text_bold_font_weight);
 }
 
-.standard_text_bold{
-  @include standard_text_bold
+.standard_text_bold {
+  @include standard_text_bold;
 }
 
-@mixin small_text(){
+@mixin small_text() {
   font-family: var(--small_text_font_family);
   font-size: var(--small_text_font_size);
   font-weight: var(--small_text_font_weight);
 }
 
-.small_text{
-  @include small_text
+.small_text {
+  @include small_text;
 }
 
-@mixin small_text_bold(){
+@mixin small_text_bold() {
   font-family: var(--small_text_font_family);
   font-size: var(--small_text_font_size);
   font-weight: var(--small_text_bold_font_weight);
 }
 
-.small_text_bold{
-  @include small_text_bold
+.small_text_bold {
+  @include small_text_bold;
 }
 
-@mixin tiny_text(){
+@mixin tiny_text() {
   font-family: var(--tiny_text_font_family);
   font-size: var(--tiny_text_font_size);
   font-weight: var(--tiny_text_font_weight);
 }
 
-.tiny_text{
-  @include tiny_text
+.tiny_text {
+  @include tiny_text;
 }
 
-@mixin tiny_text_bold(){
+@mixin tiny_text_bold() {
   font-family: var(--tiny_text_font_family);
   font-size: var(--tiny_text_font_size);
   font-weight: var(--tiny_text_bold_font_weight);
 }
 
-.tiny_text_bold{
-  @include tiny_text_bold
+.tiny_text_bold {
+  @include tiny_text_bold;
 }
 
-@mixin tooltip_text(){
+@mixin tooltip_text() {
   font-family: var(--tooltip_text_font_family);
   font-size: var(--tooltip_text_font_size);
   font-weight: var(--tooltip_text_font_weight);
 }
 
-.tooltip_text{
-  @include tooltip_text
+.tooltip_text {
+  @include tooltip_text;
 }
 
-@mixin tooltip_text_bold(){
+@mixin tooltip_text_bold() {
   font-family: var(--tooltip_text_font_family);
   font-size: var(--tooltip_text_font_size);
   font-weight: var(--tooltip_text_bold_font_weight);
 }
 
-.tooltip_text_bold{
-  @include tooltip_text_bold
+.tooltip_text_bold {
+  @include tooltip_text_bold;
 }
 
-@mixin button_text(){
+@mixin button_text() {
   font-family: var(--button_font_family);
   font-size: var(--button_font_size);
   font-weight: var(--button_font_weight);
 }
 
-.button_text{
-  @include button_text
+.button_text {
+  @include button_text;
+}
+
+@mixin text-toast() {
+  font-family: var(--roboto-family);
+  font-size: var(--standard_text_font_size);
+  font-weight: var(--roboto-bold);
+}
+
+.text-toast {
+  @include text-toast;
+}
+
+@mixin text-toast-sm() {
+  font-family: var(--roboto-family);
+  font-size: var(--small_text_font_size);
+  font-weight: var(--roboto-regular);
+}
+
+.text-toast-sm {
+  @include text-toast-sm;
 }

@@ -3,38 +3,40 @@ import type { ValidatorHistoryDuties } from '~/types/api/common'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 interface Props {
+  compact?: boolean,
   data?: ValidatorHistoryDuties,
-  compact?: boolean
 }
 const props = defineProps<Props>()
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { networkInfo } = useNetworkStore()
 
 const mapped = computed(() => {
-  const mapSuccess = (status?: 'success' | 'partial' | 'failed' | 'orphaned') => {
+  const mapSuccess = (
+    status?: 'failed' | 'orphaned' | 'partial' | 'success',
+  ) => {
     const success = status === 'success'
 
     let className = ''
     switch (status) {
-      case 'success':
-        className = 'positive'
-        break
-      case 'partial':
-        className = 'partial'
-        break
       case 'failed':
         className = 'negative'
         break
       case 'orphaned':
         className = 'orphaned'
         break
+      case 'partial':
+        className = 'partial'
+        break
+      case 'success':
+        className = 'positive'
+        break
     }
     return {
-      success,
       className,
       status,
-      tooltip: ''
+      success,
+      tooltip: '',
     }
   }
   const head = mapSuccess(props?.data?.attestation_head?.status)
@@ -54,61 +56,113 @@ const mapped = computed(() => {
     const failed = networkInfo.value.slotsPerEpoch - success
     sync.tooltip = `${success} / ${failed}`
   }
-  const totalClassName = !(head.status && source.status && target.status) ? '' : (head.success || source.success || target.success) ? 'positive' : 'negative'
-  const totalTooltipTitle = totalClassName ? totalClassName === 'positive' ? $t('validator.duty.attestation_included') : $t('validator.duty.attestation_missed') : ''
+  const totalClassName = !(head.status && source.status && target.status)
+    ? ''
+    : head.success || source.success || target.success
+      ? 'positive'
+      : 'negative'
+  const totalTooltipTitle = totalClassName
+    ? totalClassName === 'positive'
+      ? $t('validator.duty.attestation_included')
+      : $t('validator.duty.attestation_missed')
+    : ''
   return {
-    total: {
-      className: totalClassName,
-      tooltipTitle: totalTooltipTitle
-    },
     head,
-    source,
-    target,
     proposal,
     slashing,
-    sync
+    source,
+    sync,
+    target,
+    total: {
+      className: totalClassName,
+      tooltipTitle: totalTooltipTitle,
+    },
   }
 })
-
 </script>
+
 <template>
   <div class="duty-status-container">
     <BcTooltip :fit-content="true">
-      <template v-if="mapped.total.tooltipTitle" #tooltip>
+      <template
+        v-if="mapped.total.tooltipTitle"
+        #tooltip
+      >
         <div class="tooltip">
           <b>
             {{ mapped.total.tooltipTitle }}
           </b>
           <div class="head">
-            <b>{{ $t('validator.duty.head') }}:</b> {{ $t(`common.${mapped.head.success}`) }}
+            <b>{{ $t("validator.duty.head") }}:</b>
+            {{ $t(`common.${mapped.head.success}`) }}
           </div>
-          <div><b>{{ $t('validator.duty.source') }}:</b> {{ $t(`common.${mapped.source.success}`) }}</div>
-          <div><b>{{ $t('validator.duty.target') }}:</b> {{ $t(`common.${mapped.target.success}`) }}</div>
+          <div>
+            <b>{{ $t("validator.duty.source") }}:</b>
+            {{ $t(`common.${mapped.source.success}`) }}
+          </div>
+          <div>
+            <b>{{ $t("validator.duty.target") }}:</b>
+            {{ $t(`common.${mapped.target.success}`) }}
+          </div>
         </div>
       </template>
-      <div class="attestations group" :class="mapped.total.className">
-        <SlotVizIcon :class="mapped.head.className" icon="head_attestation" />
-        <SlotVizIcon :class="mapped.source.className" icon="source_attestation" />
-        <SlotVizIcon :class="mapped.target.className" icon="target_attestation" />
+      <div
+        class="attestations group"
+        :class="mapped.total.className"
+      >
+        <SlotVizIcon
+          :class="mapped.head.className"
+          icon="head_attestation"
+        />
+        <SlotVizIcon
+          :class="mapped.source.className"
+          icon="source_attestation"
+        />
+        <SlotVizIcon
+          :class="mapped.target.className"
+          icon="target_attestation"
+        />
       </div>
     </BcTooltip>
-    <div v-if="!compact" class="group">
-      <BcTooltip :text="mapped.proposal.tooltip" :fit-content="true">
-        <SlotVizIcon :class="mapped.proposal.className" icon="proposal" />
+    <div
+      v-if="!compact"
+      class="group"
+    >
+      <BcTooltip
+        :text="mapped.proposal.tooltip"
+        :fit-content="true"
+      >
+        <SlotVizIcon
+          :class="mapped.proposal.className"
+          icon="proposal"
+        />
       </BcTooltip>
-      <BcTooltip :text="mapped.slashing.tooltip" :fit-content="true">
-        <SlotVizIcon :class="mapped.slashing.className" icon="slashing" />
+      <BcTooltip
+        :text="mapped.slashing.tooltip"
+        :fit-content="true"
+      >
+        <SlotVizIcon
+          :class="mapped.slashing.className"
+          icon="slashing"
+        />
       </BcTooltip>
-      <BcTooltip :text="mapped.sync.tooltip" :fit-content="true">
-        <SlotVizIcon :class="mapped.sync.className" icon="sync" />
+      <BcTooltip
+        :text="mapped.sync.tooltip"
+        :fit-content="true"
+      >
+        <SlotVizIcon
+          :class="mapped.sync.className"
+          icon="sync"
+        />
       </BcTooltip>
     </div>
   </div>
 </template>
+
 <style lang="scss" scoped>
-.tooltip{
+.tooltip {
   text-align: left;
-  .head{
+  .head {
     margin-top: var(--padding);
   }
 }
@@ -126,7 +180,7 @@ const mapped = computed(() => {
     border-radius: var(--border-radius);
     border: solid 1px transparent;
 
-    svg{
+    svg {
       margin: 3px 4px;
       height: 12px;
       width: auto;
@@ -138,9 +192,8 @@ const mapped = computed(() => {
       &.negative {
         border-color: var(--negative-color);
       }
-      &.positive{
+      &.positive {
         border-color: var(--positive-color);
-
       }
     }
   }

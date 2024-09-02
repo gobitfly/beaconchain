@@ -9,7 +9,8 @@ import (
 
 // Config is a struct to hold the configuration data
 type Config struct {
-	JustV2         bool `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
+	JustV2         bool   `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
+	DeploymentType string `yaml:"deploymentType" envconfig:"DEPLOYMENT_TYPE"`
 	ReaderDatabase struct {
 		Username     string `yaml:"user" envconfig:"READER_DB_USERNAME"`
 		Password     string `yaml:"password" envconfig:"READER_DB_PASSWORD"`
@@ -211,14 +212,17 @@ type Config struct {
 			DiamondDay    int `yaml:"diamondDay" envconfig:"FRONTEND_RATELIMITS_DIAMOND_DAY"`
 			DiamondMonth  int `yaml:"diamondMonth" envconfig:"FRONTEND_RATELIMITS_DIAMOND_MONTH"`
 		} `yaml:"ratelimits"`
-		SessionSecret          string `yaml:"sessionSecret" envconfig:"FRONTEND_SESSION_SECRET"`
-		SessionSameSiteNone    bool   `yaml:"sessionSameSiteNone" envconfig:"FRONTEND_SESSION_SAMESITE_NONE"`
-		SessionCookieDomain    string `yaml:"sessionCookieDomain" envconfig:"FRONTEND_SESSION_COOKIE_DOMAIN"`
-		JwtSigningSecret       string `yaml:"jwtSigningSecret" envconfig:"FRONTEND_JWT_SECRET"`
-		JwtIssuer              string `yaml:"jwtIssuer" envconfig:"FRONTEND_JWT_ISSUER"`
-		JwtValidityInMinutes   int    `yaml:"jwtValidityInMinutes" envconfig:"FRONTEND_JWT_VALIDITY_INMINUTES"`
-		MaxMailsPerEmailPerDay int    `yaml:"maxMailsPerEmailPerDay" envconfig:"FRONTEND_MAX_MAIL_PER_EMAIL_PER_DAY"`
-		Mail                   struct {
+		RatelimitUpdateInterval time.Duration `yaml:"ratelimitUpdateInterval" envconfig:"FRONTEND_RATELIMIT_UPDATE_INTERVAL"`
+		RatelimitEnabled        bool          `yaml:"ratelimitEnabled" envconfig:"FRONTEND_RATELIMIT_ENABLED"`
+		RatelimitRedisTimeout   time.Duration `yaml:"ratelimitRedisTimeout" envconfig:"FRONTEND_RATELIMIT_REDIS_TIMEOUT"`
+		SessionSecret           string        `yaml:"sessionSecret" envconfig:"FRONTEND_SESSION_SECRET"`
+		SessionSameSiteNone     bool          `yaml:"sessionSameSiteNone" envconfig:"FRONTEND_SESSION_SAMESITE_NONE"`
+		SessionCookieDomain     string        `yaml:"sessionCookieDomain" envconfig:"FRONTEND_SESSION_COOKIE_DOMAIN"`
+		JwtSigningSecret        string        `yaml:"jwtSigningSecret" envconfig:"FRONTEND_JWT_SECRET"`
+		JwtIssuer               string        `yaml:"jwtIssuer" envconfig:"FRONTEND_JWT_ISSUER"`
+		JwtValidityInMinutes    int           `yaml:"jwtValidityInMinutes" envconfig:"FRONTEND_JWT_VALIDITY_INMINUTES"`
+		MaxMailsPerEmailPerDay  int           `yaml:"maxMailsPerEmailPerDay" envconfig:"FRONTEND_MAX_MAIL_PER_EMAIL_PER_DAY"`
+		Mail                    struct {
 			SMTP struct {
 				Server   string `yaml:"server" envconfig:"FRONTEND_MAIL_SMTP_SERVER"`
 				Host     string `yaml:"host" envconfig:"FRONTEND_MAIL_SMTP_HOST"`
@@ -267,9 +271,10 @@ type Config struct {
 		MainCurrency       string        `yaml:"mainCurrency" envconfig:"FRONTEND_MAIN_CURRENCY"`
 	} `yaml:"frontend"`
 	Metrics struct {
-		Enabled bool   `yaml:"enabled" envconfig:"METRICS_ENABLED"`
-		Address string `yaml:"address" envconfig:"METRICS_ADDRESS"`
-		Pprof   bool   `yaml:"pprof" envconfig:"METRICS_PPROF"`
+		Enabled    bool   `yaml:"enabled" envconfig:"METRICS_ENABLED"`
+		Address    string `yaml:"address" envconfig:"METRICS_ADDRESS"`
+		Pprof      bool   `yaml:"pprof" envconfig:"METRICS_PPROF"`
+		PprofExtra bool   `yaml:"pprofExtra" envconfig:"METRICS_PPROF_EXTRA"`
 	} `yaml:"metrics"`
 	Notifications struct {
 		UserDBNotifications                           bool    `yaml:"userDbNotifications" envconfig:"USERDB_NOTIFICATIONS_ENABLED"`

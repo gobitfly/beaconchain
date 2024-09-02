@@ -1,0 +1,23 @@
+{
+  "conventionalCommits.scopes": [
+  "checkout",
+  "ci",
+  "customFetch",
+  "DashboardChartSummaryChartFilter",
+  "DashboardGroupManagementModal",
+  "eslint",
+  "git",
+  "i18n",
+  "mainHeader",
+  "qrCode",
+  "vscode"
+],
+"editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+},
+"editor.formatOnSave": false,
+  "editor.rulers": [
+    80,
+    120
+]
+}

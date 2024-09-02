@@ -1,4 +1,5 @@
 @use "~/assets/css/fonts.scss";
+@use "~/assets/css/utils.scss";
 
 .p-menubar {
   @include fonts.button_text;
@@ -9,63 +10,128 @@
   .p-menubar-root-list {
     flex-wrap: nowrap;
     gap: var(--padding);
+    min-width: 1px;
 
-    > .p-menuitem {
+    @media (max-width: 519px) {
+      gap: var(--padding-small);
+    }
+    > .p-menubar-item {
       background: var(--list-background);
       border: 1px solid var(--container-border-color);
       border-radius: var(--border-radius);
       height: 30px;
-      cursor: pointer;
+      min-width: 1px;
+      &:has([highlight]) {
+        color: var(--text-color-inverted);
+        background: var(--button-color-active);
+        border-color: var(--button-color-active);
+      }
       &:has(.router-link-active),
       &:has(.p-active) {
         color: var(--primary-color);
         border-color: var(--primary-color);
       }
-
-      > .p-menuitem-content {
-        padding: var(--padding-small) var(--padding-large);
+      > .p-menubar-item-content {
+        padding: var(--padding-small) var(--padding);
         border-radius: var(--border-radius);
-        height: 28px;
-        .button-content {
-          margin-top: 1px;
-          justify-content: center;
-          text-align: center;
+        height: 27px;
+        margin-top: 1px;
+        justify-content: center;
+
+        &:not(:has(.text)) {
+          padding-left: 8px;
+          padding-right: 8px;
         }
       }
 
-      &:not(.p-highlight):not(.p-disabled) > .p-menuitem-content:hover {
+      &:has(> .p-menubar-item-content .text-disabled) {
+        cursor: default;
+
+        > .p-menubar-item-content {
+          opacity: 0.5;
+        }
+      }
+
+      &:not(:has([highlight])):not(.p-disabled):hover {
         background: var(--list-hover-background);
+      }
+      &:has([highlight]):not(.p-disabled):hover {
+        background: var(--button-color-hover);
       }
     }
   }
 
-  .p-submenu-list {
+  .button-content {
+    margin-top: 1px;
+    display: flex;
+    white-space: nowrap;
+    text-align: center;
+    gap: var(--padding);
+    @media (max-width: 519px) {
+      gap: var(--padding-small);
+    }
+
+    &:has(.icon):has(.text){
+      justify-content: flex-start;
+    }
+    &:has(.toggle) {
+      justify-content: space-between;
+    }
+
+    .text {
+      @include utils.truncate-text;
+      position: relative;
+
+      // this hack is necessary to make the clickable area as big as the parent
+      &::before {
+        cursor: pointer;
+        content: "";
+        position: absolute;
+        inset: 0;
+      }
+    }
+
+    .toggle {
+      flex-shrink: 0;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
+    .pointer {
+      cursor: pointer;
+    }
+  }
+
+  .p-menubar-submenu {
     margin-top: var(--padding-tiny);
     padding: var(--padding-small);
     background: var(--background-color);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
     cursor: default;
+    font-weight: var(--standard_text_font_weight);
 
-    .p-menuitem {
+    .p-menubar-item {
       border-radius: var(--border-radius);
       padding: var(--padding);
       white-space: nowrap;
       text-overflow: ellipsis;
       max-width: 200px;
-      cursor: pointer;
 
       &:not(:has(.p-active)):not(:has(.router-link-active)) {
         color: var(--text-color);
       }
 
-      &:not(.p-highlight):not(.p-disabled):hover {
+      &:not(:has([highlight])):not(.p-disabled):hover {
         background: var(--list-hover-background);
+      }
+      &:has([highlight]):not(.p-disabled):hover {
+        background: var(--button-color-hover);
       }
 
       &:not(:last-child) {
         margin-bottom: var(--padding);
-        :after{
+        :after {
           content: "";
           position: absolute;
           left: 0;
@@ -74,7 +140,7 @@
           border-bottom: 1px solid var(--container-border-color);
         }
         &.p-big-separator {
-          :after{
+          :after {
             border-bottom-width: 3px;
             bottom: -6px;
           }
@@ -83,7 +149,7 @@
     }
   }
 
-  &.right-aligned-submenu .p-submenu-list {
+  &.right-aligned-submenu .p-menubar-submenu {
     right: 0;
   }
 }

@@ -1,22 +1,39 @@
 <script lang="ts" setup>
 import {
-  faEdit,
-  faTrash
+  faEdit, faTrash,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
 import { uniq } from 'lodash-es'
-import { BcDialogConfirm, BcPremiumModal, DashboardGroupSelectionDialog } from '#components'
+import {
+  BcDialogConfirm,
+  BcPremiumModal,
+  DashboardGroupSelectionDialog,
+} from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import type { InternalGetValidatorDashboardValidatorsResponse, VDBManageValidatorsTableRow, VDBPostValidatorsData } from '~/types/api/validator_dashboard'
+import type {
+  InternalGetValidatorDashboardValidatorsResponse,
+  VDBManageValidatorsTableRow,
+  VDBPostValidatorsData,
+} from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import { type SearchBar, SearchbarShape, SearchbarColors, SearchbarPurpose, type ResultSuggestion, ResultType, pickHighestPriorityAmongBestMatchings } from '~/types/searchbar'
-import { API_PATH, type PathValues } from '~/types/customFetch'
+import {
+  pickHighestPriorityAmongBestMatchings,
+  type ResultSuggestion,
+  ResultType,
+  type SearchBar,
+  SearchbarColors,
+  SearchbarPurpose,
+  SearchbarShape,
+} from '~/types/searchbar'
+import {
+  API_PATH, type PathValues,
+} from '~/types/customFetch'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const { currentNetwork } = useNetworkStore()
 
@@ -26,19 +43,34 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
-const { overview, refreshOverview } = useValidatorDashboardOverviewStore()
+const {
+  overview, refreshOverview,
+} = useValidatorDashboardOverviewStore()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
 const selectedValidator = ref<string>('')
-const { addEntities, removeEntities, dashboardKey, isPublic, dashboardType } = useDashboardKey()
+const {
+  addEntities, dashboardKey, dashboardType, isPublic, removeEntities,
+}
+  = useDashboardKey()
 const { updateHash } = useUserDashboardStore()
-const { isLoggedIn, user } = useUserStore()
+const {
+  isLoggedIn, user,
+} = useUserStore()
 
-const initialQuery = { limit: pageSize.value, sort: 'index:asc' }
+const initialQuery = {
+  limit: pageSize.value,
+  sort: 'index:asc',
+}
 
-const { value: query, temp: tempQuery, bounce: setQuery, instant: instantQuery } = useDebounceValue<PathValues | undefined>(initialQuery, 500)
+const {
+  bounce: setQuery,
+  instant: instantQuery,
+  temp: tempQuery,
+  value: query,
+} = useDebounceValue<PathValues | undefined>(initialQuery, 500)
 
 const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
@@ -46,11 +78,11 @@ const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
 
 type ValidatorUpdateBody = {
+  deposit_address?: string,
+  graffiti?: string,
+  group_id?: number,
   validators?: string[],
-    deposit_address?: string,
-    withdrawal_address?: string,
-    graffiti?: string,
-    group_id?: number
+  withdrawal_address?: string,
 }
 
 const size = computed(() => {
@@ -58,8 +90,8 @@ const size = computed(() => {
     expandable: width.value < 1060,
     showBalance: width.value >= 1060,
     showGroup: width.value >= 925,
+    showPublicKey: width.value >= 570,
     showWithdrawalCredentials: width.value >= 750,
-    showPublicKey: width.value >= 570
   }
 })
 
@@ -76,18 +108,34 @@ const onClose = () => {
   visible.value = false
 }
 
-const mapIndexOrPubKey = (validators?: VDBManageValidatorsTableRow[]): string[] => {
-  return uniq(validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [])
+const mapIndexOrPubKey = (
+  validators?: VDBManageValidatorsTableRow[],
+): string[] => {
+  return uniq(
+    validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [],
+  )
 }
 
 const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
-  if (!body.validators?.length && !body.deposit_address && !body.graffiti && !body.withdrawal_address) {
+  if (
+    !body.validators?.length
+    && !body.deposit_address
+    && !body.graffiti
+    && !body.withdrawal_address
+  ) {
     warn('no validators selected to change group')
     return
   }
   body.group_id = groupId && groupId !== -1 ? groupId : 0
 
-  await fetch<VDBPostValidatorsData>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'POST', body }, { dashboardKey: dashboardKey.value })
+  await fetch<VDBPostValidatorsData>(
+    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+    {
+      body,
+      method: 'POST',
+    },
+    { dashboardKey: dashboardKey.value },
+  )
 
   loadData()
   refreshOverview(dashboardKey.value)
@@ -103,7 +151,14 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     return
   }
 
-  await fetch(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, { method: 'DELETE', query: { validators: validators.join(',') } }, { dashboardKey: dashboardKey.value })
+  await fetch(
+    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+    {
+      method: 'DELETE',
+      query: { validators: validators.join(',') },
+    },
+    { dashboardKey: dashboardKey.value },
+  )
 
   loadData()
   refreshOverview(dashboardKey.value)
@@ -121,20 +176,20 @@ const addValidator = (result: ResultSuggestion) => {
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
-      list = [String(result.rawResult.num_value!)]
+      list = [ String(result.rawResult.num_value!) ]
       selectedValidator.value = list[0]
       body.validators = list
       break
-    case ResultType.ValidatorsByDepositAddress :
-    case ResultType.ValidatorsByDepositEnsName :
+    case ResultType.ValidatorsByDepositAddress:
+    case ResultType.ValidatorsByDepositEnsName:
       body.deposit_address = result.rawResult.hash_value
       break
-    case ResultType.ValidatorsByWithdrawalCredential :
-    case ResultType.ValidatorsByWithdrawalAddress :
-    case ResultType.ValidatorsByWithdrawalEnsName :
+    case ResultType.ValidatorsByWithdrawalCredential:
+    case ResultType.ValidatorsByWithdrawalAddress:
+    case ResultType.ValidatorsByWithdrawalEnsName:
       body.withdrawal_address = result.rawResult.hash_value
       break
-    case ResultType.ValidatorsByGraffiti :
+    case ResultType.ValidatorsByGraffiti:
       body.graffiti = result.rawResult.str_value
       break
   }
@@ -144,14 +199,15 @@ const addValidator = (result: ResultSuggestion) => {
     if (!isLoggedIn.value) {
       updateHash(dashboardType.value, dashboardKey.value)
     }
-  } else {
+  }
+  else {
     changeGroup(body, selectedGroup.value)
   }
   searchBar.value!.empty()
 }
 
 // called for each row in the drop-down of the search bar and returns `true` to deactivate the row
-function isSearchResultRestricted (result: ResultSuggestion) : boolean {
+function isSearchResultRestricted(result: ResultSuggestion): boolean {
   switch (result.type) {
     case ResultType.ValidatorsByIndex:
     case ResultType.ValidatorsByPubkey:
@@ -164,17 +220,20 @@ function isSearchResultRestricted (result: ResultSuggestion) : boolean {
 const editSelected = () => {
   hasNoOpenDialogs.value = false
   dialog.open(DashboardGroupSelectionDialog, {
-    onClose: (response) => {
-      hasNoOpenDialogs.value = true
-      if (response?.data !== undefined) {
-        changeGroup({ validators: mapIndexOrPubKey(selected.value) }, response?.data)
-      }
-    },
     data: {
       groupId: selected.value?.[0]?.group_id ?? undefined,
       selectedValidators: selected.value?.length,
-      totalValidators: total?.value
-    }
+      totalValidators: total?.value,
+    },
+    onClose: (response) => {
+      hasNoOpenDialogs.value = true
+      if (response?.data !== undefined) {
+        changeGroup(
+          { validators: mapIndexOrPubKey(selected.value) },
+          response?.data,
+        )
+      }
+    },
   })
 }
 
@@ -197,59 +256,94 @@ const setSearch = (value?: string) => {
 }
 
 watch(selectedGroup, (value) => {
-  setQuery({ ...query?.value, group_id: value })
+  setQuery({
+    ...query?.value,
+    group_id: value,
+  })
 })
 
 const loadData = async () => {
   if (dashboardKey.value) {
     const testQ = JSON.stringify(query.value)
-    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT, undefined, { dashboardKey: dashboardKey.value }, query.value)
+    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(
+      API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+      undefined,
+      { dashboardKey: dashboardKey.value },
+      query.value,
+    )
 
     // Make sure that during loading the query did not change
     if (testQ === JSON.stringify(query.value)) {
       data.value = result
       selected.value = []
     }
-  } else {
-    data.value = { paging: {}, data: [] }
+  }
+  else {
+    data.value = {
+      data: [],
+      paging: {},
+    }
   }
 }
 
-watch(() => [dashboardKey.value, visible.value, query.value], () => {
-  if (visible.value) {
-    loadData()
-  }
-}, { immediate: true })
+watch(
+  () => [
+    dashboardKey.value,
+    visible.value,
+    query.value,
+  ],
+  () => {
+    if (visible.value) {
+      loadData()
+    }
+  },
+  { immediate: true },
+)
 
-const switchValidatorGroup = (row: VDBManageValidatorsTableRow, group: number) => {
-  changeGroup({ validators: mapIndexOrPubKey([row].concat(selected.value ?? [])) }, group)
+const switchValidatorGroup = (
+  row: VDBManageValidatorsTableRow,
+  group: number,
+) => {
+  changeGroup(
+    { validators: mapIndexOrPubKey([ row ].concat(selected.value ?? [])) },
+    group,
+  )
 }
 
 const removeRow = (row: VDBManageValidatorsTableRow) => {
-  const list = mapIndexOrPubKey([row].concat(selected.value ?? []))
+  const list = mapIndexOrPubKey([ row ].concat(selected.value ?? []))
   if (!list?.length) {
     warn('no validator to remove')
   }
 
   hasNoOpenDialogs.value = false
   dialog.open(BcDialogConfirm, {
+    data: {
+      question: $t(
+        'dashboard.validator.management.remove_text',
+        { validator: list[0] },
+        list.length,
+      ),
+      title: $t('dashboard.validator.management.remove_title'),
+    },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
       response?.data && removeValidators(list)
     },
-    data: {
-      title: $t('dashboard.validator.management.remove_title'),
-      question: $t('dashboard.validator.management.remove_text', { validator: list[0] }, list.length)
-    }
   })
 }
 
 const total = computed(() => addUpValues(overview.value?.validators))
 
-const maxValidatorsPerDashboard = computed(() => (isPublic.value || !user.value?.premium_perks?.validators_per_dashboard) ? 20 : user.value.premium_perks.validators_per_dashboard)
+const maxValidatorsPerDashboard = computed(() =>
+  isPublic.value || !user.value?.premium_perks?.validators_per_dashboard
+    ? 20
+    : user.value.premium_perks.validators_per_dashboard,
+)
 
-const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.value)
-
+const premiumLimit = computed(
+  () => total.value >= maxValidatorsPerDashboard.value,
+)
 </script>
 
 <template>
@@ -260,21 +354,41 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
     class="validator-managment-modal-container"
     @update:visible="(visible: boolean) => !visible && resetData()"
   >
-    <template v-if="!size.showWithdrawalCredentials" #header>
+    <template
+      v-if="!size.showWithdrawalCredentials"
+      #header
+    >
       <span />
     </template>
     <BcTableControl
-      :search-placeholder="$t(isPublic ? 'dashboard.validator.summary.search_placeholder_public' : 'dashboard.validator.summary.search_placeholder')"
+      :search-placeholder="
+        $t(
+          isPublic
+            ? 'dashboard.validator.summary.search_placeholder_public'
+            : 'dashboard.validator.summary.search_placeholder',
+        )
+      "
       @set-search="setSearch"
     >
       <template #header-left>
-        <span v-if="size.showWithdrawalCredentials"> {{ $t('dashboard.validator.management.sub_title') }}</span>
-        <span v-else class="small-title">{{ $t('dashboard.validator.manage_validators') }}</span>
+        <span v-if="size.showWithdrawalCredentials">
+          {{ $t("dashboard.validator.management.sub_title") }}</span>
+        <span
+          v-else
+          class="small-title"
+        >{{
+          $t("dashboard.validator.manage_validators")
+        }}</span>
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <DashboardGroupSelection v-model="selectedGroup" :include-all="true" class="small group-selection" />
-          <!-- TODO: below, "[currentNetwork]" is wrong! Replace it with an array containing the chain ID that the dashboard was created for (it is not necessarily the current network). -->
+          <DashboardGroupSelection
+            v-model="selectedGroup"
+            :include-all="true"
+            class="small group-selection"
+          />
+          <!-- TODO: below, "[currentNetwork]" is wrong! Replace it with an array containing the chain ID that
+           the dashboard was created for (it is not necessarily the current network). -->
           <BcSearchbarMain
             ref="searchBar"
             :bar-shape="SearchbarShape.Small"
@@ -283,7 +397,10 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             :only-networks="[currentNetwork]"
             :row-lacks-premium-subscription="isSearchResultRestricted"
             :pick-by-default="pickHighestPriorityAmongBestMatchings"
-            :screen-width-causing-sudden-change="0 /*if you introduce a media query (or similar) changing the width of the bar, give the threshold here to avoid visual bugs in the list of results */"
+            :screen-width-causing-sudden-change="
+              0 /*if you introduce a media query (or similar) changing the width of the bar, give the threshold here
+              to avoid visual bugs in the list of results */
+            "
             class="search-bar"
             @go="addValidator"
           />
@@ -293,19 +410,23 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
         <ClientOnly fallback-tag="span">
           <BcTable
             v-model:selection="selected"
-            :data="data"
+            :data
             data-key="public_key"
             :expandable="size.expandable"
             selection-mode="multiple"
             class="management-table"
-            :cursor="cursor"
-            :page-size="pageSize"
+            :cursor
+            :page-size
             :selected-sort="tempQuery?.sort as string"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column field="index" :sortable="true" :header="$t('dashboard.validator.col.index')" />
+            <Column
+              field="index"
+              :sortable="true"
+              :header="$t('dashboard.validator.col.index')"
+            />
 
             <Column
               v-if="size.showPublicKey"
@@ -314,7 +435,11 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               :header="$t('dashboard.validator.col.public_key')"
             >
               <template #body="slotProps">
-                <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
+                <BcFormatHash
+                  :hash="slotProps.data.public_key"
+                  type="public_key"
+                  class="public-key"
+                />
               </template>
             </Column>
             <Column
@@ -327,7 +452,9 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
                 <DashboardGroupSelection
                   v-model="slotProps.data.group_id"
                   class="small group-selection"
-                  @set-group="(id: number) => switchValidatorGroup(slotProps.data, id)"
+                  @set-group="
+                    (id: number) => switchValidatorGroup(slotProps.data, id)
+                  "
                 />
               </template>
             </Column>
@@ -365,20 +492,34 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             >
               <template #body="slotProps">
                 <div class="withdrawal-col">
-                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                  <BcFormatHash
+                    :hash="slotProps.data.withdrawal_credential"
+                    type="withdrawal_credentials"
+                  />
                 </div>
               </template>
             </Column>
             <Column field="action">
               <template #header>
-                <Button v-show="selected?.length" class="edit-button" @click.stop.prevent="editSelected()">
-                  <span class="edit-label">{{ $t('common.edit') }}</span>
-                  <FontAwesomeIcon class="edit-icon" :icon="faEdit" />
+                <Button
+                  v-show="selected?.length"
+                  class="edit-button"
+                  @click.stop.prevent="editSelected()"
+                >
+                  <span class="edit-label">{{ $t("common.edit") }}</span>
+                  <FontAwesomeIcon
+                    class="edit-icon"
+                    :icon="faEdit"
+                  />
                 </Button>
               </template>
               <template #body="slotProps">
                 <div class="action-col">
-                  <FontAwesomeIcon :icon="faTrash" class="link" @click="removeRow(slotProps.data)" />
+                  <FontAwesomeIcon
+                    :icon="faTrash"
+                    class="link"
+                    @click="removeRow(slotProps.data)"
+                  />
                 </div>
               </template>
             </Column>
@@ -386,41 +527,62 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
               <div class="expansion">
                 <div class="info">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.public_key') }}
+                    {{ $t("dashboard.validator.col.public_key") }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.public_key" type="public_key" class="public-key" />
+                  <BcFormatHash
+                    :hash="slotProps.data.public_key"
+                    type="public_key"
+                    class="public-key"
+                  />
                 </div>
                 <div class="info">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.balance') }}
+                    {{ $t("dashboard.validator.col.balance") }}
                   </div>
                   <BcFormatValue :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.group') }}
+                    {{ $t("dashboard.validator.col.group") }}
                   </div>
                   <DashboardGroupSelection
                     v-model="slotProps.data.group_id"
                     class="small"
-                    @set-group="(id: number) => switchValidatorGroup(slotProps.data, id)"
+                    @set-group="
+                      (id: number) => switchValidatorGroup(slotProps.data, id)
+                    "
                   />
                 </div>
                 <div class="info">
                   <div class="label">
-                    {{ $t('dashboard.validator.col.withdrawal_credential') }}
+                    {{ $t("dashboard.validator.col.withdrawal_credential") }}
                   </div>
-                  <BcFormatHash :hash="slotProps.data.withdrawal_credential" type="withdrawal_credentials" />
+                  <BcFormatHash
+                    :hash="slotProps.data.withdrawal_credential"
+                    type="withdrawal_credentials"
+                  />
                 </div>
               </div>
             </template>
 
             <template #bc-table-footer-left>
-              <div v-if="maxValidatorsPerDashboard" class="left">
-                <div class="labels" :class="{ premiumLimit }">
+              <div
+                v-if="maxValidatorsPerDashboard"
+                class="left"
+              >
+                <div
+                  class="labels"
+                  :class="{ premiumLimit }"
+                >
                   <span>
-                    <BcFormatNumber :value="total" default="0" /> /
-                    <BcFormatNumber :value="maxValidatorsPerDashboard" default="0" />
+                    <BcFormatNumber
+                      :value="total"
+                      default="0"
+                    /> /
+                    <BcFormatNumber
+                      :value="maxValidatorsPerDashboard"
+                      default="0"
+                    />
                   </span>
                 </div>
                 <BcPremiumGem />
@@ -428,7 +590,10 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
             </template>
 
             <template #bc-table-footer-right>
-              <Button :label="$t('navigation.done')" @click="onClose" />
+              <Button
+                :label="$t('navigation.done')"
+                @click="onClose"
+              />
             </template>
           </BcTable>
         </ClientOnly>
@@ -438,14 +603,13 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 </template>
 
 <style lang="scss" scoped>
-@use '~/assets/css/main.scss';
-@use '~/assets/css/utils.scss';
-@use '~/assets/css/fonts.scss';
+@use "~/assets/css/main.scss";
+@use "~/assets/css/utils.scss";
+@use "~/assets/css/fonts.scss";
 
 :global(.validator-managment-modal-container) {
   width: 1060px;
   height: 800px;
-
 }
 
 :global(.validator-managment-modal-container .p-dialog-content) {
@@ -460,7 +624,9 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
   @include fonts.subtitle_text;
 }
 
-:global(.validator-managment-modal-container .bc-table-header .side:first-child) {
+:global(
+    .validator-managment-modal-container .bc-table-header .side:first-child
+  ) {
   display: contents;
 }
 
@@ -501,7 +667,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 
 .left {
   display: flex;
-  align-items: center;
+  margin-top: 4px;
   gap: var(--padding-small);
 
   .labels {
@@ -535,7 +701,7 @@ const premiumLimit = computed(() => (total.value) >= maxValidatorsPerDashboard.v
 }
 
 .withdrawal-col {
-  width: 200px
+  width: 200px;
 }
 
 .action-col {
