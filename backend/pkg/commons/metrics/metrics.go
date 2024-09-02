@@ -4,6 +4,7 @@ import (
 	"log" //nolint:depguard
 	"net/http"
 	"net/http/pprof"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -128,7 +129,7 @@ func (r *responseWriterDelegator) Write(b []byte) (int, error) {
 }
 
 // Serve serves prometheus metrics on the given address under /metrics
-func Serve(addr string, servePprof bool) error {
+func Serve(addr string, servePprof bool, enableExtraPprof bool) error {
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
 	router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -146,10 +147,12 @@ func Serve(addr string, servePprof bool) error {
 
 	if servePprof {
 		log.Printf("serving pprof on %v/debug/pprof/", addr)
-		// uncomment to enable some more aggressive pprof
-		// disabled by default as it has a performance impact
-		// runtime.SetBlockProfileRate(1)
-		// runtime.SetMutexProfileFraction(1)
+		if enableExtraPprof {
+			// enables some extra pprof endpoints
+			runtime.SetCPUProfileRate(1)
+			runtime.SetBlockProfileRate(1)
+			runtime.SetMutexProfileFraction(1)
+		}
 		router.HandleFunc("/debug/pprof/", pprof.Index)
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 		router.HandleFunc("/debug/pprof/profile", pprof.Profile)
