@@ -313,7 +313,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	eg := errgroup.Group{}
 	var err error
 	// Groups
-	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
+	if dashboardId.Validators == nil {
 		// should have valid primary id
 		eg.Go(func() error {
 			var queryResult []struct {
@@ -333,11 +333,23 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			if err := d.alloyReader.SelectContext(ctx, &queryResult, query, dashboardId.Id); err != nil {
 				return err
 			}
+
+			aggregateCount := uint64(0)
 			for _, res := range queryResult {
-				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
+				if !dashboardId.AggregateGroups {
+					data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
+				} else {
+					aggregateCount += res.Count
+				}
 			}
+			if dashboardId.AggregateGroups {
+				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: aggregateCount})
+			}
+
 			return nil
 		})
+	} else {
+		data.Groups = []t.VDBOverviewGroup{{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(dashboardId.Validators))}}
 	}
 
 	// Validator status and balance
