@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -27,7 +26,7 @@ type ValidatorMapping struct {
 	ValidatorMetadata []*types.CachedValidator            // note: why pointers?
 }
 
-var currentValidatorMapping unsafe.Pointer
+var currentValidatorMapping atomic.Pointer[ValidatorMapping]
 var _cachedBufferCompressed = new(bytes.Buffer)
 var _cachedBufferDecompressed = new(bytes.Buffer)
 var _cachedRedisValidatorMapping = new(types.RedisCachedValidatorsMapping)
@@ -43,7 +42,7 @@ func (s *Services) startIndexMappingService() {
 		r := services.NewStatusReport("api_service_validator_mapping", constants.Default, delay)
 		r(constants.Running, nil)
 		latestEpoch := cache.LatestEpoch.Get()
-		if currentValidatorMapping == nil || latestEpoch != lastEpochUpdate {
+		if currentValidatorMapping.Load() == nil || latestEpoch != lastEpochUpdate {
 			err = s.updateValidatorMapping()
 		}
 		if err != nil {
@@ -79,7 +78,7 @@ func (s *Services) initValidatorMapping() {
 		c.ValidatorPubkeys[i] = b
 		c.ValidatorIndices[b] = j
 	}
-	atomic.StorePointer(&currentValidatorMapping, unsafe.Pointer(&c))
+	currentValidatorMapping.Store(&c)
 }
 
 func (s *Services) updateValidatorMapping() error {
@@ -129,10 +128,10 @@ func (s *Services) updateValidatorMapping() error {
 // Call release lock after you are done with accessing the data, otherwise it will block the validator mapping service from updating
 func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, error) {
 	// in theory the consumer can just check if the pointer is nil, but this is more explicit
-	if currentValidatorMapping == nil {
+	if currentValidatorMapping.Load() == nil {
 		return nil, fmt.Errorf("%w: validator mapping", ErrWaiting)
 	}
-	return (*ValidatorMapping)(atomic.LoadPointer(&currentValidatorMapping)), nil
+	return currentValidatorMapping.Load(), nil
 }
 
 func (s *Services) GetPubkeySliceFromIndexSlice(indices []constypes.ValidatorIndex) ([]string, error) {
