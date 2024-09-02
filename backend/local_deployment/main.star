@@ -39,7 +39,7 @@ def run(plan, args):
 			),
 			# Add a Clickhouse server
 			"clickhouse": ServiceConfig(
-				image = "clickhouse/clickhouse-server:24.2",
+				image = "clickhouse/clickhouse-server:24.5",
 				ports = {
 					CLICKHOUSE_PORT_ID: PortSpec(9000, application_protocol = "clickhouse"),
 					"http": PortSpec(8123),
