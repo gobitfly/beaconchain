@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -26,7 +25,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var currentDutiesInfo unsafe.Pointer
+var currentDutiesInfo atomic.Pointer[SyncData]
 
 func (s *Services) startSlotVizDataService() {
 	for {
@@ -47,7 +46,7 @@ func (s *Services) startSlotVizDataService() {
 
 func (s *Services) updateSlotVizData() error {
 	var dutiesInfo *SyncData
-	if currentDutiesInfo == nil {
+	if currentDutiesInfo.Load() == nil {
 		dutiesInfo = s.initDutiesInfo()
 	} else {
 		dutiesInfo = s.copyAndCleanDutiesInfo()
@@ -86,7 +85,7 @@ func (s *Services) updateSlotVizData() error {
 
 		// if we have fetched epoch assignments before
 		// dont load for this epoch again
-		if v := (*SyncData)(atomic.LoadPointer(&currentDutiesInfo)); v != nil {
+		if v := currentDutiesInfo.Load(); v != nil {
 			if v.AssignmentsFetchedForEpoch > 0 {
 				minEpoch = v.AssignmentsFetchedForEpoch + 1
 			}
@@ -272,11 +271,11 @@ func (s *Services) updateSlotVizData() error {
 	log.Debugf("process slotduties extra data: %s", time.Since(startTime))
 
 	// update currentDutiesInfo and hence frontend data
-	if currentDutiesInfo == nil { // info on first iteration
+	if currentDutiesInfo.Load() == nil { // info on first iteration
 		log.Infof("== slot-viz data updater initialized ==")
 	}
 
-	atomic.StorePointer(&currentDutiesInfo, unsafe.Pointer(dutiesInfo))
+	currentDutiesInfo.Store(dutiesInfo)
 
 	return nil
 }
@@ -284,11 +283,10 @@ func (s *Services) updateSlotVizData() error {
 // GetCurrentDutiesInfo returns the current duties info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the slot viz service from updating
 func (s *Services) GetCurrentDutiesInfo() (*SyncData, error) {
-	if currentDutiesInfo == nil {
+	if currentDutiesInfo.Load() == nil {
 		return nil, fmt.Errorf("%w: dutiesInfo", ErrWaiting)
 	}
-
-	return (*SyncData)(atomic.LoadPointer(&currentDutiesInfo)), nil
+	return currentDutiesInfo.Load(), nil
 }
 
 func (s *Services) initDutiesInfo() *SyncData {
