@@ -7,7 +7,6 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 type ArchiverRepository interface {
@@ -100,47 +99,9 @@ func (d *DataAccessService) UpdateValidatorDashboardsArchiving(ctx context.Conte
 }
 
 func (d *DataAccessService) RemoveValidatorDashboards(ctx context.Context, dashboardIds []uint64) error {
-	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error starting db transactions to remove validator dashboards: %w", err)
-	}
-	defer utils.Rollback(tx)
-
 	// Delete the dashboard
-	_, err = tx.ExecContext(ctx, `
+	_, err := d.writerDb.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = ANY($1)
 	`, dashboardIds)
-	if err != nil {
-		return err
-	}
-
-	// Delete all groups for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = ANY($1)
-	`, dashboardIds)
-	if err != nil {
-		return err
-	}
-
-	// Delete all validators for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = ANY($1)
-	`, dashboardIds)
-	if err != nil {
-		return err
-	}
-
-	// Delete all shared dashboards for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_sharing WHERE dashboard_id = ANY($1)
-	`, dashboardIds)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx to remove validator dashboards: %w", err)
-	}
-	return nil
+	return err
 }
