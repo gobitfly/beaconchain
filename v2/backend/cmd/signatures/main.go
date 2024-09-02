@@ -53,7 +53,7 @@ func Run() {
 	if utils.Config.Metrics.Enabled {
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()
