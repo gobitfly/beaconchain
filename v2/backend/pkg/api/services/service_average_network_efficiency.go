@@ -6,7 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -21,7 +20,7 @@ import (
 // TODO: As a service this will not scale well as it is running once on every instance of the api.
 // Instead of service this should be moved to the exporter.
 
-var currentEfficiencyInfo unsafe.Pointer
+var currentEfficiencyInfo atomic.Pointer[EfficiencyData]
 
 func (s *Services) startEfficiencyDataService() {
 	for {
@@ -129,10 +128,10 @@ func (s *Services) updateEfficiencyData() error {
 	}
 
 	// update currentEfficiencyInfo
-	if currentEfficiencyInfo == nil { // info on first iteration
+	if currentEfficiencyInfo.Load() == nil { // info on first iteration
 		log.Infof("== average network efficiency data updater initialized ==")
 	}
-	atomic.StorePointer(&currentEfficiencyInfo, unsafe.Pointer(efficiencyInfo))
+	currentEfficiencyInfo.Store(efficiencyInfo)
 
 	return nil
 }
@@ -140,11 +139,11 @@ func (s *Services) updateEfficiencyData() error {
 // GetCurrentEfficiencyInfo returns the current efficiency info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the efficiency service from updating
 func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, error) {
-	if currentEfficiencyInfo == nil {
+	if currentEfficiencyInfo.Load() == nil {
 		return nil, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
 	}
 
-	return (*EfficiencyData)(atomic.LoadPointer(&currentEfficiencyInfo)), nil
+	return currentEfficiencyInfo.Load(), nil
 }
 
 func (s *Services) initEfficiencyInfo() *EfficiencyData {
