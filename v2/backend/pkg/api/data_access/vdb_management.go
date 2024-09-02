@@ -313,7 +313,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	eg := errgroup.Group{}
 	var err error
 	// Groups
-	if dashboardId.Validators == nil {
+	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
 		eg.Go(func() error {
 			var queryResult []struct {
@@ -334,22 +334,12 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				return err
 			}
 
-			aggregateCount := uint64(0)
 			for _, res := range queryResult {
-				if !dashboardId.AggregateGroups {
-					data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
-				} else {
-					aggregateCount += res.Count
-				}
-			}
-			if dashboardId.AggregateGroups {
-				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: aggregateCount})
+				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
 			}
 
 			return nil
 		})
-	} else {
-		data.Groups = []t.VDBOverviewGroup{{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(dashboardId.Validators))}}
 	}
 
 	// Validator status and balance
@@ -362,6 +352,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
+			data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
 		}
 
 		// Status
