@@ -46,7 +46,7 @@ func (s *ServiceTimeoutDetector) runChecks() {
 		// ignore
 		return
 	}
-	log.Debugf("checking services timeouts")
+	log.Tracef("checking services timeouts")
 
 	query := `
 		with active_reports as (

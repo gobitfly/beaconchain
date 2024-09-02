@@ -115,8 +115,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	// need to do it manually because some pubkeys might not be in the database
-	mapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseLock()
+	mapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get current validator mapping: %w", err)
 	}
