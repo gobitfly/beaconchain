@@ -1,56 +1,52 @@
 import type { HashTabs } from '~/types/hashTabs'
 
-export function useHashTabs (tabs: HashTabs) {
-  const activeIndex = ref(-1)
+export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = false) {
+  const activeTab = ref<string>('-1')
   const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
-    const list = Object.values(tabs)
-    for (let i = 0; i < list.length; i++) {
-      const tab = list[i]
+    const defaultKey = tabs.find(t => t.key === defaultTab)
+    if (defaultKey) {
+      return defaultKey.key
+    }
+
+    for (let i = 0; i < tabs.length; i++) {
+      const tab = tabs[i]
       if (!tab.disabled) {
-        return tab.index
+        return tab.key
       }
     }
-    return -1
-  }
-  const findHashForIndex = (index: number) => {
-    const entries = Object.entries(tabs)
-    for (let i = 0; i < entries.length; i++) {
-      const [hash, tab] = entries[i]
-      if (!tab.disabled && tab.index === index) {
-        return `#${hash}`
-      }
-    }
-    return ''
+    return '-1'
   }
 
   onMounted(() => {
-    const hash = initialHash?.replace('#', '')
-    activeIndex.value = hash && tabs[hash] && !tabs[hash].disabled ? tabs[hash].index : findFirstValidIndex()
+    const hash = useRouteHash ? initialHash?.replace('#', '') : ''
+    const matchedTab = tabs.find(t => t.key === hash)
+    activeTab.value
+      = hash && matchedTab && !matchedTab.disabled
+        ? matchedTab.key
+        : findFirstValidIndex()
   })
 
-  const updateHash = (index: number) => {
-    if (process.server) {
+  const updateHash = (key: string) => {
+    if (isServerSide || !useRouteHash) {
       return
     }
-    window.location.hash = findHashForIndex(index)
+    window.location.hash = key
   }
 
-  watch(activeIndex, (index) => {
-    if (process.server && index < 0) {
-      return
-    }
-    updateHash(index)
-  }, { immediate: true })
+  watch(
+    activeTab,
+    (key) => {
+      if (isServerSide || key === '-1') {
+        return
+      }
+      updateHash(key)
+    },
+    { immediate: true },
+  )
 
-  const setActiveIndex = (index: number) => {
-    if (process.server) {
-      return
-    }
-    activeIndex.value = index
-    updateHash(index)
+  return {
+    activeTab,
   }
-
-  return { activeIndex, setActiveIndex }
 }

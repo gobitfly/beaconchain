@@ -23,13 +23,23 @@ type DataAccessor interface {
 	SearchRepository
 	NetworkRepository
 	UserRepository
+	AppRepository
+	NotificationsRepository
+	AdminRepository
+	BlockRepository
+	ProtocolRepository
+	HealthzRepository
 
 	Close()
 
+	GetLatestFinalizedEpoch() (uint64, error)
 	GetLatestSlot() (uint64, error)
+	GetLatestBlock() (uint64, error)
+	GetBlockHeightAt(slot uint64) (uint64, error)
 	GetLatestExchangeRates() ([]t.EthConversionRate, error)
 
-	GetProductSummary() (*t.ProductSummary, error)
+	GetProductSummary(ctx context.Context) (*t.ProductSummary, error)
+	GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error)
 
 	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
 }
@@ -62,6 +72,8 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// This should be removed and the db functions should become methods of a struct that contains the db pointers.
 	db.ReaderDb = das.readerDb
 	db.WriterDb = das.writerDb
+	db.UserReader = das.userWriter
+	db.UserWriter = das.userReader
 	db.AlloyReader = das.alloyReader
 	db.AlloyWriter = das.alloyWriter
 	db.ClickHouseReader = das.clickhouseReader

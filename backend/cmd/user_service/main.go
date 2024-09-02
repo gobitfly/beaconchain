@@ -1,8 +1,9 @@
-package main
+package user_service
 
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"net/http"
@@ -22,10 +23,10 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "config.yml", "path to config")
+	_ = fs.Parse(os.Args[2:])
 
 	cfg := &types.Config{}
 	err := utils.ReadConfig(cfg, *configPath)
@@ -40,6 +41,15 @@ func main() {
 
 	if utils.Config.Chain.ClConfig.SlotsPerEpoch == 0 || utils.Config.Chain.ClConfig.SecondsPerSlot == 0 {
 		log.Fatal(err, "invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file", 0)
+	}
+
+	if utils.Config.Metrics.Enabled {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}()
 	}
 
 	if utils.Config.Pprof.Enabled {
@@ -89,10 +99,6 @@ func main() {
 
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
-
-	if utils.Config.Metrics.Enabled {
-		go metrics.MonitorDB(db.FrontendWriterDB)
-	}
 
 	log.Infof("database connection established")
 

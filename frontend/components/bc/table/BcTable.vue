@@ -3,22 +3,25 @@ import type { ApiPagingResponse } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
+  addSpacer?: boolean,
   cursor?: Cursor,
-  dataKey?: string, // Unique identifier for a data row
-  pageSize?: number,
   data?: ApiPagingResponse<any>,
-  selectedSort?: string,
+  dataKey: string, // Required Unique identifier for a data row
   expandable?: boolean,
+  hidePager?: boolean,
   isRowExpandable?: (item: any) => boolean,
-  selectionMode?: 'multiple' | 'single'
-  tableClass?: string
-  addSpacer?: boolean
-  loading?: boolean
-  hidePager?: boolean
+  loading?: boolean,
+  pageSize?: number,
+  selectedSort?: string,
+  selectionMode?: 'multiple' | 'single',
+  tableClass?: string,
 }
 const props = defineProps<Props>()
 
-const emit = defineEmits<{(e: 'setCursor', value: Cursor): void, (e: 'setPageSize', value: number): void }>()
+const emit = defineEmits<{
+  (e: 'setCursor', value: Cursor): void,
+  (e: 'setPageSize', value: number): void,
+}>()
 
 const expandedRows = ref<Record<any, boolean>>({})
 
@@ -41,8 +44,10 @@ const toggleAll = (forceClose = false) => {
   const wasExpanded = allExpanded.value
   props.data?.data?.forEach((item) => {
     if (wasExpanded || forceClose) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete expandedRows.value[item[props.dataKey!]]
-    } else if (!props.isRowExpandable || props.isRowExpandable(item)) {
+    }
+    else if (!props.isRowExpandable || props.isRowExpandable(item)) {
       expandedRows.value[item[props.dataKey!]] = true
     }
   })
@@ -55,9 +60,11 @@ const toggleItem = (item: any) => {
   }
   if (expandedRows.value[item[props.dataKey]]) {
     if (expandedRows.value) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete expandedRows.value[item[props.dataKey]]
     }
-  } else {
+  }
+  else {
     expandedRows.value[item[props.dataKey]] = true
   }
   expandedRows.value = { ...expandedRows.value }
@@ -73,14 +80,20 @@ const setPageSize = (value: number) => {
   emit('setPageSize', value)
 }
 
-watch(() => props.expandable, (expandable) => {
-  if (!expandable) {
+watch(
+  () => props.expandable,
+  (expandable) => {
+    if (!expandable) {
+      toggleAll(true)
+    }
+  },
+)
+watch(
+  () => props.data,
+  () => {
     toggleAll(true)
-  }
-})
-watch(() => props.data, () => {
-  toggleAll(true)
-})
+  },
+)
 
 const sort = computed(() => {
   if (!props.selectedSort?.includes(':')) {
@@ -89,10 +102,9 @@ const sort = computed(() => {
   const split = props.selectedSort?.split(':')
   return {
     field: split[0],
-    order: split[1] === 'asc' ? -1 : 1
+    order: split[1] === 'asc' ? -1 : 1,
   }
 })
-
 </script>
 
 <template>
@@ -104,54 +116,90 @@ const sort = computed(() => {
     :sort-field="sort?.field"
     :sort-order="sort?.order"
     :value="data?.data"
-    :data-key="dataKey"
-    :loading="loading"
+    :data-key
+    :loading
   >
-    <Column v-if="selectionMode" :selection-mode="selectionMode" class="selection" />
-    <Column v-if="expandable" expander class="expander">
+    <Column
+      v-if="selectionMode"
+      :selection-mode
+      class="selection"
+    />
+    <Column
+      v-if="expandable"
+      expander
+      class="expander"
+    >
       <template #header>
-        <IconChevron class="toggle" :direction="allExpanded ? 'bottom' : 'right'" @click.stop.prevent="toggleAll()" />
+        <IconChevron
+          class="toggle"
+          :direction="allExpanded ? 'bottom' : 'right'"
+          @click.stop.prevent="toggleAll()"
+        />
       </template>
 
       <template #body="slotProps">
         <IconChevron
           v-if="!isRowExpandable || isRowExpandable(slotProps.data)"
           class="toggle"
-          :direction="dataKey && expandedRows[slotProps.data[dataKey]] ? 'bottom' : 'right'"
+          :direction="
+            dataKey && expandedRows[slotProps.data[dataKey]]
+              ? 'bottom'
+              : 'right'
+          "
           @click.stop.prevent="toggleItem(slotProps.data)"
         />
       </template>
     </Column>
     <slot />
-    <Column v-if="addSpacer" field="space_filler">
+    <Column
+      v-if="addSpacer"
+      field="space_filler"
+    >
       <template #body>
-        <span /> <!--used to fill up the empty space so that the last column does not strech endlessly -->
+        <span />
+        <!-- used to fill up the empty space so that the last column does not strech endlessly -->
       </template>
     </Column>
     <template #empty>
-      <slot v-if="!loading" name="empty" />
+      <slot
+        v-if="!loading"
+        name="empty"
+      >
+        <DashboardTableEmpty />
+      </slot>
     </template>
 
     <template #expansion="slotProps">
-      <slot v-if="dataKey && expandedRows[slotProps.data[dataKey]]" name="expansion" v-bind="slotProps" />
+      <slot
+        v-if="dataKey && expandedRows[slotProps.data[dataKey]]"
+        name="expansion"
+        v-bind="slotProps"
+      />
     </template>
 
     <template #loading>
-      <BcLoadingSpinner class="spinner" :loading="true" alignment="center" />
+      <BcLoadingSpinner
+        class="spinner"
+        :loading="true"
+        alignment="center"
+      />
     </template>
     <template #footer>
       <BcTablePager
         v-if="!hidePager && data?.paging"
         :page-size="pageSize ?? 0"
         :paging="data?.paging"
-        :cursor="cursor"
+        :cursor
         @set-cursor="setCursor"
         @set-page-size="setPageSize"
       >
         <template #bc-table-footer-left>
           <slot name="bc-table-footer-left" />
         </template>
-        <template v-if="$slots['bc-table-footer-right']" #bc-table-footer-right>
+        <template
+          v-if="$slots['bc-table-footer-right']"
+          #bc-table-footer-right
+        >
           <slot name="bc-table-footer-right" />
         </template>
       </BcTablePager>
@@ -173,7 +221,7 @@ const sort = computed(() => {
     height: 140px;
     background: transparent;
 
-    >td {
+    > td {
       border: none;
     }
   }

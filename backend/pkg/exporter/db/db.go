@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -497,6 +498,8 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		thresholdSlot = latestBlock - 64
 	}
 
+	lastGlobalAttestedEpoch := int64(latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+
 	latestEpoch := latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
 	var queries strings.Builder
@@ -576,34 +579,39 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			// ELSE 'active_online'
 			// END
 			db.BigtableClient.LastAttestationCacheMux.Lock()
-			offline := db.BigtableClient.LastAttestationCache[v.Index] < thresholdSlot
+			lastAttestationSlot := db.BigtableClient.LastAttestationCache[v.Index]
+			lastValidatorAttestedEpoch := int64(lastAttestationSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+
+			// offline := lastAttestationSlot < thresholdSlot
+			offline := lastGlobalAttestedEpoch-lastValidatorAttestedEpoch > 1 // validator has not attested in the last two epochs
+
 			db.BigtableClient.LastAttestationCacheMux.Unlock()
 
 			if v.ExitEpoch <= latestEpoch && v.Slashed {
-				v.Status = "slashed"
+				v.Status = string(constypes.DbSlashed)
 			} else if v.ExitEpoch <= latestEpoch {
-				v.Status = "exited"
-			} else if v.ActivationEligibilityEpoch == 9223372036854775807 {
-				v.Status = "deposited"
+				v.Status = string(constypes.DbExited)
+			} else if v.ActivationEligibilityEpoch == db.MaxSqlNumber {
+				v.Status = string(constypes.DbDeposited)
 			} else if v.ActivationEpoch > latestEpoch {
-				v.Status = "pending"
+				v.Status = string(constypes.DbPending)
 			} else if v.Slashed && v.ActivationEpoch < latestEpoch && offline {
-				v.Status = "slashing_offline"
+				v.Status = string(constypes.DbSlashingOffline)
 			} else if v.Slashed {
-				v.Status = "slashing_online"
-			} else if v.ExitEpoch < 9223372036854775807 && offline {
-				v.Status = "exiting_offline"
-			} else if v.ExitEpoch < 9223372036854775807 {
-				v.Status = "exiting_online"
+				v.Status = string(constypes.DbSlashingOnline)
+			} else if v.ExitEpoch < db.MaxSqlNumber && offline {
+				v.Status = string(constypes.DbExitingOffline)
+			} else if v.ExitEpoch < db.MaxSqlNumber {
+				v.Status = string(constypes.DbExitingOnline)
 			} else if v.ActivationEpoch < latestEpoch && offline {
-				v.Status = "active_offline"
+				v.Status = string(constypes.DbActiveOffline)
 			} else {
-				v.Status = "active_online"
+				v.Status = string(constypes.DbActiveOnline)
 			}
 
 			if c.Status != v.Status {
-				log.Tracef("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
-				// logger.Tracef("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v", v.ActivationEpoch, latestEpoch, lastAttestationSlots[v.Index], thresholdSlot)
+				log.Infof("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
+				log.Infof("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
 				updates++
 			}

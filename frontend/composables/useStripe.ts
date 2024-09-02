@@ -1,7 +1,9 @@
-import { inject, warn } from 'vue'
+import {
+  inject, warn,
+} from 'vue'
 import type { StripeProvider } from '~/types/stripe'
 
-export function useStripe () {
+export function useStripe() {
   const stripe = inject<StripeProvider>('stripe')
 
   const stripeInit = async (stripePulicKey: string) => {
@@ -40,5 +42,10 @@ export function useStripe () {
     return stripe?.isStripeDisabled.value
   })
 
-  return { stripeInit, stripeCustomerPortal, stripePurchase, isStripeDisabled }
+  return {
+    isStripeDisabled,
+    stripeCustomerPortal,
+    stripeInit,
+    stripePurchase,
+  }
 }

@@ -10,11 +10,10 @@
 
 // Button
 // https://primevue.org/button/
+button.p-button,
 .p-button {
   @include fonts.button_text;
 
-  color: var(--primary-contrast-color);
-  background: var(--button-color-active);
   height: var(--default-button-height);
   padding: 8px 24px;
   border: 1px solid var(--button-color-active);
@@ -27,34 +26,64 @@
 
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 
+  &:not([data-p-severity="secondary"]) {
+    color: var(--primary-contrast-color);
+    background: var(--button-color-active);
+  }
+  &[data-p-severity="secondary"] {
+    color: var(--button-secondary-color);
+    background: var(--button-secondary-background-color);
+    border-color: var(--button-secondary-border-color);
+  }
+
   &.p-disabled {
     color: var(--button-text-color-disabled);
     background: var(--button-color-disabled);
     border-color: var(--button-color-disabled);
   }
-  &:not(:disabled):hover {
+
+  &:not(:disabled):not([data-data-p-severity="secondary"]):hover {
+    border: 1px solid var(--button-color-hover);
     background: var(--button-color-hover);
-    border-color: var(--button-color-hover);
+  }
+  &:not(:disabled)[data-p-severity="secondary"]:hover {
+    background: var(--button-secondary-hover-color);
+    border: 1px solid var(--button-color-active);
   }
   &:not(:disabled):active {
     background: var(--button-color-pressed);
-    border-color: var(--button-color-pressed);
+    border: 1px solid var(--button-color-pressed);
   }
 
   &.p-button-icon-only {
     padding: 8px;
     width: var(--default-button-height);
+    flex-shrink: 1;
+  }
+
+  &.p-button-danger {
+    color: var(--button-text-color-dangerous);
+
+    &:not(:disabled) {
+      background-color: var(--button-color-dangerous);
+      border-color: var(--button-color-dangerous);
+
+      &:hover {
+        background-color: var(--button-color-dangerous-hover);
+        border: 1px solid var(--button-color-dangerous-hover);
+      }
+    }
   }
 }
 
 // Dialog
 // https://primevue.org/dialog/
-.p-dialog {
+div.p-dialog {
   background: var(--container-background);
   border: 1px solid var(--primary-orange);
   border-radius: var(--border-radius);
   padding: var(--padding-large);
-  min-width: 375px; 
+  min-width: 375px;
   max-height: calc(100% - 60px);
   touch-action: pan-x pan-y;
 
@@ -63,7 +92,7 @@
     .p-dialog-title {
       @include fonts.dialog_header;
     }
-    .p-dialog-header-close {
+    .p-dialog-close-button {
       display: none;
     }
   }
@@ -83,7 +112,7 @@
 
 // InputText
 // https://primevue.org/inputtext/
-.p-inputtext {
+input.p-inputtext {
   @include fonts.standard_text;
   color: var(--input-active-text-color);
   background: var(--input-background);
@@ -93,47 +122,61 @@
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   appearance: none;
 
-  ::placeholder {
+  &::placeholder {
     color: var(--input-placeholder-text-color);
   }
 
+  &:enabled:hover,
+  &.p-invalid {
+    border-color: var(--input-border-color);
+  }
+
   &:enabled:focus {
+    border-color: var(--input-border-color);
     outline: 0 none;
     outline-offset: 0;
   }
 }
 
-// TabView
-// https://primevue.org/tabview/
-.p-tabview {
-  .p-tabview-nav {
-    li {
-      margin-right: 0;
+// Tabs
+// https://primevue.org/tabs/
+.p-tabs {
+  .p-tablist-tab-list {
+    margin-right: 0;
+    border: none;
+    white-space: nowrap;
 
-      .p-tabview-nav-link {
-        border: solid transparent 1px;
-        border-top-right-radius: var(--border-radius);
-        border-top-left-radius: var(--border-radius);
-        padding: 10px 25px;
-        color: var(--link-color);
-      }
-      &:not(.p-highlight):not(.p-disabled):hover .p-tabview-nav-link {
-        color: var(--link-color);
-      }
-      &.p-highlight .p-tabview-nav-link {
+    .p-tab {
+      border: solid transparent 1px;
+      border-bottom-width: 0;
+      border-top-right-radius: var(--border-radius);
+      border-top-left-radius: var(--border-radius);
+      padding: 10px 25px;
+      color: var(--link-color);
+      font-weight: inherit;
+      font-size: inherit;
+      font-family: inherit;
+      background: transparent;
+
+      &.p-tab-active {
         background: var(--container-background);
         border-color: var(--container-border-color);
         color: var(--container-color);
       }
-      &.p-disabled .p-tabview-nav-link {
+
+      &:not(.p-tab-active):not(.p-disabled):hover {
+        color: var(--link-color);
+        border: solid transparent 1px;
+        border-bottom-width: 0;
+        opacity: 0.8;
+      }
+
+      &.p-disabled {
         color: var(--text-color-disabled);
       }
     }
-    .p-tabview-header {
-      white-space: nowrap;
-    }
   }
-  .p-tabview-panels {
+  .p-tabpanels {
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
   }
@@ -141,167 +184,202 @@
 
 // Checkbox
 // https://primevue.org/checkbox/
-.p-checkbox {
+div.p-checkbox {
   .p-checkbox-box {
     width: 20px;
     height: 20px;
     border-radius: var(--border-radius);
+    border: 1px solid var(--checkbox-border-color);
     background: var(--checkbox-background-color);
-    &.p-highlight:not(:hover) {
-      background: var(--primary-color);
-      color: var(--primary-contrast-color);
-    }
-    &:hover {
-      background: var(--button-color-hover);
-      color: var(--primary-contrast-color);
-    }
-    &.p-disabled {
-      background: var(--button-color-disabled);
-    }
+
     .p-checkbox-icon {
       transition-duration: 0.2s;
       pointer-events: none; // prevents the checkbox from letting click events pass through (like a hole) when unchecking
-      .p-icon {
+      &.p-icon {
         width: 14px;
         height: 14px;
       }
     }
   }
+  &.p-checkbox-checked:not(:hover) {
+    .p-checkbox-box {
+      background: var(--primary-color);
+      color: var(--primary-contrast-color);
+    }
+  }
+
+  &.p-checkbox-checked:not(.p-disabled):has(.p-checkbox-input:hover),
+  &:hover {
+    .p-checkbox-box {
+      background: var(--button-color-hover);
+      color: var(--primary-contrast-color);
+    }
+  }
+  &.p-disabled {
+    .p-checkbox-box {
+      background: var(--button-color-disabled);
+    }
+  }
 }
 
 // Input Switch
-// https://primevue.org/inputswitch/
-.p-inputswitch {
-  width: 43px;
-  height: 22px;
+// https://primevue.org/toggleswitch/
+.toggle-container {
+  .p-toggleswitch {
+    width: 43px;
+    height: 22px;
 
-  .p-inputswitch-slider {
-    background: var(--button-color-active);
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s,
-      box-shadow 0.2s;
-    border-radius: 30px;
-  }
+    .p-toggleswitch-slider {
+      background: var(--button-color-active) !important;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s,
+        box-shadow 0.2s;
+      border-radius: 30px;
+      border-width: 0 !important;
 
-  .p-inputswitch-slider:before {
-    background: var(--toggle-button-slider-color);
-    width: 20px;
-    height: 20px;
-    left: 0.3px;
-    margin-top: -10px;
-    border-radius: 50%;
-    transition-duration: 0.2s;
-  }
+      &:not(.p-toggleswitch-checked) {
+        background: var(--switch-color-disabled) !important;
+      }
+    }
 
-  &.p-inputswitch-checked .p-inputswitch-slider:before {
-    transform: translateX(20.6px);
-  }
+    .p-toggleswitch-slider:before {
+      background: var(--switch-slider-color) !important;
+      width: 20px;
+      height: 20px;
+      left: 0.3px !important;
+      margin-top: -10px;
+      border-radius: 50%;
+      transition-duration: 0.2s;
+    }
 
-  &:not(.p-disabled):hover .p-inputswitch-slider {
-    background: var(--button-color-hover);
-  }
+    &.p-toggleswitch-checked .p-toggleswitch-slider:before {
+      transform: translateX(20.6px);
+    }
 
-  &:not(.p-disabled):not(:hover).p-inputswitch-checked .p-inputswitch-slider {
-    background: var(--primary-color);
-  }
+    &:not(.p-disabled):hover.p-toggleswitch-checked .p-toggleswitch-slider {
+      background: var(--button-color-hover) !important;
+    }
 
-  &.p-disabled .p-inputswitch-slider {
-    background: var(--button-color-disabled);
+    &:not(.p-disabled):hover:not(.p-toggleswitch-checked)
+      .p-toggleswitch-slider {
+      background: var(--switch-color-disabled-hover) !important;
+    }
+
+    &:not(.p-disabled):not(:hover).p-toggleswitch-checked
+      .p-toggleswitch-slider {
+      background: var(--primary-color) !important;
+    }
+
+    &.p-disabled .p-toggleswitch-slider {
+      background: var(--button-color-disabled) !important;
+    }
   }
 }
 
 // Toast
 // https://primevue.org/toast/
-// TODO: apply our styles
 .p-toast {
   opacity: 1;
-}
-.p-toast .p-toast-message {
-  margin: 0 0 1rem 0;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  border-radius: var(--border-radius);
-}
-.p-toast .p-toast-message .p-toast-message-content {
-  padding: 1rem;
-  border-width: 0 0 0 6px;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-message-text {
-  margin: 0 0 0 1rem;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-message-icon {
-  font-size: 2rem;
-}
-.p-toast
-  .p-toast-message
-  .p-toast-message-content
-  .p-toast-message-icon.p-icon {
-  width: 2rem;
-  height: 2rem;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-summary {
-  font-weight: 700;
-}
-.p-toast .p-toast-message .p-toast-message-content .p-toast-detail {
-  margin: 0.5rem 0 0 0;
-}
-.p-toast .p-toast-message .p-toast-icon-close {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: transparent;
-  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
-}
-.p-toast .p-toast-message .p-toast-icon-close:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-.p-toast .p-toast-message .p-toast-icon-close:focus-visible {
-  outline: 0 none;
-  outline-offset: 0;
-  box-shadow: 0 0 0 0.2rem #a7f3d0;
-}
-.p-toast .p-toast-message.p-toast-message-info {
-  background: rgba(219, 234, 254, 0.7);
-  border: solid #3b82f6;
-  border-width: 0 0 0 6px;
-  color: #3b82f6;
-}
-.p-toast .p-toast-message.p-toast-message-info .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-info .p-toast-icon-close {
-  color: #3b82f6;
-}
-.p-toast .p-toast-message.p-toast-message-success {
-  background: rgba(228, 248, 240, 0.7);
-  border: solid #1ea97c;
-  border-width: 0 0 0 6px;
-  color: #1ea97c;
-}
-.p-toast .p-toast-message.p-toast-message-success .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-success .p-toast-icon-close {
-  color: #1ea97c;
-}
-.p-toast .p-toast-message.p-toast-message-warn {
-  background: rgba(255, 242, 226, 0.7);
-  border: solid #cc8925;
-  border-width: 0 0 0 6px;
-  color: #cc8925;
-}
-.p-toast .p-toast-message.p-toast-message-warn .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-warn .p-toast-icon-close {
-  color: #cc8925;
-}
-.p-toast .p-toast-message.p-toast-message-error {
-  background: rgba(255, 231, 230, 0.7);
-  border: solid #ff5757;
-  border-width: 0 0 0 6px;
-  color: #ff5757;
-}
-.p-toast .p-toast-message.p-toast-message-error .p-toast-message-icon,
-.p-toast .p-toast-message.p-toast-message-error .p-toast-icon-close {
-  color: #ff5757;
+
+  .p-toast-message {
+    margin: var(--content-margin);
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius);
+
+    &-content {
+      padding: var(--padding-large);
+      border-width: 0 0 0 6px;
+
+      .p-toast-message-text {
+        margin: 0 0 0 16px;
+      }
+
+      .p-toast-message-icon {
+        font-size: var(--logo_font_size);
+        &.p-icon {
+          width: 16px;
+          height: 16px;
+          align-self: center;
+        }
+      }
+
+      .p-toast-summary {
+        @include text-toast;
+      }
+
+      .p-toast-detail {
+        color: var(--light-black);
+        margin: 8px 0 0 0;
+        @include text-toast-sm;
+      }
+    }
+
+    .p-toast-icon-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: transparent;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      &:focus-visible {
+        outline: 0 none;
+        outline-offset: 0;
+        box-shadow: 0 0 0 3.2px #a7f3d0;
+      }
+    }
+
+    &.p-toast-message-info {
+      border: solid var(--toast-border-info-color) 1px;
+      background: var(--toast-background-info-color);
+      color: var(--toast-message-info-color);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--toast-message-info-color);
+      }
+    }
+
+    &.p-toast-message-success {
+      border: solid var(--toast-border-sucess-color) 1px;
+      background: var(--toast-background-success-color);
+      color: var(--toast-background-color-success);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--toast-background-color-success);
+      }
+    }
+
+    &.p-toast-message-warn {
+      border: solid var(--toast-border-error-color) 1px;
+      background: var(--toast-background-error-color);
+      color: var(--primary-color);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--primary-color);
+      }
+    }
+
+    &.p-toast-message-error {
+      border: solid var(--toast-border-error-color) 1px;
+      background: var(--toast-background-error-color);
+      color: var(--toast-message-error-color);
+
+      .p-toast-message-icon,
+      .p-toast-icon-close {
+        color: var(--toast-message-error-color);
+      }
+    }
+  }
 }
 
 // Multiselect drop-down
 
-.p-multiselect {
+div.p-multiselect {
   @include fonts.button_text;
   color: var(--input-active-text-color);
   background: var(--input-background);
@@ -312,11 +390,35 @@
   justify-content: center;
   width: 100%;
 
+  &:not(.p-disabled).p-focus,
+  &:not(.p-disabled):hover {
+    border-color: var(--input-border-color);
+  }
+
+  &.small {
+    height: 30px;
+
+    .p-multiselect-label-container {
+      margin-left: var(--padding-small);
+
+      .p-multiselect-label {
+        font-size: var(--tiny_text_font_size);
+        font-weight: var(--standard_text_font_weight);
+      }
+    }
+    .p-multiselect-dropdown {
+      width: 7px;
+      margin-left: var(--padding-small);
+      margin-right: var(--padding-small);
+    }
+  }
+
   .p-disabled {
     opacity: 0.5;
   }
-  .p-multiselect-trigger {
+  .p-multiselect-dropdown {
     margin-right: var(--padding);
+    width: 12px;
   }
   .p-multiselect-label-container {
     margin-top: auto;
@@ -330,7 +432,7 @@
     }
   }
 }
-.p-multiselect-panel {
+div.p-multiselect-overlay {
   color: var(--input-active-text-color);
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
@@ -346,14 +448,14 @@
     }
   }
 
-  .p-multiselect-items-wrapper {
+  .p-multiselect-list-container {
     max-width: 200px;
     margin-top: var(--padding);
     height: 100%;
     border-top: 1px solid var(--input-border-color);
 
-    .p-multiselect-items {
-      .p-multiselect-item {
+    .p-multiselect-list {
+      .p-multiselect-option {
         padding: var(--padding-small) 4px var(--padding-small);
         border-radius: var(--border-radius);
 
@@ -373,15 +475,15 @@
 }
 
 /***
-*  Dropdown
-* https://primevue.org/dropdown/
-* different Dropdown variant's:
+*  Select
+* https://primevue.org/select/
+* different Select variant's:
 * - 'default' (=default) : default style for dropdown
 * - 'table' : dropdown style within a data table
 * - 'header' : used when it is in the header of the website
 ***/
 
-.p-dropdown {
+div.p-select {
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
@@ -390,11 +492,25 @@
   padding: var(--padding);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: center; 
 
+  &:not(.p-disabled).p-focus,
+  &:not(.p-disabled):hover {
+    border-color: var(--input-border-color);
+  }
   &.small {
-    padding: var(--padding-small) var(--padding);
+    padding: var(--padding-small);
     height: 30px;
+
+    .p-select-label {
+      font-size: var(--tiny_text_font_size);
+      color: var(--input-active-text-color);
+    }
+
+    .p-select-dropdown {
+      margin-left: var(--padding-small);
+      width: 7px;
+    }
   }
 
   &.table {
@@ -403,6 +519,7 @@
   &.header {
     background: transparent;
     border: none;
+    padding: 0;
   }
 
   &:not(.p-disabled).p-focus {
@@ -413,7 +530,7 @@
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }
-  .p-dropdown-label {
+  .p-select-label {
     background: transparent;
     border: 0 none;
     padding: 0;
@@ -426,36 +543,34 @@
       box-shadow: none;
     }
   }
-  .p-dropdown-trigger {
+  .p-select-dropdown {
+    width: 12px;
     margin-left: var(--padding);
-    background: transparent;
-    border-top-right-radius: var(--border-radius);
-    border-bottom-right-radius: var(--border-radius);
   }
 }
 
-.p-dropdown-panel {
+div.p-select-overlay {
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
   border-radius: 0 0 var(--border-radius) var(--border-radius);
+  transform: translateY(-1px);
   &.header {
     border-radius: var(--border-radius);
   }
-  transform: translateY(-1px);
   &.table {
     background: var(--background-color);
   }
-  .p-dropdown-items {
+  .p-select-list {
     padding: var(--padding-small);
-    .p-dropdown-item {
+    .p-select-option {
       @include utils.truncate-text;
       padding: var(--padding-small) 4px;
       border-radius: var(--border-radius);
       .discreet {
         color: var(--text-color-discreet);
       }
-      &.p-highlight:not(:hover) {
+      &.p-select-option-selected:not(:hover) {
         background: var(--list-highlight-background);
         color: var(--primary-contrast-color);
         .discreet {
@@ -473,19 +588,25 @@
   }
 }
 
-.p-accordion {
-  .p-accordion-tab {
-    .p-accordion-header {
+div.p-accordion {
+  .p-accordionpanel {
+    border: none;
+    .p-accordionheader {
       padding: 16px 16px 16px 2px;
-      .p-accordion-header-link {
-        display: flex;
-        align-items: center;
-        gap: var(--padding);
+      display: flex;
+      align-items: center;
+      gap: var(--padding);
+      border: none;
+      .p-accordionheader-toggle-icon {
+        display: none;
       }
     }
+    .p-accordioncontent-content {
+      border: none;
+    }
 
-    &.p-accordion-tab-active {
-      .p-accordion-header {
+    &.p-accordionpanel-active {
+      .p-accordionheader {
         .fa-caret-right {
           transform: rotate(90deg);
         }
@@ -493,17 +614,15 @@
     }
   }
   &:not(.basic) {
-    .p-accordion-tab {
-      .p-accordion-header {
+    .p-accordionpanel {
+      .p-accordionheader {
         padding: 16px;
         color: var(--container-color);
         background-color: var(--container-background);
         border: 1px solid var(--container-border-color);
         border-radius: var(--border-radius);
-        .p-accordion-header-link {
-          justify-content: space-between;
-          flex-direction: row-reverse;
-        }
+        justify-content: space-between;
+        flex-direction: row-reverse;
       }
     }
   }

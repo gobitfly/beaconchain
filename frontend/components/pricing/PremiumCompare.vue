@@ -1,45 +1,56 @@
 <script lang="ts" setup>
 import { get } from 'lodash-es'
-import {
-  faInfoCircle
-} from '@fortawesome/pro-regular-svg-icons'
+import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { PremiumPerks } from '~/types/api/user'
 
-const { t: $t } = useI18n()
+const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 type CompareValue = {
-  value?: string | boolean,
+  class?: string,
   tooltip?: string,
-  class?: string
+  value?: boolean | string,
 }
 
-type RowType = 'header' | 'group' | 'perc'
+type RowType = 'group' | 'header' | 'label' | 'perc'
 
 type CompareRow = {
-  type: RowType,
+  className?: string,
   label?: string,
   subText?: string,
+  type: RowType,
   values?: CompareValue[],
-  className?: string
 }
 
 const showContent = ref(false)
 
 const rows = computed(() => {
-  const sorted = products.value?.premium_products?.sort((a, b) => a.price_per_month_eur - b.price_per_month_eur) ?? []
+  const sorted
+    = products.value?.premium_products?.toSorted(
+      (a, b) => a.price_per_month_eur - b.price_per_month_eur,
+    ) ?? []
   const rows: CompareRow[] = []
-  const mapValue = (property: string, perks: PremiumPerks):CompareValue => {
-    if (['support_us', 'bulk_adding'].includes(property)) {
+  const mapValue = (property: string, perks: PremiumPerks): CompareValue => {
+    if ([
+      'bulk_adding',
+      'support_us',
+    ].includes(property)) {
       return { value: perks.ad_free }
     }
     let value = get(perks, property)
-    if (value === 0) {
+
+    if (!value) {
       value = false
-    } else if (property.includes('_seconds')) {
-      value = formatTimeDuration(value as number, $t)
+    }
+    else if (property.includes('_seconds')) {
+      if (value === Number.MAX_SAFE_INTEGER) {
+        value = $t('pricing.full_history')
+      }
+      else {
+        value = $t('common.last_x', { duration: formatTimeDuration(value as number, $t) })
+      }
     }
 
     let tooltip: string | undefined
@@ -48,22 +59,37 @@ const rows = computed(() => {
     }
 
     return {
+      tooltip,
       value,
-      tooltip
     }
   }
-  const addRow = (type: RowType, property?: string, className?: string, subText?: string, hidePositiveValues = false) => {
-    const row: CompareRow = { type, subText, className }
+  const addRow = (
+    type: RowType,
+    property?: string,
+    className?: string,
+    subText?: string,
+    hidePositiveValues = false,
+    translationKey?: string,
+  ) => {
+    const row: CompareRow = {
+      className,
+      subText,
+      type,
+    }
     switch (type) {
-      case 'header':
-        row.values = sorted.map(p => ({ value: p.product_name }))
-        break
       case 'group':
         row.label = $t(`pricing.groups.${property}`)
         row.values = sorted.map(_p => ({}))
         break
+      case 'header':
+        row.values = sorted.map(p => ({ value: p.product_name }))
+        break
+      case 'label':
+        row.label = $t(translationKey || `pricing.percs.${property}`)
+        row.values = sorted.map(_p => ({}))
+        break
       case 'perc':
-        row.label = $t(`pricing.percs.${property}`)
+        row.label = $t(translationKey || `pricing.percs.${property}`)
         row.values = sorted.map((p) => {
           if (!property) {
             return {}
@@ -94,54 +120,132 @@ const rows = computed(() => {
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
   addRow('perc', 'manage_dashboard_via_api', undefined, comingSoon)
-  addRow('perc', 'bulk_adding', undefined, $t('pricing.percs.bulk_adding_subtext'))
-  addRow('perc', 'heatmap_history_seconds', undefined, undefined, !showInDevelopment)
-  addRow('perc', 'summary_chart_history_seconds', 'last-in-group', undefined, !showInDevelopment)
+  addRow(
+    'perc',
+    'bulk_adding',
+    'last-in-group',
+    $t('pricing.percs.bulk_adding_subtext'),
+  )
+  addRow('group', 'dashboard_charts')
+  addRow('label', 'summary_chart_history', 'first-in-group')
+  const chartProps = [
+    'epoch',
+    'hourly',
+    'daily',
+    'weekly',
+  ]
+  chartProps.forEach(p =>
+    addRow(
+      'perc',
+      `chart_history_seconds.${p}`,
+      undefined,
+      undefined,
+      undefined,
+      `time_frames.${p}`,
+    ),
+  )
 
-  addRow('group', 'notification', undefined, showInDevelopment ? undefined : comingSoon)
-  addRow('perc', 'email_notifications_per_day', 'first-in-group', undefined, !showInDevelopment)
+  addRow('label', 'heatmap_history', 'last-in-group', comingSoon)
+
+  addRow(
+    'group',
+    'notification',
+    undefined,
+    showInDevelopment ? undefined : comingSoon,
+  )
+  addRow(
+    'perc',
+    'email_notifications_per_day',
+    'first-in-group',
+    undefined,
+    !showInDevelopment,
+  )
   addRow('perc', 'configure_notifications_via_api')
-  addRow('perc', 'validator_group_notifications', undefined, undefined, !showInDevelopment)
-  addRow('perc', 'webhook_endpoints', 'last-in-group', undefined, !showInDevelopment)
+
+  addRow(
+    'perc',
+    'validator_group_notifications',
+    undefined,
+    undefined,
+    !showInDevelopment,
+  )
+  addRow(
+    'perc',
+    'webhook_endpoints',
+    'last-in-group',
+    undefined,
+    !showInDevelopment,
+  )
 
   addRow('group', 'mobille_app')
   addRow('perc', 'mobile_app_custom_themes', 'first-in-group')
   addRow('perc', 'mobile_app_widget')
   addRow('perc', 'monitor_machines')
   addRow('perc', 'machine_monitoring_history_seconds')
-  addRow('perc', 'custom_machine_alerts', 'last last-in-group', $t('pricing.percs.custom_machine_alerts_subtext'))
+  addRow(
+    'perc',
+    'custom_machine_alerts',
+    'last last-in-group',
+    $t('pricing.percs.custom_machine_alerts_subtext'),
+  )
 
   return rows
 })
-
 </script>
 
 <template>
   <div class="compare-plans-container">
-    <h1>{{ $t('pricing.compare') }}</h1>
-    <div class="content" :class="{ 'show-content': showContent }">
-      <div v-for="(row, index) in rows" :key="index" :class="[row.type, row.className]" class="row">
+    <h1>{{ $t("pricing.compare") }}</h1>
+    <div
+      class="content"
+      :class="{ 'show-content': showContent }"
+    >
+      <div
+        v-for="(row, index) in rows"
+        :key="index"
+        :class="[row.type, row.className]"
+        class="row"
+      >
         <div class="label">
           <span>{{ row.label }}</span>
-          <span v-if="row.subText" class="sub-text"> {{ row.subText }}</span>
+          <span
+            v-if="row.subText"
+            class="sub-text"
+          > {{ row.subText }}</span>
         </div>
-        <div v-for="(value, vIndex) in row.values" :key="vIndex" class="value" :class="value.class">
+        <div
+          v-for="(value, vIndex) in row.values"
+          :key="vIndex"
+          class="value"
+          :class="value.class"
+        >
           <span v-if="typeof value.value === 'boolean'">
             <BcFeatureCheck :available="value.value" />
           </span>
           <span v-else>
             {{ value.value }}
           </span>
-          <BcTooltip v-if="value.tooltip" :fit-content="true" :text="value.tooltip" class="info-icon">
+          <BcTooltip
+            v-if="value.tooltip"
+            :fit-content="true"
+            :text="value.tooltip"
+            class="info-icon"
+          >
             <FontAwesomeIcon :icon="faInfoCircle" />
           </BcTooltip>
         </div>
       </div>
       <BcBlurOverlay class="blur" />
     </div>
-    <div class="button-row" :class="{ 'show-content': showContent }">
-      <Button class="pricing_button" @click="() => showContent = !showContent">
-        {{ $t(showContent ? 'pricing.hide_feature' : 'pricing.show_feature') }}
+    <div
+      class="button-row"
+      :class="{ 'show-content': showContent }"
+    >
+      <Button
+        class="pricing_button"
+        @click="() => (showContent = !showContent)"
+      >
+        {{ $t(showContent ? "pricing.hide_feature" : "pricing.show_feature") }}
       </Button>
     </div>
   </div>
@@ -207,6 +311,7 @@ const rows = computed(() => {
       min-width: fit-content;
       border-left: 1px solid transparent;
 
+      &.label,
       &.header,
       &.group {
         font-size: 18px;
@@ -221,6 +326,7 @@ const rows = computed(() => {
         }
       }
 
+      &.label,
       &.perc {
         min-height: 36px;
       }
@@ -346,7 +452,6 @@ const rows = computed(() => {
         }
       }
     }
-
   }
 
   .button-row {

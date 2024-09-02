@@ -1,9 +1,10 @@
-package main
+package exporter
 
 import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -20,14 +21,16 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/exporter/services"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
-		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
+		log.Info(version.Version)
+		log.Info(version.GoVersion)
 		return
 	}
 
@@ -39,6 +42,15 @@ func main() {
 	utils.Config = cfg
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+
+	if utils.Config.Metrics.Enabled {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}()
+	}
 
 	wg := &sync.WaitGroup{}
 	if !cfg.JustV2 {
@@ -182,15 +194,6 @@ func main() {
 	}
 
 	go modules.StartAll(context)
-
-	if utils.Config.Metrics.Enabled {
-		go func(addr string) {
-			log.Infof("serving metrics on %v", addr)
-			if err := metrics.Serve(addr); err != nil {
-				log.Error(err, "error serving metrics", 0)
-			}
-		}(utils.Config.Metrics.Address)
-	}
 
 	// Keep the program alive until Ctrl+C is pressed
 	utils.WaitForCtrlC()

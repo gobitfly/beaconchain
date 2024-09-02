@@ -1,13 +1,15 @@
-package main
+package ethstore_exporter
 
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -17,24 +19,27 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func main() {
-	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-	bnAddress := flag.String("beacon-node-address", "", "Url of the beacon node api")
-	enAddress := flag.String("execution-node-address", "", "Url of the execution node api")
-	updateInterval := flag.Duration("update-intv", 0, "Update interval")
-	errorInterval := flag.Duration("error-intv", 0, "Error interval")
-	sleepInterval := flag.Duration("sleep-intv", 0, "Sleep interval")
-	versionFlag := flag.Bool("version", false, "Show version and exit")
-	dayToReexport := flag.Int64("day", -1, "Day to reexport")
-	daysToReexport := flag.String("days", "", "Days to reexport")
-	receiptsModeStr := flag.String("receipts-mode", "single", "single or batch")
-	concurrency := flag.Int("concurrency", 1, "concurrency level to use (1 for no concurrency)")
-	debugLevel := flag.Uint64("debug-level", 0, "debug level to use for eth.store calculation output")
-	flag.Parse()
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+
+	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
+	bnAddress := fs.String("beacon-node-address", "", "Url of the beacon node api")
+	enAddress := fs.String("execution-node-address", "", "Url of the execution node api")
+	updateInterval := fs.Duration("update-intv", 0, "Update interval")
+	errorInterval := fs.Duration("error-intv", 0, "Error interval")
+	sleepInterval := fs.Duration("sleep-intv", 0, "Sleep interval")
+	versionFlag := fs.Bool("version", false, "Show version and exit")
+	dayToReexport := fs.Int64("day", -1, "Day to reexport")
+	daysToReexport := fs.String("days", "", "Days to reexport")
+	receiptsModeStr := fs.String("receipts-mode", "single", "single or batch")
+	concurrency := fs.Int("concurrency", 1, "concurrency level to use (1 for no concurrency)")
+	debugLevel := fs.Uint64("debug-level", 0, "debug level to use for eth.store calculation output")
+
+	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
-		log.Infof(version.Version)
-		log.Infof(version.GoVersion)
+		log.Info(version.Version)
+		log.Info(version.GoVersion)
 		return
 	}
 
@@ -46,6 +51,15 @@ func main() {
 	utils.Config = cfg
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+
+	if utils.Config.Metrics.Enabled {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}()
+	}
 
 	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.WriterDatabase.Username,

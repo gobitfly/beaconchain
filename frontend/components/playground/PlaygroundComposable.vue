@@ -1,13 +1,50 @@
 <script setup lang="ts">
+import {
+  PlaygroundConversion, PlaygroundEncryption, PlaygroundToasts,
+} from '#components'
+import type { HashTabs } from '~/types/hashTabs'
 
-const { value: isTrue, temp: isTrueTemp, bounce: bounceTrue, instant: instantTrue } = useDebounceValue<boolean>(false, 2000)
-const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = useDebounceValue<number>(1, 2000)
+const {
+  bounce: bounceTrue,
+  instant: instantTrue,
+  temp: isTrueTemp,
+  value: isTrue,
+} = useDebounceValue<boolean>(false, 2000)
+const {
+  bounce: bounceNum,
+  instant: instantNum,
+  temp: numTemp,
+  value: num,
+} = useDebounceValue<number>(1, 2000)
 
+const tabs: HashTabs = [
+  {
+    key: 'bounce',
+    title: 'Bounce',
+  },
+  {
+    component: PlaygroundConversion,
+    key: 'conversion',
+    title: 'Conversion',
+  },
+  {
+    component: PlaygroundToasts,
+    key: 'toasts',
+    title: 'Toasts',
+  },
+  {
+    component: PlaygroundEncryption,
+    key: 'encryption',
+    title: 'Encryption',
+  },
+]
 </script>
 
 <template>
-  <TabView lazy>
-    <TabPanel header="Bounce">
+  <BcTabList
+    :tabs default-tab="summary"
+  >
+    <template #tab-panel-bounce>
       <div class="element_container">
         Is true: {{ isTrue }} Temp: {{ isTrueTemp }}
         <Button @click="bounceTrue(!isTrueTemp)">
@@ -28,33 +65,24 @@ const { value: num, temp: numTemp, bounce: bounceNum, instant: instantNum } = us
       </div>
       <div class="element_container">
         Num: {{ num }} Temp: {{ numTemp }}
-        <Button @click="bounceNum(numTemp+1)">
+        <Button @click="bounceNum(numTemp + 1)">
           Add
         </Button>
-        <Button @click="bounceNum(numTemp+1, false, true)">
+        <Button @click="bounceNum(numTemp + 1, false, true)">
           Add endles
         </Button>
-        <Button @click="bounceNum(numTemp+1, true)">
+        <Button @click="bounceNum(numTemp + 1, true)">
           Add if no timer
         </Button>
-        <Button @click="bounceNum(numTemp+1, true, true)">
+        <Button @click="bounceNum(numTemp + 1, true, true)">
           Add if no timer endles
         </Button>
-        <Button @click="instantNum(numTemp+1)">
+        <Button @click="instantNum(numTemp + 1)">
           Instant Toggle
         </Button>
       </div>
-    </TabPanel>
-    <TabPanel header="Conversion">
-      <PlaygroundConversion />
-    </TabPanel>
-    <TabPanel header="Toasts">
-      <PlaygroundToasts />
-    </TabPanel>
-    <TabPanel header="Encryption">
-      <PlaygroundEncryption />
-    </TabPanel>
-  </TabView>
+    </template>
+  </BcTabList>
 </template>
 
 <style lang="scss" scoped>
