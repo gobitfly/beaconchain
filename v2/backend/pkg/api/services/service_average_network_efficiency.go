@@ -1,16 +1,17 @@
 package services
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -19,23 +20,23 @@ import (
 // TODO: As a service this will not scale well as it is running once on every instance of the api.
 // Instead of service this should be moved to the exporter.
 
-var currentEfficiencyInfo *EfficiencyData
-var currentEfficiencyMutex = &sync.RWMutex{}
+var currentEfficiencyInfo atomic.Pointer[EfficiencyData]
 
 func (s *Services) startEfficiencyDataService() {
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
+		r := services.NewStatusReport("api_service_avg_efficiency", constants.Default, delay)
 		err := s.updateEfficiencyData() // TODO: only update data if something has changed (new head epoch)
-		go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, map[string]string{"status": "running"})
+		r(constants.Running, nil)
 		if err != nil {
 			log.Error(err, "error updating average network efficiency data", 0)
-			go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, nil)
+			r(constants.Failure, map[string]string{"error": err.Error()})
 			delay = 10 * time.Second
 		} else {
 			log.Infof("=== average network efficiency data updated in %s", time.Since(startTime))
+			r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
 		}
-		go services.ReportStatus(context.Background(), "api_service_avg_efficiency", err, nil, map[string]string{"status": "done", "took": time.Since(startTime).String()})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
@@ -127,26 +128,22 @@ func (s *Services) updateEfficiencyData() error {
 	}
 
 	// update currentEfficiencyInfo
-	currentEfficiencyMutex.Lock()
-	if currentEfficiencyInfo == nil { // info on first iteration
+	if currentEfficiencyInfo.Load() == nil { // info on first iteration
 		log.Infof("== average network efficiency data updater initialized ==")
 	}
-	currentEfficiencyInfo = efficiencyInfo
-	currentEfficiencyMutex.Unlock()
+	currentEfficiencyInfo.Store(efficiencyInfo)
 
 	return nil
 }
 
 // GetCurrentEfficiencyInfo returns the current efficiency info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the efficiency service from updating
-func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, func(), error) {
-	currentEfficiencyMutex.RLock()
-
-	if currentEfficiencyInfo == nil {
-		return nil, currentEfficiencyMutex.RUnlock, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
+func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, error) {
+	if currentEfficiencyInfo.Load() == nil {
+		return nil, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
 	}
 
-	return currentEfficiencyInfo, currentEfficiencyMutex.RUnlock, nil
+	return currentEfficiencyInfo.Load(), nil
 }
 
 func (s *Services) initEfficiencyInfo() *EfficiencyData {

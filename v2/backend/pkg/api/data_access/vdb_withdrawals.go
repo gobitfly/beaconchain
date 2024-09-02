@@ -298,8 +298,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	}
 
 	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -513,8 +512,7 @@ func (d *DataAccessService) getValidatorSearch(search string) ([]t.VDBValidator,
 		if strings.HasPrefix(search, "0x") && (utils.IsHash(search) || utils.IsEth1Address(search)) {
 			search = strings.ToLower(search)
 
-			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
-			defer releaseLock()
+			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
 				return nil, err
 			}

@@ -48,6 +48,13 @@ func Run() {
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
+	if cfg.DeploymentType != "development" {
+		// enable light-weight db connection monitoring
+		monitoring.Init(false)
+		monitoring.Start()
+		defer monitoring.Stop()
+	}
+
 	var dataAccessor dataaccess.DataAccessor
 	if dummyApi {
 		dataAccessor = dataaccess.NewDummyService()
@@ -59,18 +66,12 @@ func Run() {
 
 	router := api.NewApiRouter(dataAccessor, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
-	if !cfg.Frontend.Debug {
-		// enable light-weight db connection monitoring
-		monitoring.Init(false)
-		monitoring.Start()
-		defer monitoring.Stop()
-	}
 
 	if utils.Config.Metrics.Enabled {
 		router.Use(metrics.HttpMiddleware)
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()

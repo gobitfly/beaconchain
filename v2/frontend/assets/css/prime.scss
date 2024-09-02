@@ -379,7 +379,7 @@ div.p-checkbox {
 
 // Multiselect drop-down
 
-.p-multiselect {
+div.p-multiselect {
   @include fonts.button_text;
   color: var(--input-active-text-color);
   background: var(--input-background);
@@ -389,6 +389,11 @@ div.p-checkbox {
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   justify-content: center;
   width: 100%;
+
+  &:not(.p-disabled).p-focus,
+  &:not(.p-disabled):hover {
+    border-color: var(--input-border-color);
+  }
 
   &.small {
     height: 30px;
@@ -401,7 +406,7 @@ div.p-checkbox {
         font-weight: var(--standard_text_font_weight);
       }
     }
-    .p-multiselect-trigger {
+    .p-multiselect-dropdown {
       width: 7px;
       margin-left: var(--padding-small);
       margin-right: var(--padding-small);
@@ -411,7 +416,7 @@ div.p-checkbox {
   .p-disabled {
     opacity: 0.5;
   }
-  .p-multiselect-trigger {
+  .p-multiselect-dropdown {
     margin-right: var(--padding);
     width: 12px;
   }
@@ -427,7 +432,7 @@ div.p-checkbox {
     }
   }
 }
-.p-multiselect-panel {
+div.p-multiselect-overlay {
   color: var(--input-active-text-color);
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
@@ -443,14 +448,14 @@ div.p-checkbox {
     }
   }
 
-  .p-multiselect-items-wrapper {
+  .p-multiselect-list-container {
     max-width: 200px;
     margin-top: var(--padding);
     height: 100%;
     border-top: 1px solid var(--input-border-color);
 
-    .p-multiselect-items {
-      .p-multiselect-item {
+    .p-multiselect-list {
+      .p-multiselect-option {
         padding: var(--padding-small) 4px var(--padding-small);
         border-radius: var(--border-radius);
 
@@ -478,7 +483,7 @@ div.p-checkbox {
 * - 'header' : used when it is in the header of the website
 ***/
 
-.p-select {
+div.p-select {
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
   color: var(--input-active-text-color);
@@ -487,14 +492,19 @@ div.p-checkbox {
   padding: var(--padding);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: center; 
 
+  &:not(.p-disabled).p-focus,
+  &:not(.p-disabled):hover {
+    border-color: var(--input-border-color);
+  }
   &.small {
     padding: var(--padding-small);
     height: 30px;
 
     .p-select-label {
       font-size: var(--tiny_text_font_size);
+      color: var(--input-active-text-color);
     }
 
     .p-select-dropdown {

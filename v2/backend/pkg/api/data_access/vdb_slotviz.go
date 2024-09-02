@@ -30,8 +30,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, da
 
 	maxValidatorsInResponse := 6
 
-	dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
-	defer releaseLock() // important to unlock once done, otherwise data updater cant update the data
+	dutiesInfo, err := d.services.GetCurrentDutiesInfo()
 	if err != nil {
 		return nil, err
 	}

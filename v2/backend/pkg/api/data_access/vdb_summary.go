@@ -50,19 +50,16 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
-			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
-				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				searchValidator = int(index)
 			} else {
 				// No validator index for pubkey found, return empty results
-				releaseLock()
 				return result, &paging, nil
 			}
-			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			searchValidator = int(number)
 		} else if !groupNameSearchEnabled {
@@ -89,14 +86,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Get the average network efficiency
-	efficiency, releaseEfficiencyLock, err := d.services.GetCurrentEfficiencyInfo()
+	efficiency, err := d.services.GetCurrentEfficiencyInfo()
 	if err != nil {
-		releaseEfficiencyLock()
 		return nil, nil, err
 	}
 	averageNetworkEfficiency := d.calculateTotalEfficiency(
 		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
-	releaseEfficiencyLock()
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the main query and get the data
@@ -195,7 +190,15 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
 		From(goqu.L("blocks b")).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value").As("value")).
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochMin, epochMax)).
 		GroupBy(goqu.L("result_group_id"))
 
@@ -302,8 +305,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Status.UpcomingSyncCount += resultEntry.Status.UpcomingSyncCount
 
 		// Validator statuses
-		validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-		defer releaseValMapLock()
+		validatorMapping, err := d.services.GetCurrentValidatorMapping()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -826,7 +828,15 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		Select(goqu.L("COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0) AS el_reward")).
 		From(goqu.L("blocks AS b")).
 		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("b.exec_block_hash = ep.block_hash"))).
-		LeftJoin(goqu.L("relays_blocks AS rb"), goqu.On(goqu.L("b.exec_block_hash = rb.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value").As("value")).
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.status = '1'"))
 
 	if len(dashboardId.Validators) > 0 {
@@ -1005,14 +1015,12 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 
 	if averageNetworkLineRequested {
 		// Get the average network efficiency
-		efficiency, releaseEfficiencyLock, err := d.services.GetCurrentEfficiencyInfo()
+		efficiency, err := d.services.GetCurrentEfficiencyInfo()
 		if err != nil {
-			releaseEfficiencyLock()
 			return nil, err
 		}
 		averageNetworkEfficiency := d.calculateTotalEfficiency(
 			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
-		releaseEfficiencyLock()
 
 		for ts := range tsMap {
 			data[ts][int64(t.NetworkAverage)] = averageNetworkEfficiency
@@ -1139,8 +1147,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 	}
 
 	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}

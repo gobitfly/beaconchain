@@ -2,10 +2,14 @@
   "conventionalCommits.scopes": [
   "checkout",
   "ci",
+  "customFetch",
+  "DashboardChartSummaryChartFilter",
+  "DashboardGroupManagementModal",
   "eslint",
   "git",
   "i18n",
   "mainHeader",
+  "qrCode",
   "vscode"
 ],
 "editor.codeActionsOnSave": {
