@@ -443,6 +443,9 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	// fetch user
 	userId, err := h.dai.GetUserByEmail(r.Context(), email)
 	if err != nil {
+		if errors.Is(err, dataaccess.ErrNotFound) {
+			err = errBadCredentials
+		}
 		handleErr(w, r, err)
 		return
 	}

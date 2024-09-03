@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type {
-  InternalGetValidatorDashboardGroupSummaryResponse,
+  GetValidatorDashboardGroupSummaryResponse,
   VDBGroupSummaryData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
@@ -42,7 +42,7 @@ export function useValidatorDashboardSummaryDetailsStore(
       data.value = {}
       storeTimeFrame.value = timeFrame
     }
-    const res = await fetch<InternalGetValidatorDashboardGroupSummaryResponse>(
+    const res = await fetch<GetValidatorDashboardGroupSummaryResponse>(
       API_PATH.DASHBOARD_SUMMARY_DETAILS,
       { query: { period: timeFrame } },
       {

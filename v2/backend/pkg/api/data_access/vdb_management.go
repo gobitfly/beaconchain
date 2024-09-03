@@ -294,9 +294,11 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			if err := d.alloyReader.SelectContext(ctx, &queryResult, query, dashboardId.Id); err != nil {
 				return err
 			}
+
 			for _, res := range queryResult {
 				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
 			}
+
 			return nil
 		})
 	}
@@ -311,6 +313,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
+			data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
 		}
 
 		// Status
