@@ -441,7 +441,7 @@ var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 	ProductName: "Free",
 	PremiumPerks: t.PremiumPerks{
 		AdFree:                      false,
-		ValidatorDasboards:          1,
+		ValidatorDashboards:         1,
 		ValidatorsPerDashboard:      20,
 		ValidatorGroupsPerDashboard: 1,
 		ShareCustomDashboards:       false,
@@ -546,7 +546,7 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                      true,
-					ValidatorDasboards:          1,
+					ValidatorDashboards:         1,
 					ValidatorsPerDashboard:      100,
 					ValidatorGroupsPerDashboard: 3,
 					ShareCustomDashboards:       true,
@@ -579,7 +579,7 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                      true,
-					ValidatorDasboards:          2,
+					ValidatorDashboards:         2,
 					ValidatorsPerDashboard:      300,
 					ValidatorGroupsPerDashboard: 10,
 					ShareCustomDashboards:       true,
@@ -612,7 +612,7 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 				ProductName: "Orca",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                      true,
-					ValidatorDasboards:          2,
+					ValidatorDashboards:         2,
 					ValidatorsPerDashboard:      1000,
 					ValidatorGroupsPerDashboard: 30,
 					ShareCustomDashboards:       true,
