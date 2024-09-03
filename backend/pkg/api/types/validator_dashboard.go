@@ -27,7 +27,7 @@ type VDBOverviewBalances struct {
 }
 
 type VDBOverviewData struct {
-	Name                string                                     `json:"name,omitempty"`
+	Name                string                                     `json:"name,omitempty" extensions:"x-order=1"`
 	Groups              []VDBOverviewGroup                         `json:"groups"`
 	Validators          VDBOverviewValidators                      `json:"validators"`
 	Efficiency          PeriodicValues[float64]                    `json:"efficiency"`
@@ -59,7 +59,7 @@ type VDBSummaryValidators struct {
 }
 
 type VDBSummaryTableRow struct {
-	GroupId                  int64                      `json:"group_id"`
+	GroupId                  int64                      `json:"group_id" extensions:"x-order=1"`
 	Status                   VDBSummaryStatus           `json:"status"`
 	Validators               VDBSummaryValidators       `json:"validators"`
 	Efficiency               float64                    `json:"efficiency"`
@@ -115,7 +115,7 @@ type GetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, fl
 // ------------------------------------------------------------
 // Summary Validators
 type VDBSummaryValidator struct {
-	Index       uint64   `json:"index"`
+	Index       uint64   `json:"index" extensions:"x-order=1"`
 	DutyObjects []uint64 `json:"duty_objects,omitempty"`
 }
 type VDBSummaryValidatorsData struct {
@@ -168,7 +168,7 @@ type GetValidatorDashboardRewardsChartResponse ApiDataResponse[ChartData[int, de
 // Duties Modal
 
 type VDBEpochDutiesTableRow struct {
-	Validator uint64                 `json:"validator"`
+	Validator uint64                 `json:"validator" extensions:"x-order=1"`
 	Duties    ValidatorHistoryDuties `json:"duties"`
 }
 type GetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutiesTableRow]
@@ -176,12 +176,12 @@ type GetValidatorDashboardDutiesResponse ApiPagingResponse[VDBEpochDutiesTableRo
 // ------------------------------------------------------------
 // Blocks Tab
 type VDBBlocksTableRow struct {
-	Proposer        uint64                      `json:"proposer"`
-	GroupId         uint64                      `json:"group_id"`
-	Epoch           uint64                      `json:"epoch"`
-	Slot            uint64                      `json:"slot"`
+	Proposer        uint64                      `json:"proposer" extensions:"x-order=1"`
+	GroupId         uint64                      `json:"group_id" extensions:"x-order=2"`
+	Epoch           uint64                      `json:"epoch" extensions:"x-order=3"`
+	Slot            uint64                      `json:"slot" extensions:"x-order=4"`
+	Block           *uint64                     `json:"block,omitempty" extensions:"x-order=5"`
 	Status          string                      `json:"status" tstype:"'success' | 'missed' | 'orphaned' | 'scheduled'" faker:"oneof: success, missed, orphaned, scheduled"`
-	Block           *uint64                     `json:"block,omitempty"`
 	RewardRecipient *Address                    `json:"reward_recipient,omitempty"`
 	Reward          *ClElValue[decimal.Decimal] `json:"reward,omitempty"`
 	Graffiti        *string                     `json:"graffiti,omitempty"`
@@ -197,22 +197,22 @@ type VDBHeatmapEvents struct {
 	Sync     bool `json:"sync"`
 }
 type VDBHeatmapCell struct {
-	X int64  `json:"x"` // Timestamp
-	Y uint64 `json:"y"` // Group ID
+	X int64  `json:"x" extensions:"x-order=1"` // Timestamp
+	Y uint64 `json:"y" extensions:"x-order=2"` // Group ID
 
-	Value  float64           `json:"value"` // Attestaton Rewards
+	Value  float64           `json:"value" extensions:"x-order=3"` // Attestaton Rewards
 	Events *VDBHeatmapEvents `json:"events,omitempty"`
 }
 type VDBHeatmap struct {
-	Timestamps  []int64          `json:"timestamps"` // X-Axis Categories (unix timestamp)
-	GroupIds    []uint64         `json:"group_ids"`  // Y-Axis Categories
-	Data        []VDBHeatmapCell `json:"data"`
+	Timestamps  []int64          `json:"timestamps" extensions:"x-order=1"` // X-Axis Categories (unix timestamp)
+	GroupIds    []uint64         `json:"group_ids" extensions:"x-order=2"`  // Y-Axis Categories
+	Data        []VDBHeatmapCell `json:"data" extensions:"x-order=3"`
 	Aggregation string           `json:"aggregation" tstype:"'epoch' | 'hourly' | 'daily' | 'weekly'" faker:"oneof: epoch, hourly, daily, weekly"`
 }
 type GetValidatorDashboardHeatmapResponse ApiDataResponse[VDBHeatmap]
 
 type VDBHeatmapTooltipData struct {
-	Timestamp int64 `json:"timestamp"`
+	Timestamp int64 `json:"timestamp" extensions:"x-order=1"`
 
 	Proposers StatusCount `json:"proposers"`
 	Syncs     uint64      `json:"syncs"`
@@ -289,7 +289,7 @@ type GetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithd
 // ------------------------------------------------------------
 // Rocket Pool Tab
 type VDBRocketPoolTableRow struct {
-	Node   Address `json:"node"`
+	Node   Address `json:"node" extensions:"x-order=1"`
 	Staked struct {
 		Eth decimal.Decimal `json:"eth"`
 		Rpl decimal.Decimal `json:"rpl"`

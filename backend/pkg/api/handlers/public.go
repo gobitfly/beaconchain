@@ -24,17 +24,17 @@ import (
 //	@description	- Setting the URL query parameter in the following format: `api_key={your_api_key}`.\
 //	@description	Example: `https://beaconcha.in/api/v2/example?field=value&api_key={your_api_key}`
 
-// @host      beaconcha.in
-// @BasePath  /api/v2
+//	@host		beaconcha.in
+//	@BasePath	/api/v2
 
-// @securitydefinitions.apikey ApiKeyInHeader
-// @in header
-// @name Authorization
-// @description Use your API key as a Bearer token, e.g. `Bearer <your-api-key>`
+//	@securitydefinitions.apikey	ApiKeyInHeader
+//	@in							header
+//	@name						Authorization
+//	@description				Use your API key as a Bearer token, e.g. `Bearer <your-api-key>`
 
-// @securitydefinitions.apikey ApiKeyInQuery
-// @in query
-// @name api_key
+//	@securitydefinitions.apikey	ApiKeyInQuery
+//	@in							query
+//	@name						api_key
 
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -134,14 +134,14 @@ func (h *HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Re
 // PublicPostValidatorDashboards godoc
 //
 //	@Description	Create a new validator dashboard. **Note**: New dashboards will automatically have a default group created.
-//	@Security 		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboards
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			request		body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
-//	@Success		201			{object}	types.PostValidatorDashboardsResponse
-//	@Failure		400			{object}	types.ApiErrorResponse
-//	@Failure		409			{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
+//	@Param			request	body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
+//	@Success		201		{object}	types.PostValidatorDashboardsResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Failure		409		{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
 //	@Router			/validator-dashboards [post]
 func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -199,7 +199,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 //	@Tags			Validator Dashboards
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool“."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse	"Bad Request"
 //	@Router			/validator-dashboards/{dashboard_id} [get]
@@ -258,7 +258,7 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 //
 //	@Description	Delete a specified validator dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard Management
 //	@Produce		json
 //	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
 //	@Success		204				"Dashboard deleted successfully."
@@ -283,7 +283,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r
 //
 //	@Description	Update the name of a specified validator dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
@@ -322,7 +322,7 @@ func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, 
 //
 //	@Description	Create a new group in a specified validator dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
@@ -386,7 +386,7 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 //
 //	@Description	Update a groups name in a specified validator dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
@@ -438,7 +438,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 // PublicDeleteValidatorDashboardGroups godoc
 //
 //	@Description	Delete a group in a specified validator dashboard.
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
@@ -481,7 +481,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 //
 //	@Description	Add new validators to a specified dashboard or update the group of already-added validators.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
@@ -613,7 +613,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	returnCreated(w, r, response)
 }
 
-// PublicGetValidatorDashboardGroups godoc
+// PublicGetValidatorDashboardValidators godoc
 //
 //	@Description	Get a list of groups in a specified validator dashboard.
 //	@Tags			Validator Dashboards
@@ -622,8 +622,9 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 //	@Param			group_id		query		string	false	"The ID of the group."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"A field to . Possible values are:<ul><li>`name`</li><li>`created_at`</li><li>`updated_at`</li></ul>"
-//	@Success		200				{object}	types.GetValidatorDashboardGroupsResponse
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(index, public_key, balance, status, withdrawal_credentials)
+//	@Param			search			query		string	false	"Search for Address, ENS."
+//	@Success		200				{object}	types.GetValidatorDashboardValidatorsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/groups [get]
 func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
@@ -653,6 +654,17 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 	returnOk(w, r, response)
 }
 
+// PublicDeleteValidatorDashboardValidators godoc
+//
+//	@Description	Remove validators from a specified dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Produce		json
+//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
+//	@Param			validators		query	string	false	"Provide a comma seperated list of validator indices or public keys to remove from the dashboard."
+//	@Success		204				"Validators removed successfully."
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/validators [delete]
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -675,6 +687,19 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 	returnNoContent(w, r)
 }
 
+// PublicPostValidatorDashboardPublicIds godoc
+//
+//	@Description	Create a new public ID for a specified dashboard. This can be used as an ID by other users for non-modyfing (i.e. GET) endpoints only. Currently limited to one per dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPostValidatorDashboardPublicIds.request	true	"`name`: Provide a public name for the dashboard<br>`share_settings`:<ul><li>`share_groups`: If set to `true`, accessing the dashboard through the public ID will not reveal any group information.</li></ul>"
+//	@Success		201				{object}	types.ApiDataResponse[types.VDBPublicId]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their public ID limit."
+//	@Router			/validator-dashboards/{dashboard_id}/public-ids [post]
 func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -709,13 +734,26 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 		handleErr(w, r, err)
 		return
 	}
-	response := types.ApiResponse{
-		Data: data,
+	response := types.ApiDataResponse[types.VDBPublicId]{
+		Data: *data,
 	}
 
 	returnCreated(w, r, response)
 }
 
+// PublicPutValidatorDashboardPublicId godoc
+//
+//	@Description	Update a specified public ID for a specified dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			public_id		path		string													true	"The ID of the public ID."
+//	@Param			request			body		handlers.PublicPutValidatorDashboardPublicId.request	true	"`name`: Provide a public name for the dashboard<br>`share_settings`:<ul><li>`share_groups`: If set to `true`, accessing the dashboard through the public ID will not reveal any group information.</li></ul>"
+//	@Success		200				{object}	types.ApiDataResponse[types.VDBPublicId]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/public-ids/{public_id} [put]
 func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -752,13 +790,24 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 		handleErr(w, r, err)
 		return
 	}
-	response := types.ApiResponse{
-		Data: data,
+	response := types.ApiDataResponse[types.VDBPublicId]{
+		Data: *data,
 	}
 
 	returnOk(w, r, response)
 }
 
+// PublicDeleteValidatorDashboardPublicId godoc
+//
+//	@Description	Delete a specified public ID for a specified dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Produce		json
+//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
+//	@Param			public_id		path	string	true	"The ID of the public ID."
+//	@Success		204				"Public ID deleted successfully."
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/public-ids/{public_id} [delete]
 func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -787,6 +836,19 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 	returnNoContent(w, r)
 }
 
+// PublicPutValidatorDashboardArchiving godoc
+//
+//	@Description	Archive or unarchive a specified validator dashboard. Archived dashboards cannot be accessed by other endpoints. Archiving happens automatically if the number of dashboards, validators, or groups exceeds the limit allowed by your subscription plan. For example, this might occur if you downgrade your subscription to a lower tier.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
+//	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Conflict		409																			{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
+//	@Router			/validator-dashboards/{dashboard_id}/archiving [put]
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -866,6 +928,16 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardSlotViz godoc
+//
+//	@Description	Get slot viz information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_ids		query		string	false	"Provide a comma seperated list of group IDs to filter the results by. If ommited, all groups will be included."
+//	@Success		200				{object}	types.GetValidatorDashboardSlotVizResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/slot-viz [get]
 func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -891,6 +963,23 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+var summaryAllowedPeriods = []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+
+// PublicGetValidatorDashboardSummary godoc
+//
+//	@Description	Get summary information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(group_id, validators, efficiency, attestations, proposals, reward)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Group."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardSummaryResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/summary [get]
 func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -905,8 +994,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	v.checkEnumIsAllowed(period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -924,6 +1012,18 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardGroupSummary godoc
+//
+//	@Description	Get summary information for a specified group in a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardGroupSummaryResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/summary [get]
 func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -941,8 +1041,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	v.checkEnumIsAllowed(period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -959,6 +1058,20 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardSummaryChart godoc
+//
+//	@Description	Get summary chart data for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_ids		query		string	false	"Provide a comma seperated list of group IDs to filter the results by."
+//	@Param			efficiency_type	query		string	false	"Efficiency type to get data for."	Enums(all, attestation, sync, proposal)
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly) Default(hourly)
+//	@Param			after_ts 		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts 		query		string	false	"Return data before this timestamp."
+//	@Success		200				{object}	types.GetValidatorDashboardSummaryChartResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/summary-chart [get]
 func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	ctx := r.Context()
@@ -998,6 +1111,18 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardSummaryValidators godoc
+//
+//	@Description	Get summary information for validators in a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			duty			query		string	false	"Validator duty to get data for."	Enums(none, sync, slashed, proposal) Default(none)
+//	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
+//	@Success		200				{object}	types.GetValidatorDashboardSummaryValidatorsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/summary/validators [get]
 func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1048,6 +1173,20 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRewards godoc
+//
+//	@Description	Get rewards information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(epoch)
+//	@Param			search			query		string	false	"Search for Epoch, Index, Public Key, Group."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardRewardsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rewards [get]
 func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1076,6 +1215,18 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardGroupRewards godoc
+//
+//	@Description	Get rewards information for a specified group in a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			epoch			path		string	true	"The epoch to get data for."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardGroupRewardsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/rewards/{epoch} [get]
 func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1104,6 +1255,16 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRewardsChart godoc
+//
+//	@Description	Get rewards chart data for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardRewardsChartResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rewards-chart [get]
 func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1130,6 +1291,22 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardDuties godoc
+//
+//	@Description	Get duties information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			epoch			path		string	true	"The epoch to get data for."
+//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(validator, reward)
+//	@Param			search			query		string	false	"Search for Index, Public Key."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardDutiesResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/duties/{epoch} [get]
 func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1161,6 +1338,20 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardBlocks godoc
+//
+//	@Description	Get blocks information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(proposer, slot, block, status, reward)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Group."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardBlocksResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/blocks [get]
 func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1189,6 +1380,19 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardHeatmap godoc
+//
+//	@Description	Get heatmap information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly) Default(hourly)
+//	@Param			after_ts 		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts 		query		string	false	"Return data before this timestamp."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardHeatmapResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/heatmap [get]
 func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1225,6 +1429,19 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardGroupHeatmap godoc
+//
+//	@Description	Get heatmap information for a specified group in a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			timestamp		path		string	true	"The timestamp to get data for."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly) Default(hourly)
+//	@Success		200				{object}	types.GetValidatorDashboardGroupHeatmapResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/heatmap/{timestamp} [get]
 func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1262,6 +1479,17 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardExecutionLayerDeposits godoc
+//
+//	@Description	Get execution layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1287,6 +1515,17 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardConsensusLayerDeposits godoc
+//
+//	@Description	Get consensus layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Success		200				{object}	types.GetValidatorDashboardConsensusLayerDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/consensus-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1313,6 +1552,15 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalConsensusLayerDeposits godoc
+//
+//	@Description	Get total consensus layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalConsensusDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1332,6 +1580,15 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalConsensusLayerDeposits(
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalExecutionLayerDeposits godoc
+//
+//	@Description	Get total execution layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalExecutionDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-execution-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1351,6 +1608,20 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardWithdrawals godoc
+//
+//	@Description	Get withdrawals information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(epoch, slot, index, recipient, amount)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Address."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/withdrawals [get]
 func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1379,6 +1650,16 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalWithdrawals godoc
+//
+//	@Description	Get total withdrawals information for a specified dashboard
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-withdrawals [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1406,6 +1687,19 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRocketPool godoc
+//
+//	@Description	Get an aggregated list of the Rocket Pool nodes details associated with a specified dashboard.
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(node, minipools, collateral, rpl, effective_rpl, rpl_apr, smoothing_pool)
+//	@Param			search			query		string	false	"Search for Node address."
+//	@Success		200				{object}	types.GetValidatorDashboardRocketPoolResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool [get]
 func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1433,6 +1727,15 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWr
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalRocketPool godoc
+//
+//	@Description	Get a summary of all Rocket Pool nodes details associated with a specified dashboard.
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalRocketPoolResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-rocket-pool [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1458,6 +1761,16 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardNodeRocketPool godoc
+//
+//	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			node_address	path		string	true	"The address of the node."
+//	@Success		200				{object}	types.GetValidatorDashboardNodeRocketPoolResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address} [get]
 func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1484,6 +1797,20 @@ func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.Respon
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRocketPoolMinipools godoc
+//
+//	@Description	Get minipools information for a specified Rocket Pool node associated with a specified dashboard.
+//	@Tags			Validator Dashboards
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			node_address	path		string	true	"The address of the node."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order. Possible values are TODO."
+//	@Param			search			query		string	false	"Search for Index, Node."
+//	@Success		200				{object}	types.GetValidatorDashboardRocketPoolMinipoolsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address}/minipools [get]
 func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)

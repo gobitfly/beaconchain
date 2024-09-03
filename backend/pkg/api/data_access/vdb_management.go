@@ -145,7 +145,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 
 	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
+		return nil, fmt.Errorf("error retrieving user dashboards data: %w", err)
 	}
 
 	return result, nil
@@ -349,7 +349,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		if err != nil {
-			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+			return fmt.Errorf("error retrieving validators from dashboard id: %w", err)
 		}
 
 		// Status
@@ -491,7 +491,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 			query, args, err := ds.Prepared(true).ToSQL()
 			if err != nil {
-				return fmt.Errorf("error preparing query: %v", err)
+				return fmt.Errorf("error preparing query: %w", err)
 			}
 
 			err = d.clickhouseReader.GetContext(ctx, &queryResult, query, args...)
@@ -527,7 +527,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	err = eg.Wait()
 
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
+		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
 
 	return &data, nil
