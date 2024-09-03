@@ -847,6 +847,7 @@ function informationIfHiddenResults(): string {
           :placeholder="t(SearchbarPurposeInfo[barPurpose].placeHolder)"
           @keyup="(e) => handleKeyPressInTextField(e.key)"
           @focus="globalState.showDropdown = true"
+          autocomplete="off"
         >
         <BcSearchbarButton
           class="search-button"
