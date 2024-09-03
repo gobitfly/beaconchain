@@ -623,7 +623,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 //	@Param			group_id		query		string	false	"The ID of the group."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(index, public_key, balance, status, withdrawal_credentials)
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(index, public_key, balance, status, withdrawal_credentials)
 //	@Param			search			query		string	false	"Search for Address, ENS."
 //	@Success		200				{object}	types.GetValidatorDashboardValidatorsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -848,7 +848,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 //	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Conflict		409																			{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
+//	@Conflict		409																								{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
 //	@Router			/validator-dashboards/{dashboard_id}/archiving [put]
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -975,7 +975,7 @@ var summaryAllowedPeriods = []enums.Enum{enums.TimePeriods.AllTime, enums.TimePe
 //	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(group_id, validators, efficiency, attestations, proposals, reward)
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(group_id, validators, efficiency, attestations, proposals, reward)
 //	@Param			search			query		string	false	"Search for Index, Public Key, Group."
 //	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardSummaryResponse
@@ -1067,9 +1067,9 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_ids		query		string	false	"Provide a comma seperated list of group IDs to filter the results by."
 //	@Param			efficiency_type	query		string	false	"Efficiency type to get data for."	Enums(all, attestation, sync, proposal)
-//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly) Default(hourly)
-//	@Param			after_ts 		query		string	false	"Return data after this timestamp."
-//	@Param			before_ts 		query		string	false	"Return data before this timestamp."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
+//	@Param			after_ts		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts		query		string	false	"Return data before this timestamp."
 //	@Success		200				{object}	types.GetValidatorDashboardSummaryChartResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/summary-chart [get]
@@ -1119,8 +1119,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		query		string	false	"The ID of the group."
-//	@Param			duty			query		string	false	"Validator duty to get data for."	Enums(none, sync, slashed, proposal) Default(none)
-//	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
+//	@Param			duty			query		string	false	"Validator duty to get data for."	Enums(none, sync, slashed, proposal)	Default(none)
+//	@Param			period			query		string	true	"Time period to get data for."		Enums(all_time, last_30d, last_7d, last_24h, last_1h)
 //	@Success		200				{object}	types.GetValidatorDashboardSummaryValidatorsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/summary/validators [get]
@@ -1182,7 +1182,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(epoch)
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch)
 //	@Param			search			query		string	false	"Search for Epoch, Index, Public Key, Group."
 //	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardRewardsResponse
@@ -1302,7 +1302,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 //	@Param			group_id		query		string	false	"The ID of the group."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(validator, reward)
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(validator, reward)
 //	@Param			search			query		string	false	"Search for Index, Public Key."
 //	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardDutiesResponse
@@ -1347,7 +1347,7 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(proposer, slot, block, status, reward)
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(proposer, slot, block, status, reward)
 //	@Param			search			query		string	false	"Search for Index, Public Key, Group."
 //	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardBlocksResponse
@@ -1387,9 +1387,9 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 //	@Tags			Validator Dashboards
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly) Default(hourly)
-//	@Param			after_ts 		query		string	false	"Return data after this timestamp."
-//	@Param			before_ts 		query		string	false	"Return data before this timestamp."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
+//	@Param			after_ts		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts		query		string	false	"Return data before this timestamp."
 //	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardHeatmapResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -1439,7 +1439,7 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 //	@Param			group_id		path		string	true	"The ID of the group."
 //	@Param			timestamp		path		string	true	"The timestamp to get data for."
 //	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
-//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly) Default(hourly)
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
 //	@Success		200				{object}	types.GetValidatorDashboardGroupHeatmapResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/heatmap/{timestamp} [get]
@@ -1617,7 +1617,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(epoch, slot, index, recipient, amount)
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
 //	@Param			search			query		string	false	"Search for Index, Public Key, Address."
 //	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardWithdrawalsResponse
@@ -1696,7 +1696,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order." Enums(node, minipools, collateral, rpl, effective_rpl, rpl_apr, smoothing_pool)
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(node, minipools, collateral, rpl, effective_rpl, rpl_apr, smoothing_pool)
 //	@Param			search			query		string	false	"Search for Node address."
 //	@Success		200				{object}	types.GetValidatorDashboardRocketPoolResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
