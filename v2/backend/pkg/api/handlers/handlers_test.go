@@ -96,13 +96,17 @@ func setup() {
 
 	flag.Parse()
 
+	// terminate any currently running postgres instances
 	_ = exec.Command("pkill", "-9", "postgres").Run()
+
+	// start embedded postgres
 	postgres = embeddedpostgres.NewDatabase(embeddedpostgres.DefaultConfig().Username("postgres"))
 	err := postgres.Start()
 	if err != nil {
 		log.Fatal(err, "error starting embedded postgres", 0)
 	}
 
+	// connection the the embedded db and run migrations
 	tempDb, err := sqlx.Connect("postgres", "host=localhost port=5432 user=postgres password=postgres dbname=postgres sslmode=disable")
 	if err != nil {
 		log.Fatal(err, "error connection to test db", 0)
@@ -128,6 +132,8 @@ func setup() {
 	if err != nil {
 		log.Fatal(err, "error reading config file", 0)
 	}
+
+	// hardcode db connection details for testing
 	cfg.Frontend.ReaderDatabase.Host = "localhost"
 	cfg.Frontend.ReaderDatabase.Port = "5432"
 	cfg.Frontend.ReaderDatabase.Name = "postgres"
@@ -148,7 +154,6 @@ func setup() {
 	router := api.NewApiRouter(dataAccessor, cfg)
 
 	ts = &testServer{httptest.NewTLSServer(router)}
-	log.Info(ts.URL)
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		log.Fatal(err, "error creating cookie jar", 0)
@@ -163,10 +168,7 @@ func TestInternalGetProductSummaryHandler(t *testing.T) {
 
 	respData := api_types.InternalGetProductSummaryResponse{}
 	err := json.Unmarshal([]byte(body), &respData)
-	if err != nil {
-		log.Infof("%s", body)
-		t.Fatal(err)
-	}
+	assert.Nil(t, err, "error unmarshalling response")
 
 	assert.NotEqual(t, 0, respData.Data.ValidatorsPerDashboardLimit, "ValidatorsPerDashboardLimit should not be 0")
 	assert.NotEqual(t, 0, len(respData.Data.ApiProducts), "ApiProducts should not be empty")
@@ -179,9 +181,8 @@ func TestInternalGetLatestStateHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, code)
 
 	respData := api_types.InternalGetLatestStateResponse{}
-	if err := json.Unmarshal([]byte(body), &respData); err != nil {
-		t.Fatal(err)
-	}
+	err := json.Unmarshal([]byte(body), &respData)
+	assert.Nil(t, err, "error unmarshalling response")
 
 	assert.NotEqual(t, uint64(0), respData.Data.LatestSlot, "latest slot should not be 0")
 	assert.NotEqual(t, uint64(0), respData.Data.FinalizedEpoch, "finalized epoch should not be 0")
@@ -208,9 +209,9 @@ func TestInternalLoginHandler(t *testing.T) {
 	code, _, body = ts.get(t, "/api/i/users/me")
 	assert.Equal(t, http.StatusOK, code, "call to users/me should be successful")
 	meResponse := &api_types.InternalGetUserInfoResponse{}
-	if err := json.Unmarshal([]byte(body), meResponse); err != nil {
-		t.Fatal(err)
-	}
+	err := json.Unmarshal([]byte(body), meResponse)
+	assert.Nil(t, err, "error unmarshalling response")
+
 	// check if email is censored
 	assert.Equal(t, meResponse.Data.Email, "a***n@a***n.com", "email should be a***n@a***n.com")
 
@@ -229,9 +230,8 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.Equal(t, 200, code)
 
 	resp := api_types.InternalPostSearchResponse{}
-	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		t.Fatal(err)
-	}
+	err := json.Unmarshal([]byte(body), &resp)
+	assert.Nil(t, err, "error unmarshalling response")
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
 	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
@@ -242,9 +242,8 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.Equal(t, 200, code)
 
 	resp = api_types.InternalPostSearchResponse{}
-	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		t.Fatal(err)
-	}
+	err = json.Unmarshal([]byte(body), &resp)
+	assert.Nil(t, err, "error unmarshalling response")
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
 	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
@@ -255,9 +254,8 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.Equal(t, 200, code)
 
 	resp = api_types.InternalPostSearchResponse{}
-	if err := json.Unmarshal([]byte(body), &resp); err != nil {
-		t.Fatal(err)
-	}
+	err = json.Unmarshal([]byte(body), &resp)
+	assert.Nil(t, err, "error unmarshalling response")
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
 	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
