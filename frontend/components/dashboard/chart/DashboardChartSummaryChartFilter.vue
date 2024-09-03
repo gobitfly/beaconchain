@@ -13,7 +13,10 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
 
-const { overview } = useValidatorDashboardOverviewStore()
+const {
+  hasAbilityCharthistory,
+  overview,
+} = useValidatorDashboardOverviewStore()
 
 const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 
@@ -21,10 +24,10 @@ const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
 const aggregationList = computed(() => {
-  return AggregationTimeframes.map(a => ({
-    disabled: (overview.value?.chart_history_seconds?.[a] ?? 0) === 0,
-    id: a,
-    label: $t(`time_frames.${a}`),
+  return AggregationTimeframes.map(timeframe => ({
+    disabled: !hasAbilityCharthistory.value[timeframe],
+    id: timeframe,
+    label: $t(`time_frames.${timeframe}`),
   }))
 })
 
@@ -141,7 +144,11 @@ const selectedLabel = computed(() => {
     >
       <template #option="slotProps">
         <span>{{ slotProps.label }}</span>
-        <BcPremiumGem class="premium-gem" @click.stop="() => undefined" />
+        <BcPremiumGem
+          v-if="slotProps.disabled"
+          class="premium-gem"
+          @click.stop="() => undefined"
+        />
       </template>
     </BcDropdown>
     <BcDropdown v-model="efficiency" :options="efficiencyList" option-value="id" option-label="label" class="small" />
@@ -210,9 +217,5 @@ const selectedLabel = computed(() => {
   display: flex;
   gap: var(--padding-small);
   align-items: center;
-}
-
-:global(.summary-chart-aggregation-panel .p-dropdown-item:not(.p-disabled) .premium-gem) {
-  display: none;
 }
 </style>

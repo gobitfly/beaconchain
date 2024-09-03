@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type {
-  InternalGetValidatorDashboardGroupRewardsResponse,
+  GetValidatorDashboardGroupRewardsResponse,
   VDBGroupRewardsData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
@@ -32,7 +32,7 @@ export const useValidatorDashboardRewardsDetailsStore = (
     if (data.value[getKey()]) {
       return data.value[getKey()]
     }
-    const res = await fetch<InternalGetValidatorDashboardGroupRewardsResponse>(
+    const res = await fetch<GetValidatorDashboardGroupRewardsResponse>(
       API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS,
       undefined,
       {
