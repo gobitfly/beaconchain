@@ -187,7 +187,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	response := types.ApiDataResponse[types.VDBPostReturnData]{
+	response := types.PostValidatorDashboardsResponse{
 		Data: *data,
 	}
 	returnCreated(w, r, response)
