@@ -38,7 +38,7 @@ type testServer struct {
 // Implement a get() method on our custom testServer type. This makes a GET
 // request to a given url path using the test server client, and returns the
 // response status code, headers and body.
-func (ts *testServer) get(t *testing.T, urlPath string) (int, http.Header, string) {
+func (ts *testServer) get(t *testing.T, urlPath string) (int, string) {
 	rs, err := ts.Client().Get(ts.URL + urlPath)
 	if err != nil {
 		t.Fatal(err)
@@ -49,10 +49,10 @@ func (ts *testServer) get(t *testing.T, urlPath string) (int, http.Header, strin
 		t.Fatal(err)
 	}
 	bytes.TrimSpace(body)
-	return rs.StatusCode, rs.Header, string(body)
+	return rs.StatusCode, string(body)
 }
 
-func (ts *testServer) post(t *testing.T, urlPath string, data io.Reader) (int, http.Header, string) {
+func (ts *testServer) post(t *testing.T, urlPath string, data io.Reader) (int, string) {
 	rs, err := ts.Client().Post(ts.URL+urlPath, "application/json", data)
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func (ts *testServer) post(t *testing.T, urlPath string, data io.Reader) (int, h
 		t.Fatal(err)
 	}
 	bytes.TrimSpace(body)
-	return rs.StatusCode, rs.Header, string(body)
+	return rs.StatusCode, string(body)
 }
 
 func (ts *testServer) parseErrorResonse(t *testing.T, body string) api_types.ApiErrorResponse {
@@ -88,7 +88,10 @@ func TestMain(m *testing.M) {
 func teardown() {
 	dataAccessor.Close()
 	ts.Close()
-	postgres.Stop()
+	err := postgres.Stop()
+	if err != nil {
+		log.Error(err, "error stopping embedded postgres", 0)
+	}
 }
 
 func setup() {
@@ -162,7 +165,7 @@ func setup() {
 }
 
 func TestInternalGetProductSummaryHandler(t *testing.T) {
-	code, _, body := ts.get(t, "/api/i/product-summary")
+	code, body := ts.get(t, "/api/i/product-summary")
 	assert.Equal(t, http.StatusOK, code)
 
 	respData := api_types.InternalGetProductSummaryResponse{}
@@ -175,7 +178,7 @@ func TestInternalGetProductSummaryHandler(t *testing.T) {
 }
 
 func TestInternalGetLatestStateHandler(t *testing.T) {
-	code, _, body := ts.get(t, "/api/i/latest-state")
+	code, body := ts.get(t, "/api/i/latest-state")
 	assert.Equal(t, http.StatusOK, code)
 
 	respData := api_types.InternalGetLatestStateResponse{}
@@ -187,23 +190,23 @@ func TestInternalGetLatestStateHandler(t *testing.T) {
 
 func TestInternalLoginHandler(t *testing.T) {
 	// login with email in wrong format
-	code, _, body := ts.post(t, "/api/i/login", bytes.NewBuffer([]byte(`{"email": "admin", "password": "admin"}`)))
+	code, body := ts.post(t, "/api/i/login", bytes.NewBuffer([]byte(`{"email": "admin", "password": "admin"}`)))
 	assert.Equal(t, http.StatusBadRequest, code)
 	resp := ts.parseErrorResonse(t, body)
 	assert.Equal(t, "email: given value 'admin' has incorrect format", resp.Error, "unexpected error message")
 
 	// login with correct user and wrong password
-	code, _, body = ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "wrong"}`))
+	code, body = ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "wrong"}`))
 	assert.Equal(t, http.StatusUnauthorized, code, "login should not be successful")
 	resp = ts.parseErrorResonse(t, body)
 	assert.Equal(t, "unauthorized: invalid email or password", resp.Error, "unexpected error message")
 
 	// login with correct user and password
-	code, _, _ = ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "admin"}`))
+	code, _ = ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "admin"}`))
 	assert.Equal(t, http.StatusOK, code, "login should be successful")
 
 	// check if user is logged in and has a valid session
-	code, _, body = ts.get(t, "/api/i/users/me")
+	code, body = ts.get(t, "/api/i/users/me")
 	assert.Equal(t, http.StatusOK, code, "call to users/me should be successful")
 
 	meResponse := &api_types.InternalGetUserInfoResponse{}
@@ -213,17 +216,17 @@ func TestInternalLoginHandler(t *testing.T) {
 	assert.Equal(t, meResponse.Data.Email, "a***n@a***n.com", "email should be a***n@a***n.com")
 
 	// check if logout works
-	code, _, _ = ts.post(t, "/api/i/logout", bytes.NewBufferString(``))
+	code, _ = ts.post(t, "/api/i/logout", bytes.NewBufferString(``))
 	assert.Equal(t, http.StatusOK, code, "logout should be successful")
 
 	// check if user is logged out
-	code, _, _ = ts.get(t, "/api/i/users/me")
+	code, _ = ts.get(t, "/api/i/users/me")
 	assert.Equal(t, http.StatusUnauthorized, code, "call to users/me should be unauthorized")
 }
 
 func TestInternalSearchHandler(t *testing.T) {
 	// search for validator with index 5
-	code, _, body := ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"5","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
+	code, body := ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"5","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
 	assert.Equal(t, http.StatusOK, code)
 
 	resp := api_types.InternalPostSearchResponse{}
@@ -234,7 +237,7 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
 
 	// search for validator by pubkey
-	code, _, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x9699af2bad9826694a480cb523cbe545dc41db955356b3b0d4871f1cf3e4924ae4132fa8c374a0505ae2076d3d65b3e0","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
+	code, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x9699af2bad9826694a480cb523cbe545dc41db955356b3b0d4871f1cf3e4924ae4132fa8c374a0505ae2076d3d65b3e0","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
 	assert.Equal(t, http.StatusOK, code)
 
 	resp = api_types.InternalPostSearchResponse{}
@@ -245,7 +248,7 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
 
 	// search for validator by withdawal address
-	code, _, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x0e5dda855eb1de2a212cd1f62b2a3ee49d20c444","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
+	code, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x0e5dda855eb1de2a212cd1f62b2a3ee49d20c444","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
 	assert.Equal(t, http.StatusOK, code)
 
 	resp = api_types.InternalPostSearchResponse{}
@@ -257,7 +260,7 @@ func TestInternalSearchHandler(t *testing.T) {
 }
 
 func TestSlotVizHandler(t *testing.T) {
-	code, _, body := ts.get(t, "/api/i/validator-dashboards/NQ/slot-viz")
+	code, body := ts.get(t, "/api/i/validator-dashboards/NQ/slot-viz")
 	assert.Equal(t, http.StatusOK, code)
 
 	resp := api_types.GetValidatorDashboardSlotVizResponse{}
@@ -267,7 +270,6 @@ func TestSlotVizHandler(t *testing.T) {
 
 	headStateCount := 0
 	for _, epoch := range resp.Data {
-
 		if epoch.State == "head" { // count the amount of head epochs returned, should be exactly 1
 			headStateCount++
 		}
