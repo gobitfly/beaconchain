@@ -277,7 +277,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, r, err)
 		return
 	}
-	indices, publicKeys = v.checkValidators(req.Validators, allowEmpty)
+	indices, publicKeys = v.checkValidators(req.Validators, false)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
