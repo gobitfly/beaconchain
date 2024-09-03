@@ -439,6 +439,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 //
 //	@Description	Delete a group in a specified validator dashboard.
 //	@Tags			Validator Dashboard Management
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
