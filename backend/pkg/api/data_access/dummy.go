@@ -56,6 +56,10 @@ func commonFakeData(a interface{}) error {
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
 }
 
+func (d *DummyService) StartDataAccessServices() {
+	// nothing to start
+}
+
 // used for any non-pointer data, e.g. all primitive types or slices
 func getDummyData[T any]() (T, error) {
 	var r T
@@ -218,8 +222,16 @@ func (d *DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId
 	return nil
 }
 
-func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+func (d *DummyService) RemoveValidatorDashboards(ctx context.Context, dashboardIds []uint64) error {
+	return nil
+}
+
+func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
 	return getDummyStruct[t.VDBPostArchivingReturnData]()
+}
+
+func (d *DummyService) UpdateValidatorDashboardsArchiving(ctx context.Context, dashboards []t.ArchiverDashboardArchiveReason) error {
+	return nil
 }
 
 func (d *DummyService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
@@ -615,6 +627,10 @@ func (d *DummyService) GetSlotVoluntaryExits(ctx context.Context, chainId, block
 
 func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
 	return getDummyData[[]t.BlockBlobTableRow]()
+}
+
+func (d *DummyService) GetValidatorDashboardsCountInfo(ctx context.Context) (map[uint64][]t.ArchiverDashboard, error) {
+	return getDummyData[map[uint64][]t.ArchiverDashboard]()
 }
 
 func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPoolData, error) {
