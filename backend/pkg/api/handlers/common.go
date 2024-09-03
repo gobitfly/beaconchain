@@ -592,7 +592,7 @@ func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProt
 
 func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]types.VDBValidator, []string) {
 	if validators == "" && !allowEmpty {
-		v.add("validators", "list of validators is must not be empty")
+		v.add("validators", "list of validators must not be empty")
 		return nil, nil
 	}
 	validatorsSlice := splitParameters(validators, ',')

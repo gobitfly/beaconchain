@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { InternalGetValidatorDashboardRewardsResponse } from '~/types/api/validator_dashboard'
+import type { GetValidatorDashboardRewardsResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 import { DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
@@ -8,7 +8,7 @@ import { API_PATH } from '~/types/customFetch'
 const validatorDashboardRewardsStore = defineStore(
   'validator_dashboard_rewards_store',
   () => {
-    const data = ref<InternalGetValidatorDashboardRewardsResponse>()
+    const data = ref<GetValidatorDashboardRewardsResponse>()
     const query = ref<TableQueryParams>()
 
     return {
@@ -44,7 +44,7 @@ export function useValidatorDashboardRewardsStore() {
     }
     isLoading.value = true
     storedQuery.value = query
-    const res = await fetch<InternalGetValidatorDashboardRewardsResponse>(
+    const res = await fetch<GetValidatorDashboardRewardsResponse>(
       API_PATH.DASHBOARD_VALIDATOR_REWARDS,
       undefined,
       { dashboardKey },

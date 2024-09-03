@@ -54,19 +54,16 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
-			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
-				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
-				releaseLock()
 				return result, &paging, nil
 			}
-			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
 			epochSearch = int64(number)
@@ -108,7 +105,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")))
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value").As("value")).
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		)
 
 	if dashboardId.Validators == nil {
 		rewardsDs = rewardsDs.
@@ -555,7 +560,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		From(goqu.L("users_val_dashboards_validators v")).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value").As("value")).
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.epoch = ?", epoch))
 
 	// handle the case when we have a list of validators
@@ -722,7 +735,15 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		From(goqu.L("users_val_dashboards_validators v")).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value").As("value")).
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.epoch >= ?", startEpoch))
 
 	if dashboardId.Validators == nil {
@@ -910,19 +931,16 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
-			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
-				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				indexSearch = int64(index)
 			} else {
 				// No validator index for pubkey found, return empty results
-				releaseLock()
 				return result, &paging, nil
 			}
-			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			indexSearch = int64(number)
 		} else {
@@ -968,7 +986,15 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
 		From(goqu.L("blocks b")).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(goqu.L("relays_blocks rb"), goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash"))).
+		LeftJoin(
+			goqu.Dialect("postgres").
+				From("relays_blocks").
+				Select(
+					goqu.L("exec_block_hash"),
+					goqu.MAX("value").As("value")).
+				GroupBy("exec_block_hash").As("rb"),
+			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
+		).
 		Where(goqu.L("b.epoch = ?", epoch)).
 		Where(goqu.L("b.status = '1'")).
 		GroupBy(goqu.L("b.proposer"))

@@ -2,9 +2,7 @@ package dataaccess
 
 import (
 	"context"
-	"maps"
 	"slices"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -91,6 +89,11 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 			event_id, 
 			status
 		ORDER BY event_id ASC, max(inserted_at) DESC
+		SETTINGS
+			use_query_cache = true,
+			query_cache_compress_entries = false,
+			query_cache_nondeterministic_function_handling='save',
+			query_cache_ttl=10
 	`
 
 	response.Reports = make(map[string][]types.HealthzResult)
@@ -121,6 +124,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 		"api_service_avg_efficiency",
 		"api_service_validator_mapping",
 		"api_service_slot_viz",
+		"monitoring_timeouts",
 	}
 	for _, result := range results {
 		response.Reports[result.EventId] = append(response.Reports[result.EventId], result)
@@ -134,43 +138,6 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 						{"error": "no status report found"},
 					},
 				},
-			}
-		}
-	}
-
-	// we check all running ones if they are older than their timeouts_at field. if yes add an entry to failures
-	// if failures is already a key in the response, we will append a new entry to it
-	for _, r := range response.Reports {
-		for _, report := range r {
-			if report.Status != constants.Running {
-				continue
-			}
-			for _, result := range report.Result {
-				if timeoutsAt, ok := result["timeouts_at"]; ok {
-					// 2024-08-23 13:36:10
-					t, err := time.Parse("2006-01-02 15:04:05", timeoutsAt)
-					newMap := maps.Clone(result)
-					newMap["emitter"] = utils.GetUUID()
-					if err != nil {
-						newMap["healthz_error"] = "failed to parse timeouts_at"
-					} else if time.Now().After(t) {
-						newMap["healthz_error"] = "timeout"
-					} else {
-						continue
-					}
-					index := slices.IndexFunc(response.Reports[report.EventId], func(r types.HealthzResult) bool {
-						return r.Status == constants.Failure
-					})
-					if index == -1 {
-						response.Reports[report.EventId] = append(response.Reports[report.EventId], types.HealthzResult{
-							Status: constants.Failure,
-							Result: []map[string]string{},
-						})
-						index = len(response.Reports[report.EventId]) - 1
-					}
-					// copy the original map
-					response.Reports[report.EventId][index].Result = append(response.Reports[report.EventId][index].Result, newMap)
-				}
 			}
 		}
 	}
