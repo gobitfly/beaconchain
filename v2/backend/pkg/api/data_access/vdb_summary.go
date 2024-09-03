@@ -50,19 +50,16 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			search = strings.ToLower(search)
 
 			// Get the current validator state to convert pubkey to index
-			validatorMapping, releaseLock, err := d.services.GetCurrentValidatorMapping()
+			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
-				releaseLock()
 				return nil, nil, err
 			}
 			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
 				searchValidator = int(index)
 			} else {
 				// No validator index for pubkey found, return empty results
-				releaseLock()
 				return result, &paging, nil
 			}
-			releaseLock()
 		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
 			searchValidator = int(number)
 		} else if !groupNameSearchEnabled {
@@ -89,14 +86,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Get the average network efficiency
-	efficiency, releaseEfficiencyLock, err := d.services.GetCurrentEfficiencyInfo()
+	efficiency, err := d.services.GetCurrentEfficiencyInfo()
 	if err != nil {
-		releaseEfficiencyLock()
 		return nil, nil, err
 	}
 	averageNetworkEfficiency := d.calculateTotalEfficiency(
 		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
-	releaseEfficiencyLock()
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the main query and get the data
@@ -310,8 +305,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Status.UpcomingSyncCount += resultEntry.Status.UpcomingSyncCount
 
 		// Validator statuses
-		validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-		defer releaseValMapLock()
+		validatorMapping, err := d.services.GetCurrentValidatorMapping()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1021,14 +1015,12 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 
 	if averageNetworkLineRequested {
 		// Get the average network efficiency
-		efficiency, releaseEfficiencyLock, err := d.services.GetCurrentEfficiencyInfo()
+		efficiency, err := d.services.GetCurrentEfficiencyInfo()
 		if err != nil {
-			releaseEfficiencyLock()
 			return nil, err
 		}
 		averageNetworkEfficiency := d.calculateTotalEfficiency(
 			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
-		releaseEfficiencyLock()
 
 		for ts := range tsMap {
 			data[ts][int64(t.NetworkAverage)] = averageNetworkEfficiency
@@ -1155,8 +1147,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 	}
 
 	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}

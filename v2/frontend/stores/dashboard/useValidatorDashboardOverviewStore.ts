@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { useAllValidatorDashboardRewardsDetailsStore } from './useValidatorDashboardRewardsDetailsStore'
 import type {
-  InternalGetValidatorDashboardResponse,
+  GetValidatorDashboardResponse,
   VDBOverviewData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
@@ -26,7 +26,7 @@ export function useValidatorDashboardOverviewStore() {
       return
     }
     try {
-      const res = await fetch<InternalGetValidatorDashboardResponse>(
+      const res = await fetch<GetValidatorDashboardResponse>(
         API_PATH.DASHBOARD_OVERVIEW,
         undefined,
         { dashboardKey: key },
@@ -78,7 +78,15 @@ export function useValidatorDashboardOverviewStore() {
     )
   })
 
+  const hasAbilityCharthistory = computed(() => ({
+    daily: (overview.value?.chart_history_seconds?.daily ?? 0) > 0,
+    epoch: (overview.value?.chart_history_seconds?.epoch ?? 0) > 0,
+    hourly: (overview.value?.chart_history_seconds?.hourly ?? 0) > 0,
+    weekly: (overview.value?.chart_history_seconds?.weekly ?? 0) > 0,
+  }))
+
   return {
+    hasAbilityCharthistory,
     hasValidators,
     overview,
     refreshOverview,

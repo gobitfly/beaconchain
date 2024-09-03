@@ -3,6 +3,7 @@
   "checkout",
   "ci",
   "customFetch",
+  "DashboardChartSummaryChartFilter",
   "DashboardGroupManagementModal",
   "eslint",
   "git",

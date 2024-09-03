@@ -170,8 +170,7 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, pu
 		return []t.VDBValidator{}, nil
 	}
 
-	mapping, release, err := d.services.GetCurrentValidatorMapping()
-	defer release()
+	mapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -311,12 +310,12 @@ func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, da
 
 func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
 	data := t.VDBOverviewData{}
-	wg := errgroup.Group{}
+	eg := errgroup.Group{}
 	var err error
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
-		wg.Go(func() error {
+		eg.Go(func() error {
 			var queryResult []struct {
 				Id    uint32 `db:"id"`
 				Name  string `db:"name"`
@@ -334,17 +333,18 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			if err := d.alloyReader.SelectContext(ctx, &queryResult, query, dashboardId.Id); err != nil {
 				return err
 			}
+
 			for _, res := range queryResult {
 				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
 			}
+
 			return nil
 		})
 	}
 
 	// Validator status and balance
-	wg.Go(func() error {
-		validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-		defer releaseValMapLock()
+	eg.Go(func() error {
+		validatorMapping, err := d.services.GetCurrentValidatorMapping()
 		if err != nil {
 			return err
 		}
@@ -352,6 +352,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
+			data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
 		}
 
 		// Status
@@ -452,7 +456,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
-		wg.Go(func() error {
+		eg.Go(func() error {
 			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, hours)
 			if err != nil {
 				return err
@@ -461,7 +465,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 
 		// Efficiency
-		wg.Go(func() error {
+		eg.Go(func() error {
 			ds := goqu.Dialect("postgres").
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
@@ -526,7 +530,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", 30*24, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
 	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
-	err = wg.Wait()
+	err = eg.Wait()
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
@@ -691,8 +695,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 	}
 
 	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, nil, err
 	}

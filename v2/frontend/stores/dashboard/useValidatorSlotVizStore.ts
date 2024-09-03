@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type {
-  InternalGetValidatorDashboardSlotVizResponse,
+  GetValidatorDashboardSlotVizResponse,
   SlotVizEpoch,
 } from '~/types/api/slot_viz'
 import type { DashboardKey } from '~/types/dashboard'
@@ -22,7 +22,7 @@ export function useValidatorSlotVizStore() {
     if (groups?.length) {
       query = { group_ids: groups.join(',') }
     }
-    const res = await fetch<InternalGetValidatorDashboardSlotVizResponse>(
+    const res = await fetch<GetValidatorDashboardSlotVizResponse>(
       API_PATH.DASHBOARD_SLOTVIZ,
       {
         headers: {},
