@@ -1,6 +1,8 @@
 package services
 
 import (
+	"sync"
+
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -35,11 +37,15 @@ func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader 
 }
 
 func (s *Services) InitServices() {
-	go s.startSlotVizDataService()
-	go s.startIndexMappingService()
-	go s.startEfficiencyDataService()
-	go s.startEmailSenderService()
+	wg := &sync.WaitGroup{}
+	log.Infof("initializing services...")
+	wg.Add(4)
+	go s.startSlotVizDataService(wg)
+	go s.startIndexMappingService(wg)
+	go s.startEfficiencyDataService(wg)
+	go s.startEmailSenderService(wg)
 
+	wg.Wait()
 	log.Infof("initializing prices...")
 	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)
 	log.Infof("...prices initialized")
