@@ -260,7 +260,7 @@
         "open_validator_overview_modal": "Open Validator Overview",
         "validators_balance": {
           "balance_effective": "Effective Balance",
-          "balance_staked": "Stacked ETH",
+          "balance_staked": "Staked ETH",
           "balance_total": "Balance"
         }
       },

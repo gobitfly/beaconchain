@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -26,12 +26,10 @@ type ValidatorMapping struct {
 	ValidatorMetadata []*types.CachedValidator            // note: why pointers?
 }
 
-var currentValidatorMapping *ValidatorMapping
+var currentValidatorMapping atomic.Pointer[ValidatorMapping]
 var _cachedBufferCompressed = new(bytes.Buffer)
 var _cachedBufferDecompressed = new(bytes.Buffer)
-var _cachedValidatorMapping = new(types.RedisCachedValidatorsMapping)
-
-var currentMappingMutex = &sync.RWMutex{}
+var _cachedRedisValidatorMapping = new(types.RedisCachedValidatorsMapping)
 
 var lastEpochUpdate = uint64(0)
 
@@ -44,7 +42,7 @@ func (s *Services) startIndexMappingService() {
 		r := services.NewStatusReport("api_service_validator_mapping", constants.Default, delay)
 		r(constants.Running, nil)
 		latestEpoch := cache.LatestEpoch.Get()
-		if currentValidatorMapping == nil || latestEpoch != lastEpochUpdate {
+		if currentValidatorMapping.Load() == nil || latestEpoch != lastEpochUpdate {
 			err = s.updateValidatorMapping()
 		}
 		if err != nil {
@@ -62,14 +60,14 @@ func (s *Services) startIndexMappingService() {
 
 func (s *Services) initValidatorMapping() {
 	log.Infof("initializing validator mapping")
-	lenMapping := len(_cachedValidatorMapping.Mapping)
+	lenMapping := len(_cachedRedisValidatorMapping.Mapping)
 
 	c := ValidatorMapping{}
 	c.ValidatorIndices = make(map[string]constypes.ValidatorIndex, lenMapping)
 	c.ValidatorPubkeys = make([]string, lenMapping)
-	c.ValidatorMetadata = _cachedValidatorMapping.Mapping
+	c.ValidatorMetadata = _cachedRedisValidatorMapping.Mapping
 
-	for i, v := range _cachedValidatorMapping.Mapping {
+	for i, v := range _cachedRedisValidatorMapping.Mapping {
 		if i == lenMapping {
 			break
 		}
@@ -80,30 +78,7 @@ func (s *Services) initValidatorMapping() {
 		c.ValidatorPubkeys[i] = b
 		c.ValidatorIndices[b] = j
 	}
-	currentValidatorMapping = &c
-}
-
-func (s *Services) quickUpdateValidatorMapping() {
-	log.Infof("quick updating validator mapping")
-	// update metadata by overwriting it
-	currentValidatorMapping.ValidatorMetadata = _cachedValidatorMapping.Mapping
-
-	newLastValidatorIndex := len(_cachedValidatorMapping.Mapping) - 1
-	oldLastValidatorIndex := len(currentValidatorMapping.ValidatorPubkeys) - 1
-
-	if newLastValidatorIndex <= oldLastValidatorIndex {
-		log.Debugf("no new validators to add to mapping")
-		return
-	}
-	// update mappings
-	for i := oldLastValidatorIndex + 1; i <= newLastValidatorIndex; i++ {
-		v := _cachedValidatorMapping.Mapping[i]
-		b := hexutil.Encode(v.PublicKey)
-		j := constypes.ValidatorIndex(i)
-
-		currentValidatorMapping.ValidatorPubkeys = append(currentValidatorMapping.ValidatorPubkeys, b)
-		currentValidatorMapping.ValidatorIndices[b] = j
-	}
+	currentValidatorMapping.Store(&c)
 }
 
 func (s *Services) updateValidatorMapping() error {
@@ -119,15 +94,15 @@ func (s *Services) updateValidatorMapping() error {
 
 	// decompress
 	start = time.Now()
-	_cachedBufferCompressed.Reset()
 	_cachedBufferCompressed.Write(compressed)
+	defer _cachedBufferCompressed.Reset()
 	w, err := pgzip.NewReaderN(_cachedBufferCompressed, 1_000_000, 10)
 	if err != nil {
 		return errors.Wrap(err, "failed to create pgzip reader")
 	}
 	defer w.Close()
-	_cachedBufferDecompressed.Reset()
 	_, err = w.WriteTo(_cachedBufferDecompressed)
+	defer _cachedBufferDecompressed.Reset()
 	if err != nil {
 		return errors.Wrap(err, "failed to decompress validator mapping from redis")
 	}
@@ -136,45 +111,32 @@ func (s *Services) updateValidatorMapping() error {
 	// ungob
 	start = time.Now()
 	dec := gob.NewDecoder(_cachedBufferDecompressed)
-	err = dec.Decode(&_cachedValidatorMapping)
+	err = dec.Decode(&_cachedRedisValidatorMapping)
 	if err != nil {
 		return errors.Wrap(err, "error decoding assignments data")
 	}
 	log.Debugf("decoding validator mapping from gob took %s", time.Since(start))
 
-	currentMappingMutex.Lock()
 	start = time.Now()
-	if currentValidatorMapping == nil {
-		s.initValidatorMapping()
-	} else {
-		s.quickUpdateValidatorMapping()
-	}
+	s.initValidatorMapping() // no more quick update as we are pointer swapping
 	log.Debugf("updated Validator Mapping, took %s", time.Since(start))
-	currentMappingMutex.Unlock()
-
-	// free up memory
-	_cachedBufferCompressed.Reset()
-	_cachedBufferDecompressed.Reset()
 
 	return nil
 }
 
 // GetCurrentValidatorMapping returns the current validator mapping and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the validator mapping service from updating
-func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, func(), error) {
-	currentMappingMutex.RLock()
-
-	if currentValidatorMapping == nil {
-		return nil, currentMappingMutex.RUnlock, fmt.Errorf("%w: validator mapping", ErrWaiting)
+func (s *Services) GetCurrentValidatorMapping() (*ValidatorMapping, error) {
+	// in theory the consumer can just check if the pointer is nil, but this is more explicit
+	if currentValidatorMapping.Load() == nil {
+		return nil, fmt.Errorf("%w: validator mapping", ErrWaiting)
 	}
-
-	return currentValidatorMapping, currentMappingMutex.RUnlock, nil
+	return currentValidatorMapping.Load(), nil
 }
 
 func (s *Services) GetPubkeySliceFromIndexSlice(indices []constypes.ValidatorIndex) ([]string, error) {
 	res := make([]string, len(indices))
-	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
-	defer releaseLock()
+	mapping, err := s.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +152,7 @@ func (s *Services) GetPubkeySliceFromIndexSlice(indices []constypes.ValidatorInd
 
 func (s *Services) GetIndexSliceFromPubkeySlice(pubkeys []string) ([]constypes.ValidatorIndex, error) {
 	res := make([]constypes.ValidatorIndex, len(pubkeys))
-	mapping, releaseLock, err := s.GetCurrentValidatorMapping()
-	defer releaseLock()
+	mapping, err := s.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
