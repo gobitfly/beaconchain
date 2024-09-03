@@ -9,7 +9,7 @@ import {
 } from '#components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import {
-  type InternalGetValidatorDashboardSlotVizResponse,
+  type GetValidatorDashboardSlotVizResponse,
   type SlotVizEpoch,
 } from '~/types/api/slot_viz'
 import { formatNumber } from '~/utils/format'
@@ -28,7 +28,7 @@ const { refreshOverview } = useValidatorDashboardOverviewStore()
 await Promise.all([
   useAsyncData('latest_state', () => refreshLatestState()),
   useAsyncData('test_slot_viz_data', async () => {
-    const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>(
+    const res = await $fetch<GetValidatorDashboardSlotVizResponse>(
       './mock/dashboard/slotViz.json',
     )
     slotVizData.value = res.data
@@ -39,7 +39,7 @@ await Promise.all([
 ])
 
 onMounted(async () => {
-  const res = await $fetch<InternalGetValidatorDashboardSlotVizResponse>(
+  const res = await $fetch<GetValidatorDashboardSlotVizResponse>(
     './mock/dashboard/slotViz.json',
   )
   slotVizData.value = res.data
