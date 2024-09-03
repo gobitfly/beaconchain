@@ -34,23 +34,6 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, da
 		return nil, err
 	}
 
-	latestProposedSlot := int64(-1)
-	for slot := dutiesInfo.LatestSlot; ; slot-- {
-		if _, ok := dutiesInfo.PropAssignmentsForSlot[slot]; ok {
-			if dutiesInfo.SlotStatus[slot] == 1 {
-				latestProposedSlot = int64(slot)
-				break
-			}
-		} else {
-			// No more data available
-			break
-		}
-
-		if slot == 0 {
-			break
-		}
-	}
-
 	epochToIndexMap := make(map[uint64]uint64)
 	slotToIndexMap := make(map[uint64]uint64)
 
@@ -221,7 +204,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, da
 			}
 			attestationsRef := slotVizEpochs[epochIdx].Slots[slotIdx].Attestations
 
-			if latestProposedSlot == -1 || uint64(slot) >= uint64(latestProposedSlot) {
+			if uint64(slot) >= dutiesInfo.LatestProposedSlot {
 				if attestationsRef.Scheduled == nil {
 					attestationsRef.Scheduled = &t.VDBSlotVizDuty{}
 				}
