@@ -346,11 +346,11 @@ func (d *DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, da
 	return getDummyStruct[t.VDBHeatmapTooltipData]()
 }
 
-func (d *DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBExecutionDepositsTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBConsensusDepositsTableRow]()
 }
 
