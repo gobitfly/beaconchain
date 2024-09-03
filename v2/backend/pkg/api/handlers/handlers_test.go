@@ -169,7 +169,6 @@ func TestInternalGetProductSummaryHandler(t *testing.T) {
 	respData := api_types.InternalGetProductSummaryResponse{}
 	err := json.Unmarshal([]byte(body), &respData)
 	assert.Nil(t, err, "error unmarshalling response")
-
 	assert.NotEqual(t, 0, respData.Data.ValidatorsPerDashboardLimit, "ValidatorsPerDashboardLimit should not be 0")
 	assert.NotEqual(t, 0, len(respData.Data.ApiProducts), "ApiProducts should not be empty")
 	assert.NotEqual(t, 0, len(respData.Data.ExtraDashboardValidatorsPremiumAddon), "ExtraDashboardValidatorsPremiumAddon should not be empty")
@@ -183,7 +182,6 @@ func TestInternalGetLatestStateHandler(t *testing.T) {
 	respData := api_types.InternalGetLatestStateResponse{}
 	err := json.Unmarshal([]byte(body), &respData)
 	assert.Nil(t, err, "error unmarshalling response")
-
 	assert.NotEqual(t, uint64(0), respData.Data.LatestSlot, "latest slot should not be 0")
 	assert.NotEqual(t, uint64(0), respData.Data.FinalizedEpoch, "finalized epoch should not be 0")
 }
@@ -208,10 +206,10 @@ func TestInternalLoginHandler(t *testing.T) {
 	// check if user is logged in and has a valid session
 	code, _, body = ts.get(t, "/api/i/users/me")
 	assert.Equal(t, http.StatusOK, code, "call to users/me should be successful")
+
 	meResponse := &api_types.InternalGetUserInfoResponse{}
 	err := json.Unmarshal([]byte(body), meResponse)
 	assert.Nil(t, err, "error unmarshalling response")
-
 	// check if email is censored
 	assert.Equal(t, meResponse.Data.Email, "a***n@a***n.com", "email should be a***n@a***n.com")
 
@@ -232,7 +230,6 @@ func TestInternalSearchHandler(t *testing.T) {
 	resp := api_types.InternalPostSearchResponse{}
 	err := json.Unmarshal([]byte(body), &resp)
 	assert.Nil(t, err, "error unmarshalling response")
-
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
 	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
 	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
@@ -244,7 +241,6 @@ func TestInternalSearchHandler(t *testing.T) {
 	resp = api_types.InternalPostSearchResponse{}
 	err = json.Unmarshal([]byte(body), &resp)
 	assert.Nil(t, err, "error unmarshalling response")
-
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
 	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
 	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
@@ -256,7 +252,6 @@ func TestInternalSearchHandler(t *testing.T) {
 	resp = api_types.InternalPostSearchResponse{}
 	err = json.Unmarshal([]byte(body), &resp)
 	assert.Nil(t, err, "error unmarshalling response")
-
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
 	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
 	assert.Greater(t, *resp.Data[0].NumValue, uint64(0), "returned number of validators should be greater than 0")
