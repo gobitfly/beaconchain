@@ -27,7 +27,8 @@ import (
 
 var currentDutiesInfo atomic.Pointer[SyncData]
 
-func (s *Services) startSlotVizDataService() {
+func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
+	o := sync.Once{}
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
@@ -40,6 +41,9 @@ func (s *Services) startSlotVizDataService() {
 		}
 		log.Infof("=== slotviz data updated in %s", time.Since(startTime))
 		r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
+		o.Do(func() {
+			wg.Done()
+		})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }

@@ -22,7 +22,8 @@ import (
 
 var currentEfficiencyInfo atomic.Pointer[EfficiencyData]
 
-func (s *Services) startEfficiencyDataService() {
+func (s *Services) startEfficiencyDataService(wg *sync.WaitGroup) {
+	o := sync.Once{}
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
@@ -36,6 +37,9 @@ func (s *Services) startEfficiencyDataService() {
 		} else {
 			log.Infof("=== average network efficiency data updated in %s", time.Since(startTime))
 			r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
+			o.Do(func() {
+				wg.Done()
+			})
 		}
 		utils.ConstantTimeDelay(startTime, delay)
 	}

@@ -1,10 +1,12 @@
 package handlers_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -16,11 +18,54 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
-	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 )
 
-var router *mux.Router
+var ts *testServer
 var dataAccessor dataaccess.DataAccessor
+
+type testServer struct {
+	*httptest.Server
+}
+
+// Implement a get() method on our custom testServer type. This makes a GET
+// request to a given url path using the test server client, and returns the
+// response status code, headers and body.
+func (ts *testServer) get(t *testing.T, urlPath string) (int, http.Header, string) {
+	rs, err := ts.Client().Get(ts.URL + urlPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rs.Body.Close()
+	body, err := io.ReadAll(rs.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bytes.TrimSpace(body)
+	return rs.StatusCode, rs.Header, string(body)
+}
+
+func (ts *testServer) post(t *testing.T, urlPath string, data io.Reader) (int, http.Header, string) {
+	rs, err := ts.Client().Post(ts.URL+urlPath, "application/json", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rs.Body.Close()
+	body, err := io.ReadAll(rs.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bytes.TrimSpace(body)
+	return rs.StatusCode, rs.Header, string(body)
+}
+
+func (ts *testServer) parseErrorResonse(t *testing.T, body string) api_types.ApiErrorResponse {
+	resp := api_types.ApiErrorResponse{}
+	if err := json.Unmarshal([]byte(body), &resp); err != nil {
+		t.Fatal(err)
+	}
+	return resp
+}
 
 func TestMain(m *testing.M) {
 	setup()
@@ -34,6 +79,7 @@ func TestMain(m *testing.M) {
 
 func teardown() {
 	dataAccessor.Close()
+	ts.Close()
 }
 
 func setup() {
@@ -51,89 +97,84 @@ func setup() {
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	dataAccessor = dataaccess.NewDataAccessService(cfg)
-	router = api.NewApiRouter(dataAccessor, cfg)
+	router := api.NewApiRouter(dataAccessor, cfg)
+
+	ts = &testServer{httptest.NewTLSServer(router)}
+
+	jar, _ := cookiejar.New(nil)
+	ts.Server.Client().Jar = jar
 }
 
 func TestInternalGetProductSummaryHandler(t *testing.T) {
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/i/product-summary", nil)
+	code, _, body := ts.get(t, "/api/i/product-summary")
 
-	router.ServeHTTP(w, req)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected status code 200, got %d", resp.StatusCode)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Equal(t, http.StatusOK, code)
 
 	respData := api_types.InternalGetProductSummaryResponse{}
-	err = json.Unmarshal(data, &respData)
+	err := json.Unmarshal([]byte(body), &respData)
 	if err != nil {
-		log.Infof("%s", string(data))
+		log.Infof("%s", body)
 		t.Fatal(err)
 	}
 
-	if respData.Data.ValidatorsPerDashboardLimit == 0 {
-		t.Fatal("ValidatorsPerDashboardLimit is 0")
-	}
-
-	if len(respData.Data.ApiProducts) == 0 {
-		t.Fatal("ApiProducts length is 0")
-	}
+	assert.NotEqual(t, 0, respData.Data.ValidatorsPerDashboardLimit, "ValidatorsPerDashboardLimit should not be 0")
+	assert.NotEqual(t, 0, len(respData.Data.ApiProducts), "ApiProducts should not be empty")
+	assert.NotEqual(t, 0, len(respData.Data.ExtraDashboardValidatorsPremiumAddon), "ExtraDashboardValidatorsPremiumAddon should not be empty")
+	assert.NotEqual(t, 0, len(respData.Data.PremiumProducts), "PremiumProducts should not be empty")
 }
 
 func TestInternalGetLatestStateHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/i/latest-state", nil)
-
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected status code 200, got %d", resp.StatusCode)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	code, _, body := ts.get(t, "//api/i/latest-state")
+	assert.Equal(t, http.StatusOK, code)
 
 	respData := api_types.InternalGetLatestStateResponse{}
-	err = json.Unmarshal(data, &respData)
-	if err != nil {
+	if err := json.Unmarshal([]byte(body), &respData); err != nil {
 		t.Fatal(err)
 	}
 
-	if respData.Data.LatestSlot == 0 {
-		t.Fatal("latest slot is 0")
-	}
-
-	if respData.Data.FinalizedEpoch == 0 {
-		t.Fatal("finalized epoch is 0")
-	}
+	assert.NotEqual(t, uint64(0), respData.Data.LatestSlot, "latest slot should not be 0")
+	assert.NotEqual(t, uint64(0), respData.Data.FinalizedEpoch, "finalized epoch should not be 0")
 }
 
 func TestInternalPostAdConfigurationsHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/api/i/ad-configurations", nil)
+	code, _, body := ts.get(t, "/api/i/ad-configurations")
+	assert.Equal(t, http.StatusUnauthorized, code)
 
-	w := httptest.NewRecorder()
+	resp := ts.parseErrorResonse(t, body)
+	assert.Equal(t, "unauthorized: not authenticated", resp.Error)
 
-	router.ServeHTTP(w, req)
+	// login
+	code, _, body = ts.post(t, "/api/i/login", bytes.NewBuffer([]byte(`{"email": "admin@admin.com", "password": "admin"}`)))
+	assert.Equal(t, http.StatusNotFound, code)
+	resp = ts.parseErrorResonse(t, body)
+	assert.Equal(t, "not found: user not found", resp.Error)
+}
 
-	resp := w.Result()
-	defer resp.Body.Close()
+func TestInternalLoginHandler(t *testing.T) {
+	// login with email in wrong format
+	code, _, body := ts.post(t, "/api/i/login", bytes.NewBuffer([]byte(`{"email": "admin", "password": "admin"}`)))
+	assert.Equal(t, http.StatusBadRequest, code)
+	resp := ts.parseErrorResonse(t, body)
+	assert.Equal(t, "email: given value 'admin' has incorrect format", resp.Error, "unexpected error message")
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected status code 401, got %d", resp.StatusCode)
+	// login with wrong user
+	code, _, body = ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "admin"}`))
+	assert.Equal(t, http.StatusNotFound, code)
+	resp = ts.parseErrorResonse(t, body)
+	assert.Equal(t, "not found: user not found", resp.Error, "unexpected error message") // TODO: this should not return the same error as a user with a wrong password
+}
+
+func TestInternalSearchHandler(t *testing.T) {
+	// search for validator with index 5
+	code, _, body := ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"5","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
+	assert.Equal(t, 200, code)
+
+	resp := api_types.InternalPostSearchResponse{}
+	if err := json.Unmarshal([]byte(body), &resp); err != nil {
+		t.Fatal(err)
 	}
+
+	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
+	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
+	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
 }
