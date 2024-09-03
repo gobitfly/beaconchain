@@ -163,7 +163,6 @@ func setup() {
 
 func TestInternalGetProductSummaryHandler(t *testing.T) {
 	code, _, body := ts.get(t, "/api/i/product-summary")
-
 	assert.Equal(t, http.StatusOK, code)
 
 	respData := api_types.InternalGetProductSummaryResponse{}
@@ -225,7 +224,7 @@ func TestInternalLoginHandler(t *testing.T) {
 func TestInternalSearchHandler(t *testing.T) {
 	// search for validator with index 5
 	code, _, body := ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"5","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
-	assert.Equal(t, 200, code)
+	assert.Equal(t, http.StatusOK, code)
 
 	resp := api_types.InternalPostSearchResponse{}
 	err := json.Unmarshal([]byte(body), &resp)
@@ -236,7 +235,7 @@ func TestInternalSearchHandler(t *testing.T) {
 
 	// search for validator by pubkey
 	code, _, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x9699af2bad9826694a480cb523cbe545dc41db955356b3b0d4871f1cf3e4924ae4132fa8c374a0505ae2076d3d65b3e0","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
-	assert.Equal(t, 200, code)
+	assert.Equal(t, http.StatusOK, code)
 
 	resp = api_types.InternalPostSearchResponse{}
 	err = json.Unmarshal([]byte(body), &resp)
@@ -247,7 +246,7 @@ func TestInternalSearchHandler(t *testing.T) {
 
 	// search for validator by withdawal address
 	code, _, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x0e5dda855eb1de2a212cd1f62b2a3ee49d20c444","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
-	assert.Equal(t, 200, code)
+	assert.Equal(t, http.StatusOK, code)
 
 	resp = api_types.InternalPostSearchResponse{}
 	err = json.Unmarshal([]byte(body), &resp)
@@ -255,4 +254,33 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
 	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
 	assert.Greater(t, *resp.Data[0].NumValue, uint64(0), "returned number of validators should be greater than 0")
+}
+
+func TestSlotVizHandler(t *testing.T) {
+	code, _, body := ts.get(t, "/api/i/validator-dashboards/NQ/slot-viz")
+	assert.Equal(t, http.StatusOK, code)
+
+	resp := api_types.GetValidatorDashboardSlotVizResponse{}
+	err := json.Unmarshal([]byte(body), &resp)
+	assert.Nil(t, err, "error unmarshalling response")
+	assert.Equal(t, 4, len(resp.Data), "response data should contain the last 4 epochs")
+
+	headStateCount := 0
+	for _, epoch := range resp.Data {
+
+		if epoch.State == "head" { // count the amount of head epochs returned, should be exactly 1
+			headStateCount++
+		}
+		attestationAssignments := 0
+		assert.Equal(t, 32, len(epoch.Slots), "each epoch should contain 32 slots")
+
+		for _, slot := range epoch.Slots {
+			if slot.Attestations != nil { // count the amount of attestation assignments for each epoch, should be exactly 1
+				attestationAssignments++
+			}
+		}
+
+		assert.Equal(t, attestationAssignments, 1, "epoch should have exactly one attestation assignment")
+	}
+	assert.Equal(t, 1, headStateCount, "one of the last 4 epochs should be in head state")
 }
