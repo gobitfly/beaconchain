@@ -35,7 +35,6 @@ func newSessionManager(cfg *types.Config) *scs.SessionManager {
 		secure = true
 	}
 	scs.Cookie.Secure = secure
-	log.Info("Session cookie secure:", secure)
 	scs.Cookie.SameSite = sameSite
 
 	scs.Store = redisstore.New(pool)
