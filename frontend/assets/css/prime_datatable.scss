@@ -31,6 +31,10 @@
   }
   .p-datatable-footer{
     border: none;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    left: 0;
   }
   .p-datatable-thead {
     > tr {
