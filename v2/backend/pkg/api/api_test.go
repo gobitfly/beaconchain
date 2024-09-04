@@ -71,7 +71,7 @@ func (ts *testServer) parseErrorResonse(t *testing.T, body string) api_types.Api
 
 func TestMain(m *testing.M) {
 	setup()
-	log.Info("test stup completed")
+	log.Info("test setup completed")
 	code := m.Run()
 	teardown()
 
@@ -149,7 +149,9 @@ func setup() {
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
+	log.Info("initializing data access service")
 	dataAccessor = dataaccess.NewDataAccessService(cfg)
+	log.Info("initializing api router")
 	router := api.NewApiRouter(dataAccessor, cfg)
 
 	ts = &testServer{httptest.NewTLSServer(router)}
