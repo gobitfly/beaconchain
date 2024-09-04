@@ -334,7 +334,7 @@ func TestSlotVizHandler(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, attestationAssignments, 1, "epoch should have exactly one attestation assignment")
+		assert.Equal(t, 1, attestationAssignments, "epoch should have exactly one attestation assignment")
 	}
 	assert.Equal(t, 1, headStateCount, "one of the last 4 epochs should be in head state")
 }
