@@ -1,9 +1,9 @@
-name: Backend-Linter
+name: Backend-Integration-Test
 
 on:
   push:
-    paths:
-      - 'backend/**'
+    # paths:
+    #   - 'backend/**'
     branches:
       - main
       - staging
@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   build:
-    name: lint
+    name: integration-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -33,12 +33,8 @@ jobs:
         with:
           go-version: '1.23'
           cache: false
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.60.1
-          working-directory: backend
-          args: --timeout=5m
+      - name: Display Go version
+        run: go version
 
 
 
