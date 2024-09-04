@@ -1,0 +1,40 @@
+name: Backend-Integration-Test
+on:
+  push:
+    paths:
+      - 'backend/**'
+    branches:
+      - main
+      - staging
+      - BEDS-401/api_integration_tests
+  pull_request:
+    paths:
+      - 'backend/**'
+    branches:
+      - '*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  build:
+    name: integration-test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+          go-version-file: 'backend/go.mod'
+      - name: Test with the Go CLI
+        working-directory: backend
+        run: go test -v ./pkg/api/handlers/* -config "${{ secrets.CI_CONFIG_PATH }}"
+
+
+
