@@ -267,7 +267,6 @@ const deleteAction = async (
       await fetch(
         API_PATH.DASHBOARD_DELETE_VALIDATOR,
         { body: { key } },
-        { dashboardKey: key },
       )
     }
     else {
