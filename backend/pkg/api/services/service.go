@@ -45,8 +45,10 @@ func (s *Services) InitServices() {
 	go s.startEfficiencyDataService(wg)
 	go s.startEmailSenderService(wg)
 
-	wg.Wait()
 	log.Infof("initializing prices...")
 	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)
 	log.Infof("...prices initialized")
+
+	wg.Wait()
+	log.Infof("...services initialized")
 }
