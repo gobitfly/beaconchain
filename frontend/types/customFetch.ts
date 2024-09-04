@@ -29,7 +29,7 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_GROUP_MODIFY = '/validator-dashboards/group-modify',
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_INDICES = '/validator-dashboards/indices',
-  DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
+  DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/{dashboard_id}/validators',
   DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
   DASHBOARD_VALIDATOR_REWARDS_CHART = '/dashboard/validatorRewardsChart',
   DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
@@ -115,11 +115,10 @@ export const mapping: Record<string, MappingData> = {
     path: '/account-dashboards/{dashboardKey}',
   },
   [API_PATH.DASHBOARD_DELETE_VALIDATOR]: {
-    getPath: values =>
-      `/validator-dashboards/${values?.dashboardKey}/validators/bulk-deletions`,
-    method: 'POST',
+    getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
+    method: 'DELETE',
     mock: false,
-    path: '/validator-dashboards/{dashboardKey}/validators/bulk-deletions',
+    path: '/validator-dashboards/{dashboardKey}',
   },
   [API_PATH.DASHBOARD_EL_DEPOSITS]: {
     getPath: values =>
