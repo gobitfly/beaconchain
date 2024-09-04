@@ -87,7 +87,7 @@ func (s *ServerDbConnections) checkDBConnections() {
 			defer wg.Done()
 			log.Tracef("checking db connection for %s", entry.ID)
 			// context with deadline
-			ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 			defer cancel()
 			r := NewStatusReport(entry.ID, constants.Default, 10*time.Second)
 			switch edb := entry.DB.(type) {
