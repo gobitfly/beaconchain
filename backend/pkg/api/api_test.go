@@ -151,6 +151,8 @@ func setup() {
 
 	log.Info("initializing data access service")
 	dataAccessor = dataaccess.NewDataAccessService(cfg)
+	dataAccessor.StartDataAccessServices()
+
 	log.Info("initializing api router")
 	router := api.NewApiRouter(dataAccessor, cfg)
 
