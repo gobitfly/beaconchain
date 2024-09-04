@@ -84,7 +84,7 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	// Create the services
 	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.clickhouseReader, das.bigtable, das.persistentRedisDbClient)
 
-	log.Info("Services created")
+	log.Info("Services created_")
 	// Initialize the services
 	das.services.InitServices()
 
