@@ -71,6 +71,7 @@ func (ts *testServer) parseErrorResonse(t *testing.T, body string) api_types.Api
 
 func TestMain(m *testing.M) {
 	setup()
+	log.Info("test stup completed")
 	code := m.Run()
 	teardown()
 
