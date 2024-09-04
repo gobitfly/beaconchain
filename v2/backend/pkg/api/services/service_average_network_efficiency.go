@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -19,10 +20,10 @@ import (
 // TODO: As a service this will not scale well as it is running once on every instance of the api.
 // Instead of service this should be moved to the exporter.
 
-var currentEfficiencyInfo *EfficiencyData
-var currentEfficiencyMutex = &sync.RWMutex{}
+var currentEfficiencyInfo atomic.Pointer[EfficiencyData]
 
-func (s *Services) startEfficiencyDataService() {
+func (s *Services) startEfficiencyDataService(wg *sync.WaitGroup) {
+	o := sync.Once{}
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
@@ -36,6 +37,9 @@ func (s *Services) startEfficiencyDataService() {
 		} else {
 			log.Infof("=== average network efficiency data updated in %s", time.Since(startTime))
 			r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
+			o.Do(func() {
+				wg.Done()
+			})
 		}
 		utils.ConstantTimeDelay(startTime, delay)
 	}
@@ -128,26 +132,22 @@ func (s *Services) updateEfficiencyData() error {
 	}
 
 	// update currentEfficiencyInfo
-	currentEfficiencyMutex.Lock()
-	if currentEfficiencyInfo == nil { // info on first iteration
+	if currentEfficiencyInfo.Load() == nil { // info on first iteration
 		log.Infof("== average network efficiency data updater initialized ==")
 	}
-	currentEfficiencyInfo = efficiencyInfo
-	currentEfficiencyMutex.Unlock()
+	currentEfficiencyInfo.Store(efficiencyInfo)
 
 	return nil
 }
 
 // GetCurrentEfficiencyInfo returns the current efficiency info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the efficiency service from updating
-func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, func(), error) {
-	currentEfficiencyMutex.RLock()
-
-	if currentEfficiencyInfo == nil {
-		return nil, currentEfficiencyMutex.RUnlock, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
+func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, error) {
+	if currentEfficiencyInfo.Load() == nil {
+		return nil, fmt.Errorf("%w: efficiencyInfo", ErrWaiting)
 	}
 
-	return currentEfficiencyInfo, currentEfficiencyMutex.RUnlock, nil
+	return currentEfficiencyInfo.Load(), nil
 }
 
 func (s *Services) initEfficiencyInfo() *EfficiencyData {

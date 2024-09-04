@@ -46,7 +46,7 @@ func (s *ServiceTimeoutDetector) runChecks() {
 		// ignore
 		return
 	}
-	log.Debugf("checking services timeouts")
+	log.Tracef("checking services timeouts")
 
 	query := `
 		with active_reports as (
@@ -97,7 +97,7 @@ func (s *ServiceTimeoutDetector) runChecks() {
 		where status = 'running' and timeouts_at < now()
 		ORDER BY event_id ASC, inserted_at DESC`
 	// context with deadline
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 	defer cancel()
 	var victims []struct {
 		EventID    string            `db:"event_id"`

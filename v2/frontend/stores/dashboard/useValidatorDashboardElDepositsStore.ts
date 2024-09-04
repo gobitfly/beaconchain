@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type {
-  InternalGetValidatorDashboardExecutionLayerDepositsResponse,
-  InternalGetValidatorDashboardTotalExecutionDepositsResponse,
+  GetValidatorDashboardExecutionLayerDepositsResponse,
+  GetValidatorDashboardTotalExecutionDepositsResponse,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
@@ -11,7 +11,7 @@ const validatorDashboardElDepositsStore = defineStore(
   'validator_dashboard_el_deposits_store',
   () => {
     const data
-      = ref<InternalGetValidatorDashboardExecutionLayerDepositsResponse>()
+      = ref<GetValidatorDashboardExecutionLayerDepositsResponse>()
     const total = ref<string>()
     const query = ref<TableQueryParams>()
 
@@ -50,7 +50,7 @@ export function useValidatorDashboardElDepositsStore() {
     storedQuery.value = query
     isLoadingDeposits.value = true
     const res
-      = await fetch<InternalGetValidatorDashboardExecutionLayerDepositsResponse>(
+      = await fetch<GetValidatorDashboardExecutionLayerDepositsResponse>(
         API_PATH.DASHBOARD_EL_DEPOSITS,
         undefined,
         { dashboardKey },
@@ -74,7 +74,7 @@ export function useValidatorDashboardElDepositsStore() {
     }
     isLoadingTotal.value = true
     const res
-      = await fetch<InternalGetValidatorDashboardTotalExecutionDepositsResponse>(
+      = await fetch<GetValidatorDashboardTotalExecutionDepositsResponse>(
         API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL,
         undefined,
         { dashboardKey },

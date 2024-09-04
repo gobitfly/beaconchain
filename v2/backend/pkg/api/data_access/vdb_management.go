@@ -173,8 +173,7 @@ func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, pu
 		return []t.VDBValidator{}, nil
 	}
 
-	mapping, release, err := d.services.GetCurrentValidatorMapping()
-	defer release()
+	mapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
 	}
@@ -233,64 +232,25 @@ func (d *DataAccessService) CreateValidatorDashboard(ctx context.Context, userId
 }
 
 func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
-	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
-	}
-	defer utils.Rollback(tx)
-
-	// Delete the dashboard
-	_, err = tx.ExecContext(ctx, `
+	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = $1
 	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all groups for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1
-	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all validators for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1
-	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all shared dashboards for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_sharing WHERE dashboard_id = $1
-	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx to remove a validator dashboard: %w", err)
-	}
-	return nil
+	return err
 }
 
-func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
 	result := &t.VDBPostArchivingReturnData{}
 
-	var archivedReason *string
-	if archived {
-		reason := enums.VDBArchivedReasons.User.ToString()
-		archivedReason = &reason
+	var archivedReasonText *string
+	if archivedReason != nil {
+		reason := archivedReason.ToString()
+		archivedReasonText = &reason
 	}
 
 	err := d.alloyWriter.GetContext(ctx, result, `
 		UPDATE users_val_dashboards SET is_archived = $1 WHERE id = $2
 		RETURNING id, is_archived IS NOT NULL AS is_archived
-	`, archivedReason, dashboardId)
+	`, archivedReasonText, dashboardId)
 	if err != nil {
 		return nil, err
 	}
@@ -314,12 +274,12 @@ func (d *DataAccessService) UpdateValidatorDashboardName(ctx context.Context, da
 
 func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
 	data := t.VDBOverviewData{}
-	wg := errgroup.Group{}
+	eg := errgroup.Group{}
 	var err error
 
 	// Network
 	if dashboardId.Validators == nil {
-		wg.Go(func() error {
+		eg.Go(func() error {
 			query := `SELECT network
 			FROM
 				users_val_dashboards
@@ -333,7 +293,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
-		wg.Go(func() error {
+		eg.Go(func() error {
 			var queryResult []struct {
 				Id    uint32 `db:"id"`
 				Name  string `db:"name"`
@@ -351,17 +311,18 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			if err := d.alloyReader.SelectContext(ctx, &queryResult, query, dashboardId.Id); err != nil {
 				return err
 			}
+
 			for _, res := range queryResult {
 				data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: uint64(res.Id), Name: res.Name, Count: res.Count})
 			}
+
 			return nil
 		})
 	}
 
 	// Validator status and balance
-	wg.Go(func() error {
-		validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-		defer releaseValMapLock()
+	eg.Go(func() error {
+		validatorMapping, err := d.services.GetCurrentValidatorMapping()
 		if err != nil {
 			return err
 		}
@@ -369,6 +330,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		if err != nil {
 			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
+			data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
 		}
 
 		// Status
@@ -469,7 +434,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
-		wg.Go(func() error {
+		eg.Go(func() error {
 			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, hours)
 			if err != nil {
 				return err
@@ -478,7 +443,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 
 		// Efficiency
-		wg.Go(func() error {
+		eg.Go(func() error {
 			ds := goqu.Dialect("postgres").
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
@@ -543,7 +508,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", 30*24, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
 	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
-	err = wg.Wait()
+	err = eg.Wait()
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
@@ -601,33 +566,11 @@ func (d *DataAccessService) UpdateValidatorDashboardGroup(ctx context.Context, d
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
-	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
-	}
-	defer utils.Rollback(tx)
-
 	// Delete the group
-	_, err = tx.ExecContext(ctx, `
+	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all validators for the group
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND group_id = $2
-	`, dashboardId, groupId)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
-	}
-	return nil
+	return err
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
@@ -708,8 +651,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 	}
 
 	// Get the current validator state
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, nil, err
 	}
