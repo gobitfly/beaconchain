@@ -34,7 +34,7 @@ jobs:
           go-version-file: 'backend/go.mod'
       - name: Test with the Go CLI
         working-directory: backend
-        run: go test -v ./pkg/api/handlers/* -config "${{ secrets.CI_CONFIG_PATH }}"
+        run: go test ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"
 
 
 

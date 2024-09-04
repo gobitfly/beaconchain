@@ -1,4 +1,4 @@
-package handlers_test
+package api_test
 
 import (
 	"bytes"
@@ -35,11 +35,14 @@ type testServer struct {
 	*httptest.Server
 }
 
-// Implement a get() method on our custom testServer type. This makes a GET
-// request to a given url path using the test server client, and returns the
-// response status code, headers and body.
-func (ts *testServer) get(t *testing.T, urlPath string) (int, string) {
-	rs, err := ts.Client().Get(ts.URL + urlPath)
+func (ts *testServer) request(t *testing.T, method, urlPath string, data io.Reader) (int, string) {
+	req, err := http.NewRequest(method, ts.URL+urlPath, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	rs, err := ts.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,19 +54,11 @@ func (ts *testServer) get(t *testing.T, urlPath string) (int, string) {
 	bytes.TrimSpace(body)
 	return rs.StatusCode, string(body)
 }
-
+func (ts *testServer) get(t *testing.T, urlPath string) (int, string) {
+	return ts.request(t, http.MethodGet, urlPath, nil)
+}
 func (ts *testServer) post(t *testing.T, urlPath string, data io.Reader) (int, string) {
-	rs, err := ts.Client().Post(ts.URL+urlPath, "application/json", data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rs.Body.Close()
-	body, err := io.ReadAll(rs.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bytes.TrimSpace(body)
-	return rs.StatusCode, string(body)
+	return ts.request(t, http.MethodPost, urlPath, data)
 }
 
 func (ts *testServer) parseErrorResonse(t *testing.T, body string) api_types.ApiErrorResponse {
@@ -115,7 +110,7 @@ func setup() {
 		log.Fatal(err, "error connection to test db", 0)
 	}
 
-	if err := goose.Up(tempDb.DB, "../../../pkg/commons/db/migrations/postgres"); err != nil {
+	if err := goose.Up(tempDb.DB, "../../pkg/commons/db/migrations/postgres"); err != nil {
 		log.Fatal(err, "error running migrations", 0)
 	}
 
@@ -189,44 +184,64 @@ func TestInternalGetLatestStateHandler(t *testing.T) {
 }
 
 func TestInternalLoginHandler(t *testing.T) {
-	// login with email in wrong format
-	code, body := ts.post(t, "/api/i/login", bytes.NewBuffer([]byte(`{"email": "admin", "password": "admin"}`)))
-	assert.Equal(t, http.StatusBadRequest, code)
-	resp := ts.parseErrorResonse(t, body)
-	assert.Equal(t, "email: given value 'admin' has incorrect format", resp.Error, "unexpected error message")
+	t.Run("login with email in wrong format", func(t *testing.T) {
+		code, body := ts.post(t, "/api/i/login", bytes.NewBuffer([]byte(`{"email": "admin", "password": "admin"}`)))
+		assert.Equal(t, http.StatusBadRequest, code)
+		resp := ts.parseErrorResonse(t, body)
+		assert.Equal(t, "email: given value 'admin' has incorrect format", resp.Error, "unexpected error message")
+	})
+	t.Run("login with correct user and wrong password", func(t *testing.T) {
+		code, body := ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "wrong"}`))
+		assert.Equal(t, http.StatusUnauthorized, code, "login should not be successful")
+		resp := ts.parseErrorResonse(t, body)
+		assert.Equal(t, "unauthorized: invalid email or password", resp.Error, "unexpected error message")
+	})
 
-	// login with correct user and wrong password
-	code, body = ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "wrong"}`))
-	assert.Equal(t, http.StatusUnauthorized, code, "login should not be successful")
-	resp = ts.parseErrorResonse(t, body)
-	assert.Equal(t, "unauthorized: invalid email or password", resp.Error, "unexpected error message")
+	t.Run("login with correct user and password", func(t *testing.T) {
+		code, _ := ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "admin"}`))
+		assert.Equal(t, http.StatusOK, code, "login should be successful")
+	})
 
-	// login with correct user and password
-	code, _ = ts.post(t, "/api/i/login", bytes.NewBufferString(`{"email": "admin@admin.com", "password": "admin"}`))
-	assert.Equal(t, http.StatusOK, code, "login should be successful")
+	t.Run("check if user is logged in and has a valid session", func(t *testing.T) {
+		code, body := ts.get(t, "/api/i/users/me")
+		assert.Equal(t, http.StatusOK, code, "call to users/me should be successful")
 
-	// check if user is logged in and has a valid session
-	code, body = ts.get(t, "/api/i/users/me")
-	assert.Equal(t, http.StatusOK, code, "call to users/me should be successful")
+		meResponse := &api_types.InternalGetUserInfoResponse{}
+		err := json.Unmarshal([]byte(body), meResponse)
+		assert.Nil(t, err, "error unmarshalling response")
+		// check if email is censored
+		assert.Equal(t, meResponse.Data.Email, "a***n@a***n.com", "email should be a***n@a***n.com")
+	})
 
-	meResponse := &api_types.InternalGetUserInfoResponse{}
-	err := json.Unmarshal([]byte(body), meResponse)
-	assert.Nil(t, err, "error unmarshalling response")
-	// check if email is censored
-	assert.Equal(t, meResponse.Data.Email, "a***n@a***n.com", "email should be a***n@a***n.com")
-
-	// check if logout works
-	code, _ = ts.post(t, "/api/i/logout", bytes.NewBufferString(``))
-	assert.Equal(t, http.StatusOK, code, "logout should be successful")
-
-	// check if user is logged out
-	code, _ = ts.get(t, "/api/i/users/me")
-	assert.Equal(t, http.StatusUnauthorized, code, "call to users/me should be unauthorized")
+	t.Run("check if logout works", func(t *testing.T) {
+		code, _ := ts.post(t, "/api/i/logout", bytes.NewBufferString(``))
+		assert.Equal(t, http.StatusOK, code, "logout should be successful")
+	})
+	t.Run("// check if user is logged out", func(t *testing.T) {
+		code, _ := ts.get(t, "/api/i/users/me")
+		assert.Equal(t, http.StatusUnauthorized, code, "call to users/me should be unauthorized")
+	})
 }
 
 func TestInternalSearchHandler(t *testing.T) {
 	// search for validator with index 5
-	code, body := ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"5","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
+	code, body := ts.post(t, "/api/i/search", bytes.NewBufferString(`
+	{
+		"input":"5",
+		"networks":[
+			17000
+		],
+		"types":[
+			"validators_by_deposit_ens_name",
+			"validators_by_deposit_address",
+			"validators_by_withdrawal_ens_name",
+			"validators_by_withdrawal_address",
+			"validators_by_withdrawal_credential",
+			"validator_by_index",
+			"validator_by_public_key",
+			"validators_by_graffiti"
+		]
+	}`))
 	assert.Equal(t, http.StatusOK, code)
 
 	resp := api_types.InternalPostSearchResponse{}
@@ -237,7 +252,23 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
 
 	// search for validator by pubkey
-	code, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x9699af2bad9826694a480cb523cbe545dc41db955356b3b0d4871f1cf3e4924ae4132fa8c374a0505ae2076d3d65b3e0","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
+	code, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`
+	{
+		"input":"0x9699af2bad9826694a480cb523cbe545dc41db955356b3b0d4871f1cf3e4924ae4132fa8c374a0505ae2076d3d65b3e0",
+		"networks":[
+			17000
+		],
+		"types":[
+			"validators_by_deposit_ens_name",
+			"validators_by_deposit_address",
+			"validators_by_withdrawal_ens_name",
+			"validators_by_withdrawal_address",
+			"validators_by_withdrawal_credential",
+			"validator_by_index",
+			"validator_by_public_key",
+			"validators_by_graffiti"
+		]
+	}`))
 	assert.Equal(t, http.StatusOK, code)
 
 	resp = api_types.InternalPostSearchResponse{}
@@ -248,7 +279,23 @@ func TestInternalSearchHandler(t *testing.T) {
 	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
 
 	// search for validator by withdawal address
-	code, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`{"input":"0x0e5dda855eb1de2a212cd1f62b2a3ee49d20c444","networks":[17000],"types":["validators_by_deposit_ens_name","validators_by_deposit_address","validators_by_withdrawal_ens_name","validators_by_withdrawal_address","validators_by_withdrawal_credential","validator_by_index","validator_by_public_key","validators_by_graffiti"]}`))
+	code, body = ts.post(t, "/api/i/search", bytes.NewBufferString(`
+	{
+		"input":"0x0e5dda855eb1de2a212cd1f62b2a3ee49d20c444",
+		"networks":[
+			17000
+		],
+		"types":[
+			"validators_by_deposit_ens_name",
+			"validators_by_deposit_address",
+			"validators_by_withdrawal_ens_name",
+			"validators_by_withdrawal_address",
+			"validators_by_withdrawal_credential",
+			"validator_by_index",
+			"validator_by_public_key",
+			"validators_by_graffiti"
+		]
+	}`))
 	assert.Equal(t, http.StatusOK, code)
 
 	resp = api_types.InternalPostSearchResponse{}
