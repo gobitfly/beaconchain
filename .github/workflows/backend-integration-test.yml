@@ -1,8 +1,8 @@
 name: Backend-Integration-Test
 on:
   push:
-    # paths:
-    #   - 'backend/**'
+    paths:
+      - 'backend/**'
     branches:
       - main
       - staging
