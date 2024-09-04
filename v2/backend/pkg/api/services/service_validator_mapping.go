@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -33,8 +34,9 @@ var _cachedRedisValidatorMapping = new(types.RedisCachedValidatorsMapping)
 
 var lastEpochUpdate = uint64(0)
 
-func (s *Services) startIndexMappingService() {
+func (s *Services) startIndexMappingService(wg *sync.WaitGroup) {
 	var err error
+	o := sync.Once{}
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
@@ -53,6 +55,9 @@ func (s *Services) startIndexMappingService() {
 			log.Infof("=== validator mapping updated in %s", time.Since(startTime))
 			r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
 			lastEpochUpdate = latestEpoch
+			o.Do(func() {
+				wg.Done()
+			})
 		}
 		utils.ConstantTimeDelay(startTime, delay)
 	}
