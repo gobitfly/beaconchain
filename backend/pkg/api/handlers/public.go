@@ -530,7 +530,16 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	indices, publicKeys := v.checkValidatorList(r.URL.Query().Get("validators"), forbidEmpty)
+	var indices []uint64
+	var publicKeys []string
+	req := struct {
+		Validators []intOrString `json:"validators"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	indices, publicKeys = v.checkValidators(req.Validators, false)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
