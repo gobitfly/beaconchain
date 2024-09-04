@@ -80,9 +80,11 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	db.BigtableClient = das.bigtable
 	db.PersistentRedisDbClient = das.persistentRedisDbClient
 
+	log.Info("DataAccessService initialized")
 	// Create the services
 	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.clickhouseReader, das.bigtable, das.persistentRedisDbClient)
 
+	log.Info("Services created")
 	// Initialize the services
 	das.services.InitServices()
 
