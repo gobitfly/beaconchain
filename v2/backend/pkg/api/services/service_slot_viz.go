@@ -207,6 +207,9 @@ func (s *Services) updateSlotVizData() error {
 		if duty.Slot > dutiesInfo.LatestSlot {
 			dutiesInfo.LatestSlot = duty.Slot
 		}
+		if duty.Status == 1 && duty.Slot > dutiesInfo.LatestProposedSlot {
+			dutiesInfo.LatestProposedSlot = duty.Slot
+		}
 		dutiesInfo.SlotStatus[duty.Slot] = duty.Status
 		dutiesInfo.SlotBlock[duty.Slot] = duty.Block
 		if duty.Status == 1 { // 1: Proposed
@@ -296,6 +299,7 @@ func (s *Services) GetCurrentDutiesInfo() (*SyncData, error) {
 func (s *Services) initDutiesInfo() *SyncData {
 	dutiesInfo := SyncData{}
 	dutiesInfo.LatestSlot = uint64(0)
+	dutiesInfo.LatestProposedSlot = uint64(0)
 	dutiesInfo.SlotStatus = make(map[uint64]int8)
 	dutiesInfo.SlotBlock = make(map[uint64]uint64)
 	dutiesInfo.SlotSyncParticipated = make(map[uint64]map[constypes.ValidatorIndex]bool)
@@ -322,6 +326,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 
 	dutiesInfo := &SyncData{
 		LatestSlot:                   p.LatestSlot,
+		LatestProposedSlot:           p.LatestProposedSlot,
 		SlotStatus:                   make(map[uint64]int8, len(p.SlotStatus)),
 		SlotBlock:                    make(map[uint64]uint64, len(p.SlotBlock)),
 		SlotSyncParticipated:         make(map[uint64]map[constypes.ValidatorIndex]bool, len(p.SlotSyncParticipated)),
@@ -455,6 +460,7 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 
 type SyncData struct {
 	LatestSlot                   uint64
+	LatestProposedSlot           uint64
 	SlotStatus                   map[uint64]int8            // slot -> status
 	SlotBlock                    map[uint64]uint64          // slot -> block
 	SlotSyncParticipated         map[uint64]map[uint64]bool // slot -> validatorindex -> participated
