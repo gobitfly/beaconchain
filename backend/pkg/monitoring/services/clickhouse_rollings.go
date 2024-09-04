@@ -64,7 +64,7 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			}
 			log.Tracef("checking clickhouse rolling %s", rolling)
 			// context with deadline
-			ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 			defer cancel()
 			var delta uint64
 			err := db.ClickHouseReader.GetContext(ctx, &delta, fmt.Sprintf(`
