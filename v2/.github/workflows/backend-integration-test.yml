@@ -35,7 +35,7 @@ jobs:
           go-version-file: 'backend/go.mod'
       - name: Test with the Go CLI
         working-directory: backend
-        run: go test -v ./backend/pkg/api/handlers/*
+        run: go test -v ./pkg/api/handlers/*
 
 
 
