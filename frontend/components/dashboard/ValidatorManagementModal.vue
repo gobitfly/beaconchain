@@ -152,10 +152,10 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   }
 
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT_DELETE,
     {
-      method: 'DELETE',
-      query: { validators: validators.join(',') },
+      body: JSON.stringify({ validators }),
+      method: 'POST',
     },
     { dashboardKey: dashboardKey.value },
   )
