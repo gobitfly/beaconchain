@@ -19,7 +19,6 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, da
 
 	// Get min/max slot/epoch
 	headEpoch := cache.LatestEpoch.Get() // Reminder: Currently it is possible to get the head epoch from the cache but nothing sets it in v2
-	latestProposedSlot := cache.LatestProposedSlot.Get()
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
 	minEpoch := uint64(0)
@@ -205,7 +204,7 @@ func (d *DataAccessService) GetValidatorDashboardSlotViz(ctx context.Context, da
 			}
 			attestationsRef := slotVizEpochs[epochIdx].Slots[slotIdx].Attestations
 
-			if uint64(slot) >= latestProposedSlot {
+			if uint64(slot) >= dutiesInfo.LatestProposedSlot {
 				if attestationsRef.Scheduled == nil {
 					attestationsRef.Scheduled = &t.VDBSlotVizDuty{}
 				}
