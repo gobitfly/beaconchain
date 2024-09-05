@@ -478,9 +478,22 @@ func setCLConfig(cfg *types.Config) error {
 		cfg.Chain.ClConfig = *chainConfig
 	}
 
-	// Set log level based on environment variable
-	if strings.ToLower(os.Getenv("LOG_LEVEL")) == "debug" {
+	// rewrite to match to allow trace as well
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "trace":
+		logrus.SetLevel(logrus.TraceLevel)
+	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
 	}
 
 	return nil
