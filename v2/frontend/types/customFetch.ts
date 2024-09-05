@@ -116,9 +116,9 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.DASHBOARD_DELETE_VALIDATOR]: {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
-    method: 'DELETE',
+    method: 'POST',
     mock: false,
-    path: '/validator-dashboards/{dashboardKey}',
+    path: '/validator-dashboards/{dashboard_id}/validators/bulk-deletions',
   },
   [API_PATH.DASHBOARD_EL_DEPOSITS]: {
     getPath: values =>
@@ -221,7 +221,7 @@ export const mapping: Record<string, MappingData> = {
     getPath: values =>
       `/validator-dashboards/${values?.dashboardKey}/validators`,
     mock: false,
-    path: 'validator-dashboards/{dashboard_id}/validators',
+    path: 'validator-dashboards/{dashboard_id}/validators/bulk-deletions',
   },
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
     getPath: values =>
