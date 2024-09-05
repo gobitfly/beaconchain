@@ -117,7 +117,7 @@ type ExtraDashboardValidatorsPremiumAddon struct {
 
 type PremiumPerks struct {
 	AdFree                          bool                `json:"ad_free"` // note that this is somhow redunant, since there is already ApiPerks.NoAds
-	ValidatorDasboards              uint64              `json:"validator_dashboards"`
+	ValidatorDashboards             uint64              `json:"validator_dashboards"`
 	ValidatorsPerDashboard          uint64              `json:"validators_per_dashboard"`
 	ValidatorGroupsPerDashboard     uint64              `json:"validator_groups_per_dashboard"`
 	ShareCustomDashboards           bool                `json:"share_custom_dashboards"`

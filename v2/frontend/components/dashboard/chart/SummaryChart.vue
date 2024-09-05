@@ -20,7 +20,7 @@ import {
   getChartTooltipBackgroundColor,
   getSummaryChartGroupColors,
 } from '~/utils/colors'
-import { type InternalGetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
+import { type GetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatTsToTime } from '~/utils/format'
 import { API_PATH } from '~/types/customFetch'
@@ -173,7 +173,7 @@ const loadData = async () => {
   isLoading.value = true
   const newSeries: SeriesObject[] = []
   try {
-    const res = await fetch<InternalGetValidatorDashboardSummaryChartResponse>(
+    const res = await fetch<GetValidatorDashboardSummaryChartResponse>(
       API_PATH.DASHBOARD_SUMMARY_CHART,
       {
         query: {

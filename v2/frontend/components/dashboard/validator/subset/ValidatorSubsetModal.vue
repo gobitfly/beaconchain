@@ -14,7 +14,7 @@ import type {
 import { sortSummaryValidators } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
 import {
-  type InternalGetValidatorDashboardSummaryValidatorsResponse,
+  type GetValidatorDashboardSummaryValidatorsResponse,
   type VDBGroupSummaryData,
   type VDBSummaryTableRow,
   type VDBSummaryValidator,
@@ -84,7 +84,7 @@ watch(
       }
 
       const res
-        = await fetch<InternalGetValidatorDashboardSummaryValidatorsResponse>(
+        = await fetch<GetValidatorDashboardSummaryValidatorsResponse>(
           API_PATH.DASHBOARD_VALIDATOR_INDICES,
           {
             query: {

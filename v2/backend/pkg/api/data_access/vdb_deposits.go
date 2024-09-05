@@ -19,7 +19,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	var err error
 	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.ELDepositsCursor
@@ -177,7 +177,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	return responseData, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	var err error
 	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.CLDepositsCursor

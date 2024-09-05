@@ -60,6 +60,7 @@ func Run() {
 		dataAccessor = dataaccess.NewDummyService()
 	} else {
 		dataAccessor = dataaccess.NewDataAccessService(cfg)
+		dataAccessor.StartDataAccessServices()
 	}
 	defer dataAccessor.Close()
 
@@ -70,7 +71,7 @@ func Run() {
 		router.Use(metrics.HttpMiddleware)
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()

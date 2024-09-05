@@ -56,50 +56,63 @@ func commonFakeData(a interface{}) error {
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
 }
 
+func (d *DummyService) StartDataAccessServices() {
+	// nothing to start
+}
+
+// used for any non-pointer data, e.g. all primitive types or slices
+func getDummyData[T any]() (T, error) {
+	var r T
+	err := commonFakeData(&r)
+	return r, err
+}
+
+// used for any struct data that should be returned as a pointer
+func getDummyStruct[T any]() (*T, error) {
+	var r T
+	err := commonFakeData(&r)
+	return &r, err
+}
+
+// used for any table data that should be returned with paging
+func getDummyWithPaging[T any]() ([]T, *t.Paging, error) {
+	r := []T{}
+	p := t.Paging{}
+	_ = commonFakeData(&r)
+	err := commonFakeData(&p)
+	return r, &p, err
+}
+
 func (d *DummyService) Close() {
 	// nothing to close
 }
 
 func (d *DummyService) GetLatestSlot() (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetLatestFinalizedEpoch() (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetLatestBlock() (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetBlockHeightAt(slot uint64) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
-	r := []t.EthConversionRate{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.EthConversionRate]()
 }
 
 func (d *DummyService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) RemoveUser(ctx context.Context, userId uint64) error {
@@ -115,15 +128,11 @@ func (d *DummyService) UpdateUserPassword(ctx context.Context, userId uint64, pa
 }
 
 func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
-	r := time.Time{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[time.Time]()
 }
 
 func (d *DummyService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
-	r := time.Time{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[time.Time]()
 }
 
 func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
@@ -147,124 +156,94 @@ func (d *DummyService) UpdatePasswordResetHash(ctx context.Context, userId uint6
 }
 
 func (d *DummyService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
-	r := t.UserInfo{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.UserInfo]()
 }
 
 func (d *DummyService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
-	r := t.UserCredentialInfo{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.UserCredentialInfo]()
 }
 
 func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
-	r := t.ProductSummary{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.ProductSummary]()
 }
 
 func (d *DummyService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
-	r := t.PremiumPerks{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.PremiumPerks]()
 }
 
 func (d *DummyService) GetValidatorDashboardUser(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardUser, error) {
-	r := t.DashboardUser{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.DashboardUser]()
 }
 
 func (d *DummyService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
-	var r t.VDBIdPrimary
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBIdPrimary]()
 }
 
 func (d *DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
-	r := t.ValidatorDashboard{}
+	r, err := getDummyStruct[t.ValidatorDashboard]()
 	// return semi-valid data to not break staging
-	//nolint:errcheck
-	commonFakeData(&r)
 	r.IsArchived = false
-	return &r, nil
+	return r, err
 }
 
 func (d *DummyService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
-	r := ""
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[string]()
 }
 
 func (d *DummyService) GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
-	r := []t.VDBValidator{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.VDBValidator]()
 }
 
 func (d *DummyService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
-	r := t.UserDashboardsData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.UserDashboardsData]()
 }
 
 func (d *DummyService) CreateValidatorDashboard(ctx context.Context, userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
-	r := t.VDBPostReturnData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBPostReturnData]()
 }
 
 func (d *DummyService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
-	r := t.VDBOverviewData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBOverviewData]()
 }
 
 func (d *DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
 	return nil
 }
 
-func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
-	r := t.VDBPostArchivingReturnData{}
-	err := commonFakeData(&r)
-	return &r, err
+func (d *DummyService) RemoveValidatorDashboards(ctx context.Context, dashboardIds []uint64) error {
+	return nil
+}
+
+func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
+	return getDummyStruct[t.VDBPostArchivingReturnData]()
+}
+
+func (d *DummyService) UpdateValidatorDashboardsArchiving(ctx context.Context, dashboards []t.ArchiverDashboardArchiveReason) error {
+	return nil
 }
 
 func (d *DummyService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
-	r := t.VDBPostReturnData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBPostReturnData]()
 }
 
 func (d *DummyService) CreateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error) {
-	r := t.VDBPostCreateGroupData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBPostCreateGroupData]()
 }
 
 func (d *DummyService) UpdateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
-	r := t.VDBPostCreateGroupData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBPostCreateGroupData]()
 }
 
 func (d *DummyService) RemoveValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
@@ -276,41 +255,27 @@ func (d *DummyService) GetValidatorDashboardGroupExists(ctx context.Context, das
 }
 
 func (d *DummyService) GetValidatorDashboardExistingValidatorCount(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
-	r := []t.VDBPostValidatorsData{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.VDBPostValidatorsData]()
 }
 
 func (d *DummyService) AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	r := []t.VDBPostValidatorsData{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.VDBPostValidatorsData]()
 }
 
 func (d *DummyService) AddValidatorDashboardValidatorsByWithdrawalAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	r := []t.VDBPostValidatorsData{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.VDBPostValidatorsData]()
 }
 
 func (d *DummyService) AddValidatorDashboardValidatorsByGraffiti(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	r := []t.VDBPostValidatorsData{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.VDBPostValidatorsData]()
 }
 
 func (d *DummyService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	r := []t.VDBManageValidatorsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.VDBManageValidatorsTableRow]()
 }
 
 func (d *DummyService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
@@ -318,21 +283,15 @@ func (d *DummyService) RemoveValidatorDashboardValidators(ctx context.Context, d
 }
 
 func (d *DummyService) CreateValidatorDashboardPublicId(ctx context.Context, dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
-	r := t.VDBPublicId{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBPublicId]()
 }
 
 func (d *DummyService) GetValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBPublicId, error) {
-	r := t.VDBPublicId{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBPublicId]()
 }
 
 func (d *DummyService) UpdateValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic, name string, shareGroups bool) (*t.VDBPublicId, error) {
-	r := t.VDBPublicId{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBPublicId]()
 }
 
 func (d *DummyService) RemoveValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) error {
@@ -348,293 +307,175 @@ func (d *DummyService) GetValidatorDashboardSlotViz(ctx context.Context, dashboa
 }
 
 func (d *DummyService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	r := []t.VDBSummaryTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.VDBSummaryTableRow]()
 }
 func (d *DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBGroupSummaryData, error) {
-	r := t.VDBGroupSummaryData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBGroupSummaryData]()
 }
 
 func (d *DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
-	r := t.ChartData[int, float64]{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.ChartData[int, float64]]()
 }
 
 func (d *DummyService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
-	r := t.VDBGeneralSummaryValidators{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBGeneralSummaryValidators]()
 }
 func (d *DummyService) GetValidatorDashboardSyncSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
-	r := t.VDBSyncSummaryValidators{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBSyncSummaryValidators]()
 }
 func (d *DummyService) GetValidatorDashboardSlashingsSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
-	r := t.VDBSlashingsSummaryValidators{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBSlashingsSummaryValidators]()
 }
 func (d *DummyService) GetValidatorDashboardProposalSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
-	r := t.VDBProposalSummaryValidators{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBProposalSummaryValidators]()
 }
 
 func (d *DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
-	r := []t.VDBRewardsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.VDBRewardsTableRow]()
 }
 
 func (d *DummyService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBGroupRewardsData, error) {
-	r := t.VDBGroupRewardsData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBGroupRewardsData]()
 }
 
 func (d *DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.ChartData[int, decimal.Decimal], error) {
-	r := t.ChartData[int, decimal.Decimal]{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.ChartData[int, decimal.Decimal]]()
 }
 
 func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
-	r := []t.VDBEpochDutiesTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.VDBEpochDutiesTableRow]()
 }
 
 func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
-	r := []t.VDBBlocksTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.VDBBlocksTableRow]()
 }
 
 func (d *DummyService) GetValidatorDashboardHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.VDBHeatmap, error) {
-	r := t.VDBHeatmap{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBHeatmap]()
 }
 
 func (d *DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, timestamp uint64) (*t.VDBHeatmapTooltipData, error) {
-	r := t.VDBHeatmapTooltipData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBHeatmapTooltipData]()
 }
 
-func (d *DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
-	r := []t.VDBExecutionDepositsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+func (d *DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.VDBExecutionDepositsTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
-	r := []t.VDBConsensusDepositsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+func (d *DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.VDBConsensusDepositsTableRow]()
 }
 
 func (d *DummyService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
-	r := t.VDBTotalExecutionDepositsData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBTotalExecutionDepositsData]()
 }
 
 func (d *DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
-	r := t.VDBTotalConsensusDepositsData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBTotalConsensusDepositsData]()
 }
 
 func (d *DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	r := []t.VDBWithdrawalsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return []t.VDBWithdrawalsTableRow{}, &t.Paging{}, nil
 }
 
 func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error) {
-	r := t.VDBTotalWithdrawalsData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBTotalWithdrawalsData]()
 }
 
 func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
-	r := []t.VDBRocketPoolTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.VDBRocketPoolTableRow]()
 }
 
 func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
-	r := t.VDBRocketPoolTableRow{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBRocketPoolTableRow]()
 }
 
 func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
-	r := t.VDBNodeRocketPoolData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.VDBNodeRocketPoolData]()
 }
 
 func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
-	r := []t.VDBRocketPoolMinipoolsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.VDBRocketPoolMinipoolsTableRow]()
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
-	r := []t.NetworkInfo{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.NetworkInfo]()
 }
 
 func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
-	r := t.SearchValidator{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.SearchValidator]()
 }
 
 func (d *DummyService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
-	r := t.SearchValidator{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.SearchValidator]()
 }
 
 func (d *DummyService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
-	r := t.SearchValidatorsByDepositAddress{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.SearchValidatorsByDepositAddress]()
 }
 
 func (d *DummyService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error) {
-	r := t.SearchValidatorsByDepositEnsName{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.SearchValidatorsByDepositEnsName]()
 }
 
 func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
-	r := t.SearchValidatorsByWithdrwalCredential{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.SearchValidatorsByWithdrwalCredential]()
 }
 
 func (d *DummyService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error) {
-	r := t.SearchValidatorsByWithrawalEnsName{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.SearchValidatorsByWithrawalEnsName]()
 }
 
 func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
-	r := t.SearchValidatorsByGraffiti{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.SearchValidatorsByGraffiti]()
 }
 
 func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetValidatorDashboardValidatorsCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
-	r := t.NotificationOverviewData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.NotificationOverviewData]()
 }
 func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
-	r := []t.NotificationDashboardsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.NotificationDashboardsTableRow]()
 }
 
 func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationValidatorDashboardDetail, error) {
-	r := t.NotificationValidatorDashboardDetail{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.NotificationValidatorDashboardDetail]()
 }
 
 func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationAccountDashboardDetail, error) {
-	r := t.NotificationAccountDashboardDetail{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.NotificationAccountDashboardDetail]()
 }
 
 func (d *DummyService) GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
-	r := []t.NotificationMachinesTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.NotificationMachinesTableRow]()
 }
 func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
-	r := []t.NotificationClientsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.NotificationClientsTableRow]()
 }
 func (d *DummyService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
-	r := []t.NotificationRocketPoolTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.NotificationRocketPoolTableRow]()
 }
 func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
-	r := []t.NotificationNetworksTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
-	return r, &p, err
+	return getDummyWithPaging[t.NotificationNetworksTableRow]()
 }
 
 func (d *DummyService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
-	r := t.NotificationSettings{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.NotificationSettings]()
 }
 func (d *DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
 	return nil
@@ -649,10 +490,7 @@ func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Contex
 	return nil
 }
 func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
-	r := []t.NotificationSettingsDashboardsTableRow{}
-	p := t.Paging{}
-	_ = commonFakeData(&r)
-	err := commonFakeData(&p)
+	r, p, err := getDummyWithPaging[t.NotificationSettingsDashboardsTableRow]()
 	for i, n := range r {
 		var settings interface{}
 		if n.IsAccountDashboard {
@@ -663,7 +501,7 @@ func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, us
 		_ = commonFakeData(&settings)
 		r[i].Settings = settings
 	}
-	return r, &p, err
+	return r, p, err
 }
 func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
 	return nil
@@ -676,9 +514,7 @@ func (d *DummyService) CreateAdConfiguration(ctx context.Context, key, jquerySel
 }
 
 func (d *DummyService) GetAdConfigurations(ctx context.Context, keys []string) ([]t.AdConfigurationData, error) {
-	r := []t.AdConfigurationData{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.AdConfigurationData]()
 }
 
 func (d *DummyService) UpdateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
@@ -690,15 +526,11 @@ func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) er
 }
 
 func (d *DummyService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) GetUserIdByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
@@ -706,9 +538,7 @@ func (d *DummyService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefr
 }
 
 func (d *DummyService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
-	r := t.OAuthAppData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.OAuthAppData]()
 }
 
 func (d *DummyService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
@@ -720,9 +550,7 @@ func (d *DummyService) AddMobileNotificationToken(userID uint64, deviceID, notif
 }
 
 func (d *DummyService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
-	r := uint64(0)
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[uint64]()
 }
 
 func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
@@ -730,121 +558,86 @@ func (d *DummyService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetai
 }
 
 func (d *DummyService) GetBlockOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
-	r := t.BlockOverview{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.BlockOverview]()
 }
 
 func (d *DummyService) GetBlockTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
-	r := []t.BlockTransactionTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockTransactionTableRow]()
 }
 
 func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
-	r := t.BlockSummary{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.BlockSummary]()
 }
 
 func (d *DummyService) GetBlockVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
-	r := []t.BlockVoteTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockVoteTableRow]()
 }
 
 func (d *DummyService) GetBlockAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
-	r := []t.BlockAttestationTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockAttestationTableRow]()
 }
 
 func (d *DummyService) GetBlockWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
-	r := []t.BlockWithdrawalTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockWithdrawalTableRow]()
 }
 
 func (d *DummyService) GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
-	r := []t.BlockBlsChangeTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockBlsChangeTableRow]()
 }
 
 func (d *DummyService) GetBlockVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
-	r := []t.BlockVoluntaryExitTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockVoluntaryExitTableRow]()
 }
 
 func (d *DummyService) GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
-	r := []t.BlockBlobTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockBlobTableRow]()
 }
 
 func (d *DummyService) GetSlot(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
-	r := t.BlockSummary{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.BlockSummary]()
 }
 
 func (d *DummyService) GetSlotOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
-	r := t.BlockOverview{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.BlockOverview]()
 }
 
 func (d *DummyService) GetSlotTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
-	r := []t.BlockTransactionTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockTransactionTableRow]()
 }
 
 func (d *DummyService) GetSlotVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
-	r := []t.BlockVoteTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockVoteTableRow]()
 }
 
 func (d *DummyService) GetSlotAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
-	r := []t.BlockAttestationTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockAttestationTableRow]()
 }
 
 func (d *DummyService) GetSlotWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
-	r := []t.BlockWithdrawalTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockWithdrawalTableRow]()
 }
 
 func (d *DummyService) GetSlotBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
-	r := []t.BlockBlsChangeTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockBlsChangeTableRow]()
 }
 
 func (d *DummyService) GetSlotVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
-	r := []t.BlockVoluntaryExitTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockVoluntaryExitTableRow]()
 }
 
 func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
-	r := []t.BlockBlobTableRow{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.BlockBlobTableRow]()
+}
+
+func (d *DummyService) GetValidatorDashboardsCountInfo(ctx context.Context) (map[uint64][]t.ArchiverDashboard, error) {
+	return getDummyData[map[uint64][]t.ArchiverDashboard]()
 }
 
 func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPoolData, error) {
-	r := t.RocketPoolData{}
-	err := commonFakeData(&r)
-	return &r, err
+	return getDummyStruct[t.RocketPoolData]()
 }
 
 func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) types.HealthzData {
-	r := types.HealthzData{}
-	_ = commonFakeData(&r)
+	r, _ := getDummyData[types.HealthzData]()
 	return r
 }
