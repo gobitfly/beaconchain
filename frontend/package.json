@@ -26,9 +26,11 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^0.7.2",
+    "@nuxt/test-utils": "^3.15.1",
     "@nuxtjs/color-mode": "^3.5.2",
     "@nuxtjs/i18n": "^9.1.0",
     "@nuxtjs/style-resources": "^1.2.2",
+    "@playwright/test": "^1.49.1",
     "@primevue/nuxt-module": "~4.0.4",
     "@rollup/plugin-babel": "^6.0.4",
     "@types/lodash-es": "^4.17.12",
@@ -63,6 +65,8 @@
     "lint:fix": "npm run lint -- --fix",
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
+    "test:e2e": "npx playwright test --config=tests/playwright.config.ts",
+    "test:e2e:ui": "npm run test:e2e -- --ui",
     "typecheck": "npx nuxi typecheck",
     "validate": "npm run lint:fix && npm run typecheck"
   },
