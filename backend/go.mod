@@ -22,6 +22,7 @@ require (
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/ethereum/go-ethereum v1.13.12
 	github.com/fergusstrange/embedded-postgres v1.29.0
+	github.com/gavv/httpexpect/v2 v2.16.0
 	github.com/go-faker/faker/v4 v4.3.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gobitfly/eth-rewards v0.1.2-0.20230403064929-411ddc40a5f7
@@ -89,6 +90,8 @@ require (
 	cloud.google.com/go/storage v1.36.0 // indirect
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
+	github.com/ajg/form v1.5.1 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
@@ -124,6 +127,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
 	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/ferranbt/fastssz v0.1.3 // indirect
@@ -135,12 +139,14 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.9.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
@@ -149,6 +155,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v1.31.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/huandu/go-clone v1.6.0 // indirect
+	github.com/imkira/go-interpol v1.1.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
 	github.com/ipfs/boxo v0.8.0 // indirect
 	github.com/ipfs/go-bitfield v1.1.0 // indirect
@@ -181,6 +188,7 @@ require (
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -207,7 +215,9 @@ require (
 	github.com/prysmaticlabs/prysm/v3 v3.2.2 // indirect
 	github.com/r3labs/sse/v2 v2.10.0 // indirect
 	github.com/rs/zerolog v1.29.1 // indirect
+	github.com/sanity-io/litter v1.5.5 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
+	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sethvargo/go-retry v0.2.4 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
@@ -215,6 +225,8 @@ require (
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasthttp v1.34.0 // indirect
 	github.com/wealdtech/go-bytesutil v1.2.0 // indirect
 	github.com/wealdtech/go-merkletree v1.0.1-0.20190605192610-2bb163c2ea2a // indirect
 	github.com/wealdtech/go-multicodec v1.4.0 // indirect
@@ -224,6 +236,9 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
+	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0 // indirect
+	github.com/yudai/gojsondiff v1.0.0 // indirect
+	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0 // indirect
@@ -247,6 +262,7 @@ require (
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
+	moul.io/http2curl/v2 v2.3.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
