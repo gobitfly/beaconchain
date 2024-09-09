@@ -36,7 +36,7 @@ export interface VDBOverviewData {
   chart_history_seconds: ChartHistorySeconds;
   balances: VDBOverviewBalances;
 }
-export type InternalGetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
+export type GetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBPostArchivingReturnData {
   id: number /* uint64 */;
   is_archived: boolean;
@@ -61,7 +61,7 @@ export interface VDBSummaryTableRow {
   proposals: StatusCount;
   reward: ClElValue<string /* decimal.Decimal */>;
 }
-export type InternalGetValidatorDashboardSummaryResponse = ApiPagingResponse<VDBSummaryTableRow>;
+export type GetValidatorDashboardSummaryResponse = ApiPagingResponse<VDBSummaryTableRow>;
 export interface VDBGroupSummaryColumnItem {
   status_count: StatusCount;
   validators?: number /* uint64 */[];
@@ -94,8 +94,8 @@ export interface VDBGroupSummaryData {
     collateral: number /* float64 */;
   };
 }
-export type InternalGetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
-export type InternalGetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
+export type GetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
+export type GetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
 /**
  * ------------------------------------------------------------
  * Summary Validators
@@ -108,7 +108,7 @@ export interface VDBSummaryValidatorsData {
   category: 'deposited' | 'online' | 'offline' | 'slashing' | 'slashed' | 'exited' | 'withdrawn' | 'pending' | 'exiting' | 'withdrawing' | 'sync_current' | 'sync_upcoming' | 'sync_past' | 'has_slashed' | 'got_slashed' | 'proposal_proposed' | 'proposal_missed';
   validators: VDBSummaryValidator[];
 }
-export type InternalGetValidatorDashboardSummaryValidatorsResponse = ApiDataResponse<VDBSummaryValidatorsData[]>;
+export type GetValidatorDashboardSummaryValidatorsResponse = ApiDataResponse<VDBSummaryValidatorsData[]>;
 /**
  * ------------------------------------------------------------
  * Rewards Tab
@@ -125,7 +125,7 @@ export interface VDBRewardsTableRow {
   group_id: number /* int64 */;
   reward: ClElValue<string /* decimal.Decimal */>;
 }
-export type InternalGetValidatorDashboardRewardsResponse = ApiPagingResponse<VDBRewardsTableRow>;
+export type GetValidatorDashboardRewardsResponse = ApiPagingResponse<VDBRewardsTableRow>;
 export interface VDBGroupRewardsDetails {
   status_count: StatusCount;
   income: string /* decimal.Decimal */;
@@ -143,13 +143,13 @@ export interface VDBGroupRewardsData {
   proposal_cl_sync_inc_reward: string /* decimal.Decimal */;
   proposal_cl_slashing_inc_reward: string /* decimal.Decimal */;
 }
-export type InternalGetValidatorDashboardGroupRewardsResponse = ApiDataResponse<VDBGroupRewardsData>;
-export type InternalGetValidatorDashboardRewardsChartResponse = ApiDataResponse<ChartData<number /* int */, string /* decimal.Decimal */>>; // bar chart, series id is group id, property is 'el' or 'cl'
+export type GetValidatorDashboardGroupRewardsResponse = ApiDataResponse<VDBGroupRewardsData>;
+export type GetValidatorDashboardRewardsChartResponse = ApiDataResponse<ChartData<number /* int */, string /* decimal.Decimal */>>; // bar chart, series id is group id, property is 'el' or 'cl'
 export interface VDBEpochDutiesTableRow {
   validator: number /* uint64 */;
   duties: ValidatorHistoryDuties;
 }
-export type InternalGetValidatorDashboardDutiesResponse = ApiPagingResponse<VDBEpochDutiesTableRow>;
+export type GetValidatorDashboardDutiesResponse = ApiPagingResponse<VDBEpochDutiesTableRow>;
 /**
  * ------------------------------------------------------------
  * Blocks Tab
@@ -165,7 +165,7 @@ export interface VDBBlocksTableRow {
   reward?: ClElValue<string /* decimal.Decimal */>;
   graffiti?: string;
 }
-export type InternalGetValidatorDashboardBlocksResponse = ApiPagingResponse<VDBBlocksTableRow>;
+export type GetValidatorDashboardBlocksResponse = ApiPagingResponse<VDBBlocksTableRow>;
 export interface VDBHeatmapEvents {
   proposal: boolean;
   slash: boolean;
@@ -183,7 +183,7 @@ export interface VDBHeatmap {
   data: VDBHeatmapCell[];
   aggregation: 'epoch' | 'hourly' | 'daily' | 'weekly';
 }
-export type InternalGetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
+export type GetValidatorDashboardHeatmapResponse = ApiDataResponse<VDBHeatmap>;
 export interface VDBHeatmapTooltipData {
   timestamp: number /* int64 */;
   proposers: StatusCount;
@@ -195,7 +195,7 @@ export interface VDBHeatmapTooltipData {
   attestation_income: string /* decimal.Decimal */;
   attestation_efficiency: number /* float64 */;
 }
-export type InternalGetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<VDBHeatmapTooltipData>;
+export type GetValidatorDashboardGroupHeatmapResponse = ApiDataResponse<VDBHeatmapTooltipData>;
 /**
  * ------------------------------------------------------------
  * Deposits Tab
@@ -213,7 +213,7 @@ export interface VDBExecutionDepositsTableRow {
   amount: string /* decimal.Decimal */;
   valid: boolean;
 }
-export type InternalGetValidatorDashboardExecutionLayerDepositsResponse = ApiPagingResponse<VDBExecutionDepositsTableRow>;
+export type GetValidatorDashboardExecutionLayerDepositsResponse = ApiPagingResponse<VDBExecutionDepositsTableRow>;
 export interface VDBConsensusDepositsTableRow {
   public_key: PubKey;
   index: number /* uint64 */;
@@ -224,15 +224,15 @@ export interface VDBConsensusDepositsTableRow {
   amount: string /* decimal.Decimal */;
   signature: Hash;
 }
-export type InternalGetValidatorDashboardConsensusLayerDepositsResponse = ApiPagingResponse<VDBConsensusDepositsTableRow>;
+export type GetValidatorDashboardConsensusLayerDepositsResponse = ApiPagingResponse<VDBConsensusDepositsTableRow>;
 export interface VDBTotalExecutionDepositsData {
   total_amount: string /* decimal.Decimal */;
 }
-export type InternalGetValidatorDashboardTotalExecutionDepositsResponse = ApiDataResponse<VDBTotalExecutionDepositsData>;
+export type GetValidatorDashboardTotalExecutionDepositsResponse = ApiDataResponse<VDBTotalExecutionDepositsData>;
 export interface VDBTotalConsensusDepositsData {
   total_amount: string /* decimal.Decimal */;
 }
-export type InternalGetValidatorDashboardTotalConsensusDepositsResponse = ApiDataResponse<VDBTotalConsensusDepositsData>;
+export type GetValidatorDashboardTotalConsensusDepositsResponse = ApiDataResponse<VDBTotalConsensusDepositsData>;
 /**
  * ------------------------------------------------------------
  * Withdrawals Tab
@@ -246,11 +246,11 @@ export interface VDBWithdrawalsTableRow {
   amount: string /* decimal.Decimal */;
   is_missing_estimate: boolean;
 }
-export type InternalGetValidatorDashboardWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsTableRow>;
+export type GetValidatorDashboardWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsTableRow>;
 export interface VDBTotalWithdrawalsData {
   total_amount: string /* decimal.Decimal */;
 }
-export type InternalGetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBTotalWithdrawalsData>;
+export type GetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBTotalWithdrawalsData>;
 /**
  * ------------------------------------------------------------
  * Rocket Pool Tab
@@ -282,8 +282,8 @@ export interface VDBRocketPoolTableRow {
     unclaimed: string /* decimal.Decimal */;
   };
 }
-export type InternalGetValidatorDashboardRocketPoolResponse = ApiPagingResponse<VDBRocketPoolTableRow>;
-export type InternalGetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBRocketPoolTableRow>;
+export type GetValidatorDashboardRocketPoolResponse = ApiPagingResponse<VDBRocketPoolTableRow>;
+export type GetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBRocketPoolTableRow>;
 export interface VDBNodeRocketPoolData {
   timezone: string;
   refund_balance: string /* decimal.Decimal */;
@@ -293,7 +293,7 @@ export interface VDBNodeRocketPoolData {
     max: string /* decimal.Decimal */;
   };
 }
-export type InternalGetValidatorDashboardNodeRocketPoolResponse = ApiDataResponse<VDBNodeRocketPoolData>;
+export type GetValidatorDashboardNodeRocketPoolResponse = ApiDataResponse<VDBNodeRocketPoolData>;
 export interface VDBRocketPoolMinipoolsTableRow {
   node: Address;
   validator_index: number /* uint64 */;
@@ -305,7 +305,7 @@ export interface VDBRocketPoolMinipoolsTableRow {
   created_timestamp: number /* int64 */;
   penalties: number /* uint64 */;
 }
-export type InternalGetValidatorDashboardRocketPoolMinipoolsResponse = ApiPagingResponse<VDBRocketPoolMinipoolsTableRow>;
+export type GetValidatorDashboardRocketPoolMinipoolsResponse = ApiPagingResponse<VDBRocketPoolMinipoolsTableRow>;
 /**
  * ------------------------------------------------------------
  * Manage Modal
@@ -319,7 +319,7 @@ export interface VDBManageValidatorsTableRow {
   queue_position?: number /* uint64 */;
   withdrawal_credential: Hash;
 }
-export type InternalGetValidatorDashboardValidatorsResponse = ApiPagingResponse<VDBManageValidatorsTableRow>;
+export type GetValidatorDashboardValidatorsResponse = ApiPagingResponse<VDBManageValidatorsTableRow>;
 /**
  * ------------------------------------------------------------
  * Misc.

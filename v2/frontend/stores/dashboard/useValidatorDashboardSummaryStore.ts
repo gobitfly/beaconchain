@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { InternalGetValidatorDashboardSummaryResponse } from '~/types/api/validator_dashboard'
+import type { GetValidatorDashboardSummaryResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 import { API_PATH } from '~/types/customFetch'
@@ -8,7 +8,7 @@ import type { SummaryTimeFrame } from '~/types/dashboard/summary'
 const validatorDashboardSummaryStore = defineStore(
   'validator_dashboard_sumary_store',
   () => {
-    const data = ref<InternalGetValidatorDashboardSummaryResponse>()
+    const data = ref<GetValidatorDashboardSummaryResponse>()
     const query = ref<TableQueryParams>()
 
     return {
@@ -45,7 +45,7 @@ export function useValidatorDashboardSummaryStore() {
     isLoading.value = true
     storedQuery.value = query
 
-    const res = await fetch<InternalGetValidatorDashboardSummaryResponse>(
+    const res = await fetch<GetValidatorDashboardSummaryResponse>(
       API_PATH.DASHBOARD_SUMMARY,
       { query: { period: timeFrame } },
       { dashboardKey },
