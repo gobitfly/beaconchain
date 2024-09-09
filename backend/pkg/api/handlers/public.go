@@ -177,7 +177,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards && !isUserAdmin(userInfo) {
 		returnConflict(w, r, errors.New("maximum number of validator dashboards reached"))
 		return
 	}
@@ -561,7 +561,16 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	indices, publicKeys := v.checkValidatorList(r.URL.Query().Get("validators"), forbidEmpty)
+	var indices []uint64
+	var publicKeys []string
+	req := struct {
+		Validators []intOrString `json:"validators"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	indices, publicKeys = v.checkValidators(req.Validators, false)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -695,10 +704,9 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	type request struct {
+	req := struct {
 		IsArchived bool `json:"is_archived"`
-	}
-	var req request
+	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
@@ -740,12 +748,12 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 	}
 	if !isUserAdmin(userInfo) {
 		if req.IsArchived {
-			if dashboardCount >= maxArchivedDashboardsCount {
+			if dashboardCount >= MaxArchivedDashboardsCount {
 				returnConflict(w, r, errors.New("maximum number of archived validator dashboards reached"))
 				return
 			}
 		} else {
-			if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+			if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
 				returnConflict(w, r, errors.New("maximum number of active validator dashboards reached"))
 				return
 			}
@@ -760,7 +768,12 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		}
 	}
 
-	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, req.IsArchived)
+	var archivedReason *enums.VDBArchivedReason
+	if req.IsArchived {
+		archivedReason = &enums.VDBArchivedReasons.User
+	}
+
+	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, archivedReason)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1180,7 +1193,7 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardElDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardElDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1205,7 +1218,7 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardClDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardClDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return

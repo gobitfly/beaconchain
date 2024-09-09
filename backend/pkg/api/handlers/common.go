@@ -67,6 +67,7 @@ var (
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
 	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
+	reJsonContentType              = regexp.MustCompile(`^application\/json(;.*)?$`)
 )
 
 const (
@@ -81,7 +82,7 @@ const (
 	gnosis                            = "gnosis"
 	allowEmpty                        = true
 	forbidEmpty                       = false
-	maxArchivedDashboardsCount        = 10
+	MaxArchivedDashboardsCount        = 10
 )
 
 var (
@@ -184,7 +185,7 @@ func (v *validationError) checkUserEmailToken(token string) string {
 // return error only if internal error occurs, otherwise add error to validationError and/or return nil
 func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	// check if content type is application/json
-	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+	if contentType := r.Header.Get("Content-Type"); !reJsonContentType.MatchString(contentType) {
 		v.add("request body", "'Content-Type' header must be 'application/json'")
 	}
 
