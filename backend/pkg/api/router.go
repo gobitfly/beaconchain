@@ -94,6 +94,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodPost, "/mobile/equivalent-exchange", nil, hs.InternalPostMobileEquivalentExchange},
 		{http.MethodPost, "/mobile/purchase", nil, hs.InternalHandleMobilePurchase},
 		{http.MethodGet, "/mobile/latest-bundle", nil, hs.InternalGetMobileLatestBundle},
+		{http.MethodPost, "/mobile/bundles/{bundle_version}/deliveries", nil, hs.InternalPostMobileBundleDeliveries},
 
 		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
