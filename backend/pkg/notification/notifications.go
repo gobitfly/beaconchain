@@ -8,6 +8,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"maps"
+	"slices"
 
 	"fmt"
 	"html/template"
@@ -283,28 +285,28 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 		return nil, fmt.Errorf("error getting dashboard definitions: %v", err)
 	}
 
-	// Now initialize the validator dashboard configuration map
-	validatorDashboardConfig := &types.ValidatorDashboardConfig{
-		DashboardsByUserId: make(map[types.UserId]map[types.DashboardId]*types.ValidatorDashboard),
-	}
-	for _, row := range dashboardDefinitions {
-		if validatorDashboardConfig.DashboardsByUserId[row.UserId] == nil {
-			validatorDashboardConfig.DashboardsByUserId[row.UserId] = make(map[types.DashboardId]*types.ValidatorDashboard)
-		}
-		if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] == nil {
-			validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] = &types.ValidatorDashboard{
-				Name:   row.DashboardName,
-				Groups: make(map[types.DashboardGroupId]*types.ValidatorDashboardGroup),
-			}
-		}
-		if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] == nil {
-			validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] = &types.ValidatorDashboardGroup{
-				Name:       row.GroupName,
-				Validators: []uint64{},
-			}
-		}
-		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators = append(validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators, uint64(row.ValidatorIndex))
-	}
+	// // Now initialize the validator dashboard configuration map
+	// validatorDashboardConfig := &types.ValidatorDashboardConfig{
+	// 	DashboardsByUserId: make(map[types.UserId]map[types.DashboardId]*types.ValidatorDashboard),
+	// }
+	// for _, row := range dashboardDefinitions {
+	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId] == nil {
+	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId] = make(map[types.DashboardId]*types.ValidatorDashboard)
+	// 	}
+	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] == nil {
+	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] = &types.ValidatorDashboard{
+	// 			Name:   row.DashboardName,
+	// 			Groups: make(map[types.DashboardGroupId]*types.ValidatorDashboardGroup),
+	// 		}
+	// 	}
+	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] == nil {
+	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] = &types.ValidatorDashboardGroup{
+	// 			Name:       row.GroupName,
+	// 			Validators: []uint64{},
+	// 		}
+	// 	}
+	// 	validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators = append(validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators, uint64(row.ValidatorIndex))
+	// }
 
 	// TODO: pass the validatorDashboardConfig to the notification collection functions
 	// The following functions will collect the notifications and add them to the
@@ -526,7 +528,7 @@ func queueNotifications(notificationsByUserID types.NotificationsPerUserId, useD
 	for state, subs := range stateToSub {
 		subArray := make([]int64, 0)
 		for subID := range subs {
-			subArray = append(subArray, int64(subID))
+			subArray = append(subArray, int64(subID)) //nolint:gosec
 		}
 		_, err := db.FrontendWriterDB.Exec(`UPDATE users_subscriptions SET internal_state = $1 WHERE id = ANY($2)`, state, pq.Int64Array(subArray))
 		if err != nil {
@@ -582,10 +584,7 @@ func getNetwork() string {
 }
 
 func queuePushNotification(notificationsByUserID types.NotificationsPerUserId, useDB *sqlx.DB) error {
-	userIDs := []types.UserId{}
-	for userID := range notificationsByUserID {
-		userIDs = append(userIDs, userID)
-	}
+	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
 
 	tokensByUserID, err := GetUserPushTokenByIds(userIDs)
 	if err != nil {
@@ -690,10 +689,8 @@ func sendPushNotifications(useDB *sqlx.DB) error {
 }
 
 func queueEmailNotifications(notificationsByUserID types.NotificationsPerUserId, useDB *sqlx.DB) error {
-	userIDs := []types.UserId{}
-	for userID := range notificationsByUserID {
-		userIDs = append(userIDs, userID)
-	}
+	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
+
 	emailsByUserID, err := GetUserEmailsByIds(userIDs)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_get_user_mail_by_id").Inc()
@@ -1009,7 +1006,7 @@ func sendWebhookNotifications(useDB *sqlx.DB) error {
 
 		go func(n types.TransitWebhook) {
 			if n.Content.Webhook.Retries > 0 {
-				time.Sleep(time.Duration(n.Content.Webhook.Retries) * time.Second)
+				time.Sleep(time.Duration(n.Content.Webhook.Retries) * time.Second) //nolint:gosec
 			}
 			resp, err := client.Post(n.Content.Webhook.Url, "application/json", reqBody)
 			if err != nil {
@@ -1127,7 +1124,7 @@ func sendDiscordNotifications(useDB *sqlx.DB) error {
 					break // stop
 				}
 				// sleep between retries
-				time.Sleep(time.Duration(webhook.Retries) * time.Second)
+				time.Sleep(time.Duration(webhook.Retries) * time.Second) //nolint:gosec
 
 				reqBody := new(bytes.Buffer)
 				err := json.NewEncoder(reqBody).Encode(reqs[i].Content.DiscordRequest)
