@@ -645,6 +645,7 @@ const premiumLimit = computed(
   display: flex;
   flex-direction: column;
   overflow-y: hidden;
+  justify-content: space-between;
 
   :deep(.p-datatable-wrapper) {
     flex-grow: 1;
