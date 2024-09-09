@@ -130,6 +130,9 @@ func setup() error {
 	cfg.Frontend.WriterDatabase.Password = "postgres"
 	cfg.Frontend.WriterDatabase.Username = "postgres"
 
+	cfg.Frontend.Debug = false // set debug to false to disable access for private dashboards (can be enabled on a per-test basis)
+	cfg.Frontend.CsrfInsecure = true
+
 	utils.Config = cfg
 
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
@@ -466,6 +469,29 @@ func TestPublicAndSharedDashboards(t *testing.T) {
 
 			assert.Greater(t, len(resp.Data.Categories), 0, "rewards chart categories should not be empty")
 			assert.Greater(t, len(resp.Data.Series), 0, "rewards chart series should not be empty")
+		})
+
+		t.Run(fmt.Sprintf("[%s]: test blocks", dashboardId.id), func(t *testing.T) {
+			resp := api_types.GetValidatorDashboardBlocksResponse{}
+			e.GET("/api/i/validator-dashboards/{id}/blocks", dashboardId.id).
+				WithQuery("limit", 10).
+				WithQuery("sort", "block:desc").
+				Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+			assert.Greater(t, len(resp.Data), 0, "blocks response should not be empty")
+			assert.LessOrEqual(t, len(resp.Data), 10, "blocks response should not contain more than 10 entries")
+			assert.True(t, sort.SliceIsSorted(resp.Data, func(i, j int) bool {
+				return resp.Data[i].Slot > resp.Data[j].Slot
+			}), "blocks should be sorted by slot in descending order")
+
+			for _, block := range resp.Data {
+				if block.Status == "scheduled" || block.Status == "missed" || block.Status == "orphaned" {
+					assert.Nil(t, block.Block, "scheduled / orphaned / missed block should not have a block number")
+				} else {
+					assert.NotNil(t, block.Block, fmt.Sprintf("block %d should have a block number", block.Slot))
+					assert.NotNil(t, block.Proposer, "block should have a proposer")
+				}
+			}
 		})
 	}
 }
