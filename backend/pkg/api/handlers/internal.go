@@ -462,6 +462,40 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 }
 
 // --------------------------------------
+// Mobile
+
+func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	q := r.URL.Query()
+	force := v.checkBool(q.Get("force"), "force")
+	bundleVersion := v.checkUint(q.Get("bundle_version"), "bundle_version")
+	nativeVersion := v.checkUint(q.Get("native_version"), "native_version")
+	environment := checkEnum[enums.Environment](&v, q.Get("environment"), "environment")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	stats, err := h.dai.GetLatestBundleForNativeVersion(r.Context(), nativeVersion, environment)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var data types.MobileBundleData
+	data.HasNativeUpdateAvailable = stats.MaxNativeVersion > nativeVersion
+	if !force && bundleVersion <= stats.BundleVersion && stats.TargetCount > 0 && stats.DeliveryCount >= stats.TargetCount {
+		returnOk(w, r, data)
+		return
+	}
+	data.BundleUrl = stats.BundleUrl
+	returnOk(w, r, data)
+
+	err = h.dai.IncrementBundleDeliveryCount(r.Context(), bundleVersion)
+	if err != nil {
+		logApiError(r, err, 0)
+	}
+}
+
+// --------------------------------------
 // Notifications
 
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {

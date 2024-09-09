@@ -21,7 +21,7 @@ const (
 )
 
 // Files that should not be converted to TypeScript
-var ignoredFiles = []string{"data_access", "search_types"}
+var ignoredFiles = []string{"data_access", "search_types", "archiver"}
 
 var typeMappings = map[string]string{
 	"decimal.Decimal": "string /* decimal.Decimal */",

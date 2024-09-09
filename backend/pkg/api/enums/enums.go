@@ -268,3 +268,38 @@ func (c ChartAggregation) Duration(secondsPerEpoch uint64) time.Duration {
 		return 0
 	}
 }
+
+// ----------------
+// Environment
+
+type Environment int
+
+var _ EnumFactory[Environment] = Environment(0)
+
+const (
+	EnvironmentProduction Environment = iota
+	EnvironmentStaging
+)
+
+func (e Environment) Int() int {
+	return int(e)
+}
+
+func (Environment) NewFromString(s string) Environment {
+	switch s {
+	case "production", "prod", "":
+		return EnvironmentProduction
+	case "staging":
+		return EnvironmentStaging
+	default:
+		return Environment(-1)
+	}
+}
+
+var Environments = struct {
+	Production Environment
+	Staging    Environment
+}{
+	EnvironmentProduction,
+	EnvironmentStaging,
+}
