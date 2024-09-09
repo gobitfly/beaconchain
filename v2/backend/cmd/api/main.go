@@ -52,7 +52,6 @@ func Run() {
 		// enable light-weight db connection monitoring
 		monitoring.Init(false)
 		monitoring.Start()
-		defer monitoring.Stop()
 	}
 
 	var dataAccessor dataaccess.DataAccessor
@@ -103,6 +102,7 @@ func Run() {
 	if srv != nil {
 		shutDownCtx, cancelShutDownCtx := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelShutDownCtx()
+		monitoring.Stop()
 		err = srv.Shutdown(shutDownCtx)
 		if err != nil {
 			log.Error(err, "error shutting down server", 0)

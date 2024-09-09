@@ -2,9 +2,11 @@ package monitoring
 
 import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
@@ -33,6 +35,7 @@ func Init(full bool) {
 			&services.ServiceClickhouseRollings{},
 			&services.ServiceClickhouseEpoch{},
 			&services.ServiceTimeoutDetector{},
+			&services.CleanShutdownSpamDetector{},
 		)
 	}
 
@@ -42,13 +45,17 @@ func Init(full bool) {
 }
 
 func Start() {
+	log.Infof("starting monitoring services")
 	for _, service := range monitoredServices {
 		service.Start()
 	}
 }
 
 func Stop() {
+	log.Infof("stopping monitoring services")
 	for _, service := range monitoredServices {
 		service.Stop()
 	}
+	// this prevents status reports that werent shut down cleanly from triggering alerts
+	services.NewStatusReport(constants.CleanShutdownEvent, constants.Default, constants.Default)(constants.Success, nil)
 }
