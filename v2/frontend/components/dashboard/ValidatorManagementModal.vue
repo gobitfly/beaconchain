@@ -555,6 +555,15 @@ const premiumLimit = computed(
                 </div>
                 <div class="info">
                   <div class="label">
+                    {{ $t("dashboard.validator.col.status") }}
+                  </div>
+                  <ValidatorTableStatus
+                    :status="slotProps.data.status"
+                    :position="slotProps.data.queue_position"
+                  />
+                </div>
+                <div class="info">
+                  <div class="label">
                     {{ $t("dashboard.validator.col.withdrawal_credential") }}
                   </div>
                   <BcFormatHash
