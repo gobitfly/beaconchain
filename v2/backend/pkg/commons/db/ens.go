@@ -174,6 +174,11 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 							log.WarnWithFields(logFields, "error unpacking ens-log")
 							continue
 						}
+						if err = verifyName(r.Name); err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error verifying ens-name")
+							continue
+						}
 						keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, r.Name)] = true
 						keys[fmt.Sprintf("%s:ENS:V:A:%x", bigtable.chainId, r.Owner)] = true
 					} else if bytes.Equal(lTopic, ensContracts.ENSETHRegistrarControllerParsedABI.Events["NameRenewed"].ID.Bytes()) {
@@ -183,6 +188,11 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 						if err != nil {
 							logFields["error"] = err
 							log.WarnWithFields(logFields, "error unpacking ens-log")
+							continue
+						}
+						if err = verifyName(r.Name); err != nil {
+							logFields["error"] = err
+							log.WarnWithFields(logFields, "error verifying ens-name")
 							continue
 						}
 						keys[fmt.Sprintf("%s:ENS:V:N:%s", bigtable.chainId, r.Name)] = true
