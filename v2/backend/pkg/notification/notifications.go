@@ -263,27 +263,27 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 		ValidatorIndex types.ValidatorIndex   `db:"validator_index"`
 	}
 
-	log.Infof("retrieving dashboard definitions")
-	// Retrieve all dashboard definitions to be able to retrieve validators included in
-	// the group notification subscriptions
-	// TODO: add a filter to retrieve only groups that have notifications enabled
-	// Needs a new field in the db
-	var dashboardDefinitions []dashboardDefinitionRow
-	err = db.AlloyWriter.Select(&dashboardDefinitions, `
-		select 
-			users_val_dashboards.id as dashboard_id, 
-			users_val_dashboards.name as dashboard_name, 
-			users_val_dashboards.user_id, 
-			users_val_dashboards_groups.id as group_id, 
-			users_val_dashboards_groups.name as group_name, 
-			users_val_dashboards_validators.validator_index 
-		from users_val_dashboards
-		left join users_val_dashboards_groups on users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
-		left join users_val_dashboards_validators on users_val_dashboards_validators.dashboard_id = users_val_dashboards_groups.dashboard_id AND users_val_dashboards_validators.group_id = users_val_dashboards_groups.id;
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("error getting dashboard definitions: %v", err)
-	}
+	// log.Infof("retrieving dashboard definitions")
+	// // Retrieve all dashboard definitions to be able to retrieve validators included in
+	// // the group notification subscriptions
+	// // TODO: add a filter to retrieve only groups that have notifications enabled
+	// // Needs a new field in the db
+	// var dashboardDefinitions []dashboardDefinitionRow
+	// err = db.AlloyWriter.Select(&dashboardDefinitions, `
+	// 	select
+	// 		users_val_dashboards.id as dashboard_id,
+	// 		users_val_dashboards.name as dashboard_name,
+	// 		users_val_dashboards.user_id,
+	// 		users_val_dashboards_groups.id as group_id,
+	// 		users_val_dashboards_groups.name as group_name,
+	// 		users_val_dashboards_validators.validator_index
+	// 	from users_val_dashboards
+	// 	left join users_val_dashboards_groups on users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
+	// 	left join users_val_dashboards_validators on users_val_dashboards_validators.dashboard_id = users_val_dashboards_groups.dashboard_id AND users_val_dashboards_validators.group_id = users_val_dashboards_groups.id;
+	// `)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error getting dashboard definitions: %v", err)
+	// }
 
 	// // Now initialize the validator dashboard configuration map
 	// validatorDashboardConfig := &types.ValidatorDashboardConfig{
