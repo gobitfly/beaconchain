@@ -3,11 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -45,31 +42,12 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-var isShuttingDown atomic.Bool
-var once sync.Once
-
-func autoGracefulStop() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	<-c
-	isShuttingDown.Store(true)
-}
-
 func NewStatusReport(id string, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
-	// run if it hasnt started yet
-	once.Do(func() { go autoGracefulStop() })
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
 		flake := utils.GetSnowflake()
-
 		go func() {
-			// check if we are alive
-			if isShuttingDown.Load() {
-				log.Info("shutting down, not reporting status")
-				return
-			}
-
 			if metadata == nil {
 				metadata = make(map[string]string)
 			}
@@ -90,6 +68,15 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			if check_interval >= 5*time.Minute {
 				expires_at = timeouts_at.Add(check_interval)
 			}
+			log.TraceWithFields(log.Fields{
+				"emitter":         id,
+				"event_id":        utils.GetUUID(),
+				"deployment_type": utils.Config.DeploymentType,
+				"insert_id":       flake,
+				"expires_at":      expires_at,
+				"timeouts_at":     timeouts_at,
+				"metadata":        metadata,
+			}, "sending status report")
 			var err error
 			if db.ClickHouseNativeWriter != nil {
 				err = db.ClickHouseNativeWriter.AsyncInsert(
