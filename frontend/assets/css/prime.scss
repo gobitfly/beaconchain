@@ -597,6 +597,7 @@ div.p-accordion {
       align-items: center;
       gap: var(--padding);
       border: none;
+      justify-content: flex-start;
       .p-accordionheader-toggle-icon {
         display: none;
       }
@@ -626,4 +627,18 @@ div.p-accordion {
       }
     }
   }
+}
+
+
+/**
+ * TODO: remove the .p-overflow-hidden and .p-overlay-mask class when PrimeVue is updated.
+ * This is quick-fix for shifting display issues. 
+ **/
+ .p-overflow-hidden {
+  overflow: hidden !important;  /* Block scroll */
+  border-right: solid 5px transparent !important;
+}
+
+.p-overlay-mask {
+  background: var(--container-background);
 }

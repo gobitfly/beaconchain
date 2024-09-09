@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gobitfly/beaconchain/cmd/api"
+	"github.com/gobitfly/beaconchain/cmd/archiver"
 	"github.com/gobitfly/beaconchain/cmd/blobindexer"
 	"github.com/gobitfly/beaconchain/cmd/eth1indexer"
 	"github.com/gobitfly/beaconchain/cmd/ethstore_exporter"
@@ -32,6 +33,8 @@ func main() {
 	switch target {
 	case "api":
 		api.Run()
+	case "archiver":
+		archiver.Run()
 	case "blobindexer":
 		blobindexer.Run()
 	case "eth1indexer":

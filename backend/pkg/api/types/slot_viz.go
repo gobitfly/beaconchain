@@ -42,4 +42,4 @@ type SlotVizEpoch struct {
 	Slots    []VDBSlotVizSlot `json:"slots,omitempty" faker:"slice_len=32"`                                                                                                                      // only on dashboard page
 }
 
-type InternalGetValidatorDashboardSlotVizResponse ApiDataResponse[[]SlotVizEpoch]
+type GetValidatorDashboardSlotVizResponse ApiDataResponse[[]SlotVizEpoch]
