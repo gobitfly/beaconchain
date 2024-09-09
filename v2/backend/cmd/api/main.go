@@ -97,12 +97,11 @@ func Run() {
 	}()
 
 	utils.WaitForCtrlC()
-
+	monitoring.Stop() // this will emit a clean shutdown event
 	log.Info("shutting down server")
 	if srv != nil {
 		shutDownCtx, cancelShutDownCtx := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelShutDownCtx()
-		monitoring.Stop()
 		err = srv.Shutdown(shutDownCtx)
 		if err != nil {
 			log.Error(err, "error shutting down server", 0)
