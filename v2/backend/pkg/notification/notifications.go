@@ -528,7 +528,7 @@ func queueNotifications(notificationsByUserID types.NotificationsPerUserId, useD
 	for state, subs := range stateToSub {
 		subArray := make([]int64, 0)
 		for subID := range subs {
-			subArray = append(subArray, int64(subID)) //nolint:gosec
+			subArray = append(subArray, int64(subID))
 		}
 		_, err := db.FrontendWriterDB.Exec(`UPDATE users_subscriptions SET internal_state = $1 WHERE id = ANY($2)`, state, pq.Int64Array(subArray))
 		if err != nil {
@@ -1006,7 +1006,7 @@ func sendWebhookNotifications(useDB *sqlx.DB) error {
 
 		go func(n types.TransitWebhook) {
 			if n.Content.Webhook.Retries > 0 {
-				time.Sleep(time.Duration(n.Content.Webhook.Retries) * time.Second) //nolint:gosec
+				time.Sleep(time.Duration(n.Content.Webhook.Retries) * time.Second)
 			}
 			resp, err := client.Post(n.Content.Webhook.Url, "application/json", reqBody)
 			if err != nil {
@@ -1124,7 +1124,7 @@ func sendDiscordNotifications(useDB *sqlx.DB) error {
 					break // stop
 				}
 				// sleep between retries
-				time.Sleep(time.Duration(webhook.Retries) * time.Second) //nolint:gosec
+				time.Sleep(time.Duration(webhook.Retries) * time.Second)
 
 				reqBody := new(bytes.Buffer)
 				err := json.NewEncoder(reqBody).Encode(reqs[i].Content.DiscordRequest)
