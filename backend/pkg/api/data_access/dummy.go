@@ -642,7 +642,7 @@ func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) types.Healt
 	return r
 }
 
-func (d *DummyService) GetLatestBundleForNativeVersion(ctx context.Context, version uint64, environment enums.Environment) (*t.MobileAppBundleStats, error) {
+func (d *DummyService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64, environment enums.Environment) (*t.MobileAppBundleStats, error) {
 	return getDummyStruct[t.MobileAppBundleStats]()
 }
 

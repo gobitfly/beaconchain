@@ -21,7 +21,7 @@ type AppRepository interface {
 	AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error
 	GetAppSubscriptionCount(userID uint64) (uint64, error)
 	AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
-	GetLatestBundleForNativeVersion(ctx context.Context, version uint64, environment enums.Environment) (*t.MobileAppBundleStats, error)
+	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64, environment enums.Environment) (*t.MobileAppBundleStats, error)
 	IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error
 }
 
@@ -110,9 +110,9 @@ func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, payment
 	return err
 }
 
-func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, version uint64, environment enums.Environment) (*t.MobileAppBundleStats, error) {
+func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64, environment enums.Environment) (*t.MobileAppBundleStats, error) {
 	// @TODO data access
-	return d.dummy.GetLatestBundleForNativeVersion(ctx, version, environment)
+	return d.dummy.GetLatestBundleForNativeVersion(ctx, nativeVersion, environment)
 }
 
 func (d *DataAccessService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
