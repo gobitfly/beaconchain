@@ -254,14 +254,14 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 
 	log.Infof("started collecting notifications")
 
-	type dashboardDefinitionRow struct {
-		DashboardId    types.DashboardId      `db:"dashboard_id"`
-		DashboardName  string                 `db:"dashboard_name"`
-		UserId         types.UserId           `db:"user_id"`
-		GroupId        types.DashboardGroupId `db:"group_id"`
-		GroupName      string                 `db:"group_name"`
-		ValidatorIndex types.ValidatorIndex   `db:"validator_index"`
-	}
+	// type dashboardDefinitionRow struct {
+	// 	DashboardId    types.DashboardId      `db:"dashboard_id"`
+	// 	DashboardName  string                 `db:"dashboard_name"`
+	// 	UserId         types.UserId           `db:"user_id"`
+	// 	GroupId        types.DashboardGroupId `db:"group_id"`
+	// 	GroupName      string                 `db:"group_name"`
+	// 	ValidatorIndex types.ValidatorIndex   `db:"validator_index"`
+	// }
 
 	// log.Infof("retrieving dashboard definitions")
 	// // Retrieve all dashboard definitions to be able to retrieve validators included in
