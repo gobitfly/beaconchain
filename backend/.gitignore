@@ -6,4 +6,4 @@ local_deployment/elconfig.json
 local_deployment/.env
 __gitignore
 cmd/playground
-docs
+pkg/api/docs/swagger.json

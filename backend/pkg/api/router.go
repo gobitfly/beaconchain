@@ -1,11 +1,11 @@
 package api
 
 import (
-	"embed"
 	"net/http"
 	"regexp"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/api/docs"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -20,9 +20,6 @@ type endpoint struct {
 	PublicHandler  func(w http.ResponseWriter, r *http.Request)
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
-
-//go:embed docs/*
-var docFiles embed.FS
 
 func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	router := mux.NewRouter()
@@ -44,7 +41,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
 	// serve static files
-	publicRouter.PathPrefix("/docs/").Handler(http.StripPrefix("/api/v2/", http.FileServer(http.FS(docFiles))))
+	publicRouter.PathPrefix("/docs/").Handler(http.StripPrefix("/api/v2/docs/", http.FileServer(http.FS(docs.Files))))
 	router.Use(metrics.HttpMiddleware)
 
 	return router
