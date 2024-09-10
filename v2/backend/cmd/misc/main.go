@@ -458,7 +458,7 @@ func Run() {
 	case "fix-ens-addresses":
 		err = fixEnsAddresses(erigonClient)
 	case "collect-notifications":
-		err = collectNotifications(opts.StartEpoch, opts.EndEpoch)
+		err = collectNotifications(opts.StartEpoch)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -470,7 +470,7 @@ func Run() {
 	}
 }
 
-func collectNotifications(startEpoch, endEpoch uint64) error {
+func collectNotifications(startEpoch uint64) error {
 	epoch := startEpoch
 
 	log.Infof("collecting notifications for epoch %v", epoch)
