@@ -24,17 +24,17 @@ import (
 //	@description	- Setting the URL query parameter in the following format: `api_key={your_api_key}`.\
 //	@description	Example: `https://beaconcha.in/api/v2/example?field=value&api_key={your_api_key}`
 
-// @host      beaconcha.in
-// @BasePath  /api/v2
+//	@host		beaconcha.in
+//	@BasePath	/api/v2
 
-// @securitydefinitions.apikey ApiKeyInHeader
-// @in header
-// @name Authorization
-// @description Use your API key as a Bearer token, e.g. `Bearer <your-api-key>`
+//	@securitydefinitions.apikey	ApiKeyInHeader
+//	@in							header
+//	@name						Authorization
+//	@description				Use your API key as a Bearer token, e.g. `Bearer <your-api-key>`
 
-// @securitydefinitions.apikey ApiKeyInQuery
-// @in query
-// @name api_key
+//	@securitydefinitions.apikey	ApiKeyInQuery
+//	@in							query
+//	@name						api_key
 
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -134,14 +134,14 @@ func (h *HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Re
 // PublicPostValidatorDashboards godoc
 //
 //	@Description	Create a new validator dashboard. **Note**: New dashboards will automatically have a default group created.
-//	@Security 		ApiKeyInHeader || ApiKeyInQuery
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboards
 //	@Accept			json
 //	@Produce		json
-//	@Param			request		body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
-//	@Success		201			{object}	types.PostValidatorDashboardsResponse
-//	@Failure		400			{object}	types.ApiErrorResponse
-//	@Failure		409			{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
+//	@Param			request	body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
+//	@Success		201		{object}	types.PostValidatorDashboardsResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Failure		409		{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
 //	@Router			/validator-dashboards [post]
 func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -823,8 +823,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+	checkEnumIsAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -859,8 +859,8 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+	checkEnumIsAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -928,8 +928,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+	checkEnumIsAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return

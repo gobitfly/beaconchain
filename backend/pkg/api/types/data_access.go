@@ -212,16 +212,6 @@ type VDBValidatorSummaryChartRow struct {
 	SyncScheduled          float64   `db:"sync_scheduled"`
 }
 
-// -------------------------
-// ratelimiting
-
-type ApiWeightItem struct {
-	Bucket   string `db:"bucket"`
-	Endpoint string `db:"endpoint"`
-	Method   string `db:"method"`
-	Weight   int    `db:"weight"`
-}
-
 // healthz structs
 
 type HealthzResult struct {
