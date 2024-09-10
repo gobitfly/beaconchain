@@ -47,6 +47,7 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
 		flake := utils.GetSnowflake()
+		now := time.Now()
 		go func() {
 			if metadata == nil {
 				metadata = make(map[string]string)
@@ -60,9 +61,9 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
-			timeouts_at := time.Now().Add(1 * time.Minute)
+			timeouts_at := now.Add(1 * time.Minute)
 			if timeout != constants.Default {
-				timeouts_at = time.Now().Add(timeout)
+				timeouts_at = now.Add(timeout)
 			}
 			expires_at := timeouts_at.Add(5 * time.Minute)
 			if check_interval >= 5*time.Minute {
