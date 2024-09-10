@@ -58,7 +58,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	}
 
 	subMap := make(map[string][]types.Subscription, 0)
-	err = db.FrontendWriterDB.Select(&subs, query, args)
+	err = db.FrontendWriterDB.Select(&subs, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +69,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		}
 		subMap[sub.EventFilter] = append(subMap[sub.EventFilter], sub)
 	}
+
 	return subMap, nil
 }
 
