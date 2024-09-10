@@ -27,7 +27,7 @@ type VDBOverviewBalances struct {
 }
 
 type VDBOverviewData struct {
-	Name                string                                     `json:"name,omitempty" extensions:"x-order=1`
+	Name                string                                     `json:"name,omitempty" extensions:"x-order=1"`
 	Network             uint64                                     `json:"network"`
 	Groups              []VDBOverviewGroup                         `json:"groups"`
 	Validators          VDBOverviewValidators                      `json:"validators"`
