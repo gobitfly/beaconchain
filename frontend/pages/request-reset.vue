@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { object as yupObject } from 'yup'
-import { useForm } from 'vee-validate'
-import { useUserStore } from '~/stores/useUserStore'
-import { Target } from '~/types/links'
-import {
-  handleMobileAuth, provideMobileAuthParams,
-} from '~/utils/mobileAuth'
+// import { object as yupObject } from 'yup'
+// import { useForm } from 'vee-validate'
+// import { useUserStore } from '~/stores/useUserStore'
+// import { Target } from '~/types/links'
+// import {
+//   handleMobileAuth, provideMobileAuthParams,
+// } from '~/utils/mobileAuth'
 
-const { t: $t } = useTranslation()
-const { doLogin } = useUserStore()
-const toast = useBcToast()
-const route = useRoute()
-const { promoCode } = usePromoCode()
+// const { t: $t } = useTranslation()
+// const { doLogin } = useUserStore()
+// const toast = useBcToast()
+// const route = useRoute()
+// const { promoCode } = usePromoCode()
 
-// useBcSeo('login_and_register.title_login')
+if (!useRuntimeConfig().public.showInDevelopment) navigateTo('https://beaconcha.in/requestReset', { external: true })
+// useBcSeo('auth.login_and_register.title_login')
 
 // const {
 //   defineField, errors, handleSubmit,
@@ -53,9 +54,9 @@ const { promoCode } = usePromoCode()
 //   catch (error) {
 //     password.value = ''
 //     toast.showError({
-//       detail: $t('login_and_register.error_login_message'),
-//       group: $t('login_and_register.error_login_group'),
-//       summary: $t('login_and_register.error_title'),
+//       detail: $t('auth.login_and_register.error_login_message'),
+//       group: $t('auth.login_and_register.error_login_group'),
+//       summary: $t('auth.login_and_register.error_title'),
 //     })
 //   }
 // })
@@ -65,11 +66,45 @@ const { promoCode } = usePromoCode()
 // const registerLink = computed(() => {
 //   return provideMobileAuthParams(route.query, '/register')
 // })
+const { t: $t } = useTranslation()
+const input = ref('')
+const fieldName = 'email'
+const {
+  handleSubmit,
+} = useForm<{ [fieldName]: string }>()
+const onSubmit = handleSubmit((values) => {
+  console.log('submit', values)
+})
 </script>
 
 <template>
   <BcPageWrapper :minimalist-header="true">
-    hello
+    <BaseLayoutAuth>
+      <BaseCard
+        heading-tag="h1"
+        :heading="$t('auth.request_reset.title')"
+      >
+        <BaseGutter>
+          {{ $t('auth.request_reset.message') }}
+          <BaseForm @submit="onSubmit">
+            <BaseFormInputEmail
+              v-model="input"
+              :field-name
+              :label="false"
+              autofocus
+            />
+          </BaseForm>
+        </BaseGutter>
+        <template #footer>
+          <BaseButton variant="secondary">
+            Back to Login
+          </BaseButton>
+          <BaseButton @click="handleSubmit">
+            Send Link
+          </BaseButton>
+        </template>
+      </BaseCard>
+    </BaseLayoutAuth>
   </BcPageWrapper>
 </template>
 

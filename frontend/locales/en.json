@@ -1,4 +1,31 @@
 {
+  "auth": {
+    "login_and_register": {
+      "already_have_account": "Already have an account?",
+      "choose_password": "Choose a password",
+      "confirm_password": "Confirm your password",
+      "dont_have_account": "Don't have an account?",
+      "email": "Email address",
+      "error_login_group": "Cannot log in",
+      "error_login_message": "your email or your password is unknown.",
+      "error_register_group": "Cannot sign up",
+      "error_register_message": "An error of communication with the served happened.",
+      "error_title": "Error",
+      "forgotten": "Forgot password?",
+      "login_here": "Log in",
+      "password": "Password",
+      "please_agree": ["I agree to the", "T&C", "and", "Privacy Policy"],
+      "signup_here": "Register",
+      "submit_login": "Log in",
+      "submit_register": "Sign up",
+      "title_login": "Sign in",
+      "title_register": "Sign up"
+    },
+    "request_reset": {
+      "message": "Enter your email and we will send you a link to reset your password.",
+      "title": "Request Password Reset"
+    }
+  },
   "block": {
     "col": {
       "graffiti": "Graffiti",
@@ -54,6 +81,9 @@
     "overview_of_ens": "Overview of ENS domain | Overview of ENS domains",
     "past": "Past",
     "penalty": "Penalty",
+    "placeholder": {
+      "email": "vitalik.buterin{'@'}ethereum.org"
+    },
     "protocol": "Protocol | Protocols",
     "selected": "Selected",
     "send": "Send",
@@ -519,27 +549,6 @@
   "locales": {
     "currency": "en-US",
     "date": "en-US"
-  },
-  "login_and_register": {
-    "already_have_account": "Already have an account?",
-    "choose_password": "Choose a password",
-    "confirm_password": "Confirm your password",
-    "dont_have_account": "Don't have an account?",
-    "email": "Email address",
-    "error_login_group": "Cannot log in",
-    "error_login_message": "your email or your password is unknown.",
-    "error_register_group": "Cannot sign up",
-    "error_register_message": "An error of communication with the served happened.",
-    "error_title": "Error",
-    "forgotten": "Forgot password?",
-    "login_here": "Log in",
-    "password": "Password",
-    "please_agree": ["I agree to the", "T&C", "and", "Privacy Policy"],
-    "signup_here": "Register",
-    "submit_login": "Log in",
-    "submit_register": "Sign up",
-    "title_login": "Sign in",
-    "title_register": "Sign up"
   },
   "maintenance": {
     "ongoing": "Maintenance: Some features are unavailable",

@@ -70,9 +70,9 @@ const onSubmit = handleSubmit(async (values) => {
   }
   catch (error) {
     toast.showError({
-      detail: $t('login_and_register.error_register_message'),
-      group: $t('login_and_register.error_register_group'),
-      summary: $t('login_and_register.error_title'),
+      detail: $t('auth.login_and_register.error_register_message'),
+      group: $t('auth.login_and_register.error_register_group'),
+      summary: $t('auth.login_and_register.error_title'),
     })
   }
 })
@@ -96,16 +96,16 @@ const loginLink = computed(() => {
     <div class="page">
       <div class="container">
         <div class="title">
-          {{ $t("login_and_register.title_register") }}
+          {{ $t("auth.login_and_register.title_register") }}
         </div>
         <div class="login-invitation">
-          {{ $t("login_and_register.already_have_account") }}
+          {{ $t("auth.login_and_register.already_have_account") }}
           <BcLink
             :to="loginLink"
             :target="Target.Internal"
             class="link"
           >
-            {{ $t("login_and_register.login_here") }}
+            {{ $t("auth.login_and_register.login_here") }}
           </BcLink>
         </div>
         <form @submit="onSubmit">
@@ -114,7 +114,7 @@ const loginLink = computed(() => {
               for="email"
               class="label"
             >{{
-              $t("login_and_register.email")
+              $t("auth.login_and_register.email")
             }}</label>
             <InputText
               id="email"
@@ -133,7 +133,7 @@ const loginLink = computed(() => {
               for="password"
               class="label"
             >{{
-              $t("login_and_register.choose_password")
+              $t("auth.login_and_register.choose_password")
             }}</label>
             <InputText
               id="password"
@@ -152,7 +152,7 @@ const loginLink = computed(() => {
               for="confirmPassword"
               class="label"
             >{{
-              $t("login_and_register.confirm_password")
+              $t("auth.login_and_register.confirm_password")
             }}</label>
             <InputText
               id="confirmPassword"
@@ -179,29 +179,29 @@ const loginLink = computed(() => {
               />
               <div class="text">
                 <label for="agreement">{{
-                  tOf($t, "login_and_register.please_agree", 0) + " "
+                  tOf($t, "auth.login_and_register.please_agree", 0) + " "
                 }}</label>
                 <BcLink
                   to="https://storage.googleapis.com/legal.beaconcha.in/tos.pdf"
                   :target="Target.External"
                   class="link"
                 >
-                  {{ tOf($t, "login_and_register.please_agree", 1) }}
+                  {{ tOf($t, "auth.login_and_register.please_agree", 1) }}
                 </BcLink>
-                {{ tOf($t, "login_and_register.please_agree", 2) }}
+                {{ tOf($t, "auth.login_and_register.please_agree", 2) }}
                 <BcLink
                   to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
                   :target="Target.External"
                   class="link"
                 >
-                  {{ tOf($t, "login_and_register.please_agree", 3) }}
+                  {{ tOf($t, "auth.login_and_register.please_agree", 3) }}
                 </BcLink>
               </div>
             </div>
             <Button
               class="button"
               type="submit"
-              :label="$t('login_and_register.submit_register')"
+              :label="$t('auth.login_and_register.submit_register')"
               :disabled="!canSubmit"
             />
           </div>

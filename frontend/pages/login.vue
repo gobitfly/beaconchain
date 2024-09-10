@@ -13,7 +13,7 @@ const toast = useBcToast()
 const route = useRoute()
 const { promoCode } = usePromoCode()
 
-useBcSeo('login_and_register.title_login')
+useBcSeo('auth.login_and_register.title_login')
 
 const {
   defineField, errors, handleSubmit,
@@ -53,9 +53,9 @@ const onSubmit = handleSubmit(async (values) => {
   catch (error) {
     password.value = ''
     toast.showError({
-      detail: $t('login_and_register.error_login_message'),
-      group: $t('login_and_register.error_login_group'),
-      summary: $t('login_and_register.error_title'),
+      detail: $t('auth.auth.auth.login_and_register.error_login_message'),
+      group: $t('auth.login_and_register.error_login_group'),
+      summary: $t('auth.login_and_register.error_title'),
     })
   }
 })
@@ -72,7 +72,7 @@ const registerLink = computed(() => {
     <div class="page">
       <div class="container">
         <div class="title">
-          {{ $t("login_and_register.title_login") }}
+          {{ $t("auth.login_and_register.title_login") }}
         </div>
         <form @submit="onSubmit">
           <div class="input-row">
@@ -80,7 +80,7 @@ const registerLink = computed(() => {
               for="email"
               class="label"
             >{{
-              $t("login_and_register.email")
+              $t("auth.login_and_register.email")
             }}</label>
             <InputText
               id="email"
@@ -99,14 +99,14 @@ const registerLink = computed(() => {
               for="password"
               class="label"
             >
-              <div>{{ $t("login_and_register.password") }}</div>
+              <div>{{ $t("auth.login_and_register.password") }}</div>
               <div class="right-cell">
                 <BcLink
-                  to="/requestReset"
+                  to="/request-reset"
                   :target="Target.Internal"
                   class="link"
                 >
-                  {{ $t("login_and_register.forgotten") }}
+                  {{ $t("auth.login_and_register.forgotten") }}
                 </BcLink>
               </div>
             </label>
@@ -124,19 +124,19 @@ const registerLink = computed(() => {
           </div>
           <div class="last-row">
             <div class="account-invitation">
-              {{ $t("login_and_register.dont_have_account") }}
+              {{ $t("auth.login_and_register.dont_have_account") }}
               <BcLink
                 :to="registerLink"
                 :target="Target.Internal"
                 class="link"
               >
-                {{ $t("login_and_register.signup_here") }}
+                {{ $t("auth.login_and_register.signup_here") }}
               </BcLink>
             </div>
             <Button
               class="button"
               type="submit"
-              :label="$t('login_and_register.submit_login')"
+              :label="$t('auth.login_and_register.submit_login')"
               :disabled="!canSubmit"
             />
           </div>
