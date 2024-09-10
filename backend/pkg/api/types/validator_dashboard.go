@@ -27,7 +27,8 @@ type VDBOverviewBalances struct {
 }
 
 type VDBOverviewData struct {
-	Name                string                                     `json:"name,omitempty" extensions:"x-order=1"`
+	Name                string                                     `json:"name,omitempty" extensions:"x-order=1`
+	Network             uint64                                     `json:"network"`
 	Groups              []VDBOverviewGroup                         `json:"groups"`
 	Validators          VDBOverviewValidators                      `json:"validators"`
 	Efficiency          PeriodicValues[float64]                    `json:"efficiency"`
@@ -367,7 +368,6 @@ type VDBPostReturnData struct {
 	Network   uint64 `db:"network" json:"network"`
 	CreatedAt int64  `db:"created_at" json:"created_at"`
 }
-type PostValidatorDashboardsResponse ApiDataResponse[VDBPostReturnData]
 
 type VDBPostCreateGroupData struct {
 	Id   uint64 `db:"id" json:"id"`

@@ -152,10 +152,10 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   }
 
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT_DELETE,
     {
-      method: 'DELETE',
-      query: { validators: validators.join(',') },
+      body: JSON.stringify({ validators }),
+      method: 'POST',
     },
     { dashboardKey: dashboardKey.value },
   )
@@ -555,6 +555,15 @@ const premiumLimit = computed(
                 </div>
                 <div class="info">
                   <div class="label">
+                    {{ $t("dashboard.validator.col.status") }}
+                  </div>
+                  <ValidatorTableStatus
+                    :status="slotProps.data.status"
+                    :position="slotProps.data.queue_position"
+                  />
+                </div>
+                <div class="info">
+                  <div class="label">
                     {{ $t("dashboard.validator.col.withdrawal_credential") }}
                   </div>
                   <BcFormatHash
@@ -645,6 +654,7 @@ const premiumLimit = computed(
   display: flex;
   flex-direction: column;
   overflow-y: hidden;
+  justify-content: space-between;
 
   :deep(.p-datatable-wrapper) {
     flex-grow: 1;

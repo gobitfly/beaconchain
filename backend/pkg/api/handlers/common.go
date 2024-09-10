@@ -67,6 +67,7 @@ var (
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
 	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
+	reJsonContentType              = regexp.MustCompile(`^application\/json(;.*)?$`)
 )
 
 const (
@@ -81,7 +82,7 @@ const (
 	gnosis                            = "gnosis"
 	allowEmpty                        = true
 	forbidEmpty                       = false
-	maxArchivedDashboardsCount        = 10
+	MaxArchivedDashboardsCount        = 10
 )
 
 var (
@@ -184,7 +185,7 @@ func (v *validationError) checkUserEmailToken(token string) string {
 // return error only if internal error occurs, otherwise add error to validationError and/or return nil
 func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	// check if content type is application/json
-	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+	if contentType := r.Header.Get("Content-Type"); !reJsonContentType.MatchString(contentType) {
 		v.add("request body", "'Content-Type' header must be 'application/json'")
 	}
 
@@ -527,8 +528,7 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 }
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
-// precondition: the enum is the same type as the allowed enums.
-func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
+func checkEnumIsAllowed[T enums.EnumFactory[T]](v *validationError, enum T, allowed []T, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
 		return

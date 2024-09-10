@@ -67,6 +67,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 	wg.Go(func() error {
 		dbReturn := []struct {
 			Name         string         `db:"name"`
+			Network      uint64         `db:"network"`
 			IsArchived   sql.NullString `db:"is_archived"`
 			PublicId     sql.NullString `db:"public_id"`
 			PublicName   sql.NullString `db:"public_name"`
@@ -76,6 +77,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
 		SELECT
 			uvd.name,
+			uvd.network,
 			uvd.is_archived,
 			uvds.public_id,
 			uvds.name AS public_name,
@@ -95,6 +97,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 		mutex.Lock()
 		result.Id = uint64(dashboardId)
 		result.Name = dbReturn[0].Name
+		result.Network = dbReturn[0].Network
 		result.IsArchived = dbReturn[0].IsArchived.Valid
 		result.ArchivedReason = dbReturn[0].IsArchived.String
 
@@ -229,64 +232,25 @@ func (d *DataAccessService) CreateValidatorDashboard(ctx context.Context, userId
 }
 
 func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
-	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error starting db transactions to remove a validator dashboard: %w", err)
-	}
-	defer utils.Rollback(tx)
-
-	// Delete the dashboard
-	_, err = tx.ExecContext(ctx, `
+	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = $1
 	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all groups for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1
-	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all validators for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1
-	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all shared dashboards for the dashboard
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_sharing WHERE dashboard_id = $1
-	`, dashboardId)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx to remove a validator dashboard: %w", err)
-	}
-	return nil
+	return err
 }
 
-func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archived bool) (*t.VDBPostArchivingReturnData, error) {
+func (d *DataAccessService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
 	result := &t.VDBPostArchivingReturnData{}
 
-	var archivedReason *string
-	if archived {
-		reason := enums.VDBArchivedReasons.User.ToString()
-		archivedReason = &reason
+	var archivedReasonText *string
+	if archivedReason != nil {
+		reason := archivedReason.ToString()
+		archivedReasonText = &reason
 	}
 
 	err := d.alloyWriter.GetContext(ctx, result, `
 		UPDATE users_val_dashboards SET is_archived = $1 WHERE id = $2
 		RETURNING id, is_archived IS NOT NULL AS is_archived
-	`, archivedReason, dashboardId)
+	`, archivedReasonText, dashboardId)
 	if err != nil {
 		return nil, err
 	}
@@ -312,6 +276,20 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	data := t.VDBOverviewData{}
 	eg := errgroup.Group{}
 	var err error
+
+	// Network
+	if dashboardId.Validators == nil {
+		eg.Go(func() error {
+			query := `SELECT network
+			FROM
+				users_val_dashboards
+			WHERE
+				id = $1`
+			return d.alloyReader.GetContext(ctx, &data.Network, query, dashboardId.Id)
+		})
+	}
+	// TODO handle network of validator set dashboards
+
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
@@ -588,33 +566,11 @@ func (d *DataAccessService) UpdateValidatorDashboardGroup(ctx context.Context, d
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
-	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error starting db transactions to remove a validator dashboard group: %w", err)
-	}
-	defer utils.Rollback(tx)
-
 	// Delete the group
-	_, err = tx.ExecContext(ctx, `
+	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
-	if err != nil {
-		return err
-	}
-
-	// Delete all validators for the group
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM users_val_dashboards_validators WHERE dashboard_id = $1 AND group_id = $2
-	`, dashboardId, groupId)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx to remove a validator dashboard group: %w", err)
-	}
-	return nil
+	return err
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {

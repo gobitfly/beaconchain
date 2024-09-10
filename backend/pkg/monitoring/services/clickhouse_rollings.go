@@ -8,6 +8,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -64,32 +65,37 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			}
 			log.Tracef("checking clickhouse rolling %s", rolling)
 			// context with deadline
-			ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 			defer cancel()
-			var delta uint64
-			err := db.ClickHouseReader.GetContext(ctx, &delta, fmt.Sprintf(`
+			var tsEpochTable time.Time
+			err := db.ClickHouseReader.GetContext(ctx, &tsEpochTable, `
 					SELECT
-						coalesce((
-							SELECT
-								max(epoch)
-							FROM holesky.validator_dashboard_data_epoch
-							WHERE
-								epoch_timestamp = (
-									SELECT
-										max(epoch_timestamp)
-									FROM holesky.validator_dashboard_data_epoch)) - MAX(epoch_end), 255) AS delta
-					FROM
-						holesky.validator_dashboard_data_rolling_%s
-					WHERE
-						validator_index = 0`, rolling))
+						max(epoch_timestamp)
+					FROM validator_dashboard_data_epoch`,
+			)
 			if err != nil {
 				r(constants.Failure, map[string]string{"error": err.Error()})
 				return
 			}
+			var epochRollingTable uint64
+			err = db.ClickHouseReader.GetContext(ctx, &epochRollingTable, fmt.Sprintf(`
+					SELECT
+						max(epoch_end)
+					FROM validator_dashboard_data_rolling_%s`,
+				rolling,
+			),
+			)
+			if err != nil {
+				r(constants.Failure, map[string]string{"error": err.Error()})
+				return
+			}
+			// convert to timestamp
+			tsRollingTable := utils.EpochToTime(epochRollingTable)
+			threshold := 30 * time.Minute
+			delta := tsEpochTable.Sub(tsRollingTable)
 			// check if delta is out of bounds
-			threshold := 4
-			md := map[string]string{"delta": fmt.Sprintf("%d", delta), "threshold": fmt.Sprintf("%d", threshold)}
-			if delta > uint64(threshold) {
+			md := map[string]string{"delta": delta.String(), "threshold": threshold.String()}
+			if delta > threshold {
 				md["error"] = fmt.Sprintf("delta is over threshold %d", threshold)
 				r(constants.Failure, md)
 				return

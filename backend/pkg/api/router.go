@@ -88,6 +88,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
 
+		{http.MethodGet, "/ratelimit-weights", nil, hs.InternalGetRatelimitWeights},
+
 		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
 
 		{http.MethodGet, "/mobile/authorize", nil, hs.InternalPostMobileAuthorize},
@@ -271,7 +273,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroup, hs.InternalDeleteValidatorDashboardGroup},
 		{http.MethodPost, "/{dashboard_id}/validators", hs.PublicPostValidatorDashboardValidators, hs.InternalPostValidatorDashboardValidators},
 		{http.MethodGet, "/{dashboard_id}/validators", hs.PublicGetValidatorDashboardValidators, hs.InternalGetValidatorDashboardValidators},
-		{http.MethodDelete, "/{dashboard_id}/validators", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
+		{http.MethodPost, "/{dashboard_id}/validators/bulk-deletions", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
 		{http.MethodPost, "/{dashboard_id}/public-ids", hs.PublicPostValidatorDashboardPublicIds, hs.InternalPostValidatorDashboardPublicIds},
 		{http.MethodPut, "/{dashboard_id}/public-ids/{public_id}", hs.PublicPutValidatorDashboardPublicId, hs.InternalPutValidatorDashboardPublicId},
 		{http.MethodDelete, "/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteValidatorDashboardPublicId, hs.InternalDeleteValidatorDashboardPublicId},

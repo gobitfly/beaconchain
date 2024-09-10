@@ -444,7 +444,7 @@ var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 	ProductName: "Free",
 	PremiumPerks: t.PremiumPerks{
 		AdFree:                      false,
-		ValidatorDasboards:          1,
+		ValidatorDashboards:         1,
 		ValidatorsPerDashboard:      20,
 		ValidatorGroupsPerDashboard: 1,
 		ShareCustomDashboards:       false,
@@ -549,7 +549,7 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                      true,
-					ValidatorDasboards:          1,
+					ValidatorDashboards:         1,
 					ValidatorsPerDashboard:      100,
 					ValidatorGroupsPerDashboard: 3,
 					ShareCustomDashboards:       true,
@@ -582,7 +582,7 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                      true,
-					ValidatorDasboards:          2,
+					ValidatorDashboards:         2,
 					ValidatorsPerDashboard:      300,
 					ValidatorGroupsPerDashboard: 10,
 					ShareCustomDashboards:       true,
@@ -615,7 +615,7 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 				ProductName: "Orca",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                      true,
-					ValidatorDasboards:          2,
+					ValidatorDashboards:         2,
 					ValidatorsPerDashboard:      1000,
 					ValidatorGroupsPerDashboard: 30,
 					ShareCustomDashboards:       true,
@@ -685,6 +685,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		dbReturn := []struct {
 			Id           uint64         `db:"id"`
 			Name         string         `db:"name"`
+			Network      uint64         `db:"network"`
 			IsArchived   sql.NullString `db:"is_archived"`
 			PublicId     sql.NullString `db:"public_id"`
 			PublicName   sql.NullString `db:"public_name"`
@@ -695,6 +696,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		SELECT
 			uvd.id,
 			uvd.name,
+			uvd.network,
 			uvd.is_archived,
 			uvds.public_id,
 			uvds.name AS public_name,
@@ -712,6 +714,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 				validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
 					Id:             row.Id,
 					Name:           row.Name,
+					Network:        row.Network,
 					PublicIds:      []t.VDBPublicId{},
 					IsArchived:     row.IsArchived.Valid,
 					ArchivedReason: row.IsArchived.String,

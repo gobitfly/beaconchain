@@ -135,11 +135,11 @@ func (h *HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Re
 //
 //	@Description	Create a new validator dashboard. **Note**: New dashboards will automatically have a default group created.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboard Management
+//	@Tags			Validator Dashboards
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
-//	@Success		201		{object}	types.PostValidatorDashboardsResponse
+//	@Success		201		{object}	types.ApiDataResponse[types.VDBPostReturnData]
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Failure		409		{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
 //	@Router			/validator-dashboards [post]
@@ -177,7 +177,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards && !isUserAdmin(userInfo) {
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards && !isUserAdmin(userInfo) {
 		returnConflict(w, r, errors.New("maximum number of validator dashboards reached"))
 		return
 	}
@@ -187,7 +187,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	response := types.PostValidatorDashboardsResponse{
+	response := types.ApiDataResponse[types.VDBPostReturnData]{
 		Data: *data,
 	}
 	returnCreated(w, r, response)
@@ -669,7 +669,16 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	indices, publicKeys := v.checkValidatorList(r.URL.Query().Get("validators"), forbidEmpty)
+	var indices []uint64
+	var publicKeys []string
+	req := struct {
+		Validators []intOrString `json:"validators"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	indices, publicKeys = v.checkValidators(req.Validators, false)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -853,10 +862,9 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	type request struct {
+	req := struct {
 		IsArchived bool `json:"is_archived"`
-	}
-	var req request
+	}{}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
@@ -898,12 +906,12 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 	}
 	if !isUserAdmin(userInfo) {
 		if req.IsArchived {
-			if dashboardCount >= maxArchivedDashboardsCount {
+			if dashboardCount >= MaxArchivedDashboardsCount {
 				returnConflict(w, r, errors.New("maximum number of archived validator dashboards reached"))
 				return
 			}
 		} else {
-			if dashboardCount >= userInfo.PremiumPerks.ValidatorDasboards {
+			if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
 				returnConflict(w, r, errors.New("maximum number of active validator dashboards reached"))
 				return
 			}
@@ -918,7 +926,12 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		}
 	}
 
-	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, req.IsArchived)
+	var archivedReason *enums.VDBArchivedReason
+	if req.IsArchived {
+		archivedReason = &enums.VDBArchivedReasons.User
+	}
+
+	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, archivedReason)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -964,7 +977,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
-var summaryAllowedPeriods = []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 
 // PublicGetValidatorDashboardSummary godoc
 //
@@ -995,7 +1008,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	v.checkEnumIsAllowed(period, summaryAllowedPeriods, "period")
+	checkEnumIsAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1042,7 +1055,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	v.checkEnumIsAllowed(period, summaryAllowedPeriods, "period")
+	checkEnumIsAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1136,8 +1149,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+	checkEnumIsAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1504,7 +1517,7 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardElDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardElDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1540,7 +1553,7 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardClDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetValidatorDashboardClDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return

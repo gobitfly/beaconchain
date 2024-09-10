@@ -11,7 +11,7 @@ CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
 all: 
 	mkdir -p bin
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o ./bin/bc ./cmd/main.go
-
+	go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./docs -d ./pkg/api/ -g ./handlers/public.go
 clean:
 	rm -rf bin
 
@@ -23,6 +23,3 @@ frontend-types:
 
 addhooks:
 	git config core.hooksPath hooks
-
-api-docs:
-	go run cmd/main.go api_docs
