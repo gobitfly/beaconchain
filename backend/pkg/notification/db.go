@@ -3,6 +3,7 @@ package notification
 import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
@@ -39,7 +40,8 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		goqu.C("last_sent_epoch"),
 		goqu.C("created_epoch"),
 		goqu.C("event_threshold"),
-	).Where(goqu.C("event_name").Eq(utils.GetNetwork() + ":" + string(eventName)))
+		goqu.C("event_name"),
+	).Where(goqu.L("(event_name = ? AND user_id <> 0)", utils.GetNetwork()+":"+string(eventName)))
 
 	if lastSentFilter != "" {
 		if len(lastSentFilterArgs) > 0 {
@@ -62,6 +64,8 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	if err != nil {
 		return nil, err
 	}
+
+	log.Infof("Found %d subscriptions for event %s", len(subs), eventName)
 
 	for _, sub := range subs {
 		if _, ok := subMap[sub.EventFilter]; !ok {

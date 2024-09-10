@@ -28,10 +28,10 @@ type NotificationsPerUserId map[UserId]map[EventName]map[EventFilter]Notificatio
 
 func (npui NotificationsPerUserId) AddNotification(n Notification) {
 	if n.GetUserId() == 0 {
-		log.Fatal(fmt.Errorf("Notification user id is 0"), fmt.Sprintf("Notification: %v", n), 0)
+		log.Fatal(fmt.Errorf("Notification user id is 0"), fmt.Sprintf("Notification: %v", n), 1)
 	}
 	if n.GetEventName() == "" {
-		log.Fatal(fmt.Errorf("Notification event name is empty"), fmt.Sprintf("Notification: %v", n), 0)
+		log.Fatal(fmt.Errorf("Notification event name is empty"), fmt.Sprintf("Notification: %v", n), 1)
 	}
 	// next check is disabled as there are events that do not require a filter (rocketpool, network events)
 	// if n.GetEventFilter() == "" {

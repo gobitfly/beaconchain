@@ -32,6 +32,7 @@ import (
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/gobitfly/beaconchain/pkg/exporter/services"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
@@ -75,7 +76,7 @@ func Run() {
 	}
 
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -181,27 +182,27 @@ func Run() {
 	defer db.FrontendWriterDB.Close()
 
 	// clickhouse
-	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
-		Username:     cfg.ClickHouse.WriterDatabase.Username,
-		Password:     cfg.ClickHouse.WriterDatabase.Password,
-		Name:         cfg.ClickHouse.WriterDatabase.Name,
-		Host:         cfg.ClickHouse.WriterDatabase.Host,
-		Port:         cfg.ClickHouse.WriterDatabase.Port,
-		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
-		SSL:          true,
-		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
-	}, &types.DatabaseConfig{
-		Username:     cfg.ClickHouse.ReaderDatabase.Username,
-		Password:     cfg.ClickHouse.ReaderDatabase.Password,
-		Name:         cfg.ClickHouse.ReaderDatabase.Name,
-		Host:         cfg.ClickHouse.ReaderDatabase.Host,
-		Port:         cfg.ClickHouse.ReaderDatabase.Port,
-		MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-		SSL:          true,
-		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	}, "clickhouse", "clickhouse")
-	defer db.ClickHouseReader.Close()
-	defer db.ClickHouseWriter.Close()
+	// db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+	// 	Username:     cfg.ClickHouse.WriterDatabase.Username,
+	// 	Password:     cfg.ClickHouse.WriterDatabase.Password,
+	// 	Name:         cfg.ClickHouse.WriterDatabase.Name,
+	// 	Host:         cfg.ClickHouse.WriterDatabase.Host,
+	// 	Port:         cfg.ClickHouse.WriterDatabase.Port,
+	// 	MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+	// 	SSL:          true,
+	// 	MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+	// }, &types.DatabaseConfig{
+	// 	Username:     cfg.ClickHouse.ReaderDatabase.Username,
+	// 	Password:     cfg.ClickHouse.ReaderDatabase.Password,
+	// 	Name:         cfg.ClickHouse.ReaderDatabase.Name,
+	// 	Host:         cfg.ClickHouse.ReaderDatabase.Host,
+	// 	Port:         cfg.ClickHouse.ReaderDatabase.Port,
+	// 	MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+	// 	SSL:          true,
+	// 	MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+	// }, "clickhouse", "clickhouse")
+	// defer db.ClickHouseReader.Close()
+	// defer db.ClickHouseWriter.Close()
 
 	// Initialize the persistent redis client
 	rdc := redis.NewClient(&redis.Options{
@@ -456,6 +457,8 @@ func Run() {
 		err = fixEns(erigonClient)
 	case "fix-ens-addresses":
 		err = fixEnsAddresses(erigonClient)
+	case "collect-notifications":
+		err = collectNotifications(opts.StartEpoch, opts.EndEpoch)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -465,6 +468,19 @@ func Run() {
 	} else {
 		log.Infof("command executed successfully")
 	}
+}
+
+func collectNotifications(startEpoch, endEpoch uint64) error {
+	epoch := startEpoch
+
+	log.Infof("collecting notifications for epoch %v", epoch)
+	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("found %v notifications for epoch %v", len(notifications), epoch)
+	return nil
 }
 
 func fixEns(erigonClient *rpc.ErigonClient) error {
