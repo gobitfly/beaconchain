@@ -80,7 +80,7 @@ func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
 		newMessages := make([]*messaging.Message, 0, result.FailureCount)
 		if result.FailureCount > 0 {
 			for i, response := range result.Responses {
-				log.Info(response)
+				//log.Info(response)
 				if isRelevantError(response) {
 					log.Infof("retrying message %d", i)
 					newMessages = append(newMessages, currentMessages[i])
