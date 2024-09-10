@@ -18,7 +18,9 @@ func isRelevantError(response *messaging.SendResponse) bool {
 	if !response.Success && response.Error != nil {
 		// Ignore https://stackoverflow.com/questions/58308835/using-firebase-for-notifications-getting-app-instance-has-been-unregistered
 		// Errors since they indicate that the user token is expired
-		if !strings.Contains(response.Error.Error(), "registration-token-not-registered") {
+		if !strings.Contains(response.Error.Error(), "registration-token-not-registered") &&
+			!strings.Contains(response.Error.Error(), "Requested entity was not found.") &&
+			!strings.Contains(response.Error.Error(), "Request contains an invalid argument.") {
 			return true
 		}
 	}
