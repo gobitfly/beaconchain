@@ -682,6 +682,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		dbReturn := []struct {
 			Id           uint64         `db:"id"`
 			Name         string         `db:"name"`
+			Network      uint64         `db:"network"`
 			IsArchived   sql.NullString `db:"is_archived"`
 			PublicId     sql.NullString `db:"public_id"`
 			PublicName   sql.NullString `db:"public_name"`
@@ -692,6 +693,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		SELECT
 			uvd.id,
 			uvd.name,
+			uvd.network,
 			uvd.is_archived,
 			uvds.public_id,
 			uvds.name AS public_name,
@@ -709,6 +711,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 				validatorDashboardMap[row.Id] = &t.ValidatorDashboard{
 					Id:             row.Id,
 					Name:           row.Name,
+					Network:        row.Network,
 					PublicIds:      []t.VDBPublicId{},
 					IsArchived:     row.IsArchived.Valid,
 					ArchivedReason: row.IsArchived.String,

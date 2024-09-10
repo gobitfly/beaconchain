@@ -61,7 +61,7 @@ func (s *ServiceTimeoutDetector) runChecks() {
 				status,
 				metadata
 			FROM status_reports
-			WHERE expires_at > now() and deployment_type = ?
+			WHERE expires_at > now() and deployment_type = ? and emitter not in (select distinct emitter from status_reports where event_id = ? and inserted_at > now() - interval 1 days)
 			ORDER BY
 				event_id ASC,
 				emitter ASC,
@@ -87,6 +87,7 @@ func (s *ServiceTimeoutDetector) runChecks() {
 		)
 		SELECT
 			event_id,
+			emitter,
 			status,
 			inserted_at,
 			expires_at,
@@ -101,13 +102,14 @@ func (s *ServiceTimeoutDetector) runChecks() {
 	defer cancel()
 	var victims []struct {
 		EventID    string            `db:"event_id"`
+		Emitter    string            `db:"emitter"`
 		Status     string            `db:"status"`
 		InsertedAt time.Time         `db:"inserted_at"`
 		ExpiresAt  time.Time         `db:"expires_at"`
 		TimeoutsAt time.Time         `db:"timeouts_at"`
 		Metadata   map[string]string `db:"metadata"`
 	}
-	err := db.ClickHouseReader.SelectContext(ctx, &victims, query, utils.Config.DeploymentType)
+	err := db.ClickHouseReader.SelectContext(ctx, &victims, query, utils.Config.DeploymentType, constants.CleanShutdownEvent)
 	if err != nil {
 		r(constants.Failure, map[string]string{"error": err.Error()})
 		return
