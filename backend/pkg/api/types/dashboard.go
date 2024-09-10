@@ -7,6 +7,7 @@ type AccountDashboard struct {
 type ValidatorDashboard struct {
 	Id             uint64        `json:"id"`
 	Name           string        `json:"name"`
+	Network        uint64        `json:"network"`
 	PublicIds      []VDBPublicId `json:"public_ids,omitempty"`
 	IsArchived     bool          `json:"is_archived"`
 	ArchivedReason string        `json:"archived_reason,omitempty" tstype:"'user' | 'dashboard_limit' | 'validator_limit' | 'group_limit'"`
