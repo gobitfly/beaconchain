@@ -98,7 +98,7 @@ func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
 	if len(currentMessages) > 0 {
 		for _, response := range result.Responses {
 			if isRelevantError(response) {
-				log.Error(fmt.Errorf("firebase error, message id: %d, error: %s", response.MessageID, response.Error), "error sending push notifications", 0)
+				log.Error(fmt.Errorf("firebase error, message id: %s, error: %s", response.MessageID, response.Error), "error sending push notifications", 0)
 				resultFailureCount++
 			}
 		}
