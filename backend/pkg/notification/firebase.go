@@ -2,12 +2,13 @@ package notification
 
 import (
 	"context"
+	"fmt"
 
 	"strings"
 	"time"
 
-	firebase "firebase.google.com/go"
 	"firebase.google.com/go/messaging"
+	firebase "firebase.google.com/go/v4"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"google.golang.org/api/option"
@@ -24,10 +25,10 @@ func isRelevantError(response *messaging.SendResponse) bool {
 	return false
 }
 
-func SendPushBatch(messages []*messaging.Message) error {
+func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
 	credentialsPath := utils.Config.Notifications.FirebaseCredentialsPath
 	if credentialsPath == "" {
-		log.Error(nil, "firebase credentials path not provided, disabling push notifications", 0)
+		log.Error(fmt.Errorf("firebase credentials path not provided, disabling push notifications"), "error initializing SendPushBatch", 0)
 		return nil
 	}
 
@@ -42,29 +43,32 @@ func SendPushBatch(messages []*messaging.Message) error {
 
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
-		log.Error(nil, "error initializing app", 0)
+		log.Error(err, "error initializing app", 0)
 		return err
 	}
 
 	client, err := app.Messaging(ctx)
 	if err != nil {
-		log.Error(nil, "error initializing messaging", 0)
+		log.Error(err, "error initializing messaging", 0)
 		return err
 	}
 
-	var waitBeforeTryInSeconds = []time.Duration{0 * time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second, 16 * time.Second}
+	var waitBeforeTryInSeconds = []time.Duration{0, 2, 4, 8, 16}
 	var resultSuccessCount, resultFailureCount int = 0, 0
 	var result *messaging.BatchResponse
 
 	currentMessages := messages
 	tries := 0
 	for _, s := range waitBeforeTryInSeconds {
-		time.Sleep(s)
+		time.Sleep(s * time.Second)
 		tries++
-
-		result, err = client.SendAll(context.Background(), currentMessages)
+		if dryRun {
+			result, err = client.SendEachDryRun(context.Background(), currentMessages)
+		} else {
+			result, err = client.SendEach(context.Background(), currentMessages)
+		}
 		if err != nil {
-			log.Error(nil, "error sending push notifications", 0)
+			log.Error(err, "error sending push notifications", 0)
 			return err
 		}
 
@@ -74,7 +78,9 @@ func SendPushBatch(messages []*messaging.Message) error {
 		newMessages := make([]*messaging.Message, 0, result.FailureCount)
 		if result.FailureCount > 0 {
 			for i, response := range result.Responses {
+				logger.Info(response)
 				if isRelevantError(response) {
+					logger.Infof("retrying message %d", i)
 					newMessages = append(newMessages, currentMessages[i])
 					resultFailureCount--
 				}
@@ -90,12 +96,12 @@ func SendPushBatch(messages []*messaging.Message) error {
 	if len(currentMessages) > 0 {
 		for _, response := range result.Responses {
 			if isRelevantError(response) {
-				log.Error(nil, "firebase error", 0, log.Fields{"MessageID": response.MessageID, "response": response.Error})
+				logger.WithError(response.Error).WithField("MessageID", response.MessageID).Errorf("firebase error")
 				resultFailureCount++
 			}
 		}
 	}
 
-	log.Infof("sent %d firebase notifications in %d of %d tries. successful: %d | failed: %d", len(messages), tries, len(waitBeforeTryInSeconds), resultSuccessCount, resultFailureCount)
+	logger.Infof("sent %d firebase notifications in %d of %d tries. successful: %d | failed: %d", len(messages), tries, len(waitBeforeTryInSeconds), resultSuccessCount, resultFailureCount)
 	return nil
 }

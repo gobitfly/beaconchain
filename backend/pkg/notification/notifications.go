@@ -678,7 +678,7 @@ func sendPushNotifications() error {
 				end = len(n.Content.Messages)
 			}
 
-			err = SendPushBatch(n.Content.Messages[start:end])
+			err = SendPushBatch(n.Content.Messages[start:end], false)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_send_push_batch").Inc()
 				log.Error(err, "error sending firebase batch job", 0)
