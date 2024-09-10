@@ -486,7 +486,10 @@ func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r 
 	if force || (bundleVersion < stats.LatestBundleVersion && (stats.TargetCount == 0 || stats.DeliveryCount < stats.TargetCount)) {
 		data.BundleUrl = stats.BundleUrl
 	}
-	returnOk(w, r, data)
+	response := types.GetMobileLatestBundleResponse{
+		Data: data,
+	}
+	returnOk(w, r, response)
 }
 
 func (h *HandlerService) InternalPostMobileBundleDeliveries(w http.ResponseWriter, r *http.Request) {
