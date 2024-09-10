@@ -22,7 +22,7 @@ import (
 	"time"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
-	"firebase.google.com/go/messaging"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"

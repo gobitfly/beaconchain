@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"firebase.google.com/go/messaging"
 	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"google.golang.org/api/option"
@@ -78,9 +78,9 @@ func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
 		newMessages := make([]*messaging.Message, 0, result.FailureCount)
 		if result.FailureCount > 0 {
 			for i, response := range result.Responses {
-				logger.Info(response)
+				log.Info(response)
 				if isRelevantError(response) {
-					logger.Infof("retrying message %d", i)
+					log.Infof("retrying message %d", i)
 					newMessages = append(newMessages, currentMessages[i])
 					resultFailureCount--
 				}
@@ -96,12 +96,12 @@ func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
 	if len(currentMessages) > 0 {
 		for _, response := range result.Responses {
 			if isRelevantError(response) {
-				logger.WithError(response.Error).WithField("MessageID", response.MessageID).Errorf("firebase error")
+				log.Error(fmt.Errorf("firebase error, message id: %d, error: %s", response.MessageID, response.Error), "error sending push notifications", 0)
 				resultFailureCount++
 			}
 		}
 	}
 
-	logger.Infof("sent %d firebase notifications in %d of %d tries. successful: %d | failed: %d", len(messages), tries, len(waitBeforeTryInSeconds), resultSuccessCount, resultFailureCount)
+	log.Infof("sent %d firebase notifications in %d of %d tries. successful: %d | failed: %d", len(messages), tries, len(waitBeforeTryInSeconds), resultSuccessCount, resultFailureCount)
 	return nil
 }
