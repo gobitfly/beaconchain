@@ -114,7 +114,7 @@ const id = useId()
   >
     {{ $t("notifications.dashboards.dialog.heading_webhook") }}
   </h2>
-  <BcForm
+  <BaseForm
     v-focustrap
     novalidate
     class="notifications-management-dialog-webhook__form"
@@ -122,7 +122,7 @@ const id = useId()
     @keydown.esc.stop.prevent="close"
     @submit.prevent="onSubmit"
   >
-    <BcFormRow>
+    <BaseFormRow>
       <BcInputText
         v-model="webhook_url"
         v-bind="webhook_url_attrs"
@@ -133,8 +133,8 @@ const id = useId()
         type="url"
         should-autoselect
       />
-    </BcFormRow>
-    <BcFormRow>
+    </BaseFormRow>
+    <BaseFormRow>
       <BcInputCheckbox
         v-model="is_webhook_discord_enabled"
         v-bind="is_webhook_discord_enabled_attrs"
@@ -149,7 +149,7 @@ const id = useId()
           />
         </template>
       </BcInputCheckbox>
-    </BcFormRow>
+    </BaseFormRow>
     <div class="notifications-management-dialog-webhook-footer">
       <BcButton
         variant="secondary"
@@ -168,7 +168,7 @@ const id = useId()
         {{ isFormDirty ? $t("navigation.save") : $t("navigation.done") }}
       </BcButton>
     </div>
-  </BcForm>
+  </BaseForm>
 </template>
 
 <style lang="scss" scoped>

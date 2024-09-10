@@ -6,3 +6,10 @@ html {
   /* make fonts look as smooth as in Figma */
   --webkit-font-smoothing: antialiased;
 }
+
+@layer components{
+  .containerAlias{
+    /* there is a name conflict with main.scss and tailwind class */
+    @apply container
+  }
+}

@@ -1,3 +1,3 @@
-export const isServerSide = import.meta.server
 export const isClientSide = import.meta.client
-export const isDevEnvironment = import.meta.dev
+export const isServerSide = import.meta.server
+export const isDevelopmentEnvironment = import.meta.dev
