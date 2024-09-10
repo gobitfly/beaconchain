@@ -45,6 +45,14 @@ func InitNotificationSender() {
 	go notificationSender()
 }
 
+func GetNotificationsForEpoch(pubkeyCachePath string, epoch uint64) (types.NotificationsPerUserId, error) {
+	err := initPubkeyCache(pubkeyCachePath)
+	if err != nil {
+		log.Fatal(err, "error initializing pubkey cache path for notifications", 0)
+	}
+	return collectNotifications(epoch)
+}
+
 func InitNotificationCollector(pubkeyCachePath string) {
 	err := initPubkeyCache(pubkeyCachePath)
 	if err != nil {
@@ -1739,8 +1747,8 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 	for _, subs := range subscribedUsers {
 		for _, sub := range subs {
 			event := pubkeyToSlashingInfoMap[sub.EventFilter]
-			if event == nil {
-				log.Error(fmt.Errorf("error retrieving slashing info for public key %s", sub.EventFilter), "", 0)
+			if event == nil { // pubkey has not been slashed
+				//log.Error(fmt.Errorf("error retrieving slashing info for public key %s", sub.EventFilter), "", 0)
 				continue
 			}
 			log.Infof("creating %v notification for validator %v in epoch %v", event.Reason, sub.EventFilter, epoch)
@@ -2386,7 +2394,7 @@ func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUse
 
 		dbResult, err := GetSubsForEventFilter(
 			types.NetworkLivenessIncreasedEventName,
-			"us.last_sent_ts <= NOW() - INTERVAL '1 hour' OR us.last_sent_ts IS NULL",
+			"(last_sent_ts <= NOW() - INTERVAL '1 hour' OR last_sent_ts IS NULL)",
 			nil,
 			nil,
 		)
@@ -2760,7 +2768,7 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ep
 		pubKeys = append(pubKeys, val.PubKey)
 	}
 
-	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoon, "us.last_sent_ts <= NOW() - INTERVAL '26 hours' OR us.last_sent_ts IS NULL", nil, pubKeys)
+	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoon, "(last_sent_ts <= NOW() - INTERVAL '26 hours' OR last_sent_ts IS NULL)", nil, pubKeys)
 	// err = db.FrontendWriterDB.Select(&dbResult, `
 	// 			SELECT us.id, us.user_id, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') as unsubscribe_hash
 	// 			FROM users_subscriptions AS us
