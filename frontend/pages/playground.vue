@@ -86,6 +86,9 @@ const tabs: HashTabs = [
 <template>
   <div class="content">
     <h1>Playground for testing UI components</h1>
+    <pre>
+      deploymentType: {{ useRuntimeConfig().public.deploymentType }}
+    </pre>
     <BcLink to="/" class="row">
       <Button class="row">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
