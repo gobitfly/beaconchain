@@ -470,12 +470,11 @@ func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r 
 	force := v.checkBool(q.Get("force"), "force")
 	bundleVersion := v.checkUint(q.Get("bundle_version"), "bundle_version")
 	nativeVersion := v.checkUint(q.Get("native_version"), "native_version")
-	environment := checkEnum[enums.Environment](&v, q.Get("environment"), "environment")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	stats, err := h.dai.GetLatestBundleForNativeVersion(r.Context(), nativeVersion, environment)
+	stats, err := h.dai.GetLatestBundleForNativeVersion(r.Context(), nativeVersion)
 	if err != nil {
 		handleErr(w, r, err)
 		return

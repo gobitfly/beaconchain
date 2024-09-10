@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
@@ -21,7 +20,7 @@ type AppRepository interface {
 	AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error
 	GetAppSubscriptionCount(userID uint64) (uint64, error)
 	AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
-	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64, environment enums.Environment) (*t.MobileAppBundleStats, error)
+	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error)
 	IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error
 }
 
@@ -110,9 +109,9 @@ func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, payment
 	return err
 }
 
-func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64, environment enums.Environment) (*t.MobileAppBundleStats, error) {
+func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
 	// @TODO data access
-	return d.dummy.GetLatestBundleForNativeVersion(ctx, nativeVersion, environment)
+	return d.dummy.GetLatestBundleForNativeVersion(ctx, nativeVersion)
 }
 
 func (d *DataAccessService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
