@@ -55,14 +55,14 @@ func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
 		return err
 	}
 
-	var waitBeforeTryInSeconds = []time.Duration{0, 2, 4, 8, 16}
+	var waitBeforeTryInSeconds = []int{0, 2, 4, 8, 16}
 	var resultSuccessCount, resultFailureCount int = 0, 0
 	var result *messaging.BatchResponse
 
 	currentMessages := messages
 	tries := 0
 	for _, s := range waitBeforeTryInSeconds {
-		time.Sleep(s * time.Second)
+		time.Sleep(time.Duration(s) * time.Second)
 		tries++
 		if dryRun {
 			result, err = client.SendEachDryRun(context.Background(), currentMessages)
