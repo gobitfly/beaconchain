@@ -13,7 +13,7 @@ type RatelimitRepository interface {
 
 func (d *DataAccessService) GetApiWeights(ctx context.Context) ([]types.ApiWeightItem, error) {
 	var result []types.ApiWeightItem
-	err := d.readerDb.SelectContext(ctx, &result, `
+	err := d.userReader.SelectContext(ctx, &result, `
 		SELECT bucket, endpoint, method, weight
 		FROM api_weights
 		WHERE valid_from <= NOW()
