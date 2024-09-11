@@ -1,6 +1,7 @@
 package dataaccess
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -19,6 +20,8 @@ type AppRepository interface {
 	AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error
 	GetAppSubscriptionCount(userID uint64) (uint64, error)
 	AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
+	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error)
+	IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error
 }
 
 // GetUserIdByRefreshToken basically used to confirm the claimed user id with the refresh token. Returns the userId if successful
@@ -104,4 +107,14 @@ func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, payment
 	}
 
 	return err
+}
+
+func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
+	// @TODO data access
+	return d.dummy.GetLatestBundleForNativeVersion(ctx, nativeVersion)
+}
+
+func (d *DataAccessService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
+	// @TODO data access
+	return d.dummy.IncrementBundleDeliveryCount(ctx, bundleVerison)
 }
