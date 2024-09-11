@@ -121,7 +121,7 @@ func setup() error {
 		"default", "/api/v2/test-ratelimit", "GET", "", 2, time.Now().Unix(),
 	)
 	if err != nil {
-		return fmt.Errorf("error inserting user 2: %w", err)
+		return fmt.Errorf("error inserting api weight: %w", err)
 	}
 
 	cfg := &types.Config{}
