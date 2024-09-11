@@ -1,6 +1,8 @@
 package types
 
-import "github.com/gobitfly/beaconchain/pkg/api/enums"
+import (
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
+)
 
 type ArchiverDashboard struct {
 	DashboardId    uint64
