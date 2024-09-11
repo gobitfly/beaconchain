@@ -1280,3 +1280,7 @@ func (h *HandlerService) InternalGetSlotBlobs(w http.ResponseWriter, r *http.Req
 	}
 	returnOk(w, r, response)
 }
+
+func (h *HandlerService) ReturnOk(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, r, nil)
+}
