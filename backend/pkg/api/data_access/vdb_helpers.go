@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 )
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
@@ -151,4 +153,70 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	}
 
 	return timeToWithdrawal
+}
+
+func (d *DataAccessService) getRocketPoolOperators(ctx context.Context, validatorIndices []t.VDBValidator) (map[t.VDBValidator]t.RpOperatorInfo, error) {
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return nil, err
+	}
+
+	pubKeyList := make([][]byte, 0, len(validatorIndices))
+	pubKeyToIndex := make(map[string]t.VDBValidator, len(validatorIndices))
+	for _, validator := range validatorIndices {
+		publicKey := validatorMapping.ValidatorMetadata[validator].PublicKey
+		pubKeyList = append(pubKeyList, publicKey)
+		pubKeyToIndex[hexutil.Encode(publicKey)] = validator
+	}
+
+	queryResult := []struct {
+		Pubkey             []byte          `db:"pubkey"`
+		NodeFee            float64         `db:"node_fee"`
+		NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
+		UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
+		SmoothingPoolOptIn bool            `db:"smoothing_pool_opted_in"`
+	}{}
+
+	query := `
+		SELECT 
+			rplm.pubkey,
+			rplm.node_fee,
+			rplm.node_deposit_balance,
+			rplm.user_deposit_balance,
+			COALESCE(rpln.smoothing_pool_opted_in, false) AS smoothing_pool_opted_in 
+		FROM rocketpool_minipools rplm
+		LEFT JOIN rocketpool_nodes rpln ON rplm.node_address = rpln.address
+		WHERE pubkey = ANY($1) AND node_deposit_balance IS NOT NULL AND user_deposit_balance IS NOT NULL`
+
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving rocketpool validators data: %w", err)
+	}
+
+	rpValidators := make(map[t.VDBValidator]t.RpOperatorInfo)
+	for _, res := range queryResult {
+		publicKey := hexutil.Encode(res.Pubkey)
+		rpValidators[pubKeyToIndex[publicKey]] = t.RpOperatorInfo{
+			NodeFee:            res.NodeFee,
+			NodeDepositBalance: res.NodeDepositBalance,
+			UserDepositBalance: res.UserDepositBalance,
+			SmoothingPoolOptIn: res.SmoothingPoolOptIn,
+		}
+	}
+
+	return rpValidators, nil
+}
+
+func (d *DataAccessService) getRocketPoolOperatorReward(operator t.RpOperatorInfo, reward, effBalance decimal.Decimal) decimal.Decimal {
+	if reward.GreaterThan(decimal.Zero) && effBalance.GreaterThanOrEqual(decimal.New(32, 18)) {
+		fullDeposit := operator.UserDepositBalance.Add(operator.NodeDepositBalance)
+		operatorShare := operator.NodeDepositBalance.Div(fullDeposit)
+		invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
+
+		commissionReward := reward.Mul(invOperatorShare).Mul(decimal.NewFromFloat(operator.NodeFee))
+		rpReward := reward.Mul(operatorShare).Add(commissionReward)
+
+		return rpReward
+	}
+	return reward
 }

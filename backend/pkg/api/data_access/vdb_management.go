@@ -320,6 +320,20 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	}
 
+	validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+	}
+
+	if dashboardId.Validators != nil || dashboardId.AggregateGroups {
+		data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
+	}
+
+	rpValidators, err := d.getRocketPoolOperators(ctx, validators)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
+	}
+
 	// Validator status and balance
 	eg.Go(func() error {
 		validatorMapping, err := d.services.GetCurrentValidatorMapping()
@@ -327,21 +341,13 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			return err
 		}
 
-		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-		if err != nil {
-			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-		}
+		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
+		var nonRpDashboardId t.VDBId
 
-		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
-			data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
-		}
-
-		// Status
-		pubKeyList := make([][]byte, 0, len(validators))
 		for _, validator := range validators {
 			metadata := validatorMapping.ValidatorMetadata[validator]
-			pubKeyList = append(pubKeyList, metadata.PublicKey)
 
+			// Status
 			switch constypes.ValidatorDbStatus(metadata.Status) {
 			case constypes.DbExitingOnline, constypes.DbSlashingOnline, constypes.DbActiveOnline:
 				data.Validators.Online++
@@ -354,47 +360,12 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			case constypes.DbExited:
 				data.Validators.Exited++
 			}
-		}
 
-		// Find rocketpool validators
-		type RpOperatorInfo struct {
-			Pubkey             []byte          `db:"pubkey"`
-			NodeFee            float64         `db:"node_fee"`
-			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
-			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
-		}
-		var queryResult []RpOperatorInfo
-		query := `
-			SELECT 
-				pubkey,
-				node_fee,
-				node_deposit_balance,
-				user_deposit_balance
-			FROM rocketpool_minipools
-			WHERE pubkey = ANY($1)
-				AND node_deposit_balance is not null
-				AND user_deposit_balance is not null
-			`
-
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
-		if err != nil {
-			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
-		}
-
-		rpValidators := make(map[string]RpOperatorInfo)
-		for _, res := range queryResult {
-			rpValidators[hexutil.Encode(res.Pubkey)] = res
-		}
-
-		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
-		var nonRpDashboardId t.VDBId
-
-		for _, validator := range validators {
-			metadata := validatorMapping.ValidatorMetadata[validator]
+			// Balance
 			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
 
-			if rpValidator, ok := rpValidators[hexutil.Encode(metadata.PublicKey)]; ok {
+			if rpValidator, ok := rpValidators[validator]; ok {
 				if protocolModes.RocketPool {
 					// Calculate the balance of the operator
 					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
@@ -435,7 +406,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		eg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, hours)
+			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, protocolModes, -1, rpValidators, hours)
 			if err != nil {
 				return err
 			}
