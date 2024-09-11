@@ -52,7 +52,6 @@ func Run() {
 		// enable light-weight db connection monitoring
 		monitoring.Init(false)
 		monitoring.Start()
-		defer monitoring.Stop()
 	}
 
 	var dataAccessor dataaccess.DataAccessor
@@ -98,7 +97,7 @@ func Run() {
 	}()
 
 	utils.WaitForCtrlC()
-
+	monitoring.Stop() // this will emit a clean shutdown event
 	log.Info("shutting down server")
 	if srv != nil {
 		shutDownCtx, cancelShutDownCtx := context.WithTimeout(context.Background(), 10*time.Second)

@@ -71,7 +71,7 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			err := db.ClickHouseReader.GetContext(ctx, &tsEpochTable, `
 					SELECT
 						max(epoch_timestamp)
-					FROM holesky.validator_dashboard_data_epoch`,
+					FROM validator_dashboard_data_epoch`,
 			)
 			if err != nil {
 				r(constants.Failure, map[string]string{"error": err.Error()})
@@ -81,7 +81,7 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			err = db.ClickHouseReader.GetContext(ctx, &epochRollingTable, fmt.Sprintf(`
 					SELECT
 						max(epoch_end)
-					FROM holesky.validator_dashboard_data_rolling_%s`,
+					FROM validator_dashboard_data_rolling_%s`,
 				rolling,
 			),
 			)
