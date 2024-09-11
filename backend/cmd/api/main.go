@@ -52,7 +52,6 @@ func Run() {
 		// enable light-weight db connection monitoring
 		monitoring.Init(false)
 		monitoring.Start()
-		defer monitoring.Stop()
 	}
 
 	var dataAccessor dataaccess.DataAccessor
@@ -60,6 +59,7 @@ func Run() {
 		dataAccessor = dataaccess.NewDummyService()
 	} else {
 		dataAccessor = dataaccess.NewDataAccessService(cfg)
+		dataAccessor.StartDataAccessServices()
 	}
 	defer dataAccessor.Close()
 
@@ -70,7 +70,7 @@ func Run() {
 		router.Use(metrics.HttpMiddleware)
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()
@@ -97,7 +97,7 @@ func Run() {
 	}()
 
 	utils.WaitForCtrlC()
-
+	monitoring.Stop() // this will emit a clean shutdown event
 	log.Info("shutting down server")
 	if srv != nil {
 		shutDownCtx, cancelShutDownCtx := context.WithTimeout(context.Background(), 10*time.Second)

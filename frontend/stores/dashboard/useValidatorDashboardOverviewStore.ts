@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { useAllValidatorDashboardRewardsDetailsStore } from './useValidatorDashboardRewardsDetailsStore'
 import type {
-  InternalGetValidatorDashboardResponse,
+  GetValidatorDashboardResponse,
   VDBOverviewData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
@@ -26,7 +26,7 @@ export function useValidatorDashboardOverviewStore() {
       return
     }
     try {
-      const res = await fetch<InternalGetValidatorDashboardResponse>(
+      const res = await fetch<GetValidatorDashboardResponse>(
         API_PATH.DASHBOARD_OVERVIEW,
         undefined,
         { dashboardKey: key },

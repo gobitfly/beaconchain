@@ -40,8 +40,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	validatorMap := make(map[t.VDBValidator]bool)
 	params := []interface{}{}
 	filteredValidatorsQuery := ""
-	validatorMapping, releaseValMapLock, err := d.services.GetCurrentValidatorMapping()
-	defer releaseValMapLock()
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -201,8 +200,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if !onlyPrimarySort || !currentCursor.IsValid() ||
 		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
 		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
-		dutiesInfo, releaseLock, err := d.services.GetCurrentDutiesInfo()
-		defer releaseLock()
+		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
 		if err == nil {
 			for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
 				// only gather scheduled slots
