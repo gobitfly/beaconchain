@@ -412,10 +412,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		return nil, nil, err
 	}
 	var contractIdx int
-	for _, resultRow := range data {
-		if resultRow.RewardRecipient != nil {
-			resultRow.RewardRecipient = addressMapping[string(resultRow.RewardRecipient.Hash)]
-			resultRow.RewardRecipient.IsContract = contractStatuses[contractIdx] == types.CONTRACT_CREATION || contractStatuses[contractIdx] == types.CONTRACT_PRESENT
+	for i := range data {
+		if data[i].RewardRecipient != nil {
+			data[i].RewardRecipient = addressMapping[string(data[i].RewardRecipient.Hash)]
+			data[i].RewardRecipient.IsContract = contractStatuses[contractIdx] == types.CONTRACT_CREATION || contractStatuses[contractIdx] == types.CONTRACT_PRESENT
 			contractIdx += 1
 		}
 	}

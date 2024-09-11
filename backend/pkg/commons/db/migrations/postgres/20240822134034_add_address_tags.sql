@@ -11,5 +11,5 @@ CREATE TABLE address_tags (
 -- +goose Down
 -- +goose StatementBegin
 SELECT('down SQL query - drop address_tags table');
-DROP TABLE execution_payloads;
+DROP TABLE address_tags;
 -- +goose StatementEnd
