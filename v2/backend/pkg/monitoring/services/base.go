@@ -83,7 +83,7 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 				err = db.ClickHouseNativeWriter.AsyncInsert(
 					ctx,
 					"INSERT INTO status_reports (emitter, event_id, deployment_type, insert_id, expires_at, timeouts_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					true,
+					false, // true means wait for settlement, but we want to shoot and forget. false does mean we cant log any errors that occur during settlement
 					utils.GetUUID(),
 					id,
 					utils.Config.DeploymentType,
