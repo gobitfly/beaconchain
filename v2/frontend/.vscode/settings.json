@@ -15,6 +15,7 @@
     "eslint",
     "feature-flags",
     "git",
+    "git-blame-ignore",
     "i18n",
     "mainHeader",
     "notifications",
