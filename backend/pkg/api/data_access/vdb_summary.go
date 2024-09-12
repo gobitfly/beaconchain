@@ -689,7 +689,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	ret.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
-	if ret.AttestationEfficiency < 0 || math.IsNaN(ret.AttestationEfficiency) {
+	if math.IsNaN(ret.AttestationEfficiency) {
 		ret.AttestationEfficiency = 0
 	}
 
