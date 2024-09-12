@@ -98,7 +98,7 @@ svg {
 }
 
 // see https://tailwindcss.com/docs/screen-readers
-sr-only {
+.bc-screenreader-only {
   position: absolute;
   width: 1px;
   height: 1px;
