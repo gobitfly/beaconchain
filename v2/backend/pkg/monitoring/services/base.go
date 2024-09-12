@@ -65,8 +65,8 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			if timeout != constants.Default {
 				timeouts_at = now.Add(timeout)
 			}
-			expires_at := timeouts_at.Add(5 * time.Minute)
-			if check_interval >= 5*time.Minute {
+			expires_at := timeouts_at.Add(1 * time.Minute)
+			if check_interval >= 1*time.Minute {
 				expires_at = timeouts_at.Add(check_interval)
 			}
 			log.TraceWithFields(log.Fields{
