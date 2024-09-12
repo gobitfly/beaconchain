@@ -65,8 +65,8 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			if timeout != constants.Default {
 				timeouts_at = now.Add(timeout)
 			}
-			expires_at := timeouts_at.Add(5 * time.Minute)
-			if check_interval >= 5*time.Minute {
+			expires_at := timeouts_at.Add(1 * time.Minute)
+			if check_interval >= 1*time.Minute {
 				expires_at = timeouts_at.Add(check_interval)
 			}
 			log.TraceWithFields(log.Fields{
@@ -83,7 +83,7 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 				err = db.ClickHouseNativeWriter.AsyncInsert(
 					ctx,
 					"INSERT INTO status_reports (emitter, event_id, deployment_type, insert_id, expires_at, timeouts_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					true,
+					false, // true means wait for settlement, but we want to shoot and forget. false does mean we cant log any errors that occur during settlement
 					utils.GetUUID(),
 					id,
 					utils.Config.DeploymentType,
