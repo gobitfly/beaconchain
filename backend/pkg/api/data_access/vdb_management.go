@@ -329,7 +329,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
 	}
 
-	rpValidators, err := d.getRocketPoolOperators(ctx, validators)
+	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, validators)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
 	}

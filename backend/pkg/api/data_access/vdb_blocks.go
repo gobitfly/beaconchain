@@ -344,6 +344,20 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		slices.Reverse(proposals)
 	}
 
+	// Get the rocketpool minipool infos
+	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	if protocolModes.RocketPool {
+		var proposers []uint64
+		for _, row := range proposals {
+			proposers = append(proposers, row.Proposer)
+		}
+
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, proposers)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	data := make([]t.VDBBlocksTableRow, len(proposals))
 	ensMapping := make(map[string]string)
 	for i, proposal := range proposals {
@@ -387,6 +401,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		}
 		if proposal.ClReward.Valid {
 			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
+			if rpValidator, ok := rpValidators[proposal.Proposer]; ok && protocolModes.RocketPool {
+				reward.Cl = reward.Cl.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		}
 		proposals[i].Reward = proposal.ElReward.Decimal.Add(proposal.ClReward.Decimal)
 		data[i].Reward = &reward

@@ -155,7 +155,7 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	return timeToWithdrawal
 }
 
-func (d *DataAccessService) getRocketPoolOperators(ctx context.Context, validatorIndices []t.VDBValidator) (map[t.VDBValidator]t.RpOperatorInfo, error) {
+func (d *DataAccessService) getRocketPoolMinipoolInfos(ctx context.Context, validatorIndices []t.VDBValidator) (map[t.VDBValidator]t.RpMinipoolInfo, error) {
 	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, err
@@ -174,18 +174,15 @@ func (d *DataAccessService) getRocketPoolOperators(ctx context.Context, validato
 		NodeFee            float64         `db:"node_fee"`
 		NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
 		UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
-		SmoothingPoolOptIn bool            `db:"smoothing_pool_opted_in"`
 	}{}
 
 	query := `
 		SELECT 
-			rplm.pubkey,
-			rplm.node_fee,
-			rplm.node_deposit_balance,
-			rplm.user_deposit_balance,
-			COALESCE(rpln.smoothing_pool_opted_in, false) AS smoothing_pool_opted_in 
-		FROM rocketpool_minipools rplm
-		LEFT JOIN rocketpool_nodes rpln ON rplm.node_address = rpln.address
+			pubkey,
+			node_fee,
+			node_deposit_balance,
+			user_deposit_balance
+		FROM rocketpool_minipools
 		WHERE pubkey = ANY($1) AND node_deposit_balance IS NOT NULL AND user_deposit_balance IS NOT NULL`
 
 	err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
@@ -193,30 +190,26 @@ func (d *DataAccessService) getRocketPoolOperators(ctx context.Context, validato
 		return nil, fmt.Errorf("error retrieving rocketpool validators data: %w", err)
 	}
 
-	rpValidators := make(map[t.VDBValidator]t.RpOperatorInfo)
+	rpValidators := make(map[t.VDBValidator]t.RpMinipoolInfo)
 	for _, res := range queryResult {
 		publicKey := hexutil.Encode(res.Pubkey)
-		rpValidators[pubKeyToIndex[publicKey]] = t.RpOperatorInfo{
+		rpValidators[pubKeyToIndex[publicKey]] = t.RpMinipoolInfo{
 			NodeFee:            res.NodeFee,
 			NodeDepositBalance: res.NodeDepositBalance,
 			UserDepositBalance: res.UserDepositBalance,
-			SmoothingPoolOptIn: res.SmoothingPoolOptIn,
 		}
 	}
 
 	return rpValidators, nil
 }
 
-func (d *DataAccessService) getRocketPoolOperatorReward(operator t.RpOperatorInfo, reward, effBalance decimal.Decimal) decimal.Decimal {
-	if reward.GreaterThan(decimal.Zero) && effBalance.GreaterThanOrEqual(decimal.New(32, 18)) {
-		fullDeposit := operator.UserDepositBalance.Add(operator.NodeDepositBalance)
-		operatorShare := operator.NodeDepositBalance.Div(fullDeposit)
-		invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
+func (d *DataAccessService) getRocketPoolOperatorFactor(minipool t.RpMinipoolInfo) decimal.Decimal {
+	fullDeposit := minipool.UserDepositBalance.Add(minipool.NodeDepositBalance)
+	operatorShare := minipool.NodeDepositBalance.Div(fullDeposit)
+	invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
 
-		commissionReward := reward.Mul(invOperatorShare).Mul(decimal.NewFromFloat(operator.NodeFee))
-		rpReward := reward.Mul(operatorShare).Add(commissionReward)
+	commissionReward := invOperatorShare.Mul(decimal.NewFromFloat(minipool.NodeFee))
+	operatorFactor := operatorShare.Add(commissionReward)
 
-		return rpReward
-	}
-	return reward
+	return operatorFactor
 }

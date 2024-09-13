@@ -18,10 +18,9 @@ type ArchiverDashboardArchiveReason struct {
 }
 
 // TODO: Find a good place for this
-type RpOperatorInfo struct {
+type RpMinipoolInfo struct {
 	NodeFee             float64
 	NodeDepositBalance  decimal.Decimal
 	UserDepositBalance  decimal.Decimal
-	SmoothingPoolOptIn  bool
 	SmoothingPoolReward map[uint64]decimal.Decimal
 }
