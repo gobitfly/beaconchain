@@ -137,7 +137,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		}
 		addressMapping[hexutil.Encode(row.From)] = nil
 		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
-			Address: string(row.From),
+			Address: fmt.Sprintf("%x", row.From),
 			Block:   row.BlockNumber,
 			// TODO not entirely correct, would need to determine tx index and itx index of tx. But good enough for now
 			TxIdx:    -1,
@@ -156,7 +156,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			responseData[i].Depositor = t.Address{Hash: t.Hash(hexutil.Encode(row.Depositor))}
 			addressMapping[hexutil.Encode(row.Depositor)] = nil
 			depositorReq := fromContractStatusRequests[i]
-			depositorReq.Address = string(row.Depositor)
+			depositorReq.Address = fmt.Sprintf("%x", row.Depositor)
 			depositorContractStatusRequests = append(depositorContractStatusRequests, depositorReq)
 		} else {
 			responseData[i].Depositor = responseData[i].From

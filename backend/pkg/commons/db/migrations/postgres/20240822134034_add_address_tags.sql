@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 SELECT('up SQL query - create address_tags table');
-CREATE TABLE address_tags (
+CREATE TABLE IF NOT EXISTS address_tags (
     address bytea NOT NULL UNIQUE,
     tag CHARACTER VARYING(100) NOT NULL,
     PRIMARY KEY (address, tag)
@@ -11,5 +11,5 @@ CREATE TABLE address_tags (
 -- +goose Down
 -- +goose StatementBegin
 SELECT('down SQL query - drop address_tags table');
-DROP TABLE address_tags;
+DROP TABLE IF EXISTS address_tags;
 -- +goose StatementEnd

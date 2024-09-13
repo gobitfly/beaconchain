@@ -386,7 +386,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			data[i].RewardRecipient = &rewardRecp
 			addressMapping[hexutil.Encode(proposal.FeeRecipient)] = nil
 			contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
-				Address:  string(proposal.FeeRecipient),
+				Address:  fmt.Sprintf("%x", proposal.FeeRecipient),
 				Block:    proposal.Block.Int64,
 				TxIdx:    -1,
 				TraceIdx: -1,

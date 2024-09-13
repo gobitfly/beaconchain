@@ -3216,7 +3216,7 @@ type isContractInfo struct {
 }
 
 type ContractInteractionAtRequest struct {
-	Address  string
+	Address  string // expected all lowercase without 0x prefix
 	Block    int64
 	TxIdx    int64
 	TraceIdx int64

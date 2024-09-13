@@ -205,7 +205,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		address := hexutil.Encode(withdrawal.Address)
 		addressMapping[address] = nil
 		contractStatusRequests[i] = db.ContractInteractionAtRequest{
-			Address:  string(withdrawal.Address),
+			Address:  fmt.Sprintf("%x", withdrawal.Address),
 			Block:    int64(withdrawal.BlockNumber),
 			TxIdx:    -1,
 			TraceIdx: -1,
@@ -414,7 +414,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	}
 
 	contractStatusReq := []db.ContractInteractionAtRequest{{
-		Address: address.String(),
+		Address: fmt.Sprintf("%x", address),
 		Block:   -1,
 	}}
 	contractStatus, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusReq)
