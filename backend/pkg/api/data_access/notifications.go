@@ -5,6 +5,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"golang.org/x/sync/errgroup"
 )
 
 type NotificationsRepository interface {
@@ -34,7 +35,75 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 	return d.dummy.GetNotificationOverview(ctx, userId)
 }
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
-	return d.dummy.GetDashboardNotifications(ctx, userId, chainId, cursor, colSort, search, limit)
+	eg := errgroup.Group{}
+
+	response := []t.NotificationDashboardsTableRow{}
+
+	// validator dashboards
+	eg.Go(func() error {
+		query := `SELECT 
+			last_sent_ts,
+			uvd.network,					// chainID
+			us.id,							// notification id
+			us.created_ts,					// timestamp
+			uvd.id,		 					// dashboardId
+			uvd.name,						// group name
+			COUNT(uvdv.validator_index),	// entity count
+			event_name 						// event types
+		FROM
+			(
+			SELECT
+				id,
+				created_ts,
+				split_part(event_filter, ':', 2) as dashboard_id
+			FROM
+				users_subscriptions
+			WHERE
+				event_filter like 'vdb:%'
+			) as us
+		LEFT JOIN
+			users_val_dashboards uvd ON
+		LEFT JOIN
+			users_val_dashboards_validators uvdv ON
+		GROUP BY
+			id
+		`
+		return d.alloyReader.GetContext(ctx, nil, query)
+	})
+
+	// account dashboards
+	eg.Go(func() error {
+		query := `SELECT 
+			last_sent_ts,
+			uvd.network,					// chainID
+			us.id,							// notification id
+			us.created_ts,					// timestamp
+			uvd.id,		 					// dashboardId
+			uvd.name,						// group name
+			COUNT(uvdv.validator_index),	// entity count
+			event_name 						// event types
+		FROM
+			(
+			SELECT
+				id,
+				created_ts,
+				split_part(event_filter, ':', 2) as dashboard_id
+			FROM
+				users_subscriptions
+			WHERE
+				event_filter like 'adb:%'
+			) as us
+		LEFT JOIN
+			users_val_dashboards uvd ON
+		LEFT JOIN
+			users_val_dashboards_validators uvdv ON
+		GROUP BY
+			id
+		`
+		return d.alloyReader.GetContext(ctx, nil, query)
+	})
+
+	return response, nil, eg.Wait()
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationValidatorDashboardDetail, error) {
