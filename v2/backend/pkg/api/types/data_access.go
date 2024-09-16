@@ -227,3 +227,14 @@ type HealthzData struct {
 	DeploymentType    string                     `json:"deployment_type"`
 	Reports           map[string][]HealthzResult `json:"status_reports"`
 }
+
+// -------------------------
+// Mobile structs
+
+type MobileAppBundleStats struct {
+	LatestBundleVersion uint64
+	BundleUrl           string
+	TargetCount         uint64 // coalesce to 0 if column is null
+	DeliveryCount       uint64
+	MaxNativeVersion    uint64 // the max native version of the whole table for the given environment
+}

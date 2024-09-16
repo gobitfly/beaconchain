@@ -55,8 +55,8 @@ func Run() {
 
 	monitoring.Init(true)
 	monitoring.Start()
-	defer monitoring.Stop()
 
 	// gotta wait forever
 	utils.WaitForCtrlC()
+	monitoring.Stop()
 }

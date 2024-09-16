@@ -233,13 +233,29 @@ func rejectReason(valid bool) string {
 	return "expired"
 }
 
+// first 3 trillion dollar company and you can't reuse ids
+func mapAppleProductID(productID string) string {
+	mappings := map[string]string{
+		"orca.yearly.apple":    "orca.yearly",
+		"orca.apple":           "orca",
+		"dolphin.yearly.apple": "dolphin.yearly",
+		"dolphin.apple":        "dolphin",
+		"guppy.yearly.apple":   "guppy.yearly",
+		"guppy.apple":          "guppy",
+	}
+	if mapped, ok := mappings[productID]; ok {
+		return mapped
+	}
+	return productID
+}
+
 func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyResponse, error) {
 	response := &VerifyResponse{
 		Valid:          false,
 		ExpirationDate: 0,
 		RejectReason:   "",
-		ProductID:      receipt.ProductID, // may be changed by this function to be different than receipt.ProductID
-		Receipt:        receipt.Receipt,   // may be changed by this function to be different than receipt.Receipt
+		ProductID:      mapAppleProductID(receipt.ProductID), // may be changed by this function to be different than receipt.ProductID
+		Receipt:        receipt.Receipt,                      // may be changed by this function to be different than receipt.Receipt
 	}
 
 	if apple == nil {
@@ -300,7 +316,7 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 					response.RejectReason = "invalid_product_id"
 					return response, nil
 				}
-				response.ProductID = productId // update response to reflect the resolved product id
+				response.ProductID = mapAppleProductID(productId) // update response to reflect the resolved product id
 
 				expiresDateFloat, ok := claims["expiresDate"].(float64)
 				if !ok {

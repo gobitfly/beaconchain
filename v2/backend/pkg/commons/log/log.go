@@ -36,12 +36,7 @@ func Infof(format string, args ...interface{}) {
 }
 
 func InfoWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Info(msg)
+	logrus.WithFields(additionalInfos).Info(msg)
 }
 
 func Warn(args ...interface{}) {
@@ -53,12 +48,7 @@ func Warnf(format string, args ...interface{}) {
 }
 
 func WarnWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Warn(msg)
+	logrus.WithFields(additionalInfos).Warn(msg)
 }
 
 func Tracef(format string, args ...interface{}) {
@@ -66,21 +56,11 @@ func Tracef(format string, args ...interface{}) {
 }
 
 func TraceWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Trace(msg)
+	logrus.WithFields(additionalInfos).Trace(msg)
 }
 
 func DebugWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Debug(msg)
+	logrus.WithFields(additionalInfos).Debug(msg)
 }
 
 func Debugf(format string, args ...interface{}) {
@@ -96,7 +76,7 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 	}
 	pc, fullFilePath, line, ok := runtime.Caller(callerSkip + 2)
 	if ok {
-		logFields = logFields.WithFields(logrus.Fields{
+		logFields = logFields.WithFields(Fields{
 			"_file":     filepath.Base(fullFilePath),
 			"_function": runtime.FuncForPC(pc).Name(),
 			"_line":     line,
@@ -152,4 +132,4 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 	return logFields
 }
 
-type Fields map[string]interface{}
+type Fields = logrus.Fields

@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 
+	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -19,7 +20,17 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 	var results []types.HealthzResult
 	var response types.HealthzData
 	query := `
-		with active_reports as (
+		with clean_shutdown_events as (
+			SELECT
+				emitter,
+				toNullable(inserted_at) as inserted_at
+			FROM
+				status_reports
+			WHERE
+				deployment_type = {deployment_type:String}
+				AND inserted_at >= now() - interval 1 days
+				AND event_id = {clean_shutdown_event_id:String}
+		), active_reports as (
 			SELECT
 				event_id,
 				emitter,
@@ -31,7 +42,8 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				status,
 				metadata
 			FROM status_reports
-			WHERE expires_at > now() and deployment_type = ?
+			LEFT JOIN clean_shutdown_events cse ON status_reports.emitter = clean_shutdown_events.emitter
+			WHERE expires_at > now() and deployment_type = {deployment_type:String} and (status_reports.inserted_at < cse.inserted_at or cse.inserted_at is null)
 			ORDER BY
 				event_id ASC,
 				emitter ASC,
@@ -99,7 +111,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 	response.Reports = make(map[string][]types.HealthzResult)
 	response.ReportingUUID = utils.GetUUID()
 	response.DeploymentType = utils.Config.DeploymentType
-	err := db.ClickHouseReader.SelectContext(ctx, &results, query, utils.Config.DeploymentType)
+	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", constants.CleanShutdownEvent))
 	if err != nil {
 		response.Reports["response_error"] = []types.HealthzResult{
 			{
