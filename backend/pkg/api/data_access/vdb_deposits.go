@@ -167,7 +167,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	// populate address data
-	if err := d.GetLabelsAndEnsForAddresses(ctx, addressMapping); err != nil {
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
 		return nil, nil, err
 	}
 	fromContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(fromContractStatusRequests)

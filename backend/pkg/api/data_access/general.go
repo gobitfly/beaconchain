@@ -8,7 +8,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 )
 
-func (d *DataAccessService) GetLabelsAndEnsForAddresses(ctx context.Context, addressMap map[string]*types.Address) error {
+// retrieve (primary) ens name and optional name (=label) maintained by beaconcha.in, if present
+func (d *DataAccessService) GetNamesAndEnsForAddresses(ctx context.Context, addressMap map[string]*types.Address) error {
 	addresses := make([][]byte, 0, len(addressMap))
 	ensMapping := make(map[string]string, len(addressMap))
 	for address, data := range addressMap {
@@ -30,18 +31,18 @@ func (d *DataAccessService) GetLabelsAndEnsForAddresses(ctx context.Context, add
 		addressMap[address].Ens = ens
 	}
 
-	// determine tags
-	tags := []struct {
+	// determine names
+	names := []struct {
 		Address []byte `db:"address"`
-		Tag     string `db:"tag"`
+		Name    string `db:"name"`
 	}{}
-	err := d.alloyReader.SelectContext(ctx, &tags, `SELECT address, tag FROM address_tags WHERE address = ANY($1)`, addresses)
+	err := d.alloyReader.SelectContext(ctx, &names, `SELECT address, name FROM address_names WHERE address = ANY($1)`, addresses)
 	if err != nil {
 		return err
 	}
 
-	for _, tag := range tags {
-		addressMap[hexutil.Encode(tag.Address)].Label = tag.Tag
+	for _, name := range names {
+		addressMap[hexutil.Encode(name.Address)].Label = name.Name
 	}
 	return nil
 }

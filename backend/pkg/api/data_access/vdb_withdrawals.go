@@ -212,8 +212,8 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		}
 	}
 
-	// Get the ENS names for the addresses
-	if err := d.GetLabelsAndEnsForAddresses(ctx, addressMapping); err != nil {
+	// Get the ENS names and (label) names for the addresses
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
 		return nil, nil, err
 	}
 

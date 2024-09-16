@@ -401,8 +401,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	// determine reward recipient ENS names
 	startTime = time.Now()
-	// determine ens/tags
-	if err := d.GetLabelsAndEnsForAddresses(ctx, addressMapping); err != nil {
+	// determine ens/names
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
 		return nil, nil, err
 	}
 	log.Debugf("=== getting ens + labels names took %s", time.Since(startTime))
