@@ -5,6 +5,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"golang.org/x/sync/errgroup"
 )
 
 type NotificationsRepository interface {
@@ -31,7 +32,56 @@ type NotificationsRepository interface {
 }
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
-	return d.dummy.GetNotificationOverview(ctx, userId)
+	var response *t.NotificationOverviewData
+
+	eg := errgroup.Group{}
+
+	// enabled channels
+	eg.Go(func() error {
+		var channels []struct {
+			Channel string `db:"channel"`
+			Active  bool   `db:"active"`
+		}
+
+		err := d.userWriter.GetContext(ctx, &channels, `
+		SELECT
+			channel,
+			active
+		FROM
+			users_notification_channels
+		WHERE
+			user_id = $1`,
+			userId,
+		)
+		if err != nil {
+			return err
+		}
+
+		for _, channel := range channels {
+			switch channel.Channel {
+			case "email":
+				response.IsEmailNotificationsEnabled = channel.Active
+			case "push":
+				response.IsPushNotificationsEnabled = channel.Active
+			}
+		}
+		return nil
+	})
+
+	// past activity
+	eg.Go(func() error {
+		// TODO
+		return nil
+	})
+
+	// subscription counts
+	eg.Go(func() error {
+		// TODO
+		return nil
+	})
+
+	err := eg.Wait()
+	return response, err
 }
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	return d.dummy.GetDashboardNotifications(ctx, userId, chainId, cursor, colSort, search, limit)
