@@ -398,6 +398,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			data[i].RewardRecipient = &rewardRecp
 			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
+			if rpValidator, ok := rpValidators[proposal.Proposer]; ok && protocolModes.RocketPool {
+				reward.El = reward.El.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		}
 		if proposal.ClReward.Valid {
 			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))

@@ -243,6 +243,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	elRewards := make(map[int64]decimal.Decimal)
 	ds = goqu.Dialect("postgres").
 		Select(
+			goqu.L("b.proposer"),
 			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
 		From(goqu.L("blocks b")).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
@@ -256,7 +257,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochStart, epochEnd)).
-		GroupBy(goqu.L("result_group_id"))
+		GroupBy(goqu.L("b.proposer"))
 
 	if len(validators) > 0 {
 		ds = ds.
@@ -277,6 +278,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	}
 
 	var elRewardsQueryResult []struct {
+		Proposer  uint64          `db:"proposer"`
 		GroupId   int64           `db:"result_group_id"`
 		ElRewards decimal.Decimal `db:"el_rewards"`
 	}
@@ -292,7 +294,11 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	}
 
 	for _, entry := range elRewardsQueryResult {
-		elRewards[entry.GroupId] = entry.ElRewards
+		elReward := entry.ElRewards
+		if rpValidator, ok := rpValidators[entry.Proposer]; ok && protocolModes.RocketPool {
+			elReward = elReward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		}
+		elRewards[entry.GroupId] = elRewards[entry.GroupId].Add(elReward)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

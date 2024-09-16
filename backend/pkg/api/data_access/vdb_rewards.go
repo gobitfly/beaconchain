@@ -2,7 +2,6 @@ package dataaccess
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"math/big"
 	"slices"
@@ -17,7 +16,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
@@ -101,6 +99,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	elDs := goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.epoch"),
+			goqu.L("b.proposer"),
 			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
@@ -114,7 +113,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 					goqu.MAX("value").As("value")).
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
-		)
+		).
+		GroupBy(goqu.L("b.proposer"))
 
 	if dashboardId.Validators == nil {
 		rewardsDs = rewardsDs.
@@ -224,8 +224,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
 
 			elDs = elDs.
-				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-				GroupBy(goqu.L("b.epoch"))
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
 
 			if isReverseDirection {
 				rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Desc())
@@ -238,8 +237,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			rewardsDs = rewardsDs.
 				SelectAppend(goqu.L("v.group_id AS result_group_id"))
 			elDs = elDs.
-				SelectAppend(goqu.L("v.group_id AS result_group_id")).
-				GroupBy(goqu.L("b.epoch"), goqu.L("result_group_id"))
+				SelectAppend(goqu.L("v.group_id AS result_group_id"))
 
 			if isReverseDirection {
 				rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Desc(), goqu.L("result_group_id").Desc())
@@ -256,8 +254,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators))
 		elDs = elDs.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
-			GroupBy(goqu.L("b.epoch"))
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
 
 		if currentCursor.IsValid() {
 			rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
@@ -287,6 +284,21 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		} else {
 			rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Asc())
 			elDs = elDs.Order(goqu.L("b.epoch").Asc())
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get rocketpool minipool infos if needed
+	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	if protocolModes.RocketPool {
+		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
@@ -335,19 +347,6 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			return fmt.Errorf("error retrieving rewards data: %v", err)
 		}
 
-		rpValidators := make(map[uint64]t.RpMinipoolInfo)
-		if protocolModes.RocketPool {
-			validators := make([]uint64, 0, len(queryResult))
-			for _, row := range queryResult {
-				validators = append(validators, row.ValidatorIndex)
-			}
-
-			rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
-			if err != nil {
-				return err
-			}
-		}
-
 		for _, row := range queryResult {
 			if len(queryResultSum) == 0 ||
 				queryResultSum[len(queryResultSum)-1].Epoch != row.Epoch ||
@@ -386,6 +385,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	elRewards := make(map[uint64]map[int64]decimal.Decimal)
 	wg.Go(func() error {
 		elQueryResult := []struct {
+			Proposer  uint64          `db:"proposer"`
 			Epoch     uint64          `db:"epoch"`
 			GroupId   int64           `db:"result_group_id"`
 			ElRewards decimal.Decimal `db:"el_rewards"`
@@ -405,7 +405,12 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			if _, ok := elRewards[entry.Epoch]; !ok {
 				elRewards[entry.Epoch] = make(map[int64]decimal.Decimal)
 			}
-			elRewards[entry.Epoch][entry.GroupId] = entry.ElRewards
+
+			reward := entry.ElRewards
+			if rpValidator, ok := rpValidators[entry.Proposer]; ok && protocolModes.RocketPool {
+				reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
+			elRewards[entry.Epoch][entry.GroupId] = elRewards[entry.Epoch][entry.GroupId].Add(reward)
 		}
 		return nil
 	})
@@ -617,6 +622,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	elDs := goqu.Dialect("postgres").
 		Select(
+			goqu.L("b.proposer"),
 			goqu.L("COALESCE(SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)), 0) AS blocks_el_reward")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		LeftJoin(goqu.L("blocks b"), goqu.On(goqu.L("v.validator_index = b.proposer AND b.status = '1'"))).
@@ -630,7 +636,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
-		Where(goqu.L("b.epoch = ?", epoch))
+		Where(goqu.L("b.epoch = ?", epoch)).
+		GroupBy(goqu.L("b.proposer"))
 
 	// handle the case when we have a list of validators
 
@@ -698,16 +705,25 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Get the EL rewards
-	var elRewards decimal.Decimal
+	elRewards := make(map[uint64]decimal.Decimal)
 	wg.Go(func() error {
+		elQueryResult := []struct {
+			Proposer  uint64          `db:"proposer"`
+			ElRewards decimal.Decimal `db:"blocks_el_reward"`
+		}{}
+
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
 			return fmt.Errorf("error preparing query: %v", err)
 		}
 
-		err = d.readerDb.GetContext(ctx, &elRewards, query, args...)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
+		if err != nil {
 			return fmt.Errorf("error retrieving el rewards data for group rewards: %v", err)
+		}
+
+		for _, entry := range elQueryResult {
+			elRewards[entry.Proposer] = entry.ElRewards
 		}
 		return nil
 	})
@@ -759,7 +775,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			ret.Inactivity.StatusCount.Success++
 		}
 
-		ret.Proposal.Income = ret.Proposal.Income.Add(entry.BlocksClReward.Mul(gWei).Mul(rpFactor))
+		ret.Proposal.Income = ret.Proposal.Income.Add(entry.BlocksClReward.Mul(gWei).Add(elRewards[entry.ValidatorIndex]).Mul(rpFactor))
+		ret.ProposalElReward = ret.ProposalElReward.Add(elRewards[entry.ValidatorIndex])
 		ret.Proposal.StatusCount.Success += uint64(entry.BlocksProposed)
 		ret.Proposal.StatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
 
@@ -776,9 +793,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		ret.ProposalClSyncIncReward = ret.ProposalClSyncIncReward.Add(entry.BlockClSyncAggregateReward.Mul(gWei).Mul(rpFactor))
 		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(entry.BlocksClSlasherReward.Mul(gWei).Mul(rpFactor))
 	}
-
-	ret.Proposal.Income = ret.Proposal.Income.Add(elRewards)
-	ret.ProposalElReward = elRewards
 
 	return ret, nil
 }
@@ -811,6 +825,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 	elDs := goqu.Dialect("postgres").
 		Select(
+			goqu.L("b.proposer"),
 			goqu.L("b.epoch"),
 			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
@@ -825,7 +840,8 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 				GroupBy("exec_block_hash").As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
-		Where(goqu.L("b.epoch >= ?", startEpoch))
+		Where(goqu.L("b.epoch >= ?", startEpoch)).
+		GroupBy(goqu.L("b.proposer"))
 
 	if dashboardId.Validators == nil {
 		rewardsDs = rewardsDs.
@@ -840,7 +856,6 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 				Order(goqu.L("e.epoch").Asc())
 			elDs = elDs.
 				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-				GroupBy(goqu.L("b.epoch")).
 				Order(goqu.L("b.epoch").Asc())
 		} else {
 			rewardsDs = rewardsDs.
@@ -848,7 +863,6 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 				Order(goqu.L("e.epoch").Asc(), goqu.L("result_group_id").Asc())
 			elDs = elDs.
 				SelectAppend(goqu.L("v.group_id AS result_group_id")).
-				GroupBy(goqu.L("b.epoch"), goqu.L("result_group_id")).
 				Order(goqu.L("b.epoch").Asc(), goqu.L("result_group_id").Asc())
 		}
 	} else {
@@ -860,8 +874,22 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		elDs = elDs.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
 			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
-			GroupBy(goqu.L("b.epoch")).
 			Order(goqu.L("b.epoch").Asc())
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get rocketpool minipool infos if needed
+	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	if protocolModes.RocketPool {
+		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -891,19 +919,6 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			return fmt.Errorf("error retrieving rewards chart data: %v", err)
 		}
 
-		rpValidators := make(map[uint64]t.RpMinipoolInfo)
-		if protocolModes.RocketPool {
-			validators := make([]uint64, 0, len(queryResult))
-			for _, row := range queryResult {
-				validators = append(validators, row.ValidatorIndex)
-			}
-
-			rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
-			if err != nil {
-				return err
-			}
-		}
-
 		for _, entry := range queryResult {
 			if len(queryResultSum) == 0 ||
 				queryResultSum[len(queryResultSum)-1].Epoch != entry.Epoch ||
@@ -930,6 +945,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	elRewards := make(map[uint64]map[uint64]decimal.Decimal)
 	wg.Go(func() error {
 		elQueryResult := []struct {
+			Proposer  uint64          `db:"proposer"`
 			Epoch     uint64          `db:"epoch"`
 			GroupId   uint64          `db:"result_group_id"`
 			ElRewards decimal.Decimal `db:"el_rewards"`
@@ -949,8 +965,14 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			if _, ok := elRewards[entry.Epoch]; !ok {
 				elRewards[entry.Epoch] = make(map[uint64]decimal.Decimal)
 			}
-			elRewards[entry.Epoch][entry.GroupId] = entry.ElRewards
+
+			reward := entry.ElRewards
+			if rpValidator, ok := rpValidators[entry.Proposer]; ok && protocolModes.RocketPool {
+				reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
+			elRewards[entry.Epoch][entry.GroupId] = elRewards[entry.Epoch][entry.GroupId].Add(reward)
 		}
+
 		return nil
 	})
 
@@ -1154,6 +1176,21 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
+	// Get rocketpool minipool infos if needed
+	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	if protocolModes.RocketPool {
+		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+		}
+
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
 	// Get the main data
 	type QueryResultBase struct {
 		ValidatorIndex             uint64 `db:"validator_index"`
@@ -1205,19 +1242,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			return fmt.Errorf("error retrieving validator rewards data: %v", err)
 		}
 
-		rpValidators := make(map[uint64]t.RpMinipoolInfo)
-		if protocolModes.RocketPool {
-			validators := make([]uint64, 0, len(queryResult))
-			for _, row := range queryResult {
-				validators = append(validators, row.ValidatorIndex)
-			}
-
-			rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
-			if err != nil {
-				return err
-			}
-		}
-
 		for _, entry := range queryResult {
 			queryResultAdjusted = append(queryResultAdjusted, QueryResultAdjusted{
 				QueryResultBase: QueryResultBase{
@@ -1259,8 +1283,8 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	elRewards := make(map[uint64]decimal.Decimal)
 	wg.Go(func() error {
 		elQueryResult := []struct {
-			ValidatorIndex uint64          `db:"proposer"`
-			ElRewards      decimal.Decimal `db:"el_rewards"`
+			Proposer  uint64          `db:"proposer"`
+			ElRewards decimal.Decimal `db:"el_rewards"`
 		}{}
 
 		query, args, err := elDs.Prepared(true).ToSQL()
@@ -1274,7 +1298,11 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		}
 
 		for _, entry := range elQueryResult {
-			elRewards[entry.ValidatorIndex] = entry.ElRewards
+			reward := entry.ElRewards
+			if rpValidator, ok := rpValidators[entry.Proposer]; ok && protocolModes.RocketPool {
+				reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
+			elRewards[entry.Proposer] = reward
 		}
 		return nil
 	})
