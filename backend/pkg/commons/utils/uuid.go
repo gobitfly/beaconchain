@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/snowflake"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/google/uuid"
+	"golang.org/x/exp/rand"
 )
 
 // uuid that you can get  - gets set to a random value on startup/first read
@@ -30,7 +31,8 @@ func GetSnowflake() int64 {
 		return v.(*snowflake.Node).Generate().Int64()
 	}
 
-	node, err := snowflake.NewNode(1)
+	nodeId := rand.Int63() & 0xFF
+	node, err := snowflake.NewNode(nodeId)
 	if err != nil {
 		log.Fatal(err, "snowflake generator failed to start", 0)
 		return 0
