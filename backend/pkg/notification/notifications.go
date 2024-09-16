@@ -1952,7 +1952,7 @@ func collectEthClientNotifications(notificationsByUserID types.NotificationsPerU
 
 		dbResult, err := GetSubsForEventFilter(
 			types.EthClientUpdateEventName,
-			"(us.last_sent_ts <= NOW() - INTERVAL '2 DAY' AND TO_TIMESTAMP(?) > us.last_sent_ts) OR us.last_sent_ts IS NULL",
+			"((last_sent_ts <= NOW() - INTERVAL '2 DAY' AND TO_TIMESTAMP(?) > last_sent_ts) OR last_sent_ts IS NULL)",
 			[]interface{}{client.Date.Unix()},
 			[]string{strings.ToLower(client.Name)})
 		if err != nil {
@@ -2074,7 +2074,7 @@ func collectMonitoringMachine(
 
 	dbResult, err := GetSubsForEventFilter(
 		eventName,
-		"us.created_epoch <= ? AND (us.last_sent_epoch < (? - ?) OR us.last_sent_epoch IS NULL)",
+		"(created_epoch <= ? AND (last_sent_epoch < (? - ?) OR last_sent_epoch IS NULL))",
 		[]interface{}{epoch, epoch, epochWaitInBetween},
 		nil,
 	)
@@ -2325,7 +2325,7 @@ func collectTaxReportNotificationNotifications(notificationsByUserID types.Notif
 
 	dbResults, err := GetSubsForEventFilter(
 		types.TaxReportEventName,
-		"us.last_sent_ts < ? OR (us.last_sent_ts IS NULL AND us.created_ts < ?)",
+		"(last_sent_ts < ? OR (last_sent_ts IS NULL AND created_ts < ?))",
 		[]interface{}{firstDayOfMonth, firstDayOfMonth},
 		nil,
 	)
@@ -2487,7 +2487,7 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 
 		dbResult, err := GetSubsForEventFilter(
 			types.RocketpoolCommissionThresholdEventName,
-			"(us.last_sent_ts <= NOW() - INTERVAL '8 hours' OR us.last_sent_ts IS NULL) AND (us.event_threshold <= ? OR (us.event_threshold < 0 AND us.event_threshold * -1 >= ?)",
+			"(last_sent_ts <= NOW() - INTERVAL '8 hours' OR last_sent_ts IS NULL) AND (event_threshold <= ? OR (event_threshold < 0 AND event_threshold * -1 >= ?))",
 			[]interface{}{fee, fee},
 			nil,
 		)
@@ -2539,7 +2539,7 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 
 		dbResult, err := GetSubsForEventFilter(
 			types.RocketpoolNewClaimRoundStartedEventName,
-			"us.last_sent_ts <= NOW() - INTERVAL '5 hours' OR us.last_sent_ts IS NULL",
+			"(last_sent_ts <= NOW() - INTERVAL '5 hours' OR last_sent_ts IS NULL)",
 			nil,
 			nil,
 		)
