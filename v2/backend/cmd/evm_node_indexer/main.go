@@ -9,11 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"eth2-exporter/db"
 	"eth2-exporter/hexutil"
-	"eth2-exporter/types"
-	"eth2-exporter/utils"
-	"eth2-exporter/version"
 	"flag"
 	"fmt"
 	"io"
@@ -26,6 +22,11 @@ import (
 	"github.com/ethereum/go-ethereum"
 	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gtuk/discordwebhook"
 	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -96,7 +97,7 @@ func init() {
 	var err error
 	errorIdentifier, err = regexp.Compile(`\"error":\{\"code\":\-[0-9]+\,\"message\":\"([^\"]*)`)
 	if err != nil {
-		utils.LogFatal(err, "fatal, compiling regex", 0)
+		log.Fatal(err, "fatal, compiling regex", 0)
 	}
 }
 
@@ -149,7 +150,7 @@ func main() {
 		cfg := &types.Config{}
 		err := utils.ReadConfig(cfg, *configPath)
 		if err != nil {
-			utils.LogFatal(err, "error reading config file", 0) // fatal, as there is no point without a config
+			log.Fatal(err, "error reading config file", 0) // fatal, as there is no point without a config
 		} else {
 			logrus.Info("reading config completed")
 		}
@@ -180,7 +181,7 @@ func main() {
 
 	// init postgres
 	{
-		db.MustInitDB(&types.DatabaseConfig{
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 			Username:     utils.Config.WriterDatabase.Username,
 			Password:     utils.Config.WriterDatabase.Password,
 			Name:         utils.Config.WriterDatabase.Name,
@@ -188,6 +189,7 @@ func main() {
 			Port:         utils.Config.WriterDatabase.Port,
 			MaxOpenConns: utils.Config.WriterDatabase.MaxOpenConns,
 			MaxIdleConns: utils.Config.WriterDatabase.MaxIdleConns,
+			SSL:          utils.Config.WriterDatabase.SSL,
 		}, &types.DatabaseConfig{
 			Username:     utils.Config.ReaderDatabase.Username,
 			Password:     utils.Config.ReaderDatabase.Password,
@@ -196,7 +198,8 @@ func main() {
 			Port:         utils.Config.ReaderDatabase.Port,
 			MaxOpenConns: utils.Config.ReaderDatabase.MaxOpenConns,
 			MaxIdleConns: utils.Config.ReaderDatabase.MaxIdleConns,
-		})
+			SSL:          utils.Config.ReaderDatabase.SSL,
+		}, "pgx", "postgres")
 		defer db.ReaderDb.Close()
 		defer db.WriterDb.Close()
 		logrus.Info("starting postgres completed")
@@ -206,11 +209,11 @@ func main() {
 	logrus.Info("init BT...")
 	btClient, err := gcp_bigtable.NewClient(context.Background(), utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, option.WithGRPCConnectionPool(1))
 	if err != nil {
-		utils.LogFatal(err, "creating new client for Bigtable", 0) // fatal, no point to continue without BT
+		log.Fatal(err, "creating new client for Bigtable", 0) // fatal, no point to continue without BT
 	}
 	tableBlocksRaw := btClient.Open("blocks-raw")
 	if tableBlocksRaw == nil {
-		utils.LogFatal(err, "open blocks-raw table", 0) // fatal, no point to continue without BT
+		log.Fatal(err, "open blocks-raw table", 0) // fatal, no point to continue without BT
 	}
 	defer btClient.Close()
 	logrus.Info("...init BT done.")
@@ -220,7 +223,7 @@ func main() {
 	// #RECY IMPROVE split http / ws endpoint, http is mandatory, ws optional - So add an http/ws config entry, where ws is optional (to use subscribe)
 	elClient, err = ethclient.Dial(utils.Config.Eth1RpcEndpoint)
 	if err != nil {
-		utils.LogFatal(err, "error dialing eth url", 0) // fatal, no point to continue without node connection
+		log.Fatal(err, "error dialing eth url", 0) // fatal, no point to continue without node connection
 	}
 	logrus.Info("...init el client endpoint done.")
 
@@ -235,10 +238,10 @@ func main() {
 			utils.Config.Chain.Id = OPTIMISM_CHAINID
 		}
 		if err != nil {
-			utils.LogFatal(err, "error get chain id", 0) // fatal, no point to continue without chain id
+			log.Fatal(err, "error get chain id", 0) // fatal, no point to continue without chain id
 		}
 		if chainID != utils.Config.Chain.Id { // if the chain id is removed from the config, just remove this if, there is no point, except checking consistency
-			utils.LogFatal(err, "node chain different from config chain", 0) // fatal, config doesn't match node
+			log.Fatal(err, "node chain different from config chain", 0) // fatal, config doesn't match node
 		}
 		logrus.Info("...check chain id done.")
 	}
@@ -258,7 +261,7 @@ func main() {
 		err := bulkExportBlocksRange(tableBlocksRaw, []intRange{intRange{start: *startBlockNumber, end: *endBlockNumber}}, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
 		if err != nil {
 			sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, reexport not completed, check logs %s", getChainNamePretty(), *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
-			utils.LogFatal(err, "error while reexport blocks for bigtable (reexport range)", 0) // fatal, as there is nothing more todo anyway
+			log.Fatal(err, "error while reexport blocks for bigtable (reexport range)", 0) // fatal, as there is nothing more todo anyway
 		}
 		logrus.Info("Job done, have a nice day :)")
 		return
@@ -273,7 +276,7 @@ func main() {
 		missingBlocks, err := psqlFindGaps() // find the holes
 		findHolesTook := time.Since(startTime)
 		if err != nil {
-			utils.LogFatal(err, "error checking for holes", 0) // fatal, as we highly depend on postgres, if this is not working, we can quit
+			log.Fatal(err, "error checking for holes", 0) // fatal, as we highly depend on postgres, if this is not working, we can quit
 		}
 		l := len(missingBlocks)
 		if l > 0 { // some holes found
@@ -286,7 +289,7 @@ func main() {
 			startTime = time.Now()
 			err := bulkExportBlocksRange(tableBlocksRaw, missingBlocks, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser) // reexport the holes
 			if err != nil {
-				utils.LogFatal(err, "error while reexport blocks for bigtable (fixing holes)", 0) // fatal, as if we wanna start with holes, we should set the skip-hole-check parameter
+				log.Fatal(err, "error while reexport blocks for bigtable (fixing holes)", 0) // fatal, as if we wanna start with holes, we should set the skip-hole-check parameter
 			}
 			logrus.Warnf("...fixed them in %v", time.Since(startTime))
 		} else {
@@ -301,7 +304,7 @@ func main() {
 	// waiting for new blocks and export them, while checking reorg before every new block
 	latestPGBlock, err := psqlGetLatestBlock(false)
 	if err != nil {
-		utils.LogFatal(err, "error while using psqlGetLatestBlock (start / read)", 0) // fatal, as if there is no inital value, we have nothing to start from
+		log.Fatal(err, "error while using psqlGetLatestBlock (start / read)", 0) // fatal, as if there is no inital value, we have nothing to start from
 	}
 	var consecutiveErrorCount int
 	consecutiveErrorCountThreshold := 5 // after threshold + 1 errors it will be fatal instead
@@ -309,7 +312,7 @@ func main() {
 		currentNodeBN := currentNodeBlockNumber.Load()
 		if currentNodeBN < latestPGBlock {
 			// fatal, as this is an impossible error
-			utils.LogFatal(err, "impossible error currentNodeBN < lastestPGBlock", 0, map[string]interface{}{"currentNodeBN": currentNodeBN, "latestPGBlock": latestPGBlock})
+			log.Fatal(err, "impossible error currentNodeBN < lastestPGBlock", 0, map[string]interface{}{"currentNodeBN": currentNodeBN, "latestPGBlock": latestPGBlock})
 		} else if currentNodeBN == latestPGBlock {
 			time.Sleep(time.Second)
 			continue // still the same block
@@ -333,9 +336,9 @@ func main() {
 				if err != nil {
 					consecutiveErrorCount++
 					if consecutiveErrorCount <= consecutiveErrorCountThreshold {
-						utils.LogError(err, "error when bulk getting raw block hashes", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
+						log.Error(err, "error when bulk getting raw block hashes", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
 					} else {
-						utils.LogFatal(err, "error when bulk getting raw block hashes", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
+						log.Fatal(err, "error when bulk getting raw block hashes", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
 					}
 					continue
 				}
@@ -346,9 +349,9 @@ func main() {
 				if err != nil {
 					consecutiveErrorCount++
 					if consecutiveErrorCount <= consecutiveErrorCountThreshold {
-						utils.LogError(err, "error when getting hash hits id list", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
+						log.Error(err, "error when getting hash hits id list", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
 					} else {
-						utils.LogFatal(err, "error when getting hash hits id list", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
+						log.Fatal(err, "error when getting hash hits id list", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock": latestPGBlock, "reorgDepth": *reorgDepth})
 					}
 					continue
 				}
@@ -357,7 +360,7 @@ func main() {
 				if len(blockRawData) != matchingLength { // nothing todo if all elements are fine, but if not...
 					if len(blockRawData) < matchingLength {
 						// fatal, as this is an impossible error
-						utils.LogFatal(err, "impossible error len(blockRawData) < matchingLength", 0, map[string]interface{}{"latestPGBlock": latestPGBlock, "matchingLength": matchingLength})
+						log.Fatal(err, "impossible error len(blockRawData) < matchingLength", 0, map[string]interface{}{"latestPGBlock": latestPGBlock, "matchingLength": matchingLength})
 					}
 
 					// reverse the "fine" list, so we have a "not fine" list
@@ -385,7 +388,7 @@ func main() {
 					}
 					if failCounter != len(blockRawData)-matchingLength {
 						// fatal, as this is an impossible error
-						utils.LogFatal(err, "impossible error failureLength != len(blockRawData)-matchingLength", 0, map[string]interface{}{"failCounter": failCounter, "len(blockRawData)-matchingLength": len(blockRawData) - matchingLength})
+						log.Fatal(err, "impossible error failureLength != len(blockRawData)-matchingLength", 0, map[string]interface{}{"failCounter": failCounter, "len(blockRawData)-matchingLength": len(blockRawData) - matchingLength})
 					}
 					logrus.Infof("found %s wrong hashes when checking for reorgs, reexporting them now...", _formatInt(failCounter))
 					logrus.Infof("%v", wrongHashRanges)
@@ -396,9 +399,9 @@ func main() {
 					if err != nil {
 						consecutiveErrorCount++
 						if consecutiveErrorCount <= consecutiveErrorCountThreshold {
-							utils.LogError(err, "error exporting hits on reorg", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "len(blockRawData)": len(blockRawData), "reorgDepth": *reorgDepth, "matchingHashesBlockIdList": matchingHashesBlockIdList, "wrongHashRanges": wrongHashRanges})
+							log.Error(err, "error exporting hits on reorg", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "len(blockRawData)": len(blockRawData), "reorgDepth": *reorgDepth, "matchingHashesBlockIdList": matchingHashesBlockIdList, "wrongHashRanges": wrongHashRanges})
 						} else {
-							utils.LogFatal(err, "error exporting hits on reorg", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "len(blockRawData)": len(blockRawData), "reorgDepth": *reorgDepth, "matchingHashesBlockIdList": matchingHashesBlockIdList, "wrongHashRanges": wrongHashRanges})
+							log.Fatal(err, "error exporting hits on reorg", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "len(blockRawData)": len(blockRawData), "reorgDepth": *reorgDepth, "matchingHashesBlockIdList": matchingHashesBlockIdList, "wrongHashRanges": wrongHashRanges})
 						}
 						continue
 					} else {
@@ -411,16 +414,16 @@ func main() {
 			newerNodeBN := currentNodeBlockNumber.Load() // just in case it took a while doing the reorg stuff, no problem if range > reorg limit, as the exported blocks will be newest also
 			if newerNodeBN < currentNodeBN {
 				// fatal, as this is an impossible error
-				utils.LogFatal(err, "impossible error newerNodeBN < currentNodeBN", 0, map[string]interface{}{"newerNodeBN": newerNodeBN, "currentNodeBN": currentNodeBN})
+				log.Fatal(err, "impossible error newerNodeBN < currentNodeBN", 0, map[string]interface{}{"newerNodeBN": newerNodeBN, "currentNodeBN": currentNodeBN})
 			}
 			err = bulkExportBlocksRange(tableBlocksRaw, []intRange{intRange{start: latestPGBlock + 1, end: newerNodeBN}}, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
 			// we can try again, as throw a fatal will result in try again anyway
 			if err != nil {
 				consecutiveErrorCount++
 				if consecutiveErrorCount <= consecutiveErrorCountThreshold {
-					utils.LogError(err, "error while reexport blocks for bigtable (newest blocks)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock+1": latestPGBlock + 1, "newerNodeBN": newerNodeBN})
+					log.Error(err, "error while reexport blocks for bigtable (newest blocks)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock+1": latestPGBlock + 1, "newerNodeBN": newerNodeBN})
 				} else {
-					utils.LogFatal(err, "error while reexport blocks for bigtable (newest blocks)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock+1": latestPGBlock + 1, "newerNodeBN": newerNodeBN})
+					log.Fatal(err, "error while reexport blocks for bigtable (newest blocks)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount, "latestPGBlock+1": latestPGBlock + 1, "newerNodeBN": newerNodeBN})
 				}
 				continue
 			} else {
@@ -428,14 +431,14 @@ func main() {
 				if err != nil {
 					consecutiveErrorCount++
 					if consecutiveErrorCount <= consecutiveErrorCountThreshold {
-						utils.LogError(err, "error while using psqlGetLatestBlock (ongoing / write)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount})
+						log.Error(err, "error while using psqlGetLatestBlock (ongoing / write)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount})
 					} else {
-						utils.LogFatal(err, "error while using psqlGetLatestBlock (ongoing / write)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount})
+						log.Fatal(err, "error while using psqlGetLatestBlock (ongoing / write)", 0, map[string]interface{}{"reorgErrorCount": consecutiveErrorCount})
 					}
 					continue
 				} else if latestPGBlock != newerNodeBN {
 					// fatal, as this is a nearly impossible error
-					utils.LogFatal(err, "impossible error latestPGBlock != newerNodeBN", 0, map[string]interface{}{"latestPGBlock": latestPGBlock, "newerNodeBN": newerNodeBN})
+					log.Fatal(err, "impossible error latestPGBlock != newerNodeBN", 0, map[string]interface{}{"latestPGBlock": latestPGBlock, "newerNodeBN": newerNodeBN})
 				}
 			}
 
@@ -537,7 +540,7 @@ func _bulkExportBlocksImpl(tableBlocksRaw *gcp_bigtable.Table, blockRawData []fu
 		keys := []string{}
 		for _, v := range blockRawData {
 			if len(v.blockCompressed) == 0 || len(v.tracesCompressed) == 0 {
-				utils.LogFatal(nil, "tried writing empty data to BT", 0, map[string]interface{}{"len(v.blockCompressed)": len(v.blockCompressed), "len(v.receiptsCompressed)": len(v.receiptsCompressed), "len(v.tracesCompressed)": len(v.tracesCompressed)}) // fatal, as if this is not working in the first place, it will never work
+				log.Fatal(nil, "tried writing empty data to BT", 0, map[string]interface{}{"len(v.blockCompressed)": len(v.blockCompressed), "len(v.receiptsCompressed)": len(v.receiptsCompressed), "len(v.tracesCompressed)": len(v.tracesCompressed)}) // fatal, as if this is not working in the first place, it will never work
 			}
 			mut := gcp_bigtable.NewMutation()
 			mut.Set(BT_COLUMNFAMILY_BLOCK, BT_COLUMN_BLOCK, gcp_bigtable.Timestamp(0), v.blockCompressed)
@@ -707,7 +710,7 @@ func sendMessage(content string, webhookUrl *string, username *string) {
 	if len(*webhookUrl) > 0 {
 		err := discordwebhook.SendMessage(*webhookUrl, discordwebhook.Message{Username: username, Content: &content})
 		if err != nil {
-			utils.LogError(err, "error sending message to discord", 0, map[string]interface{}{"content": content, "webhookUrl": *webhookUrl, "username": *username})
+			log.Error(err, "error sending message to discord", 0, map[string]interface{}{"content": content, "webhookUrl": *webhookUrl, "username": *username})
 		}
 	}
 }
@@ -761,10 +764,10 @@ func compress(src []byte) []byte {
 	var buf bytes.Buffer
 	zw := gzip.NewWriter(&buf)
 	if _, err := zw.Write(src); err != nil {
-		utils.LogFatal(err, "error writing to gzip writer", 0) // fatal, as if this is not working in the first place, it will never work
+		log.Fatal(err, "error writing to gzip writer", 0) // fatal, as if this is not working in the first place, it will never work
 	}
 	if err := zw.Close(); err != nil {
-		utils.LogFatal(err, "error closing gzip writer", 0) // fatal, as if this is not working in the first place, it will never work
+		log.Fatal(err, "error closing gzip writer", 0) // fatal, as if this is not working in the first place, it will never work
 	}
 	return buf.Bytes()
 }
@@ -773,11 +776,11 @@ func compress(src []byte) []byte {
 /* func decompress(src []byte) []byte {
 	zr, err := gzip.NewReader(bytes.NewReader(src))
 	if err != nil {
-		utils.LogFatal(err, "error creating gzip reader", 0) // fatal, as if this is not working in the first place, it will never work
+		log.Fatal(err, "error creating gzip reader", 0) // fatal, as if this is not working in the first place, it will never work
 	}
 	data, err := io.ReadAll(zr)
 	if err != nil {
-		utils.LogFatal(err, "error reading from gzip reader", 0) // fatal, as if this is not working in the first place, it will never work
+		log.Fatal(err, "error reading from gzip reader", 0) // fatal, as if this is not working in the first place, it will never work
 	}
 	return data
 } */
@@ -876,7 +879,7 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 		blockNumber, err := rpciGetLatestBlock()
 		if err != nil {
 			sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, failed to get newest block from node, on first try %s", getChainNamePretty(), *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
-			utils.LogFatal(err, "fatal, failed to get newest block from node, on first try", 0)
+			log.Fatal(err, "fatal, failed to get newest block from node, on first try", 0)
 		}
 		currentNodeBlockNumber.Store(blockNumber)
 		if !noNewBlocks {
@@ -917,7 +920,7 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 						previousBlock = currentNodeBlockNumber.Load()
 						newestBlock = header.Number.Int64()
 						if newestBlock <= previousBlock {
-							utils.LogFatal(nil, "impossible error, newest block <= previous block", 0, map[string]interface{}{"previousBlock": previousBlock, "newestBlock": newestBlock})
+							log.Fatal(nil, "impossible error, newest block <= previous block", 0, map[string]interface{}{"previousBlock": previousBlock, "newestBlock": newestBlock})
 						}
 						currentNodeBlockNumber.Store(newestBlock)
 						gotNewBlockAt = time.Now()
@@ -932,10 +935,10 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 					"error":                          err,
 				}).Warn(errorText)
 			} else if durationSinceLastBlockReceived < noNewBlocksThresholdDuration {
-				utils.LogError(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
+				log.Error(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
 			} else {
 				sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, %s, %v, %v %s", getChainNamePretty(), errorText, err, durationSinceLastBlockReceived, *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
-				utils.LogFatal(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
+				log.Fatal(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
 			}
 
 			close(headers)
@@ -951,7 +954,7 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 			newestBlock, err := rpciGetLatestBlock()
 			if err == nil {
 				if previousBlock > newestBlock {
-					utils.LogFatal(nil, "impossible error, newest block <= previous block", 0, map[string]interface{}{"previousBlock": previousBlock, "newestBlock": newestBlock})
+					log.Fatal(nil, "impossible error, newest block <= previous block", 0, map[string]interface{}{"previousBlock": previousBlock, "newestBlock": newestBlock})
 				} else if previousBlock < newestBlock {
 					currentNodeBlockNumber.Store(newestBlock)
 					gotNewBlockAt = time.Now()
@@ -962,9 +965,9 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 			durationSinceLastBlockReceived := time.Since(gotNewBlockAt)
 			if durationSinceLastBlockReceived >= noNewBlocksThresholdDuration {
 				sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, %s, %d, %d, %v, %v %s", getChainNamePretty(), errorText, previousBlock, newestBlock, err, durationSinceLastBlockReceived, *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
-				utils.LogFatal(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
+				log.Fatal(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
 			} else if durationSinceLastBlockReceived >= noNewBlocksThresholdDuration/3*2 {
-				utils.LogError(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
+				log.Error(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
 			} else if durationSinceLastBlockReceived >= noNewBlocksThresholdDuration/3 {
 				logrus.WithFields(logrus.Fields{
 					"durationSinceLastBlockReceived": durationSinceLastBlockReceived,
@@ -1500,7 +1503,7 @@ func rpciGetBulkRawUncles(blockRawData []fullBlockRawData, nodeRequestsAtOnce in
 		for _, v := range blockRawData {
 			if v.blockUnclesCount > 2 || v.blockUnclesCount < 0 {
 				// fatal, as this is an impossible error
-				utils.LogFatal(nil, "impossible error, found impossible uncle count, expected 0, 1 or 2", 0, map[string]interface{}{"block_unclesCount": v.blockUnclesCount, "block_number": v.blockNumber})
+				log.Fatal(nil, "impossible error, found impossible uncle count, expected 0, 1 or 2", 0, map[string]interface{}{"block_unclesCount": v.blockUnclesCount, "block_number": v.blockNumber})
 			} else if v.blockUnclesCount == 0 {
 				continue
 			} else {
