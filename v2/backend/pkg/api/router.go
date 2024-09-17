@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/api/docs"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -39,6 +40,8 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
+	// serve static files
+	publicRouter.PathPrefix("/docs/").Handler(http.StripPrefix("/api/v2/docs/", http.FileServer(http.FS(docs.Files))))
 	router.Use(metrics.HttpMiddleware)
 
 	return router
@@ -87,6 +90,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 	endpoints := []endpoint{
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
+
+		{http.MethodGet, "/ratelimit-weights", nil, hs.InternalGetRatelimitWeights},
 
 		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
 

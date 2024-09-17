@@ -528,8 +528,7 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 }
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
-// precondition: the enum is the same type as the allowed enums.
-func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
+func checkEnumIsAllowed[T enums.EnumFactory[T]](v *validationError, enum T, allowed []T, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
 		return

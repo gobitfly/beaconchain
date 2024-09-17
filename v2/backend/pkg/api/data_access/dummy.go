@@ -636,6 +636,12 @@ func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPool
 	return getDummyStruct[t.RocketPoolData]()
 }
 
+func (d *DummyService) GetApiWeights(ctx context.Context) ([]t.ApiWeightItem, error) {
+	r := []t.ApiWeightItem{}
+	err := commonFakeData(&r)
+	return r, err
+}
+
 func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) t.HealthzData {
 	r, _ := getDummyData[t.HealthzData]()
 	return r
