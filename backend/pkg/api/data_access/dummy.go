@@ -43,7 +43,7 @@ func NewDummyService() *DummyService {
 	return &DummyService{}
 }
 
-// generate random decimal.Decimal, result is between 0.001 and 1000 GWei (returned a Wei)
+// generate random decimal.Decimal, result is between 0.001 and 1000 GWei (returned in Wei)
 func randomEthDecimal() decimal.Decimal {
 	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d000000", rand.Int64N(1000000)+1)) //nolint:gosec
 	return decimal
