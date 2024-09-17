@@ -836,6 +836,7 @@ func queueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 				url,
 				retries,
 				event_names,
+				last_sent,
 				destination
 			FROM
 				users_webhooks
