@@ -27,6 +27,21 @@ func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *htt
 }
 
 // --------------------------------------
+// API Ratelimit Weights
+
+func (h *HandlerService) InternalGetRatelimitWeights(w http.ResponseWriter, r *http.Request) {
+	data, err := h.dai.GetApiWeights(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetRatelimitWeightsResponse{
+		Data: data,
+	}
+	returnOk(w, r, response)
+}
+
+// --------------------------------------
 // Latest State
 
 func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +100,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -131,7 +146,7 @@ func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *h
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -161,7 +176,7 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -207,7 +222,7 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -1310,4 +1325,8 @@ func (h *HandlerService) InternalGetSlotBlobs(w http.ResponseWriter, r *http.Req
 		Data: data,
 	}
 	returnOk(w, r, response)
+}
+
+func (h *HandlerService) ReturnOk(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, r, nil)
 }
