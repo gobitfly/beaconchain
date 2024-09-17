@@ -40,6 +40,7 @@ export enum API_PATH {
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   LOGOUT = '/logout',
+  NOTIFICATIONS_CLIENTS = '/notifications/clients',
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
   NOTIFICATIONS_MACHINE = '/notifications/machines',
   NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
@@ -278,6 +279,10 @@ export const mapping: Record<string, MappingData> = {
     method: 'POST',
     mock: false,
     path: '/logout',
+  },
+  [API_PATH.NOTIFICATIONS_CLIENTS]: {
+    method: 'GET',
+    path: '/users/me/notifications/clients',
   },
   [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
     path: '/users/me/notifications/dashboards',

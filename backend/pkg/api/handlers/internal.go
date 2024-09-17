@@ -477,6 +477,52 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 }
 
 // --------------------------------------
+// Mobile
+
+func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	q := r.URL.Query()
+	force := v.checkBool(q.Get("force"), "force")
+	bundleVersion := v.checkUint(q.Get("bundle_version"), "bundle_version")
+	nativeVersion := v.checkUint(q.Get("native_version"), "native_version")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	stats, err := h.dai.GetLatestBundleForNativeVersion(r.Context(), nativeVersion)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var data types.MobileBundleData
+	data.HasNativeUpdateAvailable = stats.MaxNativeVersion > nativeVersion
+	// if given bundle version is smaller than the latest and delivery count is less than target count, return the latest bundle
+	if force || (bundleVersion < stats.LatestBundleVersion && (stats.TargetCount == 0 || stats.DeliveryCount < stats.TargetCount)) {
+		data.BundleUrl = stats.BundleUrl
+	}
+	response := types.GetMobileLatestBundleResponse{
+		Data: data,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) InternalPostMobileBundleDeliveries(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	bundleVersion := v.checkUint(vars["bundle_version"], "bundle_version")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err := h.dai.IncrementBundleDeliveryCount(r.Context(), bundleVersion)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	returnNoContent(w, r)
+}
+
+// --------------------------------------
 // Notifications
 
 func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
