@@ -289,7 +289,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	} else { // load the chain id from the config in case of public dashboards
 		data.Network = utils.Config.Chain.ClConfig.DepositChainID
-		log.Info(utils.Config.Chain.ClConfig.DepositChainID)
 	}
 
 	// Groups
@@ -515,8 +514,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
 	}
-
-	log.Info(data.Network)
 
 	return &data, nil
 }
