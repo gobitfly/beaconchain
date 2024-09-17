@@ -2,9 +2,14 @@ package dataaccess
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 type NotificationsRepository interface {
@@ -61,7 +66,144 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	return d.dummy.GetNotificationSettings(ctx, userId)
 }
 func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
-	return d.dummy.UpdateNotificationSettingsGeneral(ctx, userId, settings)
+	// TODO: Are there plans to have the network as a prefix like before for rocketpool?
+
+	latestEpoch := cache.LatestEpoch.Get()
+
+	var eventsToInsert []goqu.Record
+	var eventsToDelete []goqu.Expression
+
+	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to update general notification settings: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// -------------------------------------
+	// Set the "do not disturb" setting
+	_, err = tx.ExecContext(ctx, `UPDATE users SET notifications_do_not_disturb_ts = TO_TIMESTAMP($1) where legacy_receipt is null WHERE id = $2`,
+		settings.DoNotDisturbTimestamp, userId)
+	if err != nil {
+		return err
+	}
+
+	// -------------------------------------
+	// Set the notification channels
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO users_notification_channels (user_id, channel, active)
+    		VALUES ($1, $2, $3), ($1, $4, $5)
+    	ON CONFLICT (user_id, channel) 
+    		DO UPDATE SET active = EXCLUDED.active`,
+		userId, types.EmailNotificationChannel, settings.IsEmailNotificationsEnabled, types.PushNotificationChannel, settings.IsPushNotificationsEnabled)
+	if err != nil {
+		return err
+	}
+
+	// -------------------------------------
+	// Subscribed clients events
+	_, err = tx.ExecContext(ctx, `DELETE FROM users_subscriptions WHERE user_id = $1 AND event_name = $2 AND NOT (event_filter = ANY($3))`,
+		userId, types.EthClientUpdateEventName, settings.SubscribedClients)
+	if err != nil {
+		return err
+	}
+
+	for _, client := range settings.SubscribedClients {
+		eventsToInsert = append(eventsToInsert, goqu.Record{"user_id": userId, "event_name": types.EthClientUpdateEventName, "event_filter": client, "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": 0})
+	}
+
+	// -------------------------------------
+	// Collect the machine and rocketpool events to set and delete
+
+	//Machine events
+	if settings.IsMachineOfflineSubscribed {
+		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineOfflineEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": 0}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineOfflineEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+	if settings.MachineStorageUsageThreshold > 0 {
+		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineDiskAlmostFullEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.MachineStorageUsageThreshold}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineDiskAlmostFullEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+	if settings.MachineCpuUsageThreshold > 0 {
+		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineCpuLoadEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.MachineCpuUsageThreshold}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineCpuLoadEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+	if settings.MachineMemoryUsageThreshold > 0 {
+		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineMemoryUsageEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.MachineMemoryUsageThreshold}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineMemoryUsageEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+
+	// RocketPool events
+	if settings.IsRocketPoolNewRewardRoundSubscribed {
+		event := goqu.Record{"user_id": userId, "event_name": types.RocketpoolNewClaimRoundStartedEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": 0}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.RocketpoolNewClaimRoundStartedEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+	if settings.RocketPoolMaxCollateralThreshold > 0 {
+		event := goqu.Record{"user_id": userId, "event_name": types.RocketpoolCollateralMaxReached, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.RocketPoolMaxCollateralThreshold}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.RocketpoolCollateralMaxReached, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+	if settings.RocketPoolMinCollateralThreshold > 0 {
+		event := goqu.Record{"user_id": userId, "event_name": types.RocketpoolCollateralMinReached, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.RocketPoolMinCollateralThreshold}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.RocketpoolCollateralMinReached, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+
+	// Insert all the events or update the threshold if they already exist
+	insertDs := goqu.Dialect("postgres").
+		Insert("users_subscriptions").
+		Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
+		Rows(eventsToInsert).
+		OnConflict(goqu.DoUpdate("user_id, event_name, event_filter", goqu.L("event_threshold = EXCLUDED.event_threshold")))
+
+	query, args, err := insertDs.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %v", err)
+	}
+
+	_, err = tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	// Delete all the events
+	deleteDs := goqu.Dialect("postgres").
+		Delete("users_subscriptions").
+		Where(goqu.Or(eventsToDelete...))
+
+	query, args, err = deleteDs.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %v", err)
+	}
+
+	_, err = tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to update general notification settings: %w", err)
+	}
+	return nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	return d.dummy.UpdateNotificationSettingsNetworks(ctx, userId, chainId, settings)
