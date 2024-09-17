@@ -1008,7 +1008,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 	checkEnumIsAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
