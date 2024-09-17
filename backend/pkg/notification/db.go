@@ -1,6 +1,10 @@
 package notification
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -70,6 +74,27 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	log.Infof("Found %d subscriptions for event %s", len(subs), eventName)
 
 	for _, sub := range subs {
+		if strings.HasPrefix(sub.EventFilter, "vdb:") {
+			dashboardData := strings.Split(sub.EventFilter, ":")
+			if len(dashboardData) != 3 {
+				log.Error(fmt.Errorf("Invalid dashboard subscription: %s", sub.EventFilter), "Invalid dashboard subscription", 0)
+				continue
+			}
+			dashboardId, err := strconv.ParseInt(dashboardData[1], 10, 64)
+			if err != nil {
+				log.Error(err, "Invalid dashboard subscription", 0)
+				continue
+			}
+			sub.DashboardId = &dashboardId
+
+			dashboardGroupId, err := strconv.ParseInt(dashboardData[2], 10, 64)
+			if err != nil {
+				log.Error(err, "Invalid dashboard subscription", 0)
+				continue
+			}
+			sub.DashboardGroupId = &dashboardGroupId
+		}
+
 		if _, ok := subMap[sub.EventFilter]; !ok {
 			subMap[sub.EventFilter] = make([]types.Subscription, 0)
 		}
