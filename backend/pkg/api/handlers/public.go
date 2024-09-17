@@ -666,7 +666,7 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 //	@Param			request			body		handlers.PublicDeleteValidatorDashboardValidators.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
 //	@Success		204				"Validators removed successfully."
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/bulk-deletions [post]
+//	@Router			/validator-dashboards/{dashboard_id}/validators/bulk-deletions [post]
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
