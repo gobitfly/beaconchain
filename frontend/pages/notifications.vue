@@ -97,7 +97,8 @@ const openManageNotifications = () => {
         />
       </div>
       <BcTabList
-        :tabs default-tab="dashboards"
+        :tabs
+        default-tab="dashboards"
         :use-route-hash="true"
         class="notifications-tab-view"
         panels-class="notifications-tab-panels"
@@ -107,6 +108,11 @@ const openManageNotifications = () => {
         </template>
         <template #tab-panel-dashboards>
           <NotificationsDashboardsTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+        <template #tab-panel-clients>
+          <NotificationsClientsTable
             @open-dialog="openManageNotifications"
           />
         </template>

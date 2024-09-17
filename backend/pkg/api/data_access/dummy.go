@@ -11,7 +11,6 @@ import (
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
-	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
@@ -643,7 +642,15 @@ func (d *DummyService) GetApiWeights(ctx context.Context) ([]t.ApiWeightItem, er
 	return r, err
 }
 
-func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) types.HealthzData {
-	r, _ := getDummyData[types.HealthzData]()
+func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) t.HealthzData {
+	r, _ := getDummyData[t.HealthzData]()
 	return r
+}
+
+func (d *DummyService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
+	return getDummyStruct[t.MobileAppBundleStats]()
+}
+
+func (d *DummyService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
+	return nil
 }
