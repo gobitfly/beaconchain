@@ -206,7 +206,78 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 	return nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
-	return d.dummy.UpdateNotificationSettingsNetworks(ctx, userId, chainId, settings)
+	// TODO: Is it fine to fill a decimal.Decimal as a REAL in postgres?
+
+	latestEpoch := cache.LatestEpoch.Get()
+
+	var eventsToInsert []goqu.Record
+	var eventsToDelete []goqu.Expression
+
+	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to update general notification settings: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	if !settings.GasAboveThreshold.IsZero() {
+		event := goqu.Record{"user_id": userId, "event_name": types.NetworkGasAboveThresholdEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasAboveThreshold.InexactFloat64()}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.NetworkGasAboveThresholdEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+	if !settings.GasBelowThreshold.IsZero() {
+		event := goqu.Record{"user_id": userId, "event_name": types.NetworkGasBelowThresholdEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasBelowThreshold.InexactFloat64()}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.NetworkGasBelowThresholdEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+	if settings.ParticipationRateThreshold > 0 {
+		event := goqu.Record{"user_id": userId, "event_name": types.NetworkParticipationRateThresholdEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.ParticipationRateThreshold}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		event := goqu.Ex{"user_id": userId, "event_name": types.NetworkParticipationRateThresholdEventName, "event_filter": ""}
+		eventsToDelete = append(eventsToDelete, event)
+	}
+
+	// Insert all the events or update the threshold if they already exist
+	insertDs := goqu.Dialect("postgres").
+		Insert("users_subscriptions").
+		Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
+		Rows(eventsToInsert).
+		OnConflict(goqu.DoUpdate("user_id, event_name, event_filter", goqu.L("event_threshold = EXCLUDED.event_threshold")))
+
+	query, args, err := insertDs.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %v", err)
+	}
+
+	_, err = tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	// Delete all the events
+	deleteDs := goqu.Dialect("postgres").
+		Delete("users_subscriptions").
+		Where(goqu.Or(eventsToDelete...))
+
+	query, args, err = deleteDs.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %v", err)
+	}
+
+	_, err = tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to update general notification settings: %w", err)
+	}
+	return nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
 	return d.dummy.UpdateNotificationSettingsPairedDevice(ctx, pairedDeviceId, name, IsNotificationsEnabled)
