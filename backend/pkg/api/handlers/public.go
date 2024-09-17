@@ -135,7 +135,7 @@ func (h *HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Re
 //
 //	@Description	Create a new validator dashboard. **Note**: New dashboards will automatically have a default group created.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
@@ -196,7 +196,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 // PublicGetValidatorDashboards godoc
 //
 //	@Description	Get overview information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
@@ -617,7 +617,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 // PublicGetValidatorDashboardValidators godoc
 //
 //	@Description	Get a list of groups in a specified validator dashboard.
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		query		string	false	"The ID of the group."
@@ -660,25 +660,25 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 //	@Description	Remove validators from a specified dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
+//	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
-//	@Param			validators		query	string	false	"Provide a comma separated list of validator indices or public keys to remove from the dashboard."
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicDeleteValidatorDashboardValidators.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
 //	@Success		204				"Validators removed successfully."
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/validators [delete]
+//	@Router			/validator-dashboards/{dashboard_id}/bulk-deletions [post]
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	var indices []uint64
-	var publicKeys []string
-	req := struct {
+	type request struct {
 		Validators []intOrString `json:"validators"`
-	}{}
+	}
+	var req request
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	indices, publicKeys = v.checkValidators(req.Validators, false)
+	indices, publicKeys := v.checkValidators(req.Validators, false)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -862,9 +862,10 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	req := struct {
+	type request struct {
 		IsArchived bool `json:"is_archived"`
-	}{}
+	}
+	var req request
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
@@ -945,7 +946,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 // PublicGetValidatorDashboardSlotViz godoc
 //
 //	@Description	Get slot viz information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by. If omitted, all groups will be included."
@@ -982,7 +983,7 @@ var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.
 // PublicGetValidatorDashboardSummary godoc
 //
 //	@Description	Get summary information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
@@ -1029,7 +1030,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 // PublicGetValidatorDashboardGroupSummary godoc
 //
 //	@Description	Get summary information for a specified group in a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		string	true	"The ID of the group."
@@ -1075,7 +1076,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 // PublicGetValidatorDashboardSummaryChart godoc
 //
 //	@Description	Get summary chart data for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by."
@@ -1128,7 +1129,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 // PublicGetValidatorDashboardSummaryValidators godoc
 //
 //	@Description	Get summary information for validators in a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		query		string	false	"The ID of the group."
@@ -1190,7 +1191,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 // PublicGetValidatorDashboardRewards godoc
 //
 //	@Description	Get rewards information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
@@ -1232,7 +1233,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 // PublicGetValidatorDashboardGroupRewards godoc
 //
 //	@Description	Get rewards information for a specified group in a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		string	true	"The ID of the group."
@@ -1272,7 +1273,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 // PublicGetValidatorDashboardRewardsChart godoc
 //
 //	@Description	Get rewards chart data for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
@@ -1308,7 +1309,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 // PublicGetValidatorDashboardDuties godoc
 //
 //	@Description	Get duties information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			epoch			path		string	true	"The epoch to get data for."
@@ -1355,7 +1356,7 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 // PublicGetValidatorDashboardBlocks godoc
 //
 //	@Description	Get blocks information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
@@ -1397,7 +1398,7 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 // PublicGetValidatorDashboardHeatmap godoc
 //
 //	@Description	Get heatmap information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
@@ -1446,7 +1447,7 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 // PublicGetValidatorDashboardGroupHeatmap godoc
 //
 //	@Description	Get heatmap information for a specified group in a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		string	true	"The ID of the group."
@@ -1496,7 +1497,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.Response
 // PublicGetValidatorDashboardExecutionLayerDeposits godoc
 //
 //	@Description	Get execution layer deposits information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
@@ -1532,7 +1533,7 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 // PublicGetValidatorDashboardConsensusLayerDeposits godoc
 //
 //	@Description	Get consensus layer deposits information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
@@ -1569,7 +1570,7 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 // PublicGetValidatorDashboardTotalConsensusLayerDeposits godoc
 //
 //	@Description	Get total consensus layer deposits information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Success		200				{object}	types.GetValidatorDashboardTotalConsensusDepositsResponse
@@ -1597,7 +1598,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalConsensusLayerDeposits(
 // PublicGetValidatorDashboardTotalExecutionLayerDeposits godoc
 //
 //	@Description	Get total execution layer deposits information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Success		200				{object}	types.GetValidatorDashboardTotalExecutionDepositsResponse
@@ -1625,7 +1626,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(
 // PublicGetValidatorDashboardWithdrawals godoc
 //
 //	@Description	Get withdrawals information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
@@ -1667,7 +1668,7 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 // PublicGetValidatorDashboardTotalWithdrawals godoc
 //
 //	@Description	Get total withdrawals information for a specified dashboard
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
@@ -1704,7 +1705,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 // PublicGetValidatorDashboardRocketPool godoc
 //
 //	@Description	Get an aggregated list of the Rocket Pool nodes details associated with a specified dashboard.
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
@@ -1744,7 +1745,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWr
 // PublicGetValidatorDashboardTotalRocketPool godoc
 //
 //	@Description	Get a summary of all Rocket Pool nodes details associated with a specified dashboard.
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Success		200				{object}	types.GetValidatorDashboardTotalRocketPoolResponse
@@ -1778,7 +1779,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 // PublicGetValidatorDashboardNodeRocketPool godoc
 //
 //	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			node_address	path		string	true	"The address of the node."
@@ -1814,7 +1815,7 @@ func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.Respon
 // PublicGetValidatorDashboardRocketPoolMinipools godoc
 //
 //	@Description	Get minipools information for a specified Rocket Pool node associated with a specified dashboard.
-//	@Tags			Validator Dashboards
+//	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			node_address	path		string	true	"The address of the node."
