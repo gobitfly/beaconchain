@@ -261,100 +261,99 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 
 	log.Infof("started collecting notifications")
 
-	// type dashboardDefinitionRow struct {
-	// 	DashboardId    types.DashboardId      `db:"dashboard_id"`
-	// 	DashboardName  string                 `db:"dashboard_name"`
-	// 	UserId         types.UserId           `db:"user_id"`
-	// 	GroupId        types.DashboardGroupId `db:"group_id"`
-	// 	GroupName      string                 `db:"group_name"`
-	// 	ValidatorIndex types.ValidatorIndex   `db:"validator_index"`
-	// }
+	log.Infof("retrieving dashboard definitions")
+	// Retrieve all dashboard definitions to be able to retrieve validators included in
+	// the group notification subscriptions
+	// TODO: add a filter to retrieve only groups that have notifications enabled
+	// Needs a new field in the db
+	type dashboardDefinitionRow struct {
+		DashboardId    types.DashboardId      `db:"dashboard_id"`
+		DashboardName  string                 `db:"dashboard_name"`
+		UserId         types.UserId           `db:"user_id"`
+		GroupId        types.DashboardGroupId `db:"group_id"`
+		GroupName      string                 `db:"group_name"`
+		ValidatorIndex types.ValidatorIndex   `db:"validator_index"`
+	}
+	var dashboardDefinitions []dashboardDefinitionRow
+	err = db.AlloyWriter.Select(&dashboardDefinitions, `
+		select
+			users_val_dashboards.id as dashboard_id,
+			users_val_dashboards.name as dashboard_name,
+			users_val_dashboards.user_id,
+			users_val_dashboards_groups.id as group_id,
+			users_val_dashboards_groups.name as group_name,
+			users_val_dashboards_validators.validator_index
+		from users_val_dashboards
+		left join users_val_dashboards_groups on users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
+		left join users_val_dashboards_validators on users_val_dashboards_validators.dashboard_id = users_val_dashboards_groups.dashboard_id AND users_val_dashboards_validators.group_id = users_val_dashboards_groups.id;
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("error getting dashboard definitions: %v", err)
+	}
 
-	// log.Infof("retrieving dashboard definitions")
-	// // Retrieve all dashboard definitions to be able to retrieve validators included in
-	// // the group notification subscriptions
-	// // TODO: add a filter to retrieve only groups that have notifications enabled
-	// // Needs a new field in the db
-	// var dashboardDefinitions []dashboardDefinitionRow
-	// err = db.AlloyWriter.Select(&dashboardDefinitions, `
-	// 	select
-	// 		users_val_dashboards.id as dashboard_id,
-	// 		users_val_dashboards.name as dashboard_name,
-	// 		users_val_dashboards.user_id,
-	// 		users_val_dashboards_groups.id as group_id,
-	// 		users_val_dashboards_groups.name as group_name,
-	// 		users_val_dashboards_validators.validator_index
-	// 	from users_val_dashboards
-	// 	left join users_val_dashboards_groups on users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
-	// 	left join users_val_dashboards_validators on users_val_dashboards_validators.dashboard_id = users_val_dashboards_groups.dashboard_id AND users_val_dashboards_validators.group_id = users_val_dashboards_groups.id;
-	// `)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("error getting dashboard definitions: %v", err)
-	// }
-
-	// // Now initialize the validator dashboard configuration map
-	// validatorDashboardConfig := &types.ValidatorDashboardConfig{
-	// 	DashboardsByUserId: make(map[types.UserId]map[types.DashboardId]*types.ValidatorDashboard),
-	// }
-	// for _, row := range dashboardDefinitions {
-	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId] == nil {
-	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId] = make(map[types.DashboardId]*types.ValidatorDashboard)
-	// 	}
-	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] == nil {
-	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] = &types.ValidatorDashboard{
-	// 			Name:   row.DashboardName,
-	// 			Groups: make(map[types.DashboardGroupId]*types.ValidatorDashboardGroup),
-	// 		}
-	// 	}
-	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] == nil {
-	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] = &types.ValidatorDashboardGroup{
-	// 			Name:       row.GroupName,
-	// 			Validators: []uint64{},
-	// 		}
-	// 	}
-	// 	validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators = append(validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators, uint64(row.ValidatorIndex))
-	// }
+	// Now initialize the validator dashboard configuration map
+	validatorDashboardConfig := &types.ValidatorDashboardConfig{
+		DashboardsByUserId: make(map[types.UserId]map[types.DashboardId]*types.ValidatorDashboard),
+	}
+	for _, row := range dashboardDefinitions {
+		if validatorDashboardConfig.DashboardsByUserId[row.UserId] == nil {
+			validatorDashboardConfig.DashboardsByUserId[row.UserId] = make(map[types.DashboardId]*types.ValidatorDashboard)
+		}
+		if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] == nil {
+			validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] = &types.ValidatorDashboard{
+				Name:   row.DashboardName,
+				Groups: make(map[types.DashboardGroupId]*types.ValidatorDashboardGroup),
+			}
+		}
+		if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] == nil {
+			validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] = &types.ValidatorDashboardGroup{
+				Name:       row.GroupName,
+				Validators: []uint64{},
+			}
+		}
+		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators = append(validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators, uint64(row.ValidatorIndex))
+	}
 
 	// TODO: pass the validatorDashboardConfig to the notification collection functions
 	// The following functions will collect the notifications and add them to the
 	// notificationsByUserID map. The notifications will be queued and sent later
 	// by the notification sender process
-	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch)
+	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_missed_attestation").Inc()
 		return nil, fmt.Errorf("error collecting validator_attestation_missed notifications: %v", err)
 	}
 	log.Infof("collecting attestation & offline notifications took: %v", time.Since(start))
 
-	err = collectBlockProposalNotifications(notificationsByUserID, 1, types.ValidatorExecutedProposalEventName, epoch)
+	err = collectBlockProposalNotifications(notificationsByUserID, 1, types.ValidatorExecutedProposalEventName, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_executed_block_proposal").Inc()
 		return nil, fmt.Errorf("error collecting validator_proposal_submitted notifications: %v", err)
 	}
 	log.Infof("collecting block proposal proposed notifications took: %v", time.Since(start))
 
-	err = collectBlockProposalNotifications(notificationsByUserID, 2, types.ValidatorMissedProposalEventName, epoch)
+	err = collectBlockProposalNotifications(notificationsByUserID, 2, types.ValidatorMissedProposalEventName, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_missed_block_proposal").Inc()
 		return nil, fmt.Errorf("error collecting validator_proposal_missed notifications: %v", err)
 	}
 	log.Infof("collecting block proposal missed notifications took: %v", time.Since(start))
 
-	err = collectBlockProposalNotifications(notificationsByUserID, 3, types.ValidatorMissedProposalEventName, epoch)
+	err = collectBlockProposalNotifications(notificationsByUserID, 3, types.ValidatorMissedProposalEventName, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_missed_orphaned_block_proposal").Inc()
 		return nil, fmt.Errorf("error collecting validator_proposal_missed notifications for orphaned slots: %w", err)
 	}
 	log.Infof("collecting block proposal missed notifications for orphaned slots took: %v", time.Since(start))
 
-	err = collectValidatorGotSlashedNotifications(notificationsByUserID, epoch)
+	err = collectValidatorGotSlashedNotifications(notificationsByUserID, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_validator_got_slashed").Inc()
 		return nil, fmt.Errorf("error collecting validator_got_slashed notifications: %v", err)
 	}
 	log.Infof("collecting validator got slashed notifications took: %v", time.Since(start))
 
-	err = collectWithdrawalNotifications(notificationsByUserID, epoch)
+	err = collectWithdrawalNotifications(notificationsByUserID, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_validator_withdrawal").Inc()
 		return nil, fmt.Errorf("error collecting withdrawal notifications: %v", err)
@@ -381,7 +380,7 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 				return nil, fmt.Errorf("error collecting rocketpool notifications: %v", err)
 			}
 		} else {
-			err = collectRocketpoolComissionNotifications(notificationsByUserID)
+			err = collectRocketpoolComissionNotifications(notificationsByUserID, validatorDashboardConfig)
 			if err != nil {
 				//nolint:misspell
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_comission").Inc()
@@ -389,21 +388,21 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 			}
 			log.Infof("collecting rocketpool commissions took: %v", time.Since(start))
 
-			err = collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID)
+			err = collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID, validatorDashboardConfig)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_reward_claim").Inc()
 				return nil, fmt.Errorf("error collecting new rocketpool claim round: %v", err)
 			}
 			log.Infof("collecting rocketpool claim round took: %v", time.Since(start))
 
-			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMaxReached, epoch)
+			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMaxReached, epoch, validatorDashboardConfig)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_rpl_collateral_max_reached").Inc()
 				return nil, fmt.Errorf("error collecting rocketpool max collateral: %v", err)
 			}
 			log.Infof("collecting rocketpool max collateral took: %v", time.Since(start))
 
-			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMinReached, epoch)
+			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMinReached, epoch, validatorDashboardConfig)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_rpl_collateral_min_reached").Inc()
 				return nil, fmt.Errorf("error collecting rocketpool min collateral: %v", err)
@@ -412,7 +411,7 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 		}
 	}
 
-	err = collectSyncCommittee(notificationsByUserID, epoch)
+	err = collectSyncCommittee(notificationsByUserID, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_sync_committee").Inc()
 		return nil, fmt.Errorf("error collecting sync committee: %v", err)
@@ -1186,7 +1185,7 @@ func getUrlPart(validatorIndex uint64) string {
 	return fmt.Sprintf(` For more information visit: <a href='https://%s/validator/%v'>https://%s/validator/%v</a>.`, utils.Config.Frontend.SiteDomain, validatorIndex, utils.Config.Frontend.SiteDomain, validatorIndex)
 }
 
-func collectBlockProposalNotifications(notificationsByUserID types.NotificationsPerUserId, status uint64, eventName types.EventName, epoch uint64) error {
+func collectBlockProposalNotifications(notificationsByUserID types.NotificationsPerUserId, status uint64, eventName types.EventName, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	type dbResult struct {
 		Proposer      uint64 `db:"proposer"`
 		Status        uint64 `db:"status"`
@@ -1269,11 +1268,13 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 			log.Infof("creating %v notification for validator %v in epoch %v", eventName, event.Proposer, epoch)
 			n := &validatorProposalNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID: *sub.ID,
-					UserID:         *sub.UserID,
-					Epoch:          epoch,
-					EventName:      sub.EventName,
-					EventFilter:    hex.EncodeToString(pubkey),
+					SubscriptionID:   *sub.ID,
+					UserID:           *sub.UserID,
+					Epoch:            epoch,
+					EventName:        sub.EventName,
+					EventFilter:      hex.EncodeToString(pubkey),
+					DashboardId:      sub.DashboardId,
+					DashboardGroupId: sub.DashboardGroupId,
 				},
 				ValidatorIndex: event.Proposer,
 				Status:         event.Status,
@@ -1350,7 +1351,7 @@ func (n *validatorProposalNotification) GetInfoMarkdown() string {
 }
 
 // collectAttestationAndOfflineValidatorNotifications collects notifications for missed attestations and offline validators
-func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	// Retrieve subscriptions for missed attestations
 	subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName, "", nil, nil)
 	if err != nil {
@@ -1430,11 +1431,13 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 			log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorMissedAttestationEventName, event.ValidatorIndex, event.Epoch)
 			n := &validatorAttestationNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID: *sub.ID,
-					UserID:         *sub.UserID,
-					Epoch:          event.Epoch,
-					EventName:      sub.EventName,
-					EventFilter:    hex.EncodeToString(event.EventFilter),
+					SubscriptionID:   *sub.ID,
+					UserID:           *sub.UserID,
+					Epoch:            event.Epoch,
+					EventName:        sub.EventName,
+					EventFilter:      hex.EncodeToString(event.EventFilter),
+					DashboardId:      sub.DashboardId,
+					DashboardGroupId: sub.DashboardGroupId,
 				},
 				ValidatorIndex: event.ValidatorIndex,
 				Status:         event.Status,
@@ -1536,12 +1539,14 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 			n := &validatorIsOfflineNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID: *sub.ID,
-					Epoch:          epoch,
-					EventName:      sub.EventName,
-					LatestState:    fmt.Sprint(epoch - 2), // first epoch the validator stopped attesting
-					EventFilter:    hex.EncodeToString(validator.Pubkey),
-					UserID:         *sub.UserID,
+					SubscriptionID:   *sub.ID,
+					Epoch:            epoch,
+					EventName:        sub.EventName,
+					LatestState:      fmt.Sprint(epoch - 2), // first epoch the validator stopped attesting
+					EventFilter:      hex.EncodeToString(validator.Pubkey),
+					UserID:           *sub.UserID,
+					DashboardId:      sub.DashboardId,
+					DashboardGroupId: sub.DashboardGroupId,
 				},
 				ValidatorIndex: validator.Index,
 				IsOffline:      true,
@@ -1580,12 +1585,14 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 			n := &validatorIsOfflineNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID: *sub.ID,
-					UserID:         *sub.UserID,
-					Epoch:          epoch,
-					EventName:      sub.EventName,
-					EventFilter:    hex.EncodeToString(validator.Pubkey),
-					LatestState:    "-",
+					SubscriptionID:   *sub.ID,
+					UserID:           *sub.UserID,
+					Epoch:            epoch,
+					EventName:        sub.EventName,
+					EventFilter:      hex.EncodeToString(validator.Pubkey),
+					LatestState:      "-",
+					DashboardId:      sub.DashboardId,
+					DashboardGroupId: sub.DashboardGroupId,
 				},
 				ValidatorIndex: validator.Index,
 				IsOffline:      false,
@@ -1726,7 +1733,7 @@ func (n *validatorGotSlashedNotification) GetInfoMarkdown() string {
 	return generalPart
 }
 
-func collectValidatorGotSlashedNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+func collectValidatorGotSlashedNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	dbResult, err := db.GetValidatorsGotSlashed(epoch)
 	if err != nil {
 		return fmt.Errorf("error getting slashed validators from database, err: %w", err)
@@ -1755,11 +1762,13 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 
 			n := &validatorGotSlashedNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID: *sub.ID,
-					UserID:         *sub.UserID,
-					Epoch:          epoch,
-					EventFilter:    sub.EventFilter,
-					EventName:      sub.EventName,
+					SubscriptionID:   *sub.ID,
+					UserID:           *sub.UserID,
+					Epoch:            epoch,
+					EventFilter:      sub.EventFilter,
+					EventName:        sub.EventName,
+					DashboardId:      sub.DashboardId,
+					DashboardGroupId: sub.DashboardGroupId,
 				},
 				Slasher:        event.SlasherIndex,
 				Reason:         event.Reason,
@@ -1805,7 +1814,7 @@ func (n *validatorWithdrawalNotification) GetInfoMarkdown() string {
 }
 
 // collectWithdrawalNotifications collects all notifications validator withdrawals
-func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	// get all users that are subscribed to this event (scale: a few thousand rows depending on how many users we have)
 	subMap, err := GetSubsForEventFilter(types.ValidatorReceivedWithdrawalEventName, "", nil, nil)
 	if err != nil {
@@ -1835,10 +1844,12 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 				// log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
 				n := &validatorWithdrawalNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID: *sub.ID,
-						UserID:         *sub.UserID,
-						EventFilter:    hex.EncodeToString(event.Pubkey),
-						EventName:      sub.EventName,
+						SubscriptionID:   *sub.ID,
+						UserID:           *sub.UserID,
+						EventFilter:      hex.EncodeToString(event.Pubkey),
+						EventName:        sub.EventName,
+						DashboardId:      sub.DashboardId,
+						DashboardGroupId: sub.DashboardGroupId,
 					},
 					ValidatorIndex: event.ValidatorIndex,
 					Epoch:          epoch,
@@ -1963,11 +1974,13 @@ func collectEthClientNotifications(notificationsByUserID types.NotificationsPerU
 			for _, sub := range subs {
 				n := &ethClientNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID: *sub.ID,
-						UserID:         *sub.UserID,
-						Epoch:          sub.CreatedEpoch,
-						EventFilter:    sub.EventFilter,
-						EventName:      sub.EventName,
+						SubscriptionID:   *sub.ID,
+						UserID:           *sub.UserID,
+						Epoch:            sub.CreatedEpoch,
+						EventFilter:      sub.EventFilter,
+						EventName:        sub.EventName,
+						DashboardId:      sub.DashboardId,
+						DashboardGroupId: sub.DashboardGroupId,
 					},
 					EthClient: client.Name,
 				}
@@ -2173,11 +2186,13 @@ func collectMonitoringMachine(
 	for _, r := range result {
 		n := &monitorMachineNotification{
 			NotificationBaseImpl: types.NotificationBaseImpl{
-				SubscriptionID: *r.ID,
-				UserID:         *r.UserID,
-				EventName:      r.EventName,
-				Epoch:          epoch,
-				EventFilter:    r.EventFilter,
+				SubscriptionID:   *r.ID,
+				UserID:           *r.UserID,
+				EventName:        r.EventName,
+				Epoch:            epoch,
+				EventFilter:      r.EventFilter,
+				DashboardId:      r.DashboardId,
+				DashboardGroupId: r.DashboardGroupId,
 			},
 			MachineName: r.EventFilter,
 		}
@@ -2337,11 +2352,13 @@ func collectTaxReportNotificationNotifications(notificationsByUserID types.Notif
 		for _, sub := range subs {
 			n := &taxReportNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID: *sub.ID,
-					UserID:         *sub.UserID,
-					Epoch:          sub.CreatedEpoch,
-					EventFilter:    sub.EventFilter,
-					EventName:      sub.EventName,
+					SubscriptionID:   *sub.ID,
+					UserID:           *sub.UserID,
+					Epoch:            sub.CreatedEpoch,
+					EventFilter:      sub.EventFilter,
+					EventName:        sub.EventName,
+					DashboardId:      sub.DashboardId,
+					DashboardGroupId: sub.DashboardGroupId,
 				},
 			}
 			notificationsByUserID.AddNotification(n)
@@ -2406,11 +2423,13 @@ func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUse
 			for _, sub := range subs {
 				n := &networkNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID: *sub.ID,
-						UserID:         *sub.UserID,
-						Epoch:          sub.CreatedEpoch,
-						EventFilter:    sub.EventFilter,
-						EventName:      sub.EventName,
+						SubscriptionID:   *sub.ID,
+						UserID:           *sub.UserID,
+						Epoch:            sub.CreatedEpoch,
+						EventFilter:      sub.EventFilter,
+						EventName:        sub.EventName,
+						DashboardId:      sub.DashboardId,
+						DashboardGroupId: sub.DashboardGroupId,
 					},
 				}
 
@@ -2467,7 +2486,7 @@ func (n *rocketpoolNotification) GetInfoMarkdown() string {
 	return n.GetInfo(false)
 }
 
-func collectRocketpoolComissionNotifications(notificationsByUserID types.NotificationsPerUserId) error {
+func collectRocketpoolComissionNotifications(notificationsByUserID types.NotificationsPerUserId, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	fee := 0.0
 	err := db.WriterDb.Get(&fee, `
 		select current_node_fee from rocketpool_network_stats order by id desc LIMIT 1;
@@ -2499,11 +2518,13 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 			for _, sub := range subs {
 				n := &rocketpoolNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID: *sub.ID,
-						UserID:         *sub.UserID,
-						Epoch:          sub.CreatedEpoch,
-						EventFilter:    sub.EventFilter,
-						EventName:      sub.EventName,
+						SubscriptionID:   *sub.ID,
+						UserID:           *sub.UserID,
+						Epoch:            sub.CreatedEpoch,
+						EventFilter:      sub.EventFilter,
+						EventName:        sub.EventName,
+						DashboardId:      sub.DashboardId,
+						DashboardGroupId: sub.DashboardGroupId,
 					},
 					ExtraData: strconv.FormatInt(int64(fee*100), 10) + "%",
 				}
@@ -2517,7 +2538,7 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 	return nil
 }
 
-func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.NotificationsPerUserId) error {
+func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.NotificationsPerUserId, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	var ts int64
 	err := db.WriterDb.Get(&ts, `
 		select date_part('epoch', claim_interval_time_start)::int from rocketpool_network_stats order by id desc LIMIT 1;
@@ -2551,11 +2572,13 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 			for _, sub := range subs {
 				n := &rocketpoolNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
-						SubscriptionID: *sub.ID,
-						UserID:         *sub.UserID,
-						Epoch:          sub.CreatedEpoch,
-						EventFilter:    sub.EventFilter,
-						EventName:      sub.EventName,
+						SubscriptionID:   *sub.ID,
+						UserID:           *sub.UserID,
+						Epoch:            sub.CreatedEpoch,
+						EventFilter:      sub.EventFilter,
+						EventName:        sub.EventName,
+						DashboardId:      sub.DashboardId,
+						DashboardGroupId: sub.DashboardGroupId,
 					},
 				}
 
@@ -2568,7 +2591,7 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 	return nil
 }
 
-func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.NotificationsPerUserId, eventName types.EventName, epoch uint64) error {
+func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.NotificationsPerUserId, eventName types.EventName, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	subMap, err := GetSubsForEventFilter(eventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for RocketpoolRPLCollateral %w", err)
@@ -2685,11 +2708,13 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.Not
 
 		n := &rocketpoolNotification{
 			NotificationBaseImpl: types.NotificationBaseImpl{
-				SubscriptionID: *sub.ID,
-				UserID:         *sub.UserID,
-				Epoch:          epoch,
-				EventFilter:    sub.EventFilter,
-				EventName:      sub.EventName,
+				SubscriptionID:   *sub.ID,
+				UserID:           *sub.UserID,
+				Epoch:            epoch,
+				EventFilter:      sub.EventFilter,
+				EventName:        sub.EventName,
+				DashboardId:      sub.DashboardId,
+				DashboardGroupId: sub.DashboardGroupId,
 			},
 			ExtraData: strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", threshold*100), "0"), "."),
 		}
@@ -2742,7 +2767,7 @@ func bigFloat(x float64) *big.Float {
 	return new(big.Float).SetFloat64(x)
 }
 
-func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	slotsPerSyncCommittee := utils.SlotsPerSyncCommittee()
 	currentPeriod := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch / slotsPerSyncCommittee
 	nextPeriod := currentPeriod + 1
@@ -2785,11 +2810,13 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ep
 		for _, sub := range subs {
 			n := &rocketpoolNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID: *sub.ID,
-					UserID:         *sub.UserID,
-					Epoch:          epoch,
-					EventFilter:    sub.EventFilter,
-					EventName:      sub.EventName,
+					SubscriptionID:   *sub.ID,
+					UserID:           *sub.UserID,
+					Epoch:            epoch,
+					EventFilter:      sub.EventFilter,
+					EventName:        sub.EventName,
+					DashboardId:      sub.DashboardId,
+					DashboardGroupId: sub.DashboardGroupId,
 				},
 				ExtraData: fmt.Sprintf("%v|%v|%v", mapping[sub.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
 			}
