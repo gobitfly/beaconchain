@@ -40,8 +40,8 @@ type Address struct {
 
 type LuckItem struct {
 	Percent  float64       `json:"percent"`
-	Expected time.Time     `json:"expected"`
-	Average  time.Duration `json:"average"`
+	Expected time.Time     `json:"expected" swaggertype:"string" format:"date-time"`
+	Average  time.Duration `json:"average" swaggertype:"primitive,integer"`
 }
 
 type Luck struct {

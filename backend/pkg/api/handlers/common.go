@@ -566,7 +566,7 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 		return nil
 	}
 	if len(sortSplit) == 1 {
-		sortSplit = append(sortSplit, "")
+		sortSplit = append(sortSplit, ":asc")
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
 	order := v.parseSortOrder(sortSplit[1])
