@@ -317,23 +317,23 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		publicNotificationRouter.Use(hs.ManageViaApiCheckMiddleware)
 	}
 	endpoints := []endpoint{
-		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
-		{http.MethodGet, "/dashboards", nil, hs.InternalGetUserNotificationDashboards},
-		{http.MethodGet, "/validator-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsValidatorDashboard},
-		{http.MethodGet, "/account-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsAccountDashboard},
-		{http.MethodGet, "/machines", nil, hs.InternalGetUserNotificationMachines},
-		{http.MethodGet, "/clients", nil, hs.InternalGetUserNotificationClients},
-		{http.MethodGet, "/rocket-pool", nil, hs.InternalGetUserNotificationRocketPool},
-		{http.MethodGet, "/networks", nil, hs.InternalGetUserNotificationNetworks},
-		{http.MethodGet, "/settings", nil, hs.InternalGetUserNotificationSettings},
-		{http.MethodPut, "/settings/general", nil, hs.InternalPutUserNotificationSettingsGeneral},
-		{http.MethodPut, "/settings/networks/{network}", nil, hs.InternalPutUserNotificationSettingsNetworks},
-		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalPutUserNotificationSettingsPairedDevices},
-		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalDeleteUserNotificationSettingsPairedDevices},
-		{http.MethodGet, "/settings/dashboards", nil, hs.InternalGetUserNotificationSettingsDashboards},
-		{http.MethodPost, "/test-email", nil, hs.InternalPostUserNotificationsTestEmail},
-		{http.MethodPost, "/test-push", nil, hs.InternalPostUserNotificationsTestPush},
-		{http.MethodPost, "/test-webhook", nil, hs.InternalPostUserNotificationsTestWebhook},
+		{http.MethodGet, "", hs.PublicGetUserNotifications, hs.InternalGetUserNotifications},
+		{http.MethodGet, "/dashboards", hs.PublicGetUserNotificationDashboards, hs.InternalGetUserNotificationDashboards},
+		{http.MethodGet, "/validator-dashboards/{notification_id}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
+		{http.MethodGet, "/account-dashboards/{notification_id}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
+		{http.MethodGet, "/machines", hs.PublicGetUserNotificationMachines, hs.InternalGetUserNotificationMachines},
+		{http.MethodGet, "/clients", hs.PublicGetUserNotificationClients, hs.InternalGetUserNotificationClients},
+		{http.MethodGet, "/rocket-pool", hs.PublicGetUserNotificationRocketPool, hs.InternalGetUserNotificationRocketPool},
+		{http.MethodGet, "/networks", hs.PublicGetUserNotificationNetworks, hs.InternalGetUserNotificationNetworks},
+		{http.MethodGet, "/settings", hs.PublicGetUserNotificationSettings, hs.InternalGetUserNotificationSettings},
+		{http.MethodPut, "/settings/general", hs.PublicPutUserNotificationSettingsGeneral, hs.InternalPutUserNotificationSettingsGeneral},
+		{http.MethodPut, "/settings/networks/{network}", hs.PublicPutUserNotificationSettingsNetworks, hs.InternalPutUserNotificationSettingsNetworks},
+		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", hs.PublicPutUserNotificationSettingsPairedDevices, hs.InternalPutUserNotificationSettingsPairedDevices},
+		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", hs.PublicDeleteUserNotificationSettingsPairedDevices, hs.InternalDeleteUserNotificationSettingsPairedDevices},
+		{http.MethodGet, "/settings/dashboards", hs.PublicGetUserNotificationSettingsDashboards, hs.InternalGetUserNotificationSettingsDashboards},
+		{http.MethodPost, "/test-email", hs.PublicPostUserNotificationsTestEmail, hs.InternalPostUserNotificationsTestEmail},
+		{http.MethodPost, "/test-push", hs.PublicPostUserNotificationsTestPush, hs.InternalPostUserNotificationsTestPush},
+		{http.MethodPost, "/test-webhook", hs.PublicPostUserNotificationsTestWebhook, hs.InternalPostUserNotificationsTestWebhook},
 	}
 	addEndpointsToRouters(endpoints, publicNotificationRouter, internalNotificationRouter)
 
@@ -344,8 +344,8 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 	}
 	dashboardSettingsEndpoints := []endpoint{
-		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
-		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsAccountDashboard},
+		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsValidatorDashboard, hs.InternalPutUserNotificationSettingsValidatorDashboard},
+		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsAccountDashboard, hs.InternalPutUserNotificationSettingsAccountDashboard},
 	}
 	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"reflect"
 	"time"
@@ -618,10 +619,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 //
 //	@Description	Get a list of groups in a specified validator dashboard.
 //	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		query		string	false	"The ID of the group."
-//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(index, public_key, balance, status, withdrawal_credentials)
 //	@Param			search			query		string	false	"Search for Address, ENS."
@@ -660,13 +658,14 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 //	@Description	Remove validators from a specified dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
-//	@Accept			json
-//	@Produce		json
-//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicDeleteValidatorDashboardValidators.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
-//	@Success		204				"Validators removed successfully."
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/validators/bulk-deletions [post]
+
+// @Accept			json
+// @Produce		json
+// @Param			dashboard_id	path		string													true	"The ID of the dashboard."
+// @Param			request			body		handlers.PublicDeleteValidatorDashboardValidators.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
+// @Success		204				"Validators removed successfully."
+// @Failure		400				{object}	types.ApiErrorResponse
+// @Router			/validator-dashboards/{dashboard_id}/validators/bulk-deletions [post]
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -1854,6 +1853,466 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 		Paging: *paging,
 	}
 	returnOk(w, r, response)
+}
+
+// ----------------------------------------------
+// Notifications
+// ----------------------------------------------
+
+func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *http.Request) {
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	data, err := h.dai.GetNotificationOverview(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
+	chainId := v.checkNetworkParameter(q.Get("network"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationDashboardsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), notificationId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsValidatorDashboardResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), notificationId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsAccountDashboardResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationMachinesColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetMachineNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationMachinesResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationClientsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetClientNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationClientsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationRocketPoolColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationRocketPoolResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationNetworksColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationNetworksResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	data, err := h.dai.GetNotificationSettings(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationSettingsResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var req types.NotificationSettingsGeneral
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
+	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
+	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
+	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
+	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
+	// TODO: check validity of clients
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsGeneralResponse{
+		Data: req,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var req types.NotificationSettingsNetwork
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	checkMinMax(&v, req.ParticipationRateThreshold, 0, 1, "participation_rate_threshold")
+
+	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsNetworksResponse{
+		Data: types.NotificationNetwork{
+			ChainId:  chainId,
+			Settings: req,
+		},
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		Name                   string `json:"name,omitempty"`
+		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	// TODO use a better way to validate the paired device id
+	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	name := v.checkNameNotEmpty(req.Name)
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err := h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, name, req.IsNotificationsEnabled)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	// TODO timestamp
+	response := types.InternalPutUserNotificationSettingsPairedDevicesResponse{
+		Data: types.NotificationPairedDevice{
+			Id:                     pairedDeviceId,
+			Name:                   req.Name,
+			IsNotificationsEnabled: req.IsNotificationsEnabled,
+		},
+	}
+
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	// TODO use a better way to validate the paired device id
+	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err := h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	returnNoContent(w, r)
+}
+
+func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationSettingsDashboardColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetNotificationSettingsDashboards(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	var req types.NotificationSettingsValidatorDashboard
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	checkMinMax(&v, req.GroupOfflineThreshold, 0, 1, "group_offline_threshold")
+	vars := mux.Vars(r)
+	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsValidatorDashboardResponse{
+		Data: req,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		WebhookUrl                      string        `json:"webhook_url"`
+		IsWebhookDiscordEnabled         bool          `json:"is_webhook_discord_enabled"`
+		IsIgnoreSpamTransactionsEnabled bool          `json:"is_ignore_spam_transactions_enabled"`
+		SubscribedChainIds              []intOrString `json:"subscribed_chain_ids"`
+
+		IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
+		IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
+		IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
+		ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
+		IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
+		IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	chainIdMap := v.checkNetworkSlice(req.SubscribedChainIds)
+	// convert to uint64[] slice
+	chainIds := make([]uint64, len(chainIdMap))
+	i := 0
+	for k := range chainIdMap {
+		chainIds[i] = k
+		i++
+	}
+	checkMinMax(&v, req.ERC20TokenTransfersValueThreshold, 0, math.MaxFloat64, "group_offline_threshold")
+	vars := mux.Vars(r)
+	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	settings := types.NotificationSettingsAccountDashboard{
+		WebhookUrl:                      req.WebhookUrl,
+		IsWebhookDiscordEnabled:         req.IsWebhookDiscordEnabled,
+		IsIgnoreSpamTransactionsEnabled: req.IsIgnoreSpamTransactionsEnabled,
+		SubscribedChainIds:              chainIds,
+
+		IsIncomingTransactionsSubscribed:  req.IsIncomingTransactionsSubscribed,
+		IsOutgoingTransactionsSubscribed:  req.IsOutgoingTransactionsSubscribed,
+		IsERC20TokenTransfersSubscribed:   req.IsERC20TokenTransfersSubscribed,
+		ERC20TokenTransfersValueThreshold: req.ERC20TokenTransfersValueThreshold,
+		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
+		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
+	}
+	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsAccountDashboardResponse{
+		Data: settings,
+	}
+	returnOk(w, r, response)
+}
+
+func (h *HandlerService) PublicPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnOk(w, r, nil)
+}
+
+func (h *HandlerService) PublicPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnOk(w, r, nil)
+}
+
+func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	req := struct {
+		WebhookUrl              string `json:"webhook_url"`
+		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
+	}{}
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	// TODO
+	returnOk(w, r, nil)
 }
 
 func (h *HandlerService) PublicGetNetworkValidators(w http.ResponseWriter, r *http.Request) {
