@@ -43,9 +43,9 @@ func NewDummyService() *DummyService {
 	return &DummyService{}
 }
 
-// generate random decimal.Decimal, should result in somewhere around 0.001 ETH (+/- a few decimal places) in Wei
+// generate random decimal.Decimal, result is between 0.001 and 1000 GWei (returned a Wei)
 func randomEthDecimal() decimal.Decimal {
-	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d00000000000", rand.Int64N(10000000))) //nolint:gosec
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d000000", rand.Int64N(1000000)+1)) //nolint:gosec
 	return decimal
 }
 
