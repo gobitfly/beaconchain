@@ -199,7 +199,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 //	@Tags			Validator Dashboards
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse	"Bad Request"
 //	@Router			/validator-dashboards/{dashboard_id} [get]
@@ -486,7 +486,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If ommited, the default group will be used.<br><br>To add validators, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys to add to the dashboard.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
+//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys to add to the dashboard.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
 //	@Success		201				{object}	types.ApiDataResponse[[]types.VDBPostValidatorsData]	"Returns a list of added validators."
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their validator limit."
@@ -662,7 +662,7 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 //	@Tags			Validator Dashboard Management
 //	@Produce		json
 //	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
-//	@Param			validators		query	string	false	"Provide a comma seperated list of validator indices or public keys to remove from the dashboard."
+//	@Param			validators		query	string	false	"Provide a comma separated list of validator indices or public keys to remove from the dashboard."
 //	@Success		204				"Validators removed successfully."
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/validators [delete]
@@ -948,7 +948,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 //	@Tags			Validator Dashboards
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_ids		query		string	false	"Provide a comma seperated list of group IDs to filter the results by. If ommited, all groups will be included."
+//	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by. If omitted, all groups will be included."
 //	@Success		200				{object}	types.GetValidatorDashboardSlotVizResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/slot-viz [get]
@@ -990,7 +990,7 @@ var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(group_id, validators, efficiency, attestations, proposals, reward)
 //	@Param			search			query		string	false	"Search for Index, Public Key, Group."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardSummaryResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/summary [get]
@@ -1034,7 +1034,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		string	true	"The ID of the group."
 //	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardGroupSummaryResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/summary [get]
@@ -1078,7 +1078,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 //	@Tags			Validator Dashboards
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_ids		query		string	false	"Provide a comma seperated list of group IDs to filter the results by."
+//	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by."
 //	@Param			efficiency_type	query		string	false	"Efficiency type to get data for."	Enums(all, attestation, sync, proposal)
 //	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
 //	@Param			after_ts		query		string	false	"Return data after this timestamp."
@@ -1197,7 +1197,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch)
 //	@Param			search			query		string	false	"Search for Epoch, Index, Public Key, Group."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardRewardsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/rewards [get]
@@ -1237,7 +1237,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		string	true	"The ID of the group."
 //	@Param			epoch			path		string	true	"The epoch to get data for."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardGroupRewardsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/rewards/{epoch} [get]
@@ -1275,7 +1275,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 //	@Tags			Validator Dashboards
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardRewardsChartResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/rewards-chart [get]
@@ -1317,7 +1317,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(validator, reward)
 //	@Param			search			query		string	false	"Search for Index, Public Key."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardDutiesResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/duties/{epoch} [get]
@@ -1362,7 +1362,7 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(proposer, slot, block, status, reward)
 //	@Param			search			query		string	false	"Search for Index, Public Key, Group."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardBlocksResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/blocks [get]
@@ -1403,7 +1403,7 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 //	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
 //	@Param			after_ts		query		string	false	"Return data after this timestamp."
 //	@Param			before_ts		query		string	false	"Return data before this timestamp."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardHeatmapResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/heatmap [get]
@@ -1451,7 +1451,7 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		string	true	"The ID of the group."
 //	@Param			timestamp		path		string	true	"The timestamp to get data for."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
 //	@Success		200				{object}	types.GetValidatorDashboardGroupHeatmapResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -1632,7 +1632,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
 //	@Param			search			query		string	false	"Search for Index, Public Key, Address."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardWithdrawalsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/withdrawals [get]
@@ -1670,7 +1670,7 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 //	@Tags			Validator Dashboards
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			modes			query		string	false	"Provide a comma seperated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardTotalWithdrawalsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/total-withdrawals [get]
