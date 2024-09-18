@@ -51,6 +51,7 @@ var ClickHouseReader *sqlx.DB
 var ClickHouseWriter *sqlx.DB
 
 var PersistentRedisDbClient *redis.Client
+var LocalRedisDbClient *redis.Client
 
 var FarFutureEpoch = uint64(18446744073709551615)
 var MaxSqlNumber = uint64(9223372036854775807)
