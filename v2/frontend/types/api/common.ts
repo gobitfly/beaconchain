@@ -27,7 +27,9 @@ export type PubKey = string;
 export type Hash = string; // blocks, txs etc.
 export interface Address {
   hash: Hash;
+  is_contract: boolean;
   ens?: string;
+  label?: string;
 }
 export interface LuckItem {
   percent: number /* float64 */;
