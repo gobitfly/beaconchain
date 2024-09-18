@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
+	"github.com/gobitfly/beaconchain/pkg/api/docs"
 	handlers "github.com/gobitfly/beaconchain/pkg/api/handlers"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -39,6 +40,8 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
+	// serve static files
+	publicRouter.PathPrefix("/docs/").Handler(http.StripPrefix("/api/v2/docs/", http.FileServer(http.FS(docs.Files))))
 	router.Use(metrics.HttpMiddleware)
 
 	return router
@@ -88,11 +91,15 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},
 		{http.MethodGet, "/healthz-loadbalancer", hs.PublicGetHealthzLoadbalancer, nil},
 
+		{http.MethodGet, "/ratelimit-weights", nil, hs.InternalGetRatelimitWeights},
+
 		{http.MethodPost, "/login", nil, hs.InternalPostLogin},
 
 		{http.MethodGet, "/mobile/authorize", nil, hs.InternalPostMobileAuthorize},
 		{http.MethodPost, "/mobile/equivalent-exchange", nil, hs.InternalPostMobileEquivalentExchange},
 		{http.MethodPost, "/mobile/purchase", nil, hs.InternalHandleMobilePurchase},
+		{http.MethodGet, "/mobile/latest-bundle", nil, hs.InternalGetMobileLatestBundle},
+		{http.MethodPost, "/mobile/bundles/{bundle_version}/deliveries", nil, hs.InternalPostMobileBundleDeliveries},
 
 		{http.MethodPost, "/logout", nil, hs.InternalPostLogout},
 
@@ -310,35 +317,36 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		publicNotificationRouter.Use(hs.ManageViaApiCheckMiddleware)
 	}
 	endpoints := []endpoint{
-		{http.MethodGet, "", nil, hs.InternalGetUserNotifications},
-		{http.MethodGet, "/dashboards", nil, hs.InternalGetUserNotificationDashboards},
-		{http.MethodGet, "/validator-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsValidatorDashboard},
-		{http.MethodGet, "/account-dashboards/{notification_id}", nil, hs.InternalGetUserNotificationsAccountDashboard},
-		{http.MethodGet, "/machines", nil, hs.InternalGetUserNotificationMachines},
-		{http.MethodGet, "/clients", nil, hs.InternalGetUserNotificationClients},
-		{http.MethodGet, "/rocket-pool", nil, hs.InternalGetUserNotificationRocketPool},
-		{http.MethodGet, "/networks", nil, hs.InternalGetUserNotificationNetworks},
-		{http.MethodGet, "/settings", nil, hs.InternalGetUserNotificationSettings},
-		{http.MethodPut, "/settings/general", nil, hs.InternalPutUserNotificationSettingsGeneral},
-		{http.MethodPut, "/settings/networks/{network}", nil, hs.InternalPutUserNotificationSettingsNetworks},
-		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalPutUserNotificationSettingsPairedDevices},
-		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", nil, hs.InternalDeleteUserNotificationSettingsPairedDevices},
-		{http.MethodGet, "/settings/dashboards", nil, hs.InternalGetUserNotificationSettingsDashboards},
-		{http.MethodPost, "/test-email", nil, hs.InternalPostUserNotificationsTestEmail},
-		{http.MethodPost, "/test-push", nil, hs.InternalPostUserNotificationsTestPush},
-		{http.MethodPost, "/test-webhook", nil, hs.InternalPostUserNotificationsTestWebhook},
+		{http.MethodGet, "", hs.PublicGetUserNotifications, hs.InternalGetUserNotifications},
+		{http.MethodGet, "/dashboards", hs.PublicGetUserNotificationDashboards, hs.InternalGetUserNotificationDashboards},
+		{http.MethodGet, "/machines", hs.PublicGetUserNotificationMachines, hs.InternalGetUserNotificationMachines},
+		{http.MethodGet, "/clients", hs.PublicGetUserNotificationClients, hs.InternalGetUserNotificationClients},
+		{http.MethodGet, "/rocket-pool", hs.PublicGetUserNotificationRocketPool, hs.InternalGetUserNotificationRocketPool},
+		{http.MethodGet, "/networks", hs.PublicGetUserNotificationNetworks, hs.InternalGetUserNotificationNetworks},
+		{http.MethodGet, "/settings", hs.PublicGetUserNotificationSettings, hs.InternalGetUserNotificationSettings},
+		{http.MethodPut, "/settings/general", hs.PublicPutUserNotificationSettingsGeneral, hs.InternalPutUserNotificationSettingsGeneral},
+		{http.MethodPut, "/settings/networks/{network}", hs.PublicPutUserNotificationSettingsNetworks, hs.InternalPutUserNotificationSettingsNetworks},
+		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", hs.PublicPutUserNotificationSettingsPairedDevices, hs.InternalPutUserNotificationSettingsPairedDevices},
+		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", hs.PublicDeleteUserNotificationSettingsPairedDevices, hs.InternalDeleteUserNotificationSettingsPairedDevices},
+		{http.MethodGet, "/settings/dashboards", hs.PublicGetUserNotificationSettingsDashboards, hs.InternalGetUserNotificationSettingsDashboards},
+		{http.MethodPost, "/test-email", hs.PublicPostUserNotificationsTestEmail, hs.InternalPostUserNotificationsTestEmail},
+		{http.MethodPost, "/test-push", hs.PublicPostUserNotificationsTestPush, hs.InternalPostUserNotificationsTestPush},
+		{http.MethodPost, "/test-webhook", hs.PublicPostUserNotificationsTestWebhook, hs.InternalPostUserNotificationsTestWebhook},
 	}
 	addEndpointsToRouters(endpoints, publicNotificationRouter, internalNotificationRouter)
 
 	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
 	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
+	// TODO add adb auth middleware to account dashboard endpoints once they are implemented
 	if !debug {
 		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 	}
 	dashboardSettingsEndpoints := []endpoint{
-		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsValidatorDashboard},
-		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", nil, hs.InternalPutUserNotificationSettingsAccountDashboard},
+		{http.MethodGet, "/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
+		{http.MethodGet, "/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
+		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsValidatorDashboard, hs.InternalPutUserNotificationSettingsValidatorDashboard},
+		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsAccountDashboard, hs.InternalPutUserNotificationSettingsAccountDashboard},
 	}
 	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
 }

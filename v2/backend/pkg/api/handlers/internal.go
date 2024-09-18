@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"math"
 	"net/http"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -22,6 +21,21 @@ func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *htt
 	}
 	response := types.InternalGetProductSummaryResponse{
 		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+// --------------------------------------
+// API Ratelimit Weights
+
+func (h *HandlerService) InternalGetRatelimitWeights(w http.ResponseWriter, r *http.Request) {
+	data, err := h.dai.GetApiWeights(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetRatelimitWeightsResponse{
+		Data: data,
 	}
 	returnOk(w, r, response)
 }
@@ -85,7 +99,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -131,7 +145,7 @@ func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *h
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -161,7 +175,7 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -207,7 +221,7 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	if user.UserGroup != "ADMIN" {
+	if user.UserGroup != types.UserGroupAdmin {
 		returnForbidden(w, r, errors.New("user is not an admin"))
 		return
 	}
@@ -462,318 +476,44 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 }
 
 // --------------------------------------
-// Notifications
+// Mobile
 
-func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	data, err := h.dai.GetNotificationOverview(r.Context(), userId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationsResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
-	chainId := v.checkNetworkParameter(q.Get("network"))
+	force := v.checkBool(q.Get("force"), "force")
+	bundleVersion := v.checkUint(q.Get("bundle_version"), "bundle_version")
+	nativeVersion := v.checkUint(q.Get("native_version"), "native_version")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	stats, err := h.dai.GetLatestBundleForNativeVersion(r.Context(), nativeVersion)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalGetUserNotificationDashboardsResponse{
-		Data:   data,
-		Paging: *paging,
+	var data types.MobileBundleData
+	data.HasNativeUpdateAvailable = stats.MaxNativeVersion > nativeVersion
+	// if given bundle version is smaller than the latest and delivery count is less than target count, return the latest bundle
+	if force || (bundleVersion < stats.LatestBundleVersion && (stats.TargetCount == 0 || stats.DeliveryCount < stats.TargetCount)) {
+		data.BundleUrl = stats.BundleUrl
+	}
+	response := types.GetMobileLatestBundleResponse{
+		Data: data,
 	}
 	returnOk(w, r, response)
 }
 
-func (h *HandlerService) InternalGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerService) InternalPostMobileBundleDeliveries(w http.ResponseWriter, r *http.Request) {
 	var v validationError
-	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
+	vars := mux.Vars(r)
+	bundleVersion := v.checkUint(vars["bundle_version"], "bundle_version")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), notificationId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationsValidatorDashboardResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	notificationId := v.checkRegex(reNonEmpty, mux.Vars(r)["notification_id"], "notification_id")
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), notificationId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationsAccountDashboardResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationMachinesColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.dai.GetMachineNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationMachinesResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationClientsColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.dai.GetClientNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationClientsResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationRocketPoolColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.dai.GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationRocketPoolResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationNetworksColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationNetworksResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	data, err := h.dai.GetNotificationSettings(r.Context(), userId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationSettingsResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	var req types.NotificationSettingsGeneral
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
-	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
-	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
-	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
-	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
-	// TODO: check validity of clients
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalPutUserNotificationSettingsGeneralResponse{
-		Data: req,
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	var req types.NotificationSettingsNetwork
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	checkMinMax(&v, req.ParticipationRateThreshold, 0, 1, "participation_rate_threshold")
-
-	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalPutUserNotificationSettingsNetworksResponse{
-		Data: types.NotificationNetwork{
-			ChainId:  chainId,
-			Settings: req,
-		},
-	}
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	req := struct {
-		Name                   string `json:"name,omitempty"`
-		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
-	}{}
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
-	name := v.checkNameNotEmpty(req.Name)
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	err := h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, name, req.IsNotificationsEnabled)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	// TODO timestamp
-	response := types.InternalPutUserNotificationSettingsPairedDevicesResponse{
-		Data: types.NotificationPairedDevice{
-			Id:                     pairedDeviceId,
-			Name:                   req.Name,
-			IsNotificationsEnabled: req.IsNotificationsEnabled,
-		},
-	}
-
-	returnOk(w, r, response)
-}
-
-func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	err := h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
+	err := h.dai.IncrementBundleDeliveryCount(r.Context(), bundleVersion)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -781,143 +521,83 @@ func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w h
 	returnNoContent(w, r)
 }
 
+// --------------------------------------
+// Notifications
+
+func (h *HandlerService) InternalGetUserNotifications(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotifications(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationDashboards(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationsValidatorDashboard(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationsAccountDashboard(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationMachines(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationClients(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationRocketPool(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationNetworks(w, r)
+}
+
+func (h *HandlerService) InternalGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
+	h.PublicGetUserNotificationSettings(w, r)
+}
+
+func (h *HandlerService) InternalPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
+	h.PublicPutUserNotificationSettingsGeneral(w, r)
+}
+
+func (h *HandlerService) InternalPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
+	h.PublicPutUserNotificationSettingsNetworks(w, r)
+}
+
+func (h *HandlerService) InternalPutUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
+	h.PublicPutUserNotificationSettingsPairedDevices(w, r)
+}
+
+func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
+	h.PublicDeleteUserNotificationSettingsPairedDevices(w, r)
+}
+
 func (h *HandlerService) InternalGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationSettingsDashboardColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.dai.GetNotificationSettingsDashboards(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
+	h.PublicGetUserNotificationSettingsDashboards(w, r)
 }
 
 func (h *HandlerService) InternalPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	var req types.NotificationSettingsValidatorDashboard
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	checkMinMax(&v, req.GroupOfflineThreshold, 0, 1, "group_offline_threshold")
-	vars := mux.Vars(r)
-	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
-	groupId := v.checkExistingGroupId(vars["group_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalPutUserNotificationSettingsValidatorDashboardResponse{
-		Data: req,
-	}
-	returnOk(w, r, response)
+	h.PublicPutUserNotificationSettingsValidatorDashboard(w, r)
 }
 
 func (h *HandlerService) InternalPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	req := struct {
-		WebhookUrl                      string        `json:"webhook_url"`
-		IsWebhookDiscordEnabled         bool          `json:"is_webhook_discord_enabled"`
-		IsIgnoreSpamTransactionsEnabled bool          `json:"is_ignore_spam_transactions_enabled"`
-		SubscribedChainIds              []intOrString `json:"subscribed_chain_ids"`
-
-		IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
-		IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
-		IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
-		ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
-		IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
-		IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
-	}{}
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	chainIdMap := v.checkNetworkSlice(req.SubscribedChainIds)
-	// convert to uint64[] slice
-	chainIds := make([]uint64, len(chainIdMap))
-	i := 0
-	for k := range chainIdMap {
-		chainIds[i] = k
-		i++
-	}
-	checkMinMax(&v, req.ERC20TokenTransfersValueThreshold, 0, math.MaxFloat64, "group_offline_threshold")
-	vars := mux.Vars(r)
-	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
-	groupId := v.checkExistingGroupId(vars["group_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	settings := types.NotificationSettingsAccountDashboard{
-		WebhookUrl:                      req.WebhookUrl,
-		IsWebhookDiscordEnabled:         req.IsWebhookDiscordEnabled,
-		IsIgnoreSpamTransactionsEnabled: req.IsIgnoreSpamTransactionsEnabled,
-		SubscribedChainIds:              chainIds,
-
-		IsIncomingTransactionsSubscribed:  req.IsIncomingTransactionsSubscribed,
-		IsOutgoingTransactionsSubscribed:  req.IsOutgoingTransactionsSubscribed,
-		IsERC20TokenTransfersSubscribed:   req.IsERC20TokenTransfersSubscribed,
-		ERC20TokenTransfersValueThreshold: req.ERC20TokenTransfersValueThreshold,
-		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
-		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
-	}
-	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalPutUserNotificationSettingsAccountDashboardResponse{
-		Data: settings,
-	}
-	returnOk(w, r, response)
+	h.PublicPutUserNotificationSettingsAccountDashboard(w, r)
 }
 
 func (h *HandlerService) InternalPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	returnOk(w, r, nil)
+	h.PublicPostUserNotificationsTestEmail(w, r)
 }
 
 func (h *HandlerService) InternalPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
-	// TODO
-	returnOk(w, r, nil)
+	h.PublicPostUserNotificationsTestPush(w, r)
 }
 
 func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	req := struct {
-		WebhookUrl              string `json:"webhook_url"`
-		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
-	}{}
-	if err := v.checkBody(&req, r); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	// TODO
-	returnOk(w, r, nil)
+	h.PublicPostUserNotificationsTestWebhook(w, r)
 }
 
 // --------------------------------------
@@ -1264,4 +944,8 @@ func (h *HandlerService) InternalGetSlotBlobs(w http.ResponseWriter, r *http.Req
 		Data: data,
 	}
 	returnOk(w, r, response)
+}
+
+func (h *HandlerService) ReturnOk(w http.ResponseWriter, r *http.Request) {
+	returnOk(w, r, nil)
 }
