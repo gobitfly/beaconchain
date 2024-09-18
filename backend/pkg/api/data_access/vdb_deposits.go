@@ -134,6 +134,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
 			Valid:                row.Valid,
+			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
 		}
 		addressMapping[hexutil.Encode(row.From)] = nil
 		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
