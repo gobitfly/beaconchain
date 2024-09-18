@@ -319,8 +319,6 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	endpoints := []endpoint{
 		{http.MethodGet, "", hs.PublicGetUserNotifications, hs.InternalGetUserNotifications},
 		{http.MethodGet, "/dashboards", hs.PublicGetUserNotificationDashboards, hs.InternalGetUserNotificationDashboards},
-		{http.MethodGet, "/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
-		{http.MethodGet, "/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
 		{http.MethodGet, "/machines", hs.PublicGetUserNotificationMachines, hs.InternalGetUserNotificationMachines},
 		{http.MethodGet, "/clients", hs.PublicGetUserNotificationClients, hs.InternalGetUserNotificationClients},
 		{http.MethodGet, "/rocket-pool", hs.PublicGetUserNotificationRocketPool, hs.InternalGetUserNotificationRocketPool},
@@ -339,11 +337,14 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 
 	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
 	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
+	// TODO add adb auth middleware to account dashboard endpoints once they are implemented
 	if !debug {
 		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 	}
 	dashboardSettingsEndpoints := []endpoint{
+		{http.MethodGet, "/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
+		{http.MethodGet, "/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
 		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsValidatorDashboard, hs.InternalPutUserNotificationSettingsValidatorDashboard},
 		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsAccountDashboard, hs.InternalPutUserNotificationSettingsAccountDashboard},
 	}
