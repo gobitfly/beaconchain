@@ -208,6 +208,22 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	// TODO: Is it fine to fill a decimal.Decimal as a REAL in postgres?
 
+	networks, err := d.GetAllNetworks()
+	if err != nil {
+		return err
+	}
+
+	networkName := ""
+	for _, network := range networks {
+		if network.ChainId == chainId {
+			networkName = network.Name
+			break
+		}
+	}
+	if networkName == "" {
+		return fmt.Errorf("network with chain id %d to update general notification settings not found", chainId)
+	}
+
 	latestEpoch := cache.LatestEpoch.Get()
 
 	var eventsToInsert []goqu.Record
@@ -219,25 +235,28 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	}
 	defer utils.Rollback(tx)
 
+	eventName := fmt.Sprintf("%s:%s", networkName, types.NetworkGasAboveThresholdEventName)
 	if !settings.GasAboveThreshold.IsZero() {
-		event := goqu.Record{"user_id": userId, "event_name": types.NetworkGasAboveThresholdEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasAboveThreshold.InexactFloat64()}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasAboveThreshold.InexactFloat64()}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
-		event := goqu.Ex{"user_id": userId, "event_name": types.NetworkGasAboveThresholdEventName, "event_filter": ""}
+		event := goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""}
 		eventsToDelete = append(eventsToDelete, event)
 	}
+	eventName = fmt.Sprintf("%s:%s", networkName, types.NetworkGasBelowThresholdEventName)
 	if !settings.GasBelowThreshold.IsZero() {
-		event := goqu.Record{"user_id": userId, "event_name": types.NetworkGasBelowThresholdEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasBelowThreshold.InexactFloat64()}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasBelowThreshold.InexactFloat64()}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
-		event := goqu.Ex{"user_id": userId, "event_name": types.NetworkGasBelowThresholdEventName, "event_filter": ""}
+		event := goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""}
 		eventsToDelete = append(eventsToDelete, event)
 	}
+	eventName = fmt.Sprintf("%s:%s", networkName, types.NetworkParticipationRateThresholdEventName)
 	if settings.ParticipationRateThreshold > 0 {
-		event := goqu.Record{"user_id": userId, "event_name": types.NetworkParticipationRateThresholdEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.ParticipationRateThreshold}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.ParticipationRateThreshold}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
-		event := goqu.Ex{"user_id": userId, "event_name": types.NetworkParticipationRateThresholdEventName, "event_filter": ""}
+		event := goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""}
 		eventsToDelete = append(eventsToDelete, event)
 	}
 
