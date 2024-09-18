@@ -1893,7 +1893,7 @@ func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *ht
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
-//	@Param			network	query		string	false	"If set, results will be filtered to only include networks given. Provide a comma seperated list."
+//	@Param			network	query		string	false	"If set, results will be filtered to only include networks given. Provide a comma separated list."
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	" Enums(chain_id, timestamp, dashboard_id)
