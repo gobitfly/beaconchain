@@ -287,8 +287,9 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				id = $1`
 			return d.alloyReader.GetContext(ctx, &data.Network, query, dashboardId.Id)
 		})
+	} else { // load the chain id from the config in case of public dashboards
+		data.Network = utils.Config.Chain.ClConfig.DepositChainID
 	}
-	// TODO handle network of validator set dashboards
 
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
