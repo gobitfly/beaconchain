@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"reflect"
 	"time"
@@ -16,6 +17,27 @@ import (
 // All handler function names must include the HTTP method and the path they handle
 // Public handlers may only be authenticated by an API key
 // Public handlers must never call internal handlers
+
+//	@title			beaconcha.in API
+//	@version		2.0
+//	@description	To authenticate your API request beaconcha.in uses API Keys. Set your API Key either by:
+//	@description	- Setting the `Authorization` header in the following format: `Authorization: Bearer <your-api-key>`. (recommended)
+//	@description	- Setting the URL query parameter in the following format: `api_key={your_api_key}`.\
+//	@description	Example: `https://beaconcha.in/api/v2/example?field=value&api_key={your_api_key}`
+
+//	@host		beaconcha.in
+//	@BasePath	/api/v2
+
+//	@securitydefinitions.apikey	ApiKeyInHeader
+//	@in							header
+//	@name						Authorization
+//	@description				Use your API key as a Bearer token, e.g. `Bearer <your-api-key>`
+
+//	@securitydefinitions.apikey	ApiKeyInQuery
+//	@in							query
+//	@name						api_key
+
+//	@Validator	Dashboard Management.n
 
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -112,6 +134,18 @@ func (h *HandlerService) PublicPutAccountDashboardTransactionsSettings(w http.Re
 	returnOk(w, r, nil)
 }
 
+// PublicPostValidatorDashboards godoc
+//
+//	@Description	Create a new validator dashboard. **Note**: New dashboards will automatically have a default group created.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		handlers.PublicPostValidatorDashboards.request	true	"`name`: Specify the name of the dashboard.<br>`network`: Specify the network for the dashboard. Possible options are:<ul><li>`ethereum`</li><li>`gnosis`</li></ul>"
+//	@Success		201		{object}	types.ApiDataResponse[types.VDBPostReturnData]
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Failure		409		{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their dashboard limit."
+//	@Router			/validator-dashboards [post]
 func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	userId, err := GetUserIdByContext(r)
@@ -162,6 +196,16 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 	returnCreated(w, r, response)
 }
 
+// PublicGetValidatorDashboards godoc
+//
+//	@Description	Get overview information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardResponse
+//	@Failure		400				{object}	types.ApiErrorResponse	"Bad Request"
+//	@Router			/validator-dashboards/{dashboard_id} [get]
 func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardIdParam := mux.Vars(r)["dashboard_id"]
@@ -213,6 +257,16 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 	returnOk(w, r, response)
 }
 
+// PublicPutValidatorDashboard godoc
+//
+//	@Description	Delete a specified validator dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Produce		json
+//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
+//	@Success		204				"Dashboard deleted successfully."
+//	@Failure		400				{object}	types.ApiErrorResponse	"Bad Request"
+//	@Router			/validator-dashboards/{dashboard_id} [delete]
 func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -228,6 +282,18 @@ func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r
 	returnNoContent(w, r)
 }
 
+// PublicPutValidatorDashboard godoc
+//
+//	@Description	Update the name of a specified validator dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPutValidatorDashboardName.request	true	"request"
+//	@Success		200				{object}	types.ApiDataResponse[types.VDBPostReturnData]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/name [put]
 func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -255,6 +321,19 @@ func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, 
 	returnOk(w, r, response)
 }
 
+// PublicPostValidatorDashboardGroups godoc
+//
+//	@Description	Create a new group in a specified validator dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPostValidatorDashboardGroups.request	true	"request"
+//	@Success		201				{object}	types.ApiDataResponse[types.VDBPostCreateGroupData]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their group limit."
+//	@Router			/validator-dashboards/{dashboard_id}/groups [post]
 func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -306,6 +385,19 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 	returnCreated(w, r, response)
 }
 
+// PublicGetValidatorDashboardGroups godoc
+//
+//	@Description	Update a groups name in a specified validator dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
+//	@Param			group_id		path		string												true	"The ID of the group."
+//	@Param			request			body		handlers.PublicPutValidatorDashboardGroups.request	true	"request"
+//	@Success		200				{object}	types.ApiDataResponse[types.VDBPostCreateGroupData]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -346,6 +438,18 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
+// PublicDeleteValidatorDashboardGroups godoc
+//
+//	@Description	Delete a group in a specified validator dashboard.
+//	@Tags			Validator Dashboard Management
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
+//	@Param			group_id		path	string	true	"The ID of the group."
+//	@Success		204				"Group deleted successfully."
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id} [delete]
 func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -377,6 +481,19 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 	returnNoContent(w, r)
 }
 
+// PublicGetValidatorDashboardGroups godoc
+//
+//	@Description	Add new validators to a specified dashboard or update the group of already-added validators.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys to add to the dashboard.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
+//	@Success		201				{object}	types.ApiDataResponse[[]types.VDBPostValidatorsData]	"Returns a list of added validators."
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their validator limit."
+//	@Router			/validator-dashboards/{dashboard_id}/validators [post]
 func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -500,6 +617,19 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	returnCreated(w, r, response)
 }
 
+// PublicGetValidatorDashboardValidators godoc
+//
+//	@Description	Get a list of groups in a specified validator dashboard.
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(index, public_key, balance, status, withdrawal_credentials)
+//	@Param			search			query		string	false	"Search for Address, ENS."
+//	@Success		200				{object}	types.GetValidatorDashboardValidatorsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups [get]
 func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -527,19 +657,30 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 	returnOk(w, r, response)
 }
 
+// PublicDeleteValidatorDashboardValidators godoc
+//
+//	@Description	Remove validators from a specified dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path	string														true	"The ID of the dashboard."
+//	@Param			request			body	handlers.PublicDeleteValidatorDashboardValidators.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
+//	@Success		204				"Validators removed successfully."
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/validators/bulk-deletions [post]
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	var indices []uint64
-	var publicKeys []string
-	req := struct {
+	type request struct {
 		Validators []intOrString `json:"validators"`
-	}{}
+	}
+	var req request
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	indices, publicKeys = v.checkValidators(req.Validators, false)
+	indices, publicKeys := v.checkValidators(req.Validators, false)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -558,6 +699,19 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 	returnNoContent(w, r)
 }
 
+// PublicPostValidatorDashboardPublicIds godoc
+//
+//	@Description	Create a new public ID for a specified dashboard. This can be used as an ID by other users for non-modyfing (i.e. GET) endpoints only. Currently limited to one per dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPostValidatorDashboardPublicIds.request	true	"`name`: Provide a public name for the dashboard<br>`share_settings`:<ul><li>`share_groups`: If set to `true`, accessing the dashboard through the public ID will not reveal any group information.</li></ul>"
+//	@Success		201				{object}	types.ApiDataResponse[types.VDBPublicId]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their public ID limit."
+//	@Router			/validator-dashboards/{dashboard_id}/public-ids [post]
 func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
@@ -592,13 +746,26 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 		handleErr(w, r, err)
 		return
 	}
-	response := types.ApiResponse{
-		Data: data,
+	response := types.ApiDataResponse[types.VDBPublicId]{
+		Data: *data,
 	}
 
 	returnCreated(w, r, response)
 }
 
+// PublicPutValidatorDashboardPublicId godoc
+//
+//	@Description	Update a specified public ID for a specified dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			public_id		path		string													true	"The ID of the public ID."
+//	@Param			request			body		handlers.PublicPutValidatorDashboardPublicId.request	true	"`name`: Provide a public name for the dashboard<br>`share_settings`:<ul><li>`share_groups`: If set to `true`, accessing the dashboard through the public ID will not reveal any group information.</li></ul>"
+//	@Success		200				{object}	types.ApiDataResponse[types.VDBPublicId]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/public-ids/{public_id} [put]
 func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -635,13 +802,24 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 		handleErr(w, r, err)
 		return
 	}
-	response := types.ApiResponse{
-		Data: data,
+	response := types.ApiDataResponse[types.VDBPublicId]{
+		Data: *data,
 	}
 
 	returnOk(w, r, response)
 }
 
+// PublicDeleteValidatorDashboardPublicId godoc
+//
+//	@Description	Delete a specified public ID for a specified dashboard.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Produce		json
+//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
+//	@Param			public_id		path	string	true	"The ID of the public ID."
+//	@Success		204				"Public ID deleted successfully."
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/public-ids/{public_id} [delete]
 func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -670,12 +848,26 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 	returnNoContent(w, r)
 }
 
+// PublicPutValidatorDashboardArchiving godoc
+//
+//	@Description	Archive or unarchive a specified validator dashboard. Archived dashboards cannot be accessed by other endpoints. Archiving happens automatically if the number of dashboards, validators, or groups exceeds the limit allowed by your subscription plan. For example, this might occur if you downgrade your subscription to a lower tier.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
+//	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Conflict		409																																												{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
+//	@Router			/validator-dashboards/{dashboard_id}/archiving [put]
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	req := struct {
+	type request struct {
 		IsArchived bool `json:"is_archived"`
-	}{}
+	}
+	var req request
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
@@ -753,6 +945,16 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardSlotViz godoc
+//
+//	@Description	Get slot viz information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by. If omitted, all groups will be included."
+//	@Success		200				{object}	types.GetValidatorDashboardSlotVizResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/slot-viz [get]
 func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -778,6 +980,23 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+
+// PublicGetValidatorDashboardSummary godoc
+//
+//	@Description	Get summary information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(group_id, validators, efficiency, attestations, proposals, reward)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Group."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardSummaryResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/summary [get]
 func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -792,8 +1011,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	checkEnumIsAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -811,6 +1029,18 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardGroupSummary godoc
+//
+//	@Description	Get summary information for a specified group in a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardGroupSummaryResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/summary [get]
 func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -828,8 +1058,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	checkEnumIsAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -846,6 +1075,20 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardSummaryChart godoc
+//
+//	@Description	Get summary chart data for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by."
+//	@Param			efficiency_type	query		string	false	"Efficiency type to get data for."	Enums(all, attestation, sync, proposal)
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
+//	@Param			after_ts		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts		query		string	false	"Return data before this timestamp."
+//	@Success		200				{object}	types.GetValidatorDashboardSummaryChartResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/summary-chart [get]
 func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	ctx := r.Context()
@@ -885,6 +1128,18 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardSummaryValidators godoc
+//
+//	@Description	Get summary information for validators in a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			duty			query		string	false	"Validator duty to get data for."	Enums(none, sync, slashed, proposal)	Default(none)
+//	@Param			period			query		string	true	"Time period to get data for."		Enums(all_time, last_30d, last_7d, last_24h, last_1h)
+//	@Success		200				{object}	types.GetValidatorDashboardSummaryValidatorsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/summary/validators [get]
 func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -897,8 +1152,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.Enum{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	v.checkEnumIsAllowed(period, allowedPeriods, "period")
+	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
+	checkEnumIsAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -935,6 +1190,20 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRewards godoc
+//
+//	@Description	Get rewards information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch)
+//	@Param			search			query		string	false	"Search for Epoch, Index, Public Key, Group."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardRewardsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rewards [get]
 func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -963,6 +1232,18 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardGroupRewards godoc
+//
+//	@Description	Get rewards information for a specified group in a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			epoch			path		string	true	"The epoch to get data for."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardGroupRewardsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/rewards/{epoch} [get]
 func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -991,6 +1272,16 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRewardsChart godoc
+//
+//	@Description	Get rewards chart data for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardRewardsChartResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rewards-chart [get]
 func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1017,6 +1308,22 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardDuties godoc
+//
+//	@Description	Get duties information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			epoch			path		string	true	"The epoch to get data for."
+//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(validator, reward)
+//	@Param			search			query		string	false	"Search for Index, Public Key."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardDutiesResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/duties/{epoch} [get]
 func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1048,6 +1355,20 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardBlocks godoc
+//
+//	@Description	Get blocks information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(proposer, slot, block, status, reward)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Group."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardBlocksResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/blocks [get]
 func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1076,6 +1397,19 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardHeatmap godoc
+//
+//	@Description	Get heatmap information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
+//	@Param			after_ts		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts		query		string	false	"Return data before this timestamp."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardHeatmapResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/heatmap [get]
 func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1112,6 +1446,19 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardGroupHeatmap godoc
+//
+//	@Description	Get heatmap information for a specified group in a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			timestamp		path		string	true	"The timestamp to get data for."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
+//	@Success		200				{object}	types.GetValidatorDashboardGroupHeatmapResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/heatmap/{timestamp} [get]
 func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1149,6 +1496,17 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.Response
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardExecutionLayerDeposits godoc
+//
+//	@Description	Get execution layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1174,6 +1532,17 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardConsensusLayerDeposits godoc
+//
+//	@Description	Get consensus layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Success		200				{object}	types.GetValidatorDashboardConsensusLayerDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/consensus-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1200,6 +1569,15 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalConsensusLayerDeposits godoc
+//
+//	@Description	Get total consensus layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalConsensusDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1219,6 +1597,15 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalConsensusLayerDeposits(
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalExecutionLayerDeposits godoc
+//
+//	@Description	Get total execution layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalExecutionDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-execution-layer-deposits [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
 	var err error
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -1238,6 +1625,20 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardWithdrawals godoc
+//
+//	@Description	Get withdrawals information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Address."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/withdrawals [get]
 func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1266,6 +1667,16 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalWithdrawals godoc
+//
+//	@Description	Get total withdrawals information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-withdrawals [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1293,6 +1704,19 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRocketPool godoc
+//
+//	@Description	Get an aggregated list of the Rocket Pool nodes details associated with a specified dashboard.
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(node, minipools, collateral, rpl, effective_rpl, rpl_apr, smoothing_pool)
+//	@Param			search			query		string	false	"Search for Node address."
+//	@Success		200				{object}	types.GetValidatorDashboardRocketPoolResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool [get]
 func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1320,6 +1744,15 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWr
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardTotalRocketPool godoc
+//
+//	@Description	Get a summary of all Rocket Pool nodes details associated with a specified dashboard.
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalRocketPoolResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-rocket-pool [get]
 func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	q := r.URL.Query()
@@ -1345,6 +1778,16 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardNodeRocketPool godoc
+//
+//	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			node_address	path		string	true	"The address of the node."
+//	@Success		200				{object}	types.GetValidatorDashboardNodeRocketPoolResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address} [get]
 func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1371,6 +1814,20 @@ func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.Respon
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardRocketPoolMinipools godoc
+//
+//	@Description	Get minipools information for a specified Rocket Pool node associated with a specified dashboard.
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			node_address	path		string	true	"The address of the node."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(group_id)
+//	@Param			search			query		string	false	"Search for Index, Node."
+//	@Success		200				{object}	types.GetValidatorDashboardRocketPoolMinipoolsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address}/minipools [get]
 func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	vars := mux.Vars(r)
@@ -1399,6 +1856,703 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 		Paging: *paging,
 	}
 	returnOk(w, r, response)
+}
+
+// ----------------------------------------------
+// Notifications
+// ----------------------------------------------
+
+// PublicGetUserNotifications godoc
+//
+//	@Description	Get an overview of your recent notifications.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Success		200	{object}	types.InternalGetUserNotificationsResponse
+//	@Router			/users/me/notifications [get]
+func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *http.Request) {
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	data, err := h.dai.GetNotificationOverview(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationDashboards godoc
+//
+//	@Description	Get a list of triggered notifications related to your dashboards.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Param			network	query		string	false	"If set, results will be filtered to only include networks given. Provide a comma separated list."
+//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	" Enums(chain_id, timestamp, dashboard_id)
+//	@Param			search	query		string	false	"Search for Dashboard, Group"
+//	@Success		200		{object}	types.InternalGetUserNotificationDashboardsResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/dashboards [get]
+func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
+	chainId := v.checkNetworkParameter(q.Get("network"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationDashboardsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationValidators godoc
+//
+//	@Description	Get a detailed view of a triggered notification related to a validator dashboard group at a specific epoch.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			epoch			path		string	true	"The epoch of the notification."
+//	@Success		200				{object}	types.InternalGetUserNotificationsValidatorDashboardResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
+func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	epoch := v.checkUint(vars["epoch"], "epoch")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsValidatorDashboardResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationsAccountDashboard godoc
+//
+//	@Description	Get a detailed view of a triggered notification related to an account dashboard group at a specific epoch.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			epoch			path		string	true	"The epoch of the notification."
+//	@Success		200				{object}	types.InternalGetUserNotificationsAccountDashboardResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
+func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	dashboardId := v.checkUint(vars["dashboard_id"], "dashboard_id")
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	epoch := v.checkUint(vars["epoch"], "epoch")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationsAccountDashboardResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationMachines godoc
+//
+//	@Description	Get a list of triggered notifications related to your machines.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(machine_name, threshold, event_type, timestamp)
+//	@Param			search	query		string	false	"Search for Machine"
+//	@Success		200		{object}	types.InternalGetUserNotificationMachinesResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/machines [get]
+func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationMachinesColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetMachineNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationMachinesResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationClients godoc
+//
+//	@Description	Get a list of triggered notifications related to your clients.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(client_name, timestamp)
+//	@Param			search	query		string	false	"Search for Client"
+//	@Success		200		{object}	types.InternalGetUserNotificationClientsResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/clients [get]
+func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationClientsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetClientNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationClientsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationRocketPool godoc
+//
+//	@Description	Get a list of triggered notifications related to Rocket Pool.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
+//	@Param			search	query		string	false	"Search for TODO"
+//	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/rocket-pool [get]
+func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationRocketPoolColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationRocketPoolResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationNetworks godoc
+//
+//	@Description	Get a list of triggered notifications related to networks.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notifications
+//	@Produce		json
+//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type)
+//	@Param			search	query		string	false	"Search for TODO"
+//	@Success		200		{object}	types.InternalGetUserNotificationNetworksResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/networks [get]
+func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationNetworksColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationNetworksResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicGetUserNotificationPairedDevices godoc
+//
+//	@Description	Get notification settings for the authenticated user. Excludes dashboard notification settings.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Produce		json
+//	@Success		200	{object}	types.InternalGetUserNotificationSettingsResponse
+//	@Router			/users/me/notifications/settings [get]
+func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	data, err := h.dai.GetNotificationSettings(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationSettingsResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicPutUserNotificationSettingsGeneral godoc
+//
+//	@Description	Update general notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		types.NotificationSettingsGeneral	true	"Notification settings"
+//	@Success		200		{object}	types.InternalPutUserNotificationSettingsGeneralResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/general [put]
+func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var req types.NotificationSettingsGeneral
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
+	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
+	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
+	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
+	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
+	// TODO: check validity of clients
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsGeneralResponse{
+		Data: req,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicPutUserNotificationSettingsNetworks godoc
+//
+//	@Description	Update network notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			network	path		string								true	"The networks name or chain ID."
+//	@Param			request	body		types.NotificationSettingsNetwork	true	"Notification settings"
+//	@Success		200		{object}	types.InternalPutUserNotificationSettingsNetworksResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/networks/{network} [put]
+func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var req types.NotificationSettingsNetwork
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	checkMinMax(&v, req.ParticipationRateThreshold, 0, 1, "participation_rate_threshold")
+
+	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsNetworksResponse{
+		Data: types.NotificationNetwork{
+			ChainId:  chainId,
+			Settings: req,
+		},
+	}
+	returnOk(w, r, response)
+}
+
+// PublicPutUserNotificationSettingsPairedDevices godoc
+//
+//	@Description	Update paired device notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			paired_device_id	path		string															true	"The paired device ID."
+//	@Param			request				body		handlers.PublicPutUserNotificationSettingsPairedDevices.request	true	"Notification settings"
+//	@Success		200					{object}	types.InternalPutUserNotificationSettingsPairedDevicesResponse
+//	@Failure		400					{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/paired-devices/{paired_device_id} [put]
+func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	type request struct {
+		Name                   string `json:"name,omitempty"`
+		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
+	}
+	var req request
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	// TODO use a better way to validate the paired device id
+	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	name := v.checkNameNotEmpty(req.Name)
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err = h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId, name, req.IsNotificationsEnabled)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	// TODO timestamp
+	response := types.InternalPutUserNotificationSettingsPairedDevicesResponse{
+		Data: types.NotificationPairedDevice{
+			Id:                     pairedDeviceId,
+			Name:                   req.Name,
+			IsNotificationsEnabled: req.IsNotificationsEnabled,
+		},
+	}
+
+	returnOk(w, r, response)
+}
+
+// PublicDeleteUserNotificationSettingsPairedDevices godoc
+//
+//	@Description	Delete paired device notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Produce		json
+//	@Param			paired_device_id	path	string	true	"The paired device ID."
+//	@Success		204
+//	@Failure		400	{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/paired-devices/{paired_device_id} [delete]
+func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	// TODO use a better way to validate the paired device id
+	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err = h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	returnNoContent(w, r)
+}
+
+// PublicGetUserNotificationSettingsDashboards godoc
+//
+//	@Description	Get a list of notification settings for the dashboards of the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Produce		json
+//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums	(dashboard_id, group_name)
+//	@Param			search	query		string	false	"Search for Dashboard, Group"
+//	@Success		200		{object}	types.InternalGetUserNotificationSettingsDashboardsResponse
+//	@Failure		400		{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/dashboards [get]
+func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.NotificationSettingsDashboardColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetNotificationSettingsDashboards(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicPutUserNotificationSettingsValidatorDashboard godoc
+//
+//	@Description	Update the notification settings for a specific group of a validator dashboard for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string											true	"The ID of the dashboard."
+//	@Param			group_id		path		string											true	"The ID of the group."
+//	@Param			request			body		types.NotificationSettingsValidatorDashboard	true	"Notification settings"
+//	@Success		200				{object}	types.InternalPutUserNotificationSettingsValidatorDashboardResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id} [put]
+func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	var req types.NotificationSettingsValidatorDashboard
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	checkMinMax(&v, req.GroupOfflineThreshold, 0, 1, "group_offline_threshold")
+	vars := mux.Vars(r)
+	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsValidatorDashboardResponse{
+		Data: req,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicPutUserNotificationSettingsAccountDashboard godoc
+//
+//	@Description	Update the notification settings for a specific group of an account dashboard for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		string																true	"The ID of the dashboard."
+//	@Param			group_id		path		string																true	"The ID of the group."
+//	@Param			request			body		handlers.PublicPutUserNotificationSettingsAccountDashboard.request	true	"Notification settings"
+//	@Success		200				{object}	types.InternalPutUserNotificationSettingsAccountDashboardResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/account-dashboards/{dashboard_id}/groups/{group_id} [put]
+func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	// uses a different struct due to `subscribed_chain_ids`, which is a slice of intOrString in the payload but a slice of uint64 in the response
+	type request struct {
+		WebhookUrl                      string        `json:"webhook_url"`
+		IsWebhookDiscordEnabled         bool          `json:"is_webhook_discord_enabled"`
+		IsIgnoreSpamTransactionsEnabled bool          `json:"is_ignore_spam_transactions_enabled"`
+		SubscribedChainIds              []intOrString `json:"subscribed_chain_ids"`
+
+		IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
+		IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
+		IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
+		ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
+		IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
+		IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
+	}
+	var req request
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	chainIdMap := v.checkNetworkSlice(req.SubscribedChainIds)
+	// convert to uint64[] slice
+	chainIds := make([]uint64, len(chainIdMap))
+	i := 0
+	for k := range chainIdMap {
+		chainIds[i] = k
+		i++
+	}
+	checkMinMax(&v, req.ERC20TokenTransfersValueThreshold, 0, math.MaxFloat64, "group_offline_threshold")
+	vars := mux.Vars(r)
+	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	settings := types.NotificationSettingsAccountDashboard{
+		WebhookUrl:                      req.WebhookUrl,
+		IsWebhookDiscordEnabled:         req.IsWebhookDiscordEnabled,
+		IsIgnoreSpamTransactionsEnabled: req.IsIgnoreSpamTransactionsEnabled,
+		SubscribedChainIds:              chainIds,
+
+		IsIncomingTransactionsSubscribed:  req.IsIncomingTransactionsSubscribed,
+		IsOutgoingTransactionsSubscribed:  req.IsOutgoingTransactionsSubscribed,
+		IsERC20TokenTransfersSubscribed:   req.IsERC20TokenTransfersSubscribed,
+		ERC20TokenTransfersValueThreshold: req.ERC20TokenTransfersValueThreshold,
+		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
+		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
+	}
+	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsAccountDashboardResponse{
+		Data: settings,
+	}
+	returnOk(w, r, response)
+}
+
+// PublicPostUserNotificationsTestEmail godoc
+//
+//	@Description	Send a test email notification to the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Produce		json
+//	@Success		204
+//	@Router			/users/me/notifications/test-email [post]
+func (h *HandlerService) PublicPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnNoContent(w, r)
+}
+
+// PublicPostUserNotificationsTestPush godoc
+//
+//	@Description	Send a test push notification to the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Produce		json
+//	@Success		204
+//	@Router			/users/me/notifications/test-push [post]
+func (h *HandlerService) PublicPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
+	// TODO
+	returnNoContent(w, r)
+}
+
+// PublicPostUserNotificationsTestWebhook godoc
+//
+//	@Description	Send a test webhook notification from the authenticated user to the given URL.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	handlers.PublicPostUserNotificationsTestWebhook.request	true	"Request"
+//	@Success		204
+//	@Failure		400	{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/test-webhook [post]
+func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	type request struct {
+		WebhookUrl              string `json:"webhook_url"`
+		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
+	}
+	var req request
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	// TODO
+	returnNoContent(w, r)
 }
 
 func (h *HandlerService) PublicGetNetworkValidators(w http.ResponseWriter, r *http.Request) {

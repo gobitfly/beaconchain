@@ -561,6 +561,17 @@
     "yes": "Yes"
   },
   "notifications": {
+    "clients": {
+      "col": {
+        "client_name": "Client ",
+        "version": "Version"
+      },
+      "footer":{
+        "subscriptions": "Clients ({count} Subscriptions)"
+      },
+      "search_placeholder":"Client",
+      "title": "Clients"
+    },
     "col": {
       "dashboard": "Dashboard",
       "group": "Group",
