@@ -319,8 +319,8 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	endpoints := []endpoint{
 		{http.MethodGet, "", hs.PublicGetUserNotifications, hs.InternalGetUserNotifications},
 		{http.MethodGet, "/dashboards", hs.PublicGetUserNotificationDashboards, hs.InternalGetUserNotificationDashboards},
-		{http.MethodGet, "/validator-dashboards/{notification_id}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
-		{http.MethodGet, "/account-dashboards/{notification_id}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
+		{http.MethodGet, "/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
+		{http.MethodGet, "/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
 		{http.MethodGet, "/machines", hs.PublicGetUserNotificationMachines, hs.InternalGetUserNotificationMachines},
 		{http.MethodGet, "/clients", hs.PublicGetUserNotificationClients, hs.InternalGetUserNotificationClients},
 		{http.MethodGet, "/rocket-pool", hs.PublicGetUserNotificationRocketPool, hs.InternalGetUserNotificationRocketPool},
