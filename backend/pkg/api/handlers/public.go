@@ -859,7 +859,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 //	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Conflict		409																																		{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
+//	@Conflict		409																																												{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
 //	@Router			/validator-dashboards/{dashboard_id}/archiving [put]
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -1865,6 +1865,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 // PublicGetUserNotifications godoc
 //
 //	@Description	Get an overview of your recent notifications.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Success		200	{object}	types.InternalGetUserNotificationsResponse
@@ -1889,13 +1890,14 @@ func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *ht
 // PublicGetUserNotificationDashboards godoc
 //
 //	@Description	Get a list of triggered notifications related to your dashboards.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			network	query		string	false	"If set, results will be filtered to only include networks given. Provide a comma seperated list."
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. TODO Enums"
-//	@Param			search	query		string	false	"Search for TODO"
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	" Enums(chain_id, timestamp, dashboard_id)
+//	@Param			search	query		string	false	"Search for Dashboard, Group"
 //	@Success		200		{object}	types.InternalGetUserNotificationDashboardsResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/dashboards [get]
@@ -1929,6 +1931,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 // PublicGetUserNotificationValidators godoc
 //
 //	@Description	Get a detailed view of a triggered notification related to a validator dashboard group at a specific epoch.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
@@ -1961,6 +1964,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 // PublicGetUserNotificationsAccountDashboard godoc
 //
 //	@Description	Get a detailed view of a triggered notification related to an account dashboard group at a specific epoch.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
@@ -1993,12 +1997,13 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 // PublicGetUserNotificationMachines godoc
 //
 //	@Description	Get a list of triggered notifications related to your machines.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order. TODO Enums"
-//	@Param			search	query		string	false	"Search for TODO"
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(machine_name, threshold, event_type, timestamp)
+//	@Param			search	query		string	false	"Search for Machine"
 //	@Success		200		{object}	types.InternalGetUserNotificationMachinesResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/machines [get]
@@ -2031,12 +2036,13 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 // PublicGetUserNotificationClients godoc
 //
 //	@Description	Get a list of triggered notifications related to your clients.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order. TODO Enums"
-//	@Param			search	query		string	false	"Search for TODO"
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(client_name, timestamp)
+//	@Param			search	query		string	false	"Search for Client"
 //	@Success		200		{object}	types.InternalGetUserNotificationClientsResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/clients [get]
@@ -2069,11 +2075,12 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 // PublicGetUserNotificationRocketPool godoc
 //
 //	@Description	Get a list of triggered notifications related to Rocket Pool.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order. TODO Enums"
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
 //	@Param			search	query		string	false	"Search for TODO"
 //	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
@@ -2107,11 +2114,12 @@ func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWrit
 // PublicGetUserNotificationNetworks godoc
 //
 //	@Description	Get a list of triggered notifications related to networks.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order. TODO Enums"
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type)
 //	@Param			search	query		string	false	"Search for TODO"
 //	@Success		200		{object}	types.InternalGetUserNotificationNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
@@ -2145,6 +2153,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 // PublicGetUserNotificationPairedDevices godoc
 //
 //	@Description	Get notification settings for the authenticated user. Excludes dashboard notification settings.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Produce		json
 //	@Success		200	{object}	types.InternalGetUserNotificationSettingsResponse
@@ -2169,6 +2178,7 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 // PublicPutUserNotificationSettingsGeneral godoc
 //
 //	@Description	Update general notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Accept			json
 //	@Produce		json
@@ -2212,6 +2222,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 // PublicPutUserNotificationSettingsNetworks godoc
 //
 //	@Description	Update network notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Accept			json
 //	@Produce		json
@@ -2256,6 +2267,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 // PublicPutUserNotificationSettingsPairedDevices godoc
 //
 //	@Description	Update paired device notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Accept			json
 //	@Produce		json
@@ -2302,6 +2314,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 // PublicDeleteUserNotificationSettingsPairedDevices godoc
 //
 //	@Description	Delete paired device notification settings for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Produce		json
 //	@Param			paired_device_id	path	string	true	"The paired device ID."
@@ -2327,12 +2340,13 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 // PublicGetUserNotificationSettingsDashboards godoc
 //
 //	@Description	Get a list of notification settings for the dashboards of the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order. TODO Enums"
-//	@Param			search	query		string	false	"Search for TODO"
+//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums	(dashboard_id, group_name)
+//	@Param			search	query		string	false	"Search for Dashboard, Group"
 //	@Success		200		{object}	types.InternalGetUserNotificationSettingsDashboardsResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/dashboards [get]
@@ -2365,6 +2379,7 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 // PublicPutUserNotificationSettingsValidatorDashboard godoc
 //
 //	@Description	Update the notification settings for a specific group of a validator dashboard for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Accept			json
 //	@Produce		json
@@ -2403,6 +2418,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 // PublicPutUserNotificationSettingsAccountDashboard godoc
 //
 //	@Description	Update the notification settings for a specific group of an account dashboard for the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Accept			json
 //	@Produce		json
@@ -2476,6 +2492,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 // PublicPostUserNotificationsTestEmail godoc
 //
 //	@Description	Send a test email notification to the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Produce		json
 //	@Success		204
@@ -2488,6 +2505,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestEmail(w http.ResponseWri
 // PublicPostUserNotificationsTestPush godoc
 //
 //	@Description	Send a test push notification to the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Produce		json
 //	@Success		204
@@ -2500,6 +2518,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestPush(w http.ResponseWrit
 // PublicPostUserNotificationsTestWebhook godoc
 //
 //	@Description	Send a test webhook notification from the authenticated user to the given URL.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Accept			json
 //	@Produce		json
