@@ -34,8 +34,10 @@ type PubKey string
 type Hash string // blocks, txs etc.
 
 type Address struct {
-	Hash Hash   `json:"hash"`
-	Ens  string `json:"ens,omitempty"`
+	Hash       Hash   `json:"hash"`
+	IsContract bool   `json:"is_contract"`
+	Ens        string `json:"ens,omitempty"`
+	Label      string `json:"label,omitempty"`
 }
 
 type LuckItem struct {
