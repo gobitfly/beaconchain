@@ -206,8 +206,6 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 	return nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
-	// TODO: Is it fine to fill a decimal.Decimal as a REAL in postgres?
-
 	networks, err := d.GetAllNetworks()
 	if err != nil {
 		return err
@@ -237,7 +235,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 
 	eventName := fmt.Sprintf("%s:%s", networkName, types.NetworkGasAboveThresholdEventName)
 	if !settings.GasAboveThreshold.IsZero() {
-		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasAboveThreshold.InexactFloat64()}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasAboveThreshold}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		event := goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""}
@@ -245,7 +243,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	}
 	eventName = fmt.Sprintf("%s:%s", networkName, types.NetworkGasBelowThresholdEventName)
 	if !settings.GasBelowThreshold.IsZero() {
-		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasBelowThreshold.InexactFloat64()}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.GasBelowThreshold}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		event := goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""}
