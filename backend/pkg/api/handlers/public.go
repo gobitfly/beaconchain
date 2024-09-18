@@ -2278,6 +2278,11 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 //	@Router			/users/me/notifications/settings/paired-devices/{paired_device_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	type request struct {
 		Name                   string `json:"name,omitempty"`
 		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
@@ -2294,7 +2299,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		handleErr(w, r, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, name, req.IsNotificationsEnabled)
+	err = h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId, name, req.IsNotificationsEnabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2323,13 +2328,18 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 //	@Router			/users/me/notifications/settings/paired-devices/{paired_device_id} [delete]
 func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	err := h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
+	err = h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
