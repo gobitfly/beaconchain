@@ -73,7 +73,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 	var eventsToInsert []goqu.Record
 	var eventsToDelete []goqu.Expression
 
-	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
+	tx, err := d.userWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to update general notification settings: %w", err)
 	}
@@ -81,7 +81,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 
 	// -------------------------------------
 	// Set the "do not disturb" setting
-	_, err = tx.ExecContext(ctx, `UPDATE users SET notifications_do_not_disturb_ts = TO_TIMESTAMP($1) where legacy_receipt is null WHERE id = $2`,
+	_, err = tx.ExecContext(ctx, `UPDATE users SET notifications_do_not_disturb_ts = TO_TIMESTAMP($1) WHERE id = $2`,
 		settings.DoNotDisturbTimestamp, userId)
 	if err != nil {
 		return err
@@ -229,7 +229,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	var eventsToInsert []goqu.Record
 	var eventsToDelete []goqu.Expression
 
-	tx, err := d.alloyWriter.BeginTxx(ctx, nil)
+	tx, err := d.userWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to update general notification settings: %w", err)
 	}
@@ -298,11 +298,22 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	}
 	return nil
 }
-func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
-	return d.dummy.UpdateNotificationSettingsPairedDevice(ctx, pairedDeviceId, name, IsNotificationsEnabled)
+func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, deviceIdentifier string, name string, IsNotificationsEnabled bool) error {
+	_, err := d.userWriter.ExecContext(ctx, `
+		UPDATE users_devices 
+		SET 
+			device_name = $1,
+			notify_enabled = $2
+		WHERE user_id = $3 AND device_identifier = $4`,
+		name, IsNotificationsEnabled, userId, deviceIdentifier)
+	return err
 }
-func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId string) error {
-	return d.dummy.DeleteNotificationSettingsPairedDevice(ctx, pairedDeviceId)
+func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, deviceIdentifier string) error {
+	_, err := d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_devices 
+		WHERE user_id = $1 AND device_identifier = $4`,
+		userId, deviceIdentifier)
+	return err
 }
 func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	return d.dummy.GetNotificationSettingsDashboards(ctx, userId, cursor, colSort, search, limit)
