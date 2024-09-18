@@ -14,6 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -121,16 +122,26 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	responseData := make([]t.VDBExecutionDepositsTableRow, len(data))
+	addressMapping := make(map[string]*t.Address)
+	fromContractStatusRequests := make([]db.ContractInteractionAtRequest, len(data))
+	depositorContractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(data))
 	for i, row := range data {
 		responseData[i] = t.VDBExecutionDepositsTableRow{
 			PublicKey:            t.PubKey(pubkeys[i]),
 			Block:                uint64(row.BlockNumber),
 			Timestamp:            row.Timestamp.Unix(),
-			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
 			TxHash:               t.Hash(hexutil.Encode(row.TxHash)),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
 			Valid:                row.Valid,
+		}
+		addressMapping[hexutil.Encode(row.From)] = nil
+		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
+			Address: fmt.Sprintf("%x", row.From),
+			Block:   row.BlockNumber,
+			// TODO not entirely correct, would need to determine tx index and itx index of tx. But good enough for now
+			TxIdx:    -1,
+			TraceIdx: -1,
 		}
 		if row.GroupId.Valid {
 			if dashboardId.AggregateGroups {
@@ -143,6 +154,10 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		}
 		if len(row.Depositor) > 0 {
 			responseData[i].Depositor = t.Address{Hash: t.Hash(hexutil.Encode(row.Depositor))}
+			addressMapping[hexutil.Encode(row.Depositor)] = nil
+			depositorReq := fromContractStatusRequests[i]
+			depositorReq.Address = fmt.Sprintf("%x", row.Depositor)
+			depositorContractStatusRequests = append(depositorContractStatusRequests, depositorReq)
 		} else {
 			responseData[i].Depositor = responseData[i].From
 		}
@@ -150,6 +165,30 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			responseData[i].Index = &v
 		}
 	}
+
+	// populate address data
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
+		return nil, nil, err
+	}
+	fromContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(fromContractStatusRequests)
+	if err != nil {
+		return nil, nil, err
+	}
+	depositorContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(depositorContractStatusRequests)
+	if err != nil {
+		return nil, nil, err
+	}
+	var depositorIdx int
+	for i := range data {
+		responseData[i].From = *addressMapping[string(responseData[i].From.Hash)]
+		responseData[i].From.IsContract = fromContractStatuses[i] == types.CONTRACT_CREATION || fromContractStatuses[i] == types.CONTRACT_PRESENT
+		responseData[i].Depositor.IsContract = responseData[i].From.IsContract
+		if responseData[i].Depositor.Hash != responseData[i].From.Hash {
+			responseData[i].Depositor.IsContract = depositorContractStatuses[depositorIdx] == types.CONTRACT_CREATION || depositorContractStatuses[depositorIdx] == types.CONTRACT_PRESENT
+			depositorIdx += 1
+		}
+	}
+
 	var paging t.Paging
 
 	moreDataFlag := len(responseData) > int(limit)

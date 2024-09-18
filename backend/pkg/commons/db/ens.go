@@ -609,15 +609,19 @@ func GetAddressForEnsName(name string) (address *common.Address, err error) {
 	return address, err
 }
 
-func GetEnsNameForAddress(address common.Address) (name string, err error) {
+// pass invalid time to get latest data
+func GetEnsNameForAddress(address common.Address, validUntil time.Time) (name string, err error) {
+	if validUntil.IsZero() {
+		validUntil = time.Now()
+	}
 	err = ReaderDb.Get(&name, `
 	SELECT ens_name
 	FROM ens
 	WHERE
 		address = $1 AND
 		is_primary_name AND
-		valid_to >= now()
-	;`, address.Bytes())
+		valid_to >= $2
+	;`, address.Bytes(), validUntil)
 	return name, err
 }
 
