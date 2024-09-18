@@ -23,8 +23,8 @@ type NotificationsRepository interface {
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
 	UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error
-	UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId string, name string, IsNotificationsEnabled bool) error
-	DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId string) error
+	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error
+	DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
 	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
 	UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
@@ -66,11 +66,11 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	return d.dummy.UpdateNotificationSettingsNetworks(ctx, userId, chainId, settings)
 }
-func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
-	return d.dummy.UpdateNotificationSettingsPairedDevice(ctx, pairedDeviceId, name, IsNotificationsEnabled)
+func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
+	return d.dummy.UpdateNotificationSettingsPairedDevice(ctx, userId, pairedDeviceId, name, IsNotificationsEnabled)
 }
-func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId string) error {
-	return d.dummy.DeleteNotificationSettingsPairedDevice(ctx, pairedDeviceId)
+func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error {
+	return d.dummy.DeleteNotificationSettingsPairedDevice(ctx, userId, pairedDeviceId)
 }
 func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	return d.dummy.GetNotificationSettingsDashboards(ctx, userId, cursor, colSort, search, limit)
