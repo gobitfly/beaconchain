@@ -2,9 +2,16 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 type NotificationsRepository interface {
@@ -58,7 +65,175 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	return d.dummy.GetNetworkNotifications(ctx, userId, cursor, colSort, search, limit)
 }
 func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
-	return d.dummy.GetNotificationSettings(ctx, userId)
+	result := &t.NotificationSettings{}
+
+	wg := errgroup.Group{}
+
+	networks, err := d.GetAllNetworks()
+	if err != nil {
+		return nil, err
+	}
+
+	chainIds := make(map[string]uint64, len(networks))
+	for _, network := range networks {
+		chainIds[network.Name] = network.ChainId
+	}
+
+	// -------------------------------------
+	// Get the "do not disturb" setting
+	var doNotDisturbTimestamp sql.NullTime
+	wg.Go(func() error {
+		err := d.userReader.GetContext(ctx, &doNotDisturbTimestamp, `
+		SELECT
+			notifications_do_not_disturb_ts
+		FROM users
+		WHERE id = $1`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for notifications "do not disturb" setting: %w`, err)
+		}
+
+		return nil
+	})
+
+	// -------------------------------------
+	// Get the notification channels
+	notificationChannels := []struct {
+		Channel types.NotificationChannel `db:"channel"`
+		Active  bool                      `db:"active"`
+	}{}
+	wg.Go(func() error {
+		err := d.userReader.SelectContext(ctx, &notificationChannels, `
+		SELECT
+			channel,
+			active
+		FROM users_notification_channels
+		WHERE user_id = $1`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for notifications channels: %w`, err)
+		}
+
+		return nil
+	})
+
+	// -------------------------------------
+	// Get the subscribed events
+	subscribedEvents := []struct {
+		Name      types.EventName `db:"event_name"`
+		Filter    string          `db:"event_filter"`
+		Threshold decimal.Decimal `db:"event_threshold"`
+	}{}
+	wg.Go(func() error {
+		err := d.userReader.SelectContext(ctx, &subscribedEvents, `
+		SELECT
+			event_name,
+			event_filter,
+			event_threshold
+		FROM users_subscriptions
+		WHERE user_id = $1`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for notifications subscribed events: %w`, err)
+		}
+
+		return nil
+	})
+
+	// -------------------------------------
+	// Get the paired devices
+	pairedDevices := []struct {
+		DeviceIdentifier string    `db:"device_identifier"`
+		CreatedTs        time.Time `db:"created_ts"`
+		DeviceName       string    `db:"device_name"`
+		NotifyEnabled    bool      `db:"notify_enabled"`
+	}{}
+	wg.Go(func() error {
+		err := d.userReader.SelectContext(ctx, &pairedDevices, `
+		SELECT
+			device_identifier,
+			created_ts,
+			device_name,
+			notify_enabled
+		FROM users_devices
+		WHERE user_id = $1`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for notifications paired devices: %w`, err)
+		}
+
+		return nil
+	})
+
+	err = wg.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	// -------------------------------------
+	// Fill the result
+	if doNotDisturbTimestamp.Valid {
+		result.GeneralSettings.DoNotDisturbTimestamp = doNotDisturbTimestamp.Time.Unix()
+	}
+	for _, channel := range notificationChannels {
+		if channel.Channel == types.EmailNotificationChannel {
+			result.GeneralSettings.IsEmailNotificationsEnabled = channel.Active
+		} else if channel.Channel == types.PushNotificationChannel {
+			result.GeneralSettings.IsPushNotificationsEnabled = channel.Active
+		}
+	}
+	networkEvents := make(map[string]*t.NotificationSettingsNetwork)
+	for _, event := range subscribedEvents {
+		switch event.Name {
+		case types.MonitoringMachineOfflineEventName:
+			result.GeneralSettings.IsMachineOfflineSubscribed = true
+		case types.MonitoringMachineDiskAlmostFullEventName:
+			result.GeneralSettings.MachineStorageUsageThreshold = event.Threshold.InexactFloat64()
+		case types.MonitoringMachineCpuLoadEventName:
+			result.GeneralSettings.MachineCpuUsageThreshold = event.Threshold.InexactFloat64()
+		case types.MonitoringMachineMemoryUsageEventName:
+			result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold.InexactFloat64()
+		case types.EthClientUpdateEventName:
+			result.GeneralSettings.SubscribedClients = append(result.GeneralSettings.SubscribedClients, event.Filter)
+		case types.RocketpoolNewClaimRoundStartedEventName:
+			result.GeneralSettings.IsRocketPoolNewRewardRoundSubscribed = true
+		case types.RocketpoolCollateralMaxReached:
+			result.GeneralSettings.RocketPoolMaxCollateralThreshold = event.Threshold.InexactFloat64()
+		case types.RocketpoolCollateralMinReached:
+			result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold.InexactFloat64()
+		}
+
+		eventSplit := strings.Split(string(event.Name), ":")
+		networkName := eventSplit[0]
+		networkEvent := eventSplit[1]
+
+		if _, ok := networkEvents[networkName]; !ok {
+			networkEvents[networkName] = &t.NotificationSettingsNetwork{}
+		}
+		switch networkEvent {
+		case types.NetworkGasAboveThresholdEventName:
+			networkEvents[networkName].GasAboveThreshold = event.Threshold
+		case types.NetworkGasBelowThresholdEventName:
+			networkEvents[networkName].GasBelowThreshold = event.Threshold
+		case types.NetworkParticipationRateThresholdEventName:
+			networkEvents[networkName].ParticipationRateThreshold = event.Threshold.InexactFloat64()
+		}
+	}
+
+	for network, settings := range networkEvents {
+		result.Networks = append(result.Networks, t.NotificationNetwork{
+			ChainId:  chainIds[network],
+			Settings: *settings,
+		})
+
+	}
+
+	for _, device := range pairedDevices {
+		result.PairedDevices = append(result.PairedDevices, t.NotificationPairedDevice{
+			Id:                     device.DeviceIdentifier,
+			PairedTimestamp:        device.CreatedTs.Unix(),
+			Name:                   device.DeviceName,
+			IsNotificationsEnabled: device.NotifyEnabled,
+		})
+	}
+
+	return result, nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
 	return d.dummy.UpdateNotificationSettingsGeneral(ctx, userId, settings)
