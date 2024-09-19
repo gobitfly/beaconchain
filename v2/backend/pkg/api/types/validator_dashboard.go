@@ -6,13 +6,6 @@ import (
 
 // ------------------------------------------------------------
 // Overview
-type VDBOverviewValidators struct {
-	Online  uint64 `json:"online"`
-	Offline uint64 `json:"offline"`
-	Pending uint64 `json:"pending"`
-	Exited  uint64 `json:"exited"`
-	Slashed uint64 `json:"slashed"`
-}
 
 type VDBOverviewGroup struct {
 	Id    uint64 `json:"id"`
@@ -30,7 +23,7 @@ type VDBOverviewData struct {
 	Name                string                                     `json:"name,omitempty" extensions:"x-order=1"`
 	Network             uint64                                     `json:"network"`
 	Groups              []VDBOverviewGroup                         `json:"groups"`
-	Validators          VDBOverviewValidators                      `json:"validators"`
+	Validators          ValidatorStateCounts                       `json:"validators"`
 	Efficiency          PeriodicValues[float64]                    `json:"efficiency"`
 	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
 	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
