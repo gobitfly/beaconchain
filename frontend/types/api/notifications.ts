@@ -107,6 +107,7 @@ export type InternalGetUserNotificationMachinesResponse = ApiPagingResponse<Noti
 export interface NotificationClientsTableRow {
   client_name: string;
   version: string;
+  url: string;
   timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
