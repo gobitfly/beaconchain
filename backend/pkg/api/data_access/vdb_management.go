@@ -1213,3 +1213,9 @@ func (d *DataAccessService) GetValidatorDashboardPublicIdCount(ctx context.Conte
 	`, dashboardId)
 	return count, err
 }
+
+func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.MobileWidgetData, error) {
+	// TODO @Data-Access: Implement this function
+	// feel free to move this func to other file if needed
+	return d.dummy.GetValidatorDashboardMobileWidget(ctx, dashboardId)
+}

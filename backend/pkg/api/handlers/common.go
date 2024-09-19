@@ -78,6 +78,7 @@ const (
 	sortOrderAscending                = "asc"
 	sortOrderDescending               = "desc"
 	defaultSortOrder                  = sortOrderAscending
+	defaultDesc                       = defaultSortOrder == sortOrderDescending
 	ethereum                          = "ethereum"
 	gnosis                            = "gnosis"
 	allowEmpty                        = true
@@ -544,7 +545,7 @@ func checkEnumIsAllowed[T enums.EnumFactory[T]](v *validationError, enum T, allo
 func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
-		return defaultSortOrder == sortOrderDescending
+		return defaultDesc
 	case sortOrderAscending:
 		return false
 	case sortOrderDescending:
@@ -558,19 +559,21 @@ func (v *validationError) parseSortOrder(order string) bool {
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
 	var c T
 	if sortString == "" {
-		return &types.Sort[T]{Column: c, Desc: false}
+		return &types.Sort[T]{Column: c, Desc: defaultDesc}
 	}
 	sortSplit := strings.Split(sortString, ":")
 	if len(sortSplit) > 2 {
 		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'", sortString))
 		return nil
 	}
+	var desc bool
 	if len(sortSplit) == 1 {
-		sortSplit = append(sortSplit, ":asc")
+		desc = defaultDesc
+	} else {
+		desc = v.parseSortOrder(sortSplit[1])
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
-	order := v.parseSortOrder(sortSplit[1])
-	return &types.Sort[T]{Column: sortCol, Desc: order}
+	return &types.Sort[T]{Column: sortCol, Desc: desc}
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {
