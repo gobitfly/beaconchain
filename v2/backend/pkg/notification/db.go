@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ import (
 // or a machine name for machine notifications or a eth client name for ethereum client update notifications
 // optionally it is possible to set a filter on the last sent ts and the event filter
 // fields
-func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string) (map[string][]types.Subscription, error) {
+func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string, validatorDashboardConfig *types.ValidatorDashboardConfig) (map[string][]types.Subscription, error) {
 	var subs []types.Subscription
 
 	// subQuery := `
@@ -93,12 +94,52 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 				continue
 			}
 			sub.DashboardGroupId = &dashboardGroupId
-		}
 
-		if _, ok := subMap[sub.EventFilter]; !ok {
-			subMap[sub.EventFilter] = make([]types.Subscription, 0)
+			if dashboard, ok := validatorDashboardConfig.DashboardsById[types.DashboardId(dashboardId)]; ok {
+				if dashboard.Name == "" {
+					dashboard.Name = fmt.Sprintf("Dashboard %d", dashboardId)
+				}
+				if group, ok := dashboard.Groups[types.DashboardGroupId(dashboardGroupId)]; ok {
+					if group.Name == "" {
+						group.Name = "default"
+					}
+					for _, validatorIndex := range group.Validators {
+						validatorEventFilterRaw, err := GetPubkeyForIndex(validatorIndex)
+						if err != nil {
+							log.Error(err, "error retrieving pubkey for validator", 0, map[string]interface{}{"validator": validatorIndex})
+							continue
+						}
+						validatorEventFilter := hex.EncodeToString(validatorEventFilterRaw)
+						if _, ok := subMap[validatorEventFilter]; !ok {
+							subMap[validatorEventFilter] = make([]types.Subscription, 0)
+						}
+						hydratedSub := types.Subscription{
+							ID:                 sub.ID,
+							UserID:             sub.UserID,
+							EventName:          sub.EventName,
+							EventFilter:        validatorEventFilter,
+							LastSent:           sub.LastSent,
+							LastEpoch:          sub.LastEpoch,
+							CreatedTime:        sub.CreatedTime,
+							CreatedEpoch:       sub.CreatedEpoch,
+							EventThreshold:     sub.EventThreshold,
+							DashboardId:        sub.DashboardId,
+							DashboardName:      dashboard.Name,
+							DashboardGroupId:   sub.DashboardGroupId,
+							DashboardGroupName: group.Name,
+						}
+						subMap[validatorEventFilter] = append(subMap[validatorEventFilter], hydratedSub)
+
+						log.Infof("hydrated subscription for validator %v of dashboard %d and group %d for user %d", hydratedSub.EventFilter, *hydratedSub.DashboardId, *hydratedSub.DashboardGroupId, *hydratedSub.UserID)
+					}
+				}
+			}
+		} else {
+			if _, ok := subMap[sub.EventFilter]; !ok {
+				subMap[sub.EventFilter] = make([]types.Subscription, 0)
+			}
+			subMap[sub.EventFilter] = append(subMap[sub.EventFilter], sub)
 		}
-		subMap[sub.EventFilter] = append(subMap[sub.EventFilter], sub)
 	}
 
 	return subMap, nil

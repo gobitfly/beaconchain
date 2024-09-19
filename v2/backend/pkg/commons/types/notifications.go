@@ -10,7 +10,7 @@ type UserId uint64
 type DashboardId uint64
 type DashboardGroupId uint64
 type ValidatorDashboardConfig struct {
-	DashboardsByUserId map[UserId]map[DashboardId]*ValidatorDashboard
+	DashboardsById map[DashboardId]*ValidatorDashboard
 }
 
 type Subscription struct {
@@ -25,8 +25,10 @@ type Subscription struct {
 	CreatedEpoch   uint64    `db:"created_epoch"`
 	EventThreshold float64   `db:"event_threshold"`
 	// State          sql.NullString `db:"internal_state" swaggertype:"string"`
-	DashboardGroupId *int64
-	DashboardId      *int64
+	DashboardId        *int64 `db:"-"`
+	DashboardName      string `db:"-"`
+	DashboardGroupId   *int64 `db:"-"`
+	DashboardGroupName string `db:"-"`
 }
 
 type ValidatorDashboard struct {
