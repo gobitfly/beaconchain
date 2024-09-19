@@ -443,6 +443,32 @@ export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<
 export function mockManageNotificationsGeneral(): InternalGetUserNotificationSettingsResponse {
   return {
     data: {
+      clients: [
+        {
+          category: 'EL',
+          id: 1,
+          is_subscribed: true,
+          name: 'EL Client 1',
+        },
+        {
+          category: 'CL',
+          id: 2,
+          is_subscribed: false,
+          name: 'CL Client 1',
+        },
+        {
+          category: 'other',
+          id: 3,
+          is_subscribed: true,
+          name: 'Other Clien 1',
+        },
+        {
+          category: 'other',
+          id: 4,
+          is_subscribed: false,
+          name: 'Other Clien 2',
+        },
+      ],
       general_settings: {
         do_not_disturb_timestamp: 9000,
         is_email_notifications_enabled: false,
@@ -459,7 +485,6 @@ export function mockManageNotificationsGeneral(): InternalGetUserNotificationSet
         machine_storage_usage_threshold: 80,
         rocket_pool_max_collateral_threshold: 29823,
         rocket_pool_min_collateral_threshold: 123,
-        subscribed_clients: [],
       },
       networks: [],
       paired_devices: [
