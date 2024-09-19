@@ -111,6 +111,7 @@ type InternalGetUserNotificationMachinesResponse ApiPagingResponse[NotificationM
 type NotificationClientsTableRow struct {
 	ClientName string `json:"client_name"`
 	Version    string `json:"version"`
+	Url        string `json:"url"`
 	Timestamp  int64  `json:"timestamp"`
 }
 
