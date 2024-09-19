@@ -162,12 +162,15 @@ type NotificationPairedDevice struct {
 }
 type InternalPutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[NotificationPairedDevice]
 
-type NotificationSettingsClients struct {
+type NotificationSettingsClient struct {
 	Id           uint64 `json:"id"`
 	Name         string `json:"name"`
 	Category     string `json:"category"`
 	IsSubscribed bool   `json:"is_subscribed"`
 }
+
+type InternalPutUserNotificationSettingsClientResponse ApiDataResponse[NotificationSettingsClient]
+
 type NotificationSettingsGeneral struct {
 	DoNotDisturbTimestamp       int64 `json:"do_not_disturb_timestamp"` // notifications are disabled until this timestamp
 	IsEmailNotificationsEnabled bool  `json:"is_email_notifications_enabled"`
@@ -189,10 +192,10 @@ type NotificationSettingsGeneral struct {
 }
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
-	GeneralSettings NotificationSettingsGeneral   `json:"general_settings"`
-	Networks        []NotificationNetwork         `json:"networks"`
-	PairedDevices   []NotificationPairedDevice    `json:"paired_devices"`
-	Clients         []NotificationSettingsClients `json:"clients"`
+	GeneralSettings NotificationSettingsGeneral  `json:"general_settings"`
+	Networks        []NotificationNetwork        `json:"networks"`
+	PairedDevices   []NotificationPairedDevice   `json:"paired_devices"`
+	Clients         []NotificationSettingsClient `json:"clients"`
 }
 type InternalGetUserNotificationSettingsResponse ApiDataResponse[NotificationSettings]
 

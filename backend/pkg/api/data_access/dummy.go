@@ -488,6 +488,11 @@ func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Contex
 func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error {
 	return nil
 }
+
+func (d *DummyService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
+	return getDummyStruct[t.NotificationSettingsClient]()
+}
+
 func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	r, p, err := getDummyWithPaging[t.NotificationSettingsDashboardsTableRow]()
 	for i, n := range r {
