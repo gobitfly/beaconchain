@@ -637,9 +637,7 @@ func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPool
 }
 
 func (d *DummyService) GetApiWeights(ctx context.Context) ([]t.ApiWeightItem, error) {
-	r := []t.ApiWeightItem{}
-	err := commonFakeData(&r)
-	return r, err
+	return getDummyData[[]t.ApiWeightItem]()
 }
 
 func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) t.HealthzData {
@@ -653,4 +651,8 @@ func (d *DummyService) GetLatestBundleForNativeVersion(ctx context.Context, nati
 
 func (d *DummyService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
 	return nil
+}
+
+func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.MobileWidgetData, error) {
+	return getDummyStruct[t.MobileWidgetData]()
 }

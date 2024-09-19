@@ -402,6 +402,7 @@ func TestPublicAndSharedDashboards(t *testing.T) {
 			numValidators := resp.Data.Validators.Exited + resp.Data.Validators.Offline + resp.Data.Validators.Pending + resp.Data.Validators.Online + resp.Data.Validators.Slashed
 			assert.Greater(t, numValidators, uint64(0), "dashboard should contain at least one validator")
 			assert.Greater(t, len(resp.Data.Groups), 0, "dashboard should contain at least one group")
+			assert.Greater(t, resp.Data.Network, uint64(0), "dashboard should contain a network id greater than 0")
 		})
 
 		t.Run(fmt.Sprintf("[%s]: test group summary", dashboardId.id), func(t *testing.T) {
