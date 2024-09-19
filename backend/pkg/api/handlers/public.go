@@ -61,6 +61,14 @@ func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *
 	returnOk(w, r, nil)
 }
 
+// PublicGetUserDashboards godoc
+//
+//	@Description	Get all dashboards of the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Dashboards
+//	@Produce		json
+//	@Success		200	{object}	types.ApiDataResponse[types.UserDashboardsData]
+//	@Router			/users/me/dashboards [get]
 func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
@@ -859,7 +867,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 //	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Conflict		409																																												{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
+//	@Conflict		409																																																	{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
 //	@Router			/validator-dashboards/{dashboard_id}/archiving [put]
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError

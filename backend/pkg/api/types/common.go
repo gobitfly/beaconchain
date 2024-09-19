@@ -145,3 +145,11 @@ type IndexBlocks struct {
 	Index  uint64   `json:"index"`
 	Blocks []uint64 `json:"blocks"`
 }
+
+type ValidatorStateCounts struct {
+	Online  uint64 `json:"online"`
+	Offline uint64 `json:"offline"`
+	Pending uint64 `json:"pending"`
+	Exited  uint64 `json:"exited"`
+	Slashed uint64 `json:"slashed"`
+}
