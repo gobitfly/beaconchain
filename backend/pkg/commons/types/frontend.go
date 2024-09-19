@@ -278,18 +278,20 @@ type Notification interface {
 }
 
 type NotificationBaseImpl struct {
-	LatestState      string
-	SubscriptionID   uint64
-	EventName        EventName
-	Epoch            uint64
-	Info             string
-	Title            string
-	EventFilter      string
-	EmailAttachment  *EmailAttachment
-	InfoMarkdown     string
-	UserID           UserId
-	DashboardId      *int64
-	DashboardGroupId *int64
+	LatestState        string
+	SubscriptionID     uint64
+	EventName          EventName
+	Epoch              uint64
+	Info               string
+	Title              string
+	EventFilter        string
+	EmailAttachment    *EmailAttachment
+	InfoMarkdown       string
+	UserID             UserId
+	DashboardId        *int64
+	DashboardName      string
+	DashboardGroupId   *int64
+	DashboardGroupName string
 }
 
 func (n NotificationBaseImpl) GetLatestState() string {
