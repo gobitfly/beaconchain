@@ -11,6 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/shopspring/decimal"
 )
 
 type NotificationsRepository interface {
@@ -127,19 +128,19 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineOfflineEventName, "event_filter": ""})
 	}
 	if settings.IsMachineStorageUsageSubscribed {
-		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineDiskAlmostFullEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": settings.MachineStorageUsageThreshold}
+		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineDiskAlmostFullEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": decimal.NewFromFloat(settings.MachineStorageUsageThreshold)}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineDiskAlmostFullEventName, "event_filter": ""})
 	}
 	if settings.IsMachineCpuUsageSubscribed {
-		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineCpuLoadEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": settings.MachineCpuUsageThreshold}
+		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineCpuLoadEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": decimal.NewFromFloat(settings.MachineCpuUsageThreshold)}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineCpuLoadEventName, "event_filter": ""})
 	}
 	if settings.IsMachineMemoryUsageSubscribed {
-		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineMemoryUsageEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": settings.MachineMemoryUsageThreshold}
+		event := goqu.Record{"user_id": userId, "event_name": types.MonitoringMachineMemoryUsageEventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": decimal.NewFromFloat(settings.MachineMemoryUsageThreshold)}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": types.MonitoringMachineMemoryUsageEventName, "event_filter": ""})
@@ -156,14 +157,14 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 	}
 	eventName = fmt.Sprintf("%s:%s", networkName, types.RocketpoolCollateralMaxReached)
 	if settings.IsRocketPoolMaxCollateralSubscribed {
-		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": settings.RocketPoolMaxCollateralThreshold}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": decimal.NewFromFloat(settings.RocketPoolMaxCollateralThreshold)}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""})
 	}
 	eventName = fmt.Sprintf("%s:%s", networkName, types.RocketpoolCollateralMinReached)
 	if settings.IsRocketPoolMinCollateralSubscribed {
-		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": settings.RocketPoolMinCollateralThreshold}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": decimal.NewFromFloat(settings.RocketPoolMinCollateralThreshold)}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""})
@@ -258,7 +259,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	}
 	eventName = fmt.Sprintf("%s:%s", networkName, types.NetworkParticipationRateThresholdEventName)
 	if settings.IsParticipationRateSubscribed {
-		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": settings.ParticipationRateThreshold}
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": "", "created_ts": goqu.L("NOW()"), "created_epoch": latestEpoch, "event_threshold": decimal.NewFromFloat(settings.ParticipationRateThreshold)}
 		eventsToInsert = append(eventsToInsert, event)
 	} else {
 		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": ""})
