@@ -180,44 +180,50 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	}
 	networkEvents := make(map[string]*t.NotificationSettingsNetwork)
 	for _, event := range subscribedEvents {
-		switch event.Name {
-		case types.MonitoringMachineOfflineEventName:
-			result.GeneralSettings.IsMachineOfflineSubscribed = true
-		case types.MonitoringMachineDiskAlmostFullEventName:
-			result.GeneralSettings.IsMachineStorageUsageSubscribed = true
-			result.GeneralSettings.MachineStorageUsageThreshold = event.Threshold.InexactFloat64()
-		case types.MonitoringMachineCpuLoadEventName:
-			result.GeneralSettings.IsMachineCpuUsageSubscribed = true
-			result.GeneralSettings.MachineCpuUsageThreshold = event.Threshold.InexactFloat64()
-		case types.MonitoringMachineMemoryUsageEventName:
-			result.GeneralSettings.IsMachineMemoryUsageSubscribed = true
-			result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold.InexactFloat64()
-		case types.EthClientUpdateEventName:
-			result.GeneralSettings.SubscribedClients = append(result.GeneralSettings.SubscribedClients, event.Filter)
-		case types.RocketpoolNewClaimRoundStartedEventName:
-			result.GeneralSettings.IsRocketPoolNewRewardRoundSubscribed = true
-		case types.RocketpoolCollateralMaxReached:
-			result.GeneralSettings.IsRocketPoolMaxCollateralSubscribed = true
-			result.GeneralSettings.RocketPoolMaxCollateralThreshold = event.Threshold.InexactFloat64()
-		case types.RocketpoolCollateralMinReached:
-			result.GeneralSettings.IsRocketPoolMinCollateralSubscribed = true
-			result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold.InexactFloat64()
-		}
-
 		eventSplit := strings.Split(string(event.Name), ":")
-		networkName := eventSplit[0]
-		networkEvent := eventSplit[1]
 
-		if _, ok := networkEvents[networkName]; !ok {
-			networkEvents[networkName] = &t.NotificationSettingsNetwork{}
-		}
-		switch networkEvent {
-		case types.NetworkGasAboveThresholdEventName:
-			networkEvents[networkName].GasAboveThreshold = event.Threshold
-		case types.NetworkGasBelowThresholdEventName:
-			networkEvents[networkName].GasBelowThreshold = event.Threshold
-		case types.NetworkParticipationRateThresholdEventName:
-			networkEvents[networkName].ParticipationRateThreshold = event.Threshold.InexactFloat64()
+		if len(eventSplit) == 2 {
+			networkName := eventSplit[0]
+			networkEvent := types.EventName(eventSplit[1])
+
+			if _, ok := networkEvents[networkName]; !ok {
+				networkEvents[networkName] = &t.NotificationSettingsNetwork{}
+			}
+			switch networkEvent {
+			case types.RocketpoolNewClaimRoundStartedEventName:
+				result.GeneralSettings.IsRocketPoolNewRewardRoundSubscribed = true
+			case types.RocketpoolCollateralMaxReached:
+				result.GeneralSettings.IsRocketPoolMaxCollateralSubscribed = true
+				result.GeneralSettings.RocketPoolMaxCollateralThreshold = event.Threshold.InexactFloat64()
+			case types.RocketpoolCollateralMinReached:
+				result.GeneralSettings.IsRocketPoolMinCollateralSubscribed = true
+				result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold.InexactFloat64()
+			case types.NetworkGasAboveThresholdEventName:
+				networkEvents[networkName].IsGasAboveSubscribed = true
+				networkEvents[networkName].GasAboveThreshold = event.Threshold
+			case types.NetworkGasBelowThresholdEventName:
+				networkEvents[networkName].IsGasBelowSubscribed = true
+				networkEvents[networkName].GasBelowThreshold = event.Threshold
+			case types.NetworkParticipationRateThresholdEventName:
+				networkEvents[networkName].IsParticipationRateSubscribed = true
+				networkEvents[networkName].ParticipationRateThreshold = event.Threshold.InexactFloat64()
+			}
+		} else {
+			switch event.Name {
+			case types.MonitoringMachineOfflineEventName:
+				result.GeneralSettings.IsMachineOfflineSubscribed = true
+			case types.MonitoringMachineDiskAlmostFullEventName:
+				result.GeneralSettings.IsMachineStorageUsageSubscribed = true
+				result.GeneralSettings.MachineStorageUsageThreshold = event.Threshold.InexactFloat64()
+			case types.MonitoringMachineCpuLoadEventName:
+				result.GeneralSettings.IsMachineCpuUsageSubscribed = true
+				result.GeneralSettings.MachineCpuUsageThreshold = event.Threshold.InexactFloat64()
+			case types.MonitoringMachineMemoryUsageEventName:
+				result.GeneralSettings.IsMachineMemoryUsageSubscribed = true
+				result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold.InexactFloat64()
+			case types.EthClientUpdateEventName:
+				result.GeneralSettings.SubscribedClients = append(result.GeneralSettings.SubscribedClients, event.Filter)
+			}
 		}
 	}
 
