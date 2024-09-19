@@ -141,12 +141,12 @@ type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationN
 // ------------------------------------------------------------
 // Notification Settings
 type NotificationSettingsNetwork struct {
-	IsGasAboveEnabled          bool            `json:"is_gas_above_threshold_enabled"`
-	GasAboveThreshold          decimal.Decimal `json:"gas_above_threshold" faker:"eth"`
-	IsGasBelowEnabled          bool            `json:"is_gas_below_threshold_enabled"`
-	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold" faker:"eth"`
-	IsParticipationRateEnabled bool            `json:"is_participation_rate_threshold_enabled"`
-	ParticipationRateThreshold float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsGasAboveSubscribed          bool            `json:"is_gas_above_subscribed"`
+	GasAboveThreshold             decimal.Decimal `json:"gas_above_threshold" faker:"eth"`
+	IsGasBelowSubscribed          bool            `json:"is_gas_below_subscribed"`
+	GasBelowThreshold             decimal.Decimal `json:"gas_below_threshold" faker:"eth"`
+	IsParticipationRateSubscribed bool            `json:"is_participation_rate_subscribed"`
+	ParticipationRateThreshold    float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 type NotificationNetwork struct {
 	ChainId  uint64                      `json:"chain_id"`

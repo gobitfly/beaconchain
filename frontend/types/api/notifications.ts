@@ -137,11 +137,11 @@ export type InternalGetUserNotificationNetworksResponse = ApiPagingResponse<Noti
  * Notification Settings
  */
 export interface NotificationSettingsNetwork {
-  is_gas_above_threshold_enabled: boolean;
+  is_gas_above_subscribed: boolean;
   gas_above_threshold: string /* decimal.Decimal */;
-  is_gas_below_threshold_enabled: boolean;
+  is_gas_below_subscribed: boolean;
   gas_below_threshold: string /* decimal.Decimal */;
-  is_participation_rate_threshold_enabled: boolean;
+  is_participation_rate_subscribed: boolean;
   participation_rate_threshold: number /* float64 */;
 }
 export interface NotificationNetwork {
