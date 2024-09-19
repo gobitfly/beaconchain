@@ -141,8 +141,8 @@ type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationN
 // ------------------------------------------------------------
 // Notification Settings
 type NotificationSettingsNetwork struct {
-	GasAboveThreshold          decimal.Decimal `json:"gas_above_threshold" faker:"boundary_start=0, boundary_end=1"`          // 0 is disabled
-	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold" faker:"boundary_start=0, boundary_end=1"`          // 0 is disabled
+	GasAboveThreshold          decimal.Decimal `json:"gas_above_threshold" faker:"eth"`                                       // 0 is disabled
+	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold" faker:"eth"`                                       // 0 is disabled
 	ParticipationRateThreshold float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 is disabled
 }
 type NotificationNetwork struct {

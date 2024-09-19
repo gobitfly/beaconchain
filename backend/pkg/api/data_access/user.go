@@ -287,7 +287,10 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 	}{}
 	err = d.userReader.GetContext(ctx, &result, `SELECT email, COALESCE(user_group, '') as user_group FROM users WHERE id = $1`, userId)
 	if err != nil {
-		return nil, fmt.Errorf("error getting userEmail for user %v: %w", userId, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: user not found", ErrNotFound)
+		}
+		return nil, err
 	}
 	userInfo.Email = result.Email
 	userInfo.UserGroup = result.UserGroup
@@ -764,7 +767,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 
 	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
+		return nil, fmt.Errorf("error retrieving user dashboards data: %w", err)
 	}
 
 	// Fill the result
