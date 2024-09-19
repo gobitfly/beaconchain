@@ -493,7 +493,7 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.Respon
 		handleErr(w, r, err)
 		return
 	}
-	if !userInfo.PremiumPerks.MobileAppWidget {
+	if userInfo.UserGroup != types.UserGroupAdmin && !userInfo.PremiumPerks.MobileAppWidget {
 		returnForbidden(w, r, errors.New("user does not have access to mobile app widget"))
 		return
 	}

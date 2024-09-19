@@ -867,7 +867,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 //	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Conflict		409																																																	{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
+//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
 //	@Router			/validator-dashboards/{dashboard_id}/archiving [put]
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError

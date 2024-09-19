@@ -10,14 +10,14 @@ type MobileBundleData struct {
 type GetMobileLatestBundleResponse ApiDataResponse[MobileBundleData]
 
 type MobileWidgetData struct {
-	StateCounts       ValidatorStateCounts `json:"state_counts"`
-	Last24hIncome     decimal.Decimal      `json:"last_24h_income"`
-	Last7dIncome      decimal.Decimal      `json:"last_7d_income"`
-	Last30dApr        float64              `json:"last_30d_apr"`
-	Last30dEfficiency decimal.Decimal      `json:"last_30d_efficiency"`
-	NetworkEfficiency float64              `json:"network_efficiency"`
-	RplPrice          decimal.Decimal      `json:"rpl_price"`
-	RplApr            float64              `json:"rpl_apr"`
+	ValidatorStateCounts ValidatorStateCounts `json:"validator_state_counts"`
+	Last24hIncome        decimal.Decimal      `json:"last_24h_income" faker:"eth"`
+	Last7dIncome         decimal.Decimal      `json:"last_7d_income" faker:"eth"`
+	Last30dApr           float64              `json:"last_30d_apr"`
+	Last30dEfficiency    decimal.Decimal      `json:"last_30d_efficiency" faker:"eth"`
+	NetworkEfficiency    float64              `json:"network_efficiency"`
+	RplPrice             decimal.Decimal      `json:"rpl_price" faker:"eth"`
+	RplApr               float64              `json:"rpl_apr"`
 }
 
 type InternalGetValidatorDashboardMobileWidgetResponse ApiDataResponse[MobileWidgetData]

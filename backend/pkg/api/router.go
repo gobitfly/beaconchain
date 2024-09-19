@@ -304,7 +304,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/total-rocket-pool", hs.PublicGetValidatorDashboardTotalRocketPool, hs.InternalGetValidatorDashboardTotalRocketPool},
 		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}", hs.PublicGetValidatorDashboardNodeRocketPool, hs.InternalGetValidatorDashboardNodeRocketPool},
 		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}/minipools", hs.PublicGetValidatorDashboardRocketPoolMinipools, hs.InternalGetValidatorDashboardRocketPoolMinipools},
-		{http.MethodGet, "/{dashboard_id}/mobile-widget", nil, hs.InternalGetValidatorDashboardRocketPoolMinipools},
+		{http.MethodGet, "/{dashboard_id}/mobile-widget", nil, hs.InternalGetValidatorDashboardMobileWidget},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
 }

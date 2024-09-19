@@ -11,7 +11,7 @@ export interface MobileBundleData {
 }
 export type GetMobileLatestBundleResponse = ApiDataResponse<MobileBundleData>;
 export interface MobileWidgetData {
-  state_counts: ValidatorStateCounts;
+  validator_state_counts: ValidatorStateCounts;
   last_24h_income: string /* decimal.Decimal */;
   last_7d_income: string /* decimal.Decimal */;
   last_30d_apr: number /* float64 */;
