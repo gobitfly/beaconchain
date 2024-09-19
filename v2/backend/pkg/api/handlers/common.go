@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -477,11 +478,7 @@ func (v *validationError) checkValidatorDashboardPublicId(publicId string) types
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
-type number interface {
-	uint64 | int64 | float64
-}
-
-func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+func checkMinMax[T cmp.Ordered](v *validationError, param T, min T, max T, paramName string) T {
 	if param < min {
 		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
 	}
