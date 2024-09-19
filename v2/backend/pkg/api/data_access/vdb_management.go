@@ -148,7 +148,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 
 	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
+		return nil, fmt.Errorf("error retrieving user dashboards data: %w", err)
 	}
 
 	return result, nil
@@ -287,8 +287,9 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				id = $1`
 			return d.alloyReader.GetContext(ctx, &data.Network, query, dashboardId.Id)
 		})
+	} else { // load the chain id from the config in case of public dashboards
+		data.Network = utils.Config.Chain.ClConfig.DepositChainID
 	}
-	// TODO handle network of validator set dashboards
 
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
@@ -329,7 +330,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		if err != nil {
-			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+			return fmt.Errorf("error retrieving validators from dashboard id: %w", err)
 		}
 
 		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
@@ -475,7 +476,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 			query, args, err := ds.Prepared(true).ToSQL()
 			if err != nil {
-				return fmt.Errorf("error preparing query: %v", err)
+				return fmt.Errorf("error preparing query: %w", err)
 			}
 
 			err = d.clickhouseReader.GetContext(ctx, &queryResult, query, args...)
@@ -511,7 +512,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	err = eg.Wait()
 
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
+		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
 
 	return &data, nil
@@ -1211,4 +1212,10 @@ func (d *DataAccessService) GetValidatorDashboardPublicIdCount(ctx context.Conte
 		WHERE dashboard_id = $1
 	`, dashboardId)
 	return count, err
+}
+
+func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.MobileWidgetData, error) {
+	// TODO @Data-Access: Implement this function
+	// feel free to move this func to other file if needed
+	return d.dummy.GetValidatorDashboardMobileWidget(ctx, dashboardId)
 }
