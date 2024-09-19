@@ -184,18 +184,23 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		case types.MonitoringMachineOfflineEventName:
 			result.GeneralSettings.IsMachineOfflineSubscribed = true
 		case types.MonitoringMachineDiskAlmostFullEventName:
+			result.GeneralSettings.IsMachineStorageUsageSubscribed = true
 			result.GeneralSettings.MachineStorageUsageThreshold = event.Threshold.InexactFloat64()
 		case types.MonitoringMachineCpuLoadEventName:
+			result.GeneralSettings.IsMachineCpuUsageSubscribed = true
 			result.GeneralSettings.MachineCpuUsageThreshold = event.Threshold.InexactFloat64()
 		case types.MonitoringMachineMemoryUsageEventName:
+			result.GeneralSettings.IsMachineMemoryUsageSubscribed = true
 			result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold.InexactFloat64()
 		case types.EthClientUpdateEventName:
 			result.GeneralSettings.SubscribedClients = append(result.GeneralSettings.SubscribedClients, event.Filter)
 		case types.RocketpoolNewClaimRoundStartedEventName:
 			result.GeneralSettings.IsRocketPoolNewRewardRoundSubscribed = true
 		case types.RocketpoolCollateralMaxReached:
+			result.GeneralSettings.IsRocketPoolMaxCollateralSubscribed = true
 			result.GeneralSettings.RocketPoolMaxCollateralThreshold = event.Threshold.InexactFloat64()
 		case types.RocketpoolCollateralMinReached:
+			result.GeneralSettings.IsRocketPoolMinCollateralSubscribed = true
 			result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold.InexactFloat64()
 		}
 
