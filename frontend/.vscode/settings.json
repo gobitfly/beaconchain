@@ -3,6 +3,7 @@
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
+    "NotificationsOverview",
     "checkout",
     "ci",
     "customFetch",

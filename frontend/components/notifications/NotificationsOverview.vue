@@ -24,8 +24,8 @@ const notificationsTotal = computed(() => {
   return last24hEmailsCount.value + last24hWebhookCount.value + last24hPushCount.value
 })
 
-const userLimitMail = useUserStore()
-const mailLimit = computed(() => userLimitMail.user.value?.premium_perks.email_notifications_per_day ?? 0)
+const { user } = useUserStore()
+const mailLimit = computed(() => user.value?.premium_perks.email_notifications_per_day ?? 0)
 
 // TODO: replace with actual hours value when we get the endpoint.
 const resetHours = ref(12)
