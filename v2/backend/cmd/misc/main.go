@@ -183,7 +183,7 @@ func Run() {
 	}, "pgx", "postgres")
 	defer db.AlloyReader.Close()
 	defer db.AlloyWriter.Close()
-	
+
 	db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.Frontend.WriterDatabase.Username,
 		Password:     cfg.Frontend.WriterDatabase.Password,
@@ -503,6 +503,18 @@ func collectNotifications(startEpoch uint64) error {
 	}
 
 	log.Infof("found %v notifications for epoch %v", len(notifications), epoch)
+
+	emails, err := notification.RenderEmailsForUserEvents(notifications)
+	if err != nil {
+		return err
+	}
+
+	for _, email := range emails {
+		log.Infof("to: %v", email.Address)
+		log.Infof("subject: %v", email.Subject)
+		log.Infof("body: %v", email.Email.Body)
+		log.Info("-----")
+	}
 	return nil
 }
 

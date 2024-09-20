@@ -73,8 +73,11 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	}
 
 	log.Infof("Found %d subscriptions for event %s", len(subs), eventName)
+	zero := uint64(0)
 
 	for _, sub := range subs {
+		sub.LastEpoch = &zero                                                                                  // TODO: REMOVE!!!!
+		sub.EventName = types.EventName(strings.Replace(string(sub.EventName), utils.GetNetwork()+":", "", 1)) // remove the network name from the event name
 		if strings.HasPrefix(sub.EventFilter, "vdb:") {
 			dashboardData := strings.Split(sub.EventFilter, ":")
 			if len(dashboardData) != 3 {
@@ -130,7 +133,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 						}
 						subMap[validatorEventFilter] = append(subMap[validatorEventFilter], hydratedSub)
 
-						log.Infof("hydrated subscription for validator %v of dashboard %d and group %d for user %d", hydratedSub.EventFilter, *hydratedSub.DashboardId, *hydratedSub.DashboardGroupId, *hydratedSub.UserID)
+						//log.Infof("hydrated subscription for validator %v of dashboard %d and group %d for user %d", hydratedSub.EventFilter, *hydratedSub.DashboardId, *hydratedSub.DashboardGroupId, *hydratedSub.UserID)
 					}
 				}
 			}

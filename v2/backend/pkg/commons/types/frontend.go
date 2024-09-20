@@ -80,6 +80,37 @@ const (
 	SyncCommitteeSoon              EventName = "validator_synccommittee_soon"
 )
 
+var EventSortOrder = []EventName{
+	ValidatorGotSlashedEventName,
+	ValidatorDidSlashEventName,
+	ValidatorMissedProposalEventName,
+	ValidatorExecutedProposalEventName,
+	MonitoringMachineOfflineEventName,
+	MonitoringMachineDiskAlmostFullEventName,
+	MonitoringMachineCpuLoadEventName,
+	MonitoringMachineMemoryUsageEventName,
+	MonitoringMachineSwitchedToETH2FallbackEventName,
+	MonitoringMachineSwitchedToETH1FallbackEventName,
+	SyncCommitteeSoon,
+	ValidatorIsOfflineEventName,
+	ValidatorReceivedWithdrawalEventName,
+	ValidatorReceivedDepositEventName,
+	NetworkSlashingEventName,
+	NetworkValidatorActivationQueueFullEventName,
+	NetworkValidatorActivationQueueNotFullEventName,
+	NetworkValidatorExitQueueFullEventName,
+	NetworkValidatorExitQueueNotFullEventName,
+	NetworkLivenessIncreasedEventName,
+	EthClientUpdateEventName,
+	TaxReportEventName,
+	RocketpoolCommissionThresholdEventName,
+	RocketpoolNewClaimRoundStartedEventName,
+	RocketpoolCollateralMinReached,
+	RocketpoolCollateralMaxReached,
+	ValidatorBalanceDecreasedEventName,
+	ValidatorMissedAttestationEventName,
+}
+
 var MachineEvents = []EventName{
 	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineOfflineEventName,
@@ -410,6 +441,7 @@ type TransitEmailContent struct {
 	Subject     string            `json:"subject,omitempty"`
 	Email       Email             `json:"email,omitempty"`
 	Attachments []EmailAttachment `json:"attachments,omitempty"`
+	CreatedTs   time.Time         `json:"-"`
 }
 
 func (e *TransitEmailContent) Scan(value interface{}) error {
