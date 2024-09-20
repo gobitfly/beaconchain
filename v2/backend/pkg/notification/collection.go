@@ -203,7 +203,8 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 
 	// Now initialize the validator dashboard configuration map
 	validatorDashboardConfig := &types.ValidatorDashboardConfig{
-		DashboardsById: make(map[types.DashboardId]*types.ValidatorDashboard),
+		DashboardsById:         make(map[types.DashboardId]*types.ValidatorDashboard),
+		RocketpoolNodeByPubkey: make(map[string]string),
 	}
 	for _, row := range dashboardDefinitions {
 		if validatorDashboardConfig.DashboardsById[row.DashboardId] == nil {
@@ -223,7 +224,27 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 
 	log.Infof("retrieving dashboard definitions took: %v", time.Since(dashboardConfigRetrievalStartTs))
 
-	// TODO: pass the validatorDashboardConfig to the notification collection functions
+	// Now collect the mapping of rocketpool node addresses to validator pubkeys
+	// This is needed for the rocketpool notifications
+	type rocketpoolNodeRow struct {
+		Pubkey      []byte `db:"pubkey"`
+		NodeAddress []byte `db:"node_address"`
+	}
+
+	var rocketpoolNodes []rocketpoolNodeRow
+	err = db.AlloyWriter.Select(&rocketpoolNodes, `
+		SELECT
+			pubkey,
+			node_address
+		FROM rocketpool_minipools;`)
+	if err != nil {
+		return nil, fmt.Errorf("error getting rocketpool node addresses: %v", err)
+	}
+
+	for _, row := range rocketpoolNodes {
+		validatorDashboardConfig.RocketpoolNodeByPubkey[hex.EncodeToString(row.Pubkey)] = hex.EncodeToString(row.NodeAddress)
+	}
+
 	// The following functions will collect the notifications and add them to the
 	// notificationsByUserID map. The notifications will be queued and sent later
 	// by the notification sender process
@@ -320,7 +341,7 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 		}
 	}
 
-	err = collectSyncCommittee(notificationsByUserID, epoch, validatorDashboardConfig)
+	err = collectSyncCommitteeNotifications(notificationsByUserID, epoch, validatorDashboardConfig)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_sync_committee").Inc()
 		return nil, fmt.Errorf("error collecting sync committee: %v", err)
@@ -563,7 +584,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 				}
 			}
 
-			log.Infof("creating %v notification for validator %v in epoch %v (dashboard: %v)", sub.EventName, event.ValidatorIndex, event.Epoch, sub.DashboardId != nil)
+			//log.Infof("creating %v notification for validator %v in epoch %v (dashboard: %v)", sub.EventName, event.ValidatorIndex, event.Epoch, sub.DashboardId != nil)
 			n := &validatorAttestationNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
 					SubscriptionID:     *sub.ID,
@@ -700,22 +721,6 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 		t := hex.EncodeToString(validator.Pubkey)
 		subs := subMap[t]
 		for _, sub := range subs {
-			// if sub.State.String == "" || sub.State.String == "-" { // discard online notifications that do not have a corresponding offline notification
-			// 	continue
-			// }
-
-			// originalLastSeenEpoch, err := strconv.ParseUint(sub.State.String, 10, 64)
-			// if err != nil {
-			// 	// I have no idea what just happened.
-			// 	return fmt.Errorf("this should never happen. couldn't parse state as uint64: %v", err)
-			// }
-
-			// epochsSinceOffline := epoch - originalLastSeenEpoch
-
-			// if epochsSinceOffline > epoch { // fix overflow
-			// 	epochsSinceOffline = 4
-			// }
-
 			if sub.UserID == nil || sub.ID == nil {
 				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
 			}
@@ -752,15 +757,13 @@ func collectValidatorGotSlashedNotifications(notificationsByUserID types.Notific
 	if err != nil {
 		return fmt.Errorf("error getting slashed validators from database, err: %w", err)
 	}
-	slashedPubkeys := make([]string, 0, len(dbResult))
 	pubkeyToSlashingInfoMap := make(map[string]*types.SlashingInfo)
 	for _, event := range dbResult {
 		pubkeyStr := hex.EncodeToString(event.SlashedValidatorPubkey)
-		slashedPubkeys = append(slashedPubkeys, pubkeyStr)
 		pubkeyToSlashingInfoMap[pubkeyStr] = event
 	}
 
-	subscribedUsers, err := GetSubsForEventFilter(types.ValidatorGotSlashedEventName, "", nil, slashedPubkeys, validatorDashboardConfig)
+	subscribedUsers, err := GetSubsForEventFilter(types.ValidatorGotSlashedEventName, "", nil, nil, validatorDashboardConfig)
 	if err != nil {
 		return fmt.Errorf("failed to get subs for %v: %v", types.ValidatorGotSlashedEventName, err)
 	}
@@ -1222,7 +1225,6 @@ func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUse
 	return nil
 }
 
-//nolint:unparam
 func collectRocketpoolComissionNotifications(notificationsByUserID types.NotificationsPerUserId, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	fee := 0.0
 	err := db.WriterDb.Get(&fee, `
@@ -1246,7 +1248,7 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 			"(last_sent_ts <= NOW() - INTERVAL '8 hours' OR last_sent_ts IS NULL) AND (event_threshold <= ? OR (event_threshold < 0 AND event_threshold * -1 >= ?))",
 			[]interface{}{fee, fee},
 			nil,
-			nil,
+			validatorDashboardConfig,
 		)
 		if err != nil {
 			return err
@@ -1278,7 +1280,6 @@ func collectRocketpoolComissionNotifications(notificationsByUserID types.Notific
 	return nil
 }
 
-//nolint:unparam
 func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.NotificationsPerUserId, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	var ts int64
 	err := db.WriterDb.Get(&ts, `
@@ -1304,7 +1305,7 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 			"(last_sent_ts <= NOW() - INTERVAL '5 hours' OR last_sent_ts IS NULL)",
 			nil,
 			nil,
-			nil,
+			validatorDashboardConfig,
 		)
 		if err != nil {
 			return err
@@ -1335,9 +1336,8 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 	return nil
 }
 
-//nolint:unparam
 func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.NotificationsPerUserId, eventName types.EventName, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
-	subMap, err := GetSubsForEventFilter(eventName, "", nil, nil, nil)
+	subMap, err := GetSubsForEventFilter(eventName, "", nil, nil, validatorDashboardConfig)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for RocketpoolRPLCollateral %w", err)
 	}
@@ -1473,7 +1473,7 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.Not
 	return nil
 }
 
-func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
+func collectSyncCommitteeNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	slotsPerSyncCommittee := utils.SlotsPerSyncCommittee()
 	currentPeriod := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch / slotsPerSyncCommittee
 	nextPeriod := currentPeriod + 1
@@ -1492,14 +1492,12 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ep
 		return nil
 	}
 
-	var pubKeys []string
 	var mapping map[string]uint64 = make(map[string]uint64)
 	for _, val := range validators {
 		mapping[val.PubKey] = val.Index
-		pubKeys = append(pubKeys, val.PubKey)
 	}
 
-	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoon, "(last_sent_ts <= NOW() - INTERVAL '26 hours' OR last_sent_ts IS NULL)", nil, pubKeys, validatorDashboardConfig)
+	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoon, "(last_sent_ts <= NOW() - INTERVAL '26 hours' OR last_sent_ts IS NULL)", nil, nil, validatorDashboardConfig)
 	// err = db.FrontendWriterDB.Select(&dbResult, `
 	// 			SELECT us.id, us.user_id, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') as unsubscribe_hash
 	// 			FROM users_subscriptions AS us
@@ -1512,24 +1510,29 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ep
 		return err
 	}
 
-	for _, subs := range dbResult {
-		for _, sub := range subs {
-			n := &rocketpoolNotification{
-				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID:     *sub.ID,
-					UserID:             *sub.UserID,
-					Epoch:              epoch,
-					EventFilter:        sub.EventFilter,
-					EventName:          sub.EventName,
-					DashboardId:        sub.DashboardId,
-					DashboardName:      sub.DashboardName,
-					DashboardGroupId:   sub.DashboardGroupId,
-					DashboardGroupName: sub.DashboardGroupName,
-				},
-				ExtraData: fmt.Sprintf("%v|%v|%v", mapping[sub.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
+	for pubkey := range mapping {
+		subs, ok := dbResult[pubkey]
+		if ok {
+			for _, sub := range subs {
+				n := &syncCommitteeSoonNotification{
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID:     *sub.ID,
+						UserID:             *sub.UserID,
+						Epoch:              epoch,
+						EventFilter:        sub.EventFilter,
+						EventName:          sub.EventName,
+						DashboardId:        sub.DashboardId,
+						DashboardName:      sub.DashboardName,
+						DashboardGroupId:   sub.DashboardGroupId,
+						DashboardGroupName: sub.DashboardGroupName,
+					},
+					Validator:  mapping[sub.EventFilter],
+					StartEpoch: nextPeriod * utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod,
+					EndEpoch:   (nextPeriod + 1) * utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod,
+				}
+				notificationsByUserID.AddNotification(n)
+				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 			}
-			notificationsByUserID.AddNotification(n)
-			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
 
@@ -1537,36 +1540,25 @@ func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, ep
 }
 
 func getSyncCommitteeSoonInfo(ns map[types.EventFilter]types.Notification) string {
-	validators := []string{}
-	var startEpoch, endEpoch string
+	validators := []uint64{}
+	var startEpoch, endEpoch uint64
 	var inTime time.Duration
 
 	i := 0
 	for _, n := range ns {
-		n, ok := n.(*rocketpoolNotification)
+		n, ok := n.(*syncCommitteeSoonNotification)
 		if !ok {
-			log.Error(nil, "Sync committee notification not of type rocketpoolNotification", 0)
-			return ""
-		}
-		extras := strings.Split(n.ExtraData, "|")
-		if len(extras) != 3 {
-			log.Error(nil, "Invalid number of arguments passed to sync committee extra data. Notification will not be sent until code is corrected.", 0)
+			log.Error(nil, "Sync committee notification not of type syncCommitteeSoonNotification", 0)
 			return ""
 		}
 
-		validators = append(validators, extras[0])
+		validators = append(validators, n.Validator)
 		if i == 0 {
 			// startEpoch, endEpoch and inTime must be the same for all validators
-			startEpoch = extras[1]
-			endEpoch = extras[2]
+			startEpoch = n.StartEpoch
+			endEpoch = n.EndEpoch
 
-			syncStartEpoch, err := strconv.ParseUint(startEpoch, 10, 64)
-			if err != nil {
-				inTime = utils.Day
-			} else {
-				inTime = time.Until(utils.EpochToTime(syncStartEpoch))
-			}
-			inTime = inTime.Round(time.Second)
+			inTime = time.Until(utils.EpochToTime(startEpoch)).Round(time.Second)
 		}
 		i++
 	}
@@ -1574,19 +1566,19 @@ func getSyncCommitteeSoonInfo(ns map[types.EventFilter]types.Notification) strin
 	if len(validators) > 0 {
 		validatorsInfo := ""
 		if len(validators) == 1 {
-			validatorsInfo = fmt.Sprintf(`Your validator %s has been elected to be part of the next sync committee.`, validators[0])
+			validatorsInfo = fmt.Sprintf(`Your validator %d has been elected to be part of the next sync committee.`, validators[0])
 		} else {
 			validatorsText := ""
 			for i, validator := range validators {
 				if i < len(validators)-1 {
-					validatorsText += fmt.Sprintf("%s, ", validator)
+					validatorsText += fmt.Sprintf("%d, ", validator)
 				} else {
-					validatorsText += fmt.Sprintf("and %s", validator)
+					validatorsText += fmt.Sprintf("and %d", validator)
 				}
 			}
 			validatorsInfo = fmt.Sprintf(`Your validators %s have been elected to be part of the next sync committee.`, validatorsText)
 		}
-		return fmt.Sprintf(`%s The additional duties start at epoch %s, which is in %s and will last for about a day until epoch %s.`, validatorsInfo, startEpoch, inTime, endEpoch)
+		return fmt.Sprintf(`%s The additional duties start at epoch %d, which is in %v and will last for about a day until epoch %d.`, validatorsInfo, startEpoch, inTime, endEpoch)
 	}
 
 	return ""

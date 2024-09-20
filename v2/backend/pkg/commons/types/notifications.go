@@ -10,7 +10,8 @@ type UserId uint64
 type DashboardId uint64
 type DashboardGroupId uint64
 type ValidatorDashboardConfig struct {
-	DashboardsById map[DashboardId]*ValidatorDashboard
+	DashboardsById         map[DashboardId]*ValidatorDashboard
+	RocketpoolNodeByPubkey map[string]string
 }
 
 type Subscription struct {
