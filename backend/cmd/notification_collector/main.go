@@ -107,6 +107,30 @@ func Run() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.AlloyWriter.Username,
+			Password:     cfg.AlloyWriter.Password,
+			Name:         cfg.AlloyWriter.Name,
+			Host:         cfg.AlloyWriter.Host,
+			Port:         cfg.AlloyWriter.Port,
+			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
+			SSL:          cfg.AlloyWriter.SSL,
+		}, &types.DatabaseConfig{
+			Username:     cfg.AlloyReader.Username,
+			Password:     cfg.AlloyReader.Password,
+			Name:         cfg.AlloyReader.Name,
+			Host:         cfg.AlloyReader.Host,
+			Port:         cfg.AlloyReader.Port,
+			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
+			SSL:          cfg.AlloyReader.SSL,
+		}, "pgx", "postgres")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.Frontend.WriterDatabase.Username,
 			Password:     cfg.Frontend.WriterDatabase.Password,
@@ -158,6 +182,8 @@ func Run() {
 	defer db.WriterDb.Close()
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
+	defer db.AlloyReader.Close()
+	defer db.AlloyWriter.Close()
 	defer db.BigtableClient.Close()
 
 	log.Infof("database connection established")

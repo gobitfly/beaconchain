@@ -17,6 +17,12 @@ func Rollback(tx *sqlx.Tx) {
 		log.Error(err, "error rolling back transaction", 0)
 	}
 }
+func ClosePreparedStatement(stmt *sqlx.Stmt) {
+	err := stmt.Close()
+	if err != nil {
+		log.Error(err, "error closing prepared statement", 0)
+	}
+}
 
 func IsDuplicatedKeyError(err error) bool {
 	return errors.Is(err, duplicateEntryError)
