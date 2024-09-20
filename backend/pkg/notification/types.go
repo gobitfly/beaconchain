@@ -27,30 +27,29 @@ type validatorProposalNotification struct {
 }
 
 func (n *validatorProposalNotification) GetInfo(includeUrl bool) string {
-	var generalPart, suffix string
 	vali := strconv.FormatUint(n.ValidatorIndex, 10)
 	slot := strconv.FormatUint(n.Slot, 10)
 	if includeUrl {
 		vali = fmt.Sprintf(`<a href="https://%[1]v/validator/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex)
 		slot = fmt.Sprintf(`<a href="https://%[1]v/slot/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.Slot)
-		suffix = getUrlPart(n.ValidatorIndex)
 	}
 
 	dashboardAndGroupInfo := ""
 	if n.DashboardId != nil {
-		dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[4]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[6]v">%[5]v</a>`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.DashboardGroupName, n.DashboardName, &n.DashboardId)
+		dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[4]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[6]v">%[5]v</a>`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.DashboardGroupName, n.DashboardName, *n.DashboardId)
 	}
 	switch n.Status {
 	case 0:
-		generalPart = fmt.Sprintf(`New scheduled block proposal at slot %s for Validator %s%s.`, slot, vali, dashboardAndGroupInfo)
+		return fmt.Sprintf(`New scheduled block proposal at slot %s for Validator %s%s.`, slot, vali, dashboardAndGroupInfo)
 	case 1:
-		generalPart = fmt.Sprintf(`Validator %s%s proposed block at slot %s with %v %v execution reward.`, vali, dashboardAndGroupInfo, slot, n.Reward, utils.Config.Frontend.ElCurrency)
+		return fmt.Sprintf(`Validator %s%s proposed block at slot %s with %v %v execution reward.`, vali, dashboardAndGroupInfo, slot, n.Reward, utils.Config.Frontend.ElCurrency)
 	case 2:
-		generalPart = fmt.Sprintf(`Validator %s%s missed a block proposal at slot %s.`, vali, dashboardAndGroupInfo, slot)
+		return fmt.Sprintf(`Validator %s%s missed a block proposal at slot %s.`, vali, dashboardAndGroupInfo, slot)
 	case 3:
-		generalPart = fmt.Sprintf(`Validator %s%s had an orphaned block proposal at slot %s.`, vali, dashboardAndGroupInfo, slot)
+		return fmt.Sprintf(`Validator %s%s had an orphaned block proposal at slot %s.`, vali, dashboardAndGroupInfo, slot)
+	default:
+		return "-"
 	}
-	return generalPart + suffix
 }
 
 func (n *validatorProposalNotification) GetTitle() string {
@@ -63,28 +62,28 @@ func (n *validatorProposalNotification) GetTitle() string {
 		return "Block Proposal Missed"
 	case 3:
 		return "Block Proposal Missed (Orphaned)"
+	default:
+		return "-"
 	}
-	return "-"
 }
 
 func (n *validatorProposalNotification) GetInfoMarkdown() string {
-	var generalPart = ""
 	dashboardAndGroupInfo := ""
 	if n.DashboardId != nil {
-		dashboardAndGroupInfo = fmt.Sprintf(` of Group **%[4]v** in Dashboard [%[5]v](https://%[1]v/dashboard/%[6]v)`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.DashboardGroupName, n.DashboardName, &n.DashboardId)
+		dashboardAndGroupInfo = fmt.Sprintf(` of Group **%[4]v** in Dashboard [%[5]v](https://%[1]v/dashboard/%[6]v)`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.DashboardGroupName, n.DashboardName, *n.DashboardId)
 	}
 	switch n.Status {
 	case 0:
-		generalPart = fmt.Sprintf(`New scheduled block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v) for Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s.`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
+		return fmt.Sprintf(`New scheduled block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v) for Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s.`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
 	case 1:
-		generalPart = fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[6]s proposed a new block at slot [%[3]v](https://%[1]v/slot/%[3]v) with %[4]v %[5]v execution reward.`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.Reward, utils.Config.Frontend.ElCurrency, dashboardAndGroupInfo)
+		return fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[6]s proposed a new block at slot [%[3]v](https://%[1]v/slot/%[3]v) with %[4]v %[5]v execution reward.`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.Reward, utils.Config.Frontend.ElCurrency, dashboardAndGroupInfo)
 	case 2:
-		generalPart = fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s missed a block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
+		return fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s missed a block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
 	case 3:
-		generalPart = fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s had an orphaned block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
+		return fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s had an orphaned block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
+	default:
+		return "-"
 	}
-
-	return generalPart
 }
 
 type validatorIsOfflineNotification struct {
@@ -98,7 +97,7 @@ type validatorIsOfflineNotification struct {
 func (n *validatorIsOfflineNotification) GetInfo(includeUrl bool) string {
 	if n.IsOffline {
 		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is offline since epoch <a href="https://%[3]v/epoch/%[2]s">%[2]s</a>).`, n.ValidatorIndex, n.LatestState, utils.Config.Frontend.SiteDomain)
+			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is offline since epoch <a href="https://%[3]v/epoch/%[2]s">%[2]s</a>.`, n.ValidatorIndex, n.LatestState, utils.Config.Frontend.SiteDomain)
 		} else {
 			return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.LatestState)
 		}
@@ -136,42 +135,25 @@ type validatorAttestationNotification struct {
 }
 
 func (n *validatorAttestationNotification) GetInfo(includeUrl bool) string {
-	var generalPart = ""
+	vali := strconv.FormatUint(n.ValidatorIndex, 10)
+	epoch := strconv.FormatUint(n.Epoch, 10)
 	if includeUrl {
-		if n.DashboardId == nil { // leagcy notifications
-			switch n.Status {
-			case 0:
-				generalPart = fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> missed an attestation in epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a>.`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-			case 1:
-				generalPart = fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> submitted a successful attestation for epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a>.`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-			}
-		} else { // dashboard based notifications
-			switch n.Status {
-			case 0:
-				generalPart = fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> of Group <b>%[4]v</b> in Dashboard <a href="https://%[3]v/dashboard/%[6]v">%[5]v</a> missed an attestation in epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a>.`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.DashboardGroupName, n.DashboardName, n.DashboardId)
-			case 1:
-				generalPart = fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> of Group <b>%[4]v</b> in Dashboard <a href="https://%[3]v/dashboard/%[6]v">%[5]v</a> submitted a successful attestation for epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a>.`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.DashboardGroupName, n.DashboardName, n.DashboardId)
-			}
-		}
-		// return generalPart + getUrlPart(n.ValidatorIndex)
-	} else {
-		if n.DashboardId == nil { // leagcy notifications
-			switch n.Status {
-			case 0:
-				generalPart = fmt.Sprintf(`Validator %v missed an attestation in epoch %v.`, n.ValidatorIndex, n.Epoch)
-			case 1:
-				generalPart = fmt.Sprintf(`Validator %v submitted a successful attestation in epoch %v.`, n.ValidatorIndex, n.Epoch)
-			}
-		} else { // dashboard based notifications
-			switch n.Status {
-			case 0:
-				generalPart = fmt.Sprintf(`Validator %v of Group %v in Dashboard %v missed an attestation in epoch %v.`, n.ValidatorIndex, n.DashboardGroupName, n.DashboardName, n.Epoch)
-			case 1:
-				generalPart = fmt.Sprintf(`Validator %v of Group %v in Dashboard %v submitted a successful attestation in epoch %v.`, n.ValidatorIndex, n.DashboardGroupName, n.DashboardName, n.Epoch)
-			}
-		}
+		vali = fmt.Sprintf(`<a href="https://%[1]v/validator/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex)
+		epoch = fmt.Sprintf(`<a href="https://%[1]v/epoch/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.Epoch)
 	}
-	return generalPart
+
+	dashboardAndGroupInfo := ""
+	if n.DashboardId != nil {
+		dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomain, n.DashboardGroupName, n.DashboardName, *n.DashboardId)
+	}
+	switch n.Status {
+	case 0:
+		return fmt.Sprintf(`Validator %s%s missed an attestation in epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+	case 1:
+		return fmt.Sprintf(`Validator %s%s submitted a successful attestation for epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+	default:
+		return "-"
+	}
 }
 
 func (n *validatorAttestationNotification) GetTitle() string {
@@ -186,13 +168,6 @@ func (n *validatorAttestationNotification) GetTitle() string {
 
 func (n *validatorAttestationNotification) GetInfoMarkdown() string {
 	var generalPart = ""
-	switch n.Status {
-	case 0:
-		generalPart = fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) missed an attestation in epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-	case 1:
-		generalPart = fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) submitted a successful attestation in epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-	}
-
 	if n.DashboardId == nil { // leagcy notifications
 		switch n.Status {
 		case 0:
@@ -222,7 +197,7 @@ type validatorGotSlashedNotification struct {
 func (n *validatorGotSlashedNotification) GetInfo(includeUrl bool) string {
 	generalPart := fmt.Sprintf(`Validator %v has been slashed at epoch %v by validator %v for %s.`, n.ValidatorIndex, n.Epoch, n.Slasher, n.Reason)
 	if includeUrl {
-		return generalPart + getUrlPart(n.ValidatorIndex)
+		return generalPart
 	}
 	return generalPart
 }
@@ -249,7 +224,7 @@ type validatorWithdrawalNotification struct {
 func (n *validatorWithdrawalNotification) GetInfo(includeUrl bool) string {
 	generalPart := fmt.Sprintf(`An automatic withdrawal of %v has been processed for validator %v.`, utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false), n.ValidatorIndex)
 	if includeUrl {
-		return generalPart + getUrlPart(n.ValidatorIndex)
+		return generalPart
 	}
 	return generalPart
 }
@@ -514,6 +489,13 @@ func (n *rocketpoolNotification) GetInfoMarkdown() string {
 	return n.GetInfo(false)
 }
 
+type syncCommitteeSoonNotification struct {
+	types.NotificationBaseImpl
+	Validator  uint64
+	StartEpoch uint64
+	EndEpoch   uint64
+}
+
 type BigFloat big.Float
 
 func (b *BigFloat) Value() (driver.Value, error) {
@@ -563,8 +545,4 @@ type WebhookQueue struct {
 	Destination    sql.NullString `db:"destination"`
 	Payload        []byte         `db:"payload"`
 	LastTry        time.Time      `db:"last_try"`
-}
-
-func getUrlPart(validatorIndex uint64) string {
-	return fmt.Sprintf(` For more information visit: <a href='https://%s/validator/%v'>https://%s/validator/%v</a>.`, utils.Config.Frontend.SiteDomain, validatorIndex, utils.Config.Frontend.SiteDomain, validatorIndex)
 }

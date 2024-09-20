@@ -195,7 +195,11 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 		}
 
 		bodySummary := template.HTML("")
-		for event, count := range notificationTypesMap {
+		for _, event := range types.EventSortOrder {
+			count, ok := notificationTypesMap[event]
+			if !ok {
+				continue
+			}
 			if len(bodySummary) > 0 {
 				bodySummary += "<br>"
 			}

@@ -76,7 +76,9 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	zero := uint64(0)
 
 	for _, sub := range subs {
-		sub.LastEpoch = &zero                                                                                  // TODO: REMOVE!!!!
+		// TODO: REMOVE the next two lines!!!
+		sub.LastEpoch = &zero
+		sub.CreatedEpoch = zero
 		sub.EventName = types.EventName(strings.Replace(string(sub.EventName), utils.GetNetwork()+":", "", 1)) // remove the network name from the event name
 		if strings.HasPrefix(sub.EventFilter, "vdb:") {
 			dashboardData := strings.Split(sub.EventFilter, ":")
@@ -97,7 +99,6 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 				continue
 			}
 			sub.DashboardGroupId = &dashboardGroupId
-
 			if dashboard, ok := validatorDashboardConfig.DashboardsById[types.DashboardId(dashboardId)]; ok {
 				if dashboard.Name == "" {
 					dashboard.Name = fmt.Sprintf("Dashboard %d", dashboardId)
@@ -106,6 +107,9 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 					if group.Name == "" {
 						group.Name = "default"
 					}
+
+					uniqueRPLNodes := make(map[string]struct{})
+
 					for _, validatorIndex := range group.Validators {
 						validatorEventFilterRaw, err := GetPubkeyForIndex(validatorIndex)
 						if err != nil {
@@ -113,30 +117,64 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 							continue
 						}
 						validatorEventFilter := hex.EncodeToString(validatorEventFilterRaw)
-						if _, ok := subMap[validatorEventFilter]; !ok {
-							subMap[validatorEventFilter] = make([]types.Subscription, 0)
+
+						if eventName == types.RocketpoolCollateralMaxReached || eventName == types.RocketpoolCollateralMinReached {
+							// Those two RPL notifications are not tied to a specific validator but to a node address, create a subscription for each
+							// node in the group
+							nodeAddress, ok := validatorDashboardConfig.RocketpoolNodeByPubkey[validatorEventFilter]
+							if !ok {
+								// Validator is not a rocketpool minipool
+								continue
+							}
+							if _, ok := uniqueRPLNodes[nodeAddress]; !ok {
+								if _, ok := subMap[nodeAddress]; !ok {
+									subMap[nodeAddress] = make([]types.Subscription, 0)
+								}
+								hydratedSub := types.Subscription{
+									ID:                 sub.ID,
+									UserID:             sub.UserID,
+									EventName:          sub.EventName,
+									EventFilter:        nodeAddress,
+									LastSent:           sub.LastSent,
+									LastEpoch:          sub.LastEpoch,
+									CreatedTime:        sub.CreatedTime,
+									CreatedEpoch:       sub.CreatedEpoch,
+									EventThreshold:     sub.EventThreshold,
+									DashboardId:        sub.DashboardId,
+									DashboardName:      dashboard.Name,
+									DashboardGroupId:   sub.DashboardGroupId,
+									DashboardGroupName: group.Name,
+								}
+								subMap[nodeAddress] = append(subMap[nodeAddress], hydratedSub)
+							}
+							uniqueRPLNodes[nodeAddress] = struct{}{}
+						} else {
+							if _, ok := subMap[validatorEventFilter]; !ok {
+								subMap[validatorEventFilter] = make([]types.Subscription, 0)
+							}
+							hydratedSub := types.Subscription{
+								ID:                 sub.ID,
+								UserID:             sub.UserID,
+								EventName:          sub.EventName,
+								EventFilter:        validatorEventFilter,
+								LastSent:           sub.LastSent,
+								LastEpoch:          sub.LastEpoch,
+								CreatedTime:        sub.CreatedTime,
+								CreatedEpoch:       sub.CreatedEpoch,
+								EventThreshold:     sub.EventThreshold,
+								DashboardId:        sub.DashboardId,
+								DashboardName:      dashboard.Name,
+								DashboardGroupId:   sub.DashboardGroupId,
+								DashboardGroupName: group.Name,
+							}
+							subMap[validatorEventFilter] = append(subMap[validatorEventFilter], hydratedSub)
 						}
-						hydratedSub := types.Subscription{
-							ID:                 sub.ID,
-							UserID:             sub.UserID,
-							EventName:          sub.EventName,
-							EventFilter:        validatorEventFilter,
-							LastSent:           sub.LastSent,
-							LastEpoch:          sub.LastEpoch,
-							CreatedTime:        sub.CreatedTime,
-							CreatedEpoch:       sub.CreatedEpoch,
-							EventThreshold:     sub.EventThreshold,
-							DashboardId:        sub.DashboardId,
-							DashboardName:      dashboard.Name,
-							DashboardGroupId:   sub.DashboardGroupId,
-							DashboardGroupName: group.Name,
-						}
-						subMap[validatorEventFilter] = append(subMap[validatorEventFilter], hydratedSub)
 
 						//log.Infof("hydrated subscription for validator %v of dashboard %d and group %d for user %d", hydratedSub.EventFilter, *hydratedSub.DashboardId, *hydratedSub.DashboardGroupId, *hydratedSub.UserID)
 					}
 				}
 			}
+
 		} else {
 			if _, ok := subMap[sub.EventFilter]; !ok {
 				subMap[sub.EventFilter] = make([]types.Subscription, 0)

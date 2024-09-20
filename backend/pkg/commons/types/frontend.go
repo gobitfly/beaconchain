@@ -47,7 +47,6 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 }
 
 const (
-	ValidatorBalanceDecreasedEventName               EventName = "validator_balance_decreased"
 	ValidatorMissedProposalEventName                 EventName = "validator_proposal_missed"
 	ValidatorExecutedProposalEventName               EventName = "validator_proposal_submitted"
 	ValidatorMissedAttestationEventName              EventName = "validator_attestation_missed"
@@ -55,12 +54,6 @@ const (
 	ValidatorDidSlashEventName                       EventName = "validator_did_slash"
 	ValidatorIsOfflineEventName                      EventName = "validator_is_offline"
 	ValidatorReceivedWithdrawalEventName             EventName = "validator_withdrawal"
-	ValidatorReceivedDepositEventName                EventName = "validator_received_deposit"
-	NetworkSlashingEventName                         EventName = "network_slashing"
-	NetworkValidatorActivationQueueFullEventName     EventName = "network_validator_activation_queue_full"
-	NetworkValidatorActivationQueueNotFullEventName  EventName = "network_validator_activation_queue_not_full"
-	NetworkValidatorExitQueueFullEventName           EventName = "network_validator_exit_queue_full"
-	NetworkValidatorExitQueueNotFullEventName        EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName                EventName = "network_liveness_increased"
 	EthClientUpdateEventName                         EventName = "eth_client_update"
 	MonitoringMachineOfflineEventName                EventName = "monitoring_machine_offline"
@@ -94,12 +87,6 @@ var EventSortOrder = []EventName{
 	SyncCommitteeSoon,
 	ValidatorIsOfflineEventName,
 	ValidatorReceivedWithdrawalEventName,
-	ValidatorReceivedDepositEventName,
-	NetworkSlashingEventName,
-	NetworkValidatorActivationQueueFullEventName,
-	NetworkValidatorActivationQueueNotFullEventName,
-	NetworkValidatorExitQueueFullEventName,
-	NetworkValidatorExitQueueNotFullEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,
 	TaxReportEventName,
@@ -107,7 +94,6 @@ var EventSortOrder = []EventName{
 	RocketpoolNewClaimRoundStartedEventName,
 	RocketpoolCollateralMinReached,
 	RocketpoolCollateralMaxReached,
-	ValidatorBalanceDecreasedEventName,
 	ValidatorMissedAttestationEventName,
 }
 
@@ -134,20 +120,13 @@ var UserIndexEvents = []EventName{
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
-	ValidatorBalanceDecreasedEventName:               "Your validator(s) balance decreased",
 	ValidatorMissedProposalEventName:                 "Your validator(s) missed a proposal",
 	ValidatorExecutedProposalEventName:               "Your validator(s) submitted a proposal",
 	ValidatorMissedAttestationEventName:              "Your validator(s) missed an attestation",
 	ValidatorGotSlashedEventName:                     "Your validator(s) got slashed",
 	ValidatorDidSlashEventName:                       "Your validator(s) slashed another validator",
 	ValidatorIsOfflineEventName:                      "Your validator(s) state changed",
-	ValidatorReceivedDepositEventName:                "Your validator(s) received a deposit",
 	ValidatorReceivedWithdrawalEventName:             "A withdrawal was initiated for your validators",
-	NetworkSlashingEventName:                         "A slashing event has been registered by the network",
-	NetworkValidatorActivationQueueFullEventName:     "The activation queue is full",
-	NetworkValidatorActivationQueueNotFullEventName:  "The activation queue is empty",
-	NetworkValidatorExitQueueFullEventName:           "The validator exit queue is full",
-	NetworkValidatorExitQueueNotFullEventName:        "The validator exit queue is empty",
 	NetworkLivenessIncreasedEventName:                "The network is experiencing liveness issues",
 	EthClientUpdateEventName:                         "An Ethereum client has a new update available",
 	MonitoringMachineOfflineEventName:                "Your machine(s) might be offline",
@@ -183,20 +162,13 @@ func IsMachineNotification(event EventName) bool {
 }
 
 var EventNames = []EventName{
-	ValidatorBalanceDecreasedEventName,
 	ValidatorExecutedProposalEventName,
 	ValidatorMissedProposalEventName,
 	ValidatorMissedAttestationEventName,
 	ValidatorGotSlashedEventName,
 	ValidatorDidSlashEventName,
 	ValidatorIsOfflineEventName,
-	ValidatorReceivedDepositEventName,
 	ValidatorReceivedWithdrawalEventName,
-	NetworkSlashingEventName,
-	NetworkValidatorActivationQueueFullEventName,
-	NetworkValidatorActivationQueueNotFullEventName,
-	NetworkValidatorExitQueueFullEventName,
-	NetworkValidatorExitQueueNotFullEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,
 	MonitoringMachineOfflineEventName,
