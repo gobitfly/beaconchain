@@ -1,35 +1,14 @@
 <script setup lang="ts">
-import { warn } from 'vue'
-
-type Feature = 'feature-account_dashboards'
-type Environment = 'development' | 'production' | 'staging'
-
-const currentEnvironment = useRuntimeConfig().public.deploymentType as Environment
-if (!currentEnvironment) {
-  warn('Environment variable `deploymentType` is not set.')
-}
-
-const staging: Feature[] = []
-const activeFeatures: Record<Environment, Feature[]> = {
-  development: [
-    ...staging,
-    'feature-account_dashboards',
-  ],
-  production: [],
-  staging,
-}
+import type { FeatureFlag } from '~/types/feature-flags'
 
 const props = defineProps<{
-  feature: Feature,
+  feature: FeatureFlag,
 }>()
-
-const isEnabled = computed(
-  () => activeFeatures[currentEnvironment]?.includes(props.feature),
-)
+const { has } = useFeatureFlag()
 </script>
 
 <template>
-  <slot v-if="isEnabled" />
+  <slot v-if="has(props.feature)" />
 </template>
 
 <style scoped></style>
