@@ -10,8 +10,7 @@ export const useFeatureFlag = () => {
   }
 
   const staging: FeatureFlag[] = [ 'feature-notifications' ]
-  const development: FeatureFlag[]
-  = [
+  const development: FeatureFlag[] = [
     ...staging,
     'feature-account_dashboards',
     'feature-user_settings',
