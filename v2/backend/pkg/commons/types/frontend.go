@@ -120,27 +120,27 @@ var UserIndexEvents = []EventName{
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
-	ValidatorMissedProposalEventName:                 "Your validator(s) missed a proposal",
-	ValidatorExecutedProposalEventName:               "Your validator(s) submitted a proposal",
-	ValidatorMissedAttestationEventName:              "Your validator(s) missed an attestation",
-	ValidatorGotSlashedEventName:                     "Your validator(s) got slashed",
-	ValidatorDidSlashEventName:                       "Your validator(s) slashed another validator",
-	ValidatorIsOfflineEventName:                      "Your validator(s) state changed",
-	ValidatorReceivedWithdrawalEventName:             "A withdrawal was initiated for your validators",
+	ValidatorMissedProposalEventName:                 "Block proposal missed",
+	ValidatorExecutedProposalEventName:               "Block proposal submitted",
+	ValidatorMissedAttestationEventName:              "Attestation missed",
+	ValidatorGotSlashedEventName:                     "Validator slashed",
+	ValidatorDidSlashEventName:                       "Validator has slashed",
+	ValidatorIsOfflineEventName:                      "Validator online / offline",
+	ValidatorReceivedWithdrawalEventName:             "Validator withdrawal initiated",
 	NetworkLivenessIncreasedEventName:                "The network is experiencing liveness issues",
 	EthClientUpdateEventName:                         "An Ethereum client has a new update available",
-	MonitoringMachineOfflineEventName:                "Your machine(s) might be offline",
-	MonitoringMachineDiskAlmostFullEventName:         "Your machine(s) disk space is running low",
-	MonitoringMachineCpuLoadEventName:                "Your machine(s) has a high CPU load",
-	MonitoringMachineMemoryUsageEventName:            "Your machine(s) has a high memory load",
-	MonitoringMachineSwitchedToETH2FallbackEventName: "Your machine(s) is using its consensus client fallback",
-	MonitoringMachineSwitchedToETH1FallbackEventName: "Your machine(s) is using its execution client fallback",
-	TaxReportEventName:                               "You have an available tax report",
-	RocketpoolCommissionThresholdEventName:           "Your configured Rocket Pool commission threshold is reached",
-	RocketpoolNewClaimRoundStartedEventName:          "Your Rocket Pool claim from last round is available",
-	RocketpoolCollateralMinReached:                   "You reached the Rocket Pool min RPL collateral",
-	RocketpoolCollateralMaxReached:                   "You reached the Rocket Pool max RPL collateral",
-	SyncCommitteeSoon:                                "Your validator(s) will soon be part of the sync committee",
+	MonitoringMachineOfflineEventName:                "Machine offline",
+	MonitoringMachineDiskAlmostFullEventName:         "Machine low disk space",
+	MonitoringMachineCpuLoadEventName:                "Machine high CPU load",
+	MonitoringMachineMemoryUsageEventName:            "Machine high memory load",
+	MonitoringMachineSwitchedToETH2FallbackEventName: "Consensus client fallback activated",
+	MonitoringMachineSwitchedToETH1FallbackEventName: "Execution client fallback activated",
+	TaxReportEventName:                               "Tax report available",
+	RocketpoolCommissionThresholdEventName:           "Rocket pool commission threshold is reached",
+	RocketpoolNewClaimRoundStartedEventName:          "Rocket pool claim from last round is available",
+	RocketpoolCollateralMinReached:                   "Rocket pool node min RPL collateral reached",
+	RocketpoolCollateralMaxReached:                   "Rocket pool node max RPL collateral reached",
+	SyncCommitteeSoon:                                "Upcoming sync committee",
 }
 
 func IsUserIndexed(event EventName) bool {
@@ -267,17 +267,26 @@ const (
 	ValidatorTagsWatchlist Tag = "watchlist"
 )
 
+type NotificationFormat string
+
+var NotifciationFormatHtml NotificationFormat = "html"
+var NotifciationFormatText NotificationFormat = "text"
+var NotifciationFormatMarkdown NotificationFormat = "markdown"
+
 type Notification interface {
 	GetLatestState() string
 	GetSubscriptionID() uint64
 	GetEventName() EventName
 	GetEpoch() uint64
-	GetInfo(includeUrl bool) string
+	GetInfo(format NotificationFormat) string
 	GetTitle() string
 	GetEventFilter() string
 	GetEmailAttachment() *EmailAttachment
-	GetInfoMarkdown() string
 	GetUserId() UserId
+	GetDashboardId() *int64
+	GetDashboardName() string
+	GetDashboardGroupId() *int64
+	GetDashboardGroupName() string
 }
 
 type NotificationBaseImpl struct {
@@ -289,7 +298,6 @@ type NotificationBaseImpl struct {
 	Title              string
 	EventFilter        string
 	EmailAttachment    *EmailAttachment
-	InfoMarkdown       string
 	UserID             UserId
 	DashboardId        *int64
 	DashboardName      string
@@ -313,7 +321,7 @@ func (n NotificationBaseImpl) GetEpoch() uint64 {
 	return n.Epoch
 }
 
-func (n NotificationBaseImpl) GetInfo(includeUrl bool) string {
+func (n NotificationBaseImpl) GetInfo(format NotificationFormat) string {
 	return n.Info
 }
 
@@ -329,12 +337,24 @@ func (n NotificationBaseImpl) GetEmailAttachment() *EmailAttachment {
 	return n.EmailAttachment
 }
 
-func (n NotificationBaseImpl) GetInfoMarkdown() string {
-	return n.InfoMarkdown
-}
-
 func (n NotificationBaseImpl) GetUserId() UserId {
 	return n.UserID
+}
+
+func (n NotificationBaseImpl) GetDashboardId() *int64 {
+	return n.DashboardId
+}
+
+func (n NotificationBaseImpl) GetDashboardName() string {
+	return n.DashboardName
+}
+
+func (n NotificationBaseImpl) GetDashboardGroupId() *int64 {
+	return n.DashboardGroupId
+}
+
+func (n NotificationBaseImpl) GetDashboardGroupName() string {
+	return n.DashboardGroupName
 }
 
 // func UnMarschal

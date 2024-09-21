@@ -140,9 +140,6 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 		uniqueNotificationTypes := []types.EventName{}
 
 		bodyDetails := template.HTML("")
-		for name, events := range userNotifications {
-			log.Infof("usedr %d: rendering email for event %v with %v notifications", userID, name, len(events))
-		}
 
 		for _, event := range types.EventSortOrder {
 			ns, ok := userNotifications[event]
@@ -150,13 +147,11 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 				continue
 			}
 
-			log.Infof("used %d: rendering email for event %v with %v notifications", userID, event, len(ns))
-
 			if len(bodyDetails) > 0 {
 				bodyDetails += "<br>"
 			}
 			//nolint:gosec // this is a static string
-			bodyDetails += template.HTML(fmt.Sprintf("%s<br>====<br>", types.EventLabel[event]))
+			bodyDetails += template.HTML(fmt.Sprintf("<u>%s</u><br>", types.EventLabel[event]))
 			i := 0
 			for _, n := range ns {
 				// Find all unique notification titles for the subject
@@ -169,7 +164,7 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 					if event != types.SyncCommitteeSoon {
 						// SyncCommitteeSoon notifications are summed up in getEventInfo for all validators
 						//nolint:gosec // this is a static string
-						bodyDetails += template.HTML(fmt.Sprintf("%s<br>", n.GetInfo(true)))
+						bodyDetails += template.HTML(fmt.Sprintf("%s<br>", n.GetInfo(types.NotifciationFormatHtml)))
 					}
 
 					if att := n.GetEmailAttachment(); att != nil {
@@ -187,14 +182,14 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 				}
 			}
 
-			eventInfo := getEventInfo(event, ns)
+			eventInfo := getEventInfo(event, types.NotifciationFormatHtml, ns)
 			if eventInfo != "" {
 				//nolint:gosec // this is a static string
 				bodyDetails += template.HTML(fmt.Sprintf("%s<br>", eventInfo))
 			}
 		}
 
-		bodySummary := template.HTML("")
+		bodySummary := template.HTML("<h5>Summary:</h5>")
 		for _, event := range types.EventSortOrder {
 			count, ok := notificationTypesMap[event]
 			if !ok {
@@ -203,11 +198,27 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 			if len(bodySummary) > 0 {
 				bodySummary += "<br>"
 			}
-			//nolint:gosec // this is a static string
-			bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator(s)", types.EventLabel[event], count))
+			plural := ""
+			if count > 1 {
+				plural = "s"
+			}
+			switch event {
+			case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural))
+			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural))
+			case types.EthClientUpdateEventName:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural))
+			default:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
+			}
 		}
 		msg.Body += bodySummary
-		msg.Body += template.HTML("<br><br>Details:<br>")
+		msg.Body += template.HTML("<br><br><h5>Details:</h5>")
 		msg.Body += bodyDetails
 
 		if len(uniqueNotificationTypes) > 2 {
@@ -218,7 +229,6 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 			subject = fmt.Sprintf("%s: %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]])
 		}
 
-		// msg.Body += template.HTML(fmt.Sprintf("<br>Best regards<br>\n%s", utils.Config.Frontend.SiteDomain))
 		//nolint:gosec // this is a static string
 		msg.SubscriptionManageURL = template.HTML(fmt.Sprintf(`<a href="%v" style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'">Manage</a>`, "https://"+utils.Config.Frontend.SiteDomain+"/user/notifications"))
 
@@ -279,7 +289,7 @@ func QueuePushNotification(notificationsByUserID types.NotificationsPerUserId, t
 					for _, userToken := range userTokens {
 						notification := new(messaging.Notification)
 						notification.Title = fmt.Sprintf("%s%s", getNetwork(), n.GetTitle())
-						notification.Body = n.GetInfo(false)
+						notification.Body = n.GetInfo(types.NotifciationFormatText)
 						if notification.Body == "" {
 							continue
 						}
@@ -409,7 +419,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 							discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
 								Type:        "rich",
 								Color:       "16745472",
-								Description: n.GetInfoMarkdown(),
+								Description: n.GetInfo(types.NotifciationFormatMarkdown),
 								Title:       n.GetTitle(),
 								Fields:      fields,
 							})
@@ -422,7 +432,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 										Network:     utils.GetNetwork(),
 										Name:        string(n.GetEventName()),
 										Title:       n.GetTitle(),
-										Description: n.GetInfo(false),
+										Description: n.GetInfo(types.NotifciationFormatText),
 										Epoch:       n.GetEpoch(),
 										Target:      n.GetEventFilter(),
 									},
@@ -466,10 +476,10 @@ func getNetwork() string {
 	return ""
 }
 
-func getEventInfo(event types.EventName, ns map[types.EventFilter]types.Notification) string {
+func getEventInfo(event types.EventName, format types.NotificationFormat, ns map[types.EventFilter]types.Notification) string {
 	switch event {
 	case types.SyncCommitteeSoon:
-		return getSyncCommitteeSoonInfo(ns)
+		return getSyncCommitteeSoonInfo(format, ns)
 	case "validator_balance_decreased":
 		return "<br>You will not receive any further balance decrease mails for these validators until the balance of a validator is increasing again."
 	}

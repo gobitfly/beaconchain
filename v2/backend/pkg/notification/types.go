@@ -17,6 +17,55 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
+func formatValidatorLink(format types.NotificationFormat, validatorIndex interface{}) string {
+	switch format {
+	case types.NotifciationFormatHtml:
+		return fmt.Sprintf(`<a href="https://%s/validator/%v">%v</a>`, utils.Config.Frontend.SiteDomain, validatorIndex, validatorIndex)
+	case types.NotifciationFormatText:
+		return fmt.Sprintf(`%v`, validatorIndex)
+	case types.NotifciationFormatMarkdown:
+		return fmt.Sprintf(`[%d](https://%s/validator/%v)`, validatorIndex, utils.Config.Frontend.SiteDomain, validatorIndex)
+	}
+	return ""
+}
+func formatEpochLink(format types.NotificationFormat, epoch interface{}) string {
+	switch format {
+	case types.NotifciationFormatHtml:
+		return fmt.Sprintf(`<a href="https://%s/epoch/%v">%v</a>`, utils.Config.Frontend.SiteDomain, epoch, epoch)
+	case types.NotifciationFormatText:
+		return fmt.Sprintf(`%v`, epoch)
+	case types.NotifciationFormatMarkdown:
+		return fmt.Sprintf(`[%v](https://%s/epoch/%v)`, epoch, utils.Config.Frontend.SiteDomain, epoch)
+	}
+	return ""
+}
+func formatSlotLink(format types.NotificationFormat, slot interface{}) string {
+	switch format {
+	case types.NotifciationFormatHtml:
+		return fmt.Sprintf(`<a href="https://%s/slot/%v">%v</a>`, utils.Config.Frontend.SiteDomain, slot, slot)
+	case types.NotifciationFormatText:
+		return fmt.Sprintf(`%v`, slot)
+	case types.NotifciationFormatMarkdown:
+		return fmt.Sprintf(`[%v](https://%s/slot/%v)`, slot, utils.Config.Frontend.SiteDomain, slot)
+	}
+	return ""
+}
+
+func formateDashboardAndGroupLink(format types.NotificationFormat, n types.Notification) string {
+	dashboardAndGroupInfo := ""
+	if n.GetDashboardId() != nil {
+		switch format {
+		case types.NotifciationFormatHtml:
+			dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomain, n.GetDashboardGroupName(), n.GetDashboardName(), *n.GetDashboardId())
+		case types.NotifciationFormatText:
+			dashboardAndGroupInfo = fmt.Sprintf(` of Group %[1]v in Dashboard %[2]v`, n.GetDashboardGroupName(), n.GetDashboardName())
+		case types.NotifciationFormatMarkdown:
+			dashboardAndGroupInfo = fmt.Sprintf(` of Group **%[1]v** in Dashboard [%[2]v](https://%[3]v/dashboard/%[4]v)`, n.GetDashboardGroupName(), n.GetDashboardName(), utils.Config.Frontend.SiteDomain, *n.GetDashboardId())
+		}
+	}
+	return dashboardAndGroupInfo
+}
+
 type validatorProposalNotification struct {
 	types.NotificationBaseImpl
 
@@ -26,18 +75,11 @@ type validatorProposalNotification struct {
 	Reward         float64
 }
 
-func (n *validatorProposalNotification) GetInfo(includeUrl bool) string {
-	vali := strconv.FormatUint(n.ValidatorIndex, 10)
-	slot := strconv.FormatUint(n.Slot, 10)
-	if includeUrl {
-		vali = fmt.Sprintf(`<a href="https://%[1]v/validator/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex)
-		slot = fmt.Sprintf(`<a href="https://%[1]v/slot/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.Slot)
-	}
+func (n *validatorProposalNotification) GetInfo(format types.NotificationFormat) string {
+	vali := formatValidatorLink(format, n.ValidatorIndex)
+	slot := formatSlotLink(format, n.Slot)
+	dashboardAndGroupInfo := formateDashboardAndGroupLink(format, n)
 
-	dashboardAndGroupInfo := ""
-	if n.DashboardId != nil {
-		dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[4]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[6]v">%[5]v</a>`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.DashboardGroupName, n.DashboardName, *n.DashboardId)
-	}
 	switch n.Status {
 	case 0:
 		return fmt.Sprintf(`New scheduled block proposal at slot %s for Validator %s%s.`, slot, vali, dashboardAndGroupInfo)
@@ -67,25 +109,6 @@ func (n *validatorProposalNotification) GetTitle() string {
 	}
 }
 
-func (n *validatorProposalNotification) GetInfoMarkdown() string {
-	dashboardAndGroupInfo := ""
-	if n.DashboardId != nil {
-		dashboardAndGroupInfo = fmt.Sprintf(` of Group **%[4]v** in Dashboard [%[5]v](https://%[1]v/dashboard/%[6]v)`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.DashboardGroupName, n.DashboardName, *n.DashboardId)
-	}
-	switch n.Status {
-	case 0:
-		return fmt.Sprintf(`New scheduled block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v) for Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s.`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
-	case 1:
-		return fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[6]s proposed a new block at slot [%[3]v](https://%[1]v/slot/%[3]v) with %[4]v %[5]v execution reward.`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.Reward, utils.Config.Frontend.ElCurrency, dashboardAndGroupInfo)
-	case 2:
-		return fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s missed a block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
-	case 3:
-		return fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v)%[4]s had an orphaned block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, dashboardAndGroupInfo)
-	default:
-		return "-"
-	}
-}
-
 type validatorIsOfflineNotification struct {
 	types.NotificationBaseImpl
 
@@ -94,19 +117,20 @@ type validatorIsOfflineNotification struct {
 }
 
 // Overwrite specific methods
-func (n *validatorIsOfflineNotification) GetInfo(includeUrl bool) string {
+func (n *validatorIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
+	vali := formatValidatorLink(format, n.ValidatorIndex)
+	epoch := ""
 	if n.IsOffline {
-		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is offline since epoch <a href="https://%[3]v/epoch/%[2]s">%[2]s</a>.`, n.ValidatorIndex, n.LatestState, utils.Config.Frontend.SiteDomain)
-		} else {
-			return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.LatestState)
-		}
+		epoch = formatEpochLink(format, n.LatestState)
 	} else {
-		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is back online since epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a>.`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-		} else {
-			return fmt.Sprintf(`Validator %v is back online since epoch %v.`, n.ValidatorIndex, n.Epoch)
-		}
+		epoch = formatEpochLink(format, n.Epoch)
+	}
+	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+
+	if n.IsOffline {
+		return fmt.Sprintf(`Validator %v%v is offline since epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+	} else {
+		return fmt.Sprintf(`Validator %v%v is back online since epoch %v.`, vali, dashboardAndGroupInfo, epoch)
 	}
 }
 
@@ -118,14 +142,6 @@ func (n *validatorIsOfflineNotification) GetTitle() string {
 	}
 }
 
-func (n *validatorIsOfflineNotification) GetInfoMarkdown() string {
-	if n.IsOffline {
-		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is offline since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-	} else {
-		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is back online since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-	}
-}
-
 type validatorAttestationNotification struct {
 	types.NotificationBaseImpl
 
@@ -134,26 +150,41 @@ type validatorAttestationNotification struct {
 	Status             uint64 // * Can be 0 = scheduled | missed, 1 executed
 }
 
-func (n *validatorAttestationNotification) GetInfo(includeUrl bool) string {
-	vali := strconv.FormatUint(n.ValidatorIndex, 10)
-	epoch := strconv.FormatUint(n.Epoch, 10)
-	if includeUrl {
-		vali = fmt.Sprintf(`<a href="https://%[1]v/validator/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex)
-		epoch = fmt.Sprintf(`<a href="https://%[1]v/epoch/%[2]v">%[2]v</a>`, utils.Config.Frontend.SiteDomain, n.Epoch)
-	}
+func (n *validatorAttestationNotification) GetInfo(format types.NotificationFormat) string {
+	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+	vali := formatValidatorLink(format, n.ValidatorIndex)
+	epoch := formatEpochLink(format, n.Epoch)
 
-	dashboardAndGroupInfo := ""
-	if n.DashboardId != nil {
-		dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomain, n.DashboardGroupName, n.DashboardName, *n.DashboardId)
+	switch format {
+	case types.NotifciationFormatHtml:
+		switch n.Status {
+		case 0:
+			return fmt.Sprintf(`Validator %s%s missed an attestation in epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+		case 1:
+			return fmt.Sprintf(`Validator %s%s submitted a successful attestation for epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+		default:
+			return "-"
+		}
+	case types.NotifciationFormatText:
+		switch n.Status {
+		case 0:
+			return fmt.Sprintf(`Validator %s%s missed an attestation in epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+		case 1:
+			return fmt.Sprintf(`Validator %s%s submitted a successful attestation for epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+		default:
+			return "-"
+		}
+	case types.NotifciationFormatMarkdown:
+		switch n.Status {
+		case 0:
+			return fmt.Sprintf(`Validator %s%s missed an attestation in epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+		case 1:
+			return fmt.Sprintf(`Validator %s%s submitted a successful attestation for epoch %s.`, vali, dashboardAndGroupInfo, epoch)
+		default:
+			return "-"
+		}
 	}
-	switch n.Status {
-	case 0:
-		return fmt.Sprintf(`Validator %s%s missed an attestation in epoch %s.`, vali, dashboardAndGroupInfo, epoch)
-	case 1:
-		return fmt.Sprintf(`Validator %s%s submitted a successful attestation for epoch %s.`, vali, dashboardAndGroupInfo, epoch)
-	default:
-		return "-"
-	}
+	return ""
 }
 
 func (n *validatorAttestationNotification) GetTitle() string {
@@ -166,26 +197,6 @@ func (n *validatorAttestationNotification) GetTitle() string {
 	return "-"
 }
 
-func (n *validatorAttestationNotification) GetInfoMarkdown() string {
-	var generalPart = ""
-	if n.DashboardId == nil { // leagcy notifications
-		switch n.Status {
-		case 0:
-			generalPart = fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) missed an attestation in epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-		case 1:
-			generalPart = fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) submitted a successful attestation in epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
-		}
-	} else { // dashboard based notifications
-		switch n.Status {
-		case 0:
-			generalPart = fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) of Group **%[4]v** in Dashboard [%[4]v](https://%[3]v/dashboard/%[6]v) missed an attestation in epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.DashboardGroupName, n.DashboardName, n.DashboardId)
-		case 1:
-			generalPart = fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) of Group **%[4]v** in Dashboard [%[4]v](https://%[3]v/dashboard/%[6]v) submitted a successful attestation for epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain, n.DashboardGroupName, n.DashboardName, n.DashboardId)
-		}
-	}
-	return generalPart
-}
-
 type validatorGotSlashedNotification struct {
 	types.NotificationBaseImpl
 
@@ -194,21 +205,17 @@ type validatorGotSlashedNotification struct {
 	Reason         string
 }
 
-func (n *validatorGotSlashedNotification) GetInfo(includeUrl bool) string {
-	generalPart := fmt.Sprintf(`Validator %v has been slashed at epoch %v by validator %v for %s.`, n.ValidatorIndex, n.Epoch, n.Slasher, n.Reason)
-	if includeUrl {
-		return generalPart
-	}
-	return generalPart
+func (n *validatorGotSlashedNotification) GetInfo(format types.NotificationFormat) string {
+	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+	vali := formatValidatorLink(format, n.ValidatorIndex)
+	epoch := formatEpochLink(format, n.Epoch)
+	slasher := formatValidatorLink(format, n.Slasher)
+
+	return fmt.Sprintf(`Validator %v%v has been slashed at epoch %v by validator %v for %s.`, vali, dashboardAndGroupInfo, epoch, slasher, n.Reason)
 }
 
 func (n *validatorGotSlashedNotification) GetTitle() string {
 	return "Validator got Slashed"
-}
-
-func (n *validatorGotSlashedNotification) GetInfoMarkdown() string {
-	generalPart := fmt.Sprintf(`Validator [%[1]v](https://%[5]v/validator/%[1]v) has been slashed at epoch [%[2]v](https://%[5]v/epoch/%[2]v) by validator [%[3]v](https://%[5]v/validator/%[3]v) for %[4]s.`, n.ValidatorIndex, n.Epoch, n.Slasher, n.Reason, utils.Config.Frontend.SiteDomain)
-	return generalPart
 }
 
 type validatorWithdrawalNotification struct {
@@ -221,21 +228,17 @@ type validatorWithdrawalNotification struct {
 	Address        []byte
 }
 
-func (n *validatorWithdrawalNotification) GetInfo(includeUrl bool) string {
-	generalPart := fmt.Sprintf(`An automatic withdrawal of %v has been processed for validator %v.`, utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false), n.ValidatorIndex)
-	if includeUrl {
-		return generalPart
-	}
+func (n *validatorWithdrawalNotification) GetInfo(format types.NotificationFormat) string {
+	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+	vali := formatValidatorLink(format, n.ValidatorIndex)
+	amount := utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false)
+	generalPart := fmt.Sprintf(`An automatic withdrawal of %s has been processed for validator %s%s.`, amount, vali, dashboardAndGroupInfo)
+
 	return generalPart
 }
 
 func (n *validatorWithdrawalNotification) GetTitle() string {
 	return "Withdrawal Processed"
-}
-
-func (n *validatorWithdrawalNotification) GetInfoMarkdown() string {
-	generalPart := fmt.Sprintf(`An automatic withdrawal of %[2]v has been processed for validator [%[1]v](https://%[6]v/validator/%[1]v) during slot [%[3]v](https://%[6]v/slot/%[3]v). The funds have been sent to: [%[4]v](https://%[6]v/address/0x%[5]x).`, n.ValidatorIndex, utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false), n.Slot, utils.FormatHashRaw(n.Address), n.Address, utils.Config.Frontend.SiteDomain)
-	return generalPart
 }
 
 type ethClientNotification struct {
@@ -244,9 +247,11 @@ type ethClientNotification struct {
 	EthClient string
 }
 
-func (n *ethClientNotification) GetInfo(includeUrl bool) string {
-	generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
-	if includeUrl {
+func (n *ethClientNotification) GetInfo(format types.NotificationFormat) string {
+
+	switch format {
+	case types.NotifciationFormatHtml:
+		generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
 		url := ""
 		switch n.EthClient {
 		case "Geth":
@@ -274,44 +279,44 @@ func (n *ethClientNotification) GetInfo(includeUrl bool) string {
 		}
 
 		return generalPart + " " + url
+	case types.NotifciationFormatText:
+		return fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
+	case types.NotifciationFormatMarkdown:
+		url := ""
+		switch n.EthClient {
+		case "Geth":
+			url = "https://github.com/ethereum/go-ethereum/releases"
+		case "Nethermind":
+			url = "https://github.com/NethermindEth/nethermind/releases"
+		case "Teku":
+			url = "https://github.com/ConsenSys/teku/releases"
+		case "Prysm":
+			url = "https://github.com/prysmaticlabs/prysm/releases"
+		case "Nimbus":
+			url = "https://github.com/status-im/nimbus-eth2/releases"
+		case "Lighthouse":
+			url = "https://github.com/sigp/lighthouse/releases"
+		case "Erigon":
+			url = "https://github.com/erigontech/erigon/releases"
+		case "Rocketpool":
+			url = "https://github.com/rocket-pool/smartnode-install/releases"
+		case "MEV-Boost":
+			url = "https://github.com/flashbots/mev-boost/releases"
+		case "Lodestar":
+			url = "https://github.com/chainsafe/lodestar/releases"
+		default:
+			url = "https://beaconcha.in/ethClients"
+		}
+
+		generalPart := fmt.Sprintf(`A new version for [%s](%s) is available.`, n.EthClient, url)
+
+		return generalPart
 	}
-	return generalPart
+	return ""
 }
 
 func (n *ethClientNotification) GetTitle() string {
 	return fmt.Sprintf("New %s update", n.EthClient)
-}
-
-func (n *ethClientNotification) GetInfoMarkdown() string {
-	url := ""
-	switch n.EthClient {
-	case "Geth":
-		url = "https://github.com/ethereum/go-ethereum/releases"
-	case "Nethermind":
-		url = "https://github.com/NethermindEth/nethermind/releases"
-	case "Teku":
-		url = "https://github.com/ConsenSys/teku/releases"
-	case "Prysm":
-		url = "https://github.com/prysmaticlabs/prysm/releases"
-	case "Nimbus":
-		url = "https://github.com/status-im/nimbus-eth2/releases"
-	case "Lighthouse":
-		url = "https://github.com/sigp/lighthouse/releases"
-	case "Erigon":
-		url = "https://github.com/erigontech/erigon/releases"
-	case "Rocketpool":
-		url = "https://github.com/rocket-pool/smartnode-install/releases"
-	case "MEV-Boost":
-		url = "https://github.com/flashbots/mev-boost/releases"
-	case "Lodestar":
-		url = "https://github.com/chainsafe/lodestar/releases"
-	default:
-		url = "https://beaconcha.in/ethClients"
-	}
-
-	generalPart := fmt.Sprintf(`A new version for [%s](%s) is available.`, n.EthClient, url)
-
-	return generalPart
 }
 
 type MachineEvents struct {
@@ -328,7 +333,7 @@ type monitorMachineNotification struct {
 	MachineName string
 }
 
-func (n *monitorMachineNotification) GetInfo(includeUrl bool) string {
+func (n *monitorMachineNotification) GetInfo(format types.NotificationFormat) string {
 	switch n.EventName {
 	case types.MonitoringMachineDiskAlmostFullEventName:
 		return fmt.Sprintf(`Your staking machine "%v" is running low on storage space.`, n.MachineName)
@@ -366,10 +371,6 @@ func (n *monitorMachineNotification) GetTitle() string {
 
 func (n *monitorMachineNotification) GetEventFilter() string {
 	return n.MachineName
-}
-
-func (n *monitorMachineNotification) GetInfoMarkdown() string {
-	return n.GetInfo(false)
 }
 
 type taxReportNotification struct {
@@ -410,7 +411,7 @@ func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
 	return &types.EmailAttachment{Attachment: pdf, Name: fmt.Sprintf("income_history_%v_%v.pdf", firstDay.Format("20060102"), lastDay.Format("20060102"))}
 }
 
-func (n *taxReportNotification) GetInfo(includeUrl bool) string {
+func (n *taxReportNotification) GetInfo(format types.NotificationFormat) string {
 	generalPart := `Please find attached the income history of your selected validators.`
 	return generalPart
 }
@@ -423,26 +424,22 @@ func (n *taxReportNotification) GetEventFilter() string {
 	return n.EventFilter
 }
 
-func (n *taxReportNotification) GetInfoMarkdown() string {
-	return n.GetInfo(false)
-}
-
 type networkNotification struct {
 	types.NotificationBaseImpl
 }
 
-func (n *networkNotification) GetInfo(includeUrl bool) string {
-	generalPart := fmt.Sprintf(`Network experienced finality issues. Learn more at https://%v/charts/network_liveness`, utils.Config.Frontend.SiteDomain)
-	return generalPart
+func (n *networkNotification) GetInfo(format types.NotificationFormat) string {
+	switch format {
+	case types.NotifciationFormatHtml, types.NotifciationFormatText:
+		return fmt.Sprintf(`Network experienced finality issues. Learn more at https://%v/charts/network_liveness`, utils.Config.Frontend.SiteDomain)
+	case types.NotifciationFormatMarkdown:
+		return fmt.Sprintf(`Network experienced finality issues. [Learn more](https://%v/charts/network_liveness)`, utils.Config.Frontend.SiteDomain)
+	}
+	return ""
 }
 
 func (n *networkNotification) GetTitle() string {
 	return "Beaconchain Network Issues"
-}
-
-func (n *networkNotification) GetInfoMarkdown() string {
-	generalPart := fmt.Sprintf(`Network experienced finality issues ([view chart](https://%v/charts/network_liveness)).`, utils.Config.Frontend.SiteDomain)
-	return generalPart
 }
 
 type rocketpoolNotification struct {
@@ -450,7 +447,7 @@ type rocketpoolNotification struct {
 	ExtraData string
 }
 
-func (n *rocketpoolNotification) GetInfo(includeUrl bool) string {
+func (n *rocketpoolNotification) GetInfo(format types.NotificationFormat) string {
 	switch n.EventName {
 	case types.RocketpoolCommissionThresholdEventName:
 		return fmt.Sprintf(`The current RPL commission rate of %v has reached your configured threshold.`, n.ExtraData)
@@ -461,7 +458,7 @@ func (n *rocketpoolNotification) GetInfo(includeUrl bool) string {
 	case types.RocketpoolCollateralMinReached:
 		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
 	case types.SyncCommitteeSoon:
-		return getSyncCommitteeSoonInfo(map[types.EventFilter]types.Notification{
+		return getSyncCommitteeSoonInfo(format, map[types.EventFilter]types.Notification{
 			types.EventFilter(n.EventFilter): n,
 		})
 	}
@@ -483,10 +480,6 @@ func (n *rocketpoolNotification) GetTitle() string {
 		return `Sync Committee Duty`
 	}
 	return ""
-}
-
-func (n *rocketpoolNotification) GetInfoMarkdown() string {
-	return n.GetInfo(false)
 }
 
 type syncCommitteeSoonNotification struct {
