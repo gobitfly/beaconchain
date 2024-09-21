@@ -1498,13 +1498,6 @@ func collectSyncCommitteeNotifications(notificationsByUserID types.Notifications
 	}
 
 	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoon, "(last_sent_ts <= NOW() - INTERVAL '26 hours' OR last_sent_ts IS NULL)", nil, nil, validatorDashboardConfig)
-	// err = db.FrontendWriterDB.Select(&dbResult, `
-	// 			SELECT us.id, us.user_id, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') as unsubscribe_hash
-	// 			FROM users_subscriptions AS us
-	// 			WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '26 hours' OR us.last_sent_ts IS NULL) AND event_filter = ANY($2);
-	// 			`,
-	// 	utils.GetNetwork()+":"+string(eventName), pq.StringArray(pubKeys),
-	// )
 
 	if err != nil {
 		return err
@@ -1539,7 +1532,7 @@ func collectSyncCommitteeNotifications(notificationsByUserID types.Notifications
 	return nil
 }
 
-func getSyncCommitteeSoonInfo(ns map[types.EventFilter]types.Notification) string {
+func getSyncCommitteeSoonInfo(format types.NotificationFormat, ns map[types.EventFilter]types.Notification) string {
 	validators := []uint64{}
 	var startEpoch, endEpoch uint64
 	var inTime time.Duration
@@ -1564,21 +1557,25 @@ func getSyncCommitteeSoonInfo(ns map[types.EventFilter]types.Notification) strin
 	}
 
 	if len(validators) > 0 {
+		startEpochFormatted := formatEpochLink(format, startEpoch)
+		endEpochFormatted := formatEpochLink(format, endEpoch)
 		validatorsInfo := ""
 		if len(validators) == 1 {
-			validatorsInfo = fmt.Sprintf(`Your validator %d has been elected to be part of the next sync committee.`, validators[0])
+			vali := formatValidatorLink(format, validators[0])
+			validatorsInfo = fmt.Sprintf(`Your validator %s has been elected to be part of the next sync committee.`, vali)
 		} else {
 			validatorsText := ""
 			for i, validator := range validators {
+				vali := formatValidatorLink(format, validator)
 				if i < len(validators)-1 {
-					validatorsText += fmt.Sprintf("%d, ", validator)
+					validatorsText += fmt.Sprintf("%v, ", vali)
 				} else {
-					validatorsText += fmt.Sprintf("and %d", validator)
+					validatorsText += fmt.Sprintf("and %v", vali)
 				}
 			}
 			validatorsInfo = fmt.Sprintf(`Your validators %s have been elected to be part of the next sync committee.`, validatorsText)
 		}
-		return fmt.Sprintf(`%s The additional duties start at epoch %d, which is in %v and will last for about a day until epoch %d.`, validatorsInfo, startEpoch, inTime, endEpoch)
+		return fmt.Sprintf(`%s The additional duties start at epoch %v, which is in %v and will last for about a day until epoch %v.`, validatorsInfo, startEpochFormatted, inTime, endEpochFormatted)
 	}
 
 	return ""
