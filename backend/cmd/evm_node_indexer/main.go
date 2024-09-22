@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"eth2-exporter/hexutil"
 	"flag"
 	"fmt"
 	"io"
@@ -23,6 +22,7 @@ import (
 	eth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -89,6 +89,7 @@ var elClient *ethclient.Client
 var reorgDepth *int64
 var httpClient *http.Client
 var errorIdentifier *regexp.Regexp
+var eth1RpcEndpoint string
 
 // init
 func init() {
@@ -102,7 +103,7 @@ func init() {
 }
 
 // main
-func main() {
+func Run() {
 	// read / set parameter
 	configPath := flag.String("config", "config/default.config.yml", "Path to the config file")
 	startBlockNumber := flag.Int64("start-block-number", -1, "trigger a REEXPORT, only working in combination with end-block-number, defined block is included, will be the first action done and will quite afterwards, ignore every other action")
@@ -155,6 +156,12 @@ func main() {
 			logrus.Info("reading config completed")
 		}
 		utils.Config = cfg
+
+		if len(utils.Config.Eth1ErigonEndpoint) > 0 {
+			eth1RpcEndpoint = utils.Config.Eth1ErigonEndpoint
+		} else {
+			eth1RpcEndpoint = utils.Config.Eth1GethEndpoint
+		}
 	}
 
 	// check parameters
@@ -221,7 +228,7 @@ func main() {
 	// init el client
 	logrus.Info("init el client endpoint...")
 	// #RECY IMPROVE split http / ws endpoint, http is mandatory, ws optional - So add an http/ws config entry, where ws is optional (to use subscribe)
-	elClient, err = ethclient.Dial(utils.Config.Eth1RpcEndpoint)
+	elClient, err = ethclient.Dial(eth1RpcEndpoint)
 	if err != nil {
 		log.Fatal(err, "error dialing eth url", 0) // fatal, no point to continue without node connection
 	}
@@ -258,7 +265,7 @@ func main() {
 	// check if reexport requested
 	if *startBlockNumber >= 0 && *endBlockNumber >= 0 && *startBlockNumber <= *endBlockNumber {
 		logrus.Infof("Found REEXPORT for block %s to %s...", _formatInt64(*startBlockNumber), _formatInt64(*endBlockNumber))
-		err := bulkExportBlocksRange(tableBlocksRaw, []intRange{intRange{start: *startBlockNumber, end: *endBlockNumber}}, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
+		err := bulkExportBlocksRange(tableBlocksRaw, []intRange{{start: *startBlockNumber, end: *endBlockNumber}}, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
 		if err != nil {
 			sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, reexport not completed, check logs %s", getChainNamePretty(), *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
 			log.Fatal(err, "error while reexport blocks for bigtable (reexport range)", 0) // fatal, as there is nothing more todo anyway
@@ -307,7 +314,7 @@ func main() {
 		log.Fatal(err, "error while using psqlGetLatestBlock (start / read)", 0) // fatal, as if there is no inital value, we have nothing to start from
 	}
 	var consecutiveErrorCount int
-	consecutiveErrorCountThreshold := 5 // after threshold + 1 errors it will be fatal instead
+	consecutiveErrorCountThreshold := 0 // after threshold + 1 errors it will be fatal instead #TODO not working correct wenn syncing big amount of data, setting meanwhile to 0, as an error will result in a fully retry (which is wrong)
 	for {
 		currentNodeBN := currentNodeBlockNumber.Load()
 		if currentNodeBN < latestPGBlock {
@@ -364,7 +371,7 @@ func main() {
 					}
 
 					// reverse the "fine" list, so we have a "not fine" list
-					wrongHashRanges := []intRange{intRange{start: -1}}
+					wrongHashRanges := []intRange{{start: -1}}
 					wrongHashRangesIndex := 0
 					var i int
 					var failCounter int
@@ -416,7 +423,7 @@ func main() {
 				// fatal, as this is an impossible error
 				log.Fatal(err, "impossible error newerNodeBN < currentNodeBN", 0, map[string]interface{}{"newerNodeBN": newerNodeBN, "currentNodeBN": currentNodeBN})
 			}
-			err = bulkExportBlocksRange(tableBlocksRaw, []intRange{intRange{start: latestPGBlock + 1, end: newerNodeBN}}, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
+			err = bulkExportBlocksRange(tableBlocksRaw, []intRange{{start: latestPGBlock + 1, end: newerNodeBN}}, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
 			// we can try again, as throw a fatal will result in try again anyway
 			if err != nil {
 				consecutiveErrorCount++
@@ -891,7 +898,7 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 	var errorText string
 	gotNewBlockAt := time.Now()
 	timePerBlock := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
-	if strings.HasPrefix(utils.Config.Eth1RpcEndpoint, "ws") {
+	if strings.HasPrefix(eth1RpcEndpoint, "ws") {
 		logrus.Infof("ws node endpoint found, will use subscribe")
 		var timer *time.Timer
 		previousBlock := int64(-1)
@@ -1175,11 +1182,12 @@ func _rpciGetHttpResult(body []byte, nodeRequestsAtOnce int64, count int64) ([][
 		so to avoid a dead lock, we will remove the "batch" and make a single request, which doesn't have this error at all.
 		imho this is a EL bug and should be fixed there, but meanwhile this "workaround" will be fine as well.
 	*/
+	_ = nodeRequestsAtOnce
 	if count == 1 && len(body) > 2 && body[0] == byte('[') && body[len(body)-1] == byte(']') {
 		body = body[1 : len(body)-1]
 	}
 
-	r, err := http.NewRequest("POST", utils.Config.Eth1RpcEndpoint, bytes.NewBuffer(body))
+	r, err := http.NewRequest("POST", eth1RpcEndpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("error creating post request: %w", err)
 	}
