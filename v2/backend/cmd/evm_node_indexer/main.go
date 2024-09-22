@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
-	eth_types "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/hexutil"
@@ -29,7 +29,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gtuk/discordwebhook"
 	"github.com/lib/pq"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 
@@ -123,37 +122,37 @@ func Run() {
 
 	// tell the user about all parameter
 	{
-		logrus.Infof("config set to '%s'", *configPath)
+		log.Infof("config set to '%s'", *configPath)
 		if *startBlockNumber >= 0 {
-			logrus.Infof("start-block-number set to '%s'", _formatInt64(*startBlockNumber))
+			log.Infof("start-block-number set to '%s'", _formatInt64(*startBlockNumber))
 		}
 		if *endBlockNumber >= 0 {
-			logrus.Infof("end-block-number set to '%s'", _formatInt64(*endBlockNumber))
+			log.Infof("end-block-number set to '%s'", _formatInt64(*endBlockNumber))
 		}
-		logrus.Infof("reorg.depth set to '%s'", _formatInt64(*reorgDepth))
-		logrus.Infof("concurrency set to '%s'", _formatInt64(*concurrency))
-		logrus.Infof("node-requests-at-once set to '%s'", _formatInt64(*nodeRequestsAtOnce))
+		log.Infof("reorg.depth set to '%s'", _formatInt64(*reorgDepth))
+		log.Infof("concurrency set to '%s'", _formatInt64(*concurrency))
+		log.Infof("node-requests-at-once set to '%s'", _formatInt64(*nodeRequestsAtOnce))
 		if *skipHoleCheck {
-			logrus.Infof("skip-hole-check set true")
+			log.Infof("skip-hole-check set true")
 		}
 		if *onlyHoleCheck {
-			logrus.Infof("only-hole-check set true")
+			log.Infof("only-hole-check set true")
 		}
 		if *noNewBlocks {
-			logrus.Infof("ignore-new-blocks set true")
+			log.Infof("ignore-new-blocks set true")
 		}
-		logrus.Infof("fatal-if-no-new-block-for-x-seconds set to '%d' seconds", *noNewBlocksThresholdSeconds)
+		log.Infof("fatal-if-no-new-block-for-x-seconds set to '%d' seconds", *noNewBlocksThresholdSeconds)
 	}
 
 	// check config
 	{
-		logrus.WithField("config", *configPath).WithField("version", version.Version).Printf("starting")
+		log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 		cfg := &types.Config{}
 		err := utils.ReadConfig(cfg, *configPath)
 		if err != nil {
 			log.Fatal(err, "error reading config file", 0) // fatal, as there is no point without a config
 		} else {
-			logrus.Info("reading config completed")
+			log.Info("reading config completed")
 		}
 		utils.Config = cfg
 
@@ -166,23 +165,23 @@ func Run() {
 
 	// check parameters
 	if *nodeRequestsAtOnce < 1 {
-		logrus.Warnf("node-requests-at-once set to %s, corrected to 1", _formatInt64(*nodeRequestsAtOnce))
+		log.Warnf("node-requests-at-once set to %s, corrected to 1", _formatInt64(*nodeRequestsAtOnce))
 		*nodeRequestsAtOnce = 1
 	}
 	if *nodeRequestsAtOnce > MAX_NODE_REQUESTS_AT_ONCE {
-		logrus.Warnf("node-requests-at-once set to %s, corrected to %s", _formatInt64(*nodeRequestsAtOnce), _formatInt64(MAX_NODE_REQUESTS_AT_ONCE))
+		log.Warnf("node-requests-at-once set to %s, corrected to %s", _formatInt64(*nodeRequestsAtOnce), _formatInt64(MAX_NODE_REQUESTS_AT_ONCE))
 		*nodeRequestsAtOnce = MAX_NODE_REQUESTS_AT_ONCE
 	}
 	if *reorgDepth < 0 || *reorgDepth > MAX_REORG_DEPTH {
-		logrus.Warnf("reorg.depth parameter set to %s, corrected to %s", _formatInt64(*reorgDepth), _formatInt64(MAX_REORG_DEPTH))
+		log.Warnf("reorg.depth parameter set to %s, corrected to %s", _formatInt64(*reorgDepth), _formatInt64(MAX_REORG_DEPTH))
 		*reorgDepth = MAX_REORG_DEPTH
 	}
 	if *concurrency < 1 {
-		logrus.Warnf("concurrency parameter set to %s, corrected to 1", _formatInt64(*concurrency))
+		log.Warnf("concurrency parameter set to %s, corrected to 1", _formatInt64(*concurrency))
 		*concurrency = 1
 	}
 	if *noNewBlocksThresholdSeconds < 30 {
-		logrus.Warnf("fatal-if-no-new-block-for-x-seconds set to %d, corrected to 30", *noNewBlocksThresholdSeconds)
+		log.Warnf("fatal-if-no-new-block-for-x-seconds set to %d, corrected to 30", *noNewBlocksThresholdSeconds)
 		*noNewBlocksThresholdSeconds = 30
 	}
 
@@ -209,11 +208,11 @@ func Run() {
 		}, "pgx", "postgres")
 		defer db.ReaderDb.Close()
 		defer db.WriterDb.Close()
-		logrus.Info("starting postgres completed")
+		log.Info("starting postgres completed")
 	}
 
 	// init bigtable
-	logrus.Info("init BT...")
+	log.Info("init BT...")
 	btClient, err := gcp_bigtable.NewClient(context.Background(), utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, option.WithGRPCConnectionPool(1))
 	if err != nil {
 		log.Fatal(err, "creating new client for Bigtable", 0) // fatal, no point to continue without BT
@@ -223,20 +222,20 @@ func Run() {
 		log.Fatal(err, "open blocks-raw table", 0) // fatal, no point to continue without BT
 	}
 	defer btClient.Close()
-	logrus.Info("...init BT done.")
+	log.Info("...init BT done.")
 
 	// init el client
-	logrus.Info("init el client endpoint...")
+	log.Info("init el client endpoint...")
 	// #RECY IMPROVE split http / ws endpoint, http is mandatory, ws optional - So add an http/ws config entry, where ws is optional (to use subscribe)
 	elClient, err = ethclient.Dial(eth1RpcEndpoint)
 	if err != nil {
 		log.Fatal(err, "error dialing eth url", 0) // fatal, no point to continue without node connection
 	}
-	logrus.Info("...init el client endpoint done.")
+	log.Info("...init el client endpoint done.")
 
 	// check chain id
 	{
-		logrus.Info("check chain id...")
+		log.Info("check chain id...")
 		chainID, err := rpciGetChainId()
 		if chainID == ARBITRUM_CHAINID { // #RECY REMOVE currently necessary as there is no default config / setting in utils for Arbitrum
 			utils.Config.Chain.Id = ARBITRUM_CHAINID
@@ -250,13 +249,13 @@ func Run() {
 		if chainID != utils.Config.Chain.Id { // if the chain id is removed from the config, just remove this if, there is no point, except checking consistency
 			log.Fatal(err, "node chain different from config chain", 0) // fatal, config doesn't match node
 		}
-		logrus.Info("...check chain id done.")
+		log.Info("...check chain id done.")
 	}
 
 	// get latest block (as it's global, so we have a initial value)
-	logrus.Info("get latest block from node...")
+	log.Info("get latest block from node...")
 	updateBlockNumber(true, *noNewBlocks, time.Duration(*noNewBlocksThresholdSeconds)*time.Second, discordWebhookReportUrl, discordWebhookUser, discordWebhookAddTextFatal)
-	logrus.Infof("...get latest block (%s) from node done.", _formatInt64(currentNodeBlockNumber.Load()))
+	log.Infof("...get latest block (%s) from node done.", _formatInt64(currentNodeBlockNumber.Load()))
 
 	// //////////////////////////////////////////
 	// Config done, now actually "doing" stuff //
@@ -264,21 +263,21 @@ func Run() {
 
 	// check if reexport requested
 	if *startBlockNumber >= 0 && *endBlockNumber >= 0 && *startBlockNumber <= *endBlockNumber {
-		logrus.Infof("Found REEXPORT for block %s to %s...", _formatInt64(*startBlockNumber), _formatInt64(*endBlockNumber))
+		log.Infof("Found REEXPORT for block %s to %s...", _formatInt64(*startBlockNumber), _formatInt64(*endBlockNumber))
 		err := bulkExportBlocksRange(tableBlocksRaw, []intRange{{start: *startBlockNumber, end: *endBlockNumber}}, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
 		if err != nil {
 			sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, reexport not completed, check logs %s", getChainNamePretty(), *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
 			log.Fatal(err, "error while reexport blocks for bigtable (reexport range)", 0) // fatal, as there is nothing more todo anyway
 		}
-		logrus.Info("Job done, have a nice day :)")
+		log.Info("Job done, have a nice day :)")
 		return
 	}
 
 	// find holes in our previous runs / sanity check
 	if *skipHoleCheck {
-		logrus.Warn("Skipping hole check!")
+		log.Warn("Skipping hole check!")
 	} else {
-		logrus.Info("Checking for holes...")
+		log.Info("Checking for holes...")
 		startTime := time.Now()
 		missingBlocks, err := psqlFindGaps() // find the holes
 		findHolesTook := time.Since(startTime)
@@ -287,31 +286,31 @@ func Run() {
 		}
 		l := len(missingBlocks)
 		if l > 0 { // some holes found
-			logrus.Warnf("Found %s missing block ranges in %v, fixing them now...", _formatInt(l), findHolesTook)
+			log.Warnf("Found %s missing block ranges in %v, fixing them now...", _formatInt(l), findHolesTook)
 			if l <= 10 {
-				logrus.Warnf("%v", missingBlocks)
+				log.Warnf("%v", missingBlocks)
 			} else {
-				logrus.Warnf("%v<...>", missingBlocks[:10])
+				log.Warnf("%v<...>", missingBlocks[:10])
 			}
 			startTime = time.Now()
 			err := bulkExportBlocksRange(tableBlocksRaw, missingBlocks, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser) // reexport the holes
 			if err != nil {
 				log.Fatal(err, "error while reexport blocks for bigtable (fixing holes)", 0) // fatal, as if we wanna start with holes, we should set the skip-hole-check parameter
 			}
-			logrus.Warnf("...fixed them in %v", time.Since(startTime))
+			log.Warnf("...fixed them in %v", time.Since(startTime))
 		} else {
-			logrus.Infof("...no missing block found in %v", findHolesTook)
+			log.Infof("...no missing block found in %v", findHolesTook)
 		}
 	}
 	if *onlyHoleCheck {
-		logrus.Info("only-hole-check set, job done, have a nice day :)")
+		log.Info("only-hole-check set, job done, have a nice day :)")
 		return
 	}
 
 	// waiting for new blocks and export them, while checking reorg before every new block
 	latestPGBlock, err := psqlGetLatestBlock(false)
 	if err != nil {
-		log.Fatal(err, "error while using psqlGetLatestBlock (start / read)", 0) // fatal, as if there is no inital value, we have nothing to start from
+		log.Fatal(err, "error while using psqlGetLatestBlock (start / read)", 0) // fatal, as if there is no initial value, we have nothing to start from
 	}
 	var consecutiveErrorCount int
 	consecutiveErrorCountThreshold := 0 // after threshold + 1 errors it will be fatal instead #TODO not working correct wenn syncing big amount of data, setting meanwhile to 0, as an error will result in a fully retry (which is wrong)
@@ -397,8 +396,8 @@ func Run() {
 						// fatal, as this is an impossible error
 						log.Fatal(err, "impossible error failureLength != len(blockRawData)-matchingLength", 0, map[string]interface{}{"failCounter": failCounter, "len(blockRawData)-matchingLength": len(blockRawData) - matchingLength})
 					}
-					logrus.Infof("found %s wrong hashes when checking for reorgs, reexporting them now...", _formatInt(failCounter))
-					logrus.Infof("%v", wrongHashRanges)
+					log.Infof("found %s wrong hashes when checking for reorgs, reexporting them now...", _formatInt(failCounter))
+					log.Infof("%v", wrongHashRanges)
 
 					// export the hits again
 					err = bulkExportBlocksRange(tableBlocksRaw, wrongHashRanges, *concurrency, *nodeRequestsAtOnce, discordWebhookBlockThreshold, discordWebhookReportUrl, discordWebhookUser)
@@ -412,7 +411,7 @@ func Run() {
 						}
 						continue
 					} else {
-						logrus.Info("...done. Everything fine with reorgs again.")
+						log.Info("...done. Everything fine with reorgs again.")
 					}
 				}
 			}
@@ -451,7 +450,7 @@ func Run() {
 
 			// reset consecutive error count if no change during this run
 			if consecutiveErrorCount > 0 {
-				logrus.Infof("reset consecutive error count to 0, as no error in this run (was %d)", consecutiveErrorCount)
+				log.Infof("reset consecutive error count to 0, as no error in this run (was %d)", consecutiveErrorCount)
 				consecutiveErrorCount = 0
 			}
 		}
@@ -469,17 +468,9 @@ func _bulkExportBlocksHandler(tableBlocksRaw *gcp_bigtable.Table, blockRawData [
 			{
 				s := errorIdentifier.FindStringSubmatch(err.Error())
 				if len(s) >= 2 { // if we have a valid json error available, should be the case if it's a node issue
-					logrus.WithFields(logrus.Fields{
-						"deep":     deep,
-						"cause":    s[1],
-						"0block":   blockRawData[0].blockNumber,
-						"elements": elementCount}).Warnf("got an error and will try to fix it (sub)")
+					log.WarnWithFields(log.Fields{"deep": deep, "cause": s[1], "0block": blockRawData[0].blockNumber, "elements": elementCount}, "got an error and will try to fix it (sub)")
 				} else { // if we have a no json error available, should be the case if it's a BT or Postgres issue
-					logrus.WithFields(logrus.Fields{
-						"deep":     deep,
-						"cause":    err,
-						"0block":   blockRawData[0].blockNumber,
-						"elements": elementCount}).Warnf("got an error and will try to fix it (err)")
+					log.WarnWithFields(log.Fields{"deep": deep, "cause": err, "0block": blockRawData[0].blockNumber, "elements": elementCount}, "got an error and will try to fix it (err)")
 				}
 			}
 
@@ -552,7 +543,7 @@ func _bulkExportBlocksImpl(tableBlocksRaw *gcp_bigtable.Table, blockRawData []fu
 			mut := gcp_bigtable.NewMutation()
 			mut.Set(BT_COLUMNFAMILY_BLOCK, BT_COLUMN_BLOCK, gcp_bigtable.Timestamp(0), v.blockCompressed)
 			if len(v.receiptsCompressed) < 1 {
-				logrus.Warnf("empty receipts at block %d lRec %d lTxs %d", v.blockNumber, len(v.receiptsCompressed), len(v.blockTxs))
+				log.Warnf("empty receipts at block %d lRec %d lTxs %d", v.blockNumber, len(v.receiptsCompressed), len(v.blockTxs))
 			}
 			mut.Set(BT_COLUMNFAMILY_RECEIPTS, BT_COLUMN_RECEIPTS, gcp_bigtable.Timestamp(0), v.receiptsCompressed)
 			mut.Set(BT_COLUMNFAMILY_TRACES, BT_COLUMN_TRACES, gcp_bigtable.Timestamp(0), v.tracesCompressed)
@@ -560,7 +551,7 @@ func _bulkExportBlocksImpl(tableBlocksRaw *gcp_bigtable.Table, blockRawData []fu
 				mut.Set(BT_COLUMNFAMILY_UNCLES, BT_COLUMN_UNCLES, gcp_bigtable.Timestamp(0), v.unclesCompressed)
 			}
 			muts = append(muts, mut)
-			keys = append(keys, fmt.Sprintf("%d:%12d", utils.Config.Chain.Id, MAX_EL_BLOCK_NUMBER-int64(v.blockNumber)))
+			keys = append(keys, fmt.Sprintf("%d:%12d", utils.Config.Chain.Id, MAX_EL_BLOCK_NUMBER-v.blockNumber))
 		}
 
 		// write
@@ -603,9 +594,9 @@ func bulkExportBlocksRange(tableBlocksRaw *gcp_bigtable.Table, blockRanges []int
 		}
 
 		if l == 1 {
-			logrus.Infof("Only 1 range found, started export of blocks %s to %s, total block amount %s, using an updater every %d seconds for more details.", _formatInt64(blockRanges[0].start), _formatInt64(blockRanges[0].end), _formatInt64(blocksTotalCount), OUTPUT_CYCLE_IN_SECONDS)
+			log.Infof("Only 1 range found, started export of blocks %s to %s, total block amount %s, using an updater every %d seconds for more details.", _formatInt64(blockRanges[0].start), _formatInt64(blockRanges[0].end), _formatInt64(blocksTotalCount), OUTPUT_CYCLE_IN_SECONDS)
 		} else {
-			logrus.Infof("%d ranges found, total block amount %d, using an updater every %d seconds for more details.", l, blocksTotalCount, OUTPUT_CYCLE_IN_SECONDS)
+			log.Infof("%d ranges found, total block amount %d, using an updater every %d seconds for more details.", l, blocksTotalCount, OUTPUT_CYCLE_IN_SECONDS)
 		}
 	}
 
@@ -644,7 +635,7 @@ func bulkExportBlocksRange(tableBlocksRaw *gcp_bigtable.Table, blockRanges []int
 			blocksPerSecondTotal := float64(bpt) / time.Since(totalStart).Seconds()
 			durationRemainingTotal := time.Second * time.Duration(float64(totalBlocks-bpt)/float64(blocksPerSecondTotal))
 
-			logrus.Infof("current speed: %0.1f b/s %0.1f t/s %s remain %s total %0.2fh (=%0.2fd to go)", blocksPerSecond, blocksPerSecondTotal, _formatInt64(totalBlocks-bpt), _formatInt64(totalBlocks), durationRemainingTotal.Hours(), durationRemainingTotal.Hours()/24)
+			log.Infof("current speed: %0.1f b/s %0.1f t/s %s remain %s total %0.2fh (=%0.2fd to go)", blocksPerSecond, blocksPerSecondTotal, _formatInt64(totalBlocks-bpt), _formatInt64(totalBlocks), durationRemainingTotal.Hours(), durationRemainingTotal.Hours()/24)
 			exportStart = newStart
 			if lastDiscordReportAtBlocksProcessedTotal+(*discordWebhookBlockThreshold) <= bpt {
 				lastDiscordReportAtBlocksProcessedTotal += (*discordWebhookBlockThreshold)
@@ -671,7 +662,7 @@ Loop:
 					blockRawDataLen++
 					current++
 				} else {
-					logrus.Warnf("tried to export block %d, but latest block on node is %d, so stopping all further export till %d", current, currentNodeBlockNumberLocalCopy, blockRange.end)
+					log.Warnf("tried to export block %d, but latest block on node is %d, so stopping all further export till %d", current, currentNodeBlockNumberLocalCopy, blockRange.end)
 					current = blockRange.end + 1
 				}
 			}
@@ -899,12 +890,12 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 	gotNewBlockAt := time.Now()
 	timePerBlock := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
 	if strings.HasPrefix(eth1RpcEndpoint, "ws") {
-		logrus.Infof("ws node endpoint found, will use subscribe")
+		log.Infof("ws node endpoint found, will use subscribe")
 		var timer *time.Timer
 		previousBlock := int64(-1)
 		newestBlock := int64(-1)
 		for {
-			headers := make(chan *eth_types.Header)
+			headers := make(chan *gethtypes.Header)
 			sub, err := rpciSubscribeNewHead(headers)
 			if err != nil {
 				errorText = "error, init subscribe for new head"
@@ -937,10 +928,7 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 
 			durationSinceLastBlockReceived := time.Since(gotNewBlockAt)
 			if durationSinceLastBlockReceived < noNewBlocksThresholdDuration/3*2 {
-				logrus.WithFields(logrus.Fields{
-					"durationSinceLastBlockReceived": durationSinceLastBlockReceived,
-					"error":                          err,
-				}).Warn(errorText)
+				log.WarnWithFields(log.Fields{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "error": err}, errorText)
 			} else if durationSinceLastBlockReceived < noNewBlocksThresholdDuration {
 				log.Error(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
 			} else {
@@ -953,7 +941,7 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 			time.Sleep(timePerBlock) // Sleep for 1 block in case of an error
 		}
 	} else { // no ws node endpoint available
-		logrus.Infof("no ws node endpoint found, can't use subscribe")
+		log.Infof("no ws node endpoint found, can't use subscribe")
 		errorText := "error, no new block for a longer time"
 		for {
 			time.Sleep(timePerBlock / 2) // wait half a block
@@ -976,12 +964,7 @@ func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDur
 			} else if durationSinceLastBlockReceived >= noNewBlocksThresholdDuration/3*2 {
 				log.Error(err, errorText, 0, map[string]interface{}{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "previousBlock": previousBlock, "newestBlock": newestBlock})
 			} else if durationSinceLastBlockReceived >= noNewBlocksThresholdDuration/3 {
-				logrus.WithFields(logrus.Fields{
-					"durationSinceLastBlockReceived": durationSinceLastBlockReceived,
-					"error":                          err,
-					"previousBlock":                  previousBlock,
-					"newestBlock":                    newestBlock,
-				}).Warn(errorText)
+				log.WarnWithFields(log.Fields{"durationSinceLastBlockReceived": durationSinceLastBlockReceived, "error": err, "previousBlock": previousBlock, "newestBlock": newestBlock}, errorText)
 			}
 		}
 	}
@@ -1171,7 +1154,7 @@ func rpciGetLatestBlock() (int64, error) {
 }
 
 // subscribe for latest block
-func rpciSubscribeNewHead(ch chan<- *eth_types.Header) (ethereum.Subscription, error) {
+func rpciSubscribeNewHead(ch chan<- *gethtypes.Header) (ethereum.Subscription, error) {
 	return elClient.SubscribeNewHead(context.Background(), ch)
 }
 
@@ -1187,7 +1170,7 @@ func _rpciGetHttpResult(body []byte, nodeRequestsAtOnce int64, count int64) ([][
 		body = body[1 : len(body)-1]
 	}
 
-	r, err := http.NewRequest("POST", eth1RpcEndpoint, bytes.NewBuffer(body))
+	r, err := http.NewRequest(http.MethodPost, eth1RpcEndpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("error creating post request: %w", err)
 	}
@@ -1341,7 +1324,6 @@ func _rpciGetBulkRawTransactionReceipts(blockRawData []fullBlockRawData, nodeReq
 				blockRawData[blockRawDataWriteIndex].receiptsCompressed = compress(vv)
 				blockRawDataWriteIndex++
 			}
-
 		}
 	}
 
@@ -1400,7 +1382,7 @@ func rpciGetBulkBlockRawData(blockRawData []fullBlockRawData, nodeRequestsAtOnce
 		{
 			blockParsedResultNumber := int64(binary.BigEndian.Uint64(append(make([]byte, 8-len(blockParsed.Result.Number)), blockParsed.Result.Number...)))
 			if blockRawData[i].blockNumber != blockParsedResultNumber {
-				logrus.Errorf("blockRawData[i].block_number '%d' doesn't match blockParsed.Result.Number '%d'", blockRawData[i].blockNumber, blockParsedResultNumber)
+				log.Error(nil, "Doesn't match", 0, map[string]interface{}{"blockRawData[i].blockNumber": blockRawData[i].blockNumber, "blockParsedResultNumber": blockParsedResultNumber})
 			}
 		}
 
@@ -1476,7 +1458,7 @@ func rpciGetBulkBlockRawHash(blockRawData []fullBlockRawData, nodeRequestsAtOnce
 		{
 			blockParsedResultNumber := int64(binary.BigEndian.Uint64(append(make([]byte, 8-len(blockParsed.Result.Number)), blockParsed.Result.Number...)))
 			if blockRawData[i].blockNumber != blockParsedResultNumber {
-				logrus.Errorf("blockRawData[i].block_number '%d' doesn't match blockParsed.Result.Number '%d'", blockRawData[i].blockNumber, blockParsedResultNumber)
+				log.Error(nil, "Doesn't match", 0, map[string]interface{}{"blockRawData[i].blockNumber": blockRawData[i].blockNumber, "blockParsedResultNumber": blockParsedResultNumber})
 			}
 		}
 		if blockParsed.Result.Hash == nil {
