@@ -53,6 +53,14 @@ func GetNotificationsForEpoch(pubkeyCachePath string, epoch uint64) (types.Notif
 	return collectNotifications(epoch)
 }
 
+func GetUserNotificationsForEpoch(pubkeyCachePath string, epoch uint64) (types.NotificationsPerUserId, error) {
+	err := initPubkeyCache(pubkeyCachePath)
+	if err != nil {
+		log.Fatal(err, "error initializing pubkey cache path for notifications", 0)
+	}
+	return collectUserDbNotifications(epoch)
+}
+
 func InitNotificationCollector(pubkeyCachePath string) {
 	err := initPubkeyCache(pubkeyCachePath)
 	if err != nil {
@@ -2075,7 +2083,7 @@ func collectMonitoringMachine(
 
 	dbResult, err := GetSubsForEventFilter(
 		eventName,
-		"(created_epoch <= ? AND (last_sent_epoch < (? - ?) OR last_sent_epoch IS NULL))",
+		"(created_epoch <= ? AND (last_sent_epoch < (?::int - ?::int) OR last_sent_epoch IS NULL))", // ::int is required here otherwise the generated goose query throw an error
 		[]interface{}{epoch, epoch, epochWaitInBetween},
 		nil,
 	)

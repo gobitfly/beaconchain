@@ -76,7 +76,7 @@ func Run() {
 	}
 
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -216,6 +216,14 @@ func Run() {
 
 	db.PersistentRedisDbClient = rdc
 	defer db.PersistentRedisDbClient.Close()
+
+	if utils.Config.TieredCacheProvider != "redis" {
+		log.Fatal(nil, "no cache provider set, please set TierdCacheProvider (redis)", 0)
+	}
+	if utils.Config.TieredCacheProvider == "redis" || len(utils.Config.RedisCacheEndpoint) != 0 {
+		cache.MustInitTieredCache(utils.Config.RedisCacheEndpoint)
+		log.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
+	}
 
 	switch opts.Command {
 	case "nameValidatorsByRanges":
@@ -459,6 +467,8 @@ func Run() {
 		err = fixEnsAddresses(erigonClient)
 	case "collect-notifications":
 		err = collectNotifications(opts.StartEpoch)
+	case "collect-user-db-notifications":
+		err = collectUserDbNotifications(opts.StartEpoch)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -475,6 +485,19 @@ func collectNotifications(startEpoch uint64) error {
 
 	log.Infof("collecting notifications for epoch %v", epoch)
 	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("found %v notifications for epoch %v", len(notifications), epoch)
+	return nil
+}
+
+func collectUserDbNotifications(startEpoch uint64) error {
+	epoch := startEpoch
+
+	log.Infof("collecting notifications for epoch %v", epoch)
+	notifications, err := notification.GetUserNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
 	if err != nil {
 		return err
 	}

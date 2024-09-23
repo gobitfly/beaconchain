@@ -103,6 +103,16 @@ var UserIndexEvents = []EventName{
 	MonitoringMachineSwitchedToETH1FallbackEventName,
 }
 
+var UserIndexEventsMap = map[EventName]struct{}{
+	EthClientUpdateEventName:                         {},
+	MonitoringMachineCpuLoadEventName:                {},
+	MonitoringMachineOfflineEventName:                {},
+	MonitoringMachineDiskAlmostFullEventName:         {},
+	MonitoringMachineMemoryUsageEventName:            {},
+	MonitoringMachineSwitchedToETH2FallbackEventName: {},
+	MonitoringMachineSwitchedToETH1FallbackEventName: {},
+}
+
 var EventLabel map[EventName]string = map[EventName]string{
 	ValidatorBalanceDecreasedEventName:               "Your validator(s) balance decreased",
 	ValidatorMissedProposalEventName:                 "Your validator(s) missed a proposal",
