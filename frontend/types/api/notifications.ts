@@ -38,10 +38,10 @@ export type InternalGetUserNotificationsResponse = ApiDataResponse<NotificationO
 export interface NotificationDashboardsTableRow {
   is_account_dashboard: boolean; // if false it's a validator dashboard
   chain_id: number /* uint64 */;
-  timestamp: number /* int64 */;
+  epoch: number /* uint64 */;
   dashboard_id: number /* uint64 */;
+  group_id: number /* uint64 */;
   group_name: string;
-  notification_id: number /* uint64 */; // may be string? db schema is not defined afaik
   entity_count: number /* uint64 */;
   event_types: ('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
 }
