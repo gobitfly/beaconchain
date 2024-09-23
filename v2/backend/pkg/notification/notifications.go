@@ -2235,10 +2235,6 @@ func (n *monitorMachineNotification) GetTitle() string {
 		return "Staking Machine Offline"
 	case types.MonitoringMachineCpuLoadEventName:
 		return "High CPU Load"
-	case types.MonitoringMachineSwitchedToETH1FallbackEventName:
-		return "ETH1 Fallback Active"
-	case types.MonitoringMachineSwitchedToETH2FallbackEventName:
-		return "ETH2 Fallback Active"
 	case types.MonitoringMachineMemoryUsageEventName:
 		return "Memory Warning"
 	}
