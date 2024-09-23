@@ -1,0 +1,51 @@
+name: Backend-Type-Conversion-Check
+on:
+  push:
+    paths:
+      - 'backend/pkg/api/types/**'
+    branches:
+      - main
+      - staging
+  pull_request:
+    paths:
+      - 'backend/pkg/api/types/**'
+    branches:
+      - '*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  build:
+    name: type-conversion-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: 'backend/go.mod'
+          cache-dependency-path: 'backend/go.sum'
+
+      - name: Run TypeScript type conversion script
+        working-directory: backend
+        run: go run cmd/main.go typescript-converter -out ../frontend/types/api
+
+      - name: Check for uncommitted changes in TypeScript types
+        working-directory: frontend
+        run: |
+          git diff --exit-code types/api
+
+      - name: Fail if uncommitted changes are found
+        if: failure()
+        run: |
+          echo "::error::TypeScript types are outdated. Please run the conversion script and commit the updated types."
+          exit 1
+
+
+
