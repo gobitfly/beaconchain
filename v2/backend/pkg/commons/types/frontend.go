@@ -54,6 +54,13 @@ const (
 	//nolint:misspell
 	RocketpoolCollateralMaxReached EventName = "rocketpool_colleteral_max"
 	SyncCommitteeSoon              EventName = "validator_synccommittee_soon"
+
+	// Account dashboard events
+	IncomingTransactionEventName  EventName = "incoming_transaction"
+	OutgoingTransactionEventName  EventName = "outgoing_transaction"
+	ERC20TokenTransferEventName   EventName = "erc20_token_transfer"
+	ERC721TokenTransferEventName  EventName = "erc721_token_transfer"
+	ERC1155TokenTransferEventName EventName = "erc1155_token_transfer"
 )
 
 var MachineEvents = []EventName{
