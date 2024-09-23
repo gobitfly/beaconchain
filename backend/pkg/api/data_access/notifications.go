@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 type NotificationsRepository interface {
@@ -78,7 +80,86 @@ func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.C
 	return d.dummy.DeleteNotificationSettingsPairedDevice(ctx, userId, pairedDeviceId)
 }
 func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
-	// Get dashboards with userId from users_val_dashboards and users_acc_dashboards
+	// Get settings with userId from users_val_dashboards_groups, users_acc_dashboards_groups and users_subscriptions
+	result := make([]t.NotificationSettingsDashboardsTableRow, 0)
+	var paging t.Paging
+
+	wg := errgroup.Group{}
+
+	// -------------------------------------
+	// Get the validator dashboards
+	valDashboards := []struct {
+		WebhookUrl            sql.NullString `db:"webhook_target"`
+		Destination           string         `db:"destination"`
+		IsRealTimeModeEnabled bool           `db:"real_time_mode"`
+	}{}
+	wg.Go(func() error {
+		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
+			SELECT
+				webhook_target,
+				destination,
+				real_time_mode
+			FROM users_val_dashboards_groups
+			WHERE user_id = $1 AND (webhook_target IS NOT NULL OR real_time_mode)`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
+		}
+
+		return nil
+	})
+
+	// -------------------------------------
+	// Get the account dashboards
+	accDashboards := []struct {
+		WebhookUrl                      sql.NullString `db:"webhook_target"`
+		Destination                     string         `db:"destination"`
+		IsIgnoreSpamTransactionsEnabled bool           `db:"ignore_spam_transactions"`
+		SubscribedChainIds              []uint64       `db:"subscribed_chain_ids"`
+	}{}
+	wg.Go(func() error {
+		err := d.alloyReader.SelectContext(ctx, &accDashboards, `
+			SELECT
+				webhook_target,
+				destination,
+				ignore_spam_transactions,
+				subscribed_chain_ids
+			FROM users_acc_dashboards_groups
+			WHERE user_id = $1 AND (webhook_target IS NOT NULL OR IsIgnoreSpamTransactionsEnabled OR array_length(subscribed_chain_ids, 1) > 0)`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
+		}
+
+		return nil
+	})
+
+	// -------------------------------------
+	// Get the events
+	events := []struct {
+		EventName      string  `db:"event_name"`
+		EventFilter    string  `db:"event_filter"`
+		EventThreshold float64 `db:"event_threshold"`
+	}{}
+	wg.Go(func() error {
+		err := d.userReader.SelectContext(ctx, &events, `
+			SELECT
+				event_name,
+				event_filter,
+				event_threshold
+			FROM users_subscriptions
+			WHERE user_id = $1`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for account dashboard notifications: %w`, err)
+		}
+
+		return nil
+	})
+
+	err := wg.Wait()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error retrieving dashboard notification data: %w", err)
+	}
+
+	return result, &paging, nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
 	// For the given dashboardId and groupId update users_subscriptions and users_val_dashboards_groups with the given settings
@@ -149,9 +230,9 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	}
 
 	// Set non-event settings
-	destination := "webhook"
+	destination := types.WebhookNotificationChannel
 	if settings.IsWebhookDiscordEnabled {
-		destination = "webhook_discord"
+		destination = types.WebhookDiscordNotificationChannel
 	}
 	_, err = d.alloyWriter.ExecContext(ctx, `
 		UPDATE users_val_dashboards_groups 
@@ -232,9 +313,9 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 	}
 
 	// Set non-event settings
-	destination := "webhook"
+	destination := types.WebhookNotificationChannel
 	if settings.IsWebhookDiscordEnabled {
-		destination = "webhook_discord"
+		destination = types.WebhookDiscordNotificationChannel
 	}
 	_, err = d.alloyWriter.ExecContext(ctx, `
 		UPDATE users_acc_dashboards_groups 
