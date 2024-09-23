@@ -120,10 +120,10 @@ type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationCl
 // ------------------------------------------------------------
 // Rocket Pool Table
 type NotificationRocketPoolTableRow struct {
-	Timestamp   int64   `json:"timestamp"`
-	EventType   string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	AlertValue  float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
-	NodeAddress Hash    `json:"node_address"`
+	Timestamp  int64   `json:"timestamp"`
+	EventType  string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
+	AlertValue float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
+	Node       Address `json:"node"`
 }
 
 type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
