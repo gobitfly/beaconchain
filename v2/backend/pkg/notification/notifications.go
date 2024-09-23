@@ -2083,7 +2083,7 @@ func collectMonitoringMachine(
 
 	dbResult, err := GetSubsForEventFilter(
 		eventName,
-		"(created_epoch <= ? AND (last_sent_epoch < (?::int - ?::int) OR last_sent_epoch IS NULL))", // ::int is required here otherwise the generated goose query throw an error
+		"(created_epoch <= ? AND (last_sent_epoch < (?::int - ?::int) OR last_sent_epoch IS NULL))", // ::int is required here otherwise the generated goqu query throw an error
 		[]interface{}{epoch, epoch, epochWaitInBetween},
 		nil,
 	)
