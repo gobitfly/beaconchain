@@ -2217,10 +2217,6 @@ func (n *monitorMachineNotification) GetInfo(includeUrl bool) string {
 		return fmt.Sprintf(`Your staking machine "%v" might be offline. It has not been seen for a couple minutes now.`, n.MachineName)
 	case types.MonitoringMachineCpuLoadEventName:
 		return fmt.Sprintf(`Your staking machine "%v" has reached your configured CPU usage threshold.`, n.MachineName)
-	case types.MonitoringMachineSwitchedToETH1FallbackEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has switched to your configured ETH1 fallback`, n.MachineName)
-	case types.MonitoringMachineSwitchedToETH2FallbackEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has switched to your configured ETH2 fallback`, n.MachineName)
 	case types.MonitoringMachineMemoryUsageEventName:
 		return fmt.Sprintf(`Your staking machine "%v" has reached your configured RAM threshold.`, n.MachineName)
 	}
