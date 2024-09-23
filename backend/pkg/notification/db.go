@@ -33,6 +33,11 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	// 	where event_name = $1
 	// 	`
 
+	eventNameForQuery := utils.GetNetwork() + ":" + string(eventName)
+
+	if _, ok := types.UserIndexEventsMap[eventName]; ok {
+		eventNameForQuery = string(eventName)
+	}
 	ds := goqu.Dialect("postgres").From("users_subscriptions").Select(
 		goqu.C("id"),
 		goqu.C("user_id"),
@@ -41,7 +46,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		goqu.C("created_epoch"),
 		goqu.C("event_threshold"),
 		goqu.C("event_name"),
-	).Where(goqu.L("(event_name = ? AND user_id <> 0)", utils.GetNetwork()+":"+string(eventName)))
+	).Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery))
 
 	if lastSentFilter != "" {
 		if len(lastSentFilterArgs) > 0 {
@@ -58,8 +63,6 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	if err != nil {
 		return nil, err
 	}
-
-	log.Info(query)
 
 	subMap := make(map[string][]types.Subscription, 0)
 	err = db.FrontendWriterDB.Select(&subs, query, args...)
