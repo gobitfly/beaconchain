@@ -4,7 +4,6 @@ import (
 	"flag"
 	"go/ast"
 	"iter"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -79,7 +78,7 @@ func Run() {
 	for fileName, typesUsed := range imports {
 		var importStr string
 		if len(typesUsed) > 0 {
-			importStr = "import type { " + strings.Join(slices.Collect(maps.Keys(typesUsed)), ", ") + " } from './" + commonFileName + "'\n"
+			importStr = "import type { " + strings.Join(typesUsed, ", ") + " } from './" + commonFileName + "'\n"
 		}
 		configs = append(configs, tygo.New(getTygoConfig(out, fileName, importStr)))
 	}
@@ -164,26 +163,27 @@ func getCommonTypes(pkgs []*packages.Package) map[string]struct{} {
 
 // Parse all files to find used common types for each file
 // Returns a map with file name as key and a set of common types used in the file as value
-func getImports(pkgs []*packages.Package, commonTypes map[string]struct{}) map[string]map[string]struct{} {
-	imports := make(map[string]map[string]struct{})     // Map from file to set of commonTypes used
-	imports[commonFileName] = make(map[string]struct{}) // Add common file to map with empty set
+func getImports(pkgs []*packages.Package, commonTypes map[string]struct{}) map[string][]string {
+	imports := make(map[string][]string) // Map from file to set of commonTypes used
+	imports[commonFileName] = []string{} // Add common file to map with empty set
 	for fileName, file := range allFiles(pkgs) {
 		fileName = strings.TrimSuffix(fileName, goFileSuffix)
 		if filepath.Base(fileName) == commonFileName || slices.Contains(ignoredFiles, fileName) {
 			continue
 		}
-		imports[fileName] = make(map[string]struct{})
+		var currentFileImports []string
 		// iterate over all struct fields in the file
 		for node := range ast.Preorder(file) {
 			ident, ok := node.(*ast.Ident)
 			if !ok {
 				continue
 			}
-			if _, ok := commonTypes[ident.Name]; ok {
-				// field is a common type, add it to the map
-				imports[fileName][ident.Name] = struct{}{}
+			_, isCommonType := commonTypes[ident.Name]
+			if isCommonType && !slices.Contains(currentFileImports, ident.Name) {
+				currentFileImports = append(currentFileImports, ident.Name)
 			}
 		}
+		imports[fileName] = currentFileImports
 	}
 	return imports
 }
