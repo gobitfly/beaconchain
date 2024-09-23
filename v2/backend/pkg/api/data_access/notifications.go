@@ -41,34 +41,108 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 
 	// validator dashboards
 	eg.Go(func() error {
-		query := `SELECT 
-			last_sent_ts,
-			uvd.network,					// chainID
-			us.id,							// notification id
-			us.created_ts,					// timestamp
-			uvd.id,		 					// dashboardId
-			uvd.name,						// group name
-			COUNT(uvdv.validator_index),	// entity count
-			event_name 						// event types
+		type subscritionResult struct {
+			network     uint64 `db:"network"`
+			dashboardId uint64 `db:"dashboard_id"`
+			groupId     uint64 `db:"group_id"`
+			groupName   string `db:"group_name"`
+			entityCount uint64 `db:"entity_count"`
+			eventName   string `db:"event_name"`
+		}
+		subscriptions := []struct {
+			subscriptionId uint64 `db:"subscription_id"`
+			subscritionResult
+		}{}
+		// NOTE: subscriptions and notifications are in different databases so we can't join/group efficiently; this makes things ugly...
+		// 1. get subscribed notifications for user
+		// TODO could change this: minimize data transfer by splitting the query into dashboards + subscriptions retrieval; need to test performance
+		query := `SELECT
+			uvd.network,
+			uvd.id as dashboard_id,
+			uvdg.id as group_id,
+			uvdg.name as group_name,
+			COUNT(uvdv.validator_index) as entity_count,
+			event_name
 		FROM
 			(
 			SELECT
-				id,
-				created_ts,
-				split_part(event_filter, ':', 2) as dashboard_id
+				split_part(event_filter, ':', 2)::int as dashboard_id,
+				split_part(event_filter, ':', 3)::int as group_id,
+				event_name
 			FROM
 				users_subscriptions
 			WHERE
-				event_filter like 'vdb:%'
+				user_id = $1 AND event_filter like 'vdb:%'
 			) as us
+		INNER JOIN
+			users_val_dashboards uvd ON us.dashboard_id = uvd.id AND uvd.network = $2
+		INNER JOIN
+			users_val_dashboards_groups uvdg ON us.dashboard_id = uvdg.dashboard_id AND us.group_id = uvdg.id
 		LEFT JOIN
-			users_val_dashboards uvd ON
-		LEFT JOIN
-			users_val_dashboards_validators uvdv ON
+			users_val_dashboards_validators uvdv ON us.dashboard_id = uvdv.dashboard_id AND us.group_id = uvdv.group_id
 		GROUP BY
-			id
+			us.id, uvd.network, uvd.id, uvdg.id, uvdg.name, event_name
 		`
-		return d.alloyReader.GetContext(ctx, nil, query)
+		err := d.alloyReader.GetContext(ctx, &subscriptions, query, userId, chainId)
+		if err != nil {
+			return err
+		}
+		subscriptionsMap := make(map[uint64]subscritionResult)
+		// dashboardId -> groupId -> epoch -> notificationIds
+		r := map[uint64]map[uint64]map[uint64][]uint64{}
+		for _, subscription := range subscriptions {
+			subscriptionsMap[subscription.subscriptionId] = subscription.subscritionResult
+			r[subscription.dashboardId][subscription.groupId] = make(map[uint64][]uint64)
+		}
+
+		// 2. get requested notifications (based on cursor, search etc.)
+		// providing grouped data so
+		subscriptionIds := make([]uint64, len(subscriptions))
+		for _, subscription := range subscriptions {
+			subscriptionIds = append(subscriptionIds, subscription.subscriptionId)
+		}
+		result := []struct {
+			Epoch           uint64   `db:"epoch"`
+			SubscriptionIds []uint64 `db:"subscription_ids"`
+		}{}
+		query = `SELECT
+			ARRAY_AGG(DISTINCT subscription_id) AS ids,
+			epoch
+		FROM
+			notification_queue
+		WHERE
+			subscription_id = ANY($1)
+		GROUP BY
+			epoch
+		`
+		err = d.alloyReader.GetContext(ctx, &result, query, subscriptionIds)
+		if err != nil {
+			return err
+		}
+
+		// 3. compose response rows
+
+		for _, row := range result {
+			tableRow := t.NotificationDashboardsTableRow{
+				IsAccountDashboard: false,
+				Epoch:              row.Epoch,
+			}
+			for _, subscriptionId := range row.SubscriptionIds {
+				subscription := subscriptionsMap[subscriptionId]
+				if _, ok := r[subscription.dashboardId][subscription.groupId][row.Epoch]; !ok {
+					r[subscription.dashboardId][subscription.groupId][row.Epoch] = []uint64{}
+				}
+				r[subscription.dashboardId][subscription.groupId][row.Epoch] = append(r[subscription.dashboardId][subscription.groupId][row.Epoch], subscriptionId)
+				tableRow.ChainId = subscription.network
+				tableRow.DashboardId = subscription.dashboardId
+				tableRow.GroupId = subscription.groupId
+				tableRow.GroupName = subscription.groupName
+				tableRow.EntityCount = subscription.entityCount
+				tableRow.EventTypes = append(tableRow.EventTypes, subscription.eventName)
+			}
+			response = append(response, tableRow)
+		}
+		return nil
 	})
 
 	// account dashboards
