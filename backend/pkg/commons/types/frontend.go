@@ -22,12 +22,14 @@ type EventName string
 
 const (
 	ValidatorBalanceDecreasedEventName               EventName = "validator_balance_decreased"
+	ValidatorUpcomingProposalEventName               EventName = "validator_proposal_upcoming"
 	ValidatorMissedProposalEventName                 EventName = "validator_proposal_missed"
 	ValidatorExecutedProposalEventName               EventName = "validator_proposal_submitted"
 	ValidatorMissedAttestationEventName              EventName = "validator_attestation_missed"
 	ValidatorGotSlashedEventName                     EventName = "validator_got_slashed"
 	ValidatorDidSlashEventName                       EventName = "validator_did_slash"
 	ValidatorIsOfflineEventName                      EventName = "validator_is_offline"
+	GroupIsOfflineEventName                          EventName = "group_is_offline"
 	ValidatorReceivedWithdrawalEventName             EventName = "validator_withdrawal"
 	ValidatorReceivedDepositEventName                EventName = "validator_received_deposit"
 	NetworkSlashingEventName                         EventName = "network_slashing"

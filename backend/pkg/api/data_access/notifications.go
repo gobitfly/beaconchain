@@ -2,9 +2,14 @@ package dataaccess
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 type NotificationsRepository interface {
@@ -26,8 +31,8 @@ type NotificationsRepository interface {
 	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error
 	DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
-	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
-	UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
+	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
+	UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
 }
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
@@ -73,11 +78,103 @@ func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.C
 	return d.dummy.DeleteNotificationSettingsPairedDevice(ctx, userId, pairedDeviceId)
 }
 func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
-	return d.dummy.GetNotificationSettingsDashboards(ctx, userId, cursor, colSort, search, limit)
+	// Get dashboards with userId from users_val_dashboards and users_acc_dashboards
 }
-func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
-	return d.dummy.UpdateNotificationSettingsValidatorDashboard(ctx, dashboardId, groupId, settings)
+func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
+	// For the given dashboardId and groupId update users_subscriptions and users_val_dashboards_groups with the given settings
+	epoch := utils.TimeToEpoch(time.Now())
+
+	var eventsToInsert []goqu.Record
+	var eventsToDelete []goqu.Expression
+
+	tx, err := d.userWriter.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to update validator dashboard notification settings: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	eventFilter := fmt.Sprintf("vdb:%d:%d", dashboardId, groupId)
+
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, types.ValidatorIsOfflineEventName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsGroupOfflineSubscribed, userId, types.GroupIsOfflineEventName, eventFilter, epoch, settings.GroupOfflineThreshold)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsBlockProposalSubscribed, userId, types.ValidatorMissedProposalEventName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, types.ValidatorReceivedWithdrawalEventName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, eventFilter, epoch, 0)
+
+	// Insert all the events or update the threshold if they already exist
+	if len(eventsToInsert) > 0 {
+		insertDs := goqu.Dialect("postgres").
+			Insert("users_subscriptions").
+			Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
+			Rows(eventsToInsert).
+			OnConflict(goqu.DoUpdate(
+				"user_id, event_name, event_filter",
+				goqu.Record{"event_threshold": goqu.L("EXCLUDED.event_threshold")},
+			))
+
+		query, args, err := insertDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		_, err = tx.ExecContext(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete all the events
+	if len(eventsToDelete) > 0 {
+		deleteDs := goqu.Dialect("postgres").
+			Delete("users_subscriptions").
+			Where(goqu.Or(eventsToDelete...))
+
+		query, args, err := deleteDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		_, err = tx.ExecContext(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to update validator dashboard notification settings: %w", err)
+	}
+
+	// Set non-event settings
+	destination := "webhook"
+	if settings.IsWebhookDiscordEnabled {
+		destination = "webhook_discord"
+	}
+	_, err = d.alloyWriter.ExecContext(ctx, `
+		UPDATE users_val_dashboards_groups 
+		SET 
+			webhook_target = NULLIF($1, ''),
+			destination = $2,
+			real_time_mode = $3
+		WHERE dashboard_id = $4 AND id = $5`, settings.WebhookUrl, destination, settings.IsRealTimeModeEnabled, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
-func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
-	return d.dummy.UpdateNotificationSettingsAccountDashboard(ctx, dashboardId, groupId, settings)
+func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
+	return d.dummy.UpdateNotificationSettingsAccountDashboard(ctx, userId, dashboardId, groupId, settings)
+}
+
+func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert []goqu.Record, eventsToDelete []goqu.Expression, isSubscribed bool, userId uint64, eventName types.EventName, eventFilter string, epoch int64, threshold float64) {
+	if isSubscribed {
+		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": eventFilter, "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": threshold}
+		eventsToInsert = append(eventsToInsert, event)
+	} else {
+		eventsToDelete = append(eventsToDelete, goqu.Ex{"user_id": userId, "event_name": eventName, "event_filter": eventFilter})
+	}
 }
