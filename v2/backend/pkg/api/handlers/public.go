@@ -2409,6 +2409,12 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 //	@Router			/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
 	var req types.NotificationSettingsValidatorDashboard
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
@@ -2422,7 +2428,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
+	err = h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), userId, dashboardId, groupId, req)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2448,6 +2454,12 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 //	@Router			/users/me/notifications/settings/account-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
 	// uses a different struct due to `subscribed_chain_ids`, which is a slice of intOrString in the payload but a slice of uint64 in the response
 	type request struct {
 		WebhookUrl                      string        `json:"webhook_url"`
@@ -2496,7 +2508,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
 		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
 	}
-	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
+	err = h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), userId, dashboardId, groupId, settings)
 	if err != nil {
 		handleErr(w, r, err)
 		return
