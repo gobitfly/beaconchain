@@ -229,7 +229,7 @@ type NotificationSettingsDashboardsTableRow struct {
 	DashboardId        uint64 `json:"dashboard_id"`
 	GroupId            uint64 `json:"group_id"`
 	GroupName          string `json:"group_name"`
-	// if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
+	// if it's a validator dashboard, Settings is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
 	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard" faker:"-"`
 	ChainIds []uint64    `json:"chain_ids" faker:"chain_ids"`
 }
