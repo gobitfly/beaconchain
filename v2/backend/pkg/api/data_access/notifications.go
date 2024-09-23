@@ -120,7 +120,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	subscribedEvents := []struct {
 		Name      types.EventName `db:"event_name"`
 		Filter    string          `db:"event_filter"`
-		Threshold decimal.Decimal `db:"event_threshold"`
+		Threshold float64         `db:"event_threshold"`
 	}{}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &subscribedEvents, `
@@ -194,19 +194,19 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 				result.GeneralSettings.IsRocketPoolNewRewardRoundSubscribed = true
 			case types.RocketpoolCollateralMaxReached:
 				result.GeneralSettings.IsRocketPoolMaxCollateralSubscribed = true
-				result.GeneralSettings.RocketPoolMaxCollateralThreshold = event.Threshold.InexactFloat64()
+				result.GeneralSettings.RocketPoolMaxCollateralThreshold = event.Threshold
 			case types.RocketpoolCollateralMinReached:
 				result.GeneralSettings.IsRocketPoolMinCollateralSubscribed = true
-				result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold.InexactFloat64()
+				result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold
 			case types.NetworkGasAboveThresholdEventName:
 				networkEvents[networkName].IsGasAboveSubscribed = true
-				networkEvents[networkName].GasAboveThreshold = event.Threshold
+				networkEvents[networkName].GasAboveThreshold = decimal.NewFromFloat(event.Threshold).Mul(decimal.NewFromInt(1e9))
 			case types.NetworkGasBelowThresholdEventName:
 				networkEvents[networkName].IsGasBelowSubscribed = true
-				networkEvents[networkName].GasBelowThreshold = event.Threshold
+				networkEvents[networkName].GasBelowThreshold = decimal.NewFromFloat(event.Threshold).Mul(decimal.NewFromInt(1e9))
 			case types.NetworkParticipationRateThresholdEventName:
 				networkEvents[networkName].IsParticipationRateSubscribed = true
-				networkEvents[networkName].ParticipationRateThreshold = event.Threshold.InexactFloat64()
+				networkEvents[networkName].ParticipationRateThreshold = event.Threshold
 			}
 		} else {
 			switch event.Name {
@@ -214,13 +214,13 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 				result.GeneralSettings.IsMachineOfflineSubscribed = true
 			case types.MonitoringMachineDiskAlmostFullEventName:
 				result.GeneralSettings.IsMachineStorageUsageSubscribed = true
-				result.GeneralSettings.MachineStorageUsageThreshold = event.Threshold.InexactFloat64()
+				result.GeneralSettings.MachineStorageUsageThreshold = event.Threshold
 			case types.MonitoringMachineCpuLoadEventName:
 				result.GeneralSettings.IsMachineCpuUsageSubscribed = true
-				result.GeneralSettings.MachineCpuUsageThreshold = event.Threshold.InexactFloat64()
+				result.GeneralSettings.MachineCpuUsageThreshold = event.Threshold
 			case types.MonitoringMachineMemoryUsageEventName:
 				result.GeneralSettings.IsMachineMemoryUsageSubscribed = true
-				result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold.InexactFloat64()
+				result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold
 			case types.EthClientUpdateEventName:
 				result.GeneralSettings.SubscribedClients = append(result.GeneralSettings.SubscribedClients, event.Filter)
 			}
