@@ -3,6 +3,7 @@
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
+    "NotificationsClientsTable",
     "NotificationsOverview",
     "checkout",
     "ci",

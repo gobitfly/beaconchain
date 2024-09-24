@@ -43,7 +43,7 @@ const clientLink = computed(() => {
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="clientsNotifications"
-            data-key="notification_id"
+            data-key="client_name"
             :cursor
             :page-size
             :selected-sort="query?.sort"
