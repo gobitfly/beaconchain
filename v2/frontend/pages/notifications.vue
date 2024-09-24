@@ -84,7 +84,9 @@ const openManageNotifications = () => {
       <template #top>
         <DashboardHeader :dashboard-title="$t('notifications.title')" />
         <div class="overview">
-          TODO: Overview
+          <NotificationsOverview
+            @open-dialog="openManageNotifications"
+          />
         </div>
       </template>
       <NotificationsManagementModal
