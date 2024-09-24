@@ -557,13 +557,12 @@ func collectUserDbNotifications(startEpoch uint64) error {
 		message := pushMessage.Messages[0]
 		log.Infof("title: %v body: %v", message.Notification.Title, message.Notification.Body)
 
-		if message.Token == "c0xn2dSe60YWucTa1QHJT2:APA91bEntgloLjUiH8GTY-5qN-ACmj41P7rg3cw18pwvd0I5q1XXmAQH2xkUIKzJEWqRJ0UHa-q9bowveXRaLPFDXoN1IvJ4TDLYVGT4wwNzoldMZxRIvCJ3rsLt4LG5kX0XeWpU-Che" {
+		if message.Token == "" {
 			log.Info("sending test message")
 
 			err = notification.SendPushBatch([]*messaging.Message{message}, false)
 			if err != nil {
 				log.Error(err, "error sending firebase batch job", 0)
-			} else {
 			}
 		}
 	}
