@@ -40,6 +40,7 @@ export interface NotificationDashboardsTableRow {
   chain_id: number /* uint64 */;
   epoch: number /* uint64 */;
   dashboard_id: number /* uint64 */;
+  dashboard_name: string;
   group_id: number /* uint64 */;
   group_name: string;
   entity_count: number /* uint64 */;

@@ -5,7 +5,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"golang.org/x/sync/errgroup"
 )
 
 type NotificationsRepository interface {
@@ -35,149 +34,57 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 	return d.dummy.GetNotificationOverview(ctx, userId)
 }
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
-	eg := errgroup.Group{}
-
 	response := []t.NotificationDashboardsTableRow{}
 
-	// validator dashboards
-	eg.Go(func() error {
-		type subscritionResult struct {
-			network     uint64 `db:"network"`
-			dashboardId uint64 `db:"dashboard_id"`
-			groupId     uint64 `db:"group_id"`
-			groupName   string `db:"group_name"`
-			entityCount uint64 `db:"entity_count"`
-			eventName   string `db:"event_name"`
-		}
-		subscriptions := []struct {
-			subscriptionId uint64 `db:"subscription_id"`
-			subscritionResult
-		}{}
-		// NOTE: subscriptions and notifications are in different databases so we can't join/group efficiently; this makes things ugly...
-		// 1. get subscribed notifications for user
-		// TODO could change this: minimize data transfer by splitting the query into dashboards + subscriptions retrieval; need to test performance
-		query := `SELECT
-			uvd.network,
-			uvd.id as dashboard_id,
-			uvdg.id as group_id,
-			uvdg.name as group_name,
-			COUNT(uvdv.validator_index) as entity_count,
-			event_name
+	query := `
+		SELECT
+			false AS is_account_dashboard,
+			$2 AS chain_id,
+			dnh.epoch,
+			uvd.id AS dashboard_id,
+			uvd.name AS dashboard_name,
+			uvdg.id AS group_id,
+			uvdg.name AS group_name,
+			SUM(dnh.event_count),
+			ARRAY_AGG(DISTINCT event_type) AS event_types
 		FROM
-			(
-			SELECT
-				split_part(event_filter, ':', 2)::int as dashboard_id,
-				split_part(event_filter, ':', 3)::int as group_id,
-				event_name
-			FROM
-				users_subscriptions
-			WHERE
-				user_id = $1 AND event_filter like 'vdb:%'
-			) as us
+			dashboard_notifications_history dnh
 		INNER JOIN
-			users_val_dashboards uvd ON us.dashboard_id = uvd.id AND uvd.network = $2
+			users_val_dashboards uvd ON uvd.id = dnh.dashboard_id
 		INNER JOIN
-			users_val_dashboards_groups uvdg ON us.dashboard_id = uvdg.dashboard_id AND us.group_id = uvdg.id
-		LEFT JOIN
-			users_val_dashboards_validators uvdv ON us.dashboard_id = uvdv.dashboard_id AND us.group_id = uvdv.group_id
-		GROUP BY
-			us.id, uvd.network, uvd.id, uvdg.id, uvdg.name, event_name
-		`
-		err := d.alloyReader.GetContext(ctx, &subscriptions, query, userId, chainId)
-		if err != nil {
-			return err
-		}
-		subscriptionsMap := make(map[uint64]subscritionResult)
-		// dashboardId -> groupId -> epoch -> notificationIds
-		r := map[uint64]map[uint64]map[uint64][]uint64{}
-		for _, subscription := range subscriptions {
-			subscriptionsMap[subscription.subscriptionId] = subscription.subscritionResult
-			r[subscription.dashboardId][subscription.groupId] = make(map[uint64][]uint64)
-		}
-
-		// 2. get requested notifications (based on cursor, search etc.)
-		// providing grouped data so
-		subscriptionIds := make([]uint64, len(subscriptions))
-		for _, subscription := range subscriptions {
-			subscriptionIds = append(subscriptionIds, subscription.subscriptionId)
-		}
-		result := []struct {
-			Epoch           uint64   `db:"epoch"`
-			SubscriptionIds []uint64 `db:"subscription_ids"`
-		}{}
-		query = `SELECT
-			ARRAY_AGG(DISTINCT subscription_id) AS ids,
-			epoch
-		FROM
-			notification_queue
+			users_val_dashboards_groups uvdg ON uvdg.id = dnh.group_id
 		WHERE
-			subscription_id = ANY($1)
+			uvd.user_id = $1 AND uvd.network = $2 AND dnh.dashboard_type = 'validator'
 		GROUP BY
-			epoch
-		`
-		err = d.alloyReader.GetContext(ctx, &result, query, subscriptionIds)
-		if err != nil {
-			return err
-		}
-
-		// 3. compose response rows
-
-		for _, row := range result {
-			tableRow := t.NotificationDashboardsTableRow{
-				IsAccountDashboard: false,
-				Epoch:              row.Epoch,
-			}
-			for _, subscriptionId := range row.SubscriptionIds {
-				subscription := subscriptionsMap[subscriptionId]
-				if _, ok := r[subscription.dashboardId][subscription.groupId][row.Epoch]; !ok {
-					r[subscription.dashboardId][subscription.groupId][row.Epoch] = []uint64{}
-				}
-				r[subscription.dashboardId][subscription.groupId][row.Epoch] = append(r[subscription.dashboardId][subscription.groupId][row.Epoch], subscriptionId)
-				tableRow.ChainId = subscription.network
-				tableRow.DashboardId = subscription.dashboardId
-				tableRow.GroupId = subscription.groupId
-				tableRow.GroupName = subscription.groupName
-				tableRow.EntityCount = subscription.entityCount
-				tableRow.EventTypes = append(tableRow.EventTypes, subscription.eventName)
-			}
-			response = append(response, tableRow)
-		}
-		return nil
-	})
-
-	// account dashboards
-	eg.Go(func() error {
-		query := `SELECT 
-			last_sent_ts,
-			uvd.network,					// chainID
-			us.id,							// notification id
-			us.created_ts,					// timestamp
-			uvd.id,		 					// dashboardId
-			uvd.name,						// group name
-			COUNT(uvdv.validator_index),	// entity count
-			event_name 						// event types
+			dnh.epoch, uvd.network, uvd.id, uvdg.id, uvdg.name
+	UNION
+		SELECT
+			true AS is_account_dashboard,
+			$2 AS chain_id,
+			dnh.epoch,
+			uad.id AS dashboard_id,
+			uad.name AS dashboard_name,
+			uadg.id AS group_id,
+			uadg.name AS group_name,
+			SUM(dnh.event_count),
+			ARRAY_AGG(DISTINCT event_type) AS event_types
 		FROM
-			(
-			SELECT
-				id,
-				created_ts,
-				split_part(event_filter, ':', 2) as dashboard_id
-			FROM
-				users_subscriptions
-			WHERE
-				event_filter like 'adb:%'
-			) as us
-		LEFT JOIN
-			users_val_dashboards uvd ON
-		LEFT JOIN
-			users_val_dashboards_validators uvdv ON
+			dashboard_notifications_history dnh
+		INNER JOIN
+			users_acc_dashboards uad ON uad.id = dnh.dashboard_id
+		INNER JOIN
+			users_acc_dashboards_groups uadg ON uadg.id = dnh.group_id
+		WHERE
+			uad.user_id = $1 AND dnh.dashboard_type = 'account'
 		GROUP BY
-			id
-		`
-		return d.alloyReader.GetContext(ctx, nil, query)
-	})
+			dnh.epoch, uad.network, uad.id, uadg.id, uadg.name
+	`
+	err := d.alloyReader.GetContext(ctx, &response, query, userId, chainId)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return response, nil, eg.Wait()
+	return response, nil, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, notificationId string) (*t.NotificationValidatorDashboardDetail, error) {
