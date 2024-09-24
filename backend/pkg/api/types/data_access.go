@@ -212,7 +212,6 @@ type VDBValidatorSummaryChartRow struct {
 	SyncScheduled          float64   `db:"sync_scheduled"`
 }
 
-// -------------------------
 // healthz structs
 
 type HealthzResult struct {
