@@ -13,3 +13,12 @@ func GetNotificationsForEpoch(pubkeyCachePath string, epoch uint64) (types.Notif
 	}
 	return collectNotifications(epoch)
 }
+
+// Used for isolated testing
+func GetUserNotificationsForEpoch(pubkeyCachePath string, epoch uint64) (types.NotificationsPerUserId, error) {
+	err := initPubkeyCache(pubkeyCachePath)
+	if err != nil {
+		log.Fatal(err, "error initializing pubkey cache path for notifications", 0)
+	}
+	return collectUserDbNotifications(epoch)
+}

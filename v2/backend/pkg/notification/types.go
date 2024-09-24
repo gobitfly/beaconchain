@@ -341,10 +341,6 @@ func (n *monitorMachineNotification) GetInfo(format types.NotificationFormat) st
 		return fmt.Sprintf(`Your staking machine "%v" might be offline. It has not been seen for a couple minutes now.`, n.MachineName)
 	case types.MonitoringMachineCpuLoadEventName:
 		return fmt.Sprintf(`Your staking machine "%v" has reached your configured CPU usage threshold.`, n.MachineName)
-	case types.MonitoringMachineSwitchedToETH1FallbackEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has switched to your configured ETH1 fallback`, n.MachineName)
-	case types.MonitoringMachineSwitchedToETH2FallbackEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has switched to your configured ETH2 fallback`, n.MachineName)
 	case types.MonitoringMachineMemoryUsageEventName:
 		return fmt.Sprintf(`Your staking machine "%v" has reached your configured RAM threshold.`, n.MachineName)
 	}
@@ -359,10 +355,6 @@ func (n *monitorMachineNotification) GetTitle() string {
 		return "Staking Machine Offline"
 	case types.MonitoringMachineCpuLoadEventName:
 		return "High CPU Load"
-	case types.MonitoringMachineSwitchedToETH1FallbackEventName:
-		return "ETH1 Fallback Active"
-	case types.MonitoringMachineSwitchedToETH2FallbackEventName:
-		return "ETH2 Fallback Active"
 	case types.MonitoringMachineMemoryUsageEventName:
 		return "Memory Warning"
 	}

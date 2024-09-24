@@ -48,14 +48,18 @@ func queueNotifications(notificationsByUserID types.NotificationsPerUserId) erro
 	}
 
 	subByEpoch := map[uint64][]uint64{}
-	for _, events := range notificationsByUserID {
-		for _, notifications := range events {
-			for _, n := range notifications {
-				e := n.GetEpoch()
-				if _, exists := subByEpoch[e]; !exists {
-					subByEpoch[e] = []uint64{n.GetSubscriptionID()}
-				} else {
-					subByEpoch[e] = append(subByEpoch[e], n.GetSubscriptionID())
+	for _, notificationsPerDashboard := range notificationsByUserID {
+		for _, notificationsPerGroup := range notificationsPerDashboard {
+			for _, events := range notificationsPerGroup {
+				for _, notifications := range events {
+					for _, n := range notifications {
+						e := n.GetEpoch()
+						if _, exists := subByEpoch[e]; !exists {
+							subByEpoch[e] = []uint64{n.GetSubscriptionID()}
+						} else {
+							subByEpoch[e] = append(subByEpoch[e], n.GetSubscriptionID())
+						}
+					}
 				}
 			}
 		}
@@ -117,7 +121,7 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 		return nil, fmt.Errorf("error when sending email-notifications: could not get emails: %w", err)
 	}
 
-	for userID, userNotifications := range notificationsByUserID {
+	for userID, notificationsPerDashboard := range notificationsByUserID {
 		userEmail, exists := emailsByUserID[userID]
 		if !exists {
 			log.WarnWithStackTrace(nil, "email notification skipping user", 0, log.Fields{"user_id": userID})
@@ -125,120 +129,123 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 			// metrics.Errors.WithLabelValues("notifications_mail_not_found").Inc()
 			continue
 		}
+		for _, notificationsPerGroup := range notificationsPerDashboard {
+			for _, userNotifications := range notificationsPerGroup {
+				attachments := []types.EmailAttachment{}
 
-		attachments := []types.EmailAttachment{}
+				var msg types.Email
 
-		var msg types.Email
-
-		if utils.Config.Chain.Name != "mainnet" {
-			//nolint:gosec // this is a static string
-			msg.Body += template.HTML(fmt.Sprintf("<b>Notice: This email contains notifications for the %s network!</b><br>", utils.Config.Chain.Name))
-		}
-
-		subject := ""
-		notificationTypesMap := make(map[types.EventName]int)
-		uniqueNotificationTypes := []types.EventName{}
-
-		bodyDetails := template.HTML("")
-
-		for _, event := range types.EventSortOrder {
-			ns, ok := userNotifications[event]
-			if !ok { // nothing to do for this event type
-				continue
-			}
-
-			if len(bodyDetails) > 0 {
-				bodyDetails += "<br>"
-			}
-			//nolint:gosec // this is a static string
-			bodyDetails += template.HTML(fmt.Sprintf("<u>%s</u><br>", types.EventLabel[event]))
-			i := 0
-			for _, n := range ns {
-				// Find all unique notification titles for the subject
-				if _, ok := notificationTypesMap[event]; !ok {
-					uniqueNotificationTypes = append(uniqueNotificationTypes, event)
-				}
-				notificationTypesMap[event]++
-
-				if i <= 10 {
-					if event != types.SyncCommitteeSoon {
-						// SyncCommitteeSoon notifications are summed up in getEventInfo for all validators
-						//nolint:gosec // this is a static string
-						bodyDetails += template.HTML(fmt.Sprintf("%s<br>", n.GetInfo(types.NotifciationFormatHtml)))
-					}
-
-					if att := n.GetEmailAttachment(); att != nil {
-						attachments = append(attachments, *att)
-					}
-				}
-
-				metrics.NotificationsQueued.WithLabelValues("email", string(event)).Inc()
-				i++
-
-				if i == 11 {
+				if utils.Config.Chain.Name != "mainnet" {
 					//nolint:gosec // this is a static string
-					bodyDetails += template.HTML(fmt.Sprintf("... and %d more notifications<br>", len(ns)-i))
-					continue
+					msg.Body += template.HTML(fmt.Sprintf("<b>Notice: This email contains notifications for the %s network!</b><br>", utils.Config.Chain.Name))
 				}
-			}
 
-			eventInfo := getEventInfo(event, types.NotifciationFormatHtml, ns)
-			if eventInfo != "" {
+				subject := ""
+				notificationTypesMap := make(map[types.EventName]int)
+				uniqueNotificationTypes := []types.EventName{}
+
+				bodyDetails := template.HTML("")
+
+				for _, event := range types.EventSortOrder {
+					ns, ok := userNotifications[event]
+					if !ok { // nothing to do for this event type
+						continue
+					}
+
+					if len(bodyDetails) > 0 {
+						bodyDetails += "<br>"
+					}
+					//nolint:gosec // this is a static string
+					bodyDetails += template.HTML(fmt.Sprintf("<u>%s</u><br>", types.EventLabel[event]))
+					i := 0
+					for _, n := range ns {
+						// Find all unique notification titles for the subject
+						if _, ok := notificationTypesMap[event]; !ok {
+							uniqueNotificationTypes = append(uniqueNotificationTypes, event)
+						}
+						notificationTypesMap[event]++
+
+						if i <= 10 {
+							if event != types.SyncCommitteeSoon {
+								// SyncCommitteeSoon notifications are summed up in getEventInfo for all validators
+								//nolint:gosec // this is a static string
+								bodyDetails += template.HTML(fmt.Sprintf("%s<br>", n.GetInfo(types.NotifciationFormatHtml)))
+							}
+
+							if att := n.GetEmailAttachment(); att != nil {
+								attachments = append(attachments, *att)
+							}
+						}
+
+						metrics.NotificationsQueued.WithLabelValues("email", string(event)).Inc()
+						i++
+
+						if i == 11 {
+							//nolint:gosec // this is a static string
+							bodyDetails += template.HTML(fmt.Sprintf("... and %d more notifications<br>", len(ns)-i))
+							continue
+						}
+					}
+
+					eventInfo := getEventInfo(event, types.NotifciationFormatHtml, ns)
+					if eventInfo != "" {
+						//nolint:gosec // this is a static string
+						bodyDetails += template.HTML(fmt.Sprintf("%s<br>", eventInfo))
+					}
+				}
+
+				bodySummary := template.HTML("<h5>Summary:</h5>")
+				for _, event := range types.EventSortOrder {
+					count, ok := notificationTypesMap[event]
+					if !ok {
+						continue
+					}
+					if len(bodySummary) > 0 {
+						bodySummary += "<br>"
+					}
+					plural := ""
+					if count > 1 {
+						plural = "s"
+					}
+					switch event {
+					case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
+						//nolint:gosec // this is a static string
+						bodySummary += template.HTML(fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural))
+					case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+						//nolint:gosec // this is a static string
+						bodySummary += template.HTML(fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural))
+					case types.EthClientUpdateEventName:
+						//nolint:gosec // this is a static string
+						bodySummary += template.HTML(fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural))
+					default:
+						//nolint:gosec // this is a static string
+						bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
+					}
+				}
+				msg.Body += bodySummary
+				msg.Body += template.HTML("<br><br><h5>Details:</h5>")
+				msg.Body += bodyDetails
+
+				if len(uniqueNotificationTypes) > 2 {
+					subject = fmt.Sprintf("%s: %s,... and %d other notifications", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], len(uniqueNotificationTypes)-1)
+				} else if len(uniqueNotificationTypes) == 2 {
+					subject = fmt.Sprintf("%s: %s and %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], types.EventLabel[uniqueNotificationTypes[1]])
+				} else if len(uniqueNotificationTypes) == 1 {
+					subject = fmt.Sprintf("%s: %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]])
+				}
+
 				//nolint:gosec // this is a static string
-				bodyDetails += template.HTML(fmt.Sprintf("%s<br>", eventInfo))
+				msg.SubscriptionManageURL = template.HTML(fmt.Sprintf(`<a href="%v" style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'">Manage</a>`, "https://"+utils.Config.Frontend.SiteDomain+"/user/notifications"))
+
+				emails = append(emails, types.TransitEmailContent{
+					Address:     userEmail,
+					Subject:     subject,
+					Email:       msg,
+					Attachments: attachments,
+					CreatedTs:   createdTs,
+				})
 			}
 		}
-
-		bodySummary := template.HTML("<h5>Summary:</h5>")
-		for _, event := range types.EventSortOrder {
-			count, ok := notificationTypesMap[event]
-			if !ok {
-				continue
-			}
-			if len(bodySummary) > 0 {
-				bodySummary += "<br>"
-			}
-			plural := ""
-			if count > 1 {
-				plural = "s"
-			}
-			switch event {
-			case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
-				//nolint:gosec // this is a static string
-				bodySummary += template.HTML(fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural))
-			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
-				//nolint:gosec // this is a static string
-				bodySummary += template.HTML(fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural))
-			case types.EthClientUpdateEventName:
-				//nolint:gosec // this is a static string
-				bodySummary += template.HTML(fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural))
-			default:
-				//nolint:gosec // this is a static string
-				bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
-			}
-		}
-		msg.Body += bodySummary
-		msg.Body += template.HTML("<br><br><h5>Details:</h5>")
-		msg.Body += bodyDetails
-
-		if len(uniqueNotificationTypes) > 2 {
-			subject = fmt.Sprintf("%s: %s,... and %d other notifications", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], len(uniqueNotificationTypes)-1)
-		} else if len(uniqueNotificationTypes) == 2 {
-			subject = fmt.Sprintf("%s: %s and %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], types.EventLabel[uniqueNotificationTypes[1]])
-		} else if len(uniqueNotificationTypes) == 1 {
-			subject = fmt.Sprintf("%s: %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]])
-		}
-
-		//nolint:gosec // this is a static string
-		msg.SubscriptionManageURL = template.HTML(fmt.Sprintf(`<a href="%v" style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'">Manage</a>`, "https://"+utils.Config.Frontend.SiteDomain+"/user/notifications"))
-
-		emails = append(emails, types.TransitEmailContent{
-			Address:     userEmail,
-			Subject:     subject,
-			Email:       msg,
-			Attachments: attachments,
-			CreatedTs:   createdTs,
-		})
 	}
 	return emails, nil
 }
@@ -272,56 +279,61 @@ func QueuePushNotification(notificationsByUserID types.NotificationsPerUserId, t
 		return fmt.Errorf("error when sending push-notifications: could not get tokens: %w", err)
 	}
 
-	for userID, userNotifications := range notificationsByUserID {
+	for userID, notificationsPerDashboard := range notificationsByUserID {
 		userTokens, exists := tokensByUserID[userID]
 		if !exists {
 			continue
 		}
 
-		// todo: this looks like a flawed approach to queue the notifications
-		// this will issue one db write per user, which is not optimal
-		// we should batch the notifications and write them in one go
-		go func(userTokens []string, userNotifications map[types.EventName]map[types.EventFilter]types.Notification) {
-			var batch []*messaging.Message
-			for event, ns := range userNotifications {
-				for _, n := range ns {
-					added := false
-					for _, userToken := range userTokens {
-						notification := new(messaging.Notification)
-						notification.Title = fmt.Sprintf("%s%s", getNetwork(), n.GetTitle())
-						notification.Body = n.GetInfo(types.NotifciationFormatText)
-						if notification.Body == "" {
-							continue
+		for _, notficationsPerGroup := range notificationsPerDashboard {
+
+			for _, userNotifications := range notficationsPerGroup {
+				// todo: this looks like a flawed approach to queue the notifications
+				// this will issue one db write per user, which is not optimal
+				// we should batch the notifications and write them in one go
+				go func(userTokens []string, userNotifications types.NotificationsPerEventName) {
+					var batch []*messaging.Message
+					for event, ns := range userNotifications {
+						for _, n := range ns {
+							added := false
+							for _, userToken := range userTokens {
+								notification := new(messaging.Notification)
+								notification.Title = fmt.Sprintf("%s%s", getNetwork(), n.GetTitle())
+								notification.Body = n.GetInfo(types.NotifciationFormatText)
+								if notification.Body == "" {
+									continue
+								}
+								added = true
+
+								message := new(messaging.Message)
+								message.Notification = notification
+								message.Token = userToken
+
+								message.APNS = new(messaging.APNSConfig)
+								message.APNS.Payload = new(messaging.APNSPayload)
+								message.APNS.Payload.Aps = new(messaging.Aps)
+								message.APNS.Payload.Aps.Sound = "default"
+
+								batch = append(batch, message)
+							}
+							if added {
+								metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
+							}
 						}
-						added = true
-
-						message := new(messaging.Message)
-						message.Notification = notification
-						message.Token = userToken
-
-						message.APNS = new(messaging.APNSConfig)
-						message.APNS.Payload = new(messaging.APNSPayload)
-						message.APNS.Payload.Aps = new(messaging.Aps)
-						message.APNS.Payload.Aps.Sound = "default"
-
-						batch = append(batch, message)
 					}
-					if added {
-						metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
+
+					transitPushContent := types.TransitPushContent{
+						Messages: batch,
 					}
-				}
-			}
 
-			transitPushContent := types.TransitPushContent{
-				Messages: batch,
+					_, err = tx.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES ($1, 'push', $2)`, time.Now(), transitPushContent)
+					if err != nil {
+						log.Error(err, "error writing transit push notification to db", 0)
+						return
+					}
+				}(userTokens, userNotifications)
 			}
-
-			_, err = tx.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES ($1, 'push', $2)`, time.Now(), transitPushContent)
-			if err != nil {
-				log.Error(err, "error writing transit push notification to db", 0)
-				return
-			}
-		}(userTokens, userNotifications)
+		}
 	}
 	return nil
 }
@@ -355,89 +367,88 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 		notifs := make([]types.TransitWebhook, 0)
 		// send the notifications to each registered webhook
 		for _, w := range webhooks {
-			for event, notifications := range userNotifications {
-				eventSubscribed := false
-				// check if the webhook is subscribed to the type of event
-				for _, w := range w.EventNames {
-					if w == string(event) {
-						eventSubscribed = true
-						break
-					}
-				}
-				if eventSubscribed {
-					if len(notifications) > 0 {
-						// reset Retries
-						if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-							_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
-							if err != nil {
-								log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
-								continue
-							}
-						} else if w.Retries > 5 && !w.LastSent.Valid {
-							log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
-							continue
-						}
+			for event, notificationsPerDashboard := range userNotifications {
+				for _, notificationsPerGroup := range notificationsPerDashboard {
+					for _, notifications := range notificationsPerGroup {
+						// check if the webhook is subscribed to the type of event
+						eventSubscribed := slices.Contains(w.EventNames, string(event))
 
-						if w.Retries >= 5 {
-							// early return
-							continue
-						}
-					}
+						if eventSubscribed {
+							if len(notifications) > 0 {
+								// reset Retries
+								if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
+									_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
+									if err != nil {
+										log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
+										continue
+									}
+								} else if w.Retries > 5 && !w.LastSent.Valid {
+									log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
+									continue
+								}
 
-					for _, n := range notifications {
-						if w.Destination.Valid && w.Destination.String == "webhook_discord" {
-							if _, exists := discordNotifMap[w.ID]; !exists {
-								discordNotifMap[w.ID] = make([]types.TransitDiscordContent, 0)
-							}
-							l_notifs := len(discordNotifMap[w.ID])
-							if l_notifs == 0 || len(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds) >= 10 {
-								discordNotifMap[w.ID] = append(discordNotifMap[w.ID], types.TransitDiscordContent{
-									Webhook: w,
-									DiscordRequest: types.DiscordReq{
-										Username: utils.Config.Frontend.SiteDomain,
-									},
-								})
-								l_notifs++
+								if w.Retries >= 5 {
+									// early return
+									continue
+								}
 							}
 
-							fields := []types.DiscordEmbedField{
-								{
-									Name:   "Epoch",
-									Value:  fmt.Sprintf("[%[1]v](https://%[2]s/%[1]v)", n.GetEpoch(), utils.Config.Frontend.SiteDomain+"/epoch"),
-									Inline: false,
-								},
-							}
+							for _, n := range notifications {
+								if w.Destination.Valid && w.Destination.String == "webhook_discord" {
+									if _, exists := discordNotifMap[w.ID]; !exists {
+										discordNotifMap[w.ID] = make([]types.TransitDiscordContent, 0)
+									}
+									l_notifs := len(discordNotifMap[w.ID])
+									if l_notifs == 0 || len(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds) >= 10 {
+										discordNotifMap[w.ID] = append(discordNotifMap[w.ID], types.TransitDiscordContent{
+											Webhook: w,
+											DiscordRequest: types.DiscordReq{
+												Username: utils.Config.Frontend.SiteDomain,
+											},
+										})
+										l_notifs++
+									}
 
-							if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReached || n.GetEventName() == types.RocketpoolCollateralMinReached {
-								fields = append(fields,
-									types.DiscordEmbedField{
-										Name:   "Target",
-										Value:  fmt.Sprintf("%v", n.GetEventFilter()),
-										Inline: false,
-									})
-							}
-							discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
-								Type:        "rich",
-								Color:       "16745472",
-								Description: n.GetInfo(types.NotifciationFormatMarkdown),
-								Title:       n.GetTitle(),
-								Fields:      fields,
-							})
-						} else {
-							notifs = append(notifs, types.TransitWebhook{
-								Channel: w.Destination.String,
-								Content: types.TransitWebhookContent{
-									Webhook: w,
-									Event: types.WebhookEvent{
-										Network:     utils.GetNetwork(),
-										Name:        string(n.GetEventName()),
+									fields := []types.DiscordEmbedField{
+										{
+											Name:   "Epoch",
+											Value:  fmt.Sprintf("[%[1]v](https://%[2]s/%[1]v)", n.GetEpoch(), utils.Config.Frontend.SiteDomain+"/epoch"),
+											Inline: false,
+										},
+									}
+
+									if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReached || n.GetEventName() == types.RocketpoolCollateralMinReached {
+										fields = append(fields,
+											types.DiscordEmbedField{
+												Name:   "Target",
+												Value:  fmt.Sprintf("%v", n.GetEventFilter()),
+												Inline: false,
+											})
+									}
+									discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
+										Type:        "rich",
+										Color:       "16745472",
+										Description: n.GetInfo(types.NotifciationFormatMarkdown),
 										Title:       n.GetTitle(),
-										Description: n.GetInfo(types.NotifciationFormatText),
-										Epoch:       n.GetEpoch(),
-										Target:      n.GetEventFilter(),
-									},
-								},
-							})
+										Fields:      fields,
+									})
+								} else {
+									notifs = append(notifs, types.TransitWebhook{
+										Channel: w.Destination.String,
+										Content: types.TransitWebhookContent{
+											Webhook: w,
+											Event: types.WebhookEvent{
+												Network:     utils.GetNetwork(),
+												Name:        string(n.GetEventName()),
+												Title:       n.GetTitle(),
+												Description: n.GetInfo(types.NotifciationFormatText),
+												Epoch:       n.GetEpoch(),
+												Target:      n.GetEventFilter(),
+											},
+										},
+									})
+								}
+							}
 						}
 					}
 				}

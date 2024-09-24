@@ -992,8 +992,8 @@ func collectMonitoringMachine(
 
 	dbResult, err := GetSubsForEventFilter(
 		eventName,
-		"(created_epoch <= ? AND (last_sent_epoch < (? - ?) OR last_sent_epoch IS NULL))",
-		[]interface{}{epoch, epoch, epochWaitInBetween},
+		"(created_epoch <= ? AND (last_sent_epoch < ? OR last_sent_epoch IS NULL))",
+		[]interface{}{epoch, int64(epoch) - int64(epochWaitInBetween)},
 		nil,
 		nil,
 	)
