@@ -19,6 +19,7 @@ import (
 
 	"firebase.google.com/go/v4/messaging"
 	"github.com/coocood/freecache"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/cmd/misc/commands"
@@ -509,6 +510,22 @@ func collectNotifications(startEpoch uint64) error {
 
 	log.Infof("collecting notifications for epoch %v", epoch)
 	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("found %v notifications for epoch %v with %v notifications for user 0", len(notifications), epoch, len(notifications[0]))
+	if len(notifications[0]) > 0 {
+		spew.Dump(notifications[0])
+	}
+	return nil
+}
+
+func collectUserDbNotifications(startEpoch uint64) error {
+	epoch := startEpoch
+
+	log.Infof("collecting notifications for epoch %v", epoch)
+	notifications, err := notification.GetUserNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
 	if err != nil {
 		return err
 	}
