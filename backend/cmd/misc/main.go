@@ -522,7 +522,7 @@ func collectNotifications(startEpoch uint64) error {
 	}
 
 	for _, email := range emails {
-		if email.Address == "peter@bitfly.at" {
+		if email.Address == "" {
 			log.Infof("to: %v", email.Address)
 			log.Infof("subject: %v", email.Subject)
 			log.Infof("body: %v", email.Email.Body)
@@ -549,7 +549,7 @@ func collectUserDbNotifications(startEpoch uint64) error {
 	}
 
 	for _, email := range emails {
-		if email.Address == "peter@bitfly.at" {
+		if email.Address == "" {
 			log.Infof("to: %v", email.Address)
 			log.Infof("subject: %v", email.Subject)
 			log.Infof("body: %v", email.Email.Body)
