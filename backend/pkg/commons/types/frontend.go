@@ -23,7 +23,11 @@ import (
 type EventName string
 type EventFilter string
 
-type NotificationsPerUserId map[UserId]map[EventName]map[EventFilter]Notification
+type NotificationsPerUserId map[UserId]NotificationsPerDashboard
+type NotificationsPerDashboard map[DashboardId]NotificationsPerDashboardGroup
+type NotificationsPerDashboardGroup map[DashboardGroupId]NotificationsPerEventName
+type NotificationsPerEventName map[EventName]NotificationsPerEventFilter
+type NotificationsPerEventFilter map[EventFilter]Notification
 
 func (npui NotificationsPerUserId) AddNotification(n Notification) {
 	if n.GetUserId() == 0 {
@@ -32,37 +36,49 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 	if n.GetEventName() == "" {
 		log.Fatal(fmt.Errorf("Notification event name is empty"), fmt.Sprintf("Notification: %v", n), 1)
 	}
+
+	dashboardId := DashboardId(0)
+	dashboardGroupId := DashboardGroupId(0)
+	if n.GetDashboardId() != nil {
+		dashboardId = DashboardId(*n.GetDashboardId())
+		dashboardGroupId = DashboardGroupId(*n.GetDashboardGroupId())
+	}
+
 	// next check is disabled as there are events that do not require a filter (rocketpool, network events)
 	// if n.GetEventFilter() == "" {
 	// 	log.Fatal(fmt.Errorf("Notification event filter is empty"), fmt.Sprintf("Notification: %v", n), 0)
 	// }
 
 	if _, ok := npui[n.GetUserId()]; !ok {
-		npui[n.GetUserId()] = make(map[EventName]map[EventFilter]Notification)
+		npui[n.GetUserId()] = make(NotificationsPerDashboard)
 	}
-	if _, ok := npui[n.GetUserId()][n.GetEventName()]; !ok {
-		npui[n.GetUserId()][n.GetEventName()] = make(map[EventFilter]Notification)
+	if _, ok := npui[n.GetUserId()][dashboardId]; !ok {
+		npui[n.GetUserId()][dashboardId] = make(NotificationsPerDashboardGroup)
 	}
-	npui[n.GetUserId()][n.GetEventName()][EventFilter(n.GetEventFilter())] = n
+	if _, ok := npui[n.GetUserId()][dashboardId][dashboardGroupId]; !ok {
+		npui[n.GetUserId()][dashboardId][dashboardGroupId] = make(NotificationsPerEventName)
+	}
+	if _, ok := npui[n.GetUserId()][dashboardId][dashboardGroupId][n.GetEventName()]; !ok {
+		npui[n.GetUserId()][dashboardId][dashboardGroupId][n.GetEventName()] = make(NotificationsPerEventFilter)
+	}
+	npui[n.GetUserId()][dashboardId][dashboardGroupId][n.GetEventName()][EventFilter(n.GetEventFilter())] = n
 }
 
 const (
-	ValidatorMissedProposalEventName                 EventName = "validator_proposal_missed"
-	ValidatorExecutedProposalEventName               EventName = "validator_proposal_submitted"
-	ValidatorMissedAttestationEventName              EventName = "validator_attestation_missed"
-	ValidatorGotSlashedEventName                     EventName = "validator_got_slashed"
-	ValidatorDidSlashEventName                       EventName = "validator_did_slash"
-	ValidatorIsOfflineEventName                      EventName = "validator_is_offline"
-	ValidatorReceivedWithdrawalEventName             EventName = "validator_withdrawal"
-	NetworkLivenessIncreasedEventName                EventName = "network_liveness_increased"
-	EthClientUpdateEventName                         EventName = "eth_client_update"
-	MonitoringMachineOfflineEventName                EventName = "monitoring_machine_offline"
-	MonitoringMachineDiskAlmostFullEventName         EventName = "monitoring_hdd_almostfull"
-	MonitoringMachineCpuLoadEventName                EventName = "monitoring_cpu_load"
-	MonitoringMachineMemoryUsageEventName            EventName = "monitoring_memory_usage"
-	MonitoringMachineSwitchedToETH2FallbackEventName EventName = "monitoring_fallback_eth2inuse"
-	MonitoringMachineSwitchedToETH1FallbackEventName EventName = "monitoring_fallback_eth1inuse"
-	TaxReportEventName                               EventName = "user_tax_report"
+	ValidatorMissedProposalEventName         EventName = "validator_proposal_missed"
+	ValidatorExecutedProposalEventName       EventName = "validator_proposal_submitted"
+	ValidatorMissedAttestationEventName      EventName = "validator_attestation_missed"
+	ValidatorGotSlashedEventName             EventName = "validator_got_slashed"
+	ValidatorDidSlashEventName               EventName = "validator_did_slash"
+	ValidatorIsOfflineEventName              EventName = "validator_is_offline"
+	ValidatorReceivedWithdrawalEventName     EventName = "validator_withdrawal"
+	NetworkLivenessIncreasedEventName        EventName = "network_liveness_increased"
+	EthClientUpdateEventName                 EventName = "eth_client_update"
+	MonitoringMachineOfflineEventName        EventName = "monitoring_machine_offline"
+	MonitoringMachineDiskAlmostFullEventName EventName = "monitoring_hdd_almostfull"
+	MonitoringMachineCpuLoadEventName        EventName = "monitoring_cpu_load"
+	MonitoringMachineMemoryUsageEventName    EventName = "monitoring_memory_usage"
+	TaxReportEventName                       EventName = "user_tax_report"
 	//nolint:misspell
 	RocketpoolCommissionThresholdEventName  EventName = "rocketpool_commision_threshold"
 	RocketpoolNewClaimRoundStartedEventName EventName = "rocketpool_new_claimround"
@@ -82,8 +98,6 @@ var EventSortOrder = []EventName{
 	MonitoringMachineDiskAlmostFullEventName,
 	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineMemoryUsageEventName,
-	MonitoringMachineSwitchedToETH2FallbackEventName,
-	MonitoringMachineSwitchedToETH1FallbackEventName,
 	SyncCommitteeSoon,
 	ValidatorIsOfflineEventName,
 	ValidatorReceivedWithdrawalEventName,
@@ -103,44 +117,44 @@ var MachineEvents = []EventName{
 	MonitoringMachineDiskAlmostFullEventName,
 	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineMemoryUsageEventName,
-	MonitoringMachineSwitchedToETH2FallbackEventName,
-	MonitoringMachineSwitchedToETH1FallbackEventName,
 }
 
 var UserIndexEvents = []EventName{
 	EthClientUpdateEventName,
 	MonitoringMachineCpuLoadEventName,
-	EthClientUpdateEventName,
 	MonitoringMachineOfflineEventName,
 	MonitoringMachineDiskAlmostFullEventName,
-	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineMemoryUsageEventName,
-	MonitoringMachineSwitchedToETH2FallbackEventName,
-	MonitoringMachineSwitchedToETH1FallbackEventName,
+}
+
+var UserIndexEventsMap = map[EventName]struct{}{
+	EthClientUpdateEventName:                 {},
+	MonitoringMachineCpuLoadEventName:        {},
+	MonitoringMachineOfflineEventName:        {},
+	MonitoringMachineDiskAlmostFullEventName: {},
+	MonitoringMachineMemoryUsageEventName:    {},
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
-	ValidatorMissedProposalEventName:                 "Block proposal missed",
-	ValidatorExecutedProposalEventName:               "Block proposal submitted",
-	ValidatorMissedAttestationEventName:              "Attestation missed",
-	ValidatorGotSlashedEventName:                     "Validator slashed",
-	ValidatorDidSlashEventName:                       "Validator has slashed",
-	ValidatorIsOfflineEventName:                      "Validator online / offline",
-	ValidatorReceivedWithdrawalEventName:             "Validator withdrawal initiated",
-	NetworkLivenessIncreasedEventName:                "The network is experiencing liveness issues",
-	EthClientUpdateEventName:                         "An Ethereum client has a new update available",
-	MonitoringMachineOfflineEventName:                "Machine offline",
-	MonitoringMachineDiskAlmostFullEventName:         "Machine low disk space",
-	MonitoringMachineCpuLoadEventName:                "Machine high CPU load",
-	MonitoringMachineMemoryUsageEventName:            "Machine high memory load",
-	MonitoringMachineSwitchedToETH2FallbackEventName: "Consensus client fallback activated",
-	MonitoringMachineSwitchedToETH1FallbackEventName: "Execution client fallback activated",
-	TaxReportEventName:                               "Tax report available",
-	RocketpoolCommissionThresholdEventName:           "Rocket pool commission threshold is reached",
-	RocketpoolNewClaimRoundStartedEventName:          "Rocket pool claim from last round is available",
-	RocketpoolCollateralMinReached:                   "Rocket pool node min RPL collateral reached",
-	RocketpoolCollateralMaxReached:                   "Rocket pool node max RPL collateral reached",
-	SyncCommitteeSoon:                                "Upcoming sync committee",
+	ValidatorMissedProposalEventName:         "Block proposal missed",
+	ValidatorExecutedProposalEventName:       "Block proposal submitted",
+	ValidatorMissedAttestationEventName:      "Attestation missed",
+	ValidatorGotSlashedEventName:             "Validator slashed",
+	ValidatorDidSlashEventName:               "Validator has slashed",
+	ValidatorIsOfflineEventName:              "Validator online / offline",
+	ValidatorReceivedWithdrawalEventName:     "Validator withdrawal initiated",
+	NetworkLivenessIncreasedEventName:        "The network is experiencing liveness issues",
+	EthClientUpdateEventName:                 "An Ethereum client has a new update available",
+	MonitoringMachineOfflineEventName:        "Machine offline",
+	MonitoringMachineDiskAlmostFullEventName: "Machine low disk space",
+	MonitoringMachineCpuLoadEventName:        "Machine high CPU load",
+	MonitoringMachineMemoryUsageEventName:    "Machine high memory load",
+	TaxReportEventName:                       "Tax report available",
+	RocketpoolCommissionThresholdEventName:   "Rocket pool commission threshold is reached",
+	RocketpoolNewClaimRoundStartedEventName:  "Rocket pool claim from last round is available",
+	RocketpoolCollateralMinReached:           "Rocket pool node min RPL collateral reached",
+	RocketpoolCollateralMaxReached:           "Rocket pool node max RPL collateral reached",
+	SyncCommitteeSoon:                        "Upcoming sync committee",
 }
 
 func IsUserIndexed(event EventName) bool {
@@ -174,8 +188,6 @@ var EventNames = []EventName{
 	MonitoringMachineOfflineEventName,
 	MonitoringMachineDiskAlmostFullEventName,
 	MonitoringMachineCpuLoadEventName,
-	MonitoringMachineSwitchedToETH2FallbackEventName,
-	MonitoringMachineSwitchedToETH1FallbackEventName,
 	MonitoringMachineMemoryUsageEventName,
 	TaxReportEventName,
 	RocketpoolCommissionThresholdEventName,
