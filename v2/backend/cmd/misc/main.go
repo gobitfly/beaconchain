@@ -570,33 +570,6 @@ func collectUserDbNotifications(startEpoch uint64) error {
 	return nil
 }
 
-func collectUserDbNotifications(startEpoch uint64) error {
-	epoch := startEpoch
-
-	log.Infof("collecting notifications for epoch %v", epoch)
-	notifications, err := notification.GetUserNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("found %v notifications for epoch %v", len(notifications), epoch)
-
-	emails, err := notification.RenderEmailsForUserEvents(notifications)
-	if err != nil {
-		return err
-	}
-
-	for _, email := range emails {
-		if email.Address == "" {
-			log.Infof("to: %v", email.Address)
-			log.Infof("subject: %v", email.Subject)
-			log.Infof("body: %v", email.Email.Body)
-			log.Info("-----")
-		}
-	}
-	return nil
-}
-
 func fixEns(erigonClient *rpc.ErigonClient) error {
 	log.Infof("command: fix-ens")
 	addrs := []struct {
