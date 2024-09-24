@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/shopspring/decimal"
 )
@@ -345,7 +346,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	data := make([]t.VDBBlocksTableRow, len(proposals))
-	ensMapping := make(map[string]string)
+	addressMapping := make(map[string]*t.Address)
+	contractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(proposals))
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
 		if dashboardId.AggregateGroups {
@@ -382,7 +384,13 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				Hash: t.Hash(hexutil.Encode(proposal.FeeRecipient)),
 			}
 			data[i].RewardRecipient = &rewardRecp
-			ensMapping[hexutil.Encode(proposal.FeeRecipient)] = ""
+			addressMapping[hexutil.Encode(proposal.FeeRecipient)] = nil
+			contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
+				Address:  fmt.Sprintf("%x", proposal.FeeRecipient),
+				Block:    proposal.Block.Int64,
+				TxIdx:    -1,
+				TraceIdx: -1,
+			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
 		if proposal.ClReward.Valid {
@@ -393,13 +401,22 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	// determine reward recipient ENS names
 	startTime = time.Now()
-	if err := db.GetEnsNamesForAddresses(ensMapping); err != nil {
+	// determine ens/names
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
 		return nil, nil, err
 	}
-	log.Debugf("=== getting ens names took %s", time.Since(startTime))
+	log.Debugf("=== getting ens + labels names took %s", time.Since(startTime))
+	// determine contract statuses
+	contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
+	if err != nil {
+		return nil, nil, err
+	}
+	var contractIdx int
 	for i := range data {
 		if data[i].RewardRecipient != nil {
-			data[i].RewardRecipient.Ens = ensMapping[string(data[i].RewardRecipient.Hash)]
+			data[i].RewardRecipient = addressMapping[string(data[i].RewardRecipient.Hash)]
+			data[i].RewardRecipient.IsContract = contractStatuses[contractIdx] == types.CONTRACT_CREATION || contractStatuses[contractIdx] == types.CONTRACT_PRESENT
+			contractIdx += 1
 		}
 	}
 	if !moreDataFlag && !currentCursor.IsValid() {

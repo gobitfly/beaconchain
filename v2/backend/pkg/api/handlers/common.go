@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -78,6 +79,7 @@ const (
 	sortOrderAscending                = "asc"
 	sortOrderDescending               = "desc"
 	defaultSortOrder                  = sortOrderAscending
+	defaultDesc                       = defaultSortOrder == sortOrderDescending
 	ethereum                          = "ethereum"
 	gnosis                            = "gnosis"
 	allowEmpty                        = true
@@ -476,11 +478,7 @@ func (v *validationError) checkValidatorDashboardPublicId(publicId string) types
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
-type number interface {
-	uint64 | int64 | float64
-}
-
-func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+func checkMinMax[T cmp.Ordered](v *validationError, param T, min T, max T, paramName string) T {
 	if param < min {
 		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
 	}
@@ -528,8 +526,7 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 }
 
 // checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
-// precondition: the enum is the same type as the allowed enums.
-func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
+func checkEnumIsAllowed[T enums.EnumFactory[T]](v *validationError, enum T, allowed []T, name string) {
 	if enums.IsInvalidEnum(enum) {
 		v.add(name, "parameter is missing or invalid, please check the API documentation")
 		return
@@ -545,7 +542,7 @@ func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.En
 func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
-		return defaultSortOrder == sortOrderDescending
+		return defaultDesc
 	case sortOrderAscending:
 		return false
 	case sortOrderDescending:
@@ -559,19 +556,21 @@ func (v *validationError) parseSortOrder(order string) bool {
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
 	var c T
 	if sortString == "" {
-		return &types.Sort[T]{Column: c, Desc: false}
+		return &types.Sort[T]{Column: c, Desc: defaultDesc}
 	}
 	sortSplit := strings.Split(sortString, ":")
 	if len(sortSplit) > 2 {
 		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'", sortString))
 		return nil
 	}
+	var desc bool
 	if len(sortSplit) == 1 {
-		sortSplit = append(sortSplit, "")
+		desc = defaultDesc
+	} else {
+		desc = v.parseSortOrder(sortSplit[1])
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
-	order := v.parseSortOrder(sortSplit[1])
-	return &types.Sort[T]{Column: sortCol, Desc: order}
+	return &types.Sort[T]{Column: sortCol, Desc: desc}
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {
@@ -657,6 +656,14 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 		return v.checkNetwork(intOrString{intValue: &chainId})
 	}
 	return v.checkNetwork(intOrString{strValue: &param})
+}
+
+func (v *validationError) checkNetworksParameter(param string) []uint64 {
+	var chainIds []uint64
+	for _, network := range splitParameters(param, ',') {
+		chainIds = append(chainIds, v.checkNetworkParameter(network))
+	}
+	return chainIds
 }
 
 // isValidNetwork checks if the given network is a valid network.
