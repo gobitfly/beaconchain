@@ -4,6 +4,7 @@
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
     "NotificationsClientsTable",
+    "NotificationsNetworkTable",
     "NotificationsOverview",
     "checkout",
     "ci",
