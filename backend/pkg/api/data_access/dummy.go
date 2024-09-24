@@ -448,7 +448,7 @@ func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, d
 func (d *DummyService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return getDummyStruct[t.NotificationOverviewData]()
 }
-func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationDashboardsTableRow]()
 }
 
