@@ -105,6 +105,14 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type NotificationSettingsCursor struct {
+	GenericCursor
+
+	IsAccountDashboard bool // if false it's a validator dashboard
+	DashboardId        uint64
+	GroupId            uint64
+}
+
 type UserCredentialInfo struct {
 	Id             uint64 `db:"id"`
 	Email          string `db:"email"`
