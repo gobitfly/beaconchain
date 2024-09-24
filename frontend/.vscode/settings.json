@@ -1,5 +1,6 @@
 {
   "conventionalCommits.scopes": [
+    "BcTablePager",
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
