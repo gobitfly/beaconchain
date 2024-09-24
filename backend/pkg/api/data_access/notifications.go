@@ -184,8 +184,8 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				g.discord_webhook,
 				g.ignore_spam_transactions,
 				g.subscribed_chain_ids
-			FROM users_val_dashboards d
-			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
+			FROM users_acc_dashboards d
+			INNER JOIN users_acc_dashboards_groups g ON d.id = g.dashboard_id
 			WHERE d.user_id = $1`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)

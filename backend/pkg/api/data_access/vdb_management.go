@@ -235,6 +235,16 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = $1
 	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("%s:%d:", ValidatorDashboardEventPrefix, dashboardId)
+
+	// Remove all events related to the dashboard
+	_, err = d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_subscriptions WHERE event_filter LIKE ($1 || '%')
+	`, prefix)
 	return err
 }
 
@@ -571,6 +581,16 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, d
 	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
+
+	// Remove all events related to the group
+	_, err = d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_subscriptions WHERE event_filter = $1
+	`, prefix)
 	return err
 }
 
