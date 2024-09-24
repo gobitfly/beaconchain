@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"firebase.google.com/go/v4/messaging"
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
@@ -522,11 +523,31 @@ func collectNotifications(startEpoch uint64) error {
 	}
 
 	for _, email := range emails {
-		if email.Address == "" {
-			log.Infof("to: %v", email.Address)
-			log.Infof("subject: %v", email.Subject)
-			log.Infof("body: %v", email.Email.Body)
-			log.Info("-----")
+		// if email.Address == "" {
+		log.Infof("to: %v", email.Address)
+		log.Infof("subject: %v", email.Subject)
+		log.Infof("body: %v", email.Email.Body)
+		log.Info("-----")
+		// }
+	}
+
+	pushMessages, err := notification.RenderPushMessagesForUserEvents(notifications)
+	if err != nil {
+		return err
+	}
+
+	for _, pushMessage := range pushMessages {
+		message := pushMessage.Messages[0]
+		log.Infof("title: %v body: %v", message.Notification.Title, message.Notification.Body)
+
+		if message.Token == "c0xn2dSe60YWucTa1QHJT2:APA91bEntgloLjUiH8GTY-5qN-ACmj41P7rg3cw18pwvd0I5q1XXmAQH2xkUIKzJEWqRJ0UHa-q9bowveXRaLPFDXoN1IvJ4TDLYVGT4wwNzoldMZxRIvCJ3rsLt4LG5kX0XeWpU-Che" {
+			log.Info("sending test message")
+
+			err = notification.SendPushBatch([]*messaging.Message{message}, false)
+			if err != nil {
+				log.Error(err, "error sending firebase batch job", 0)
+			} else {
+			}
 		}
 	}
 	return nil
