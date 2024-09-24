@@ -129,24 +129,24 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 			// metrics.Errors.WithLabelValues("notifications_mail_not_found").Inc()
 			continue
 		}
-		for _, notificationsPerGroup := range notificationsPerDashboard {
-			for _, userNotifications := range notificationsPerGroup {
-				attachments := []types.EmailAttachment{}
+		attachments := []types.EmailAttachment{}
 
-				var msg types.Email
+		var msg types.Email
 
-				if utils.Config.Chain.Name != "mainnet" {
-					//nolint:gosec // this is a static string
-					msg.Body += template.HTML(fmt.Sprintf("<b>Notice: This email contains notifications for the %s network!</b><br>", utils.Config.Chain.Name))
-				}
+		if utils.Config.Chain.Name != "mainnet" {
+			//nolint:gosec // this is a static string
+			msg.Body += template.HTML(fmt.Sprintf("<b>Notice: This email contains notifications for the %s network!</b><br>", utils.Config.Chain.Name))
+		}
 
-				subject := ""
-				notificationTypesMap := make(map[types.EventName]int)
-				uniqueNotificationTypes := []types.EventName{}
+		subject := ""
+		notificationTypesMap := make(map[types.EventName]int)
+		uniqueNotificationTypes := []types.EventName{}
 
-				bodyDetails := template.HTML("")
+		bodyDetails := template.HTML("")
 
-				for _, event := range types.EventSortOrder {
+		for _, event := range types.EventSortOrder {
+			for _, notificationsPerGroup := range notificationsPerDashboard {
+				for _, userNotifications := range notificationsPerGroup {
 					ns, ok := userNotifications[event]
 					if !ok { // nothing to do for this event type
 						continue
@@ -193,64 +193,64 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 						bodyDetails += template.HTML(fmt.Sprintf("%s<br>", eventInfo))
 					}
 				}
-
-				bodySummary := template.HTML("<h5>Summary:</h5>")
-				for _, event := range types.EventSortOrder {
-					count, ok := notificationTypesMap[event]
-					if !ok {
-						continue
-					}
-					if len(bodySummary) > 0 {
-						bodySummary += "<br>"
-					}
-					plural := ""
-					if count > 1 {
-						plural = "s"
-					}
-					switch event {
-					case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
-						//nolint:gosec // this is a static string
-						bodySummary += template.HTML(fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural))
-					case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
-						//nolint:gosec // this is a static string
-						bodySummary += template.HTML(fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural))
-					case types.EthClientUpdateEventName:
-						//nolint:gosec // this is a static string
-						bodySummary += template.HTML(fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural))
-					default:
-						//nolint:gosec // this is a static string
-						bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
-					}
-				}
-				msg.Body += bodySummary
-				msg.Body += template.HTML("<br><br><h5>Details:</h5>")
-				msg.Body += bodyDetails
-
-				if len(uniqueNotificationTypes) > 2 {
-					subject = fmt.Sprintf("%s: %s,... and %d other notifications", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], len(uniqueNotificationTypes)-1)
-				} else if len(uniqueNotificationTypes) == 2 {
-					subject = fmt.Sprintf("%s: %s and %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], types.EventLabel[uniqueNotificationTypes[1]])
-				} else if len(uniqueNotificationTypes) == 1 {
-					subject = fmt.Sprintf("%s: %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]])
-				}
-
-				//nolint:gosec // this is a static string
-				msg.SubscriptionManageURL = template.HTML(fmt.Sprintf(`<a href="%v" style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'">Manage</a>`, "https://"+utils.Config.Frontend.SiteDomain+"/user/notifications"))
-
-				emails = append(emails, types.TransitEmailContent{
-					Address:     userEmail,
-					Subject:     subject,
-					Email:       msg,
-					Attachments: attachments,
-					CreatedTs:   createdTs,
-				})
 			}
 		}
+
+		bodySummary := template.HTML("<h5>Summary:</h5>")
+		for _, event := range types.EventSortOrder {
+			count, ok := notificationTypesMap[event]
+			if !ok {
+				continue
+			}
+			if len(bodySummary) > 0 {
+				bodySummary += "<br>"
+			}
+			plural := ""
+			if count > 1 {
+				plural = "s"
+			}
+			switch event {
+			case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural))
+			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural))
+			case types.EthClientUpdateEventName:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural))
+			default:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
+			}
+		}
+		msg.Body += bodySummary
+		msg.Body += template.HTML("<br><br><h5>Details:</h5>")
+		msg.Body += bodyDetails
+
+		if len(uniqueNotificationTypes) > 2 {
+			subject = fmt.Sprintf("%s: %s,... and %d other notifications", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], len(uniqueNotificationTypes)-1)
+		} else if len(uniqueNotificationTypes) == 2 {
+			subject = fmt.Sprintf("%s: %s and %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]], types.EventLabel[uniqueNotificationTypes[1]])
+		} else if len(uniqueNotificationTypes) == 1 {
+			subject = fmt.Sprintf("%s: %s", utils.Config.Frontend.SiteDomain, types.EventLabel[uniqueNotificationTypes[0]])
+		}
+		//nolint:gosec // this is a static string
+		msg.SubscriptionManageURL = template.HTML(fmt.Sprintf(`<a href="%v" style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'">Manage</a>`, "https://"+utils.Config.Frontend.SiteDomain+"/user/notifications"))
+
+		emails = append(emails, types.TransitEmailContent{
+			Address:     userEmail,
+			Subject:     subject,
+			Email:       msg,
+			Attachments: attachments,
+			CreatedTs:   createdTs,
+		})
 	}
 	return emails, nil
 }
 
 func QueueEmailNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
+	// for emails multiple notifications will be rendered to one email per user for each run
 	emails, err := RenderEmailsForUserEvents(notificationsByUserID)
 	if err != nil {
 		return fmt.Errorf("error rendering emails: %w", err)
@@ -258,25 +258,23 @@ func QueueEmailNotifications(notificationsByUserID types.NotificationsPerUserId,
 
 	// now batch insert the emails in one go
 	log.Infof("queueing %v email notifications", len(emails))
+	// TODO: this query is likely wrong!
 	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (:created_ts, 'email', :email)`, emails)
 	if err != nil {
 		log.Error(err, "error writing transit email to db", 0)
 	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing transaction: %w", err)
-	}
 	return nil
 }
 
-func QueuePushNotification(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
+func RenderPushMessagesForUserEvents(notificationsByUserID types.NotificationsPerUserId) ([]types.TransitPushContent, error) {
+	pushMessages := make([]types.TransitPushContent, 0, 50)
+
 	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
 
 	tokensByUserID, err := GetUserPushTokenByIds(userIDs)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_send_push_notifications").Inc()
-		return fmt.Errorf("error when sending push-notifications: could not get tokens: %w", err)
+		return nil, fmt.Errorf("error when sending push-notifications: could not get tokens: %w", err)
 	}
 
 	for userID, notificationsPerDashboard := range notificationsByUserID {
@@ -284,56 +282,88 @@ func QueuePushNotification(notificationsByUserID types.NotificationsPerUserId, t
 		if !exists {
 			continue
 		}
+		log.Infof("generating push notification for user %v", userID)
 
-		for _, notficationsPerGroup := range notificationsPerDashboard {
+		notificationTypesMap := make(map[types.EventName]int)
 
-			for _, userNotifications := range notficationsPerGroup {
-				// todo: this looks like a flawed approach to queue the notifications
-				// this will issue one db write per user, which is not optimal
-				// we should batch the notifications and write them in one go
-				go func(userTokens []string, userNotifications types.NotificationsPerEventName) {
-					var batch []*messaging.Message
-					for event, ns := range userNotifications {
-						for _, n := range ns {
-							added := false
-							for _, userToken := range userTokens {
-								notification := new(messaging.Notification)
-								notification.Title = fmt.Sprintf("%s%s", getNetwork(), n.GetTitle())
-								notification.Body = n.GetInfo(types.NotifciationFormatText)
-								if notification.Body == "" {
-									continue
-								}
-								added = true
-
-								message := new(messaging.Message)
-								message.Notification = notification
-								message.Token = userToken
-
-								message.APNS = new(messaging.APNSConfig)
-								message.APNS.Payload = new(messaging.APNSPayload)
-								message.APNS.Payload.Aps = new(messaging.Aps)
-								message.APNS.Payload.Aps.Sound = "default"
-
-								batch = append(batch, message)
-							}
-							if added {
-								metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
-							}
-						}
+		for _, event := range types.EventSortOrder {
+			for _, notficationsPerGroup := range notificationsPerDashboard {
+				for _, userNotifications := range notficationsPerGroup {
+					ns, ok := userNotifications[event]
+					if !ok { // nothing to do for this event type
+						continue
 					}
-
-					transitPushContent := types.TransitPushContent{
-						Messages: batch,
+					for range ns {
+						notificationTypesMap[event]++
 					}
-
-					_, err = tx.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES ($1, 'push', $2)`, time.Now(), transitPushContent)
-					if err != nil {
-						log.Error(err, "error writing transit push notification to db", 0)
-						return
-					}
-				}(userTokens, userNotifications)
+					metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
+				}
 			}
 		}
+
+		bodySummary := ""
+		for _, event := range types.EventSortOrder {
+			count, ok := notificationTypesMap[event]
+			if !ok {
+				continue
+			}
+			if len(bodySummary) > 0 {
+				bodySummary += "\n"
+			}
+			plural := ""
+			if count > 1 {
+				plural = "s"
+			}
+			switch event {
+			case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
+				bodySummary += fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural)
+			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+				bodySummary += fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural)
+			case types.EthClientUpdateEventName:
+				bodySummary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)
+			default:
+				bodySummary += fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural)
+			}
+		}
+
+		if len(bodySummary) > 1000 { // cap the notification body to 1000 characters (firebase limit)
+			bodySummary = bodySummary[:1000]
+		}
+		for _, userToken := range userTokens {
+			message := new(messaging.Message)
+			message.Token = userToken
+			message.APNS = new(messaging.APNSConfig)
+			message.APNS.Payload = new(messaging.APNSPayload)
+			message.APNS.Payload.Aps = new(messaging.Aps)
+			message.APNS.Payload.Aps.Sound = "default"
+
+			notification := new(messaging.Notification)
+			notification.Title = fmt.Sprintf("%s Info", getNetwork())
+			notification.Body = bodySummary
+			message.Notification = notification
+			transitPushContent := types.TransitPushContent{
+				Messages: []*messaging.Message{message},
+			}
+
+			pushMessages = append(pushMessages, transitPushContent)
+		}
+	}
+
+	return pushMessages, nil
+}
+
+func QueuePushNotification(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
+	pushMessages, err := RenderPushMessagesForUserEvents(notificationsByUserID)
+	if err != nil {
+		return fmt.Errorf("error rendering push messages: %w", err)
+	}
+
+	// now batch insert the push messages in one go
+	log.Infof("queueing %v push notifications", len(pushMessages))
+	// TODO: this query is likely wrong!
+	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), 'push', :messages)`, pushMessages)
+	if err != nil {
+		return fmt.Errorf("error writing transit push to db: %w", err)
 	}
 	return nil
 }

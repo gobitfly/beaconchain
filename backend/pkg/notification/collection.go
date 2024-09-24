@@ -1337,7 +1337,12 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.
 }
 
 func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.NotificationsPerUserId, eventName types.EventName, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
-	subMap, err := GetSubsForEventFilter(eventName, "", nil, nil, validatorDashboardConfig)
+	subMap, err := GetSubsForEventFilter(
+		eventName,
+		"(last_sent_ts <= NOW() - INTERVAL '24 hours' OR last_sent_ts IS NULL)", // send out this notification type only once per day
+		nil,
+		nil,
+		validatorDashboardConfig)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for RocketpoolRPLCollateral %w", err)
 	}

@@ -51,7 +51,7 @@ func formatSlotLink(format types.NotificationFormat, slot interface{}) string {
 	return ""
 }
 
-func formateDashboardAndGroupLink(format types.NotificationFormat, n types.Notification) string {
+func formatDashboardAndGroupLink(format types.NotificationFormat, n types.Notification) string {
 	dashboardAndGroupInfo := ""
 	if n.GetDashboardId() != nil {
 		switch format {
@@ -78,7 +78,7 @@ type validatorProposalNotification struct {
 func (n *validatorProposalNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	slot := formatSlotLink(format, n.Slot)
-	dashboardAndGroupInfo := formateDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 
 	switch n.Status {
 	case 0:
@@ -125,7 +125,7 @@ func (n *validatorIsOfflineNotification) GetInfo(format types.NotificationFormat
 	} else {
 		epoch = formatEpochLink(format, n.Epoch)
 	}
-	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 
 	if n.IsOffline {
 		return fmt.Sprintf(`Validator %v%v is offline since epoch %s.`, vali, dashboardAndGroupInfo, epoch)
@@ -151,7 +151,7 @@ type validatorAttestationNotification struct {
 }
 
 func (n *validatorAttestationNotification) GetInfo(format types.NotificationFormat) string {
-	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.Epoch)
 
@@ -206,7 +206,7 @@ type validatorGotSlashedNotification struct {
 }
 
 func (n *validatorGotSlashedNotification) GetInfo(format types.NotificationFormat) string {
-	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.Epoch)
 	slasher := formatValidatorLink(format, n.Slasher)
@@ -229,7 +229,7 @@ type validatorWithdrawalNotification struct {
 }
 
 func (n *validatorWithdrawalNotification) GetInfo(format types.NotificationFormat) string {
-	dashboardAndGroupInfo := formateDashboardAndGroupLink(types.NotifciationFormatHtml, n)
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	amount := utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false)
 	generalPart := fmt.Sprintf(`An automatic withdrawal of %s has been processed for validator %s%s.`, amount, vali, dashboardAndGroupInfo)
