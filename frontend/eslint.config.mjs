@@ -114,6 +114,16 @@ export default withNuxt({
     ...eslintPluginJsonc.configs['flat/recommended-with-json'],
     {
       rules: {
+        'jsonc/sort-array-values': [
+          'warn',
+          {
+            order: {
+              natural: true,
+              type: 'asc',
+            },
+            pathPattern: 'conventionalCommits.scopes',
+          },
+        ],
         'jsonc/sort-keys': [
           'error',
           'asc',

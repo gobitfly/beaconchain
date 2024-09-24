@@ -107,6 +107,7 @@ export type InternalGetUserNotificationMachinesResponse = ApiPagingResponse<Noti
 export interface NotificationClientsTableRow {
   client_name: string;
   version: string;
+  url: string;
   timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
@@ -118,7 +119,7 @@ export interface NotificationRocketPoolTableRow {
   timestamp: number /* int64 */;
   event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
   alert_value?: number /* float64 */; // only for some notification types, e.g. max collateral
-  node_address: Hash;
+  node: Address;
 }
 export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<NotificationRocketPoolTableRow>;
 /**
@@ -137,9 +138,12 @@ export type InternalGetUserNotificationNetworksResponse = ApiPagingResponse<Noti
  * Notification Settings
  */
 export interface NotificationSettingsNetwork {
-  gas_above_threshold: string /* decimal.Decimal */; // 0 is disabled
-  gas_below_threshold: string /* decimal.Decimal */; // 0 is disabled
-  participation_rate_threshold: number /* float64 */; // 0 is disabled
+  is_gas_above_subscribed: boolean;
+  gas_above_threshold: string /* decimal.Decimal */;
+  is_gas_below_subscribed: boolean;
+  gas_below_threshold: string /* decimal.Decimal */;
+  is_participation_rate_subscribed: boolean;
+  participation_rate_threshold: number /* float64 */;
 }
 export interface NotificationNetwork {
   chain_id: number /* uint64 */;
@@ -158,13 +162,18 @@ export interface NotificationSettingsGeneral {
   is_email_notifications_enabled: boolean;
   is_push_notifications_enabled: boolean;
   is_machine_offline_subscribed: boolean;
-  machine_storage_usage_threshold: number /* float64 */; // 0 means disabled
-  machine_cpu_usage_threshold: number /* float64 */; // 0 means disabled
-  machine_memory_usage_threshold: number /* float64 */; // 0 means disabled
+  is_machine_storage_usage_subscribed: boolean;
+  machine_storage_usage_threshold: number /* float64 */;
+  is_machine_cpu_usage_subscribed: boolean;
+  machine_cpu_usage_threshold: number /* float64 */;
+  is_machine_memory_usage_subscribed: boolean;
+  machine_memory_usage_threshold: number /* float64 */;
   subscribed_clients: string[];
   is_rocket_pool_new_reward_round_subscribed: boolean;
-  rocket_pool_max_collateral_threshold: number /* float64 */; // 0 means disabled
-  rocket_pool_min_collateral_threshold: number /* float64 */; // 0 means disabled
+  is_rocket_pool_max_collateral_subscribed: boolean;
+  rocket_pool_max_collateral_threshold: number /* float64 */;
+  is_rocket_pool_min_collateral_subscribed: boolean;
+  rocket_pool_min_collateral_threshold: number /* float64 */;
 }
 export type InternalPutUserNotificationSettingsGeneralResponse = ApiDataResponse<NotificationSettingsGeneral>;
 export interface NotificationSettings {
@@ -178,7 +187,8 @@ export interface NotificationSettingsValidatorDashboard {
   is_webhook_discord_enabled: boolean;
   is_real_time_mode_enabled: boolean;
   is_validator_offline_subscribed: boolean;
-  group_offline_threshold: number /* float64 */; // 0 is disabled
+  is_group_offline_subscribed: boolean;
+  group_offline_threshold: number /* float64 */;
   is_attestations_missed_subscribed: boolean;
   is_block_proposal_subscribed: boolean;
   is_upcoming_block_proposal_subscribed: boolean;
@@ -195,7 +205,7 @@ export interface NotificationSettingsAccountDashboard {
   is_incoming_transactions_subscribed: boolean;
   is_outgoing_transactions_subscribed: boolean;
   is_erc20_token_transfers_subscribed: boolean;
-  erc20_token_transfers_value_threshold: number /* float64 */; // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
+  erc20_token_transfers_value_threshold: number /* float64 */;
   is_erc721_token_transfers_subscribed: boolean;
   is_erc1155_token_transfers_subscribed: boolean;
 }
