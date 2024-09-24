@@ -1,6 +1,8 @@
 package notification
 
 import (
+	"strings"
+
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -73,6 +75,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	log.Infof("Found %d subscriptions for event %s", len(subs), eventName)
 
 	for _, sub := range subs {
+		sub.EventName = types.EventName(strings.Replace(string(sub.EventName), utils.GetNetwork()+":", "", 1)) // remove the network name from the event name
 		if _, ok := subMap[sub.EventFilter]; !ok {
 			subMap[sub.EventFilter] = make([]types.Subscription, 0)
 		}
