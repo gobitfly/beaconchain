@@ -359,15 +359,19 @@ func setCLConfig(cfg *types.Config) error {
 		maxForkEpoch := uint64(18446744073709551615)
 
 		if jr.Data.AltairForkEpoch == nil {
+			log.Warnf("AltairForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.AltairForkEpoch = &maxForkEpoch
 		}
 		if jr.Data.BellatrixForkEpoch == nil {
+			log.Warnf("BellatrixForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.BellatrixForkEpoch = &maxForkEpoch
 		}
 		if jr.Data.CapellaForkEpoch == nil {
+			log.Warnf("CapellaForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.CapellaForkEpoch = &maxForkEpoch
 		}
 		if jr.Data.DenebForkEpoch == nil {
+			log.Warnf("DenebForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.DenebForkEpoch = &maxForkEpoch
 		}
 
