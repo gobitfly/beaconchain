@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/coocood/freecache"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/cmd/misc/commands"
@@ -489,7 +490,10 @@ func collectNotifications(startEpoch uint64) error {
 		return err
 	}
 
-	log.Infof("found %v notifications for epoch %v", len(notifications), epoch)
+	log.Infof("found %v notifications for epoch %v with %v notifications for user 0", len(notifications), epoch, len(notifications[0]))
+	if len(notifications[0]) > 0 {
+		spew.Dump(notifications[0])
+	}
 	return nil
 }
 
