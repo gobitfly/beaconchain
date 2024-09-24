@@ -45,6 +45,7 @@ export enum API_PATH {
   NOTIFICATIONS_MACHINE = '/notifications/machines',
   NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
   NOTIFICATIONS_NETWORK = '/notifications/networks',
+  NOTIFICATIONS_OVERVIEW = '/notifications',
   NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test-webhook',
@@ -297,6 +298,11 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.NOTIFICATIONS_NETWORK]: {
     path: '/users/me/notifications/networks',
+  },
+  [API_PATH.NOTIFICATIONS_OVERVIEW]: {
+    method: 'GET',
+    mock: false,
+    path: '/users/me/notifications',
   },
   [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
     method: 'POST',

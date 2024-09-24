@@ -446,8 +446,13 @@ export function mockManageNotificationsGeneral(): InternalGetUserNotificationSet
       general_settings: {
         do_not_disturb_timestamp: 9000,
         is_email_notifications_enabled: false,
+        is_machine_cpu_usage_subscribed: true,
+        is_machine_memory_usage_subscribed: true,
         is_machine_offline_subscribed: true,
+        is_machine_storage_usage_subscribed: true,
         is_push_notifications_enabled: true,
+        is_rocket_pool_max_collateral_subscribed: true,
+        is_rocket_pool_min_collateral_subscribed: true,
         is_rocket_pool_new_reward_round_subscribed: true,
         machine_cpu_usage_threshold: 40,
         machine_memory_usage_threshold: 50,

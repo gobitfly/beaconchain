@@ -43,7 +43,6 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	if _, ok := types.UserIndexEventsMap[eventName]; ok {
 		eventNameForQuery = string(eventName)
 	}
-
 	ds := goqu.Dialect("postgres").From("users_subscriptions").Select(
 		goqu.C("id"),
 		goqu.C("user_id"),
@@ -69,8 +68,6 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	if err != nil {
 		return nil, err
 	}
-
-	log.Info(query)
 
 	subMap := make(map[string][]types.Subscription, 0)
 	err = db.FrontendWriterDB.Select(&subs, query, args...)
