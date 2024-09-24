@@ -125,6 +125,16 @@ type BlocksCursor struct {
 	Reward   decimal.Decimal
 }
 
+type NotificationsDashboardsCursor struct {
+	GenericCursor
+	Epoch uint64 // basically the same as Block, Epoch, Age; mandatory, used to index
+
+	// optional, max one of those (for now)
+	Network       uint64
+	DashboardName string
+	GroupName     string
+}
+
 type NetworkInfo struct {
 	ChainId uint64
 	Name    string

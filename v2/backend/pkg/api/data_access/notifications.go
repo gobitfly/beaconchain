@@ -3,8 +3,10 @@ package dataaccess
 import (
 	"context"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/lib/pq"
 )
 
 type NotificationsRepository interface {
@@ -33,53 +35,89 @@ type NotificationsRepository interface {
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return d.dummy.GetNotificationOverview(ctx, userId)
 }
-func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	response := []t.NotificationDashboardsTableRow{}
+	var err error
 
-	query := `
-		SELECT
-			false AS is_account_dashboard,
-			$2 AS chain_id,
-			dnh.epoch,
-			uvd.id AS dashboard_id,
-			uvd.name AS dashboard_name,
-			uvdg.id AS group_id,
-			uvdg.name AS group_name,
-			SUM(dnh.event_count),
-			ARRAY_AGG(DISTINCT event_type) AS event_types
-		FROM
-			dashboard_notifications_history dnh
-		INNER JOIN
-			users_val_dashboards uvd ON uvd.id = dnh.dashboard_id
-		INNER JOIN
-			users_val_dashboards_groups uvdg ON uvdg.id = dnh.group_id
-		WHERE
-			uvd.user_id = $1 AND uvd.network = $2 AND dnh.dashboard_type = 'validator'
-		GROUP BY
-			dnh.epoch, uvd.network, uvd.id, uvdg.id, uvdg.name
-	UNION
-		SELECT
-			true AS is_account_dashboard,
-			$2 AS chain_id,
-			dnh.epoch,
-			uad.id AS dashboard_id,
-			uad.name AS dashboard_name,
-			uadg.id AS group_id,
-			uadg.name AS group_name,
-			SUM(dnh.event_count),
-			ARRAY_AGG(DISTINCT event_type) AS event_types
-		FROM
-			dashboard_notifications_history dnh
-		INNER JOIN
-			users_acc_dashboards uad ON uad.id = dnh.dashboard_id
-		INNER JOIN
-			users_acc_dashboards_groups uadg ON uadg.id = dnh.group_id
-		WHERE
-			uad.user_id = $1 AND dnh.dashboard_type = 'account'
-		GROUP BY
-			dnh.epoch, uad.network, uad.id, uadg.id, uadg.name
-	`
-	err := d.alloyReader.GetContext(ctx, &response, query, userId, chainId)
+	// default sorting precedence: age, db_name, group_name (always ASC), network
+	//var currentCursor t.NotificationsDashboardsCursor
+
+	/*if cursor != "" {
+	if currentCursor, err = utils.StringToCursor[t.NotificationsDashboardsCursor](cursor); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationsDashboardsCursor: %w", err)
+		}
+	}
+	// Prepare the sorting
+	isReverseDirection := colSort.Desc != currentCursor.IsReverse() // (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
+	sortSearchDirection := ">"
+	if isReverseDirection {
+		sortSearchDirection = "<"
+	}
+	if currentCursor.IsValid() {
+	}*/
+
+	// base query
+	vdbQuery := goqu.Dialect("postgres").
+		From(goqu.T("vdb_notifications_history").As("vnh")).
+		Select(
+			goqu.L("false").As("is_account_dashboard"),
+			goqu.I("uvd.network").As("chain_id"),
+			goqu.I("vnh.epoch"),
+			goqu.I("uvd.id").As("dashboard_id"),
+			goqu.I("uvd.name").As("dashboard_name"),
+			goqu.I("uvdg.id").As("group_id"),
+			goqu.I("uvdg.name").As("group_name"),
+			goqu.SUM("vnh.event_count"),
+			goqu.L("ARRAY_AGG(DISTINCT event_type)").As("event_types"),
+		).
+		InnerJoin(goqu.T("users_val_dashboards").As("uvd"), goqu.On(goqu.Ex{"uvd.id": goqu.I("vnh.dashboard_id")})).
+		InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(goqu.Ex{"uvdg.id": goqu.I("vnh.group_id")})).
+		Where(
+			goqu.Ex{"uvd.user_id": userId},
+			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
+		).
+		GroupBy(
+			goqu.I("vnh.epoch"),
+			goqu.I("uvd.network"),
+			goqu.I("uvd.id"),
+			goqu.I("uvdg.id"),
+			goqu.I("uvdg.name"),
+		)
+
+	adbQuery := goqu.Dialect("postgres").
+		From(goqu.T("adb_notifications_history").As("anh")).
+		Select(
+			goqu.L("true").As("is_account_dashboard"),
+			goqu.I("anh.network").As("chain_id"),
+			goqu.I("anh.epoch"),
+			goqu.I("uad.id").As("dashboard_id"),
+			goqu.I("uad.name").As("dashboard_name"),
+			goqu.I("uadg.id").As("group_id"),
+			goqu.I("uadg.name").As("group_name"),
+			goqu.SUM("anh.event_count"),
+			goqu.L("ARRAY_AGG(DISTINCT event_type)").As("event_types"),
+		).
+		InnerJoin(goqu.T("users_acc_dashboards").As("uad"), goqu.On(goqu.Ex{"uad.id": goqu.I("anh.dashboard_id")})).
+		InnerJoin(goqu.T("users_acc_dashboards_groups").As("uadg"), goqu.On(goqu.Ex{"uadg.id": goqu.I("anh.group_id")})).
+		Where(
+			goqu.Ex{"uad.user_id": userId},
+			goqu.L("anh.network = ANY(?)", pq.Array(chainIds)),
+		).
+		GroupBy(
+			goqu.I("anh.epoch"),
+			goqu.I("anh.network"),
+			goqu.I("uad.id"),
+			goqu.I("uadg.id"),
+			goqu.I("uadg.name"),
+		)
+
+	unionQuery := vdbQuery.Union(adbQuery)
+
+	query, args, err := unionQuery.ToSQL()
+	if err != nil {
+		return nil, nil, err
+	}
+	err = d.alloyReader.GetContext(ctx, &response, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
