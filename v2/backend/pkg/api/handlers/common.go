@@ -658,6 +658,14 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 	return v.checkNetwork(intOrString{strValue: &param})
 }
 
+func (v *validationError) checkNetworksParameter(param string) []uint64 {
+	var chainIds []uint64
+	for _, network := range splitParameters(param, ',') {
+		chainIds = append(chainIds, v.checkNetworkParameter(network))
+	}
+	return chainIds
+}
+
 // isValidNetwork checks if the given network is a valid network.
 // It returns the chain id of the network and true if it is valid, otherwise 0 and false.
 func isValidNetwork(network intOrString) (uint64, bool) {
