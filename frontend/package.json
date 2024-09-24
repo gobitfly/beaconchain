@@ -51,6 +51,8 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nuxt dev",
+    "dev:mock:production": "NUXT_DEPLOYMENT_TYPE=production npm run dev",
+    "dev:mock:staging": "NUXT_DEPLOYMENT_TYPE=staging npm run dev",
     "generate": "nuxt generate",
     "lint": "eslint . --report-unused-disable-directives",
     "lint:fix": "npm run lint -- --fix",
