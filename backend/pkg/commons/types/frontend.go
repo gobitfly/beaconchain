@@ -22,15 +22,9 @@ type EventName string
 
 const (
 	ValidatorBalanceDecreasedEventName               EventName = "validator_balance_decreased"
-	ValidatorUpcomingProposalEventName               EventName = "validator_proposal_upcoming"
 	ValidatorMissedProposalEventName                 EventName = "validator_proposal_missed"
 	ValidatorExecutedProposalEventName               EventName = "validator_proposal_submitted"
-	ValidatorMissedAttestationEventName              EventName = "validator_attestation_missed"
-	ValidatorGotSlashedEventName                     EventName = "validator_got_slashed"
 	ValidatorDidSlashEventName                       EventName = "validator_did_slash"
-	ValidatorIsOfflineEventName                      EventName = "validator_is_offline"
-	GroupIsOfflineEventName                          EventName = "group_is_offline"
-	ValidatorReceivedWithdrawalEventName             EventName = "validator_withdrawal"
 	ValidatorReceivedDepositEventName                EventName = "validator_received_deposit"
 	NetworkSlashingEventName                         EventName = "network_slashing"
 	NetworkValidatorActivationQueueFullEventName     EventName = "network_validator_activation_queue_full"
@@ -53,7 +47,16 @@ const (
 	RocketpoolCollateralMinReached EventName = "rocketpool_colleteral_min"
 	//nolint:misspell
 	RocketpoolCollateralMaxReached EventName = "rocketpool_colleteral_max"
-	SyncCommitteeSoon              EventName = "validator_synccommittee_soon"
+
+	// Validator dashboard events
+	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
+	GroupIsOfflineEventName              EventName = "group_is_offline"
+	ValidatorMissedAttestationEventName  EventName = "validator_attestation_missed"
+	ValidatorProposalEventName           EventName = "validator_proposal"
+	ValidatorUpcomingProposalEventName   EventName = "validator_proposal_upcoming"
+	SyncCommitteeSoon                    EventName = "validator_synccommittee_soon"
+	ValidatorReceivedWithdrawalEventName EventName = "validator_withdrawal"
+	ValidatorGotSlashedEventName         EventName = "validator_got_slashed"
 
 	// Account dashboard events
 	IncomingTransactionEventName  EventName = "incoming_transaction"

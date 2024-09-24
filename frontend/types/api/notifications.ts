@@ -216,7 +216,7 @@ export interface NotificationSettingsDashboardsTableRow {
   group_id: number /* uint64 */;
   group_name: string;
   /**
-   * if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
+   * if it's a validator dashboard, Settings is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
    */
   settings: NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard;
   chain_ids: number /* uint64 */[];

@@ -203,7 +203,7 @@ type NotificationSettingsDashboardColumn int
 var _ EnumFactory[NotificationSettingsDashboardColumn] = NotificationSettingsDashboardColumn(0)
 
 const (
-	NotificationSettingsDashboardDashboardId NotificationSettingsDashboardColumn = iota
+	NotificationSettingsDashboardDashboardName NotificationSettingsDashboardColumn = iota
 	NotificationSettingsDashboardGroupName
 )
 
@@ -213,8 +213,8 @@ func (c NotificationSettingsDashboardColumn) Int() int {
 
 func (NotificationSettingsDashboardColumn) NewFromString(s string) NotificationSettingsDashboardColumn {
 	switch s {
-	case "dashboard_id":
-		return NotificationSettingsDashboardDashboardId
+	case "dashboard_name", "dashboard_id":
+		return NotificationSettingsDashboardDashboardName
 	case "group_name":
 		return NotificationSettingsDashboardGroupName
 	default:
@@ -223,9 +223,9 @@ func (NotificationSettingsDashboardColumn) NewFromString(s string) NotificationS
 }
 
 var NotificationSettingsDashboardColumns = struct {
-	DashboardId NotificationSettingsDashboardColumn
-	GroupName   NotificationSettingsDashboardColumn
+	DashboardName NotificationSettingsDashboardColumn
+	GroupName     NotificationSettingsDashboardColumn
 }{
-	NotificationSettingsDashboardDashboardId,
+	NotificationSettingsDashboardDashboardName,
 	NotificationSettingsDashboardGroupName,
 }
