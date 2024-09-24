@@ -7,6 +7,7 @@
     "checkout",
     "ci",
     "customFetch",
+    "dialog",
     "eslint",
     "feature-flags",
     "git",
