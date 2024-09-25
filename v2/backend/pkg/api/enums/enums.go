@@ -12,11 +12,6 @@ type EnumFactory[T Enum] interface {
 	NewFromString(string) T
 }
 
-type EnumConvertible[T Enum] interface {
-	EnumFactory[T]
-	ToString() string
-}
-
 func IsInvalidEnum(e Enum) bool {
 	return e.Int() == -1
 }

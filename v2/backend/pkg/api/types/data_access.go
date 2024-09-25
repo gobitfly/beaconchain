@@ -22,8 +22,8 @@ type Sort[T enums.Enum] struct {
 	Desc   bool
 }
 
-type SortConvertible[T enums.Enum] struct {
-	Column enums.EnumConvertible[T]
+type SortColumn struct {
+	Column string
 	Desc   bool
 }
 
