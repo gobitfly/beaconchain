@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -37,6 +38,18 @@ type NotificationsRepository interface {
 	UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
 }
 
+const (
+	MachineStorageUsageThresholdDefault     float64 = 0.1
+	MachineCpuUsageThresholdDefault         float64 = 0.2
+	MachineMemoryUsageThresholdDefault      float64 = 0.3
+	RocketPoolMaxCollateralThresholdDefault float64 = 0.4
+	RocketPoolMinCollateralThresholdDefault float64 = 0.5
+
+	GasAboveThresholdDefault          float64 = 1000.0001
+	GasBelowThresholdDefault          float64 = 1000.0002
+	ParticipationRateThresholdDefault float64 = 0.6
+)
+
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return d.dummy.GetNotificationOverview(ctx, userId)
 }
@@ -65,18 +78,35 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	return d.dummy.GetNetworkNotifications(ctx, userId, cursor, colSort, search, limit)
 }
 func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
-	result := &t.NotificationSettings{}
-
 	wg := errgroup.Group{}
+
+	// -------------------------------------
+	// Create the default settings
+	result := &t.NotificationSettings{
+		GeneralSettings: t.NotificationSettingsGeneral{
+			MachineStorageUsageThreshold:     MachineStorageUsageThresholdDefault,
+			MachineCpuUsageThreshold:         MachineCpuUsageThresholdDefault,
+			MachineMemoryUsageThreshold:      MachineMemoryUsageThresholdDefault,
+			RocketPoolMaxCollateralThreshold: RocketPoolMaxCollateralThresholdDefault,
+			RocketPoolMinCollateralThreshold: RocketPoolMinCollateralThresholdDefault,
+		},
+	}
 
 	networks, err := d.GetAllNetworks()
 	if err != nil {
 		return nil, err
 	}
 
-	chainIds := make(map[string]uint64, len(networks))
+	networksSettings := make(map[string]*t.NotificationNetwork, len(networks))
 	for _, network := range networks {
-		chainIds[network.Name] = network.ChainId
+		networksSettings[network.Name] = &t.NotificationNetwork{
+			ChainId: network.ChainId,
+			Settings: t.NotificationSettingsNetwork{
+				GasAboveThreshold:          decimal.NewFromFloat(GasAboveThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
+				GasBelowThreshold:          decimal.NewFromFloat(GasBelowThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
+				ParticipationRateThreshold: ParticipationRateThresholdDefault,
+			},
+		}
 	}
 
 	// -------------------------------------
@@ -178,7 +208,6 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			result.GeneralSettings.IsPushNotificationsEnabled = channel.Active
 		}
 	}
-	networkEvents := make(map[string]*t.NotificationSettingsNetwork)
 	for _, event := range subscribedEvents {
 		eventSplit := strings.Split(string(event.Name), ":")
 
@@ -186,9 +215,6 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			networkName := eventSplit[0]
 			networkEvent := types.EventName(eventSplit[1])
 
-			if _, ok := networkEvents[networkName]; !ok {
-				networkEvents[networkName] = &t.NotificationSettingsNetwork{}
-			}
 			switch networkEvent {
 			case types.RocketpoolNewClaimRoundStartedEventName:
 				result.GeneralSettings.IsRocketPoolNewRewardRoundSubscribed = true
@@ -199,14 +225,14 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 				result.GeneralSettings.IsRocketPoolMinCollateralSubscribed = true
 				result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold
 			case types.NetworkGasAboveThresholdEventName:
-				networkEvents[networkName].IsGasAboveSubscribed = true
-				networkEvents[networkName].GasAboveThreshold = decimal.NewFromFloat(event.Threshold).Mul(decimal.NewFromInt(1e9))
+				networksSettings[networkName].Settings.IsGasAboveSubscribed = true
+				networksSettings[networkName].Settings.GasAboveThreshold = decimal.NewFromFloat(event.Threshold).Mul(decimal.NewFromInt(params.GWei))
 			case types.NetworkGasBelowThresholdEventName:
-				networkEvents[networkName].IsGasBelowSubscribed = true
-				networkEvents[networkName].GasBelowThreshold = decimal.NewFromFloat(event.Threshold).Mul(decimal.NewFromInt(1e9))
+				networksSettings[networkName].Settings.IsGasBelowSubscribed = true
+				networksSettings[networkName].Settings.GasBelowThreshold = decimal.NewFromFloat(event.Threshold).Mul(decimal.NewFromInt(params.GWei))
 			case types.NetworkParticipationRateThresholdEventName:
-				networkEvents[networkName].IsParticipationRateSubscribed = true
-				networkEvents[networkName].ParticipationRateThreshold = event.Threshold
+				networksSettings[networkName].Settings.IsParticipationRateSubscribed = true
+				networksSettings[networkName].Settings.ParticipationRateThreshold = event.Threshold
 			}
 		} else {
 			switch event.Name {
@@ -227,11 +253,8 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		}
 	}
 
-	for network, settings := range networkEvents {
-		result.Networks = append(result.Networks, t.NotificationNetwork{
-			ChainId:  chainIds[network],
-			Settings: *settings,
-		})
+	for _, settings := range networksSettings {
+		result.Networks = append(result.Networks, *settings)
 
 	}
 
