@@ -86,7 +86,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		if strings.HasPrefix(sub.EventFilter, "vdb:") {
 			dashboardData := strings.Split(sub.EventFilter, ":")
 			if len(dashboardData) != 3 {
-				log.Error(fmt.Errorf("Invalid dashboard subscription: %s", sub.EventFilter), "Invalid dashboard subscription", 0)
+				log.Error(fmt.Errorf("invalid dashboard subscription: %s", sub.EventFilter), "invalid dashboard subscription", 0)
 				continue
 			}
 			dashboardId, err := strconv.ParseInt(dashboardData[1], 10, 64)
@@ -177,7 +177,6 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 					}
 				}
 			}
-
 		} else {
 			if _, ok := subMap[sub.EventFilter]; !ok {
 				subMap[sub.EventFilter] = make([]types.Subscription, 0)
