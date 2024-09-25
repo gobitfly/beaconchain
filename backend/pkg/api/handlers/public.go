@@ -25,7 +25,6 @@ import (
 //	@description	- Setting the URL query parameter in the following format: `api_key={your_api_key}`.\
 //	@description	Example: `https://beaconcha.in/api/v2/example?field=value&api_key={your_api_key}`
 
-//	@host		beaconcha.in
 //	@BasePath	/api/v2
 
 //	@securitydefinitions.apikey	ApiKeyInHeader
@@ -61,6 +60,14 @@ func (h *HandlerService) PublicGetHealthzLoadbalancer(w http.ResponseWriter, r *
 	returnOk(w, r, nil)
 }
 
+// PublicGetUserDashboards godoc
+//
+//	@Description	Get all dashboards of the authenticated user.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Dashboards
+//	@Produce		json
+//	@Success		200	{object}	types.ApiDataResponse[types.UserDashboardsData]
+//	@Router			/users/me/dashboards [get]
 func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.Request) {
 	userId, err := GetUserIdByContext(r)
 	if err != nil {
@@ -859,7 +866,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 //	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Conflict		409																																												{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
+//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
 //	@Router			/validator-dashboards/{dashboard_id}/archiving [put]
 func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -1893,7 +1900,7 @@ func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *ht
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
-//	@Param			network	query		string	false	"If set, results will be filtered to only include networks given. Provide a comma separated list."
+//	@Param			networks	query		string	false	"If set, results will be filtered to only include networks given. Provide a comma separated list."
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	" Enums(chain_id, timestamp, dashboard_id)
@@ -1911,12 +1918,12 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
-	chainId := v.checkNetworkParameter(q.Get("network"))
+	chainIds := v.checkNetworksParameter(q.Get("networks"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2459,14 +2466,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		handleErr(w, r, err)
 		return
 	}
-	chainIdMap := v.checkNetworkSlice(req.SubscribedChainIds)
-	// convert to uint64[] slice
-	chainIds := make([]uint64, len(chainIdMap))
-	i := 0
-	for k := range chainIdMap {
-		chainIds[i] = k
-		i++
-	}
+	chainIds := v.checkNetworkSlice(req.SubscribedChainIds)
 	checkMinMax(&v, req.ERC20TokenTransfersValueThreshold, 0, math.MaxFloat64, "group_offline_threshold")
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
