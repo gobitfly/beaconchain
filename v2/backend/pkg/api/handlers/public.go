@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"reflect"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -490,16 +489,15 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 
 // PublicGetValidatorDashboardGroups godoc
 //
-//	@Description	Add new validators to a specified dashboard or update the group of already-added validators.
+//	@Description	Add new validators to a specified dashboard or update the group of already-added validators. This endpoint will always add as many validators as possible, even if more validators are provided than allowed by the subscription plan. The response will contain a list of added validators.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys to add to the dashboard.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
+//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators or update their group, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
 //	@Success		201				{object}	types.ApiDataResponse[[]types.VDBPostValidatorsData]	"Returns a list of added validators."
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their validator limit."
 //	@Router			/validator-dashboards/{dashboard_id}/validators [post]
 func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -511,7 +509,9 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		WithdrawalAddress string        `json:"withdrawal_address,omitempty"`
 		Graffiti          string        `json:"graffiti,omitempty"`
 	}
-	var req request
+	req := request{
+		GroupId: types.DefaultGroupId, // default value
+	}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
@@ -520,11 +520,17 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, v)
 		return
 	}
+	groupId := req.GroupId
 	// check if exactly one of validators, deposit_address, withdrawal_address, graffiti is set
-	fields := []interface{}{req.Validators, req.DepositAddress, req.WithdrawalAddress, req.Graffiti}
+	nilFields := []bool{
+		req.Validators == nil,
+		req.DepositAddress == "",
+		req.WithdrawalAddress == "",
+		req.Graffiti == "",
+	}
 	var count int
-	for _, set := range fields {
-		if !reflect.ValueOf(set).IsZero() {
+	for _, isNil := range nilFields {
+		if !isNil {
 			count++
 		}
 	}
@@ -536,7 +542,6 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 
-	groupId := req.GroupId
 	ctx := r.Context()
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(ctx, dashboardId, groupId)
 	if err != nil {
@@ -557,11 +562,23 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
 	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
-		returnConflict(w, r, errors.New("bulk adding not allowed with current subscription plan"))
+		returnForbidden(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
+	dashboardLimit := userInfo.PremiumPerks.ValidatorsPerDashboard
+	existingValidatorCount, err := h.dai.GetValidatorDashboardValidatorsCount(ctx, dashboardId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var limit uint64
+	if isUserAdmin(userInfo) {
+		limit = math.MaxUint32 // no limit for admins
+	} else if dashboardLimit >= existingValidatorCount {
+		limit = dashboardLimit - existingValidatorCount
+	}
+
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
@@ -576,15 +593,8 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, err)
 			return
 		}
-		// check if adding more validators than allowed
-		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(ctx, dashboardId, validators)
-		if err != nil {
-			handleErr(w, r, err)
-			return
-		}
-		if uint64(len(validators)) > existingValidatorCount+limit {
-			returnConflict(w, r, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
-			return
+		if len(validators) > int(limit) {
+			validators = validators[:limit]
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
 
@@ -687,7 +697,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, r, err)
 		return
 	}
-	indices, publicKeys := v.checkValidators(req.Validators, false)
+	indices, publicKeys := v.checkValidators(req.Validators, forbidEmpty)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
