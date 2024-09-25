@@ -253,10 +253,6 @@ func (d *DummyService) GetValidatorDashboardGroupExists(ctx context.Context, das
 	return true, nil
 }
 
-func (d *DummyService) GetValidatorDashboardExistingValidatorCount(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
-	return getDummyData[uint64]()
-}
-
 func (d *DummyService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	return getDummyData[[]t.VDBPostValidatorsData]()
 }
