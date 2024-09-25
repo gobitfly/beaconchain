@@ -1,12 +1,17 @@
 {
   "conventionalCommits.scopes": [
+    "BcLink",
+    "BcTablePager",
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
+    "NotificationsClientsTable",
+    "NotificationsNetworkTable",
     "NotificationsOverview",
     "checkout",
     "ci",
     "customFetch",
+    "dialog",
     "eslint",
     "feature-flags",
     "git",
@@ -14,6 +19,7 @@
     "mainHeader",
     "notifications",
     "qrCode",
+    "useWindowSize",
     "vscode"
   ],
 "editor.codeActionsOnSave": {
