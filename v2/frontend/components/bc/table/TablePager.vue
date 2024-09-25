@@ -181,29 +181,27 @@ watch(
         @change="(event) => setPageSize(event.value)"
       />
     </div>
-    <div class="very-last">
-      <div
-        v-if="!stepperOnly"
-        class="left-info"
-      >
-        <slot name="bc-table-footer-left">
-          <span v-if="props.paging?.total_count">
-            {{
-              $t("table.showing", {
-                from: data.from,
-                to: data.to,
-                total: props.paging?.total_count,
-              })
-            }}
-          </span>
-        </slot>
-      </div>
-      <div
-        v-if="$slots['bc-table-footer-right']"
-        class="right-info"
-      >
-        <slot name="bc-table-footer-right" />
-      </div>
+    <div
+      v-if="!stepperOnly"
+      class="left-info"
+    >
+      <slot name="bc-table-footer-left">
+        <span v-if="props.paging?.total_count">
+          {{
+            $t("table.showing", {
+              from: data.from,
+              to: data.to,
+              total: props.paging?.total_count,
+            })
+          }}
+        </span>
+      </slot>
+    </div>
+    <div
+      v-if="$slots['bc-table-footer-right']"
+      class="right-info"
+    >
+      <slot name="bc-table-footer-right" />
     </div>
   </div>
 </template>
@@ -212,30 +210,44 @@ watch(
 @use "~/assets/css/main.scss";
 
 .bc-pageinator {
-  position: relative;
-  height: 78px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  margin-block-start: 20px;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
   font-weight: var(--standard_text_medium_font_weight);
-  margin: var(--padding) var(--padding-large);
 
-  .very-last {
-    position: absolute;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
-    pointer-events: none;
+  @media screen and (min-width: 768px) {
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 1fr 1fr;
+
+      .pager {
+        grid-column: span 2
+      }
+      .left-info {
+        margin-inline-start: 16px;
+        justify-self: start;
+      }
+      .right-info{
+        justify-self: end;
+        margin-inline-end: 16px;
+      }
+    }
+  @media screen and (min-width: 1024px) {
+    grid-template-rows: 1fr ;
+    grid-template-columns: 1fr auto 1fr;
+    .pager {
+      grid-column:  2/3;
+      grid-row: 1/2
+    }
     .left-info {
-      margin-right: auto;
-      pointer-events: all;
+      grid-column: 1/2;
+      grid-row: 1/2
     }
     .right-info {
-      margin-left: auto;
-      pointer-events: all;
+      grid-column: 3/4;
+      grid-row: 1/2
     }
+
   }
 
   .pager {
@@ -299,13 +311,18 @@ watch(
     }
   }
 
-  @media screen and (max-width: 1399px) {
-    gap: var(--padding);
-    height: unset;
-    .very-last {
-      @media (max-width: 600px) {
-        position: relative;
-      }
+  .left-info {
+    display: none;
+    @media screen and (min-width: 640px) {
+      display: block;
+    }
+  }
+  .right-info {
+    font-weight: 400;
+    font-size: 12px;
+    @media screen and (min-width: 640px) {
+      font-weight: inherit;
+      font-size: inherit;
     }
   }
 }

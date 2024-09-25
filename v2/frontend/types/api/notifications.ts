@@ -107,6 +107,7 @@ export type InternalGetUserNotificationMachinesResponse = ApiPagingResponse<Noti
 export interface NotificationClientsTableRow {
   client_name: string;
   version: string;
+  url: string;
   timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
@@ -118,7 +119,7 @@ export interface NotificationRocketPoolTableRow {
   timestamp: number /* int64 */;
   event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
   alert_value?: number /* float64 */; // only for some notification types, e.g. max collateral
-  node_address: Hash;
+  node: Address;
 }
 export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<NotificationRocketPoolTableRow>;
 /**

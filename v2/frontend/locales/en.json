@@ -20,6 +20,7 @@
   },
   "common": {
     "account": "Account | Accounts",
+    "active": "Active",
     "address": "Address | Addresses",
     "age": "Age",
     "and_more": "and {count} more",
@@ -34,6 +35,7 @@
     "deselected": "Not selected",
     "earned": "Earned",
     "edit": "Edit",
+    "email": "Email",
     "ens_address": "ENS address | ENS addresses",
     "epoch": "Epoch | Epochs",
     "erc20token": "ERC-20 Token | ERC-20 Tokens",
@@ -45,6 +47,7 @@
     "graffiti": "Graffiti | Graffitis",
     "id": "ID",
     "in_day": "In one day | In {count} days",
+    "inactive": "Inactive",
     "index": "Index",
     "last_x": "Last {duration}",
     "live": "Live",
@@ -68,8 +71,12 @@
     "true": "True",
     "tx_batch": "Tx Batch | Tx Batches",
     "unavailable": "Unavailable",
+    "units": {
+      "per_day": "per day"
+    },
     "upcoming": "Upcoming",
-    "validator": "Validator | Validators"
+    "validator": "Validator | Validators",
+    "webhook": "Webhook"
   },
   "cookies": {
     "accept_all": "Accept All",
@@ -690,7 +697,42 @@
       },
       "footer": {
         "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
-      }
+      },
+      "title": "Network"
+    },
+    "overview": {
+      "email_activate": "Click here to activate Email notifications",
+      "email_tooltip": "Your current limit is { limit } emails per day. Your email limit resets in { hours } hours. Upgrade to premium for more.",
+      "headers": {
+        "account_groups": "Most notified account groups",
+        "email_notifications": "Email Notifications",
+        "most_notifications_24h": "Most Notifications in 24h",
+        "most_notifications_30d": "Most Notifications in 30d",
+        "push_notifications": "Push Notifications",
+        "validator_groups": "Most notified validator groups"
+      },
+      "notifications_activate_premium": {
+        "_link": "here",
+        "template": "Click {_link} to activate"
+      },
+      "notifications_download_app": {
+        "_link": "mobile app",
+        "template": "Download the {_link} to activate"
+      },
+      "push": "Push"
+    },
+    "rocketpool": {
+      "col": {
+        "node_address": "Node Address",
+        "notification": "Notification",
+        "rocketpool_subscription":"Rocketpool ({count} Subscriptions)"
+      },
+      "event_types": {
+        "collateral_max": "Max collateral reached",
+        "collateral_min": "Min collateral reached",
+        "reward_round": "New reward round"
+      },
+      "search_placeholder": "Node Address"
     },
     "subscriptions": {
       "accounts": {
