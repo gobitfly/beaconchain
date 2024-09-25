@@ -22,7 +22,7 @@ const {
 <template>
   <div>
     <BcTableControl
-      :title="$t('notifications.dashboards.title')"
+      :title="$t('notifications.network.title')"
       :search-placeholder="$t('notifications.dashboards.search_placeholder')"
       @set-search="setSearch"
     >
