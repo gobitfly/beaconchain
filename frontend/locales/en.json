@@ -697,7 +697,8 @@
       },
       "footer": {
         "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
-      }
+      },
+      "title": "Network"
     },
     "overview": {
       "email_activate": "Click here to activate Email notifications",
@@ -719,6 +720,19 @@
         "template": "Download the {_link} to activate"
       },
       "push": "Push"
+    },
+    "rocketpool": {
+      "col": {
+        "node_address": "Node Address",
+        "notification": "Notification",
+        "rocketpool_subscription":"Rocketpool ({count} Subscriptions)"
+      },
+      "event_types": {
+        "collateral_max": "Max collateral reached",
+        "collateral_min": "Min collateral reached",
+        "reward_round": "New reward round"
+      },
+      "search_placeholder": "Node Address"
     },
     "subscriptions": {
       "accounts": {
