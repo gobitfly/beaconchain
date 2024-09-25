@@ -135,6 +135,28 @@ var UserIndexEventsMap = map[EventName]struct{}{
 	MonitoringMachineMemoryUsageEventName:    {},
 }
 
+var LegacyEventLabel map[EventName]string = map[EventName]string{
+	ValidatorMissedProposalEventName:         "Your validator(s) missed a proposal",
+	ValidatorExecutedProposalEventName:       "Your validator(s) submitted a proposal",
+	ValidatorMissedAttestationEventName:      "Your validator(s) missed an attestation",
+	ValidatorGotSlashedEventName:             "Your validator(s) got slashed",
+	ValidatorDidSlashEventName:               "Your validator(s) slashed another validator",
+	ValidatorIsOfflineEventName:              "Your validator(s) state changed",
+	ValidatorReceivedWithdrawalEventName:     "A withdrawal was initiated for your validators",
+	NetworkLivenessIncreasedEventName:        "The network is experiencing liveness issues",
+	EthClientUpdateEventName:                 "An Ethereum client has a new update available",
+	MonitoringMachineOfflineEventName:        "Your machine(s) might be offline",
+	MonitoringMachineDiskAlmostFullEventName: "Your machine(s) disk space is running low",
+	MonitoringMachineCpuLoadEventName:        "Your machine(s) has a high CPU load",
+	MonitoringMachineMemoryUsageEventName:    "Your machine(s) has a high memory load",
+	TaxReportEventName:                       "You have an available tax report",
+	RocketpoolCommissionThresholdEventName:   "Your configured Rocket Pool commission threshold is reached",
+	RocketpoolNewClaimRoundStartedEventName:  "Your Rocket Pool claim from last round is available",
+	RocketpoolCollateralMinReached:           "You reached the Rocket Pool min RPL collateral",
+	RocketpoolCollateralMaxReached:           "You reached the Rocket Pool max RPL collateral",
+	SyncCommitteeSoon:                        "Your validator(s) will soon be part of the sync committee",
+}
+
 var EventLabel map[EventName]string = map[EventName]string{
 	ValidatorMissedProposalEventName:         "Block proposal missed",
 	ValidatorExecutedProposalEventName:       "Block proposal submitted",
@@ -292,6 +314,8 @@ type Notification interface {
 	GetEpoch() uint64
 	GetInfo(format NotificationFormat) string
 	GetTitle() string
+	GetLegacyInfo() string
+	GetLegacyTitle() string
 	GetEventFilter() string
 	GetEmailAttachment() *EmailAttachment
 	GetUserId() UserId
@@ -338,6 +362,14 @@ func (n NotificationBaseImpl) GetInfo(format NotificationFormat) string {
 }
 
 func (n NotificationBaseImpl) GetTitle() string {
+	return n.Title
+}
+
+func (n NotificationBaseImpl) GetLegacyInfo() string {
+	return n.Info
+}
+
+func (n NotificationBaseImpl) GetLegacyTitle() string {
 	return n.Title
 }
 
