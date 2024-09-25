@@ -24,12 +24,6 @@ const colsVisible = computed(() => {
   }
 })
 
-const clientLink = computed(() => {
-  // TODO: implement client link when it's available from the API
-  // TODO: Test the endpoints
-  // return `/client/${data.clientId}`
-  return '/notifications'
-})
 const { overview } = useNotificationsDashboardOverviewStore()
 </script>
 
@@ -70,9 +64,10 @@ const { overview } = useNotificationsDashboardOverviewStore()
             >
               <template #body="slotProps">
                 <BcLink
-                  :to="clientLink"
+                  :to="`${slotProps.data.url}`"
                   class="link"
                   target="_blank"
+                  external
                 >
                   {{ slotProps.data.version }}
                 </BcLink>
