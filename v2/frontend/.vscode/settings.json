@@ -19,6 +19,7 @@
     "mainHeader",
     "notifications",
     "qrCode",
+    "useNotificationsOverviewStore",
     "useWindowSize",
     "vscode"
   ],
