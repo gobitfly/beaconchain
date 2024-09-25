@@ -14,6 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/mail"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	commonTypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
@@ -708,6 +709,7 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 	validationResult, err := userservice.VerifyReceipt(nil, nil, verifyPackage)
 	if err != nil {
 		log.Warn(err, "could not verify receipt %v", 0, map[string]interface{}{"receipt": verifyPackage.Receipt})
+		metrics.Errors.WithLabelValues(fmt.Sprintf("appsub_verify_%s_failed", req.Transaction.Type)).Inc()
 		if errors.Is(err, userservice.ErrClientInit) {
 			log.Error(err, "Apple or Google client is NOT initialized. Did you provide their configuration?", 0, nil)
 			handleErr(w, r, err)
