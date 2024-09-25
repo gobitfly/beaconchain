@@ -117,3 +117,10 @@ export interface IndexBlocks {
   index: number /* uint64 */;
   blocks: number /* uint64 */[];
 }
+export interface ValidatorStateCounts {
+  online: number /* uint64 */;
+  offline: number /* uint64 */;
+  pending: number /* uint64 */;
+  exited: number /* uint64 */;
+  slashed: number /* uint64 */;
+}

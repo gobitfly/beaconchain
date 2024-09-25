@@ -112,4 +112,9 @@ type StandardSpec struct {
 	DomainSyncCommittee                     string   `json:"DOMAIN_SYNC_COMMITTEE"`
 	BlsWithdrawalPrefix                     string   `json:"BLS_WITHDRAWAL_PREFIX"`
 	ZeroHash                                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
+	// DENEB
+	MaxRequestBlocksDeneb            *uint64 `json:"MAX_REQUEST_BLOCKS_DENEB,string"`
+	MaxRequestBlobSidecars           *uint64 `json:"MAX_REQUEST_BLOB_SIDECARS,string"`
+	MinEpochsForBlobSidecarsRequests *uint64 `json:"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS,string"`
+	BlobSidecarSubnetCount           *uint64 `json:"BLOB_SIDECAR_SUBNET_COUNT,string"`
 }

@@ -111,6 +111,7 @@ type InternalGetUserNotificationMachinesResponse ApiPagingResponse[NotificationM
 type NotificationClientsTableRow struct {
 	ClientName string `json:"client_name"`
 	Version    string `json:"version"`
+	Url        string `json:"url"`
 	Timestamp  int64  `json:"timestamp"`
 }
 
@@ -119,10 +120,10 @@ type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationCl
 // ------------------------------------------------------------
 // Rocket Pool Table
 type NotificationRocketPoolTableRow struct {
-	Timestamp   int64   `json:"timestamp"`
-	EventType   string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	AlertValue  float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
-	NodeAddress Hash    `json:"node_address"`
+	Timestamp  int64   `json:"timestamp"`
+	EventType  string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
+	AlertValue float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
+	Node       Address `json:"node"`
 }
 
 type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
@@ -141,9 +142,12 @@ type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationN
 // ------------------------------------------------------------
 // Notification Settings
 type NotificationSettingsNetwork struct {
-	GasAboveThreshold          decimal.Decimal `json:"gas_above_threshold" faker:"eth"`                                       // 0 is disabled
-	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold" faker:"eth"`                                       // 0 is disabled
-	ParticipationRateThreshold float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 is disabled
+	IsGasAboveSubscribed          bool            `json:"is_gas_above_subscribed"`
+	GasAboveThreshold             decimal.Decimal `json:"gas_above_threshold" faker:"eth"`
+	IsGasBelowSubscribed          bool            `json:"is_gas_below_subscribed"`
+	GasBelowThreshold             decimal.Decimal `json:"gas_below_threshold" faker:"eth"`
+	IsParticipationRateSubscribed bool            `json:"is_participation_rate_subscribed"`
+	ParticipationRateThreshold    float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 type NotificationNetwork struct {
 	ChainId  uint64                      `json:"chain_id"`
@@ -164,15 +168,20 @@ type NotificationSettingsGeneral struct {
 	IsEmailNotificationsEnabled bool  `json:"is_email_notifications_enabled"`
 	IsPushNotificationsEnabled  bool  `json:"is_push_notifications_enabled"`
 
-	IsMachineOfflineSubscribed   bool    `json:"is_machine_offline_subscribed"`
-	MachineStorageUsageThreshold float64 `json:"machine_storage_usage_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
-	MachineCpuUsageThreshold     float64 `json:"machine_cpu_usage_threshold" faker:"boundary_start=0, boundary_end=1"`     // 0 means disabled
-	MachineMemoryUsageThreshold  float64 `json:"machine_memory_usage_threshold" faker:"boundary_start=0, boundary_end=1"`  // 0 means disabled
+	IsMachineOfflineSubscribed      bool    `json:"is_machine_offline_subscribed"`
+	IsMachineStorageUsageSubscribed bool    `json:"is_machine_storage_usage_subscribed"`
+	MachineStorageUsageThreshold    float64 `json:"machine_storage_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMachineCpuUsageSubscribed     bool    `json:"is_machine_cpu_usage_subscribed"`
+	MachineCpuUsageThreshold        float64 `json:"machine_cpu_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMachineMemoryUsageSubscribed  bool    `json:"is_machine_memory_usage_subscribed"`
+	MachineMemoryUsageThreshold     float64 `json:"machine_memory_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
 
 	SubscribedClients                    []string `json:"subscribed_clients"`
 	IsRocketPoolNewRewardRoundSubscribed bool     `json:"is_rocket_pool_new_reward_round_subscribed"`
-	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
-	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
+	IsRocketPoolMaxCollateralSubscribed  bool     `json:"is_rocket_pool_max_collateral_subscribed"`
+	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsRocketPoolMinCollateralSubscribed  bool     `json:"is_rocket_pool_min_collateral_subscribed"`
+	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
@@ -188,7 +197,8 @@ type NotificationSettingsValidatorDashboard struct {
 	IsRealTimeModeEnabled   bool   `json:"is_real_time_mode_enabled"`
 
 	IsValidatorOfflineSubscribed      bool    `json:"is_validator_offline_subscribed"`
-	GroupOfflineThreshold             float64 `json:"group_offline_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 is disabled
+	IsGroupOfflineSubscribed          bool    `json:"is_group_offline_subscribed"`
+	GroupOfflineThreshold             float64 `json:"group_offline_threshold" faker:"boundary_start=0, boundary_end=1"`
 	IsAttestationsMissedSubscribed    bool    `json:"is_attestations_missed_subscribed"`
 	IsBlockProposalSubscribed         bool    `json:"is_block_proposal_subscribed"`
 	IsUpcomingBlockProposalSubscribed bool    `json:"is_upcoming_block_proposal_subscribed"`
@@ -208,7 +218,7 @@ type NotificationSettingsAccountDashboard struct {
 	IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 	IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
 	IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
-	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold" faker:"boundary_start=0, boundary_end=1000000"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
+	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold" faker:"boundary_start=0, boundary_end=1000000"`
 	IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
 	IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
 }
