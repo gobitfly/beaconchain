@@ -258,8 +258,18 @@ func QueueEmailNotifications(notificationsByUserID types.NotificationsPerUserId,
 
 	// now batch insert the emails in one go
 	log.Infof("queueing %v email notifications", len(emails))
-	// TODO: this query is likely wrong!
-	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (:created_ts, 'email', :email)`, emails)
+	type insertData struct {
+		Content types.TransitEmailContent `db:"content"`
+	}
+
+	insertRows := make([]insertData, 0, len(emails))
+	for _, email := range emails {
+		insertRows = append(insertRows, insertData{
+			Content: email,
+		})
+	}
+
+	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'email', :content)`, insertRows)
 	if err != nil {
 		log.Error(err, "error writing transit email to db", 0)
 	}
@@ -360,8 +370,18 @@ func QueuePushNotification(notificationsByUserID types.NotificationsPerUserId, t
 
 	// now batch insert the push messages in one go
 	log.Infof("queueing %v push notifications", len(pushMessages))
-	// TODO: this query is likely wrong!
-	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), 'push', :messages)`, pushMessages)
+	type insertData struct {
+		Content types.TransitPushContent `db:"content"`
+	}
+
+	insertRows := make([]insertData, 0, len(pushMessages))
+	for _, pushMessage := range pushMessages {
+		insertRows = append(insertRows, insertData{
+			Content: pushMessage,
+		})
+	}
+
+	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'push', :content)`, insertRows)
 	if err != nil {
 		return fmt.Errorf("error writing transit push to db: %w", err)
 	}
@@ -397,9 +417,12 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 		notifs := make([]types.TransitWebhook, 0)
 		// send the notifications to each registered webhook
 		for _, w := range webhooks {
-			for event, notificationsPerDashboard := range userNotifications {
+			for dashboardId, notificationsPerDashboard := range userNotifications {
+				if dashboardId != 0 { // disable webhooks for dashboard notifications for now
+					continue
+				}
 				for _, notificationsPerGroup := range notificationsPerDashboard {
-					for _, notifications := range notificationsPerGroup {
+					for event, notifications := range notificationsPerGroup {
 						// check if the webhook is subscribed to the type of event
 						eventSubscribed := slices.Contains(w.EventNames, string(event))
 
@@ -470,8 +493,8 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 											Event: types.WebhookEvent{
 												Network:     utils.GetNetwork(),
 												Name:        string(n.GetEventName()),
-												Title:       n.GetTitle(),
-												Description: n.GetInfo(types.NotifciationFormatText),
+												Title:       n.GetLegacyTitle(),
+												Description: n.GetLegacyInfo(),
 												Epoch:       n.GetEpoch(),
 												Target:      n.GetEventFilter(),
 											},
