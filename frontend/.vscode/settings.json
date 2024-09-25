@@ -1,17 +1,26 @@
 {
   "conventionalCommits.scopes": [
+    "BcLink",
+    "BcTablePager",
+    "DashboardChartSummaryChartFilter",
+    "DashboardGroupManagementModal",
+    "DashboardValidatorManagmentModal",
+    "NotificationsClientsTable",
+    "NotificationsNetworkTable",
+    "NotificationsOverview",
     "checkout",
     "ci",
     "customFetch",
-    "DashboardChartSummaryChartFilter",
-    "DashboardGroupManagementModal",
+    "dialog",
     "eslint",
+    "feature-flags",
     "git",
     "i18n",
     "mainHeader",
+    "notifications",
     "qrCode",
-    "vscode",
-    "DashboardValidatorManagmentModal"
+    "useWindowSize",
+    "vscode"
   ],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"

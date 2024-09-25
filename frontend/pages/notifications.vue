@@ -6,9 +6,7 @@ import {
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import {
-  BcDialogConfirm, NotificationsNetworkTable,
-} from '#components'
+import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 
 useDashboardKeyProvider('notifications')
@@ -22,41 +20,43 @@ await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLo
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const manageNotificationsModalVisisble = ref(false)
-
+const tabKey = {
+  clients: 'clients',
+  dashboards: 'dashboards',
+  machines: 'machines',
+  network: 'network',
+  rocketpool: 'rocketpool',
+}
 const tabs: HashTabs = [
   {
     icon: faGaugeSimpleMax,
-    key: 'dashboards',
+    key: tabKey.dashboards,
     title: $t('notifications.tabs.dashboards'),
   },
   {
     disabled: !showInDevelopment,
     icon: faMonitorWaveform,
-    key: 'machines',
+    key: tabKey.machines,
     placeholder: 'Machines coming soon!',
     title: $t('notifications.tabs.machines'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faBolt,
-    key: 'clients',
-    placeholder: 'Clients coming soon!',
+    key: tabKey.clients,
     title: $t('notifications.tabs.clients'),
   },
   {
-    disabled: !showInDevelopment,
-    key: 'rocketpool',
-    placeholder: 'Rocketpool coming soon!',
+    key: tabKey.rocketpool,
     title: $t('notifications.tabs.rocketpool'),
   },
   {
-    component: NotificationsNetworkTable,
-    disabled: !showInDevelopment,
     icon: faNetworkWired,
-    key: 'network',
+    key: tabKey.network,
     title: $t('notifications.tabs.network'),
   },
 ]
+
+const getSlotName = (key: string) => `tab-panel-${key}`
 
 useBcSeo('notifications.title')
 
@@ -84,7 +84,9 @@ const openManageNotifications = () => {
       <template #top>
         <DashboardHeader :dashboard-title="$t('notifications.title')" />
         <div class="overview">
-          TODO: Overview
+          <NotificationsOverview
+            @open-dialog="openManageNotifications"
+          />
         </div>
       </template>
       <NotificationsManagementModal
@@ -103,16 +105,26 @@ const openManageNotifications = () => {
         class="notifications-tab-view"
         panels-class="notifications-tab-panels"
       >
-        <template #tab-header-icon-rocketpool>
-          <IconRocketPool />
-        </template>
-        <template #tab-panel-dashboards>
+        <template #[getSlotName(tabKey.dashboards)]>
           <NotificationsDashboardsTable
             @open-dialog="openManageNotifications"
           />
         </template>
-        <template #tab-panel-clients>
+        <template #[getSlotName(tabKey.clients)]>
           <NotificationsClientsTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+        <template #tab-header-icon-rocketpool>
+          <IconRocketPool />
+        </template>
+        <template #[getSlotName(tabKey.rocketpool)]>
+          <NotificationsRocketPoolTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+        <template #[getSlotName(tabKey.network)]>
+          <NotificationsNetworkTable
             @open-dialog="openManageNotifications"
           />
         </template>

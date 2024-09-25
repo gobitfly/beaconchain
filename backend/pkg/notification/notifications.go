@@ -3,15 +3,15 @@ package notification
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"maps"
+	"slices"
 
 	"fmt"
-	"html"
 	"html/template"
 	"io"
 	"math/big"
@@ -22,7 +22,7 @@ import (
 	"time"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
-	"firebase.google.com/go/messaging"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -34,7 +34,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/rocket-pool/rocketpool-go/utils/eth"
 	"golang.org/x/text/cases"
@@ -44,6 +43,22 @@ import (
 func InitNotificationSender() {
 	log.Infof("starting notifications-sender")
 	go notificationSender()
+}
+
+func GetNotificationsForEpoch(pubkeyCachePath string, epoch uint64) (types.NotificationsPerUserId, error) {
+	err := initPubkeyCache(pubkeyCachePath)
+	if err != nil {
+		log.Fatal(err, "error initializing pubkey cache path for notifications", 0)
+	}
+	return collectNotifications(epoch)
+}
+
+func GetUserNotificationsForEpoch(pubkeyCachePath string, epoch uint64) (types.NotificationsPerUserId, error) {
+	err := initPubkeyCache(pubkeyCachePath)
+	if err != nil {
+		log.Fatal(err, "error initializing pubkey cache path for notifications", 0)
+	}
+	return collectUserDbNotifications(epoch)
 }
 
 func InitNotificationCollector(pubkeyCachePath string) {
@@ -126,7 +141,7 @@ func notificationCollector() {
 				break
 			}
 
-			queueNotifications(notifications, db.FrontendWriterDB) // this caused the collected notifications to be queued and sent
+			queueNotifications(notifications) // this caused the collected notifications to be queued and sent
 
 			// Network DB Notifications (user related, must only run on one instance ever!!!!)
 			if utils.Config.Notifications.UserDBNotifications {
@@ -139,7 +154,7 @@ func notificationCollector() {
 					continue
 				}
 
-				queueNotifications(userNotifications, db.FrontendWriterDB)
+				queueNotifications(userNotifications)
 			}
 
 			log.InfoWithFields(log.Fields{"notifications": len(notifications), "duration": time.Since(start), "epoch": epoch}, "notifications completed")
@@ -168,7 +183,7 @@ func notificationSender() {
 		if err != nil {
 			log.Error(err, "error getting advisory lock from db", 0)
 
-			conn.Close()
+			err := conn.Close()
 			if err != nil {
 				log.Error(err, "error returning connection to connection pool", 0)
 			}
@@ -177,12 +192,12 @@ func notificationSender() {
 		}
 
 		log.Infof("lock obtained")
-		err = dispatchNotifications(db.FrontendWriterDB)
+		err = dispatchNotifications()
 		if err != nil {
 			log.Error(err, "error dispatching notifications", 0)
 		}
 
-		err = garbageCollectNotificationQueue(db.FrontendWriterDB)
+		err = garbageCollectNotificationQueue()
 		if err != nil {
 			log.Error(err, "error garbage collecting notification queue", 0)
 		}
@@ -225,12 +240,13 @@ func notificationSender() {
 	}
 }
 
-func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.Notification, error) {
-	notificationsByUserID := map[uint64]map[types.EventName][]types.Notification{}
+func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
+	notificationsByUserID := types.NotificationsPerUserId{}
 	start := time.Now()
 	var err error
 	var dbIsCoherent bool
 
+	// do a consistency check to make sure that we have all the data we need in the db
 	err = db.WriterDb.Get(&dbIsCoherent, `
 		SELECT
 			NOT (array[false] && array_agg(is_coherent)) AS is_coherent
@@ -253,6 +269,64 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 
 	log.Infof("started collecting notifications")
 
+	// type dashboardDefinitionRow struct {
+	// 	DashboardId    types.DashboardId      `db:"dashboard_id"`
+	// 	DashboardName  string                 `db:"dashboard_name"`
+	// 	UserId         types.UserId           `db:"user_id"`
+	// 	GroupId        types.DashboardGroupId `db:"group_id"`
+	// 	GroupName      string                 `db:"group_name"`
+	// 	ValidatorIndex types.ValidatorIndex   `db:"validator_index"`
+	// }
+
+	// log.Infof("retrieving dashboard definitions")
+	// // Retrieve all dashboard definitions to be able to retrieve validators included in
+	// // the group notification subscriptions
+	// // TODO: add a filter to retrieve only groups that have notifications enabled
+	// // Needs a new field in the db
+	// var dashboardDefinitions []dashboardDefinitionRow
+	// err = db.AlloyWriter.Select(&dashboardDefinitions, `
+	// 	select
+	// 		users_val_dashboards.id as dashboard_id,
+	// 		users_val_dashboards.name as dashboard_name,
+	// 		users_val_dashboards.user_id,
+	// 		users_val_dashboards_groups.id as group_id,
+	// 		users_val_dashboards_groups.name as group_name,
+	// 		users_val_dashboards_validators.validator_index
+	// 	from users_val_dashboards
+	// 	left join users_val_dashboards_groups on users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
+	// 	left join users_val_dashboards_validators on users_val_dashboards_validators.dashboard_id = users_val_dashboards_groups.dashboard_id AND users_val_dashboards_validators.group_id = users_val_dashboards_groups.id;
+	// `)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error getting dashboard definitions: %v", err)
+	// }
+
+	// // Now initialize the validator dashboard configuration map
+	// validatorDashboardConfig := &types.ValidatorDashboardConfig{
+	// 	DashboardsByUserId: make(map[types.UserId]map[types.DashboardId]*types.ValidatorDashboard),
+	// }
+	// for _, row := range dashboardDefinitions {
+	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId] == nil {
+	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId] = make(map[types.DashboardId]*types.ValidatorDashboard)
+	// 	}
+	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] == nil {
+	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId] = &types.ValidatorDashboard{
+	// 			Name:   row.DashboardName,
+	// 			Groups: make(map[types.DashboardGroupId]*types.ValidatorDashboardGroup),
+	// 		}
+	// 	}
+	// 	if validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] == nil {
+	// 		validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId] = &types.ValidatorDashboardGroup{
+	// 			Name:       row.GroupName,
+	// 			Validators: []uint64{},
+	// 		}
+	// 	}
+	// 	validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators = append(validatorDashboardConfig.DashboardsByUserId[row.UserId][row.DashboardId].Groups[row.GroupId].Validators, uint64(row.ValidatorIndex))
+	// }
+
+	// TODO: pass the validatorDashboardConfig to the notification collection functions
+	// The following functions will collect the notifications and add them to the
+	// notificationsByUserID map. The notifications will be queued and sent later
+	// by the notification sender process
 	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_missed_attestation").Inc()
@@ -295,7 +369,7 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 	}
 	log.Infof("collecting withdrawal notifications took: %v", time.Since(start))
 
-	err = collectNetworkNotifications(notificationsByUserID, types.NetworkLivenessIncreasedEventName)
+	err = collectNetworkNotifications(notificationsByUserID)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_network").Inc()
 		return nil, fmt.Errorf("error collecting network notifications: %v", err)
@@ -315,7 +389,7 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 				return nil, fmt.Errorf("error collecting rocketpool notifications: %v", err)
 			}
 		} else {
-			err = collectRocketpoolComissionNotifications(notificationsByUserID, types.RocketpoolCommissionThresholdEventName)
+			err = collectRocketpoolComissionNotifications(notificationsByUserID)
 			if err != nil {
 				//nolint:misspell
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_comission").Inc()
@@ -323,7 +397,7 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 			}
 			log.Infof("collecting rocketpool commissions took: %v", time.Since(start))
 
-			err = collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID, types.RocketpoolNewClaimRoundStartedEventName)
+			err = collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_reward_claim").Inc()
 				return nil, fmt.Errorf("error collecting new rocketpool claim round: %v", err)
@@ -346,7 +420,7 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 		}
 	}
 
-	err = collectSyncCommittee(notificationsByUserID, types.SyncCommitteeSoon, epoch)
+	err = collectSyncCommittee(notificationsByUserID, epoch)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_sync_committee").Inc()
 		return nil, fmt.Errorf("error collecting sync committee: %v", err)
@@ -356,8 +430,8 @@ func collectNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.
 	return notificationsByUserID, nil
 }
 
-func collectUserDbNotifications(epoch uint64) (map[uint64]map[types.EventName][]types.Notification, error) {
-	notificationsByUserID := map[uint64]map[types.EventName][]types.Notification{}
+func collectUserDbNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
+	notificationsByUserID := types.NotificationsPerUserId{}
 	var err error
 
 	// Monitoring (premium): machine offline
@@ -389,14 +463,14 @@ func collectUserDbNotifications(epoch uint64) (map[uint64]map[types.EventName][]
 	}
 
 	// New ETH clients
-	err = collectEthClientNotifications(notificationsByUserID, types.EthClientUpdateEventName)
+	err = collectEthClientNotifications(notificationsByUserID)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_eth_client").Inc()
 		return nil, fmt.Errorf("error collecting Eth client notifications: %v", err)
 	}
 
 	//Tax Report
-	err = collectTaxReportNotificationNotifications(notificationsByUserID, types.TaxReportEventName)
+	err = collectTaxReportNotificationNotifications(notificationsByUserID)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_tax_report").Inc()
 		return nil, fmt.Errorf("error collecting tax report notifications: %v", err)
@@ -405,40 +479,20 @@ func collectUserDbNotifications(epoch uint64) (map[uint64]map[types.EventName][]
 	return notificationsByUserID, nil
 }
 
-func queueNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, useDB *sqlx.DB) {
+func queueNotifications(notificationsByUserID types.NotificationsPerUserId) {
 	subByEpoch := map[uint64][]uint64{}
 
-	// prevent multiple events being sent with the same subscription id
-	for user, notifications := range notificationsByUserID {
-		for eventType, events := range notifications {
-			filteredEvents := make([]types.Notification, 0)
-
-			for _, ev := range events {
-				isDuplicate := false
-				for _, fe := range filteredEvents {
-					if fe.GetSubscriptionID() == ev.GetSubscriptionID() {
-						isDuplicate = true
-					}
-				}
-				if !isDuplicate {
-					filteredEvents = append(filteredEvents, ev)
-				}
-			}
-			notificationsByUserID[user][eventType] = filteredEvents
-		}
-	}
-
-	err := queueEmailNotifications(notificationsByUserID, useDB)
+	err := queueEmailNotifications(notificationsByUserID)
 	if err != nil {
 		log.Error(err, "error queuing email notifications", 0)
 	}
 
-	err = queuePushNotification(notificationsByUserID, useDB)
+	err = queuePushNotification(notificationsByUserID)
 	if err != nil {
 		log.Error(err, "error queuing push notifications", 0)
 	}
 
-	err = queueWebhookNotifications(notificationsByUserID, useDB)
+	err = queueWebhookNotifications(notificationsByUserID)
 	if err != nil {
 		log.Error(err, "error queuing webhook notifications", 0)
 	}
@@ -455,9 +509,11 @@ func queueNotifications(notificationsByUserID map[uint64]map[types.EventName][]t
 			}
 		}
 	}
+
+	// obsolete as notifications are anyway sent on a per-epoch basis
 	for epoch, subIDs := range subByEpoch {
 		// update that we've queued the subscription (last sent rather means last queued)
-		err := db.UpdateSubscriptionsLastSent(subIDs, time.Now(), epoch, useDB)
+		err := db.UpdateSubscriptionsLastSent(subIDs, time.Now(), epoch)
 		if err != nil {
 			log.Error(err, "error updating sent-time of sent notifications", 0)
 			metrics.Errors.WithLabelValues("notifications_updating_sent_time").Inc()
@@ -483,6 +539,7 @@ func queueNotifications(notificationsByUserID map[uint64]map[types.EventName][]t
 		}
 	}
 
+	// no need to batch here as the internal state will become obsolete
 	for state, subs := range stateToSub {
 		subArray := make([]int64, 0)
 		for subID := range subs {
@@ -495,23 +552,23 @@ func queueNotifications(notificationsByUserID map[uint64]map[types.EventName][]t
 	}
 }
 
-func dispatchNotifications(useDB *sqlx.DB) error {
-	err := sendEmailNotifications(useDB)
+func dispatchNotifications() error {
+	err := sendEmailNotifications()
 	if err != nil {
 		return fmt.Errorf("error sending email notifications, err: %w", err)
 	}
 
-	err = sendPushNotifications(useDB)
+	err = sendPushNotifications()
 	if err != nil {
 		return fmt.Errorf("error sending push notifications, err: %w", err)
 	}
 
-	err = sendWebhookNotifications(useDB)
+	err = sendWebhookNotifications()
 	if err != nil {
 		return fmt.Errorf("error sending webhook notifications, err: %w", err)
 	}
 
-	err = sendDiscordNotifications(useDB)
+	err = sendDiscordNotifications()
 	if err != nil {
 		return fmt.Errorf("error sending webhook discord notifications, err: %w", err)
 	}
@@ -520,8 +577,8 @@ func dispatchNotifications(useDB *sqlx.DB) error {
 }
 
 // garbageCollectNotificationQueue deletes entries from the notification queue that have been processed
-func garbageCollectNotificationQueue(useDB *sqlx.DB) error {
-	rows, err := useDB.Exec(`DELETE FROM notification_queue WHERE (sent < now() - INTERVAL '30 minutes') OR (created < now() - INTERVAL '1 hour')`)
+func garbageCollectNotificationQueue() error {
+	rows, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE (sent < now() - INTERVAL '30 minutes') OR (created < now() - INTERVAL '1 hour')`)
 	if err != nil {
 		return fmt.Errorf("error deleting from notification_queue %w", err)
 	}
@@ -541,11 +598,8 @@ func getNetwork() string {
 	return ""
 }
 
-func queuePushNotification(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, useDB *sqlx.DB) error {
-	userIDs := []uint64{}
-	for userID := range notificationsByUserID {
-		userIDs = append(userIDs, userID)
-	}
+func queuePushNotification(notificationsByUserID types.NotificationsPerUserId) error {
+	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
 
 	tokensByUserID, err := GetUserPushTokenByIds(userIDs)
 	if err != nil {
@@ -559,7 +613,10 @@ func queuePushNotification(notificationsByUserID map[uint64]map[types.EventName]
 			continue
 		}
 
-		go func(userTokens []string, userNotifications map[types.EventName][]types.Notification) {
+		// todo: this looks like a flawed approach to queue the notifications
+		// this will issue one db write per user, which is not optimal
+		// we should batch the notifications and write them in one go
+		go func(userTokens []string, userNotifications map[types.EventName]map[types.EventFilter]types.Notification) {
 			var batch []*messaging.Message
 			for event, ns := range userNotifications {
 				for _, n := range ns {
@@ -594,7 +651,7 @@ func queuePushNotification(notificationsByUserID map[uint64]map[types.EventName]
 				Messages: batch,
 			}
 
-			_, err = useDB.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES ($1, 'push', $2)`, time.Now(), transitPushContent)
+			_, err = db.WriterDb.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES ($1, 'push', $2)`, time.Now(), transitPushContent)
 			if err != nil {
 				log.Error(err, "error writing transit push notification to db", 0)
 				return
@@ -604,10 +661,10 @@ func queuePushNotification(notificationsByUserID map[uint64]map[types.EventName]
 	return nil
 }
 
-func sendPushNotifications(useDB *sqlx.DB) error {
+func sendPushNotifications() error {
 	var notificationQueueItem []types.TransitPush
 
-	err := useDB.Select(&notificationQueueItem, `SELECT
+	err := db.WriterDb.Select(&notificationQueueItem, `SELECT
 		id,
 		created,
 		sent,
@@ -629,7 +686,7 @@ func sendPushNotifications(useDB *sqlx.DB) error {
 				end = len(n.Content.Messages)
 			}
 
-			err = SendPushBatch(n.Content.Messages[start:end])
+			err = SendPushBatch(n.Content.Messages[start:end], false)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_send_push_batch").Inc()
 				log.Error(err, "error sending firebase batch job", 0)
@@ -637,7 +694,7 @@ func sendPushNotifications(useDB *sqlx.DB) error {
 				metrics.NotificationsSent.WithLabelValues("push", "200").Add(float64(len(n.Content.Messages)))
 			}
 
-			_, err = useDB.Exec(`UPDATE notification_queue SET sent = now() WHERE id = $1`, n.Id)
+			_, err = db.WriterDb.Exec(`UPDATE notification_queue SET sent = now() WHERE id = $1`, n.Id)
 			if err != nil {
 				return fmt.Errorf("error updating sent status for push notification with id: %v, err: %w", n.Id, err)
 			}
@@ -646,11 +703,9 @@ func sendPushNotifications(useDB *sqlx.DB) error {
 	return nil
 }
 
-func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, useDB *sqlx.DB) error {
-	userIDs := []uint64{}
-	for userID := range notificationsByUserID {
-		userIDs = append(userIDs, userID)
-	}
+func queueEmailNotifications(notificationsByUserID types.NotificationsPerUserId) error {
+	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
+
 	emailsByUserID, err := GetUserEmailsByIds(userIDs)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_get_user_mail_by_id").Inc()
@@ -665,7 +720,7 @@ func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventNam
 			// metrics.Errors.WithLabelValues("notifications_mail_not_found").Inc()
 			continue
 		}
-		go func(userEmail string, userNotifications map[types.EventName][]types.Notification) {
+		go func(userEmail string, userNotifications map[types.EventName]map[types.EventFilter]types.Notification) {
 			attachments := []types.EmailAttachment{}
 
 			var msg types.Email
@@ -688,76 +743,14 @@ func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventNam
 				}
 				//nolint:gosec // this is a static string
 				msg.Body += template.HTML(fmt.Sprintf("%s<br>====<br><br>", types.EventLabel[event_title]))
-				unsubURL := "https://" + utils.Config.Frontend.SiteDomain + "/notifications/unsubscribe"
-				for i, n := range ns {
+				i := 0
+				for _, n := range ns {
 					// Find all unique notification titles for the subject
 					title := n.GetTitle()
 					if _, ok := notificationTitlesMap[title]; !ok {
 						notificationTitlesMap[title] = true
 						notificationTitles = append(notificationTitles, title)
 					}
-
-					unsubHash := n.GetUnsubscribeHash()
-					if unsubHash == "" {
-						id := n.GetSubscriptionID()
-
-						tx, err := db.FrontendWriterDB.Beginx()
-						if err != nil {
-							log.Error(err, "error starting transaction", 0)
-						}
-						var sub types.Subscription
-						err = tx.Get(&sub, `
-							SELECT
-								id,
-								user_id,
-								event_name,
-								event_filter,
-								last_sent_ts,
-								last_sent_epoch,
-								created_ts,
-								created_epoch,
-								event_threshold
-							FROM users_subscriptions
-							WHERE id = $1
-						`, id)
-						if err != nil {
-							log.Error(err, "error getting user subscription by subscription id", 0)
-							err = tx.Rollback()
-							if err != nil {
-								log.Error(err, "error rolling back transaction", 0)
-							}
-						}
-
-						raw := fmt.Sprintf("%v%v%v%v", sub.ID, sub.UserID, sub.EventName, sub.CreatedTime)
-						digest := sha256.Sum256([]byte(raw))
-
-						_, err = tx.Exec("UPDATE users_subscriptions set unsubscribe_hash = $1 WHERE id = $2", digest[:], id)
-						if err != nil {
-							log.Error(err, "error updating users subscriptions table with unsubscribe hash", 0)
-							err = tx.Rollback()
-							if err != nil {
-								log.Error(err, "error rolling back transaction", 0)
-							}
-						}
-
-						err = tx.Commit()
-						if err != nil {
-							log.Error(err, "error committing transaction to update users subscriptions with an unsubscribe hash", 0)
-							err = tx.Rollback()
-							if err != nil {
-								log.Error(err, "error rolling back transaction", 0)
-							}
-						}
-
-						unsubHash = hex.EncodeToString(digest[:])
-					}
-					if i == 0 {
-						unsubURL += "?hash=" + html.EscapeString(unsubHash)
-					} else {
-						unsubURL += "&hash=" + html.EscapeString(unsubHash)
-					}
-					//nolint:gosec // this is a static string
-					msg.UnsubURL = template.HTML(fmt.Sprintf(`<a style="color: white" onMouseOver="this.style.color='#F5B498'" onMouseOut="this.style.color='#FFFFFF'" href="%v">Unsubscribe</a>`, unsubURL))
 
 					if event != types.SyncCommitteeSoon {
 						// SyncCommitteeSoon notifications are summed up in getEventInfo for all validators
@@ -770,6 +763,7 @@ func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventNam
 					}
 
 					metrics.NotificationsQueued.WithLabelValues("email", string(event)).Inc()
+					i++
 				}
 
 				eventInfo := getEventInfo(event, ns)
@@ -798,7 +792,7 @@ func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventNam
 				Attachments: attachments,
 			}
 
-			_, err = useDB.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES ($1, 'email', $2)`, time.Now(), transitEmailContent)
+			_, err = db.WriterDb.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES ($1, 'email', $2)`, time.Now(), transitEmailContent)
 			if err != nil {
 				log.Error(err, "error writing transit email to db", 0)
 			}
@@ -807,10 +801,10 @@ func queueEmailNotifications(notificationsByUserID map[uint64]map[types.EventNam
 	return nil
 }
 
-func sendEmailNotifications(useDb *sqlx.DB) error {
+func sendEmailNotifications() error {
 	var notificationQueueItem []types.TransitEmail
 
-	err := useDb.Select(&notificationQueueItem, `SELECT
+	err := db.WriterDb.Select(&notificationQueueItem, `SELECT
 		id,
 		created,
 		sent,
@@ -833,7 +827,7 @@ func sendEmailNotifications(useDb *sqlx.DB) error {
 				metrics.NotificationsSent.WithLabelValues("email", "200").Inc()
 			}
 		}
-		_, err = useDb.Exec(`UPDATE notification_queue set sent = now() where id = $1`, n.Id)
+		_, err = db.WriterDb.Exec(`UPDATE notification_queue set sent = now() where id = $1`, n.Id)
 		if err != nil {
 			return fmt.Errorf("error updating sent status for email notification with id: %v, err: %w", n.Id, err)
 		}
@@ -841,16 +835,17 @@ func sendEmailNotifications(useDb *sqlx.DB) error {
 	return nil
 }
 
-func queueWebhookNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, useDB *sqlx.DB) error {
+func queueWebhookNotifications(notificationsByUserID types.NotificationsPerUserId) error {
 	for userID, userNotifications := range notificationsByUserID {
 		var webhooks []types.UserWebhook
-		err := useDB.Select(&webhooks, `
+		err := db.FrontendWriterDB.Select(&webhooks, `
 			SELECT
 				id,
 				user_id,
 				url,
 				retries,
 				event_names,
+				last_sent,
 				destination
 			FROM
 				users_webhooks
@@ -882,7 +877,7 @@ func queueWebhookNotifications(notificationsByUserID map[uint64]map[types.EventN
 					if len(notifications) > 0 {
 						// reset Retries
 						if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-							_, err = useDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
+							_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
 							if err != nil {
 								log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
 								continue
@@ -959,7 +954,7 @@ func queueWebhookNotifications(notificationsByUserID map[uint64]map[types.EventN
 		}
 		// process notifs
 		for _, n := range notifs {
-			_, err = useDB.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), $1, $2);`, n.Channel, n.Content)
+			_, err = db.WriterDb.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), $1, $2);`, n.Channel, n.Content)
 			if err != nil {
 				log.Error(err, "error inserting into webhooks_queue", 0)
 			} else {
@@ -969,7 +964,7 @@ func queueWebhookNotifications(notificationsByUserID map[uint64]map[types.EventN
 		// process discord notifs
 		for _, dNotifs := range discordNotifMap {
 			for _, n := range dNotifs {
-				_, err = useDB.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), 'webhook_discord', $1);`, n)
+				_, err = db.WriterDb.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), 'webhook_discord', $1);`, n)
 				if err != nil {
 					log.Error(err, "error inserting into webhooks_queue (discord)", 0)
 					continue
@@ -982,10 +977,10 @@ func queueWebhookNotifications(notificationsByUserID map[uint64]map[types.EventN
 	return nil
 }
 
-func sendWebhookNotifications(useDB *sqlx.DB) error {
+func sendWebhookNotifications() error {
 	var notificationQueueItem []types.TransitWebhook
 
-	err := useDB.Select(&notificationQueueItem, `SELECT
+	err := db.WriterDb.Select(&notificationQueueItem, `SELECT
 		id,
 		created,
 		sent,
@@ -1002,7 +997,7 @@ func sendWebhookNotifications(useDB *sqlx.DB) error {
 	for _, n := range notificationQueueItem {
 		// do not retry after 5 attempts
 		if n.Content.Webhook.Retries > 5 {
-			_, err := db.FrontendWriterDB.Exec(`DELETE FROM notification_queue WHERE id = $1`, n.Id)
+			_, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE id = $1`, n.Id)
 			if err != nil {
 				return fmt.Errorf("error deleting from notification queue: %w", err)
 			}
@@ -1018,7 +1013,7 @@ func sendWebhookNotifications(useDB *sqlx.DB) error {
 
 		_, err = url.Parse(n.Content.Webhook.Url)
 		if err != nil {
-			_, err := db.FrontendWriterDB.Exec(`DELETE FROM notification_queue WHERE id = $1`, n.Id)
+			_, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE id = $1`, n.Id)
 			if err != nil {
 				return fmt.Errorf("error deleting from notification queue: %w", err)
 			}
@@ -1038,14 +1033,14 @@ func sendWebhookNotifications(useDB *sqlx.DB) error {
 			}
 			defer resp.Body.Close()
 
-			_, err = useDB.Exec(`UPDATE notification_queue SET sent = now() WHERE id = $1`, n.Id)
+			_, err = db.WriterDb.Exec(`UPDATE notification_queue SET sent = now() WHERE id = $1`, n.Id)
 			if err != nil {
 				log.Error(err, "error updating notification_queue table", 0)
 				return
 			}
 
 			if resp != nil && resp.StatusCode < 400 {
-				_, err = useDB.Exec(`UPDATE users_webhooks SET retries = 0, last_sent = now() WHERE id = $1;`, n.Content.Webhook.ID)
+				_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0, last_sent = now() WHERE id = $1;`, n.Content.Webhook.ID)
 				if err != nil {
 					log.Error(err, "error updating users_webhooks table", 0)
 					return
@@ -1063,7 +1058,7 @@ func sendWebhookNotifications(useDB *sqlx.DB) error {
 					errResp.Body = string(b)
 				}
 
-				_, err = useDB.Exec(`UPDATE users_webhooks SET retries = retries + 1, last_sent = now(), request = $2, response = $3 WHERE id = $1;`, n.Content.Webhook.ID, n.Content, errResp)
+				_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = retries + 1, last_sent = now(), request = $2, response = $3 WHERE id = $1;`, n.Content.Webhook.ID, n.Content, errResp)
 				if err != nil {
 					log.Error(err, "error updating users_webhooks table", 0)
 					return
@@ -1074,10 +1069,10 @@ func sendWebhookNotifications(useDB *sqlx.DB) error {
 	return nil
 }
 
-func sendDiscordNotifications(useDB *sqlx.DB) error {
+func sendDiscordNotifications() error {
 	var notificationQueueItem []types.TransitDiscord
 
-	err := useDB.Select(&notificationQueueItem, `SELECT
+	err := db.WriterDb.Select(&notificationQueueItem, `SELECT
 		id,
 		created,
 		sent,
@@ -1098,7 +1093,7 @@ func sendDiscordNotifications(useDB *sqlx.DB) error {
 	for _, n := range notificationQueueItem {
 		// purge the event from existence if the retry counter is over 5
 		if n.Content.Webhook.Retries > 5 {
-			_, err = db.FrontendWriterDB.Exec(`DELETE FROM notification_queue where id = $1`, n.Id)
+			_, err = db.WriterDb.Exec(`DELETE FROM notification_queue where id = $1`, n.Id)
 			if err != nil {
 				log.Warnf("failed to delete notification from queue: %v", err)
 			}
@@ -1113,10 +1108,12 @@ func sendDiscordNotifications(useDB *sqlx.DB) error {
 		notifMap[n.Content.Webhook.ID] = append(notifMap[n.Content.Webhook.ID], n)
 	}
 	for _, webhook := range webhookMap {
+		// todo: this has the potential to spin up thousands of go routines
+		// should use an errgroup instead if we decide to keep the aproach
 		go func(webhook types.UserWebhook, reqs []types.TransitDiscord) {
 			defer func() {
 				// update retries counters in db based on end result
-				_, err = useDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, webhook.Retries, webhook.ID)
+				_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, webhook.Retries, webhook.ID)
 				if err != nil {
 					log.Warnf("failed to update retries counter to %v for webhook %v: %v", webhook.Retries, webhook.ID, err)
 				}
@@ -1126,7 +1123,7 @@ func sendDiscordNotifications(useDB *sqlx.DB) error {
 				for _, req := range reqs {
 					ids = append(ids, req.Id)
 				}
-				_, err = db.FrontendWriterDB.Exec(`UPDATE notification_queue SET sent = now() where id = ANY($1)`, pq.Array(ids))
+				_, err = db.WriterDb.Exec(`UPDATE notification_queue SET sent = now() where id = ANY($1)`, pq.Array(ids))
 				if err != nil {
 					log.Warnf("failed to update sent for notifcations in queue: %v", err)
 				}
@@ -1173,14 +1170,15 @@ func sendDiscordNotifications(useDB *sqlx.DB) error {
 						}
 						errResp.Status = resp.Status
 						resp.Body.Close()
+
+						if resp.StatusCode == http.StatusTooManyRequests {
+							log.Warnf("could not push to discord webhook due to rate limit. %v url: %v", errResp.Body, webhook.Url)
+						} else {
+							log.Error(nil, "error pushing discord webhook", 0, map[string]interface{}{"errResp.Body": errResp.Body, "webhook.Url": webhook.Url})
+						}
 					}
 
-					if strings.Contains(errResp.Body, "You are being rate limited") {
-						log.Warnf("could not push to discord webhook due to rate limit. %v url: %v", errResp.Body, webhook.Url)
-					} else {
-						log.Error(nil, "error pushing discord webhook", 0, map[string]interface{}{"errResp.Body": errResp.Body, "webhook.Url": webhook.Url})
-					}
-					_, err = useDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, reqs[i].Content.DiscordRequest, errResp)
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, reqs[i].Content.DiscordRequest, errResp)
 					if err != nil {
 						log.Error(err, "error storing failure data in users_webhooks table", 0)
 					}
@@ -1198,7 +1196,7 @@ func getUrlPart(validatorIndex uint64) string {
 	return fmt.Sprintf(` For more information visit: <a href='https://%s/validator/%v'>https://%s/validator/%v</a>.`, utils.Config.Frontend.SiteDomain, validatorIndex, utils.Config.Frontend.SiteDomain, validatorIndex)
 }
 
-func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, status uint64, eventName types.EventName, epoch uint64) error {
+func collectBlockProposalNotifications(notificationsByUserID types.NotificationsPerUserId, status uint64, eventName types.EventName, epoch uint64) error {
 	type dbResult struct {
 		Proposer      uint64 `db:"proposer"`
 		Status        uint64 `db:"status"`
@@ -1207,7 +1205,7 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 		ExecRewardETH float64
 	}
 
-	_, subMap, err := GetSubsForEventFilter(eventName)
+	subMap, err := GetSubsForEventFilter(eventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for (missed) block proposals %w", err)
 	}
@@ -1280,22 +1278,19 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 			}
 			log.Infof("creating %v notification for validator %v in epoch %v", eventName, event.Proposer, epoch)
 			n := &validatorProposalNotification{
-				SubscriptionID: *sub.ID,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventName:      sub.EventName,
+					EventFilter:    hex.EncodeToString(pubkey),
+				},
 				ValidatorIndex: event.Proposer,
-				Epoch:          epoch,
 				Status:         event.Status,
-				EventName:      eventName,
 				Reward:         event.ExecRewardETH,
-				EventFilter:    hex.EncodeToString(pubkey),
 				Slot:           event.Slot,
 			}
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			notificationsByUserID[*sub.UserID][n.GetEventName()] = append(notificationsByUserID[*sub.UserID][n.GetEventName()], n)
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1304,43 +1299,12 @@ func collectBlockProposalNotifications(notificationsByUserID map[uint64]map[type
 }
 
 type validatorProposalNotification struct {
-	SubscriptionID     uint64
-	ValidatorIndex     uint64
-	ValidatorPublicKey string
-	Epoch              uint64
-	Slot               uint64
-	Status             uint64 // * Can be 0 = scheduled, 1 executed, 2 missed */
-	EventName          types.EventName
-	EventFilter        string
-	Reward             float64
-	UnsubscribeHash    sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *validatorProposalNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorProposalNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *validatorProposalNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorProposalNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorProposalNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *validatorProposalNotification) GetEventName() types.EventName {
-	return n.EventName
+	ValidatorIndex uint64
+	Slot           uint64
+	Status         uint64 // * Can be 0 = scheduled, 1 executed, 2 missed */
+	Reward         float64
 }
 
 func (n *validatorProposalNotification) GetInfo(includeUrl bool) string {
@@ -1359,6 +1323,8 @@ func (n *validatorProposalNotification) GetInfo(includeUrl bool) string {
 		generalPart = fmt.Sprintf(`Validator %s proposed block at slot %s with %v %v execution reward.`, vali, slot, n.Reward, utils.Config.Frontend.ElCurrency)
 	case 2:
 		generalPart = fmt.Sprintf(`Validator %s missed a block proposal at slot %s.`, vali, slot)
+	case 3:
+		generalPart = fmt.Sprintf(`Validator %s had an orphaned block proposal at slot %s.`, vali, slot)
 	}
 	return generalPart + suffix
 }
@@ -1371,12 +1337,10 @@ func (n *validatorProposalNotification) GetTitle() string {
 		return "New Block Proposal"
 	case 2:
 		return "Block Proposal Missed"
+	case 3:
+		return "Block Proposal Missed (Orphaned)"
 	}
 	return "-"
-}
-
-func (n *validatorProposalNotification) GetEventFilter() string {
-	return n.EventFilter
 }
 
 func (n *validatorProposalNotification) GetInfoMarkdown() string {
@@ -1388,13 +1352,17 @@ func (n *validatorProposalNotification) GetInfoMarkdown() string {
 		generalPart = fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v) proposed a new block at slot [%[3]v](https://%[1]v/slot/%[3]v) with %[4]v %[5]v execution reward.`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot, n.Reward, utils.Config.Frontend.ElCurrency)
 	case 2:
 		generalPart = fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v) missed a block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot)
+	case 3:
+		generalPart = fmt.Sprintf(`Validator [%[2]v](https://%[1]v/validator/%[2]v) had an orphaned block proposal at slot [%[3]v](https://%[1]v/slot/%[3]v).`, utils.Config.Frontend.SiteDomain, n.ValidatorIndex, n.Slot)
 	}
 
 	return generalPart
 }
 
-func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
-	_, subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName)
+// collectAttestationAndOfflineValidatorNotifications collects notifications for missed attestations and offline validators
+func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+	// Retrieve subscriptions for missed attestations
+	subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for missted attestations %w", err)
 	}
@@ -1407,12 +1375,13 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 	}
 
 	// get attestations for all validators for the last 4 epochs
-
+	// we need 4 epochs so that can detect the online / offline status of validators
 	validators, err := db.GetValidatorIndices()
 	if err != nil {
 		return err
 	}
 
+	// this reads the submitted attestations for the last 4 epochs
 	participationPerEpoch, err := db.GetValidatorAttestationHistoryForNotifications(epoch-3, epoch)
 	if err != nil {
 		return fmt.Errorf("error getting validator attestations from db %w", err)
@@ -1470,29 +1439,17 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 
 			log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorMissedAttestationEventName, event.ValidatorIndex, event.Epoch)
 			n := &validatorAttestationNotification{
-				SubscriptionID: *sub.ID,
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          event.Epoch,
+					EventName:      sub.EventName,
+					EventFilter:    hex.EncodeToString(event.EventFilter),
+				},
 				ValidatorIndex: event.ValidatorIndex,
-				Epoch:          event.Epoch,
 				Status:         event.Status,
-				EventName:      types.ValidatorMissedAttestationEventName,
-				EventFilter:    hex.EncodeToString(event.EventFilter),
 			}
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			isDuplicate := false
-			for _, userEvent := range notificationsByUserID[*sub.UserID][n.GetEventName()] {
-				if userEvent.GetSubscriptionID() == n.SubscriptionID {
-					isDuplicate = true
-				}
-			}
-			if isDuplicate {
-				continue
-			}
-			notificationsByUserID[*sub.UserID][n.GetEventName()] = append(notificationsByUserID[*sub.UserID][n.GetEventName()], n)
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1573,7 +1530,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 		return fmt.Errorf("retrieved more than %v online validators notifications: %v, exiting", onlineValidatorsLimit, len(onlineValidators))
 	}
 
-	_, subMap, err = GetSubsForEventFilter(types.ValidatorIsOfflineEventName)
+	subMap, err = GetSubsForEventFilter(types.ValidatorIsOfflineEventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get subs for %v: %v", types.ValidatorIsOfflineEventName, err)
 	}
@@ -1587,34 +1544,20 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 			}
 			log.Infof("new event: validator %v detected as offline since epoch %v", validator.Index, epoch)
 
-			n := validatorIsOfflineNotification{
-				SubscriptionID: *sub.ID,
+			n := &validatorIsOfflineNotification{
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					Epoch:          epoch,
+					EventName:      sub.EventName,
+					LatestState:    fmt.Sprint(epoch - 2), // first epoch the validator stopped attesting
+					EventFilter:    hex.EncodeToString(validator.Pubkey),
+					UserID:         *sub.UserID,
+				},
 				ValidatorIndex: validator.Index,
 				IsOffline:      true,
-				EventEpoch:     epoch,
-				EventName:      types.ValidatorIsOfflineEventName,
-				InternalState:  fmt.Sprint(epoch - 2), // first epoch the validator stopped attesting
-				EventFilter:    hex.EncodeToString(validator.Pubkey),
 			}
 
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			isDuplicate := false
-			for _, userEvent := range notificationsByUserID[*sub.UserID][n.GetEventName()] {
-				if userEvent.GetSubscriptionID() == n.SubscriptionID {
-					isDuplicate = true
-					break
-				}
-			}
-			if isDuplicate {
-				log.Infof("duplicate offline notification detected")
-				continue
-			}
-			notificationsByUserID[*sub.UserID][n.GetEventName()] = append(notificationsByUserID[*sub.UserID][n.GetEventName()], &n)
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1623,21 +1566,21 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 		t := hex.EncodeToString(validator.Pubkey)
 		subs := subMap[t]
 		for _, sub := range subs {
-			if sub.State.String == "" || sub.State.String == "-" { // discard online notifications that do not have a corresponding offline notification
-				continue
-			}
+			// if sub.State.String == "" || sub.State.String == "-" { // discard online notifications that do not have a corresponding offline notification
+			// 	continue
+			// }
 
-			originalLastSeenEpoch, err := strconv.ParseUint(sub.State.String, 10, 64)
-			if err != nil {
-				// i have no idea what just happened.
-				return fmt.Errorf("this should never happen. couldn't parse state as uint64: %v", err)
-			}
+			// originalLastSeenEpoch, err := strconv.ParseUint(sub.State.String, 10, 64)
+			// if err != nil {
+			// 	// I have no idea what just happened.
+			// 	return fmt.Errorf("this should never happen. couldn't parse state as uint64: %v", err)
+			// }
 
-			epochsSinceOffline := epoch - originalLastSeenEpoch
+			// epochsSinceOffline := epoch - originalLastSeenEpoch
 
-			if epochsSinceOffline > epoch { // fix overflow
-				epochsSinceOffline = 4
-			}
+			// if epochsSinceOffline > epoch { // fix overflow
+			// 	epochsSinceOffline = 4
+			// }
 
 			if sub.UserID == nil || sub.ID == nil {
 				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
@@ -1645,35 +1588,20 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 
 			log.Infof("new event: validator %v detected as online again at epoch %v", validator.Index, epoch)
 
-			n := validatorIsOfflineNotification{
-				SubscriptionID: *sub.ID,
+			n := &validatorIsOfflineNotification{
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventName:      sub.EventName,
+					EventFilter:    hex.EncodeToString(validator.Pubkey),
+					LatestState:    "-",
+				},
 				ValidatorIndex: validator.Index,
 				IsOffline:      false,
-				EventEpoch:     epoch,
-				EventName:      types.ValidatorIsOfflineEventName,
-				InternalState:  "-",
-				EventFilter:    hex.EncodeToString(validator.Pubkey),
-				EpochsOffline:  epochsSinceOffline,
 			}
 
-			if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-				notificationsByUserID[*sub.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			isDuplicate := false
-			for _, userEvent := range notificationsByUserID[*sub.UserID][n.GetEventName()] {
-				if userEvent.GetSubscriptionID() == n.SubscriptionID {
-					isDuplicate = true
-					break
-				}
-			}
-			if isDuplicate {
-				log.Infof("duplicate online notification detected")
-				continue
-			}
-			notificationsByUserID[*sub.UserID][n.GetEventName()] = append(notificationsByUserID[*sub.UserID][n.GetEventName()], &n)
+			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
@@ -1682,45 +1610,25 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ma
 }
 
 type validatorIsOfflineNotification struct {
-	SubscriptionID  uint64
-	ValidatorIndex  uint64
-	EventEpoch      uint64
-	EpochsOffline   uint64
-	IsOffline       bool
-	EventName       types.EventName
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-	InternalState   string
+	types.NotificationBaseImpl
+
+	ValidatorIndex uint64
+	IsOffline      bool
 }
 
-func (n *validatorIsOfflineNotification) GetLatestState() string {
-	return n.InternalState
-}
-
-func (n *validatorIsOfflineNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorIsOfflineNotification) GetEventName() types.EventName {
-	return n.EventName
-}
-
-func (n *validatorIsOfflineNotification) GetEpoch() uint64 {
-	return n.EventEpoch
-}
-
+// Overwrite specific methods
 func (n *validatorIsOfflineNotification) GetInfo(includeUrl bool) string {
 	if n.IsOffline {
 		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is offline since epoch <a href="https://%[3]v/epoch/%[2]s">%[2]s</a>).`, n.ValidatorIndex, n.InternalState, utils.Config.Frontend.SiteDomain)
+			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is offline since epoch <a href="https://%[3]v/epoch/%[2]s">%[2]s</a>).`, n.ValidatorIndex, n.LatestState, utils.Config.Frontend.SiteDomain)
 		} else {
-			return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.InternalState)
+			return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.LatestState)
 		}
 	} else {
 		if includeUrl {
-			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is back online since epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a> (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.EventEpoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
+			return fmt.Sprintf(`Validator <a href="https://%[3]v/validator/%[1]v">%[1]v</a> is back online since epoch <a href="https://%[3]v/epoch/%[2]v">%[2]v</a>.`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
 		} else {
-			return fmt.Sprintf(`Validator %v is back online since epoch %v (was offline for %v epoch(s)).`, n.ValidatorIndex, n.EventEpoch, n.EpochsOffline)
+			return fmt.Sprintf(`Validator %v is back online since epoch %v.`, n.ValidatorIndex, n.Epoch)
 		}
 	}
 }
@@ -1733,54 +1641,24 @@ func (n *validatorIsOfflineNotification) GetTitle() string {
 	}
 }
 
-func (n *validatorIsOfflineNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
-func (n *validatorIsOfflineNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorIsOfflineNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
 func (n *validatorIsOfflineNotification) GetInfoMarkdown() string {
 	if n.IsOffline {
-		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is offline since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.EventEpoch, utils.Config.Frontend.SiteDomain)
+		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is offline since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
 	} else {
-		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is back online since epoch [%[2]v](https://%[3]v/epoch/%[2]v) (was offline for %[4]v epoch(s)).`, n.ValidatorIndex, n.EventEpoch, utils.Config.Frontend.SiteDomain, n.EpochsOffline)
+		return fmt.Sprintf(`Validator [%[1]v](https://%[3]v/validator/%[1]v) is back online since epoch [%[2]v](https://%[3]v/epoch/%[2]v).`, n.ValidatorIndex, n.Epoch, utils.Config.Frontend.SiteDomain)
 	}
+}
+
+func (n *validatorIsOfflineNotification) GetEventName() types.EventName {
+	return types.ValidatorIsOfflineEventName
 }
 
 type validatorAttestationNotification struct {
-	SubscriptionID     uint64
+	types.NotificationBaseImpl
+
 	ValidatorIndex     uint64
 	ValidatorPublicKey string
-	Epoch              uint64
 	Status             uint64 // * Can be 0 = scheduled | missed, 1 executed
-	EventName          types.EventName
-	EventFilter        string
-	UnsubscribeHash    sql.NullString
-}
-
-func (n *validatorAttestationNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorAttestationNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorAttestationNotification) GetEventName() types.EventName {
-	return n.EventName
-}
-
-func (n *validatorAttestationNotification) GetEpoch() uint64 {
-	return n.Epoch
 }
 
 func (n *validatorAttestationNotification) GetInfo(includeUrl bool) string {
@@ -1814,21 +1692,6 @@ func (n *validatorAttestationNotification) GetTitle() string {
 	return "-"
 }
 
-func (n *validatorAttestationNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
-func (n *validatorAttestationNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorAttestationNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
 func (n *validatorAttestationNotification) GetInfoMarkdown() string {
 	var generalPart = ""
 	switch n.Status {
@@ -1840,41 +1703,16 @@ func (n *validatorAttestationNotification) GetInfoMarkdown() string {
 	return generalPart
 }
 
+func (n *validatorAttestationNotification) GetEventName() types.EventName {
+	return types.ValidatorMissedAttestationEventName
+}
+
 type validatorGotSlashedNotification struct {
-	SubscriptionID  uint64
-	ValidatorIndex  uint64
-	Epoch           uint64
-	Slasher         uint64
-	Reason          string
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *validatorGotSlashedNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorGotSlashedNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *validatorGotSlashedNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorGotSlashedNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorGotSlashedNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *validatorGotSlashedNotification) GetEventName() types.EventName {
-	return types.ValidatorGotSlashedEventName
+	ValidatorIndex uint64
+	Slasher        uint64
+	Reason         string
 }
 
 func (n *validatorGotSlashedNotification) GetInfo(includeUrl bool) string {
@@ -1889,8 +1727,8 @@ func (n *validatorGotSlashedNotification) GetTitle() string {
 	return "Validator got Slashed"
 }
 
-func (n *validatorGotSlashedNotification) GetEventFilter() string {
-	return n.EventFilter
+func (n *validatorGotSlashedNotification) GetEventName() types.EventName {
+	return types.ValidatorGotSlashedEventName
 }
 
 func (n *validatorGotSlashedNotification) GetInfoMarkdown() string {
@@ -1898,100 +1736,61 @@ func (n *validatorGotSlashedNotification) GetInfoMarkdown() string {
 	return generalPart
 }
 
-func collectValidatorGotSlashedNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
+func collectValidatorGotSlashedNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
 	dbResult, err := db.GetValidatorsGotSlashed(epoch)
 	if err != nil {
 		return fmt.Errorf("error getting slashed validators from database, err: %w", err)
 	}
-	query := ""
-	resultsLen := len(dbResult)
-	for i, event := range dbResult {
-		query += fmt.Sprintf(`SELECT %d AS ref, id, user_id, ENCODE(unsubscribe_hash, 'hex') AS unsubscribe_hash from users_subscriptions where event_name = $1 AND event_filter = '%x'`, i, event.SlashedValidatorPubkey)
-		if i < resultsLen-1 {
-			query += " UNION "
-		}
+	slashedPubkeys := make([]string, 0, len(dbResult))
+	pubkeyToSlashingInfoMap := make(map[string]*types.SlashingInfo)
+	for _, event := range dbResult {
+		pubkeyStr := hex.EncodeToString(event.SlashedValidatorPubkey)
+		slashedPubkeys = append(slashedPubkeys, pubkeyStr)
+		pubkeyToSlashingInfoMap[pubkeyStr] = event
 	}
 
-	if query == "" {
-		return nil
-	}
-
-	var subscribers []struct {
-		Ref             uint64         `db:"ref"`
-		Id              uint64         `db:"id"`
-		UserId          uint64         `db:"user_id"`
-		UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
-	}
-
-	name := string(types.ValidatorGotSlashedEventName)
-	if utils.Config.Chain.ClConfig.ConfigName != "" {
-		name = utils.Config.Chain.ClConfig.ConfigName + ":" + name
-	}
-	err = db.FrontendWriterDB.Select(&subscribers, query, name)
+	subscribedUsers, err := GetSubsForEventFilter(types.ValidatorGotSlashedEventName, "", nil, slashedPubkeys)
 	if err != nil {
-		return fmt.Errorf("error querying subscribers, err: %w", err)
+		return fmt.Errorf("failed to get subs for %v: %v", types.ValidatorGotSlashedEventName, err)
 	}
 
-	for _, sub := range subscribers {
-		event := dbResult[sub.Ref]
+	for _, subs := range subscribedUsers {
+		for _, sub := range subs {
+			event := pubkeyToSlashingInfoMap[sub.EventFilter]
+			if event == nil { // pubkey has not been slashed
+				//log.Error(fmt.Errorf("error retrieving slashing info for public key %s", sub.EventFilter), "", 0)
+				continue
+			}
+			log.Infof("creating %v notification for validator %v in epoch %v", event.Reason, sub.EventFilter, epoch)
 
-		log.Infof("creating %v notification for validator %v in epoch %v", event.SlashedValidatorPubkey, event.Reason, epoch)
-
-		n := &validatorGotSlashedNotification{
-			SubscriptionID:  sub.Id,
-			Slasher:         event.SlasherIndex,
-			Epoch:           event.Epoch,
-			Reason:          event.Reason,
-			ValidatorIndex:  event.SlashedValidatorIndex,
-			EventFilter:     hex.EncodeToString(event.SlashedValidatorPubkey),
-			UnsubscribeHash: sub.UnsubscribeHash,
+			n := &validatorGotSlashedNotification{
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventFilter:    sub.EventFilter,
+					EventName:      sub.EventName,
+				},
+				Slasher:        event.SlasherIndex,
+				Reason:         event.Reason,
+				ValidatorIndex: event.SlashedValidatorIndex,
+			}
+			notificationsByUserID.AddNotification(n)
+			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
-
-		if _, exists := notificationsByUserID[sub.UserId]; !exists {
-			notificationsByUserID[sub.UserId] = map[types.EventName][]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[sub.UserId][n.GetEventName()]; !exists {
-			notificationsByUserID[sub.UserId][n.GetEventName()] = []types.Notification{}
-		}
-		notificationsByUserID[sub.UserId][n.GetEventName()] = append(notificationsByUserID[sub.UserId][n.GetEventName()], n)
-		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
 	return nil
 }
 
 type validatorWithdrawalNotification struct {
-	SubscriptionID  uint64
-	ValidatorIndex  uint64
-	Epoch           uint64
-	Slot            uint64
-	Amount          uint64
-	Address         []byte
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *validatorWithdrawalNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *validatorWithdrawalNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *validatorWithdrawalNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *validatorWithdrawalNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *validatorWithdrawalNotification) GetEpoch() uint64 {
-	return n.Epoch
+	ValidatorIndex uint64
+	Epoch          uint64
+	Slot           uint64
+	Amount         uint64
+	Address        []byte
 }
 
 func (n *validatorWithdrawalNotification) GetEventName() types.EventName {
@@ -2010,19 +1809,15 @@ func (n *validatorWithdrawalNotification) GetTitle() string {
 	return "Withdrawal Processed"
 }
 
-func (n *validatorWithdrawalNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
 func (n *validatorWithdrawalNotification) GetInfoMarkdown() string {
 	generalPart := fmt.Sprintf(`An automatic withdrawal of %[2]v has been processed for validator [%[1]v](https://%[6]v/validator/%[1]v) during slot [%[3]v](https://%[6]v/slot/%[3]v). The funds have been sent to: [%[4]v](https://%[6]v/address/0x%[5]x).`, n.ValidatorIndex, utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false), n.Slot, utils.FormatHashRaw(n.Address), n.Address, utils.Config.Frontend.SiteDomain)
 	return generalPart
 }
 
 // collectWithdrawalNotifications collects all notifications validator withdrawals
-func collectWithdrawalNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
+func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
 	// get all users that are subscribed to this event (scale: a few thousand rows depending on how many users we have)
-	_, subMap, err := GetSubsForEventFilter(types.ValidatorReceivedWithdrawalEventName)
+	subMap, err := GetSubsForEventFilter(types.ValidatorReceivedWithdrawalEventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for missed attestations %w", err)
 	}
@@ -2049,22 +1844,19 @@ func collectWithdrawalNotifications(notificationsByUserID map[uint64]map[types.E
 				}
 				// log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
 				n := &validatorWithdrawalNotification{
-					SubscriptionID:  *sub.ID,
-					ValidatorIndex:  event.ValidatorIndex,
-					Epoch:           epoch,
-					Slot:            event.Slot,
-					Amount:          event.Amount,
-					Address:         event.Address,
-					EventFilter:     hex.EncodeToString(event.Pubkey),
-					UnsubscribeHash: sub.UnsubscribeHash,
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						EventFilter:    hex.EncodeToString(event.Pubkey),
+						EventName:      sub.EventName,
+					},
+					ValidatorIndex: event.ValidatorIndex,
+					Epoch:          epoch,
+					Slot:           event.Slot,
+					Amount:         event.Amount,
+					Address:        event.Address,
 				}
-				if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-					notificationsByUserID[*sub.UserID] = map[types.EventName][]types.Notification{}
-				}
-				if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-					notificationsByUserID[*sub.UserID][n.GetEventName()] = []types.Notification{}
-				}
-				notificationsByUserID[*sub.UserID][n.GetEventName()] = append(notificationsByUserID[*sub.UserID][n.GetEventName()], n)
+				notificationsByUserID.AddNotification(n)
 				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 			}
 		}
@@ -2074,35 +1866,9 @@ func collectWithdrawalNotifications(notificationsByUserID map[uint64]map[types.E
 }
 
 type ethClientNotification struct {
-	SubscriptionID  uint64
-	UserID          uint64
-	Epoch           uint64
-	EthClient       string
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *ethClientNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *ethClientNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *ethClientNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *ethClientNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *ethClientNotification) GetEpoch() uint64 {
-	return n.Epoch
+	EthClient string
 }
 
 func (n *ethClientNotification) GetEventName() types.EventName {
@@ -2147,10 +1913,6 @@ func (n *ethClientNotification) GetTitle() string {
 	return fmt.Sprintf("New %s update", n.EthClient)
 }
 
-func (n *ethClientNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
 func (n *ethClientNotification) GetInfoMarkdown() string {
 	url := ""
 	switch n.EthClient {
@@ -2183,50 +1945,45 @@ func (n *ethClientNotification) GetInfoMarkdown() string {
 	return generalPart
 }
 
-func collectEthClientNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName) error {
+func collectEthClientNotifications(notificationsByUserID types.NotificationsPerUserId) error {
 	updatedClients := ethclients.GetUpdatedClients() //only check if there are new updates
 	for _, client := range updatedClients {
-		var dbResult []struct {
-			SubscriptionID  uint64         `db:"id"`
-			UserID          uint64         `db:"user_id"`
-			Epoch           uint64         `db:"created_epoch"`
-			EventFilter     string         `db:"event_filter"`
-			UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
-		}
+		// err := db.FrontendWriterDB.Select(&dbResult, `
+		// 	SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
+		// 	FROM users_subscriptions AS us
+		// 	WHERE
+		// 		us.event_name=$1
+		// 	AND
+		// 		us.event_filter=$2
+		// 	AND
+		// 		((us.last_sent_ts <= NOW() - INTERVAL '2 DAY' AND TO_TIMESTAMP($3) > us.last_sent_ts) OR us.last_sent_ts IS NULL)
+		// 	`,
+		// 	eventName, strings.ToLower(client.Name), client.Date.Unix()) // was last notification sent 2 days ago for this client
 
-		err := db.FrontendWriterDB.Select(&dbResult, `
-			SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
-			FROM users_subscriptions AS us
-			WHERE
-				us.event_name=$1
-			AND
-				us.event_filter=$2
-			AND
-				((us.last_sent_ts <= NOW() - INTERVAL '2 DAY' AND TO_TIMESTAMP($3) > us.last_sent_ts) OR us.last_sent_ts IS NULL)
-			`,
-			eventName, strings.ToLower(client.Name), client.Date.Unix()) // was last notification sent 2 days ago for this client
-
+		dbResult, err := GetSubsForEventFilter(
+			types.EthClientUpdateEventName,
+			"((last_sent_ts <= NOW() - INTERVAL '2 DAY' AND TO_TIMESTAMP(?) > last_sent_ts) OR last_sent_ts IS NULL)",
+			[]interface{}{client.Date.Unix()},
+			[]string{strings.ToLower(client.Name)})
 		if err != nil {
 			return err
 		}
 
-		for _, r := range dbResult {
-			n := &ethClientNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				EthClient:       client.Name,
-				UnsubscribeHash: r.UnsubscribeHash,
+		for _, subs := range dbResult {
+			for _, sub := range subs {
+				n := &ethClientNotification{
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
+					},
+					EthClient: client.Name,
+				}
+				notificationsByUserID.AddNotification(n)
+				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
-			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
 	return nil
@@ -2234,17 +1991,17 @@ func collectEthClientNotifications(notificationsByUserID map[uint64]map[types.Ev
 
 type MachineEvents struct {
 	SubscriptionID  uint64         `db:"id"`
-	UserID          uint64         `db:"user_id"`
+	UserID          types.UserId   `db:"user_id"`
 	MachineName     string         `db:"machine"`
 	UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
 	EventThreshold  float64        `db:"event_threshold"`
 }
 
-func collectMonitoringMachineOffline(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
+func collectMonitoringMachineOffline(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
 	nowTs := time.Now().Unix()
 	return collectMonitoringMachine(notificationsByUserID, types.MonitoringMachineOfflineEventName, 120,
 		// notify condition
-		func(_ *MachineEvents, machineData *types.MachineMetricSystemUser) bool {
+		func(subscribeData *types.Subscription, machineData *types.MachineMetricSystemUser) bool {
 			if machineData.CurrentDataInsertTs < nowTs-10*60 && machineData.CurrentDataInsertTs > nowTs-90*60 {
 				return true
 			}
@@ -2259,10 +2016,10 @@ func isMachineDataRecent(machineData *types.MachineMetricSystemUser) bool {
 	return machineData.CurrentDataInsertTs >= nowTs-60*60
 }
 
-func collectMonitoringMachineDiskAlmostFull(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
+func collectMonitoringMachineDiskAlmostFull(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
 	return collectMonitoringMachine(notificationsByUserID, types.MonitoringMachineDiskAlmostFullEventName, 750,
 		// notify condition
-		func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool {
+		func(subscribeData *types.Subscription, machineData *types.MachineMetricSystemUser) bool {
 			if !isMachineDataRecent(machineData) {
 				return false
 			}
@@ -2274,10 +2031,10 @@ func collectMonitoringMachineDiskAlmostFull(notificationsByUserID map[uint64]map
 	)
 }
 
-func collectMonitoringMachineCPULoad(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
+func collectMonitoringMachineCPULoad(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
 	return collectMonitoringMachine(notificationsByUserID, types.MonitoringMachineCpuLoadEventName, 10,
 		// notify condition
-		func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool {
+		func(subscribeData *types.Subscription, machineData *types.MachineMetricSystemUser) bool {
 			if !isMachineDataRecent(machineData) {
 				return false
 			}
@@ -2296,10 +2053,10 @@ func collectMonitoringMachineCPULoad(notificationsByUserID map[uint64]map[types.
 	)
 }
 
-func collectMonitoringMachineMemoryUsage(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, epoch uint64) error {
+func collectMonitoringMachineMemoryUsage(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
 	return collectMonitoringMachine(notificationsByUserID, types.MonitoringMachineMemoryUsageEventName, 10,
 		// notify condition
-		func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool {
+		func(subscribeData *types.Subscription, machineData *types.MachineMetricSystemUser) bool {
 			if !isMachineDataRecent(machineData) {
 				return false
 			}
@@ -2317,32 +2074,45 @@ func collectMonitoringMachineMemoryUsage(notificationsByUserID map[uint64]map[ty
 var isFirstNotificationCheck = true
 
 func collectMonitoringMachine(
-	notificationsByUserID map[uint64]map[types.EventName][]types.Notification,
+	notificationsByUserID types.NotificationsPerUserId,
 	eventName types.EventName,
 	epochWaitInBetween int,
-	notifyConditionFulfilled func(subscribeData *MachineEvents, machineData *types.MachineMetricSystemUser) bool,
+	notifyConditionFulfilled func(subscribeData *types.Subscription, machineData *types.MachineMetricSystemUser) bool,
 	epoch uint64,
 ) error {
-	var allSubscribed []MachineEvents
-	err := db.FrontendWriterDB.Select(&allSubscribed,
-		`SELECT
-			us.user_id,
-			max(us.id) AS id,
-			ENCODE((array_agg(us.unsubscribe_hash))[1], 'hex') AS unsubscribe_hash,
-			event_filter AS machine,
-			COALESCE(event_threshold, 0) AS event_threshold
-		FROM users_subscriptions us
-		WHERE us.event_name = $1 AND us.created_epoch <= $2
-		AND (us.last_sent_epoch < ($2 - $3) OR us.last_sent_epoch IS NULL)
-		group by us.user_id, machine, event_threshold`,
-		eventName, epoch, epochWaitInBetween)
+	// event_filter == machine name
+
+	dbResult, err := GetSubsForEventFilter(
+		eventName,
+		"(created_epoch <= ? AND (last_sent_epoch < (?::int - ?::int) OR last_sent_epoch IS NULL))", // ::int is required here otherwise the generated goqu query throw an error
+		[]interface{}{epoch, epoch, epochWaitInBetween},
+		nil,
+	)
+
+	// TODO: clarify why we need grouping here?!
+	// err := db.FrontendWriterDB.Select(&allSubscribed,
+	// 	`SELECT
+	// 		us.user_id,
+	// 		max(us.id) AS id,
+	// 		ENCODE((array_agg(us.unsubscribe_hash))[1], 'hex') AS unsubscribe_hash,
+	// 		event_filter,
+	// 		COALESCE(event_threshold, 0) AS event_threshold
+	// 	FROM users_subscriptions us
+	// 	WHERE us.event_name = $1 AND us.created_epoch <= $2
+	// 	AND (us.last_sent_epoch < ($2 - $3) OR us.last_sent_epoch IS NULL)
+	// 	group by us.user_id, event_filter, event_threshold`,
+	// 	eventName, epoch, epochWaitInBetween)
 	if err != nil {
 		return err
 	}
 
 	rowKeys := gcp_bigtable.RowList{}
-	for _, data := range allSubscribed {
-		rowKeys = append(rowKeys, db.BigtableClient.GetMachineRowKey(data.UserID, "system", data.MachineName))
+	totalSubscribed := 0
+	for _, data := range dbResult {
+		for _, sub := range data {
+			rowKeys = append(rowKeys, db.BigtableClient.GetMachineRowKey(*sub.UserID, "system", sub.EventFilter))
+			totalSubscribed++
+		}
 	}
 
 	machineDataOfSubscribed, err := db.BigtableClient.GetMachineMetricsForNotifications(rowKeys)
@@ -2350,21 +2120,23 @@ func collectMonitoringMachine(
 		return err
 	}
 
-	var result []MachineEvents
-	for _, data := range allSubscribed {
-		localData := data // Create a local copy of the data variable
-		machineMap, found := machineDataOfSubscribed[localData.UserID]
-		if !found {
-			continue
-		}
-		currentMachineData, found := machineMap[localData.MachineName]
-		if !found {
-			continue
-		}
+	var result []*types.Subscription
+	for _, data := range dbResult {
+		for _, sub := range data {
+			localData := sub // Create a local copy of the data variable
+			machineMap, found := machineDataOfSubscribed[*localData.UserID]
+			if !found {
+				continue
+			}
+			currentMachineData, found := machineMap[localData.EventFilter]
+			if !found {
+				continue
+			}
 
-		//logrus.Infof("currentMachineData %v | %v | %v | %v", currentMachine.CurrentDataInsertTs, currentMachine.CompareDataInsertTs, currentMachine.UserID, currentMachine.Machine)
-		if notifyConditionFulfilled(&localData, currentMachineData) {
-			result = append(result, localData)
+			//logrus.Infof("currentMachineData %v | %v | %v | %v", currentMachine.CurrentDataInsertTs, currentMachine.CompareDataInsertTs, currentMachine.UserID, currentMachine.Machine)
+			if notifyConditionFulfilled(&localData, currentMachineData) {
+				result = append(result, &localData)
+			}
 		}
 	}
 
@@ -2402,7 +2174,7 @@ func collectMonitoringMachine(
 			subRatioThreshold = subFirstRatioThreshold
 			isFirstNotificationCheck = false
 		}
-		if float64(len(result))/float64(len(allSubscribed)) >= subRatioThreshold {
+		if float64(len(result))/float64(totalSubscribed) >= subRatioThreshold {
 			log.Error(nil, fmt.Errorf("error too many users would be notified concerning: %v", eventName), 0)
 			return nil
 		}
@@ -2410,21 +2182,17 @@ func collectMonitoringMachine(
 
 	for _, r := range result {
 		n := &monitorMachineNotification{
-			SubscriptionID:  r.SubscriptionID,
-			MachineName:     r.MachineName,
-			UserID:          r.UserID,
-			EventName:       eventName,
-			Epoch:           epoch,
-			UnsubscribeHash: r.UnsubscribeHash,
+			NotificationBaseImpl: types.NotificationBaseImpl{
+				SubscriptionID: *r.ID,
+				UserID:         *r.UserID,
+				EventName:      r.EventName,
+				Epoch:          epoch,
+				EventFilter:    r.EventFilter,
+			},
+			MachineName: r.EventFilter,
 		}
 		//logrus.Infof("notify %v %v", eventName, n)
-		if _, exists := notificationsByUserID[r.UserID]; !exists {
-			notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
-		}
-		notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
+		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
@@ -2437,39 +2205,9 @@ func collectMonitoringMachine(
 }
 
 type monitorMachineNotification struct {
-	SubscriptionID  uint64
-	MachineName     string
-	UserID          uint64
-	Epoch           uint64
-	EventName       types.EventName
-	UnsubscribeHash sql.NullString
-}
+	types.NotificationBaseImpl
 
-func (n *monitorMachineNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *monitorMachineNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *monitorMachineNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *monitorMachineNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *monitorMachineNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *monitorMachineNotification) GetEventName() types.EventName {
-	return n.EventName
+	MachineName string
 }
 
 func (n *monitorMachineNotification) GetInfo(includeUrl bool) string {
@@ -2480,10 +2218,6 @@ func (n *monitorMachineNotification) GetInfo(includeUrl bool) string {
 		return fmt.Sprintf(`Your staking machine "%v" might be offline. It has not been seen for a couple minutes now.`, n.MachineName)
 	case types.MonitoringMachineCpuLoadEventName:
 		return fmt.Sprintf(`Your staking machine "%v" has reached your configured CPU usage threshold.`, n.MachineName)
-	case types.MonitoringMachineSwitchedToETH1FallbackEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has switched to your configured ETH1 fallback`, n.MachineName)
-	case types.MonitoringMachineSwitchedToETH2FallbackEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has switched to your configured ETH2 fallback`, n.MachineName)
 	case types.MonitoringMachineMemoryUsageEventName:
 		return fmt.Sprintf(`Your staking machine "%v" has reached your configured RAM threshold.`, n.MachineName)
 	}
@@ -2498,10 +2232,6 @@ func (n *monitorMachineNotification) GetTitle() string {
 		return "Staking Machine Offline"
 	case types.MonitoringMachineCpuLoadEventName:
 		return "High CPU Load"
-	case types.MonitoringMachineSwitchedToETH1FallbackEventName:
-		return "ETH1 Fallback Active"
-	case types.MonitoringMachineSwitchedToETH2FallbackEventName:
-		return "ETH2 Fallback Active"
 	case types.MonitoringMachineMemoryUsageEventName:
 		return "Memory Warning"
 	}
@@ -2517,22 +2247,7 @@ func (n *monitorMachineNotification) GetInfoMarkdown() string {
 }
 
 type taxReportNotification struct {
-	SubscriptionID  uint64
-	UserID          uint64
-	Epoch           uint64
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
-
-func (n *taxReportNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *taxReportNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
+	types.NotificationBaseImpl
 }
 
 func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
@@ -2569,14 +2284,6 @@ func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
 	return &types.EmailAttachment{Attachment: pdf, Name: fmt.Sprintf("income_history_%v_%v.pdf", firstDay.Format("20060102"), lastDay.Format("20060102"))}
 }
 
-func (n *taxReportNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *taxReportNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
 func (n *taxReportNotification) GetEventName() types.EventName {
 	return types.TaxReportEventName
 }
@@ -2598,7 +2305,7 @@ func (n *taxReportNotification) GetInfoMarkdown() string {
 	return n.GetInfo(false)
 }
 
-func collectTaxReportNotificationNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName) error {
+func collectTaxReportNotificationNotifications(notificationsByUserID types.NotificationsPerUserId) error {
 	lastStatsDay, err := cache.LatestExportedStatisticDay.GetOrDefault(db.GetLastExportedStatisticDay)
 
 	if err != nil {
@@ -2611,80 +2318,44 @@ func collectTaxReportNotificationNotifications(notificationsByUserID map[uint64]
 		return nil
 	}
 
-	var dbResult []struct {
-		SubscriptionID  uint64         `db:"id"`
-		UserID          uint64         `db:"user_id"`
-		Epoch           uint64         `db:"created_epoch"`
-		EventFilter     string         `db:"event_filter"`
-		UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
-	}
+	// err = db.FrontendWriterDB.Select(&dbResult, `
+	// 		SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
+	// 		FROM users_subscriptions AS us
+	// 		WHERE us.event_name=$1 AND (us.last_sent_ts < $2 OR (us.last_sent_ts IS NULL AND us.created_ts < $2));
+	// 		`,
+	// 	name, firstDayOfMonth)
 
-	name := string(eventName)
-	if utils.Config.Chain.ClConfig.ConfigName != "" {
-		name = utils.Config.Chain.ClConfig.ConfigName + ":" + name
-	}
-
-	err = db.FrontendWriterDB.Select(&dbResult, `
-			SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
-			FROM users_subscriptions AS us
-			WHERE us.event_name=$1 AND (us.last_sent_ts < $2 OR (us.last_sent_ts IS NULL AND us.created_ts < $2));
-			`,
-		name, firstDayOfMonth)
-
+	dbResults, err := GetSubsForEventFilter(
+		types.TaxReportEventName,
+		"(last_sent_ts < ? OR (last_sent_ts IS NULL AND created_ts < ?))",
+		[]interface{}{firstDayOfMonth, firstDayOfMonth},
+		nil,
+	)
 	if err != nil {
 		return err
 	}
 
-	for _, r := range dbResult {
-		n := &taxReportNotification{
-			SubscriptionID:  r.SubscriptionID,
-			UserID:          r.UserID,
-			Epoch:           r.Epoch,
-			EventFilter:     r.EventFilter,
-			UnsubscribeHash: r.UnsubscribeHash,
+	for _, subs := range dbResults {
+		for _, sub := range subs {
+			n := &taxReportNotification{
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          sub.CreatedEpoch,
+					EventFilter:    sub.EventFilter,
+					EventName:      sub.EventName,
+				},
+			}
+			notificationsByUserID.AddNotification(n)
+			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
-		if _, exists := notificationsByUserID[r.UserID]; !exists {
-			notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
-		}
-		notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
-		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
 	return nil
 }
 
 type networkNotification struct {
-	SubscriptionID  uint64
-	UserID          uint64
-	Epoch           uint64
-	EventFilter     string
-	UnsubscribeHash sql.NullString
-}
-
-func (n *networkNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *networkNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *networkNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *networkNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *networkNotification) GetEpoch() uint64 {
-	return n.Epoch
+	types.NotificationBaseImpl
 }
 
 func (n *networkNotification) GetEventName() types.EventName {
@@ -2700,16 +2371,12 @@ func (n *networkNotification) GetTitle() string {
 	return "Beaconchain Network Issues"
 }
 
-func (n *networkNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
 func (n *networkNotification) GetInfoMarkdown() string {
 	generalPart := fmt.Sprintf(`Network experienced finality issues ([view chart](https://%v/charts/network_liveness)).`, utils.Config.Frontend.SiteDomain)
 	return generalPart
 }
 
-func collectNetworkNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName) error {
+func collectNetworkNotifications(notificationsByUserID types.NotificationsPerUserId) error {
 	count := 0
 	err := db.WriterDb.Get(&count, `
 		SELECT count(ts) FROM network_liveness WHERE (headepoch-finalizedepoch) > 3 AND ts > now() - interval '60 minutes';
@@ -2720,41 +2387,38 @@ func collectNetworkNotifications(notificationsByUserID map[uint64]map[types.Even
 	}
 
 	if count > 0 {
-		var dbResult []struct {
-			SubscriptionID  uint64         `db:"id"`
-			UserID          uint64         `db:"user_id"`
-			Epoch           uint64         `db:"created_epoch"`
-			EventFilter     string         `db:"event_filter"`
-			UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
-		}
+		// err := db.FrontendWriterDB.Select(&dbResult, `
+		// 	SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
+		// 	FROM users_subscriptions AS us
+		// 	WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '1 hour' OR us.last_sent_ts IS NULL);
+		// 	`,
+		// 	utils.GetNetwork()+":"+string(eventName))
 
-		err := db.FrontendWriterDB.Select(&dbResult, `
-			SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
-			FROM users_subscriptions AS us
-			WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '1 hour' OR us.last_sent_ts IS NULL);
-			`,
-			utils.GetNetwork()+":"+string(eventName))
-
+		dbResult, err := GetSubsForEventFilter(
+			types.NetworkLivenessIncreasedEventName,
+			"(last_sent_ts <= NOW() - INTERVAL '1 hour' OR last_sent_ts IS NULL)",
+			nil,
+			nil,
+		)
 		if err != nil {
 			return err
 		}
 
-		for _, r := range dbResult {
-			n := &networkNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				UnsubscribeHash: r.UnsubscribeHash,
+		for _, subs := range dbResult {
+			for _, sub := range subs {
+				n := &networkNotification{
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
+					},
+				}
+
+				notificationsByUserID.AddNotification(n)
+				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
-			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
 
@@ -2762,40 +2426,8 @@ func collectNetworkNotifications(notificationsByUserID map[uint64]map[types.Even
 }
 
 type rocketpoolNotification struct {
-	SubscriptionID  uint64
-	UserID          uint64
-	Epoch           uint64
-	EventFilter     string
-	EventName       types.EventName
-	ExtraData       string
-	UnsubscribeHash sql.NullString
-}
-
-func (n *rocketpoolNotification) GetLatestState() string {
-	return ""
-}
-
-func (n *rocketpoolNotification) GetUnsubscribeHash() string {
-	if n.UnsubscribeHash.Valid {
-		return n.UnsubscribeHash.String
-	}
-	return ""
-}
-
-func (n *rocketpoolNotification) GetEmailAttachment() *types.EmailAttachment {
-	return nil
-}
-
-func (n *rocketpoolNotification) GetSubscriptionID() uint64 {
-	return n.SubscriptionID
-}
-
-func (n *rocketpoolNotification) GetEpoch() uint64 {
-	return n.Epoch
-}
-
-func (n *rocketpoolNotification) GetEventName() types.EventName {
-	return n.EventName
+	types.NotificationBaseImpl
+	ExtraData string
 }
 
 func (n *rocketpoolNotification) GetInfo(includeUrl bool) string {
@@ -2809,7 +2441,9 @@ func (n *rocketpoolNotification) GetInfo(includeUrl bool) string {
 	case types.RocketpoolCollateralMinReached:
 		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
 	case types.SyncCommitteeSoon:
-		return getSyncCommitteeSoonInfo([]types.Notification{n})
+		return getSyncCommitteeSoonInfo(map[types.EventFilter]types.Notification{
+			types.EventFilter(n.EventFilter): n,
+		})
 	}
 
 	return ""
@@ -2831,15 +2465,11 @@ func (n *rocketpoolNotification) GetTitle() string {
 	return ""
 }
 
-func (n *rocketpoolNotification) GetEventFilter() string {
-	return n.EventFilter
-}
-
 func (n *rocketpoolNotification) GetInfoMarkdown() string {
 	return n.GetInfo(false)
 }
 
-func collectRocketpoolComissionNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName) error {
+func collectRocketpoolComissionNotifications(notificationsByUserID types.NotificationsPerUserId) error {
 	fee := 0.0
 	err := db.WriterDb.Get(&fee, `
 		select current_node_fee from rocketpool_network_stats order by id desc LIMIT 1;
@@ -2850,50 +2480,46 @@ func collectRocketpoolComissionNotifications(notificationsByUserID map[uint64]ma
 	}
 
 	if fee > 0 {
-		var dbResult []struct {
-			SubscriptionID  uint64         `db:"id"`
-			UserID          uint64         `db:"user_id"`
-			Epoch           uint64         `db:"created_epoch"`
-			EventFilter     string         `db:"event_filter"`
-			UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
-		}
+		// err := db.FrontendWriterDB.Select(&dbResult, `
+		// 	SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
+		// 	FROM users_subscriptions AS us
+		// 	WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '8 hours' OR us.last_sent_ts IS NULL) AND (us.event_threshold <= $2 OR (us.event_threshold < 0 AND us.event_threshold * -1 >= $2));
+		// 	`,
+		// 	utils.GetNetwork()+":"+string(eventName), fee)
 
-		err := db.FrontendWriterDB.Select(&dbResult, `
-			SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
-			FROM users_subscriptions AS us
-			WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '8 hours' OR us.last_sent_ts IS NULL) AND (us.event_threshold <= $2 OR (us.event_threshold < 0 AND us.event_threshold * -1 >= $2));
-			`,
-			utils.GetNetwork()+":"+string(eventName), fee)
-
+		dbResult, err := GetSubsForEventFilter(
+			types.RocketpoolCommissionThresholdEventName,
+			"(last_sent_ts <= NOW() - INTERVAL '8 hours' OR last_sent_ts IS NULL) AND (event_threshold <= ? OR (event_threshold < 0 AND event_threshold * -1 >= ?))",
+			[]interface{}{fee, fee},
+			nil,
+		)
 		if err != nil {
 			return err
 		}
 
-		for _, r := range dbResult {
-			n := &rocketpoolNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				EventName:       eventName,
-				ExtraData:       strconv.FormatInt(int64(fee*100), 10) + "%",
-				UnsubscribeHash: r.UnsubscribeHash,
+		for _, subs := range dbResult {
+			for _, sub := range subs {
+				n := &rocketpoolNotification{
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
+					},
+					ExtraData: strconv.FormatInt(int64(fee*100), 10) + "%",
+				}
+
+				notificationsByUserID.AddNotification(n)
+				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
-			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
 
 	return nil
 }
 
-func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName) error {
+func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID types.NotificationsPerUserId) error {
 	var ts int64
 	err := db.WriterDb.Get(&ts, `
 		select date_part('epoch', claim_interval_time_start)::int from rocketpool_network_stats order by id desc LIMIT 1;
@@ -2904,50 +2530,48 @@ func collectRocketpoolRewardClaimRoundNotifications(notificationsByUserID map[ui
 	}
 
 	if ts+3*60*60 > time.Now().Unix() {
-		var dbResult []struct {
-			SubscriptionID  uint64         `db:"id"`
-			UserID          uint64         `db:"user_id"`
-			Epoch           uint64         `db:"created_epoch"`
-			EventFilter     string         `db:"event_filter"`
-			UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
-		}
+		// var dbResult []*types.Subscription
 
-		err := db.FrontendWriterDB.Select(&dbResult, `
-			SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
-			FROM users_subscriptions AS us
-			WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '5 hours' OR us.last_sent_ts IS NULL);
-			`,
-			utils.GetNetwork()+":"+string(eventName))
+		// err := db.FrontendWriterDB.Select(&dbResult, `
+		// 	SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
+		// 	FROM users_subscriptions AS us
+		// 	WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '5 hours' OR us.last_sent_ts IS NULL);
+		// 	`,
+		// 	utils.GetNetwork()+":"+string(eventName))
 
+		dbResult, err := GetSubsForEventFilter(
+			types.RocketpoolNewClaimRoundStartedEventName,
+			"(last_sent_ts <= NOW() - INTERVAL '5 hours' OR last_sent_ts IS NULL)",
+			nil,
+			nil,
+		)
 		if err != nil {
 			return err
 		}
 
-		for _, r := range dbResult {
-			n := &rocketpoolNotification{
-				SubscriptionID:  r.SubscriptionID,
-				UserID:          r.UserID,
-				Epoch:           r.Epoch,
-				EventFilter:     r.EventFilter,
-				EventName:       eventName,
-				UnsubscribeHash: r.UnsubscribeHash,
+		for _, subs := range dbResult {
+			for _, sub := range subs {
+				n := &rocketpoolNotification{
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID: *sub.ID,
+						UserID:         *sub.UserID,
+						Epoch:          sub.CreatedEpoch,
+						EventFilter:    sub.EventFilter,
+						EventName:      sub.EventName,
+					},
+				}
+
+				notificationsByUserID.AddNotification(n)
+				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 			}
-			if _, exists := notificationsByUserID[r.UserID]; !exists {
-				notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
-			}
-			if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-				notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
-			}
-			notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
-			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
 	}
 
 	return nil
 }
 
-func collectRocketpoolRPLCollateralNotifications(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName, epoch uint64) error {
-	pubkeys, subMap, err := GetSubsForEventFilter(eventName)
+func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.NotificationsPerUserId, eventName types.EventName, epoch uint64) error {
+	subMap, err := GetSubsForEventFilter(eventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for RocketpoolRPLCollateral %w", err)
 	}
@@ -2959,20 +2583,34 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID map[uint6
 		RPLStakeMax BigFloat `db:"max_rpl_stake"`
 	}
 
+	// filter nodes with no minipools (anymore) because they have min/max stake of 0
+	// TODO properly remove notification entry from db
 	stakeInfoPerNode := make([]dbResult, 0)
 	batchSize := 5000
-	dataLen := len(pubkeys)
-	for i := 0; i < dataLen; i += batchSize {
-		var keys [][]byte
-		start := i
-		end := i + batchSize
-
-		if dataLen < end {
-			end = dataLen
+	keys := make([][]byte, 0, batchSize)
+	for pubkey := range subMap {
+		b, err := hex.DecodeString(pubkey)
+		if err != nil {
+			log.Error(err, fmt.Sprintf("error decoding pubkey %s", pubkey), 0)
+			continue
 		}
+		keys = append(keys, b)
 
-		keys = pubkeys[start:end]
+		if len(keys) > batchSize {
+			var partial []dbResult
 
+			err = db.WriterDb.Select(&partial, `
+			SELECT address, rpl_stake, min_rpl_stake, max_rpl_stake
+			FROM rocketpool_nodes
+			WHERE address = ANY($1) AND min_rpl_stake != 0 AND max_rpl_stake != 0`, pq.ByteaArray(keys))
+			if err != nil {
+				return err
+			}
+			stakeInfoPerNode = append(stakeInfoPerNode, partial...)
+			keys = make([][]byte, 0, batchSize)
+		}
+	}
+	if len(keys) > 0 {
 		var partial []dbResult
 
 		// filter nodes with no minipools (anymore) because they have min/max stake of 0
@@ -3048,21 +2686,17 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID map[uint6
 		}
 
 		n := &rocketpoolNotification{
-			SubscriptionID:  *sub.ID,
-			UserID:          *sub.UserID,
-			Epoch:           epoch,
-			EventFilter:     sub.EventFilter,
-			EventName:       eventName,
-			ExtraData:       strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", threshold*100), "0"), "."),
-			UnsubscribeHash: sub.UnsubscribeHash,
+			NotificationBaseImpl: types.NotificationBaseImpl{
+				SubscriptionID: *sub.ID,
+				UserID:         *sub.UserID,
+				Epoch:          epoch,
+				EventFilter:    sub.EventFilter,
+				EventName:      sub.EventName,
+			},
+			ExtraData: strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", threshold*100), "0"), "."),
 		}
-		if _, exists := notificationsByUserID[*sub.UserID]; !exists {
-			notificationsByUserID[*sub.UserID] = map[types.EventName][]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[*sub.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[*sub.UserID][n.GetEventName()] = []types.Notification{}
-		}
-		notificationsByUserID[*sub.UserID][n.GetEventName()] = append(notificationsByUserID[*sub.UserID][n.GetEventName()], n)
+
+		notificationsByUserID.AddNotification(n)
 		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
@@ -3110,7 +2744,7 @@ func bigFloat(x float64) *big.Float {
 	return new(big.Float).SetFloat64(x)
 }
 
-func collectSyncCommittee(notificationsByUserID map[uint64]map[types.EventName][]types.Notification, eventName types.EventName, epoch uint64) error {
+func collectSyncCommittee(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
 	slotsPerSyncCommittee := utils.SlotsPerSyncCommittee()
 	currentPeriod := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch / slotsPerSyncCommittee
 	nextPeriod := currentPeriod + 1
@@ -3136,43 +2770,34 @@ func collectSyncCommittee(notificationsByUserID map[uint64]map[types.EventName][
 		pubKeys = append(pubKeys, val.PubKey)
 	}
 
-	var dbResult []struct {
-		SubscriptionID  uint64         `db:"id"`
-		UserID          uint64         `db:"user_id"`
-		EventFilter     string         `db:"event_filter"`
-		UnsubscribeHash sql.NullString `db:"unsubscribe_hash"`
-	}
-
-	err = db.FrontendWriterDB.Select(&dbResult, `
-				SELECT us.id, us.user_id, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') as unsubscribe_hash
-				FROM users_subscriptions AS us
-				WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '26 hours' OR us.last_sent_ts IS NULL) AND event_filter = ANY($2);
-				`,
-		utils.GetNetwork()+":"+string(eventName), pq.StringArray(pubKeys),
-	)
+	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoon, "(last_sent_ts <= NOW() - INTERVAL '26 hours' OR last_sent_ts IS NULL)", nil, pubKeys)
+	// err = db.FrontendWriterDB.Select(&dbResult, `
+	// 			SELECT us.id, us.user_id, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') as unsubscribe_hash
+	// 			FROM users_subscriptions AS us
+	// 			WHERE us.event_name=$1 AND (us.last_sent_ts <= NOW() - INTERVAL '26 hours' OR us.last_sent_ts IS NULL) AND event_filter = ANY($2);
+	// 			`,
+	// 	utils.GetNetwork()+":"+string(eventName), pq.StringArray(pubKeys),
+	// )
 
 	if err != nil {
 		return err
 	}
 
-	for _, r := range dbResult {
-		n := &rocketpoolNotification{
-			SubscriptionID:  r.SubscriptionID,
-			UserID:          r.UserID,
-			Epoch:           epoch,
-			EventFilter:     r.EventFilter,
-			EventName:       eventName,
-			ExtraData:       fmt.Sprintf("%v|%v|%v", mapping[r.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
-			UnsubscribeHash: r.UnsubscribeHash,
+	for _, subs := range dbResult {
+		for _, sub := range subs {
+			n := &rocketpoolNotification{
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID: *sub.ID,
+					UserID:         *sub.UserID,
+					Epoch:          epoch,
+					EventFilter:    sub.EventFilter,
+					EventName:      sub.EventName,
+				},
+				ExtraData: fmt.Sprintf("%v|%v|%v", mapping[sub.EventFilter], nextPeriod*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod, (nextPeriod+1)*utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod),
+			}
+			notificationsByUserID.AddNotification(n)
+			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 		}
-		if _, exists := notificationsByUserID[r.UserID]; !exists {
-			notificationsByUserID[r.UserID] = map[types.EventName][]types.Notification{}
-		}
-		if _, exists := notificationsByUserID[r.UserID][n.GetEventName()]; !exists {
-			notificationsByUserID[r.UserID][n.GetEventName()] = []types.Notification{}
-		}
-		notificationsByUserID[r.UserID][n.GetEventName()] = append(notificationsByUserID[r.UserID][n.GetEventName()], n)
-		metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 	}
 
 	return nil
@@ -3188,7 +2813,7 @@ type WebhookQueue struct {
 	LastTry        time.Time      `db:"last_try"`
 }
 
-func getEventInfo(event types.EventName, ns []types.Notification) string {
+func getEventInfo(event types.EventName, ns map[types.EventFilter]types.Notification) string {
 	switch event {
 	case types.SyncCommitteeSoon:
 		return getSyncCommitteeSoonInfo(ns)
@@ -3199,12 +2824,13 @@ func getEventInfo(event types.EventName, ns []types.Notification) string {
 	return ""
 }
 
-func getSyncCommitteeSoonInfo(ns []types.Notification) string {
+func getSyncCommitteeSoonInfo(ns map[types.EventFilter]types.Notification) string {
 	validators := []string{}
 	var startEpoch, endEpoch string
 	var inTime time.Duration
 
-	for i, n := range ns {
+	i := 0
+	for _, n := range ns {
 		n, ok := n.(*rocketpoolNotification)
 		if !ok {
 			log.Error(nil, "Sync committee notification not of type rocketpoolNotification", 0)
@@ -3230,6 +2856,7 @@ func getSyncCommitteeSoonInfo(ns []types.Notification) string {
 			}
 			inTime = inTime.Round(time.Second)
 		}
+		i++
 	}
 
 	if len(validators) > 0 {
