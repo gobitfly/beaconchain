@@ -3,8 +3,11 @@ package dataaccess
 import (
 	"context"
 
+	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 )
 
@@ -45,4 +48,31 @@ func (d *DataAccessService) GetNamesAndEnsForAddresses(ctx context.Context, addr
 		addressMap[hexutil.Encode(name.Address)].Label = name.Name
 	}
 	return nil
+}
+
+// helper function to sort and apply pagination to a query
+// 1st param defines default column precedence and direction
+// 2nd param defines requested primary sort
+// TODO pagination
+func applySortAndPagination(defaultColumnsOrder []t.SortColumn, primary t.SortColumn) []exp.OrderedExpression {
+	// prepare ordering columns; always need all columns to ensure consistent ordering
+	queryOrderColumns := make([]t.SortColumn, len(defaultColumnsOrder))
+	queryOrderColumns = append(queryOrderColumns, primary)
+	// secondary sorts according to default
+	for _, column := range defaultColumnsOrder {
+		if column.Column != primary.Column {
+			queryOrderColumns = append(queryOrderColumns, column)
+		}
+	}
+
+	// apply ordering
+	queryColumns := []exp.OrderedExpression{}
+	for _, column := range queryOrderColumns {
+		col := goqu.C(column.Column).Asc()
+		if column.Desc {
+			col = goqu.C(column.Column).Desc()
+		}
+		queryColumns = append(queryColumns, col)
+	}
+	return queryColumns
 }

@@ -5,7 +5,7 @@ package enums
 
 type NotificationDashboardsColumn int
 
-var _ EnumConvertible[NotificationDashboardsColumn] = NotificationDashboardsColumn(0)
+var _ EnumFactory[NotificationDashboardsColumn] = NotificationDashboardsColumn(0)
 
 const (
 	NotificationDashboardChainId NotificationDashboardsColumn = iota

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/lib/pq"
@@ -36,6 +35,7 @@ type NotificationsRepository interface {
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return d.dummy.GetNotificationOverview(ctx, userId)
 }
+
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	response := []t.NotificationDashboardsTableRow{}
 	var err error
@@ -115,14 +115,13 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	unionQuery := vdbQuery.Union(adbQuery)
 
 	// sorting
-	// prepare ordering columns; always need columns to ensure consistent ordering
-	defaultColumnsOrder := []t.SortConvertible[enums.NotificationDashboardsColumn]{
-		{Column: enums.NotificationDashboardTimestamp, Desc: true},
-		{Column: enums.NotificationDashboardDashboardName, Desc: false},
-		{Column: enums.NotificationDashboardGroupName, Desc: false},
-		{Column: enums.NotificationDashboardChainId, Desc: true},
+	defaultColumnsOrder := []t.SortColumn{
+		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true},
+		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false},
+		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false},
+		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true},
 	}
-	unionQuery.Order(applySort(defaultColumnsOrder, colSort)...)
+	unionQuery.Order(applySortAndPagination(defaultColumnsOrder, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc})...)
 	// cursor
 	//  TODO
 
@@ -186,26 +185,4 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 }
 func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
 	return d.dummy.UpdateNotificationSettingsAccountDashboard(ctx, dashboardId, groupId, settings)
-}
-
-func applySort[T enums.Enum](defaultColumnsOrder []t.SortConvertible[T], primary t.Sort[T]) []exp.OrderedExpression {
-	queryOrderColumns := make([]t.SortConvertible[T], len(defaultColumnsOrder))
-	queryOrderColumns = append(queryOrderColumns, interface{}(primary).(t.SortConvertible[T]))
-	// secondary sorts according to default
-	for _, column := range defaultColumnsOrder {
-		if column.Column.Int() != primary.Column.Int() {
-			queryOrderColumns = append(queryOrderColumns, column)
-		}
-	}
-
-	// apply ordering
-	queryColumns := []exp.OrderedExpression{}
-	for _, column := range queryOrderColumns {
-		col := goqu.C(column.Column.ToString()).Asc()
-		if column.Desc {
-			col = goqu.C(column.Column.ToString()).Desc()
-		}
-		queryColumns = append(queryColumns, col)
-	}
-	return queryColumns
 }
