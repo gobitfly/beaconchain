@@ -14,17 +14,17 @@ import (
 // Fatal logs a fatal error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
 // callerSkip equal to 0 gives you info directly where Fatal is called.
 func Fatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
-	logErrorInfo(err, callerSkip, additionalInfos...).Fatal(errorMsg)
+	logErrorInfo(err, callerSkip, false, additionalInfos...).Fatal(errorMsg)
 }
 
 // Error logs an error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
 // callerSkip equal to 0 gives you info directly where Error is called.
 func Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
-	logErrorInfo(err, callerSkip, additionalInfos...).Error(errorMsg)
+	logErrorInfo(err, callerSkip, false, additionalInfos...).Error(errorMsg)
 }
 
 func WarnWithStackTrace(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
-	logErrorInfo(err, callerSkip, additionalInfos...).Warn(errorMsg)
+	logErrorInfo(err, callerSkip, true, additionalInfos...).Warn(errorMsg)
 }
 
 func Info(args ...interface{}) {
@@ -67,7 +67,7 @@ func Debugf(format string, args ...interface{}) {
 	logrus.Debugf(format, args...)
 }
 
-func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.Entry {
+func logErrorInfo(err error, callerSkip int, isWarning bool, additionalInfos ...Fields) *logrus.Entry {
 	logFields := logrus.NewEntry(logrus.New())
 
 	metricName := "unknown"
@@ -88,7 +88,9 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 	if len(metricName) > 30 {
 		metricName = metricName[len(metricName)-30:]
 	}
-	metrics.Errors.WithLabelValues(metricName).Inc()
+	if !isWarning {
+		metrics.Errors.WithLabelValues(metricName).Inc()
+	}
 
 	errColl := []string{}
 	for {
