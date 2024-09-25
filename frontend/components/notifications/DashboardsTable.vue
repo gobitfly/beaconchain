@@ -45,6 +45,7 @@ const openDialog = () => {
 }
 
 const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'account' : 'validator'
+const { overview } = useNotificationsDashboardOverviewStore()
 </script>
 
 <template>
@@ -222,21 +223,18 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
                 @open-dialog="$emit('openDialog')"
               />
             </template>
-            <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width < 1024">
                 {{
                   $t(
                     "notifications.dashboards.footer.subscriptions.validators_shortened",
-                    { count: 1 },
-                  )
+                    { count: overview?.vdb_subscriptions_count })
                 }}
                 |
                 {{
                   $t(
                     "notifications.dashboards.footer.subscriptions.accounts_shortened",
-                    { count: 1 },
-                  )
+                    { count: overview?.adb_subscriptions_count })
                 }}
               </template>
               <template v-else>
@@ -244,16 +242,16 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
                   {{
                     $t(
                       "notifications.dashboards.footer.subscriptions.validators",
-                      { count: 1 },
-                    )
+                      { count: overview?.vdb_subscriptions_count })
+
                   }}
                 </div>
                 <div>
                   {{
                     $t(
                       "notifications.dashboards.footer.subscriptions.accounts",
-                      { count: 1 },
-                    )
+                      { count: overview?.adb_subscriptions_count })
+
                   }}
                 </div>
               </template>
