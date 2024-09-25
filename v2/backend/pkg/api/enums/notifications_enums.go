@@ -5,12 +5,13 @@ package enums
 
 type NotificationDashboardsColumn int
 
-var _ EnumFactory[NotificationDashboardsColumn] = NotificationDashboardsColumn(0)
+var _ EnumConvertible[NotificationDashboardsColumn] = NotificationDashboardsColumn(0)
 
 const (
 	NotificationDashboardChainId NotificationDashboardsColumn = iota
 	NotificationDashboardTimestamp
-	NotificationDashboardDashboardName // sort by name
+	NotificationDashboardDashboardName // sort by dashboard name
+	NotificationDashboardGroupName     // sort by group name, internal use only
 )
 
 func (c NotificationDashboardsColumn) Int() int {
@@ -30,14 +31,32 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 	}
 }
 
+// internal use, used to map to query column names
+func (c NotificationDashboardsColumn) ToString() string {
+	switch c {
+	case NotificationDashboardChainId:
+		return "chain_id"
+	case NotificationDashboardTimestamp:
+		return "epoch"
+	case NotificationDashboardDashboardName:
+		return "dashboard_name"
+	case NotificationDashboardGroupName:
+		return "group_name"
+	default:
+		return ""
+	}
+}
+
 var NotificationsDashboardsColumns = struct {
 	ChainId     NotificationDashboardsColumn
 	Timestamp   NotificationDashboardsColumn
 	DashboardId NotificationDashboardsColumn
+	GroupId     NotificationDashboardsColumn
 }{
 	NotificationDashboardChainId,
 	NotificationDashboardTimestamp,
 	NotificationDashboardDashboardName,
+	NotificationDashboardGroupName,
 }
 
 // ------------------------------------------------------------

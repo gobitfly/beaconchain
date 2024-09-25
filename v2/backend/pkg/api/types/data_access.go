@@ -22,6 +22,11 @@ type Sort[T enums.Enum] struct {
 	Desc   bool
 }
 
+type SortConvertible[T enums.Enum] struct {
+	Column enums.EnumConvertible[T]
+	Desc   bool
+}
+
 type VDBIdPrimary int
 type VDBIdPublic string
 type VDBIdValidatorSet []VDBValidator
