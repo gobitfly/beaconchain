@@ -335,7 +335,6 @@ type ethClientNotification struct {
 }
 
 func (n *ethClientNotification) GetInfo(format types.NotificationFormat) string {
-
 	switch format {
 	case types.NotifciationFormatHtml:
 		generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
