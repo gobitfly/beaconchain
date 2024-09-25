@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
 	"github.com/coocood/freecache"
 	"github.com/davecgh/go-spew/spew"
@@ -40,6 +41,7 @@ import (
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
 	go_ens "github.com/wealdtech/go-ens/v3"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/api/option"
 
 	"flag"
 
@@ -78,7 +80,7 @@ func Run() {
 	}
 
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -494,6 +496,8 @@ func Run() {
 		err = collectNotifications(opts.StartEpoch)
 	case "collect-user-db-notifications":
 		err = collectUserDbNotifications(opts.StartEpoch)
+	case "verify-fcm-tokens":
+		err = verifyFCMTokens()
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -2096,4 +2100,57 @@ func reExportSyncCommittee(rpcClient rpc.Client, p uint64, dryRun bool) error {
 
 		return tx.Commit()
 	}
+}
+
+func verifyFCMTokens() error {
+	type row struct {
+		RefreshToken      string `db:"refresh_token"`
+		UserId            int    `db:"user_id"`
+		NotificationToken string `db:"notification_token"`
+	}
+
+	var rows []row
+	err := db.FrontendWriterDB.Select(&rows, `SELECT refresh_token, user_id, COALESCE(notification_token, '') AS notification_token FROM users_devices where length(notification_token) > 20 and id >= 0 order by id`)
+
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	opt := option.WithCredentialsJSON([]byte(utils.Config.Notifications.FirebaseCredentialsPath))
+
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		log.Error(err, "error initializing app", 0)
+		return err
+	}
+
+	client, err := app.Messaging(ctx)
+	if err != nil {
+		log.Error(err, "error initializing messaging", 0)
+		return err
+	}
+
+	for _, r := range rows {
+		log.Infof("checking token %s for user %v", r.NotificationToken, r.UserId)
+
+		_, err := client.SendDryRun(ctx, &messaging.Message{
+			Token: r.NotificationToken,
+		})
+		if err != nil {
+			if err.Error() == "Requested entity was not found." {
+				log.Infof("token %s for user %v is invalid", r.NotificationToken, r.UserId)
+				res, err := db.FrontendWriterDB.Exec(`UPDATE users_devices SET notification_token = NULL WHERE notification_token = $1 AND user_id = $2 AND refresh_token = $3`, r.NotificationToken, r.UserId, r.RefreshToken)
+				if err != nil {
+					log.Error(err, "error updating token", 0)
+				}
+				rowsAffected, _ := res.RowsAffected()
+				log.Infof("updated %d rows", rowsAffected)
+			} else {
+				log.Error(err, "error sending message", 0)
+			}
+		}
+		time.Sleep(time.Millisecond * 250)
+	}
+	return nil
 }
