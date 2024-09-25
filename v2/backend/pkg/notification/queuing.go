@@ -481,8 +481,8 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 									discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
 										Type:        "rich",
 										Color:       "16745472",
-										Description: n.GetInfo(types.NotifciationFormatMarkdown),
-										Title:       n.GetTitle(),
+										Description: n.GetLegacyInfo(),
+										Title:       n.GetLegacyTitle(),
 										Fields:      fields,
 									})
 								} else {
