@@ -39,7 +39,7 @@ const shouldAppearDisabled = computed(
 </template>
 
 <style lang="scss" scoped>
-.bc-button--secondary {
+button.bc-button--secondary {
   border-color: var(--button-secondary-border-color);
   background-color: var(--button-secondary-background-color);
   color: var(--button-secondary-color);
@@ -52,7 +52,7 @@ const shouldAppearDisabled = computed(
     border-color: var(--button-secondary-border-color);
   }
 }
-.bc-button--disabled {
+button.bc-button--disabled {
   &,
   &:hover,
   &:focus {

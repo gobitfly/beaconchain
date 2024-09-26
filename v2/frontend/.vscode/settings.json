@@ -1,5 +1,6 @@
 {
   "conventionalCommits.scopes": [
+    "BcButton",
     "BcLink",
     "BcTablePager",
     "DashboardChartSummaryChartFilter",
