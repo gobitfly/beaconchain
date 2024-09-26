@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
@@ -655,4 +657,21 @@ func (d *DummyService) IncrementBundleDeliveryCount(ctx context.Context, bundleV
 
 func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.MobileWidgetData, error) {
 	return getDummyStruct[t.MobileWidgetData]()
+}
+
+func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit uint64, offset uint64) (*types.MachineMetricsData, error) {
+	data, err := getDummyStruct[types.MachineMetricsData]()
+	if err != nil {
+		return nil, err
+	}
+	data.SystemMetrics = slices.SortedFunc(slices.Values(data.SystemMetrics), func(i, j *t.MachineMetricSystem) int {
+		return int(i.Timestamp) - int(j.Timestamp)
+	})
+	data.ValidatorMetrics = slices.SortedFunc(slices.Values(data.ValidatorMetrics), func(i, j *t.MachineMetricValidator) int {
+		return int(i.Timestamp) - int(j.Timestamp)
+	})
+	data.NodeMetrics = slices.SortedFunc(slices.Values(data.NodeMetrics), func(i, j *t.MachineMetricNode) int {
+		return int(i.Timestamp) - int(j.Timestamp)
+	})
+	return data, nil
 }
