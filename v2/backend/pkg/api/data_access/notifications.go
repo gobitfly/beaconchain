@@ -2,10 +2,12 @@ package dataaccess
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 )
 
@@ -40,24 +42,14 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	response := []t.NotificationDashboardsTableRow{}
 	var err error
 
-	// default sorting precedence: age, db_name, group_name (always ASC), network
-	//var currentCursor t.NotificationsDashboardsCursor
-
-	/*if cursor != "" {
-	if currentCursor, err = utils.StringToCursor[t.NotificationsDashboardsCursor](cursor); err != nil {
+	var currentCursor t.NotificationsDashboardsCursor
+	if cursor != "" {
+		if currentCursor, err = utils.StringToCursor[t.NotificationsDashboardsCursor](cursor); err != nil {
 			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationsDashboardsCursor: %w", err)
 		}
 	}
-	// Prepare the sorting
-	isReverseDirection := colSort.Desc != currentCursor.IsReverse() // (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
-	sortSearchDirection := ">"
-	if isReverseDirection {
-		sortSearchDirection = "<"
-	}
-	if currentCursor.IsValid() {
-	}*/
 
-	// base query
+	// validator query
 	vdbQuery := goqu.Dialect("postgres").
 		From(goqu.T("vdb_notifications_history").As("vnh")).
 		Select(
@@ -85,7 +77,8 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.I("uvdg.name"),
 		)
 
-	adbQuery := goqu.Dialect("postgres").
+	// TODO account dashboards
+	/*adbQuery := goqu.Dialect("postgres").
 		From(goqu.T("adb_notifications_history").As("anh")).
 		Select(
 			goqu.L("true").As("is_account_dashboard"),
@@ -112,29 +105,46 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.I("uadg.name"),
 		)
 
-	unionQuery := vdbQuery.Union(adbQuery)
+	unionQuery := vdbQuery.Union(adbQuery)*/
+	unionQuery := goqu.From(vdbQuery)
 
 	// sorting
-	defaultColumnsOrder := []t.SortColumn{
-		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true},
-		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false},
-		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false},
-		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true},
+	defaultColumns := []t.SortColumn{
+		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
+		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
+		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true, Offset: currentCursor.Network},
 	}
-	unionQuery.Order(applySortAndPagination(defaultColumnsOrder, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc})...)
-	// cursor
-	//  TODO
+	var offset any
+	if currentCursor.IsValid() {
+		switch colSort.Column {
+		case enums.NotificationDashboardTimestamp:
+			offset = currentCursor.Epoch
+		case enums.NotificationDashboardDashboardName:
+			offset = currentCursor.DashboardName
+		case enums.NotificationDashboardGroupName:
+			offset = currentCursor.GroupName
+		case enums.NotificationDashboardChainId:
+			offset = currentCursor.Network
+		}
+	}
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	unionQuery = unionQuery.Order(order...)
+	unionQuery = unionQuery.Where(directions)
 
 	// search
 	// 	TODO
 
-	unionQuery.Limit(uint(limit))
+	unionQuery.Limit(uint(limit + 1))
 
 	query, args, err := unionQuery.ToSQL()
 	if err != nil {
 		return nil, nil, err
 	}
 	err = d.alloyReader.GetContext(ctx, &response, query, args...)
+	if len(response) > int(limit) {
+		response = response[:len(response)-1]
+	}
 	if err != nil {
 		return nil, nil, err
 	}
