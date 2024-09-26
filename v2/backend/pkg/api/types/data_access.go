@@ -134,10 +134,9 @@ type BlocksCursor struct {
 
 type NotificationsDashboardsCursor struct {
 	GenericCursor
-	Epoch uint64 // basically the same as Block, Epoch, Age; mandatory, used to index
 
-	// optional, max one of those (for now)
-	Network       uint64
+	Epoch         uint64
+	ChainId       uint64
 	DashboardName string
 	GroupName     string
 }
