@@ -275,11 +275,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		key := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, valDashboard.DashboardId, valDashboard.GroupId)
 
 		if _, ok := settingsMap[key]; !ok {
-			if !valDashboard.WebhookUrl.Valid && !valDashboard.IsRealTimeModeEnabled {
-				// No subscriptions for this dashboard
-				continue
-			}
-
 			settingsMap[key] = &NotificationSettingsDashboardsInfo{
 				Settings: t.NotificationSettingsValidatorDashboard{},
 			}
@@ -306,11 +301,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		key := fmt.Sprintf("%s:%d:%d", AccountDashboardEventPrefix, accDashboard.DashboardId, accDashboard.GroupId)
 
 		if _, ok := settingsMap[key]; !ok {
-			if !accDashboard.WebhookUrl.Valid && !accDashboard.IsIgnoreSpamTransactionsEnabled && len(accDashboard.SubscribedChainIds) == 0 {
-				// No subscription for this dashboard
-				continue
-			}
-
 			settingsMap[key] = &NotificationSettingsDashboardsInfo{
 				Settings: t.NotificationSettingsAccountDashboard{},
 			}
