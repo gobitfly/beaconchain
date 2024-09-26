@@ -173,26 +173,27 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		IsIgnoreSpamTransactionsEnabled bool           `db:"ignore_spam_transactions"`
 		SubscribedChainIds              []uint64       `db:"subscribed_chain_ids"`
 	}{}
-	wg.Go(func() error {
-		err := d.alloyReader.SelectContext(ctx, &accDashboards, `
-			SELECT
-				d.id AS dashboard_id,
-				d.name AS dashboard_name,
-				g.id AS group_id,
-				g.name AS group_name,
-				g.webhook_target,
-				g.discord_webhook,
-				g.ignore_spam_transactions,
-				g.subscribed_chain_ids
-			FROM users_acc_dashboards d
-			INNER JOIN users_acc_dashboards_groups g ON d.id = g.dashboard_id
-			WHERE d.user_id = $1`, userId)
-		if err != nil {
-			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
-		}
+	// TODO: Account dashboard handling will be handled later
+	// wg.Go(func() error {
+	// 	err := d.alloyReader.SelectContext(ctx, &accDashboards, `
+	// 		SELECT
+	// 			d.id AS dashboard_id,
+	// 			d.name AS dashboard_name,
+	// 			g.id AS group_id,
+	// 			g.name AS group_name,
+	// 			g.webhook_target,
+	// 			g.discord_webhook,
+	// 			g.ignore_spam_transactions,
+	// 			g.subscribed_chain_ids
+	// 		FROM users_acc_dashboards d
+	// 		INNER JOIN users_acc_dashboards_groups g ON d.id = g.dashboard_id
+	// 		WHERE d.user_id = $1`, userId)
+	// 	if err != nil {
+	// 		return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
+	// 	}
 
-		return nil
-	})
+	// 	return nil
+	// })
 
 	err = wg.Wait()
 	if err != nil {
@@ -520,82 +521,83 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	return nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
-	// For the given dashboardId and groupId update users_subscriptions and users_acc_dashboards_groups with the given settings
-	epoch := utils.TimeToEpoch(time.Now())
+	// TODO: Account dashboard handling will be handled later
+	// // For the given dashboardId and groupId update users_subscriptions and users_acc_dashboards_groups with the given settings
+	// epoch := utils.TimeToEpoch(time.Now())
 
-	var eventsToInsert []goqu.Record
-	var eventsToDelete []goqu.Expression
+	// var eventsToInsert []goqu.Record
+	// var eventsToDelete []goqu.Expression
 
-	tx, err := d.userWriter.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("error starting db transactions to update validator dashboard notification settings: %w", err)
-	}
-	defer utils.Rollback(tx)
+	// tx, err := d.userWriter.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return fmt.Errorf("error starting db transactions to update validator dashboard notification settings: %w", err)
+	// }
+	// defer utils.Rollback(tx)
 
-	eventFilter := fmt.Sprintf("%s:%d:%d", AccountDashboardEventPrefix, dashboardId, groupId)
+	// eventFilter := fmt.Sprintf("%s:%d:%d", AccountDashboardEventPrefix, dashboardId, groupId)
 
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsIncomingTransactionsSubscribed, userId, types.IncomingTransactionEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsOutgoingTransactionsSubscribed, userId, types.OutgoingTransactionEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC20TokenTransfersSubscribed, userId, types.ERC20TokenTransferEventName, eventFilter, epoch, settings.ERC20TokenTransfersValueThreshold)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC721TokenTransfersSubscribed, userId, types.ERC721TokenTransferEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC1155TokenTransfersSubscribed, userId, types.ERC1155TokenTransferEventName, eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsIncomingTransactionsSubscribed, userId, types.IncomingTransactionEventName, eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsOutgoingTransactionsSubscribed, userId, types.OutgoingTransactionEventName, eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC20TokenTransfersSubscribed, userId, types.ERC20TokenTransferEventName, eventFilter, epoch, settings.ERC20TokenTransfersValueThreshold)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC721TokenTransfersSubscribed, userId, types.ERC721TokenTransferEventName, eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC1155TokenTransfersSubscribed, userId, types.ERC1155TokenTransferEventName, eventFilter, epoch, 0)
 
-	// Insert all the events or update the threshold if they already exist
-	if len(eventsToInsert) > 0 {
-		insertDs := goqu.Dialect("postgres").
-			Insert("users_subscriptions").
-			Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
-			Rows(eventsToInsert).
-			OnConflict(goqu.DoUpdate(
-				"user_id, event_name, event_filter",
-				goqu.Record{"event_threshold": goqu.L("EXCLUDED.event_threshold")},
-			))
+	// // Insert all the events or update the threshold if they already exist
+	// if len(eventsToInsert) > 0 {
+	// 	insertDs := goqu.Dialect("postgres").
+	// 		Insert("users_subscriptions").
+	// 		Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
+	// 		Rows(eventsToInsert).
+	// 		OnConflict(goqu.DoUpdate(
+	// 			"user_id, event_name, event_filter",
+	// 			goqu.Record{"event_threshold": goqu.L("EXCLUDED.event_threshold")},
+	// 		))
 
-		query, args, err := insertDs.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
-		}
+	// 	query, args, err := insertDs.Prepared(true).ToSQL()
+	// 	if err != nil {
+	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 	}
 
-		_, err = tx.ExecContext(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-	}
+	// 	_, err = tx.ExecContext(ctx, query, args...)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
-	// Delete all the events
-	if len(eventsToDelete) > 0 {
-		deleteDs := goqu.Dialect("postgres").
-			Delete("users_subscriptions").
-			Where(goqu.Or(eventsToDelete...))
+	// // Delete all the events
+	// if len(eventsToDelete) > 0 {
+	// 	deleteDs := goqu.Dialect("postgres").
+	// 		Delete("users_subscriptions").
+	// 		Where(goqu.Or(eventsToDelete...))
 
-		query, args, err := deleteDs.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
-		}
+	// 	query, args, err := deleteDs.Prepared(true).ToSQL()
+	// 	if err != nil {
+	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 	}
 
-		_, err = tx.ExecContext(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-	}
+	// 	_, err = tx.ExecContext(ctx, query, args...)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx to update validator dashboard notification settings: %w", err)
-	}
+	// err = tx.Commit()
+	// if err != nil {
+	// 	return fmt.Errorf("error committing tx to update validator dashboard notification settings: %w", err)
+	// }
 
-	// Set non-event settings
-	_, err = d.alloyWriter.ExecContext(ctx, `
-		UPDATE users_acc_dashboards_groups 
-		SET 
-			webhook_target = NULLIF($1, ''),
-			discord_webhook = CASE WHEN $1 = '' THEN NULL ELSE $2 END,
-			ignore_spam_transactions = $3,
-			subscribed_chain_ids = $4
-		WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
-	if err != nil {
-		return err
-	}
+	// // Set non-event settings
+	// _, err = d.alloyWriter.ExecContext(ctx, `
+	// 	UPDATE users_acc_dashboards_groups
+	// 	SET
+	// 		webhook_target = NULLIF($1, ''),
+	// 		discord_webhook = CASE WHEN $1 = '' THEN NULL ELSE $2 END,
+	// 		ignore_spam_transactions = $3,
+	// 		subscribed_chain_ids = $4
+	// 	WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
