@@ -34,6 +34,7 @@ type NotificationDashboardsTableRow struct {
 	ChainId            uint64   `db:"chain_id" json:"chain_id"`
 	Epoch              uint64   `db:"epoch" json:"epoch"`
 	DashboardId        uint64   `db:"dashboard_id" json:"dashboard_id"`
+	DashboardName      string   `db:"dashboard_name" json:"-"` // not exported, internal use only
 	GroupId            uint64   `db:"group_id" json:"group_id"`
 	GroupName          string   `db:"group_name" json:"group_name"`
 	EntityCount        uint64   `db:"entity_count" json:"entity_count"`

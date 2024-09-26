@@ -3,8 +3,11 @@ package dataaccess
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -113,7 +116,7 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
 		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
 		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
-		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true, Offset: currentCursor.Network},
+		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
 	}
 	var offset any
 	if currentCursor.IsValid() {
@@ -125,7 +128,7 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 		case enums.NotificationDashboardGroupName:
 			offset = currentCursor.GroupName
 		case enums.NotificationDashboardChainId:
-			offset = currentCursor.Network
+			offset = currentCursor.ChainId
 		}
 	}
 	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
@@ -133,23 +136,39 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	unionQuery = unionQuery.Where(directions)
 
 	// search
-	// 	TODO
-
-	unionQuery.Limit(uint(limit + 1))
+	searchName := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
+	if searchName {
+		searchLower := strings.ToLower(strings.Replace(search, "_", "\\_", -1)) + "%"
+		unionQuery = unionQuery.Where(exp.NewExpressionList(
+			exp.OrType,
+			goqu.L("LOWER(?)", goqu.I("dashboard_name")).Like(searchLower),
+			goqu.L("LOWER(?)", goqu.I("group_name")).Like(searchLower),
+		))
+	}
+	unionQuery = unionQuery.Limit(uint(limit + 1))
 
 	query, args, err := unionQuery.ToSQL()
 	if err != nil {
 		return nil, nil, err
 	}
 	err = d.alloyReader.GetContext(ctx, &response, query, args...)
-	if len(response) > int(limit) {
-		response = response[:len(response)-1]
-	}
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return response, nil, nil
+	moreDataFlag := len(response) > int(limit)
+	if moreDataFlag {
+		response = response[:len(response)-1]
+	}
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return response, &t.Paging{}, nil
+	}
+	paging, err := utils.GetPagingFromData(response, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, err
+	}
+	return response, paging, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (*t.NotificationValidatorDashboardDetail, error) {
