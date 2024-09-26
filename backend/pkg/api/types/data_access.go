@@ -25,6 +25,8 @@ type Sort[T enums.Enum] struct {
 type SortColumn struct {
 	Column string
 	Desc   bool
+	// represents value from cursor
+	Offset any
 }
 
 type VDBIdPrimary int

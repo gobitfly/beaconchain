@@ -51,28 +51,51 @@ func (d *DataAccessService) GetNamesAndEnsForAddresses(ctx context.Context, addr
 }
 
 // helper function to sort and apply pagination to a query
-// 1st param defines default column precedence and direction
-// 2nd param defines requested primary sort
-// TODO pagination
-func applySortAndPagination(defaultColumnsOrder []t.SortColumn, primary t.SortColumn) []exp.OrderedExpression {
+// 1st param is the list of all columns necessary to sort the table deterministically; it defines their precedence and sort direction
+// 2nd param is the requested sort column; it may or may not be part of the default columns
+func applySortAndPagination(defaultColumns []t.SortColumn, primary t.SortColumn, cursor t.GenericCursor) ([]exp.OrderedExpression, exp.Expression) {
 	// prepare ordering columns; always need all columns to ensure consistent ordering
-	queryOrderColumns := make([]t.SortColumn, len(defaultColumnsOrder))
+	queryOrderColumns := make([]t.SortColumn, 0, len(defaultColumns))
 	queryOrderColumns = append(queryOrderColumns, primary)
 	// secondary sorts according to default
-	for _, column := range defaultColumnsOrder {
+	for _, column := range defaultColumns {
 		if column.Column != primary.Column {
 			queryOrderColumns = append(queryOrderColumns, column)
 		}
 	}
 
 	// apply ordering
-	queryColumns := []exp.OrderedExpression{}
+	queryOrder := []exp.OrderedExpression{}
 	for _, column := range queryOrderColumns {
-		col := goqu.C(column.Column).Asc()
-		if column.Desc {
-			col = goqu.C(column.Column).Desc()
+		if cursor.IsReverse() {
+			column.Desc = !column.Desc
 		}
-		queryColumns = append(queryColumns, col)
+		colOrder := goqu.C(column.Column).Asc()
+		if column.Desc {
+			colOrder = goqu.C(column.Column).Desc()
+		}
+		queryOrder = append(queryOrder, colOrder)
 	}
-	return queryColumns
+
+	// apply cursor offsets
+	var queryWhere exp.Expression
+	if cursor.IsValid() {
+		// reverse order to nest conditions
+		for i := len(queryOrderColumns) - 1; i >= 0; i-- {
+			column := queryOrderColumns[i]
+
+			colWhere := goqu.C(column.Column).Gt(column.Offset)
+			if column.Desc {
+				colWhere = goqu.C(column.Column).Lt(column.Offset)
+			}
+
+			if i == len(queryOrderColumns)-1 {
+				queryWhere = colWhere
+			} else {
+				queryWhere = goqu.Or(colWhere, goqu.And(goqu.C(column.Column).Eq(column.Offset), queryWhere))
+			}
+		}
+	}
+
+	return queryOrder, queryWhere
 }
