@@ -524,6 +524,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 	}
 
 	updates := 0
+	statusUpdates := make(map[string][]uint64)
 	for _, v := range validators {
 		// exchange farFutureEpoch with the corresponding max sql value
 		if v.WithdrawableEpoch == db.FarFutureEpoch {
@@ -612,8 +613,13 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			if c.Status != v.Status {
 				log.Infof("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
 				log.Infof("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
-				updates++
+				if statusUpdates[v.Status] == nil {
+					statusUpdates[v.Status] = make([]uint64, 0)
+				}
+				statusUpdates[v.Status] = append(statusUpdates[v.Status], v.Index)
+
+				//queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
+				//updates++
 			}
 			// if c.Balance != v.Balance {
 			// 	// log.LogInfo("Balance changed for validator %v from %v to %v", v.Index, c.Balance, v.Balance)
@@ -672,6 +678,16 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			return err
 		}
 		log.Infof("validator table update completed, took %v", time.Since(updateStart))
+	}
+
+	for status, updatedValidators := range statusUpdates {
+		updateStart := time.Now()
+		log.Infof("updating status of %v validators to %v", len(updatedValidators), status)
+		_, err = tx.Exec("UPDATE validators SET status = $1 WHERE validatorindex = ANY($2)", status, pq.Array(updatedValidators))
+		if err != nil {
+			return fmt.Errorf("error updating validator status: %w", err)
+		}
+		log.Infof("status update completed, took %v", time.Since(updateStart))
 	}
 
 	s := time.Now()
