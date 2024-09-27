@@ -10,6 +10,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
   const { fetch } = useCustomFetch()
   const settings = ref<NotificationSettings>(
     {
+      clients: [],
       general_settings: {
         do_not_disturb_timestamp: 0,
         is_email_notifications_enabled: false,
@@ -26,7 +27,6 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         machine_storage_usage_threshold: 0.0,
         rocket_pool_max_collateral_threshold: 0,
         rocket_pool_min_collateral_threshold: 0,
-        subscribed_clients: [],
       },
       networks: [ {
         chain_id: 0,
