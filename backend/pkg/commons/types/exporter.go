@@ -709,3 +709,12 @@ type RedisCachedValidatorsMapping struct {
 	Epoch   Epoch
 	Mapping []*CachedValidator
 }
+
+type SlashingInfo struct {
+	Epoch                  uint64 `db:"epoch"`
+	SlasherIndex           uint64 `db:"slasher"`
+	SlasherPubkey          string `db:"slasher_pubkey"`
+	SlashedValidatorIndex  uint64 `db:"slashedvalidator"`
+	SlashedValidatorPubkey []byte `db:"slashedvalidator_pubkey"`
+	Reason                 string `db:"reason"`
+}

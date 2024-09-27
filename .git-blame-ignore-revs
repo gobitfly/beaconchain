@@ -4,6 +4,8 @@
 # in order to work execute once:
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+#chore(eslint): add `natural sorting` for `json` files 
+f3da99c5c685eae1914aad8513d3b4b2f1cdcaa2
 # style(eslint): add `typescript delimiter` rule
 d6b42edb3f687cad3082a9044bcb71fc39a46176
 # style(eslint): apply `max-len` rule

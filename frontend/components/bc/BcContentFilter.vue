@@ -58,9 +58,9 @@ const handleClick = () => {
       :class="{ filter_visible: isFilterVisible }"
       @click="handleClick"
     >
-      <span class="sr-only">
+      <BcScreenreaderOnly>
         {{ !isFilterVisible ? $t('filter.open') : $t('filter.close') }}
-      </span>
+      </BcScreenreaderOnly>
       <FontAwesomeIcon :icon="faMagnifyingGlass" />
     </Button>
   </div>

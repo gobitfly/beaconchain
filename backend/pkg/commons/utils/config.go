@@ -262,6 +262,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 		"mainCurrency":           cfg.Frontend.MainCurrency,
 	}, "did init config")
 
+	Config = cfg
 	return nil
 }
 
@@ -358,15 +359,19 @@ func setCLConfig(cfg *types.Config) error {
 		maxForkEpoch := uint64(18446744073709551615)
 
 		if jr.Data.AltairForkEpoch == nil {
+			log.Warnf("AltairForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.AltairForkEpoch = &maxForkEpoch
 		}
 		if jr.Data.BellatrixForkEpoch == nil {
+			log.Warnf("BellatrixForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.BellatrixForkEpoch = &maxForkEpoch
 		}
 		if jr.Data.CapellaForkEpoch == nil {
+			log.Warnf("CapellaForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.CapellaForkEpoch = &maxForkEpoch
 		}
 		if jr.Data.DenebForkEpoch == nil {
+			log.Warnf("DenebForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.DenebForkEpoch = &maxForkEpoch
 		}
 
@@ -478,9 +483,22 @@ func setCLConfig(cfg *types.Config) error {
 		cfg.Chain.ClConfig = *chainConfig
 	}
 
-	// Set log level based on environment variable
-	if strings.ToLower(os.Getenv("LOG_LEVEL")) == "debug" {
+	// rewrite to match to allow trace as well
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "trace":
+		logrus.SetLevel(logrus.TraceLevel)
+	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
 	}
 
 	return nil

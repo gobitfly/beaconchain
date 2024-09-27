@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -26,9 +25,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var currentDutiesInfo unsafe.Pointer
+var currentDutiesInfo atomic.Pointer[SyncData]
 
-func (s *Services) startSlotVizDataService() {
+func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
+	o := sync.Once{}
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
@@ -41,13 +41,16 @@ func (s *Services) startSlotVizDataService() {
 		}
 		log.Infof("=== slotviz data updated in %s", time.Since(startTime))
 		r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
+		o.Do(func() {
+			wg.Done()
+		})
 		utils.ConstantTimeDelay(startTime, delay)
 	}
 }
 
 func (s *Services) updateSlotVizData() error {
 	var dutiesInfo *SyncData
-	if currentDutiesInfo == nil {
+	if currentDutiesInfo.Load() == nil {
 		dutiesInfo = s.initDutiesInfo()
 	} else {
 		dutiesInfo = s.copyAndCleanDutiesInfo()
@@ -86,7 +89,7 @@ func (s *Services) updateSlotVizData() error {
 
 		// if we have fetched epoch assignments before
 		// dont load for this epoch again
-		if v := (*SyncData)(atomic.LoadPointer(&currentDutiesInfo)); v != nil {
+		if v := currentDutiesInfo.Load(); v != nil {
 			if v.AssignmentsFetchedForEpoch > 0 {
 				minEpoch = v.AssignmentsFetchedForEpoch + 1
 			}
@@ -204,6 +207,9 @@ func (s *Services) updateSlotVizData() error {
 		if duty.Slot > dutiesInfo.LatestSlot {
 			dutiesInfo.LatestSlot = duty.Slot
 		}
+		if duty.Status == 1 && duty.Slot > dutiesInfo.LatestProposedSlot {
+			dutiesInfo.LatestProposedSlot = duty.Slot
+		}
 		dutiesInfo.SlotStatus[duty.Slot] = duty.Status
 		dutiesInfo.SlotBlock[duty.Slot] = duty.Block
 		if duty.Status == 1 { // 1: Proposed
@@ -272,11 +278,11 @@ func (s *Services) updateSlotVizData() error {
 	log.Debugf("process slotduties extra data: %s", time.Since(startTime))
 
 	// update currentDutiesInfo and hence frontend data
-	if currentDutiesInfo == nil { // info on first iteration
+	if currentDutiesInfo.Load() == nil { // info on first iteration
 		log.Infof("== slot-viz data updater initialized ==")
 	}
 
-	atomic.StorePointer(&currentDutiesInfo, unsafe.Pointer(dutiesInfo))
+	currentDutiesInfo.Store(dutiesInfo)
 
 	return nil
 }
@@ -284,16 +290,16 @@ func (s *Services) updateSlotVizData() error {
 // GetCurrentDutiesInfo returns the current duties info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the slot viz service from updating
 func (s *Services) GetCurrentDutiesInfo() (*SyncData, error) {
-	if currentDutiesInfo == nil {
+	if currentDutiesInfo.Load() == nil {
 		return nil, fmt.Errorf("%w: dutiesInfo", ErrWaiting)
 	}
-
-	return (*SyncData)(atomic.LoadPointer(&currentDutiesInfo)), nil
+	return currentDutiesInfo.Load(), nil
 }
 
 func (s *Services) initDutiesInfo() *SyncData {
 	dutiesInfo := SyncData{}
 	dutiesInfo.LatestSlot = uint64(0)
+	dutiesInfo.LatestProposedSlot = uint64(0)
 	dutiesInfo.SlotStatus = make(map[uint64]int8)
 	dutiesInfo.SlotBlock = make(map[uint64]uint64)
 	dutiesInfo.SlotSyncParticipated = make(map[uint64]map[constypes.ValidatorIndex]bool)
@@ -320,6 +326,7 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 
 	dutiesInfo := &SyncData{
 		LatestSlot:                   p.LatestSlot,
+		LatestProposedSlot:           p.LatestProposedSlot,
 		SlotStatus:                   make(map[uint64]int8, len(p.SlotStatus)),
 		SlotBlock:                    make(map[uint64]uint64, len(p.SlotBlock)),
 		SlotSyncParticipated:         make(map[uint64]map[constypes.ValidatorIndex]bool, len(p.SlotSyncParticipated)),
@@ -453,6 +460,7 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 
 type SyncData struct {
 	LatestSlot                   uint64
+	LatestProposedSlot           uint64
 	SlotStatus                   map[uint64]int8            // slot -> status
 	SlotBlock                    map[uint64]uint64          // slot -> block
 	SlotSyncParticipated         map[uint64]map[uint64]bool // slot -> validatorindex -> participated

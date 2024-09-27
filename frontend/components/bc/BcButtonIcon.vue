@@ -10,7 +10,7 @@ const props = defineProps<{
 
 <template>
   <button class="bc-button-icon">
-    <span class="sr-only">{{ props.srText }}</span>
+    <BcScreenreaderOnly>{{ props.srText }}</BcScreenreaderOnly>
     <slot />
   </button>
 </template>

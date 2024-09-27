@@ -13,7 +13,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -27,9 +26,13 @@ type DataAccessor interface {
 	NotificationsRepository
 	AdminRepository
 	BlockRepository
+	ArchiverRepository
 	ProtocolRepository
+	RatelimitRepository
 	HealthzRepository
+	MachineRepository
 
+	StartDataAccessServices()
 	Close()
 
 	GetLatestFinalizedEpoch() (uint64, error)
@@ -79,12 +82,6 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	db.ClickHouseReader = das.clickhouseReader
 	db.BigtableClient = das.bigtable
 	db.PersistentRedisDbClient = das.persistentRedisDbClient
-
-	// Create the services
-	das.services = services.NewServices(das.readerDb, das.writerDb, das.alloyReader, das.alloyWriter, das.clickhouseReader, das.bigtable, das.persistentRedisDbClient)
-
-	// Initialize the services
-	das.services.InitServices()
 
 	return das
 }
@@ -207,7 +204,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
+		bt, err := db.InitBigtable(cfg.Bigtable.Project, cfg.Bigtable.Instance, fmt.Sprintf("%d", cfg.Chain.ClConfig.DepositChainID), cfg.RedisCacheEndpoint)
 		if err != nil {
 			log.Fatal(err, "error connecting to bigtable", 0)
 		}
@@ -215,11 +212,11 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	}()
 
 	// Initialize the tiered cache (redis)
-	if utils.Config.TieredCacheProvider == "redis" || len(utils.Config.RedisCacheEndpoint) != 0 {
+	if cfg.TieredCacheProvider == "redis" || len(cfg.RedisCacheEndpoint) != 0 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			cache.MustInitTieredCache(utils.Config.RedisCacheEndpoint)
+			cache.MustInitTieredCache(cfg.RedisCacheEndpoint)
 			log.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
 		}()
 	}
@@ -229,7 +226,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	go func() {
 		defer wg.Done()
 		rdc := redis.NewClient(&redis.Options{
-			Addr:        utils.Config.RedisSessionStoreEndpoint,
+			Addr:        cfg.RedisSessionStoreEndpoint,
 			ReadTimeout: time.Second * 60,
 		})
 
@@ -241,12 +238,20 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 
 	wg.Wait()
 
-	if utils.Config.TieredCacheProvider != "redis" {
+	if cfg.TieredCacheProvider != "redis" {
 		log.Fatal(fmt.Errorf("no cache provider set, please set TierdCacheProvider (example redis)"), "", 0)
 	}
 
 	// Return the result
 	return &dataAccessService
+}
+
+func (d *DataAccessService) StartDataAccessServices() {
+	// Create the services
+	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
+
+	// Initialize the services
+	d.services.InitServices()
 }
 
 func (d *DataAccessService) Close() {

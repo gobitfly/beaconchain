@@ -13,7 +13,7 @@ import {
 } from '#components'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type {
-  InternalGetValidatorDashboardValidatorsResponse,
+  GetValidatorDashboardValidatorsResponse,
   VDBManageValidatorsTableRow,
   VDBPostValidatorsData,
 } from '~/types/api/validator_dashboard'
@@ -72,7 +72,7 @@ const {
   value: query,
 } = useDebounceValue<PathValues | undefined>(initialQuery, 500)
 
-const data = ref<InternalGetValidatorDashboardValidatorsResponse | undefined>()
+const data = ref<GetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
 const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
@@ -152,10 +152,10 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   }
 
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT_DELETE,
     {
-      method: 'DELETE',
-      query: { validators: validators.join(',') },
+      body: JSON.stringify({ validators }),
+      method: 'POST',
     },
     { dashboardKey: dashboardKey.value },
   )
@@ -265,7 +265,7 @@ watch(selectedGroup, (value) => {
 const loadData = async () => {
   if (dashboardKey.value) {
     const testQ = JSON.stringify(query.value)
-    const result = await fetch<InternalGetValidatorDashboardValidatorsResponse>(
+    const result = await fetch<GetValidatorDashboardValidatorsResponse>(
       API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
       undefined,
       { dashboardKey: dashboardKey.value },
@@ -555,6 +555,15 @@ const premiumLimit = computed(
                 </div>
                 <div class="info">
                   <div class="label">
+                    {{ $t("dashboard.validator.col.status") }}
+                  </div>
+                  <ValidatorTableStatus
+                    :status="slotProps.data.status"
+                    :position="slotProps.data.queue_position"
+                  />
+                </div>
+                <div class="info">
+                  <div class="label">
                     {{ $t("dashboard.validator.col.withdrawal_credential") }}
                   </div>
                   <BcFormatHash
@@ -645,6 +654,7 @@ const premiumLimit = computed(
   display: flex;
   flex-direction: column;
   overflow-y: hidden;
+  justify-content: space-between;
 
   :deep(.p-datatable-wrapper) {
     flex-grow: 1;

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 )
@@ -49,6 +50,8 @@ func StripeEmailUpdater() {
 				continue
 			}
 		}
+
+		services.ReportStatus("stripe_email_updater", "Running", nil)
 
 		time.Sleep(time.Minute)
 	}

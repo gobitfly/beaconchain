@@ -845,6 +845,7 @@ function informationIfHiddenResults(): string {
           :class="[barShape, colorTheme]"
           type="text"
           :placeholder="t(SearchbarPurposeInfo[barPurpose].placeHolder)"
+          autocomplete="off"
           @keyup="(e) => handleKeyPressInTextField(e.key)"
           @focus="globalState.showDropdown = true"
         >

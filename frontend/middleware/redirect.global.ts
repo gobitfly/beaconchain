@@ -5,8 +5,8 @@ export default function ({
   params,
   query,
 }: RouteLocationNormalizedLoaded) {
+  const { has } = useFeatureFlag()
   const config = useRuntimeConfig()
-  const showInDevelopment = Boolean(config.public.showInDevelopment)
   const v1Domain = config.public.v1Domain || 'https://beaconcha.in'
   if (name === 'slug') {
     name = params.slug?.[0]
@@ -40,8 +40,8 @@ export default function ({
     case 'mobile':
       return navigateTo(`${v1Domain}/mobile`, { external: true })
     case 'notifications':
-      if (!showInDevelopment) {
-        return navigateTo(`${v1Domain}/user/notifications`, { external: true })
+      if (!has('feature-notifications')) {
+        return navigateTo(`${v1Domain}/user/notifications`)
       }
       break
     case 'requestReset':
@@ -51,9 +51,8 @@ export default function ({
     case 'tx':
       return navigateTo(`${v1Domain}/tx/${params.id || params.slug?.[1]}`, { external: true })
     case 'user-settings':
-      // TODO: Remove once backend for this page is ready
-      if (!showInDevelopment) {
-        return navigateTo(`${v1Domain}/user/settings`, { external: true })
+      if (!has('feature-user_settings')) {
+        return navigateTo(`${v1Domain}/user/settings`)
       }
       break
     case 'validator':

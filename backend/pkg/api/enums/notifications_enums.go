@@ -10,7 +10,7 @@ var _ EnumFactory[NotificationDashboardsColumn] = NotificationDashboardsColumn(0
 const (
 	NotificationDashboardChainId NotificationDashboardsColumn = iota
 	NotificationDashboardTimestamp
-	NotificationDashboardDashboardId // sort by name
+	NotificationDashboardDashboardName // sort by name
 )
 
 func (c NotificationDashboardsColumn) Int() int {
@@ -23,8 +23,8 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 		return NotificationDashboardChainId
 	case "timestamp":
 		return NotificationDashboardTimestamp
-	case "dashboard_id":
-		return NotificationDashboardDashboardId
+	case "dashboard_name", "dashboard_id": // accepting id for frontend
+		return NotificationDashboardDashboardName
 	default:
 		return NotificationDashboardsColumn(-1)
 	}
@@ -37,7 +37,7 @@ var NotificationsDashboardsColumns = struct {
 }{
 	NotificationDashboardChainId,
 	NotificationDashboardTimestamp,
-	NotificationDashboardDashboardId,
+	NotificationDashboardDashboardName,
 }
 
 // ------------------------------------------------------------
@@ -203,7 +203,7 @@ type NotificationSettingsDashboardColumn int
 var _ EnumFactory[NotificationSettingsDashboardColumn] = NotificationSettingsDashboardColumn(0)
 
 const (
-	NotificationSettingsDashboardDashboardId NotificationSettingsDashboardColumn = iota
+	NotificationSettingsDashboardDashboardName NotificationSettingsDashboardColumn = iota
 	NotificationSettingsDashboardGroupName
 )
 
@@ -213,8 +213,8 @@ func (c NotificationSettingsDashboardColumn) Int() int {
 
 func (NotificationSettingsDashboardColumn) NewFromString(s string) NotificationSettingsDashboardColumn {
 	switch s {
-	case "dashboard_id":
-		return NotificationSettingsDashboardDashboardId
+	case "dashboard_name", "dashboard_id":
+		return NotificationSettingsDashboardDashboardName
 	case "group_name":
 		return NotificationSettingsDashboardGroupName
 	default:
@@ -226,6 +226,6 @@ var NotificationSettingsDashboardColumns = struct {
 	DashboardId NotificationSettingsDashboardColumn
 	GroupName   NotificationSettingsDashboardColumn
 }{
-	NotificationSettingsDashboardDashboardId,
+	NotificationSettingsDashboardDashboardName,
 	NotificationSettingsDashboardGroupName,
 }

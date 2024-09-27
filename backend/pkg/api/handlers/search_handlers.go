@@ -5,8 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -68,12 +70,12 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	searchResultChan := make(chan types.SearchResult)
 
 	// iterate over all combinations of search types and networks
-	for searchType := range searchTypeSet {
+	for _, searchType := range searchTypeSet {
 		// check if input matches the regex for the search type
 		if !searchTypeToRegex[searchType].MatchString(req.Input) {
 			continue
 		}
-		for chainId := range chainIdSet {
+		for _, chainId := range chainIdSet {
 			chainId := chainId
 			searchType := searchType
 			g.Go(func() error {
@@ -326,14 +328,14 @@ func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, i
 //   Input Validation
 
 // if the passed slice is empty, return a set with all chain IDs; otherwise check if the passed networks are valid
-func (v *validationError) checkNetworkSlice(networks []intOrString) map[uint64]struct{} {
+func (v *validationError) checkNetworkSlice(networks []intOrString) []uint64 {
 	networkSet := map[uint64]struct{}{}
 	// if the list is empty, query all networks
 	if len(networks) == 0 {
 		for _, n := range allNetworks {
 			networkSet[n.ChainId] = struct{}{}
 		}
-		return networkSet
+		return slices.Collect(maps.Keys(networkSet))
 	}
 	// list not empty, check if networks are valid
 	for _, network := range networks {
@@ -344,18 +346,18 @@ func (v *validationError) checkNetworkSlice(networks []intOrString) map[uint64]s
 		}
 		networkSet[chainId] = struct{}{}
 	}
-	return networkSet
+	return slices.Collect(maps.Keys(networkSet))
 }
 
 // if the passed slice is empty, return a set with all search types; otherwise check if the passed types are valid
-func (v *validationError) checkSearchTypes(types []searchTypeKey) map[searchTypeKey]struct{} {
+func (v *validationError) checkSearchTypes(types []searchTypeKey) []searchTypeKey {
 	typeSet := map[searchTypeKey]struct{}{}
 	// if the list is empty, query all types
 	if len(types) == 0 {
 		for t := range searchTypeToRegex {
 			typeSet[t] = struct{}{}
 		}
-		return typeSet
+		return slices.Collect(maps.Keys(typeSet))
 	}
 	// list not empty, check if types are valid
 	for _, t := range types {
@@ -365,5 +367,5 @@ func (v *validationError) checkSearchTypes(types []searchTypeKey) map[searchType
 		}
 		typeSet[t] = struct{}{}
 	}
-	return typeSet
+	return slices.Collect(maps.Keys(typeSet))
 }

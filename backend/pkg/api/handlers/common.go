@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -28,11 +29,12 @@ import (
 )
 
 type HandlerService struct {
-	dai dataaccess.DataAccessor
-	scs *scs.SessionManager
+	dai                         dataaccess.DataAccessor
+	scs                         *scs.SessionManager
+	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -42,8 +44,9 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 	}
 
 	return &HandlerService{
-		dai: dataAccessor,
-		scs: sessionManager,
+		dai:                         dataAccessor,
+		scs:                         sessionManager,
+		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
 }
 
@@ -67,6 +70,7 @@ var (
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
 	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
+	reJsonContentType              = regexp.MustCompile(`^application\/json(;.*)?$`)
 )
 
 const (
@@ -77,11 +81,12 @@ const (
 	sortOrderAscending                = "asc"
 	sortOrderDescending               = "desc"
 	defaultSortOrder                  = sortOrderAscending
+	defaultDesc                       = defaultSortOrder == sortOrderDescending
 	ethereum                          = "ethereum"
 	gnosis                            = "gnosis"
 	allowEmpty                        = true
 	forbidEmpty                       = false
-	maxArchivedDashboardsCount        = 10
+	MaxArchivedDashboardsCount        = 10
 )
 
 var (
@@ -184,7 +189,7 @@ func (v *validationError) checkUserEmailToken(token string) string {
 // return error only if internal error occurs, otherwise add error to validationError and/or return nil
 func (v *validationError) checkBody(data interface{}, r *http.Request) error {
 	// check if content type is application/json
-	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
+	if contentType := r.Header.Get("Content-Type"); !reJsonContentType.MatchString(contentType) {
 		v.add("request body", "'Content-Type' header must be 'application/json'")
 	}
 
@@ -475,11 +480,7 @@ func (v *validationError) checkValidatorDashboardPublicId(publicId string) types
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
-type number interface {
-	uint64 | int64 | float64
-}
-
-func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+func checkMinMax[T cmp.Ordered](v *validationError, param T, min T, max T, paramName string) T {
 	if param < min {
 		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
 	}
@@ -526,15 +527,10 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
-// precondition: the enum is the same type as the allowed enums.
-func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
-	if enums.IsInvalidEnum(enum) {
-		v.add(name, "parameter is missing or invalid, please check the API documentation")
-		return
-	}
+// better func name would be
+func checkValueInAllowed[T cmp.Ordered](v *validationError, value T, allowed []T, name string) {
 	for _, a := range allowed {
-		if enum.Int() == a.Int() {
+		if cmp.Compare(value, a) == 0 {
 			return
 		}
 	}
@@ -544,7 +540,7 @@ func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.En
 func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
-		return defaultSortOrder == sortOrderDescending
+		return defaultDesc
 	case sortOrderAscending:
 		return false
 	case sortOrderDescending:
@@ -558,19 +554,21 @@ func (v *validationError) parseSortOrder(order string) bool {
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
 	var c T
 	if sortString == "" {
-		return &types.Sort[T]{Column: c, Desc: false}
+		return &types.Sort[T]{Column: c, Desc: defaultDesc}
 	}
 	sortSplit := strings.Split(sortString, ":")
 	if len(sortSplit) > 2 {
 		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'", sortString))
 		return nil
 	}
+	var desc bool
 	if len(sortSplit) == 1 {
-		sortSplit = append(sortSplit, "")
+		desc = defaultDesc
+	} else {
+		desc = v.parseSortOrder(sortSplit[1])
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
-	order := v.parseSortOrder(sortSplit[1])
-	return &types.Sort[T]{Column: sortCol, Desc: order}
+	return &types.Sort[T]{Column: sortCol, Desc: desc}
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {
@@ -592,7 +590,7 @@ func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProt
 
 func (v *validationError) checkValidatorList(validators string, allowEmpty bool) ([]types.VDBValidator, []string) {
 	if validators == "" && !allowEmpty {
-		v.add("validators", "list of validators is must not be empty")
+		v.add("validators", "list of validators must not be empty")
 		return nil, nil
 	}
 	validatorsSlice := splitParameters(validators, ',')
@@ -656,6 +654,14 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 		return v.checkNetwork(intOrString{intValue: &chainId})
 	}
 	return v.checkNetwork(intOrString{strValue: &param})
+}
+
+func (v *validationError) checkNetworksParameter(param string) []uint64 {
+	var chainIds []uint64
+	for _, network := range splitParameters(param, ',') {
+		chainIds = append(chainIds, v.checkNetworkParameter(network))
+	}
+	return chainIds
 }
 
 // isValidNetwork checks if the given network is a valid network.

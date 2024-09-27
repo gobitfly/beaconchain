@@ -46,4 +46,4 @@ export interface SlotVizEpoch {
   progress?: number /* float64 */; // only on landing page
   slots?: VDBSlotVizSlot[]; // only on dashboard page
 }
-export type InternalGetValidatorDashboardSlotVizResponse = ApiDataResponse<SlotVizEpoch[]>;
+export type GetValidatorDashboardSlotVizResponse = ApiDataResponse<SlotVizEpoch[]>;

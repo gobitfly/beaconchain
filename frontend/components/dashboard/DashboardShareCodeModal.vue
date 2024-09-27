@@ -34,9 +34,7 @@ const isShared = computed(() => isSharedKey(sharedKey.value))
 const path = computed(() => {
   const newRoute = router.resolve({
     name: 'dashboard-id',
-    query: {
-      validators: fromBase64Url(sharedKey.value ?? ''),
-    },
+    params: { id: sharedKey.value },
   })
   return url.origin + newRoute.fullPath
 })

@@ -96,7 +96,7 @@ func Run() {
 	if utils.Config.Metrics.Enabled {
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()
@@ -187,6 +187,10 @@ func Run() {
 				time.Sleep(*tokenPriceExportFrequency)
 			}
 		}()
+	}
+
+	if *enableEnsUpdater {
+		go ImportEnsUpdatesLoop(bt, client, *ensBatchSize)
 	}
 
 	if *enableFullBalanceUpdater {
@@ -375,19 +379,24 @@ func Run() {
 			ProcessMetadataUpdates(bt, client, balanceUpdaterPrefix, *balanceUpdaterBatchSize, 10)
 		}
 
-		if *enableEnsUpdater {
-			err := bt.ImportEnsUpdates(client.GetNativeClient(), *ensBatchSize)
-			if err != nil {
-				log.Error(err, "error importing ens updates", 0, nil)
-				continue
-			}
-		}
-
 		log.Infof("index run completed")
 		services.ReportStatus("eth1indexer", "Running", nil)
 	}
 
 	// utils.WaitForCtrlC()
+}
+
+func ImportEnsUpdatesLoop(bt *db.Bigtable, client *rpc.ErigonClient, batchSize int64) {
+	time.Sleep(time.Second * 5)
+	for {
+		err := bt.ImportEnsUpdates(client.GetNativeClient(), batchSize)
+		if err != nil {
+			log.Error(err, "error importing ens updates", 0, nil)
+		} else {
+			services.ReportStatus("ensIndexer", "Running", nil)
+		}
+		time.Sleep(time.Second * 5)
+	}
 }
 
 func UpdateTokenPrices(bt *db.Bigtable, client *rpc.ErigonClient, tokenListPath string) error {

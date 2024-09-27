@@ -1,5 +1,4 @@
 import {
-  mockManageNotificationsGeneral,
   simulateAPIresponseAboutNetworkList,
   simulateAPIresponseForTheSearchBar,
 } from '~/utils/mock'
@@ -30,6 +29,7 @@ export enum API_PATH {
   DASHBOARD_VALIDATOR_GROUPS = '/validator-dashboards/groups',
   DASHBOARD_VALIDATOR_INDICES = '/validator-dashboards/indices',
   DASHBOARD_VALIDATOR_MANAGEMENT = '/validator-dashboards/validators',
+  DASHBOARD_VALIDATOR_MANAGEMENT_DELETE = '/validator-dashboards/validators/bulk-deletions',
   DASHBOARD_VALIDATOR_REWARDS = '/dashboard/validatorRewards',
   DASHBOARD_VALIDATOR_REWARDS_CHART = '/dashboard/validatorRewardsChart',
   DASHBOARD_VALIDATOR_REWARDS_DETAILS = '/dashboard/validatorRewardsDetails',
@@ -39,10 +39,16 @@ export enum API_PATH {
   LATEST_STATE = '/latestState',
   LOGIN = '/login',
   LOGOUT = '/logout',
+  NOTIFICATIONS_CLIENTS = '/notifications/clients',
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
   NOTIFICATIONS_MACHINE = '/notifications/machines',
   NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
+  NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE = '/notifications/managementPairedDevicesDelete',
+  NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION = '/notifications/managementPairedDevicesSetNotification',
+  NOTIFICATIONS_MANAGEMENT_SAVE = '/notifications/managementSave',
   NOTIFICATIONS_NETWORK = '/notifications/networks',
+  NOTIFICATIONS_OVERVIEW = '/notifications',
+  NOTIFICATIONS_ROCKETPOOL = '/notifications/rocket-pool',
   NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test-webhook',
@@ -223,6 +229,12 @@ export const mapping: Record<string, MappingData> = {
     mock: false,
     path: 'validator-dashboards/{dashboard_id}/validators',
   },
+  [API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT_DELETE]: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/validators/bulk-deletions`,
+    mock: false,
+    path: 'validator-dashboards/{dashboard_id}/validators/bulk-deletions',
+  },
   [API_PATH.DASHBOARD_VALIDATOR_REWARDS]: {
     getPath: values =>
       `/validator-dashboards/${values?.dashboardKey}/rewards`,
@@ -272,6 +284,10 @@ export const mapping: Record<string, MappingData> = {
     mock: false,
     path: '/logout',
   },
+  [API_PATH.NOTIFICATIONS_CLIENTS]: {
+    method: 'GET',
+    path: '/users/me/notifications/clients',
+  },
   [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
     path: '/users/me/notifications/dashboards',
   },
@@ -279,21 +295,42 @@ export const mapping: Record<string, MappingData> = {
     path: '/users/me/notifications/machines',
   },
   [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
-    mock: true,
-    mockFunction: mockManageNotificationsGeneral,
+    path: '/users/me/notifications/settings',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/paired-devices/${pathValues?.paired_device_id}`,
+    method: 'DELETE',
+    path: '/users/me/notifications/settings/paired-devices/{paired_device_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/paired-devices/${pathValues?.paired_device_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/paired-devices/{paired_device_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_SAVE]: {
+    method: 'PUT',
     path: '/users/me/notifications/settings/general',
   },
   [API_PATH.NOTIFICATIONS_NETWORK]: {
     path: '/users/me/notifications/networks',
   },
+  [API_PATH.NOTIFICATIONS_OVERVIEW]: {
+    method: 'GET',
+    mock: false,
+    path: '/users/me/notifications',
+  },
+  [API_PATH.NOTIFICATIONS_ROCKETPOOL]: {
+    method: 'GET',
+    path: '/users/me/notifications/rocket-pool',
+  },
   [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
     method: 'POST',
-    mock: true,
-    path: '/users/me/notifications/test-emails',
+    path: '/users/me/notifications/test-email',
   },
   [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
     method: 'POST',
-    mock: true,
     path: '/users/me/notifications/test-push',
   },
   [API_PATH.NOTIFICATIONS_TEST_WEBHOOK]: {

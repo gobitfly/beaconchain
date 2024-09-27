@@ -1,6 +1,7 @@
 package services
 
 import (
+	"sync"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -29,7 +30,8 @@ var Queue []QueuedEmail
 // collects & queues mails, sends in batches regularly (possibly aggregating multiple messasages to the same user to avoid spam?)
 // TODO ratelimiting
 // TODO send via SMTP/mailgun/others?
-func (s *Services) startEmailSenderService() {
+func (s *Services) startEmailSenderService(wg *sync.WaitGroup) {
+	o := sync.Once{}
 	for {
 		startTime := time.Now()
 		// lock mutex
@@ -44,6 +46,9 @@ func (s *Services) startEmailSenderService() {
 			}*/
 		}
 		log.Infof("=== message sending done in %s", time.Since(startTime))
+		o.Do(func() {
+			wg.Done()
+		})
 		utils.ConstantTimeDelay(startTime, 30*time.Second)
 	}
 }

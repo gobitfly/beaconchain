@@ -22,7 +22,7 @@ import {
   getRewardChartColors,
   getRewardsChartLineColor,
 } from '~/utils/colors'
-import { type InternalGetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
+import { type GetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
 import { type ChartData } from '~/types/api/common'
 import {
   type RewardChartGroupData,
@@ -73,7 +73,7 @@ useAsyncData(
       return
     }
     isLoading.value = true
-    const res = await fetch<InternalGetValidatorDashboardRewardsChartResponse>(
+    const res = await fetch<GetValidatorDashboardRewardsChartResponse>(
       API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART,
       undefined,
       { dashboardKey: dashboardKey.value },

@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { getCSRFHeader } from '~/utils/fetch'
 
 /**
   The csrf header is added to non GET requests to prevent Cross-site request forgery
@@ -7,24 +6,19 @@ import { getCSRFHeader } from '~/utils/fetch'
 **/
 
 const csrfStore = defineStore('csrf_store', () => {
-  const header = ref<[string, string] | null | undefined>()
-  return { header }
+  const tokenCsrf = ref<string >('')
+  return { tokenCsrf }
 })
 
 export function useCsrfStore() {
-  const { header } = storeToRefs(csrfStore())
+  const { tokenCsrf } = storeToRefs(csrfStore())
 
-  const csrfHeader = computed(() => header.value)
-
-  function setCsrfHeader(headers: Headers) {
-    const h = getCSRFHeader(headers)
-    if (h) {
-      header.value = h
-    }
+  function setTokenCsrf(token: string) {
+    tokenCsrf.value = token
   }
 
   return {
-    csrfHeader,
-    setCsrfHeader,
+    setTokenCsrf,
+    tokenCsrf,
   }
 }

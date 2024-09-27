@@ -6,15 +6,11 @@ import {
   faMonitorWaveform,
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
-import { NotificationsManagementDashboards } from '#components'
-import { useUseNotificationsManagementSettingsProvider } from '~/composables/notifications/useNotificationsManagementSettingsProvider'
 import type { HashTabs } from '~/types/hashTabs'
 
 const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
-
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const tabs: HashTabs = [
   {
@@ -23,46 +19,34 @@ const tabs: HashTabs = [
     title: $t('notifications.tabs.general'),
   },
   {
-    component: NotificationsManagementDashboards,
-    disabled: !showInDevelopment,
     icon: faGaugeSimpleMax,
     key: 'dashboards',
     title: $t('notifications.tabs.dashboards'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faMonitorWaveform,
     key: 'machines',
     placeholder: 'Machines coming soon!',
     title: $t('notifications.tabs.machines'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faBolt,
     key: 'clients',
     placeholder: 'Clients coming soon!',
     title: $t('notifications.tabs.clients'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faCog,
     key: 'rocketpool',
     title: $t('notifications.tabs.rocketpool'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faNetworkWired,
     key: 'network',
     placeholder: 'Network coming soon!',
     title: $t('notifications.tabs.network'),
   },
 ]
-
-const {
-  isLoading, refreshSettings,
-}
-  = useUseNotificationsManagementSettingsProvider()
-refreshSettings()
 </script>
 
 <template>
@@ -79,13 +63,13 @@ refreshSettings()
       oanels-class="notifications-management-tab-panels"
     >
       <template #tab-panel-general>
-        <BcLoadingSpinner
-          v-if="isLoading"
-          class="spinner"
-          :loading="isLoading"
-          alignment="center"
-        />
-        <NotificationsManagementGeneralTab v-else />
+        <NotificationsManagementGeneralTab />
+      </template>
+      <template #tab-panel-dashboards>
+        <NotificationsManagementDashboards />
+      </template>
+      <template #tab-panel-machines>
+        <NotificationsManagementMachines />
       </template>
       <template #tab-header-icon-rocketpool>
         <IconRocketPool />

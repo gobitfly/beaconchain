@@ -17,6 +17,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -111,6 +112,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	// Get the withdrawals for the validators
 	queryResult := []struct {
 		BlockSlot       uint64 `db:"block_slot"`
+		BlockNumber     uint64 `db:"exec_block_number"`
 		WithdrawalIndex uint64 `db:"withdrawalindex"`
 		ValidatorIndex  uint64 `db:"validatorindex"`
 		Address         []byte `db:"address"`
@@ -121,6 +123,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	withdrawalsQuery := `
 		SELECT
 		    w.block_slot,
+		    b.exec_block_number,
 			w.withdrawalindex,
 			w.validatorindex,
 			w.address,
@@ -196,32 +199,43 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	// Prepare the ENS map
-	addressEns := make(map[string]string)
-	for _, withdrawal := range queryResult {
+	addressMapping := make(map[string]*t.Address)
+	contractStatusRequests := make([]db.ContractInteractionAtRequest, len(queryResult))
+	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
-		addressEns[address] = ""
+		addressMapping[address] = nil
+		contractStatusRequests[i] = db.ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", withdrawal.Address),
+			Block:    int64(withdrawal.BlockNumber),
+			TxIdx:    -1,
+			TraceIdx: -1,
+		}
 	}
 
-	// Get the ENS names for the addresses
-	if err := db.GetEnsNamesForAddresses(addressEns); err != nil {
+	// Get the ENS names and (label) names for the addresses
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
+		return nil, nil, err
+	}
+
+	// Get the contract status for the addresses
+	contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
+	if err != nil {
 		return nil, nil, err
 	}
 
 	// Create the result
 	cursorData := make([]t.WithdrawalsCursor, 0)
-	for _, withdrawal := range queryResult {
+	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
 		result = append(result, t.VDBWithdrawalsTableRow{
-			Epoch:   withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
-			Slot:    withdrawal.BlockSlot,
-			Index:   withdrawal.ValidatorIndex,
-			GroupId: validatorGroupMap[withdrawal.ValidatorIndex],
-			Recipient: t.Address{
-				Hash: t.Hash(address),
-				Ens:  addressEns[address],
-			},
-			Amount: utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
+			Epoch:     withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
+			Slot:      withdrawal.BlockSlot,
+			Index:     withdrawal.ValidatorIndex,
+			Recipient: *addressMapping[address],
+			GroupId:   validatorGroupMap[withdrawal.ValidatorIndex],
+			Amount:    utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
 		})
+		result[i].Recipient.IsContract = contractStatuses[i] == types.CONTRACT_CREATION || contractStatuses[i] == types.CONTRACT_PRESENT
 		cursorData = append(cursorData, t.WithdrawalsCursor{
 			Slot:            withdrawal.BlockSlot,
 			WithdrawalIndex: withdrawal.WithdrawalIndex,
@@ -256,7 +270,8 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		if nextData != nil {
 			// Complete the next data
 			nextData.GroupId = validatorGroupMap[nextData.Index]
-			nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
+			// TODO integrate label/ens data for "next" row
+			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
 		} else {
 			// If there is no next data, add a missing estimate row
 			nextData = &t.VDBWithdrawalsTableRow{
@@ -393,12 +408,28 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 		withdrawalAmount = 0
 	}
 
+	ens_name, err := db.GetEnsNameForAddress(*address, utils.SlotToTime(nextWithdrawalSlot))
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	contractStatusReq := []db.ContractInteractionAtRequest{{
+		Address: fmt.Sprintf("%x", address),
+		Block:   -1,
+	}}
+	contractStatus, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusReq)
+	if err != nil {
+		return nil, err
+	}
+
 	nextData := &t.VDBWithdrawalsTableRow{
 		Epoch: nextWithdrawalSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
 		Slot:  nextWithdrawalSlot,
 		Index: *nextValidator,
 		Recipient: t.Address{
-			Hash: t.Hash(address.String()),
+			Hash:       t.Hash(address.String()),
+			Ens:        ens_name,
+			IsContract: contractStatus[0] == types.CONTRACT_CREATION || contractStatus[0] == types.CONTRACT_PRESENT,
 		},
 		Amount: utils.GWeiToWei(big.NewInt(int64(withdrawalAmount))),
 	}

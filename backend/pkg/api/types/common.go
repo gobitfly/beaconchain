@@ -34,14 +34,16 @@ type PubKey string
 type Hash string // blocks, txs etc.
 
 type Address struct {
-	Hash Hash   `json:"hash"`
-	Ens  string `json:"ens,omitempty"`
+	Hash       Hash   `json:"hash"`
+	IsContract bool   `json:"is_contract"`
+	Ens        string `json:"ens,omitempty"`
+	Label      string `json:"label,omitempty"`
 }
 
 type LuckItem struct {
 	Percent  float64       `json:"percent"`
-	Expected time.Time     `json:"expected"`
-	Average  time.Duration `json:"average"`
+	Expected time.Time     `json:"expected" swaggertype:"string" format:"date-time"`
+	Average  time.Duration `json:"average" swaggertype:"primitive,integer"`
 }
 
 type Luck struct {
@@ -142,4 +144,12 @@ type ChartHistorySeconds struct {
 type IndexBlocks struct {
 	Index  uint64   `json:"index"`
 	Blocks []uint64 `json:"blocks"`
+}
+
+type ValidatorStateCounts struct {
+	Online  uint64 `json:"online"`
+	Offline uint64 `json:"offline"`
+	Pending uint64 `json:"pending"`
+	Exited  uint64 `json:"exited"`
+	Slashed uint64 `json:"slashed"`
 }

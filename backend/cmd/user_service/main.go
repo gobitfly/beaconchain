@@ -46,7 +46,7 @@ func Run() {
 	if utils.Config.Metrics.Enabled {
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()
@@ -90,6 +90,30 @@ func Run() {
 			Port:         cfg.Frontend.ReaderDatabase.Port,
 			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
 			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
+		}, "pgx", "postgres")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
+			Username:     utils.Config.WriterDatabase.Username,
+			Password:     utils.Config.WriterDatabase.Password,
+			Name:         utils.Config.WriterDatabase.Name,
+			Host:         utils.Config.WriterDatabase.Host,
+			Port:         utils.Config.WriterDatabase.Port,
+			MaxOpenConns: utils.Config.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: utils.Config.WriterDatabase.MaxIdleConns,
+			SSL:          utils.Config.WriterDatabase.SSL,
+		}, &types.DatabaseConfig{
+			Username:     utils.Config.ReaderDatabase.Username,
+			Password:     utils.Config.ReaderDatabase.Password,
+			Name:         utils.Config.ReaderDatabase.Name,
+			Host:         utils.Config.ReaderDatabase.Host,
+			Port:         utils.Config.ReaderDatabase.Port,
+			MaxOpenConns: utils.Config.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: utils.Config.ReaderDatabase.MaxIdleConns,
+			SSL:          utils.Config.ReaderDatabase.SSL,
 		}, "pgx", "postgres")
 	}()
 

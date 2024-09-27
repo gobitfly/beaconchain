@@ -16,7 +16,7 @@ import (
 func Run() {
 	fs := flag.NewFlagSet("fs", flag.ExitOnError)
 
-	configFlag := fs.String("config", "config.yml", "path to config")
+	configFlag := fs.String("config", "", "path to config")
 	versionFlag := fs.Bool("version", false, "print version and exit")
 	_ = fs.Parse(os.Args[2:])
 	if *versionFlag {
@@ -31,7 +31,7 @@ func Run() {
 	if utils.Config.Metrics.Enabled {
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
-			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof); err != nil {
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
 				log.Fatal(err, "error serving metrics", 0)
 			}
 		}()

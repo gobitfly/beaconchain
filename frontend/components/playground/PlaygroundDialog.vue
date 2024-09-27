@@ -34,6 +34,7 @@ const validatorSub: NotificationSettingsValidatorDashboard = {
   group_offline_threshold: 0, // means "deactivated/unchecked"
   is_attestations_missed_subscribed: true,
   is_block_proposal_subscribed: true,
+  is_group_offline_subscribed: true,
   is_real_time_mode_enabled: false,
   is_slashed_subscribed: false,
   is_sync_subscribed: true,

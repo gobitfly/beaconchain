@@ -64,6 +64,7 @@ export default defineNuxtConfig({
     ],
     '@primevue/nuxt-module',
     '@nuxt/eslint',
+    '@vueuse/nuxt',
   ],
   nitro: { compressPublicAssets: true },
   postcss: { plugins: { autoprefixer: {} } },
@@ -78,6 +79,7 @@ export default defineNuxtConfig({
       apiClient: process.env.PUBLIC_API_CLIENT,
       apiKey: process.env.PUBLIC_API_KEY,
       chainIdByDefault: process.env.PUBLIC_CHAIN_ID_BY_DEFAULT,
+      deploymentType: process.env.PUBLIC_DEPLOYMENT_TYPE,
       domain: process.env.PUBLIC_DOMAIN,
       gitVersion,
       legacyApiClient: process.env.PUBLIC_LEGACY_API_CLIENT,
@@ -107,9 +109,6 @@ export default defineNuxtConfig({
           commonjs(),
         ],
       },
-    },
-    esbuild: {
-      drop: [ 'console' ],
     },
   },
 })
