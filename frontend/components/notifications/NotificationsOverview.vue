@@ -100,9 +100,9 @@ const emit = defineEmits<{
           {{ $t('notifications.overview.headers.most_notifications_30d') }}
         </h3>
         <div class="lists-container">
-          <h4 class="bc-screenreader-only">
+          <BcScreenreaderOnly tag="h4">
             {{ $t('notifications.overview.headers.validator_groups') }}
-          </h4>
+          </BcScreenreaderOnly>
           <ol class="icon-list">
             <li v-for="group in vdbMostNotifiedGroups" :key="group" class="small_text list-item">
               <FontAwesomeIcon :icon="faDesktop" />
@@ -112,9 +112,9 @@ const emit = defineEmits<{
             </li>
           </ol>
           <BcFeatureFlag feature="feature-account_dashboards">
-            <h4 class="bc-screenreader-only">
+            <BcScreenreaderOnly tag="h4">
               {{ $t('notifications.overview.headers.account_groups') }}
-            </h4>
+            </BcScreenreaderOnly>
             <ol
               class="icon-list"
             >
