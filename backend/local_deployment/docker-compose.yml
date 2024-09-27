@@ -34,7 +34,7 @@ services:
     <<: *default-service
     command: go run ./cmd api -config /app/backend/local_deployment/config.yml
   frontend:
-    image: ghcr.io/gobitfly/beaconchain_frontend:main
+    image: ghcr.io/gobitfly/beaconchain_frontend:staging
     network_mode: "host"
     environment:
       - NUXT_PUBLIC_API_CLIENT="http://local.beaconcha.in:8080/api/i/"
