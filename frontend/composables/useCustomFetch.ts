@@ -7,8 +7,7 @@ import {
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
 
-const pathNames = Object.values(API_PATH)
-type PathName = (typeof pathNames)[number]
+type PathName = API_PATH
 
 export function useCustomFetch() {
   const headers = useRequestHeaders([ 'cookie' ])
@@ -24,7 +23,6 @@ export function useCustomFetch() {
   const uuid = inject<{ value: string }>('app-uuid')
   async function fetch<T>(
     pathName: PathName,
-    // eslint-disable-next-line @typescript-eslint/ban-types
     options: NitroFetchOptions<{} & string> = {},
     pathValues?: PathValues,
     query?: PathValues,

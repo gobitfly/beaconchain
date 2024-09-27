@@ -13,12 +13,12 @@ import type {
 } from '~/types/validator'
 import { sortSummaryValidators } from '~/utils/dashboard/validator'
 import { API_PATH } from '~/types/customFetch'
-import {
-  type GetValidatorDashboardSummaryValidatorsResponse,
-  type VDBGroupSummaryData,
-  type VDBSummaryTableRow,
-  type VDBSummaryValidator,
-  type VDBSummaryValidatorsData,
+import type {
+  GetValidatorDashboardSummaryValidatorsResponse,
+  VDBGroupSummaryData,
+  VDBSummaryTableRow,
+  VDBSummaryValidator,
+  VDBSummaryValidatorsData,
 } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useTranslation()

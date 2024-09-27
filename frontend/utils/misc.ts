@@ -1,4 +1,4 @@
-export const addUpValues = (obj?: Record<string, number>): number => {
+export const addUpValues = <T extends object>(obj?: T): number => {
   if (!obj) {
     return 0
   }

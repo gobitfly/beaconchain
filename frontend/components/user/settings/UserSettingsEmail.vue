@@ -52,7 +52,7 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
     })
     resetForm()
   }
-  catch (error) {
+  catch {
     toast.showError({
       detail: $t('user_settings.email.error.toast_message'),
       group: $t('user_settings.email.error.toast_group'),

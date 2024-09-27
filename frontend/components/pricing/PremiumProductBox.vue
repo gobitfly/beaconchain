@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { type PremiumProduct } from '~/types/api/user'
+import type { PremiumProduct } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
 import type { Feature } from '~/types/pricing'
 
@@ -71,20 +71,20 @@ const percentages = computed(() => {
   if (props.product.premium_perks.chart_history_seconds) {
     chartPercent
       = (props.product.premium_perks.chart_history_seconds.hourly
-      / bestProduct.premium_perks.chart_history_seconds.hourly)
-      * 100
+        / bestProduct.premium_perks.chart_history_seconds.hourly)
+        * 100
   }
   return {
     heatmapChart: chartPercent,
     summaryChart: chartPercent,
     validatorDashboards:
       (props.product.premium_perks.validator_dashboards
-      / bestProduct.premium_perks.validator_dashboards)
-      * 100,
+        / bestProduct.premium_perks.validator_dashboards)
+        * 100,
     validatorsPerDashboard:
       (props.product.premium_perks.validators_per_dashboard
-      / bestProduct.premium_perks.validators_per_dashboard)
-      * 100,
+        / bestProduct.premium_perks.validators_per_dashboard)
+        * 100,
   }
 })
 

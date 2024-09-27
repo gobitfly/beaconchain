@@ -1,4 +1,4 @@
-import { type ChartHistorySeconds } from '~/types/api/common'
+import type { ChartHistorySeconds } from '~/types/api/common'
 
 export const SummaryDetailsEfficiencyProps = [
   'attestations_head',

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { type ComposerTranslation } from 'vue-i18n'
+import type { ComposerTranslation } from 'vue-i18n'
 import { BigNumber } from '@ethersproject/bignumber'
 import type {
   RewardChartGroupData,
@@ -81,7 +81,7 @@ const data = computed<Series[]>(() => {
     value: `${
       props
         .weiToValue(props.series[1].bigData[props.dataIndex]
-        .add(props.series[0].bigData[props.dataIndex])).label
+          .add(props.series[0].bigData[props.dataIndex])).label
     }`,
   }
   return [

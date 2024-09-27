@@ -93,10 +93,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       {
         paired_device_id: id,
       },
-    ).then(() => {
-      // using optimistic ui here to avoid calling the api after put
-      settings.value.paired_devices
-    })
+    )
   }
 
   return {

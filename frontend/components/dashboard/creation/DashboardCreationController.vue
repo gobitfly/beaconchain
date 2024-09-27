@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { type DashboardType } from '~/types/dashboard'
-import {
-  type DashboardCreationDisplayMode,
-  type DashboardCreationState,
+import type { DashboardType } from '~/types/dashboard'
+import type {
+  DashboardCreationDisplayMode,
+  DashboardCreationState,
 } from '~/types/dashboard/creation'
-import { type ChainIDs } from '~/types/network'
+import type { ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
 const {

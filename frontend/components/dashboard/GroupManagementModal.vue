@@ -155,7 +155,9 @@ const removeGroup = (row: VDBOverviewGroup) => {
     },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
-      response?.data && removeGroupConfirmed(row)
+      if (response?.data) {
+        removeGroupConfirmed(row)
+      }
     },
   })
 }

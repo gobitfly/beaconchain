@@ -93,7 +93,7 @@ watch(debouncer.value as Ref<SettingsWithContext>, async (value) => {
   try {
     await saveUserSettings(value)
   }
-  catch (error) {
+  catch {
     toast.showError({
       detail: $t('notifications.subscriptions.error_message'),
       group: $t('notifications.subscriptions.error_group'),
@@ -200,7 +200,7 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
               })
               closeCallback()
             }
-            catch (error) {
+            catch {
               toast.showError({
                 detail: $t('notifications.subscriptions.error_message'),
                 group: $t('notifications.subscriptions.error_group'),

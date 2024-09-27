@@ -76,7 +76,7 @@ const addonSubscriptionCount = computed(() => {
       sub =>
         sub.product_category === ProductCategoryPremiumAddon
         && (sub.product_id === props.addon.product_id_monthly
-        || sub.product_id === props.addon.product_id_yearly),
+          || sub.product_id === props.addon.product_id_yearly),
     ).length || 0
   )
 })
@@ -125,8 +125,8 @@ const addonButton = computed(() => {
 const maximumQuantity = computed(() => {
   return Math.floor(
     ((props.maximumValidatorLimit || 10000)
-    - (user.value?.premium_perks.validators_per_dashboard || 0))
-    / props.addon.extra_dashboard_validators,
+      - (user.value?.premium_perks.validators_per_dashboard || 0))
+      / props.addon.extra_dashboard_validators,
   )
 })
 

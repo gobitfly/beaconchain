@@ -138,10 +138,10 @@ const isOptionValueKnownInDB = (key: keyof AllOptions) =>
   originalSettings[key] !== undefined
   && originalSettings[key] !== null
   && (typeof originalSettings[key] !== 'number'
-  || (originalSettings[key] as number) > 0
-  || isOptionActivatedInDB(key))
-  && (!Array.isArray(originalSettings[key])
-  || !!(originalSettings[key] as Array<any>).length)
+    || (originalSettings[key] as number) > 0
+    || isOptionActivatedInDB(key))
+    && (!Array.isArray(originalSettings[key])
+      || !!(originalSettings[key] as Array<any>).length)
 const isOptionActivatedInDB = (key: keyof AllOptions) =>
   RowsWhoseCheckBoxIsInASeparateField.has(key)
     ? !!originalSettings[RowsWhoseCheckBoxIsInASeparateField.get(key)!]

@@ -1,5 +1,5 @@
 /* eslint-disable vue/max-len -- TODO:   plz fix this */
-import { type ModelRef } from 'vue'
+import type { ModelRef } from 'vue'
 
 export interface BridgeRef<T> extends Ref<T> {
   pauseBridgeFromNowOn: () => void,

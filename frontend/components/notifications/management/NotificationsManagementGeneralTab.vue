@@ -62,7 +62,7 @@ const sendTestNotification = async (type: 'email' | 'push') => {
         : API_PATH.NOTIFICATIONS_TEST_PUSH,
     )
   }
-  catch (error) {
+  catch {
     toast.showError({
       detail: $t('notifications.general.test_notification_error.toast_message'),
       group: $t('notifications.general.test_notification_error.toast_group'),

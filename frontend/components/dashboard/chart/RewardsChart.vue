@@ -22,11 +22,11 @@ import {
   getRewardChartColors,
   getRewardsChartLineColor,
 } from '~/utils/colors'
-import { type GetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
-import { type ChartData } from '~/types/api/common'
-import {
-  type RewardChartGroupData,
-  type RewardChartSeries,
+import type { GetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
+import type { ChartData } from '~/types/api/common'
+import type {
+  RewardChartGroupData,
+  RewardChartSeries,
 } from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'

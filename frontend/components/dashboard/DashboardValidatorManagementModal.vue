@@ -328,7 +328,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
-      response?.data && removeValidators(list)
+      if (response?.data) {
+        removeValidators(list)
+      }
     },
   })
 }

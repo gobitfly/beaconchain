@@ -38,7 +38,7 @@ export function useNotificationsClientStore() {
 
       data.value = result
     }
-    catch (e) {
+    catch {
       data.value = undefined
       isLoading.value = false
     }
@@ -50,8 +50,8 @@ export function useNotificationsClientStore() {
   })
 
   watch(query, (q) => {
-    if (q) {
-      isLoggedIn.value && loadClientsNotifications(q)
+    if (q && isLoggedIn.value) {
+      loadClientsNotifications(q)
     }
   }, { immediate: true })
 

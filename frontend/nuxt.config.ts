@@ -20,7 +20,7 @@ try {
     gitVersion = info.hash
   }
 }
-catch (err) {
+catch {
   warn(
     'The GitHub tag and hash of the explorer cannot be read with git-describe.',
   )

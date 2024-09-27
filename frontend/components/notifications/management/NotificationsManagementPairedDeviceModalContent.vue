@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { faTrash } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { type NotificationPairedDevice } from '~/types/api/notifications'
+import type { NotificationPairedDevice } from '~/types/api/notifications'
 
 const { t: $t } = useTranslation()
 

@@ -50,7 +50,7 @@ const onSubmit = handleSubmit(async (values) => {
       await navigateTo('/')
     }
   }
-  catch (error) {
+  catch {
     password.value = ''
     toast.showError({
       detail: $t('login_and_register.error_login_message'),

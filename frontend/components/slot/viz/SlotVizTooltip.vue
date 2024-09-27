@@ -4,7 +4,7 @@ import type {
   VDBSlotVizSlot,
   VDBSlotVizStatus,
 } from '~/types/api/slot_viz'
-import { type SlotVizIcons } from '~/types/dashboard/slotViz'
+import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
 type RowDuty = {
   duty_object?: number,

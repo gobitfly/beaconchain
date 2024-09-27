@@ -1,10 +1,10 @@
 /* eslint-disable vue/max-len -- TODO:   plz fix this */
 import type { ComposerTranslation } from 'vue-i18n'
 import type { ChainIDs } from '~/types/network'
-import {
-  type ApiErrorResponse,
-  type InternalPostSearchResponse,
-  type SearchResult,
+import type {
+  ApiErrorResponse,
+  InternalPostSearchResponse,
+  SearchResult,
 } from '~/types/api/common'
 
 export const MinimumTimeBetweenAPIcalls = 400 // ms

@@ -3,7 +3,7 @@ import { warn } from 'vue'
 import { faCopy } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Paging } from '~/types/api/common'
-import { type Cursor } from '~/types/datatable'
+import type { Cursor } from '~/types/datatable'
 import type { ValidatorSubsetCategory } from '~/types/validator'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 

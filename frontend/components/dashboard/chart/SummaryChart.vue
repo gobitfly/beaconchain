@@ -5,7 +5,7 @@ import {
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
-import { type ECharts } from 'echarts'
+import type { ECharts } from 'echarts'
 import { get } from 'lodash-es'
 import {
   DataZoomComponent,
@@ -20,7 +20,7 @@ import {
   getChartTooltipBackgroundColor,
   getSummaryChartGroupColors,
 } from '~/utils/colors'
-import { type GetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
+import type { GetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatTsToTime } from '~/utils/format'
 import { API_PATH } from '~/types/customFetch'
@@ -215,7 +215,7 @@ const loadData = async () => {
       })
     }
   }
-  catch (e) {
+  catch {
     if (currentCounter !== reloadCounter) {
       return // make sure we only use the data from the latest call
     }

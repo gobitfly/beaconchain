@@ -61,7 +61,7 @@ const data = computed(() => {
   ) {
     const tooltip: { text: string,
       title: string, } | undefined = $tm(
-      `dashboard.validator.tooltip.${props.property}`,
+        `dashboard.validator.tooltip.${props.property}`,
       )
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
 

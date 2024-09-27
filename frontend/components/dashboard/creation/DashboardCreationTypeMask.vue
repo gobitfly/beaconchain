@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { type DashboardType } from '~/types/dashboard'
+import type { DashboardType } from '~/types/dashboard'
 import {
   IconAccount, IconValidator,
 } from '#components'

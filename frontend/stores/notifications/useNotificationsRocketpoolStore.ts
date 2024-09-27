@@ -54,8 +54,8 @@ export function useNotificationsRocketpoolStore() {
   //
 
   watch([ query ], ([ q ]) => {
-    if (q) {
-      isLoggedIn.value && loadRocketpoolNotifications(q)
+    if (q && isLoggedIn.value) {
+      loadRocketpoolNotifications(q)
     }
   },
   { immediate: true },

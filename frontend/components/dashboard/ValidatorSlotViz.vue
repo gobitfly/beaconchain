@@ -33,7 +33,7 @@ watch(
     if (
       oldValue
       && (newValue[0] !== oldValue[0]
-      || (newValue[1] as number[]).length !== (oldValue[1] as number[]).length)
+        || (newValue[1] as number[]).length !== (oldValue[1] as number[]).length)
     ) {
       resetTick()
     }

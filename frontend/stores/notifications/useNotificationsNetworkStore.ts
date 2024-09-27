@@ -38,7 +38,7 @@ export function useNotificationsNetworkStore() {
 
       data.value = result
     }
-    catch (e) {
+    catch {
       data.value = undefined
       isLoading.value = false
     }
@@ -50,8 +50,8 @@ export function useNotificationsNetworkStore() {
   })
 
   watch(query, (q) => {
-    if (q) {
-      isLoggedIn.value && loadNetworkNotifications(q)
+    if (q && isLoggedIn.value) {
+      loadNetworkNotifications(q)
     }
   }, { immediate: true })
 

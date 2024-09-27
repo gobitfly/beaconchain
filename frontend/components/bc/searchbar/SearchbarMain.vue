@@ -320,8 +320,8 @@ function userFiltersChanged() {
   // if the scope did not widen, we simply update the list of result suggestions shown to the user
   if (
     (!differentialRequests
-    || nextSearchScope.networks.size + nextSearchScope.categories.size === 0)
-    && globalState.value.state !== States.Error
+      || nextSearchScope.networks.size + nextSearchScope.categories.size === 0)
+      && globalState.value.state !== States.Error
   ) {
     refreshOutputArea()
   }
@@ -482,7 +482,7 @@ async function callAPIthenOrganizeResultsThenCallBack(nonceWhenCalled: number) {
       method: 'POST',
     })
   }
-  catch (error) {
+  catch {
     received = undefined
   }
   if (userInputNonce !== nonceWhenCalled) {
@@ -525,8 +525,8 @@ function filterAndOrganizeResults() {
     const category = TypeInfo[toBeAdded.type].category
     if (
       (toBeAdded.chainId !== ChainIDs.Any
-      && !userInputNetworks.value.has(toBeAdded.chainId))
-      || !userInputCategories.value.has(category)
+        && !userInputNetworks.value.has(toBeAdded.chainId))
+        || !userInputCategories.value.has(category)
     ) {
       continue
     }
@@ -685,8 +685,8 @@ function convertSingleAPIresultIntoResultSuggestion(
     }
     if (
       (SearchbarPurposeInfo[props.barPurpose].askAPItoCountResults
-      && isNaN(count))
-      || count <= 0
+        && isNaN(count))
+        || count <= 0
     ) {
       warn(
         'The API returned a search-ahead result of type ',

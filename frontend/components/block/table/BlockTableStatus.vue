@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type BlockStatus } from '~/types/block'
+import type { BlockStatus } from '~/types/block'
 import type {
   TagColor, TagSize,
 } from '~/types/tag'
