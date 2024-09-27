@@ -9,15 +9,12 @@ import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 
+// TODO: get rid of this provider logic -> necessary for `<DashboardHeader`
 useDashboardKeyProvider('notifications')
-const { refreshDashboards } = useUserDashboardStore()
+
 const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
 const { t: $t } = useTranslation()
-
-await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
-
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 const manageNotificationsModalVisisble = ref(false)
 const tabKey = {
@@ -34,10 +31,8 @@ const tabs: HashTabs = [
     title: $t('notifications.tabs.dashboards'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faMonitorWaveform,
     key: tabKey.machines,
-    placeholder: 'Machines coming soon!',
     title: $t('notifications.tabs.machines'),
   },
   {
@@ -125,6 +120,11 @@ const openManageNotifications = () => {
         </template>
         <template #[getSlotName(tabKey.network)]>
           <NotificationsNetworkTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+        <template #[getSlotName(tabKey.machines)]>
+          <NotificationsMachinesTable
             @open-dialog="openManageNotifications"
           />
         </template>

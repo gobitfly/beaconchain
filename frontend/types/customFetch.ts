@@ -1,5 +1,4 @@
 import {
-  mockManageNotificationsGeneral,
   simulateAPIresponseAboutNetworkList,
   simulateAPIresponseForTheSearchBar,
 } from '~/utils/mock'
@@ -44,6 +43,9 @@ export enum API_PATH {
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
   NOTIFICATIONS_MACHINE = '/notifications/machines',
   NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/managementGeneral',
+  NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE = '/notifications/managementPairedDevicesDelete',
+  NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION = '/notifications/managementPairedDevicesSetNotification',
+  NOTIFICATIONS_MANAGEMENT_SAVE = '/notifications/managementSave',
   NOTIFICATIONS_NETWORK = '/notifications/networks',
   NOTIFICATIONS_OVERVIEW = '/notifications',
   NOTIFICATIONS_ROCKETPOOL = '/notifications/rocket-pool',
@@ -293,8 +295,22 @@ export const mapping: Record<string, MappingData> = {
     path: '/users/me/notifications/machines',
   },
   [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
-    mock: true,
-    mockFunction: mockManageNotificationsGeneral,
+    path: '/users/me/notifications/settings',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/paired-devices/${pathValues?.paired_device_id}`,
+    method: 'DELETE',
+    path: '/users/me/notifications/settings/paired-devices/{paired_device_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/paired-devices/${pathValues?.paired_device_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/paired-devices/{paired_device_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_SAVE]: {
+    method: 'PUT',
     path: '/users/me/notifications/settings/general',
   },
   [API_PATH.NOTIFICATIONS_NETWORK]: {
@@ -311,12 +327,10 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
     method: 'POST',
-    mock: true,
-    path: '/users/me/notifications/test-emails',
+    path: '/users/me/notifications/test-email',
   },
   [API_PATH.NOTIFICATIONS_TEST_PUSH]: {
     method: 'POST',
-    mock: true,
     path: '/users/me/notifications/test-push',
   },
   [API_PATH.NOTIFICATIONS_TEST_WEBHOOK]: {
