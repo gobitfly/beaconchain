@@ -331,6 +331,7 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		{http.MethodPut, "/settings/networks/{network}", hs.PublicPutUserNotificationSettingsNetworks, hs.InternalPutUserNotificationSettingsNetworks},
 		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", hs.PublicPutUserNotificationSettingsPairedDevices, hs.InternalPutUserNotificationSettingsPairedDevices},
 		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", hs.PublicDeleteUserNotificationSettingsPairedDevices, hs.InternalDeleteUserNotificationSettingsPairedDevices},
+		{http.MethodPut, "/settings/clients/{client_id}", hs.PublicPutUserNotificationSettingsClient, hs.InternalPutUserNotificationSettingsClient},
 		{http.MethodGet, "/settings/dashboards", hs.PublicGetUserNotificationSettingsDashboards, hs.InternalGetUserNotificationSettingsDashboards},
 		{http.MethodPost, "/test-email", hs.PublicPostUserNotificationsTestEmail, hs.InternalPostUserNotificationsTestEmail},
 		{http.MethodPost, "/test-push", hs.PublicPostUserNotificationsTestPush, hs.InternalPostUserNotificationsTestPush},
