@@ -9,6 +9,7 @@
     "NotificationsClientsTable",
     "NotificationsNetworkTable",
     "NotificationsOverview",
+    "a11y",
     "checkout",
     "ci",
     "customFetch",
