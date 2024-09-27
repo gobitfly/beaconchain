@@ -381,3 +381,34 @@ export function formatToPercent(value: NumberOrString, option?: { locale?: strin
     unit: 'percent',
   }).format(Number(value))
 }
+
+/**
+ * This should convert 0.2069 to 20%
+ */
+export function formatFractionToPercent(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value)
+  if (number >= 1) throw new Error('number has to be below 1 but was ' + number)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    style: 'unit',
+    unit: 'percent',
+  }).format(number * 100)
+}
+/**
+ * This should convert 0.2069 to 20
+ */
+export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value)
+  if (number >= 1) throw new Error('number has to be below 1 but was ' + number)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(number * 100)
+}
