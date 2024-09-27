@@ -24,6 +24,7 @@
     "notifications",
     "nuxt.config",
     "qrCode",
+    "scss",
     "useNotificationsOverviewStore",
     "useWindowSize",
     "vscode"
