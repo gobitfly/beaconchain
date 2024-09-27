@@ -110,8 +110,5 @@ export default defineNuxtConfig({
         ],
       },
     },
-    esbuild: {
-      drop: [ 'console' ],
-    },
   },
 })
