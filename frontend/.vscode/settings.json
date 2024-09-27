@@ -12,6 +12,7 @@
     "a11y",
     "checkout",
     "ci",
+    "csrf",
     "customFetch",
     "dialog",
     "eslint",
