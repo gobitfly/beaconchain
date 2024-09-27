@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"reflect"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -270,7 +269,7 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
 //	@Produce		json
-//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
+//	@Param			dashboard_id	path	integer	true	"The ID of the dashboard."
 //	@Success		204				"Dashboard deleted successfully."
 //	@Failure		400				{object}	types.ApiErrorResponse	"Bad Request"
 //	@Router			/validator-dashboards/{dashboard_id} [delete]
@@ -296,7 +295,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
+//	@Param			dashboard_id	path		integer												true	"The ID of the dashboard."
 //	@Param			request			body		handlers.PublicPutValidatorDashboardName.request	true	"request"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostReturnData]
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -335,7 +334,7 @@ func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, 
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
+//	@Param			dashboard_id	path		integer												true	"The ID of the dashboard."
 //	@Param			request			body		handlers.PublicPostValidatorDashboardGroups.request	true	"request"
 //	@Success		201				{object}	types.ApiDataResponse[types.VDBPostCreateGroupData]
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -399,8 +398,8 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path		string												true	"The ID of the dashboard."
-//	@Param			group_id		path		string												true	"The ID of the group."
+//	@Param			dashboard_id	path		integer												true	"The ID of the dashboard."
+//	@Param			group_id		path		integer												true	"The ID of the group."
 //	@Param			request			body		handlers.PublicPutValidatorDashboardGroups.request	true	"request"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostCreateGroupData]
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -452,8 +451,8 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
-//	@Param			group_id		path	string	true	"The ID of the group."
+//	@Param			dashboard_id	path	integer	true	"The ID of the dashboard."
+//	@Param			group_id		path	integer	true	"The ID of the group."
 //	@Success		204				"Group deleted successfully."
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id} [delete]
@@ -490,16 +489,15 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 
 // PublicGetValidatorDashboardGroups godoc
 //
-//	@Description	Add new validators to a specified dashboard or update the group of already-added validators.
+//	@Description	Add new validators to a specified dashboard or update the group of already-added validators. This endpoint will always add as many validators as possible, even if more validators are provided than allowed by the subscription plan. The response will contain a list of added validators.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys to add to the dashboard.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
+//	@Param			dashboard_id	path		integer													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators or update their group, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
 //	@Success		201				{object}	types.ApiDataResponse[[]types.VDBPostValidatorsData]	"Returns a list of added validators."
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their validator limit."
 //	@Router			/validator-dashboards/{dashboard_id}/validators [post]
 func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
@@ -511,7 +509,9 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		WithdrawalAddress string        `json:"withdrawal_address,omitempty"`
 		Graffiti          string        `json:"graffiti,omitempty"`
 	}
-	var req request
+	req := request{
+		GroupId: types.DefaultGroupId, // default value
+	}
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
@@ -520,11 +520,17 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, v)
 		return
 	}
+	groupId := req.GroupId
 	// check if exactly one of validators, deposit_address, withdrawal_address, graffiti is set
-	fields := []interface{}{req.Validators, req.DepositAddress, req.WithdrawalAddress, req.Graffiti}
+	nilFields := []bool{
+		req.Validators == nil,
+		req.DepositAddress == "",
+		req.WithdrawalAddress == "",
+		req.Graffiti == "",
+	}
 	var count int
-	for _, set := range fields {
-		if !reflect.ValueOf(set).IsZero() {
+	for _, isNil := range nilFields {
+		if !isNil {
 			count++
 		}
 	}
@@ -536,7 +542,6 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 
-	groupId := req.GroupId
 	ctx := r.Context()
 	groupExists, err := h.dai.GetValidatorDashboardGroupExists(ctx, dashboardId, groupId)
 	if err != nil {
@@ -557,11 +562,23 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	limit := userInfo.PremiumPerks.ValidatorsPerDashboard
 	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
-		returnConflict(w, r, errors.New("bulk adding not allowed with current subscription plan"))
+		returnForbidden(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
+	dashboardLimit := userInfo.PremiumPerks.ValidatorsPerDashboard
+	existingValidatorCount, err := h.dai.GetValidatorDashboardValidatorsCount(ctx, dashboardId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var limit uint64
+	if isUserAdmin(userInfo) {
+		limit = math.MaxUint32 // no limit for admins
+	} else if dashboardLimit >= existingValidatorCount {
+		limit = dashboardLimit - existingValidatorCount
+	}
+
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
@@ -576,15 +593,8 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, err)
 			return
 		}
-		// check if adding more validators than allowed
-		existingValidatorCount, err := h.dai.GetValidatorDashboardExistingValidatorCount(ctx, dashboardId, validators)
-		if err != nil {
-			handleErr(w, r, err)
-			return
-		}
-		if uint64(len(validators)) > existingValidatorCount+limit {
-			returnConflict(w, r, fmt.Errorf("adding more validators than allowed, limit is %v new validators", limit))
-			return
+		if len(validators) > int(limit) {
+			validators = validators[:limit]
 		}
 		data, dataErr = h.dai.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
 
@@ -630,7 +640,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			group_id		query		integer	false	"The ID of the group."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(index, public_key, balance, status, withdrawal_credentials)
 //	@Param			search			query		string	false	"Search for Address, ENS."
@@ -671,7 +681,7 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path	string														true	"The ID of the dashboard."
+//	@Param			dashboard_id	path	integer														true	"The ID of the dashboard."
 //	@Param			request			body	handlers.PublicDeleteValidatorDashboardValidators.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
 //	@Success		204				"Validators removed successfully."
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -687,7 +697,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, r, err)
 		return
 	}
-	indices, publicKeys := v.checkValidators(req.Validators, false)
+	indices, publicKeys := v.checkValidators(req.Validators, forbidEmpty)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -713,7 +723,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			dashboard_id	path		integer													true	"The ID of the dashboard."
 //	@Param			request			body		handlers.PublicPostValidatorDashboardPublicIds.request	true	"`name`: Provide a public name for the dashboard<br>`share_settings`:<ul><li>`share_groups`: If set to `true`, accessing the dashboard through the public ID will not reveal any group information.</li></ul>"
 //	@Success		201				{object}	types.ApiDataResponse[types.VDBPublicId]
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -767,7 +777,7 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
+//	@Param			dashboard_id	path		integer													true	"The ID of the dashboard."
 //	@Param			public_id		path		string													true	"The ID of the public ID."
 //	@Param			request			body		handlers.PublicPutValidatorDashboardPublicId.request	true	"`name`: Provide a public name for the dashboard<br>`share_settings`:<ul><li>`share_groups`: If set to `true`, accessing the dashboard through the public ID will not reveal any group information.</li></ul>"
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPublicId]
@@ -822,7 +832,7 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
 //	@Produce		json
-//	@Param			dashboard_id	path	string	true	"The ID of the dashboard."
+//	@Param			dashboard_id	path	integer	true	"The ID of the dashboard."
 //	@Param			public_id		path	string	true	"The ID of the public ID."
 //	@Success		204				"Public ID deleted successfully."
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -862,8 +872,8 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
-//	@Param			dashboard_id	path		string													true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"request"
+//	@Param			dashboard_id	path		integer													true	"The ID of the dashboard."
+//	@Param			request			body		handlers.PublicPutValidatorDashboardArchiving.request	true	"`is_archived`: Set to `true` to archive the dashboard, or `false` to unarchive it."
 //	@Success		200				{object}	types.ApiDataResponse[types.VDBPostArchivingReturnData]
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their subscription limit."
@@ -1018,7 +1028,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkEnumIsAllowed(&v, period, summaryAllowedPeriods, "period")
+	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1042,7 +1052,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		path		string	true	"The ID of the group."
+//	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
 //	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardGroupSummaryResponse
@@ -1065,7 +1075,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkEnumIsAllowed(&v, period, summaryAllowedPeriods, "period")
+	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1141,7 +1151,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			group_id		query		integer	false	"The ID of the group."
 //	@Param			duty			query		string	false	"Validator duty to get data for."	Enums(none, sync, slashed, proposal)	Default(none)
 //	@Param			period			query		string	true	"Time period to get data for."		Enums(all_time, last_30d, last_7d, last_24h, last_1h)
 //	@Success		200				{object}	types.GetValidatorDashboardSummaryValidatorsResponse
@@ -1160,7 +1170,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
 	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	checkEnumIsAllowed(&v, period, allowedPeriods, "period")
+	checkValueInAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1245,8 +1255,8 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		path		string	true	"The ID of the group."
-//	@Param			epoch			path		string	true	"The epoch to get data for."
+//	@Param			group_id		path		integer	true	"The ID of the group."
+//	@Param			epoch			path		integer	true	"The epoch to get data for."
 //	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Success		200				{object}	types.GetValidatorDashboardGroupRewardsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -1321,8 +1331,8 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			epoch			path		string	true	"The epoch to get data for."
-//	@Param			group_id		query		string	false	"The ID of the group."
+//	@Param			epoch			path		integer	true	"The epoch to get data for."
+//	@Param			group_id		query		integer	false	"The ID of the group."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
 //	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(validator, reward)
@@ -1459,8 +1469,8 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		path		string	true	"The ID of the group."
-//	@Param			timestamp		path		string	true	"The timestamp to get data for."
+//	@Param			group_id		path		integer	true	"The ID of the group."
+//	@Param			timestamp		path		integer	true	"The timestamp to get data for."
 //	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
 //	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
 //	@Success		200				{object}	types.GetValidatorDashboardGroupHeatmapResponse
@@ -1902,7 +1912,7 @@ func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *ht
 //	@Produce		json
 //	@Param			networks	query		string	false	"If set, results will be filtered to only include networks given. Provide a comma separated list."
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	" Enums(chain_id, timestamp, dashboard_id)
 //	@Param			search	query		string	false	"Search for Dashboard, Group"
 //	@Success		200		{object}	types.InternalGetUserNotificationDashboardsResponse
@@ -1930,7 +1940,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 	}
 	response := types.InternalGetUserNotificationDashboardsResponse{
 		Data:   data,
-		Paging: *paging,
+		Paging: *paging, //	@Param			epoch			path		strings
 	}
 	returnOk(w, r, response)
 }
@@ -1942,8 +1952,8 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		path		string	true	"The ID of the group."
-//	@Param			epoch			path		string	true	"The epoch of the notification."
+//	@Param			group_id		path		integer	true	"The ID of the group."
+//	@Param			epoch			path		integer	true	"The epoch of the notification."
 //	@Success		200				{object}	types.InternalGetUserNotificationsValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -1975,8 +1985,8 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		path		string	true	"The ID of the group."
-//	@Param			epoch			path		string	true	"The epoch of the notification."
+//	@Param			group_id		path		integer	true	"The ID of the group."
+//	@Param			epoch			path		integer	true	"The epoch of the notification."
 //	@Success		200				{object}	types.InternalGetUserNotificationsAccountDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -2008,7 +2018,7 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(machine_name, threshold, event_type, timestamp)
 //	@Param			search	query		string	false	"Search for Machine"
 //	@Success		200		{object}	types.InternalGetUserNotificationMachinesResponse
@@ -2047,7 +2057,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(client_name, timestamp)
 //	@Param			search	query		string	false	"Search for Client"
 //	@Success		200		{object}	types.InternalGetUserNotificationClientsResponse
@@ -2086,7 +2096,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
 //	@Param			search	query		string	false	"Search for TODO"
 //	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
@@ -2125,7 +2135,7 @@ func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWrit
 //	@Tags			Notifications
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type)
 //	@Param			search	query		string	false	"Search for TODO"
 //	@Success		200		{object}	types.InternalGetUserNotificationNetworksResponse
@@ -2189,7 +2199,7 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 //	@Tags			Notification Settings
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		types.NotificationSettingsGeneral	true	"Notification settings"
+//	@Param			request	body		types.NotificationSettingsGeneral	true	"Description TODO"
 //	@Success		200		{object}	types.InternalPutUserNotificationSettingsGeneralResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/general [put]
@@ -2210,7 +2220,6 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
 	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
 	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
-	// TODO: check validity of clients
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -2234,7 +2243,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 //	@Accept			json
 //	@Produce		json
 //	@Param			network	path		string								true	"The networks name or chain ID."
-//	@Param			request	body		types.NotificationSettingsNetwork	true	"Notification settings"
+//	@Param			request	body		types.NotificationSettingsNetwork	true	"Description Todo"
 //	@Success		200		{object}	types.InternalPutUserNotificationSettingsNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/networks/{network} [put]
@@ -2279,7 +2288,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 //	@Accept			json
 //	@Produce		json
 //	@Param			paired_device_id	path		string															true	"The paired device ID."
-//	@Param			request				body		handlers.PublicPutUserNotificationSettingsPairedDevices.request	true	"Notification settings"
+//	@Param			request				body		handlers.PublicPutUserNotificationSettingsPairedDevices.request	true	"Description TODO"
 //	@Success		200					{object}	types.InternalPutUserNotificationSettingsPairedDevicesResponse
 //	@Failure		400					{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/paired-devices/{paired_device_id} [put]
@@ -2354,6 +2363,49 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 	returnNoContent(w, r)
 }
 
+// PublicPutUserNotificationSettingsClient godoc
+//
+//	@Description	Update client notification settings for the authenticated user. When a client is subscribed, notifications will be sent when a new version is available.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Notification Settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			client_id	path		integer														true	"The ID of the client."
+//	@Param			request		body		handlers.PublicPutUserNotificationSettingsClient.request	true	"`is_subscribed`: Set to `true` to subscribe to notifications; set to `false` to unsubscribe."
+//	@Success		200			{object}	types.InternalPutUserNotificationSettingsClientResponse
+//	@Failure		400			{object}	types.ApiErrorResponse
+//	@Router			/users/me/notifications/settings/clients/{client_id} [put]
+func (h *HandlerService) PublicPutUserNotificationSettingsClient(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	type request struct {
+		IsSubscribed bool `json:"is_subscribed"`
+	}
+	var req request
+	if err := v.checkBody(&req, r); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	clientId := v.checkUint(mux.Vars(r)["client_id"], "client_id")
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, err := h.dai.UpdateNotificationSettingsClients(r.Context(), userId, clientId, req.IsSubscribed)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalPutUserNotificationSettingsClientResponse{
+		Data: *data,
+	}
+	returnOk(w, r, response)
+}
+
 // PublicGetUserNotificationSettingsDashboards godoc
 //
 //	@Description	Get a list of notification settings for the dashboards of the authenticated user.
@@ -2361,7 +2413,7 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 //	@Tags			Notification Settings
 //	@Produce		json
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		string	false	"The maximum number of results that may be returned."
+//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums	(dashboard_id, group_name)
 //	@Param			search	query		string	false	"Search for Dashboard, Group"
 //	@Success		200		{object}	types.InternalGetUserNotificationSettingsDashboardsResponse
@@ -2401,7 +2453,7 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string											true	"The ID of the dashboard."
-//	@Param			group_id		path		string											true	"The ID of the group."
+//	@Param			group_id		path		integer											true	"The ID of the group."
 //	@Param			request			body		types.NotificationSettingsValidatorDashboard	true	"Notification settings"
 //	@Success		200				{object}	types.InternalPutUserNotificationSettingsValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
@@ -2440,7 +2492,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		string																true	"The ID of the dashboard."
-//	@Param			group_id		path		string																true	"The ID of the group."
+//	@Param			group_id		path		integer																true	"The ID of the group."
 //	@Param			request			body		handlers.PublicPutUserNotificationSettingsAccountDashboard.request	true	"Notification settings"
 //	@Success		200				{object}	types.InternalPutUserNotificationSettingsAccountDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse

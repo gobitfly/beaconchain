@@ -64,6 +64,7 @@ export default defineNuxtConfig({
     ],
     '@primevue/nuxt-module',
     '@nuxt/eslint',
+    '@vueuse/nuxt',
   ],
   nitro: { compressPublicAssets: true },
   postcss: { plugins: { autoprefixer: {} } },
@@ -108,9 +109,6 @@ export default defineNuxtConfig({
           commonjs(),
         ],
       },
-    },
-    esbuild: {
-      drop: [ 'console' ],
     },
   },
 })

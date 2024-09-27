@@ -16,7 +16,7 @@ import (
 func Run() {
 	fs := flag.NewFlagSet("fs", flag.ExitOnError)
 
-	configFlag := fs.String("config", "config.yml", "path to config")
+	configFlag := fs.String("config", "", "path to config")
 	versionFlag := fs.Bool("version", false, "print version and exit")
 	_ = fs.Parse(os.Args[2:])
 	if *versionFlag {

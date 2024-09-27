@@ -1,7 +1,16 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import type { NuxtLinkProps } from '#app'
+
+defineProps<{
+  to: NuxtLinkProps['to'],
+}>()
+</script>
 
 <template>
-  <NuxtLink :no-prefetch="true">
+  <NuxtLink
+    :to
+    :no-prefetch="true"
+  >
     <template #default>
       <slot />
     </template>
