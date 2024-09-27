@@ -7,7 +7,6 @@ import (
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
-	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 )
 
@@ -53,9 +52,9 @@ func (d *DataAccessService) GetNamesAndEnsForAddresses(ctx context.Context, addr
 // helper function to sort and apply pagination to a query
 // 1st param is the list of all columns necessary to sort the table deterministically; it defines their precedence and sort direction
 // 2nd param is the requested sort column; it may or may not be part of the default columns
-func applySortAndPagination(defaultColumns []t.SortColumn, primary t.SortColumn, cursor t.GenericCursor) ([]exp.OrderedExpression, exp.Expression) {
+func applySortAndPagination(defaultColumns []types.SortColumn, primary types.SortColumn, cursor types.GenericCursor) ([]exp.OrderedExpression, exp.Expression) {
 	// prepare ordering columns; always need all columns to ensure consistent ordering
-	queryOrderColumns := make([]t.SortColumn, 0, len(defaultColumns))
+	queryOrderColumns := make([]types.SortColumn, 0, len(defaultColumns))
 	queryOrderColumns = append(queryOrderColumns, primary)
 	// secondary sorts according to default
 	for _, column := range defaultColumns {
@@ -66,10 +65,11 @@ func applySortAndPagination(defaultColumns []t.SortColumn, primary t.SortColumn,
 
 	// apply ordering
 	queryOrder := []exp.OrderedExpression{}
-	for _, column := range queryOrderColumns {
+	for i := range queryOrderColumns {
 		if cursor.IsReverse() {
-			column.Desc = !column.Desc
+			queryOrderColumns[i].Desc = !queryOrderColumns[i].Desc
 		}
+		column := queryOrderColumns[i]
 		colOrder := goqu.C(column.Column).Asc()
 		if column.Desc {
 			colOrder = goqu.C(column.Column).Desc()
@@ -83,17 +83,18 @@ func applySortAndPagination(defaultColumns []t.SortColumn, primary t.SortColumn,
 		// reverse order to nest conditions
 		for i := len(queryOrderColumns) - 1; i >= 0; i-- {
 			column := queryOrderColumns[i]
-
 			colWhere := goqu.C(column.Column).Gt(column.Offset)
 			if column.Desc {
 				colWhere = goqu.C(column.Column).Lt(column.Offset)
 			}
 
-			if i == len(queryOrderColumns)-1 {
-				queryWhere = colWhere
+			equal := goqu.C(column.Column).Eq(column.Offset)
+			if queryWhere == nil {
+				queryWhere = equal
 			} else {
-				queryWhere = goqu.Or(colWhere, goqu.And(goqu.C(column.Column).Eq(column.Offset), queryWhere))
+				queryWhere = goqu.And(equal, queryWhere)
 			}
+			queryWhere = goqu.Or(colWhere, queryWhere)
 		}
 	}
 

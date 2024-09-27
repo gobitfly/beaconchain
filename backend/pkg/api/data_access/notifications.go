@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/doug-martin/goqu/v9"
@@ -64,11 +65,15 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.I("uvd.name").As("dashboard_name"),
 			goqu.I("uvdg.id").As("group_id"),
 			goqu.I("uvdg.name").As("group_name"),
-			goqu.SUM("vnh.event_count"),
+			goqu.SUM("vnh.event_count").As("entity_count"),
 			goqu.L("ARRAY_AGG(DISTINCT event_type)").As("event_types"),
 		).
-		InnerJoin(goqu.T("users_val_dashboards").As("uvd"), goqu.On(goqu.Ex{"uvd.id": goqu.I("vnh.dashboard_id")})).
-		InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(goqu.Ex{"uvdg.id": goqu.I("vnh.group_id")})).
+		InnerJoin(goqu.T("users_val_dashboards").As("uvd"), goqu.On(
+			goqu.Ex{"uvd.id": goqu.I("vnh.dashboard_id")})).
+		InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+			goqu.Ex{"uvdg.id": goqu.I("vnh.group_id")},
+			goqu.Ex{"uvdg.dashboard_id": goqu.I("uvd.id")},
+		)).
 		Where(
 			goqu.Ex{"uvd.user_id": userId},
 			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
@@ -92,11 +97,16 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.I("uad.name").As("dashboard_name"),
 			goqu.I("uadg.id").As("group_id"),
 			goqu.I("uadg.name").As("group_name"),
-			goqu.SUM("anh.event_count"),
+			goqu.SUM("anh.event_count").As("entity_count"),
 			goqu.L("ARRAY_AGG(DISTINCT event_type)").As("event_types"),
 		).
-		InnerJoin(goqu.T("users_acc_dashboards").As("uad"), goqu.On(goqu.Ex{"uad.id": goqu.I("anh.dashboard_id")})).
-		InnerJoin(goqu.T("users_acc_dashboards_groups").As("uadg"), goqu.On(goqu.Ex{"uadg.id": goqu.I("anh.group_id")})).
+		InnerJoin(goqu.T("users_acc_dashboards").As("uad"), goqu.On(
+			goqu.Ex{"uad.id": goqu.I("anh.dashboard_id"),
+			})).
+		InnerJoin(goqu.T("users_acc_dashboards_groups").As("uadg"), goqu.On(
+			goqu.Ex{"uadg.id": goqu.I("anh.group_id"),
+			goqu.Ex{"uadg.dashboard_id": goqu.I("uad.id")},
+			})).
 		Where(
 			goqu.Ex{"uad.user_id": userId},
 			goqu.L("anh.network = ANY(?)", pq.Array(chainIds)),
@@ -134,7 +144,9 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	}
 	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
 	unionQuery = unionQuery.Order(order...)
-	unionQuery = unionQuery.Where(directions)
+	if directions != nil {
+		unionQuery = unionQuery.Where(directions)
+	}
 
 	// search
 	searchName := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
@@ -152,14 +164,37 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	if err != nil {
 		return nil, nil, err
 	}
-	err = d.alloyReader.GetContext(ctx, &response, query, args...)
+	//err = d.alloyReader.SelectContext(ctx, &response, query, args...)
+	rows, err := d.alloyReader.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var row t.NotificationDashboardsTableRow
+		err = rows.Scan(
+			&row.IsAccountDashboard,
+			&row.ChainId,
+			&row.Epoch,
+			&row.DashboardId,
+			&row.DashboardName,
+			&row.GroupId,
+			&row.GroupName,
+			&row.EntityCount,
+			pq.Array(&row.EventTypes),
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		response = append(response, row)
 	}
 
 	moreDataFlag := len(response) > int(limit)
 	if moreDataFlag {
 		response = response[:len(response)-1]
+	}
+	if currentCursor.IsReverse() {
+		slices.Reverse(response)
 	}
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// No paging required
