@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -181,13 +182,15 @@ const authHeaderPrefix = "Bearer "
 
 func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 	// TODO: store user id in context during ratelimting and use it here
-	var apiKey string
-	authHeader := r.Header.Get("Authorization")
-	if strings.HasPrefix(authHeader, authHeaderPrefix) {
-		apiKey = strings.TrimPrefix(authHeader, authHeaderPrefix)
-	} else {
-		apiKey = r.URL.Query().Get("api_key")
-	}
+	query := r.URL.Query()
+	header := r.Header
+	apiKey := cmp.Or(
+		strings.TrimPrefix(header.Get("Authorization"), authHeaderPrefix),
+		header.Get("X-Api-Key"),
+		query.Get("api_key"),
+		query.Get("apiKey"),
+		query.Get("apikey"),
+	)
 	if apiKey == "" {
 		return 0, newUnauthorizedErr("missing api key")
 	}

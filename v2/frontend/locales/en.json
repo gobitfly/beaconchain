@@ -33,6 +33,8 @@
     "contract": "Contract | Contracts",
     "current": "Current",
     "deselected": "Not selected",
+    "download_app_google": "Get our app on the app on the Google Play Store",
+    "download_app_ios": "Download our app on the App store",
     "earned": "Earned",
     "edit": "Edit",
     "email": "Email",
@@ -653,7 +655,10 @@
       },
       "paired_devices": {
         "device": "Device",
-        "grant_account_access": "Grant account access (required)",
+        "info_empty":{
+          "_link": "Click here to pair a device",
+          "template": "Currently there are no devices paired."
+        },
         "mobile_notifications": "Mobile notifications",
         "paired_date": "Paired: {date}",
         "title": "Paired Devices",
@@ -676,14 +681,28 @@
         "threshold": "Threshold"
       },
       "event_type": {
-        "is_machine_offline": "Machine is offline",
-        "machine_cpu_usage": "CPU overheated",
-        "machine_memory_usage": "High memory usage",
-        "machine_storage_usage": "No storage left"
+        "cpu_overheated": "CPU overheated",
+        "high_memory_usage": "High memory usage",
+        "machine_offline": "Machine is offline",
+        "no_storage": "No storage left"
       },
       "footer": {
         "subscriptions": "Machines (1 Subscription) |Machines ({count} Subscriptions)"
-      }
+      },
+      "search_placeholder": "Machine",
+      "settings": {
+        "check_out_knowlege_base": "Check out our Knowledge Base for a step by step tutorial:",
+        "cpu_usage": "CPU usage",
+        "info": "Currently there are no machines configured.",
+        "machine_offline": "Machine offline",
+        "memory_usage": "Memory usage",
+        "mobile_app_node_monitoring": "Mobile App Node Monitoring",
+        "storage_usage": "Storage usage",
+        "subscribe_to_premium_cpu": "Subscribe to premium to set a custom CPU threshold.",
+        "subscribe_to_premium_memory": "Subscribe to premium to set a custom memory threshold.",
+        "subscribe_to_premium_storage": "Subscribe to premium to set a custom storage threshold."
+      },
+      "title": "Machines"
     },
     "manage": "Manage Notifications",
     "management": {
@@ -696,7 +715,7 @@
         "participation_rate": "Participation rate < {_value}"
       },
       "footer": {
-        "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
+        "subscriptions": "Network ({count} Subscriptions)"
       },
       "title": "Network"
     },

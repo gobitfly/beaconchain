@@ -7,7 +7,6 @@ import {
   type SearchAheadAPIresponse,
   TypeInfo,
 } from '~/types/searchbar'
-import { type InternalGetUserNotificationSettingsResponse } from '~/types/api/notifications'
 
 const probabilityOfNoResultOrError = 0.0
 

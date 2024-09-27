@@ -12,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
@@ -92,6 +93,8 @@ func CheckMobileSubscriptions() {
 			}
 			updateValidationState(receipt, valid)
 		}
+
+		services.ReportStatus("app_subscriptions_check", "Running", nil)
 
 		log.InfoWithFields(log.Fields{"subscriptions": len(receipts), "duration": time.Since(start)}, "subscription update completed")
 		time.Sleep(time.Hour * 4)
