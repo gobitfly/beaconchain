@@ -27,7 +27,7 @@ export function levenshteinDistance(str1: string, str2: string): number {
       }
     }
   }
-  return dist[str1.length][str2.length]
+  return dist[str1.length]?[str2.length]
 }
 
 export function generateUUID() {

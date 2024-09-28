@@ -54,6 +54,9 @@ export default defineNuxtConfig({
   },
   devtools: { enabled: true },
   eslint: { config: { stylistic: true } },
+  future: {
+    compatibilityVersion: 4,
+  },
   i18n: { vueI18n: './i18n.config.ts' },
   modules: [
     '@nuxtjs/i18n',

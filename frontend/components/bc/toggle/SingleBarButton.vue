@@ -7,7 +7,7 @@ interface Props {
   disabled?: boolean,
   icon?: IconDefinition,
   layout: 'gaudy' | 'minimal',
-  selected: boolean,
+  selected?: boolean,
   subText?: string,
   text?: string,
   tooltip?: string,

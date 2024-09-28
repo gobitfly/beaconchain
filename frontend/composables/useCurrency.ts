@@ -80,6 +80,7 @@ export function useCurrency() {
     if (
       latestState.value
       && !available.value.includes(selectedCurrency.value)
+      && available.value[0]
     ) {
       selectedCurrency.value = available.value[0]
     }

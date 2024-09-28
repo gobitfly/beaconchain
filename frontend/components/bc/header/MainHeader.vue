@@ -43,7 +43,7 @@ const hideInDevelopmentClass = showInDevelopment
 const megaMenu = ref<null | typeof BcHeaderMegaMenu>(null)
 
 const rate = computed(() => {
-  if (isFiat(currency.value) && rates.value?.[currency.value]) {
+  if (currency.value && isFiat(currency.value) && rates.value?.[currency.value]) {
     return rates.value[currency.value]
   }
   else if (rates.value?.USD) {
@@ -128,6 +128,7 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
         <span v-if="rate">
           <span>
             <IconNetwork
+              v-if="currentNetwork"
               :chain-id="currentNetwork"
               class="network-icon"
               :harmonize-perceived-size="true"

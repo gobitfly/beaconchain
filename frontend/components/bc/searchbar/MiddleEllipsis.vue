@@ -739,7 +739,7 @@ function determineReason(
       'my gap changed (to be determined).',
       'my gap decreased.',
       'my gap increased.',
-    ][reason],
+    ][reason] ?? '',
     'Gaps:',
     gaps,
   )
@@ -1052,6 +1052,7 @@ function clipText(
   // first, we decide it over the first half of blocks
   let bLeft = 0
   let bRight = nBlocks - 1
+
   while (bLeft < symmAxis) {
     if (blocks[bLeft].visibleLength > blocks[bRight].visibleLength) {
       // we have a look at the opposite bloc, to try to create symmetry

@@ -151,7 +151,7 @@ const mapSeriesData = (data: RewardChartSeries, minUnit: CryptoUnits) => {
         minUnit,
       })
       data.formatedData[index] = formatted
-      const parsedValue = parseFloat(`${formatted.label}`.split(' ')[0])
+      const parsedValue = parseFloat(`${formatted.label}`.split(' ')[0] ?? '0')
       if (!isNaN(parsedValue)) {
         data.data[index] = parsedValue
       }

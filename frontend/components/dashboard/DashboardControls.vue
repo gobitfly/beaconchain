@@ -303,12 +303,12 @@ const deleteAction = async (
     }
 
     if ((preferedDashboards?.length ?? 0) > 0) {
-      setDashboardKey(`${preferedDashboards[0].id}`)
+      setDashboardKey(`${preferedDashboards[0]?.id}`)
       return
     }
 
     if ((fallbackDashboards.length ?? 0) > 0) {
-      await navigateTo(`${fallbackUrl}${fallbackDashboards[0].id}`)
+      await navigateTo(`${fallbackUrl}${fallbackDashboards[0]?.id}`)
       return
     }
   }

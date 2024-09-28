@@ -18,7 +18,7 @@ const refreshAd = () => {
   const ins = document.getElementById(containerId.value)?.firstElementChild
   ins?.removeAttribute('data-revive-loaded')
   ins?.removeAttribute('data-revive-seq')
-  window.reviveAsync?.[reviveId].refresh()
+  window.reviveAsync?.[reviveId]?.refresh()
 }
 const makeSureReviveIsInitiated = () => {
   const ins = document.getElementById(containerId.value)?.firstElementChild
@@ -28,7 +28,7 @@ const makeSureReviveIsInitiated = () => {
     && !ins.getAttribute('data-revive-seq')
     && !ins.getAttribute('data-revive-loaded')
   ) {
-    window.reviveAsync?.[reviveId].refresh()
+    window.reviveAsync?.[reviveId]?.refresh()
   }
 }
 

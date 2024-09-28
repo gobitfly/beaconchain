@@ -76,7 +76,7 @@ function show(
       type.value = 'account'
     }
   }
-  network.value = forcedNetwork || currentNetwork.value
+  network.value = (forcedNetwork || currentNetwork.value) ?? 0
   state.value = 'type'
   name.value = isLoggedIn.value ? '' : 'cookie'
 }
