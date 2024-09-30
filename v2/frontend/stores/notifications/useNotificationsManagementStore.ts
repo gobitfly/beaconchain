@@ -1,8 +1,10 @@
 import type {
   InternalGetUserNotificationSettingsResponse,
   InternalPutUserNotificationSettingsGeneralResponse,
+  InternalPutUserNotificationSettingsNetworksResponse,
   InternalPutUserNotificationSettingsPairedDevicesResponse,
   NotificationSettings,
+  NotificationSettingsNetwork,
 } from '~/types/api/notifications'
 import { API_PATH } from '~/types/customFetch'
 
@@ -28,23 +30,8 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         rocket_pool_max_collateral_threshold: 0,
         rocket_pool_min_collateral_threshold: 0,
       },
-      networks: [ {
-        chain_id: 0,
-        settings: {
-          gas_above_threshold: '0.0',
-          gas_below_threshold: '0.0',
-          is_gas_above_subscribed: false,
-          is_gas_below_subscribed: false,
-          is_participation_rate_subscribed: false,
-          participation_rate_threshold: 0,
-        },
-      } ],
-      paired_devices: [ {
-        id: '',
-        is_notifications_enabled: false,
-        name: '',
-        paired_timestamp: 0,
-      } ],
+      networks: [],
+      paired_devices: [],
     },
   )
 
@@ -55,11 +42,14 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         method: 'PUT',
       })
   }
+  const isLoadingGetSettings = ref(false)
   const getSettings = async () => {
+    isLoadingGetSettings.value = true
     const { data } = await fetch<InternalGetUserNotificationSettingsResponse>(
       API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL,
     )
     settings.value = data
+    isLoadingGetSettings.value = false
   }
 
   const removeDevice = async (id: string) => {
@@ -93,16 +83,34 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       {
         paired_device_id: id,
       },
-    ).then(() => {
-      // using optimistic ui here to avoid calling the api after put
-      settings.value.paired_devices
-    })
+    )
+  }
+  const setNotificationForNetwork = async ({
+    chain_id,
+    settings,
+  }: {
+    chain_id: string,
+    settings: NotificationSettingsNetwork,
+  }) => {
+    await fetch<InternalPutUserNotificationSettingsNetworksResponse>(
+      API_PATH.NOTIFICATIONS_MANAGEMENT_NETWORK_SET_NOTIFICATION,
+      {
+        body: {
+          ...settings,
+        },
+      },
+      {
+        network: chain_id,
+      },
+    )
   }
 
   return {
     getSettings,
+    isLoadingGetSettings,
     removeDevice,
     saveSettings,
+    setNotificationForNetwork,
     setNotificationForPairedDevice,
     settings,
   }

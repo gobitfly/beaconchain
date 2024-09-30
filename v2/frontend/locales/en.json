@@ -74,6 +74,7 @@
     "tx_batch": "Tx Batch | Tx Batches",
     "unavailable": "Unavailable",
     "units": {
+      "GWEI": "GWei",
       "per_day": "per day"
     },
     "upcoming": "Upcoming",
@@ -716,6 +717,12 @@
       },
       "footer": {
         "subscriptions": "Network ({count} Subscriptions)"
+      },
+      "settings": {
+        "alert_if_gas_above": "Alert if gas is above",
+        "alert_if_gas_below": "Alert if gas is below",
+        "alert_if_participation_rate_below": "Alert if participation rate is below",
+        "new_reward_round": "New reward round"
       },
       "title": "Network"
     },
