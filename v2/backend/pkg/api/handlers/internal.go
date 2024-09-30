@@ -609,6 +609,10 @@ func (h *HandlerService) InternalDeleteUserNotificationSettingsPairedDevices(w h
 	h.PublicDeleteUserNotificationSettingsPairedDevices(w, r)
 }
 
+func (h *HandlerService) InternalPutUserNotificationSettingsClient(w http.ResponseWriter, r *http.Request) {
+	h.PublicPutUserNotificationSettingsClient(w, r)
+}
+
 func (h *HandlerService) InternalGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetUserNotificationSettingsDashboards(w, r)
 }

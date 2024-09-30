@@ -30,6 +30,7 @@ type DataAccessor interface {
 	ProtocolRepository
 	RatelimitRepository
 	HealthzRepository
+	MachineRepository
 
 	StartDataAccessServices()
 	Close()

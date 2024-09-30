@@ -15,13 +15,13 @@ export function useCustomFetch() {
   const xForwardedFor = useRequestHeader('x-forwarded-for')
   const xRealIp = useRequestHeader('x-real-ip')
   const {
-    csrfHeader, setCsrfHeader,
+    setTokenCsrf,
+    tokenCsrf,
   } = useCsrfStore()
   const { showError } = useBcToast()
   const { t: $t } = useTranslation()
   const { $bcLogger } = useNuxtApp()
   const uuid = inject<{ value: string }>('app-uuid')
-
   async function fetch<T>(
     pathName: PathName,
     // eslint-disable-next-line @typescript-eslint/ban-types
@@ -100,8 +100,11 @@ export function useCustomFetch() {
 
     // For non GET method's we need to set the csrf header for security
     if (method !== 'GET') {
-      if (csrfHeader.value) {
-        options.headers.append(csrfHeader.value[0], csrfHeader.value[1])
+      if (tokenCsrf.value) {
+        options.headers = new Headers({
+          ...options.headers,
+          'x-csrf-token': tokenCsrf.value,
+        })
       }
       else {
         $bcLogger.warn(`${uuid?.value} | missing csrf header!`)
@@ -116,7 +119,6 @@ export function useCustomFetch() {
       })
       return res as T
     }
-
     try {
       const res = await $fetch.raw<T>(path, {
         baseURL,
@@ -125,7 +127,10 @@ export function useCustomFetch() {
       })
       if (method === 'GET') {
         // We get the csrf header from GET requests
-        setCsrfHeader(res.headers)
+        const tokenCsrf = res.headers.get('x-csrf-token')
+        if (tokenCsrf) {
+          setTokenCsrf(tokenCsrf)
+        }
       }
       return res._data as T
     }
@@ -141,5 +146,7 @@ export function useCustomFetch() {
     }
   }
 
-  return { fetch }
+  return {
+    fetch,
+  }
 }

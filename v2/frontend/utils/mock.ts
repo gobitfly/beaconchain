@@ -7,7 +7,6 @@ import {
   type SearchAheadAPIresponse,
   TypeInfo,
 } from '~/types/searchbar'
-import { type InternalGetUserNotificationSettingsResponse } from '~/types/api/notifications'
 
 const probabilityOfNoResultOrError = 0.0
 
@@ -438,44 +437,4 @@ export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<
     }
   }
   return result
-}
-
-export function mockManageNotificationsGeneral(): InternalGetUserNotificationSettingsResponse {
-  return {
-    data: {
-      general_settings: {
-        do_not_disturb_timestamp: 9000,
-        is_email_notifications_enabled: false,
-        is_machine_cpu_usage_subscribed: true,
-        is_machine_memory_usage_subscribed: true,
-        is_machine_offline_subscribed: true,
-        is_machine_storage_usage_subscribed: true,
-        is_push_notifications_enabled: true,
-        is_rocket_pool_max_collateral_subscribed: true,
-        is_rocket_pool_min_collateral_subscribed: true,
-        is_rocket_pool_new_reward_round_subscribed: true,
-        machine_cpu_usage_threshold: 40,
-        machine_memory_usage_threshold: 50,
-        machine_storage_usage_threshold: 80,
-        rocket_pool_max_collateral_threshold: 29823,
-        rocket_pool_min_collateral_threshold: 123,
-        subscribed_clients: [],
-      },
-      networks: [],
-      paired_devices: [
-        {
-          id: 'ABC-test',
-          is_notifications_enabled: true,
-          name: 'My device',
-          paired_timestamp: 1620000000,
-        },
-        {
-          id: 'DEF-test',
-          is_notifications_enabled: false,
-          name: 'My other device',
-          paired_timestamp: 1700000000,
-        },
-      ],
-    },
-  }
 }

@@ -32,7 +32,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
-	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager)
+	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager, !cfg.Frontend.DisableStatsInserts)
 
 	// store user id in context, if available
 	publicRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdByApiKey))
@@ -122,6 +122,8 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodPut, "/users/me/password", nil, hs.InternalPutUserPassword},
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 		{http.MethodPut, "/users/me/notifications/settings/paired-devices/{client_id}/token", nil, hs.InternalPostUsersMeNotificationSettingsPairedDevicesToken},
+
+		{http.MethodGet, "/users/me/machine-metrics", hs.PublicGetUserMachineMetrics, hs.InternalGetUserMachineMetrics},
 
 		{http.MethodPost, "/search", nil, hs.InternalPostSearch},
 
@@ -329,6 +331,7 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		{http.MethodPut, "/settings/networks/{network}", hs.PublicPutUserNotificationSettingsNetworks, hs.InternalPutUserNotificationSettingsNetworks},
 		{http.MethodPut, "/settings/paired-devices/{paired_device_id}", hs.PublicPutUserNotificationSettingsPairedDevices, hs.InternalPutUserNotificationSettingsPairedDevices},
 		{http.MethodDelete, "/settings/paired-devices/{paired_device_id}", hs.PublicDeleteUserNotificationSettingsPairedDevices, hs.InternalDeleteUserNotificationSettingsPairedDevices},
+		{http.MethodPut, "/settings/clients/{client_id}", hs.PublicPutUserNotificationSettingsClient, hs.InternalPutUserNotificationSettingsClient},
 		{http.MethodGet, "/settings/dashboards", hs.PublicGetUserNotificationSettingsDashboards, hs.InternalGetUserNotificationSettingsDashboards},
 		{http.MethodPost, "/test-email", hs.PublicPostUserNotificationsTestEmail, hs.InternalPostUserNotificationsTestEmail},
 		{http.MethodPost, "/test-push", hs.PublicPostUserNotificationsTestPush, hs.InternalPostUserNotificationsTestPush},

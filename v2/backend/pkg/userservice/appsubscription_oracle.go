@@ -11,6 +11,8 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
@@ -37,18 +39,21 @@ func CheckMobileSubscriptions() {
 		receipts, err := db.GetAllAppSubscriptions()
 
 		if err != nil {
+			metrics.Errors.WithLabelValues("appsub_verify_db_failed").Inc()
 			log.Error(err, "error retrieving subscription data from db: %v", 0, nil)
 			return
 		}
 
 		googleClient, err := initGoogle()
 		if googleClient == nil {
+			metrics.Errors.WithLabelValues("appsub_verify_initgoogle_failed").Inc()
 			log.Error(err, "error initializing google client: %v", 0, nil)
 			return
 		}
 
 		appleClient, err := initApple()
 		if err != nil {
+			metrics.Errors.WithLabelValues("appsub_verify_initapple_failed").Inc()
 			log.Error(err, "error initializing apple client: %v", 0, nil)
 			return
 		}
@@ -71,11 +76,14 @@ func CheckMobileSubscriptions() {
 				if strings.Contains(err.Error(), "expired") {
 					err = db.SetSubscriptionToExpired(nil, receipt.ID)
 					if err != nil {
+						metrics.Errors.WithLabelValues("appsub_verify_write_failed").Inc()
 						log.Error(err, "subscription set expired failed", 0, map[string]interface{}{"receiptID": receipt.ID})
 					}
 					continue
 				}
 				log.Warnf("subscription verification failed in service for [%v]: %v", receipt.ID, err)
+				metrics.Errors.WithLabelValues(fmt.Sprintf("appsub_verify_%s_failed", receipt.Store)).Inc()
+
 				continue
 			}
 
@@ -85,6 +93,8 @@ func CheckMobileSubscriptions() {
 			}
 			updateValidationState(receipt, valid)
 		}
+
+		services.ReportStatus("app_subscriptions_check", "Running", nil)
 
 		log.InfoWithFields(log.Fields{"subscriptions": len(receipts), "duration": time.Since(start)}, "subscription update completed")
 		time.Sleep(time.Hour * 4)

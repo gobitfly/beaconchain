@@ -5,39 +5,45 @@ import { type NotificationPairedDevice } from '~/types/api/notifications'
 
 const { t: $t } = useTranslation()
 
-interface Props {
+const props = defineProps<{
   device: NotificationPairedDevice,
-}
-const props = defineProps<Props>()
+}>()
 
-const notificationsToggle = ref(false)
-const accountAccessToggle = ref(false)
+const emit = defineEmits<{
+  (e: 'remove-device', id: string): void,
+  (e: 'toggle-notifications', {
+    id,
+    value,
+  }: {
+    id: string,
+    value: boolean,
+  }): void,
+}>()
+
+const hasNotifications = ref(props.device.is_notifications_enabled)
 </script>
 
 <template>
   <div class="row-container">
     <div class="device-row">
-      <div class="device">
+      <div class="device truncate-text">
         {{ $t("notifications.general.paired_devices.device") }}:
-        {{
-          props.device.name
-            || $t("notifications.general.paired_devices.unknown")
-        }}
+        {{ device.name || $t("notifications.general.paired_devices.unknown") }}
       </div>
       <Button
         severity="secondary"
-        class="p-button-icon-only"
+        class="p-button-icon-only margin-inline-start-small"
+        @click="emit('remove-device', device.id)"
       >
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
     </div>
     <div class="toggle-row">
-      <BcToggle v-model="notificationsToggle" />
+      <BcToggle
+        v-model="hasNotifications"
+        @update:model-value="emit('toggle-notifications', { id: device.id, value: $event })"
+      />
       {{ $t("notifications.general.paired_devices.mobile_notifications") }}
-    </div>
-    <div class="toggle-row">
-      <BcToggle v-model="accountAccessToggle" />
-      {{ $t("notifications.general.paired_devices.grant_account_access") }}
     </div>
     <div class="paired-row">
       {{
@@ -75,6 +81,9 @@ const accountAccessToggle = ref(false)
     @include fonts.small_text;
     color: var(--text-color-discreet);
     margin-top: var(--padding-small);
+  }
+  .margin-inline-start-small {
+    margin-inline-start: var(--padding-small);
   }
 }
 </style>

@@ -7,18 +7,8 @@ export function useWindowSize() {
   const width = computed(() => size?.width?.value ?? 2000)
   const height = computed(() => size?.height?.value ?? 2000)
 
-  const isMobile = computed(() => {
-    return (width.value ?? 0) <= 800
-  })
-
-  const isIPad = computed(() => {
-    return (width.value ?? 0) <= 1194
-  })
-
   return {
     height,
-    isIPad,
-    isMobile,
     width,
   }
 }
