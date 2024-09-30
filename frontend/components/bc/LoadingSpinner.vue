@@ -1,6 +1,7 @@
 <script setup lang="ts">
 interface Props {
   alignment?: 'center' | 'default',
+  hasBackdrop?: boolean,
   loading?: boolean,
   size?: 'full' | 'large' | 'medium' | 'small', // default = medium
 }
@@ -11,7 +12,11 @@ defineProps<Props>()
   <div
     v-if="loading !== false"
     class="spinning-container"
-    :class="[alignment]"
+    :class="{
+      'center': alignment === 'center',
+      'default': alignment === 'default',
+      'has-backdrop': hasBackdrop,
+    }"
   >
     <div
       class="spinner"
@@ -31,6 +36,8 @@ defineProps<Props>()
 
 .spinning-container {
   color: var(--primary-color);
+  position: relative;
+  z-index: 1;
 
   &.center {
     width: 100%;
@@ -48,6 +55,8 @@ defineProps<Props>()
 
   .spinner {
     display: inline-block;
+    position: absolute;
+    z-index: 2;
     width: 40px;
     height: 40px;
     vertical-align: text-bottom;
@@ -74,4 +83,7 @@ defineProps<Props>()
     }
   }
 }
+.has-backdrop {
+    backdrop-filter: blur(2px);
+  }
 </style>
