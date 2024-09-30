@@ -115,7 +115,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		Epoch        uint64              `db:"epoch"`
 		Slot         uint64              `db:"slot"`
 		Status       uint64              `db:"status"`
-		Block        sql.NullInt64       `db:"block"`
+		Block        sql.NullInt64       `db:"exec_block_number"`
 		FeeRecipient []byte              `db:"fee_recipient"`
 		ElReward     decimal.NullDecimal `db:"el_reward"`
 		ClReward     decimal.NullDecimal `db:"cl_reward"`
@@ -161,7 +161,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		params = append(params, currentCursor.Slot)
 		where += `WHERE (`
 		if onlyPrimarySort {
-			where += `slot` + sign + fmt.Sprintf(`$%d`, len(params))
+			where += `blocks.slot` + sign + fmt.Sprintf(`$%d`, len(params))
 		} else {
 			params = append(params, val)
 			secSign := ` < `
@@ -172,7 +172,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				// explicit cast to int because type of 'status' column is text for some reason
 				sortColName += "::int"
 			}
-			where += fmt.Sprintf(`(slot`+secSign+`$%d AND `+sortColName+` = $%d) OR `+sortColName+sign+`$%d`, len(params)-1, len(params), len(params))
+			where += fmt.Sprintf(`(blocks.slot`+secSign+`$%d AND `+sortColName+` = $%d) OR `+sortColName+sign+`$%d`, len(params)-1, len(params), len(params))
 		}
 		where += `) `
 	}
@@ -226,25 +226,30 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 	groupIdCol := "group_id"
 	// this is actually just used for sorting for "reward".. will not consider EL rewards of unfinalized blocks atm
-	reward := "reward"
+	// reward := "reward"
 	if dashboardId.Validators != nil {
 		groupIdCol = fmt.Sprintf("%d AS %s", t.DefaultGroupId, groupIdCol)
-		reward = "coalesce(rb.value / 1e18, ep.fee_recipient_reward) AS " + reward
+		// reward = "coalesce(rb.value / 1e18, ep.fee_recipient_reward) AS " + reward
 	}
 	selectFields := fmt.Sprintf(`
-		r.proposer,
+		blocks.proposer,
 		%s,
-		r.epoch,
-		r.slot,
-		r.status,
-		block,
+		blocks.epoch,
+		blocks.slot,
+		blocks.status,
+		exec_block_number,
 		COALESCE(rb.proposer_fee_recipient, blocks.exec_fee_recipient) AS fee_recipient,
 		COALESCE(rb.value / 1e18, ep.fee_recipient_reward) AS el_reward,
 		cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9 as cl_reward,
-		r.graffiti_text`, groupIdCol)
-	query := fmt.Sprintf(`SELECT distinct on (slot)
+		blocks.graffiti_text`, groupIdCol)
+	distinct := "slot"
+	if !onlyPrimarySort {
+		distinct = sortColName + ", " + distinct
+	}
+	query := fmt.Sprintf(`SELECT distinct on (%s)
 			%s
-		FROM ( SELECT * FROM (`, selectFields)
+		FROM blocks
+		`, distinct, selectFields)
 	// supply scheduled proposals, if any
 	if len(scheduledProposers) > 0 {
 		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
@@ -277,19 +282,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		UNION
 		(`, distinct, selectFields, len(params)-2, len(params)-1, len(params))
 	}
-	query += fmt.Sprintf(`
-	SELECT
-		proposer,
-		epoch,
-		blocks.slot,
-		status,
-		exec_block_number AS block,
-		%s,
-		graffiti_text
-	FROM blocks
-	`, reward)
 
-	if dashboardId.Validators == nil {
+	/*if dashboardId.Validators == nil {
 		query += `
 		LEFT JOIN cached_proposal_rewards ON cached_proposal_rewards.dashboard_id = $1 AND blocks.slot = cached_proposal_rewards.slot
 		`
@@ -304,32 +298,30 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if len(scheduledProposers) > 0 {
 		query += `)`
 	}
-	query += `) as u `
+	query += `) as u `*/
 	if dashboardId.Validators == nil {
 		query += fmt.Sprintf(`
 		INNER JOIN (%s) validators ON validators.validator_index = proposer
 		`, filteredValidatorsQuery)
 	} else {
-		query += `WHERE proposer = ANY($1) `
+		where += `WHERE proposer = ANY($1) `
 	}
 
 	params = append(params, limit+1)
 	limitStr := fmt.Sprintf(`
 		LIMIT $%d
 	`, len(params))
-	rewardsStr := `) r
-	LEFT JOIN consensus_payloads cp on r.slot = cp.slot
-	LEFT JOIN blocks on r.slot = blocks.slot
+	rewardsStr := `
+	LEFT JOIN consensus_payloads cp on blocks.slot = cp.slot
 	LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
 	LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
 	`
 	// relay bribe deduplication; select most likely (=max) relay bribe value for each block
-	relayOrder := ``
 	if colSort.Column != enums.VDBBlockProposerReward {
-		relayOrder += `,  rb.value ` + secSort
+		orderBy += `, rb.value ` + secSort
 	}
 	startTime := time.Now()
-	err = d.alloyReader.SelectContext(ctx, &proposals, query+where+orderBy+limitStr+rewardsStr+orderBy+relayOrder, params...)
+	err = d.alloyReader.SelectContext(ctx, &proposals, query+rewardsStr+where+orderBy+limitStr, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
