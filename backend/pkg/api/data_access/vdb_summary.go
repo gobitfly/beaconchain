@@ -474,12 +474,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 		// Efficiency
 		var totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency sql.NullFloat64
-		if !total.AttestationIdealRewargoqu.Dialect("postgres").
-		From("relays_blocks").
-		Select(
-			goqu.L("exec_block_hash"),
-			goqu.MAX("value").As("value")).
-		GroupBy("exec_block_hash").As("rb"),d.IsZero() {
+		if !total.AttestationIdealReward.IsZero() {
 			totalAttestationEfficiency.Float64 = total.AttestationReward.Div(total.AttestationIdealReward).InexactFloat64()
 			totalAttestationEfficiency.Valid = true
 		}
