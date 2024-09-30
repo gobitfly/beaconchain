@@ -157,6 +157,13 @@ export interface NotificationPairedDevice {
   is_notifications_enabled: boolean;
 }
 export type InternalPutUserNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationPairedDevice>;
+export interface NotificationSettingsClient {
+  id: number /* uint64 */;
+  name: string;
+  category: string;
+  is_subscribed: boolean;
+}
+export type InternalPutUserNotificationSettingsClientResponse = ApiDataResponse<NotificationSettingsClient>;
 export interface NotificationSettingsGeneral {
   do_not_disturb_timestamp: number /* int64 */; // notifications are disabled until this timestamp
   is_email_notifications_enabled: boolean;
@@ -168,7 +175,6 @@ export interface NotificationSettingsGeneral {
   machine_cpu_usage_threshold: number /* float64 */;
   is_machine_memory_usage_subscribed: boolean;
   machine_memory_usage_threshold: number /* float64 */;
-  subscribed_clients: string[];
   is_rocket_pool_new_reward_round_subscribed: boolean;
   is_rocket_pool_max_collateral_subscribed: boolean;
   rocket_pool_max_collateral_threshold: number /* float64 */;
@@ -180,6 +186,7 @@ export interface NotificationSettings {
   general_settings: NotificationSettingsGeneral;
   networks: NotificationNetwork[];
   paired_devices: NotificationPairedDevice[];
+  clients: NotificationSettingsClient[];
 }
 export type InternalGetUserNotificationSettingsResponse = ApiDataResponse<NotificationSettings>;
 export interface NotificationSettingsValidatorDashboard {

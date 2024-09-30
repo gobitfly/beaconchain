@@ -29,11 +29,12 @@ import (
 )
 
 type HandlerService struct {
-	dai dataaccess.DataAccessor
-	scs *scs.SessionManager
+	dai                         dataaccess.DataAccessor
+	scs                         *scs.SessionManager
+	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -43,8 +44,9 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 	}
 
 	return &HandlerService{
-		dai: dataAccessor,
-		scs: sessionManager,
+		dai:                         dataAccessor,
+		scs:                         sessionManager,
+		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
 }
 
@@ -525,14 +527,10 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
-func checkEnumIsAllowed[T enums.EnumFactory[T]](v *validationError, enum T, allowed []T, name string) {
-	if enums.IsInvalidEnum(enum) {
-		v.add(name, "parameter is missing or invalid, please check the API documentation")
-		return
-	}
+// better func name would be
+func checkValueInAllowed[T cmp.Ordered](v *validationError, value T, allowed []T, name string) {
 	for _, a := range allowed {
-		if enum.Int() == a.Int() {
+		if cmp.Compare(value, a) == 0 {
 			return
 		}
 	}
