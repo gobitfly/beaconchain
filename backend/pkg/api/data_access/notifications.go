@@ -44,6 +44,8 @@ type NotificationsRepository interface {
 const (
 	ValidatorDashboardEventPrefix string = "vdb"
 	AccountDashboardEventPrefix   string = "adb"
+
+	DiscordWebhookFormat string = "discord"
 )
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
@@ -149,11 +151,11 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				g.name AS group_name,
 				d.network,
 				g.webhook_target,
-				g.discord_webhook,
+				(g.webhook_format = $1) AS discord_webhook,
 				g.real_time_mode
 			FROM users_val_dashboards d
 			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
-			WHERE d.user_id = $1`, userId)
+			WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
 		}
@@ -182,12 +184,12 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// 			g.id AS group_id,
 	// 			g.name AS group_name,
 	// 			g.webhook_target,
-	// 			g.discord_webhook,
+	// 			(g.webhook_format = $1) AS discord_webhook,
 	// 			g.ignore_spam_transactions,
 	// 			g.subscribed_chain_ids
 	// 		FROM users_acc_dashboards d
 	// 		INNER JOIN users_acc_dashboards_groups g ON d.id = g.dashboard_id
-	// 		WHERE d.user_id = $1`, userId)
+	// 		WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
 	// 	if err != nil {
 	// 		return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
 	// 	}
@@ -501,9 +503,9 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 		UPDATE users_val_dashboards_groups 
 		SET 
 			webhook_target = NULLIF($1, ''),
-			discord_webhook = CASE WHEN $1 = '' THEN NULL ELSE $2 END,
-			real_time_mode = $3
-		WHERE dashboard_id = $4 AND id = $5`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, settings.IsRealTimeModeEnabled, dashboardId, groupId)
+			discord_webhook = CASE WHEN $2 THEN $3 ELSE NULL END,
+			real_time_mode = $4
+		WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsRealTimeModeEnabled, dashboardId, groupId)
 	if err != nil {
 		return err
 	}
@@ -581,10 +583,10 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 	// 	UPDATE users_acc_dashboards_groups
 	// 	SET
 	// 		webhook_target = NULLIF($1, ''),
-	// 		discord_webhook = CASE WHEN $1 = '' THEN NULL ELSE $2 END,
-	// 		ignore_spam_transactions = $3,
-	// 		subscribed_chain_ids = $4
-	// 	WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
+	// 		discord_webhook = CASE WHEN $2 THEN $3 ELSE NULL END,
+	// 		ignore_spam_transactions = $4,
+	// 		subscribed_chain_ids = $5
+	// 	WHERE dashboard_id = $6 AND id = $7`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
 	// if err != nil {
 	// 	return err
 	// }
