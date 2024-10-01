@@ -106,18 +106,6 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 	}
 
 	// -------------------------------------
-	// Subscribed clients events
-	_, err = tx.ExecContext(ctx, `DELETE FROM users_subscriptions WHERE user_id = $1 AND event_name = $2 AND NOT (event_filter = ANY($3))`,
-		userId, types.EthClientUpdateEventName, settings.SubscribedClients)
-	if err != nil {
-		return err
-	}
-
-	for _, client := range settings.SubscribedClients {
-		eventsToInsert = append(eventsToInsert, goqu.Record{"user_id": userId, "event_name": types.EthClientUpdateEventName, "event_filter": client, "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": 0})
-	}
-
-	// -------------------------------------
 	// Collect the machine and rocketpool events to set and delete
 
 	//Machine events
@@ -278,7 +266,43 @@ func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.C
 	return err
 }
 func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
-	return d.dummy.UpdateNotificationSettingsClients(ctx, userId, clientId, IsSubscribed)
+	result := &t.NotificationSettingsClient{Id: clientId, IsSubscribed: IsSubscribed}
+
+	var clientInfo *t.ClientInfo
+
+	clients, err := d.GetAllClients()
+	if err != nil {
+		return nil, err
+	}
+	for _, client := range clients {
+		if client.Id == clientId {
+			clientInfo = &client
+			break
+		}
+	}
+	if clientInfo == nil {
+		return nil, fmt.Errorf("client with id %d to update client notification settings not found", clientId)
+	}
+
+	if IsSubscribed {
+		_, err = d.userWriter.ExecContext(ctx, `
+			INSERT INTO users_subscriptions (user_id, event_name, event_filter, created_ts, created_epoch)
+				VALUES ($1, $2, $3, NOW(), $4)
+			ON CONFLICT (user_id, event_name, event_filter) 
+				DO NOTHING`,
+			userId, types.EthClientUpdateEventName, clientInfo.Name, utils.TimeToEpoch(time.Now()))
+	} else {
+		_, err = d.userWriter.ExecContext(ctx, `DELETE FROM users_subscriptions WHERE user_id = $1 AND event_name = $2 AND event_filter = $3`,
+			userId, types.EthClientUpdateEventName, clientInfo.Name)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	result.Name = clientInfo.Name
+	result.Category = clientInfo.Category
+
+	return result, nil
 }
 func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	return d.dummy.GetNotificationSettingsDashboards(ctx, userId, cursor, colSort, search, limit)
