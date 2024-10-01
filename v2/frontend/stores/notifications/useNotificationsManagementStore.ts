@@ -42,14 +42,10 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         method: 'PUT',
       })
   }
-  const isLoadingGetSettings = ref(false)
-  const getSettings = async () => {
-    isLoadingGetSettings.value = true
-    const { data } = await fetch<InternalGetUserNotificationSettingsResponse>(
+  const getSettings = () => {
+    return fetch<InternalGetUserNotificationSettingsResponse>(
       API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL,
     )
-    settings.value = data
-    isLoadingGetSettings.value = false
   }
 
   const removeDevice = async (id: string) => {
@@ -107,7 +103,6 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
 
   return {
     getSettings,
-    isLoadingGetSettings,
     removeDevice,
     saveSettings,
     setNotificationForNetwork,
