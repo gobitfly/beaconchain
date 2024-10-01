@@ -4,14 +4,17 @@ import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
 const idInput = useId()
 const input = defineModel<string>()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   error?: BcInputError,
   inputWidth?: `${number}px`,
   label: string,
+  labelPosition?: 'left' | 'right',
   placeholder?: string,
   shouldAutoselect?: boolean,
   type?: HTMLInputElement['type'],
-}>()
+}>(), {
+  labelPosition: 'left',
+})
 onMounted(() => {
   if (props.shouldAutoselect) {
     const input = document.getElementById(idInput)
@@ -25,7 +28,12 @@ onMounted(() => {
 
 <template>
   <BcInputError :error>
-    <label :for="idInput">{{ label }}</label>
+    <label
+      v-if="labelPosition === 'left'"
+      :for="idInput"
+    >
+      {{ label }}
+    </label>
     <InputText
       :id="idInput"
       v-model.trim="input"
@@ -34,6 +42,12 @@ onMounted(() => {
       :placeholder
       :type
     />
+    <label
+      v-if="labelPosition === 'right'"
+      :for="idInput"
+    >
+      {{ label }}
+    </label>
   </BcInputError>
 </template>
 
