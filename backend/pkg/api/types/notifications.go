@@ -166,7 +166,7 @@ type InternalPutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[No
 type NotificationSettingsClient struct {
 	Id           uint64 `json:"id"`
 	Name         string `json:"name"`
-	Category     string `json:"category"`
+	Category     string `json:"category" tstype:"'execution' | 'consensus' | 'other'" faker:"oneof: execution, consensus, other"`
 	IsSubscribed bool   `json:"is_subscribed"`
 }
 
@@ -196,7 +196,7 @@ type NotificationSettings struct {
 	GeneralSettings NotificationSettingsGeneral  `json:"general_settings"`
 	Networks        []NotificationNetwork        `json:"networks"`
 	PairedDevices   []NotificationPairedDevice   `json:"paired_devices"`
-	Clients         []NotificationSettingsClient `json:"clients"`
+	Clients         []NotificationSettingsClient `json:"clients" faker:"slice_len=10"`
 }
 type InternalGetUserNotificationSettingsResponse ApiDataResponse[NotificationSettings]
 
