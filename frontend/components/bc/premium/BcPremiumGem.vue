@@ -1,16 +1,28 @@
 <script lang="ts" setup>
 import { faGem } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
+defineProps<{
+  screenreaderText?: string,
+  toolTipText?: string,
+  tooltipWidth?: `${number}%` | `${number}px`,
+}>()
 </script>
 
 <template>
-  <BcTooltip :text="$t('premium.subscribe')">
+  <BcTooltip
+    :tooltip-width
+    :text="toolTipText ?? $t('premium.subscribe')"
+  >
     <BcLink
-      :to="`/pricing`"
+      to="/pricing"
       target="_blank"
       class="link"
     >
       <div>
+        <LazyBcScreenreaderOnly v-if="screenreaderText">
+          {{ screenreaderText }}
+        </LazyBcScreenreaderOnly>
         <FontAwesomeIcon
           :icon="faGem"
           class="gem"
