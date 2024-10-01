@@ -10,6 +10,8 @@
     "@fortawesome/vue-fontawesome": "^3.0.6",
     "@pinia/nuxt": "^0.5.1",
     "@stripe/stripe-js": "^3.5.0",
+    "@vueuse/core": "^11.1.0",
+    "@vueuse/nuxt": "^11.1.0",
     "echarts": "^5.5.1",
     "git-describe": "^4.1.1",
     "lodash-es": "^4.17.21",
@@ -51,6 +53,8 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nuxt dev",
+    "dev:mock:production": "NUXT_DEPLOYMENT_TYPE=production npm run dev",
+    "dev:mock:staging": "NUXT_DEPLOYMENT_TYPE=staging npm run dev",
     "generate": "nuxt generate",
     "lint": "eslint . --report-unused-disable-directives",
     "lint:fix": "npm run lint -- --fix",

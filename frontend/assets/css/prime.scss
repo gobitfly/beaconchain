@@ -634,11 +634,11 @@ div.p-accordion {
  * TODO: remove the .p-overflow-hidden and .p-overlay-mask class when PrimeVue is updated.
  * This is quick-fix for shifting display issues. 
  **/
- .p-overflow-hidden {
+ div.p-overflow-hidden {
   overflow: hidden !important;  /* Block scroll */
   border-right: solid 5px transparent !important;
 }
 
-.p-overlay-mask {
-  background: var(--container-background);
+div.p-dialog-mask.p-overlay-mask {
+  background: rgba(0, 0, 0, 0.5);
 }

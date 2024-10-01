@@ -5,7 +5,7 @@ import type {
 } from '~/types/api/notifications'
 
 const notificationsOverviewStore = defineStore('notifications_overview_store', () => {
-  const data = ref<NotificationOverviewData | null | undefined>()
+  const data = ref<NotificationOverviewData | undefined>()
   return { data }
 })
 

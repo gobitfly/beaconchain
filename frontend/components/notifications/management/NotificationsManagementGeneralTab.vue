@@ -5,44 +5,35 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { API_PATH } from '~/types/customFetch'
-import { useNotificationsManagementSettings } from '~/composables/notifications/useNotificationsManagementSettings'
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const {
-  generalSettings, pairedDevices, updateGeneralSettings,
-}
-  = useNotificationsManagementSettings()
+const notificationsManagementStore = useNotificationsManagementStore()
 
 const isVisible = ref(false)
-const isEmailToggleOn = ref(false)
-const isPushToggleOn = ref(false)
-const {
-  bounce: bounceTestButton,
-  instant: setTestButton,
-  value: areTestButtonsDisabled,
-} = useDebounceValue<boolean>(false, 5000)
 
-const timestampMute = ref<number | undefined>()
 const muteDropdownList = [
   {
     label: $t('notifications.general.mute.hours', { count: 1 }),
-    value: 1 * 60 * 60,
+    value: getSeconds({ hours: 1 }),
   },
   {
     label: $t('notifications.general.mute.hours', { count: 2 }),
-    value: 2 * 60 * 60,
+    value: getSeconds({ hours: 2 }),
+
   },
   {
     label: $t('notifications.general.mute.hours', { count: 4 }),
-    value: 4 * 60 * 60,
+    value: getSeconds({ hours: 4 }),
+
   },
   {
     label: $t('notifications.general.mute.hours', { count: 8 }),
-    value: 8 * 60 * 60,
+    value: getSeconds({ hours: 8 }),
+
   },
   {
     label: $t('notifications.general.mute.until_i_turn_on'),
@@ -50,20 +41,20 @@ const muteDropdownList = [
   },
 ]
 
-const unmuteNotifications = () => {
-  timestampMute.value = 0
-}
-
-const muteNotifications = (value: number) => {
-  if (value === Number.MAX_SAFE_INTEGER) {
-    timestampMute.value = Number.MAX_SAFE_INTEGER
-    return
+const muteNotifications = (seconds: number) => {
+  if (seconds === Number.MAX_SAFE_INTEGER) {
+    return notificationsManagementStore
+      .settings
+      .general_settings
+      .do_not_disturb_timestamp = seconds
   }
-  timestampMute.value = Date.now() / 1000 + value
+  notificationsManagementStore
+    .settings
+    .general_settings
+    .do_not_disturb_timestamp = getFutureTimestampInSeconds({ seconds })
 }
 
 const sendTestNotification = async (type: 'email' | 'push') => {
-  setTestButton(true)
   try {
     await fetch(
       type === 'email'
@@ -78,83 +69,50 @@ const sendTestNotification = async (type: 'email' | 'push') => {
       summary: $t('notifications.general.test_notification_error.toast_title'),
     })
   }
-  bounceTestButton(false)
 }
 
-const pairedDevicesCount = computed(() => pairedDevices.value?.length || 0)
+const pairedDevicesCount = computed(() => notificationsManagementStore.settings.paired_devices?.length || 0)
 
-const buttonStates = computed(() => {
-  return {
-    isEmailDisabled: areTestButtonsDisabled.value || !isEmailToggleOn.value,
-    isPushDisabled:
-      areTestButtonsDisabled.value
-      || !isPushToggleOn.value
-      || pairedDevicesCount.value === 0,
-  }
-})
+const hasPushNotificationTest = computed(() =>
+  notificationsManagementStore
+    .settings
+    .general_settings
+    .is_push_notifications_enabled
+    && notificationsManagementStore.settings.paired_devices?.length,
+)
 
+const hasEmailNotificationTest = computed(() =>
+  notificationsManagementStore.settings.general_settings.is_email_notifications_enabled,
+)
 const openPairdeDevicesModal = () => {
   isVisible.value = true
 }
 
-watch(
-  generalSettings,
-  (newGeneralSettings) => {
-    if (newGeneralSettings) {
-      isEmailToggleOn.value = newGeneralSettings.is_email_notifications_enabled
-      isPushToggleOn.value = newGeneralSettings.is_push_notifications_enabled
-      timestampMute.value
-        = newGeneralSettings.do_not_disturb_timestamp > Date.now() / 1000
-          ? newGeneralSettings.do_not_disturb_timestamp
-          : undefined
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  [
-    isEmailToggleOn,
-    isPushToggleOn,
-    timestampMute,
-  ],
-  ([
-    enableEmail,
-    enablePush,
-    muteTs,
-  ]) => {
-    if (!generalSettings.value) {
-      return
-    }
-    if (
-      generalSettings.value?.is_email_notifications_enabled !== enableEmail
-      || generalSettings.value?.is_push_notifications_enabled !== enablePush
-      || generalSettings.value?.do_not_disturb_timestamp !== muteTs
-    ) {
-      updateGeneralSettings({
-        ...generalSettings.value,
-        do_not_disturb_timestamp: muteTs!,
-        is_email_notifications_enabled: enableEmail,
-        is_push_notifications_enabled: enablePush,
-      })
-    }
-  },
-)
-
 const textMutedUntil = computed(() => {
-  if (timestampMute.value) {
-    if (timestampMute.value === Number.MAX_SAFE_INTEGER) {
-      return $t('notifications.general.mute.until_turned_on')
-    }
-    return $t('notifications.general.mute.until', { date: formatTsToAbsolute(timestampMute.value, $t('locales.date'), true) })
+  if (notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp === Number.MAX_SAFE_INTEGER) {
+    return $t('notifications.general.mute.until_turned_on')
   }
-
-  return undefined
+  return $t('notifications.general.mute.until', {
+    date: formatTsToAbsolute(
+      notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp,
+      $t('locales.date'),
+      true,
+    ),
+  })
+})
+await notificationsManagementStore.getSettings()
+watchDebounced(notificationsManagementStore.settings.general_settings, async () => {
+  await notificationsManagementStore.saveSettings()
+}, {
+  deep: true,
 })
 </script>
 
 <template>
-  <NotificationsManagementPairedDevicesModal v-model="isVisible" />
+  <LazyNotificationsManagementPairedDevicesModal
+    v-if="isVisible"
+    v-model="isVisible"
+  />
   <div class="container">
     <div class="row divider do-not-disturb">
       <div>
@@ -164,12 +122,12 @@ const textMutedUntil = computed(() => {
         }}</span>
       </div>
       <div
-        v-if="generalSettings?.do_not_disturb_timestamp"
+        v-if="notificationsManagementStore.settings.general_settings?.do_not_disturb_timestamp"
         class="unmute-container"
       >
         <Button
           :label="$t('notifications.general.mute.unmute')"
-          @click="unmuteNotifications"
+          @click="notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp = 0"
         />
         <div class="muted-until">
           {{ textMutedUntil }}
@@ -195,9 +153,12 @@ const textMutedUntil = computed(() => {
       <div>
         {{ $t("notifications.general.email_notifications") }}
       </div>
-      <BcToggle v-model="isEmailToggleOn" />
+      <BcToggle v-model="notificationsManagementStore.settings.general_settings.is_email_notifications_enabled" />
     </div>
-    <div class="row divider">
+    <div
+      class="row"
+      :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
+    >
       <div>
         {{ $t("notifications.general.push_notifications") }}
         <span v-if="pairedDevicesCount > 0">
@@ -211,7 +172,7 @@ const textMutedUntil = computed(() => {
       </div>
       <BcToggle
         v-if="pairedDevicesCount > 0"
-        v-model="isPushToggleOn"
+        v-model="notificationsManagementStore.settings.general_settings.is_push_notifications_enabled"
       />
       <div v-else>
         {{ tOf($t, "notifications.general.download_app", 0) }}
@@ -225,31 +186,37 @@ const textMutedUntil = computed(() => {
         {{ tOf($t, "notifications.general.download_app", 2) }}
       </div>
     </div>
-    <div class="row">
-      <div>
+    <div
+      v-if="notificationsManagementStore.settings.general_settings.is_email_notifications_enabled"
+      class="row"
+    >
+      <span>
         {{ $t("notifications.general.send_test_email") }}
-      </div>
-      <Button
-        class="button-send"
-        :disabled="buttonStates.isEmailDisabled"
+      </span>
+      <BcButton
         @click="sendTestNotification('email')"
       >
         {{ $t("common.send") }}
-        <FontAwesomeIcon :icon="faPaperPlane" />
-      </Button>
+        <template #icon>
+          <FontAwesomeIcon :icon="faPaperPlane" />
+        </template>
+      </BcButton>
     </div>
-    <div class="row">
-      <div>
+    <div
+      v-if="hasPushNotificationTest"
+      class="row"
+    >
+      <span>
         {{ $t("notifications.general.send_test_push") }}
-      </div>
-      <Button
-        class="button-send"
-        :disabled="buttonStates.isPushDisabled"
+      </span>
+      <BcButton
         @click="sendTestNotification('push')"
       >
         {{ $t("common.send") }}
-        <FontAwesomeIcon :icon="faPaperPlane" />
-      </Button>
+        <template #icon>
+          <FontAwesomeIcon :icon="faPaperPlane" />
+        </template>
+      </BcButton>
     </div>
   </div>
 </template>
@@ -293,11 +260,6 @@ const textMutedUntil = computed(() => {
 
     .popout {
       margin-left: var(--padding-small);
-    }
-
-    .button-send {
-      display: flex;
-      gap: var(--padding-small);
     }
 
     &.divider {

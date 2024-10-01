@@ -191,12 +191,13 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		From(goqu.L("blocks b")).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 		LeftJoin(
-			goqu.Dialect("postgres").
+			goqu.Lateral(goqu.Dialect("postgres").
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
 					goqu.MAX("value").As("value")).
-				GroupBy("exec_block_hash").As("rb"),
+				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
+				GroupBy("exec_block_hash")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochMin, epochMax)).
@@ -829,12 +830,13 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		From(goqu.L("blocks AS b")).
 		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("b.exec_block_hash = ep.block_hash"))).
 		LeftJoin(
-			goqu.Dialect("postgres").
+			goqu.Lateral(goqu.Dialect("postgres").
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
 					goqu.MAX("value").As("value")).
-				GroupBy("exec_block_hash").As("rb"),
+				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
+				GroupBy("exec_block_hash")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.status = '1'"))
