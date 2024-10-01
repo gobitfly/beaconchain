@@ -166,7 +166,7 @@ type InternalPutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[No
 type NotificationSettingsClient struct {
 	Id           uint64 `json:"id"`
 	Name         string `json:"name"`
-	Category     string `json:"category" tstype:"'execution' | 'consensus' | 'other'" faker:"oneof: execution, consensus, other"`
+	Category     string `json:"category" tstype:"'execution_layer' | 'consensus_layer' | 'other'" faker:"oneof: execution_layer, consensus_layer, other"`
 	IsSubscribed bool   `json:"is_subscribed"`
 }
 

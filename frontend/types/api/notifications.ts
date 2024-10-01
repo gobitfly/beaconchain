@@ -160,7 +160,7 @@ export type InternalPutUserNotificationSettingsPairedDevicesResponse = ApiDataRe
 export interface NotificationSettingsClient {
   id: number /* uint64 */;
   name: string;
-  category: 'execution' | 'consensus' | 'other';
+  category: 'execution_layer' | 'consensus_layer' | 'other';
   is_subscribed: boolean;
 }
 export type InternalPutUserNotificationSettingsClientResponse = ApiDataResponse<NotificationSettingsClient>;
