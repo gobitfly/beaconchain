@@ -122,6 +122,14 @@ type NotificationClientsCursor struct {
 	Epoch  uint64
 }
 
+type NotificationRocketPoolsCursor struct {
+	GenericCursor
+
+	NodeAddress []byte
+	EventType   string
+	Epoch       uint64
+}
+
 type NotificationNetworksCursor struct {
 	GenericCursor
 
