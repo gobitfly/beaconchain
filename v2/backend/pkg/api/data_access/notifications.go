@@ -172,7 +172,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		return nil, nil, fmt.Errorf("error preparing machine notifications query: %w", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &notificationHistory, query, args...)
+	err = d.userReader.SelectContext(ctx, &notificationHistory, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`error retrieving data for machine notifications: %w`, err)
 	}
@@ -313,7 +313,7 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 		return nil, nil, fmt.Errorf("error preparing client notifications query: %w", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &notificationHistory, query, args...)
+	err = d.userReader.SelectContext(ctx, &notificationHistory, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`error retrieving data for client notifications: %w`, err)
 	}
@@ -445,7 +445,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		return nil, nil, fmt.Errorf("error preparing network notifications query: %w", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &notificationHistory, query, args...)
+	err = d.userReader.SelectContext(ctx, &notificationHistory, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`error retrieving data for network notifications: %w`, err)
 	}
