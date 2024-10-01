@@ -7,6 +7,7 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -360,7 +361,163 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	return result, p, nil
 }
 func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
-	return d.dummy.GetRocketPoolNotifications(ctx, userId, cursor, colSort, search, limit)
+	result := make([]t.NotificationRocketPoolTableRow, 0)
+	var paging t.Paging
+
+	// Initialize the cursor
+	var currentCursor t.NotificationRocketPoolsCursor
+	var err error
+	if cursor != "" {
+		currentCursor, err = utils.StringToCursor[t.NotificationRocketPoolsCursor](cursor)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationRocketPoolsCursor: %w", err)
+		}
+	}
+
+	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
+	sortSearchDirection := ">"
+	if isReverseDirection {
+		sortSearchDirection = "<"
+	}
+
+	// -------------------------------------
+	// Get the machine notification history
+	notificationHistory := []struct {
+		Epoch          uint64          `db:"epoch"`
+		EventType      types.EventName `db:"event_type"`
+		EventThreshold float64         `db:"event_threshold"`
+		NodeAddress    []byte          `db:"node_address"`
+	}{}
+
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("epoch"),
+			goqu.L("event_type"),
+			goqu.L("event_threshold"),
+			goqu.L("node_address")).
+		From("rocketpool_notifications_history").
+		Where(goqu.L("user_id = ?", userId)).
+		Limit(uint(limit + 1))
+
+	// Search
+	if search != "" {
+		nodeAddress, err := hexutil.Decode(search)
+		if err != nil || !utils.eth1AddressRE.MatchString(search) {
+			return result, &paging, nil
+		}
+		ds = ds.Where(goqu.L("node_address = ?", nodeAddress))
+	}
+
+	// Sorting and limiting if cursor is present
+	// Rows can be uniquely identified by (epoch, event_type, node_address)
+	sortDirFunc := func(column string) exp.OrderedExpression {
+		return goqu.I(column).Asc()
+	}
+	if isReverseDirection {
+		sortDirFunc = func(column string) exp.OrderedExpression {
+			return goqu.I(column).Desc()
+		}
+	}
+	switch colSort.Column {
+	case enums.NotificationRocketPoolColumns.Timestamp:
+		if currentCursor.IsValid() {
+			ds = ds.Where(goqu.Or(
+				goqu.L(fmt.Sprintf("(epoch %s ?)", sortSearchDirection), currentCursor.Epoch),
+				goqu.L(fmt.Sprintf("(epoch = ? AND event_type %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.EventType),
+				goqu.L(fmt.Sprintf("(epoch = ? AND event_type = ? AND node_address %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.EventType, currentCursor.NodeAddress),
+			))
+		}
+		ds = ds.Order(
+			sortDirFunc("epoch"),
+			sortDirFunc("event_type"),
+			sortDirFunc("node_address"))
+	case enums.NotificationRocketPoolColumns.EventType:
+		if currentCursor.IsValid() {
+			ds = ds.Where(goqu.Or(
+				goqu.L(fmt.Sprintf("(event_type %s ?)", sortSearchDirection), currentCursor.EventType),
+				goqu.L(fmt.Sprintf("(event_type = ? AND epoch %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch),
+				goqu.L(fmt.Sprintf("(event_type = ? AND epoch = ? AND node_address %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch, currentCursor.NodeAddress),
+			))
+		}
+		ds = ds.Order(
+			sortDirFunc("event_type"),
+			sortDirFunc("epoch"),
+			sortDirFunc("node_address"))
+	case enums.NotificationRocketPoolColumns.NodeAddress:
+		if currentCursor.IsValid() {
+			ds = ds.Where(goqu.Or(
+				goqu.L(fmt.Sprintf("(node_address %s ?)", sortSearchDirection), currentCursor.NodeAddress),
+				goqu.L(fmt.Sprintf("(node_address = ? AND epoch %s ?)", sortSearchDirection), currentCursor.NodeAddress, currentCursor.Epoch),
+				goqu.L(fmt.Sprintf("(node_address = ? AND epoch = ? AND event_type %s ?)", sortSearchDirection), currentCursor.NodeAddress, currentCursor.Epoch, currentCursor.EventType),
+			))
+		}
+		ds = ds.Order(
+			sortDirFunc("node_address"),
+			sortDirFunc("epoch"),
+			sortDirFunc("event_type"))
+	default:
+		return nil, nil, fmt.Errorf("invalid column for sorting of rocketpool notification history: %v", colSort.Column)
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error preparing rocketpool notifications query: %w", err)
+	}
+
+	err = d.userReader.SelectContext(ctx, &notificationHistory, query, args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`error retrieving data for rocketpool notifications: %w`, err)
+	}
+
+	// -------------------------------------
+	// Calculate the result
+	cursorData := notificationHistory
+	for _, notification := range notificationHistory {
+		resultEntry := t.NotificationRocketPoolTableRow{
+			Threshold: notification.EventThreshold,
+			Node:      t.Address{Hash: t.Hash(hexutil.Encode(notification.NodeAddress))}, // TODO: Get the full correct information
+			Timestamp: utils.EpochToTime(notification.Epoch).Unix(),
+		}
+		switch notification.EventType {
+		case types.RocketpoolNewClaimRoundStartedEventName:
+			resultEntry.EventType = "reward_round"
+		case types.RocketpoolCollateralMinReached:
+			resultEntry.EventType = "collateral_min"
+		case types.RocketpoolCollateralMaxReached:
+			resultEntry.EventType = "collateral_max"
+		default:
+			return nil, nil, fmt.Errorf("invalid event name for rocketpool notification: %v", notification.EventType)
+		}
+		result = append(result, resultEntry)
+	}
+
+	// -------------------------------------
+	// Paging
+
+	// Flag if above limit
+	moreDataFlag := len(result) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return result, &paging, nil
+	}
+
+	// Remove the last entries from data
+	if moreDataFlag {
+		result = result[:limit]
+		cursorData = cursorData[:limit]
+	}
+
+	if currentCursor.IsReverse() {
+		slices.Reverse(result)
+		slices.Reverse(cursorData)
+	}
+
+	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return result, p, nil
 }
 func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	result := make([]t.NotificationNetworksTableRow, 0)
