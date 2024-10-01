@@ -413,7 +413,7 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 		}
 		log.Infof("generating push notification for user %v", userID)
 
-		notificationTypesMap := make(map[types.EventName]int)
+		notificationTypesMap := make(map[types.EventName][]string)
 
 		for _, event := range types.EventSortOrder {
 			for _, notficationsPerGroup := range notificationsPerDashboard {
@@ -422,7 +422,12 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					if !ok { // nothing to do for this event type
 						continue
 					}
-					notificationTypesMap[event] += len(ns)
+					if _, ok := notificationTypesMap[event]; !ok {
+						notificationTypesMap[event] = make([]string, 0)
+					}
+					for _, n := range ns {
+						notificationTypesMap[event] = append(notificationTypesMap[event], n.GetEntitiyId())
+					}
 					metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
 				}
 			}
@@ -430,10 +435,11 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 
 		bodySummary := ""
 		for _, event := range types.EventSortOrder {
-			count, ok := notificationTypesMap[event]
-			if !ok {
+			events := notificationTypesMap[event]
+			if len(events) == 0 {
 				continue
 			}
+			count := len(events)
 			if len(bodySummary) > 0 {
 				bodySummary += "\n"
 			}
@@ -453,6 +459,12 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 			default:
 				bodySummary += fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural)
 			}
+			truncated := ""
+			if len(events) > 3 {
+				truncated = ",..."
+				events = events[:3]
+			}
+			bodySummary += fmt.Sprintf(" (%s%s)", strings.Join(events, ","), truncated)
 		}
 
 		if len(bodySummary) > 1000 { // cap the notification body to 1000 characters (firebase limit)

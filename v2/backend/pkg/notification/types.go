@@ -75,6 +75,10 @@ type validatorProposalNotification struct {
 	Reward         float64
 }
 
+func (n *validatorProposalNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%d", n.ValidatorIndex)
+}
+
 func (n *validatorProposalNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	slot := formatSlotLink(format, n.Slot)
@@ -148,6 +152,10 @@ type validatorIsOfflineNotification struct {
 	IsOffline      bool
 }
 
+func (n *validatorIsOfflineNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%d", n.ValidatorIndex)
+}
+
 // Overwrite specific methods
 func (n *validatorIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
@@ -196,6 +204,10 @@ type validatorAttestationNotification struct {
 	ValidatorIndex     uint64
 	ValidatorPublicKey string
 	Status             uint64 // * Can be 0 = scheduled | missed, 1 executed
+}
+
+func (n *validatorAttestationNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%d", n.ValidatorIndex)
 }
 
 func (n *validatorAttestationNotification) GetInfo(format types.NotificationFormat) string {
@@ -274,6 +286,10 @@ type validatorGotSlashedNotification struct {
 	Reason         string
 }
 
+func (n *validatorGotSlashedNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%d", n.ValidatorIndex)
+}
+
 func (n *validatorGotSlashedNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
@@ -306,6 +322,10 @@ type validatorWithdrawalNotification struct {
 	Address        []byte
 }
 
+func (n *validatorWithdrawalNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%v", n.ValidatorIndex)
+}
+
 func (n *validatorWithdrawalNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
@@ -332,6 +352,10 @@ type ethClientNotification struct {
 	types.NotificationBaseImpl
 
 	EthClient string
+}
+
+func (n *ethClientNotification) GetEntitiyId() string {
+	return n.EthClient
 }
 
 func (n *ethClientNotification) GetInfo(format types.NotificationFormat) string {
@@ -429,6 +453,10 @@ type monitorMachineNotification struct {
 	EventThreshold float64
 }
 
+func (n *monitorMachineNotification) GetEntitiyId() string {
+	return n.MachineName
+}
+
 func (n *monitorMachineNotification) GetInfo(format types.NotificationFormat) string {
 	switch n.EventName {
 	case types.MonitoringMachineDiskAlmostFullEventName:
@@ -493,6 +521,10 @@ type taxReportNotification struct {
 	types.NotificationBaseImpl
 }
 
+func (n *taxReportNotification) GetEntitiyId() string {
+	return ""
+}
+
 func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
 	tNow := time.Now()
 	lastDay := time.Date(tNow.Year(), tNow.Month(), 1, 0, 0, 0, 0, time.UTC)
@@ -553,6 +585,10 @@ type networkNotification struct {
 	types.NotificationBaseImpl
 }
 
+func (n *networkNotification) GetEntitiyId() string {
+	return ""
+}
+
 func (n *networkNotification) GetInfo(format types.NotificationFormat) string {
 	switch format {
 	case types.NotifciationFormatHtml, types.NotifciationFormatText:
@@ -579,6 +615,10 @@ func (n *networkNotification) GetLegacyTitle() string {
 type rocketpoolNotification struct {
 	types.NotificationBaseImpl
 	ExtraData string
+}
+
+func (n *rocketpoolNotification) GetEntitiyId() string {
+	return ""
 }
 
 func (n *rocketpoolNotification) GetInfo(format types.NotificationFormat) string {
@@ -644,6 +684,10 @@ type syncCommitteeSoonNotification struct {
 	Validator  uint64
 	StartEpoch uint64
 	EndEpoch   uint64
+}
+
+func (n *syncCommitteeSoonNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%d", n.Validator)
 }
 
 func (n *syncCommitteeSoonNotification) GetInfo(format types.NotificationFormat) string {

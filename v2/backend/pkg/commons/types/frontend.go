@@ -322,6 +322,7 @@ type Notification interface {
 	GetDashboardName() string
 	GetDashboardGroupId() *int64
 	GetDashboardGroupName() string
+	GetEntitiyId() string
 }
 
 type NotificationBaseImpl struct {
