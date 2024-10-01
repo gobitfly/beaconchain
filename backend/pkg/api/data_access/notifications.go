@@ -114,15 +114,6 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsMachineCpuUsageSubscribed, userId, string(types.MonitoringMachineCpuLoadEventName), "", epoch, settings.MachineCpuUsageThreshold)
 	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsMachineMemoryUsageSubscribed, userId, string(types.MonitoringMachineMemoryUsageEventName), "", epoch, settings.MachineMemoryUsageThreshold)
 
-	// RocketPool events
-	networkName := utils.Config.Chain.Name
-	eventName := fmt.Sprintf("%s:%s", networkName, types.RocketpoolNewClaimRoundStartedEventName)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsRocketPoolNewRewardRoundSubscribed, userId, eventName, "", epoch, 0)
-	eventName = fmt.Sprintf("%s:%s", networkName, types.RocketpoolCollateralMaxReached)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsRocketPoolMaxCollateralSubscribed, userId, eventName, "", epoch, settings.RocketPoolMaxCollateralThreshold)
-	eventName = fmt.Sprintf("%s:%s", networkName, types.RocketpoolCollateralMinReached)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsRocketPoolMinCollateralSubscribed, userId, eventName, "", epoch, settings.RocketPoolMinCollateralThreshold)
-
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {
 		insertDs := goqu.Dialect("postgres").
@@ -202,6 +193,8 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsGasBelowSubscribed, userId, eventName, "", epoch, settings.GasBelowThreshold.Div(decimal.NewFromInt(1e9)).InexactFloat64())
 	eventName = fmt.Sprintf("%s:%s", networkName, types.NetworkParticipationRateThresholdEventName)
 	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsParticipationRateSubscribed, userId, eventName, "", epoch, settings.ParticipationRateThreshold)
+	eventName = fmt.Sprintf("%s:%s", networkName, types.RocketpoolNewClaimRoundStartedEventName)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsNewRewardRoundSubscribed, userId, eventName, "", epoch, 0)
 
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {
