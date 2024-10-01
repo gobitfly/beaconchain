@@ -11,7 +11,7 @@ const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const route = useRoute()
 const router = useRouter()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
+const { has } = useFeatureFlag()
 
 const { isLoggedIn } = useUserStore()
 const { dashboards } = useUserDashboardStore()
@@ -90,19 +90,18 @@ const items = computed<MenuBarEntry[]>(() => {
     const cd = db as CookieDashboard
     return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash !== undefined ? cd.hash : cd.id}`)
   }))
-  if (showInDevelopment) {
+  if (has('feature-account_dashboards')) {
     addToSortedItems($t('dashboard.header.account'), dashboards.value?.validator_dashboards?.slice(0, 1).map((db) => {
       const cd = db as CookieDashboard
       return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
     }))
   }
-  const disabledTooltip = !showInDevelopment ? $t('common.coming_soon') : undefined
-  const onNotificationsPage = dashboardType.value === 'notifications'
+  const disabledTooltip = !has('feature-notifications') ? $t('common.coming_soon') : undefined
   addToSortedItems($t('notifications.title'), [ {
-    active: onNotificationsPage,
+    active: route.name === 'notifications',
     disabledTooltip,
     label: $t('notifications.title'),
-    route: !onNotificationsPage ? '/notifications' : undefined,
+    route: route.name !== 'notifications' ? '/notifications' : undefined,
   } ])
 
   return buttons

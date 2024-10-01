@@ -17,12 +17,13 @@ const {
   setPageSize,
   setSearch,
 } = useNotificationsNetworkStore()
+const { overview } = useNotificationsDashboardOverviewStore()
 </script>
 
 <template>
   <div>
     <BcTableControl
-      :title="$t('notifications.dashboards.title')"
+      :title="$t('notifications.network.title')"
       :search-placeholder="$t('notifications.dashboards.search_placeholder')"
       @set-search="setSearch"
     >
@@ -103,10 +104,9 @@ const {
                 @open-dialog="$emit('openDialog')"
               />
             </template>
-            <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width > 1024">
-                {{ $t('notifications.network.footer.subscriptions', { count: 1 }) }}
+                {{ $t('notifications.network.footer.subscriptions', { count: overview?.networks_subscription_count }) }}
               </template>
             </template>
           </BcTable>

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
@@ -253,10 +255,6 @@ func (d *DummyService) GetValidatorDashboardGroupExists(ctx context.Context, das
 	return true, nil
 }
 
-func (d *DummyService) GetValidatorDashboardExistingValidatorCount(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
-	return getDummyData[uint64]()
-}
-
 func (d *DummyService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	return getDummyData[[]t.VDBPostValidatorsData]()
 }
@@ -398,7 +396,20 @@ func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Cont
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
-	return getDummyData[[]t.NetworkInfo]()
+	return []types.NetworkInfo{
+		{
+			ChainId: 1,
+			Name:    "ethereum",
+		},
+		{
+			ChainId: 100,
+			Name:    "gnosis",
+		},
+		{
+			ChainId: 17000,
+			Name:    "holesky",
+		},
+	}, nil
 }
 
 func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
@@ -448,7 +459,7 @@ func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, d
 func (d *DummyService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return getDummyStruct[t.NotificationOverviewData]()
 }
-func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainId uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationDashboardsTableRow]()
 }
 
@@ -469,7 +480,7 @@ func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64
 func (d *DummyService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationRocketPoolTableRow]()
 }
-func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationNetworksTableRow]()
 }
 
@@ -488,6 +499,11 @@ func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Contex
 func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error {
 	return nil
 }
+
+func (d *DummyService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
+	return getDummyStruct[t.NotificationSettingsClient]()
+}
+
 func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	r, p, err := getDummyWithPaging[t.NotificationSettingsDashboardsTableRow]()
 	for i, n := range r {
@@ -655,4 +671,21 @@ func (d *DummyService) IncrementBundleDeliveryCount(ctx context.Context, bundleV
 
 func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.MobileWidgetData, error) {
 	return getDummyStruct[t.MobileWidgetData]()
+}
+
+func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit uint64, offset uint64) (*types.MachineMetricsData, error) {
+	data, err := getDummyStruct[types.MachineMetricsData]()
+	if err != nil {
+		return nil, err
+	}
+	data.SystemMetrics = slices.SortedFunc(slices.Values(data.SystemMetrics), func(i, j *t.MachineMetricSystem) int {
+		return int(i.Timestamp) - int(j.Timestamp)
+	})
+	data.ValidatorMetrics = slices.SortedFunc(slices.Values(data.ValidatorMetrics), func(i, j *t.MachineMetricValidator) int {
+		return int(i.Timestamp) - int(j.Timestamp)
+	})
+	data.NodeMetrics = slices.SortedFunc(slices.Values(data.NodeMetrics), func(i, j *t.MachineMetricNode) int {
+		return int(i.Timestamp) - int(j.Timestamp)
+	})
+	return data, nil
 }
