@@ -61,11 +61,13 @@ type Config struct {
 	} `yaml:"bigtable"`
 	BlobIndexer struct {
 		S3 struct {
-			Endpoint        string `yaml:"endpoint" envconfig:"BLOB_INDEXER_S3_ENDPOINT"`
-			Bucket          string `yaml:"bucket" envconfig:"BLOB_INDEXER_S3_BUCKET"`
-			AccessKeyId     string `yaml:"accessKeyId" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_ID"`
-			AccessKeySecret string `yaml:"accessKeySecret" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_SECRET"`
+			Endpoint        string `yaml:"endpoint" envconfig:"BLOB_INDEXER_S3_ENDPOINT"`                 // s3 endpoint
+			Bucket          string `yaml:"bucket" envconfig:"BLOB_INDEXER_S3_BUCKET"`                     // s3 bucket
+			AccessKeyId     string `yaml:"accessKeyId" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_ID"`         // s3 access key id
+			AccessKeySecret string `yaml:"accessKeySecret" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_SECRET"` // s3 access key secret
 		} `yaml:"s3"`
+		PruneMarginEpochs    uint64 `yaml:"pruneMarginEpochs" envconfig:"BLOB_INDEXER_PRUNE_MARGIN_EPOCHS"`       // PruneMarginEpochs helps blobindexer to decide if connected node has pruned too far to have no holes in the data, set it to same value as lighthouse flag --blob-prune-margin-epochs
+		DisableStatusReports bool   `yaml:"disableStatusReports" envconfig:"BLOB_INDEXER_DISABLE_STATUS_REPORTS"` // disable status reports (no connection to db needed)
 	} `yaml:"blobIndexer"`
 	Chain struct {
 		Name                       string `yaml:"name" envconfig:"CHAIN_NAME"`
