@@ -254,16 +254,16 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	notificationHistory := []struct {
 		Epoch   uint64 `db:"epoch"`
 		Client  string `db:"client"`
-		Version string `db:"version"`
-		Url     string `db:"url"`
+		Version string `db:"client_version"`
+		Url     string `db:"client_url"`
 	}{}
 
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("epoch"),
 			goqu.L("client"),
-			goqu.L("version"),
-			goqu.L("url")).
+			goqu.L("client_version"),
+			goqu.L("client_url")).
 		From("client_notifications_history").
 		Where(goqu.L("user_id = ?", userId)).
 		Limit(uint(limit + 1))
@@ -455,17 +455,19 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	cursorData := notificationHistory
 	for _, notification := range notificationHistory {
 		resultEntry := t.NotificationNetworksTableRow{
-			ChainId:    notification.Network,
-			Timestamp:  utils.EpochToTime(notification.Epoch).Unix(),
-			AlertValue: decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei)),
+			ChainId:   notification.Network,
+			Timestamp: utils.EpochToTime(notification.Epoch).Unix(),
 		}
 		switch notification.EventType {
 		case types.NetworkGasAboveThresholdEventName:
 			resultEntry.EventType = "gas_above"
+			resultEntry.AlertValue = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
 		case types.NetworkGasAboveThresholdEventName:
 			resultEntry.EventType = "gas_below"
+			resultEntry.AlertValue = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
 		case types.NetworkParticipationRateThresholdEventName:
 			resultEntry.EventType = "participation_rate"
+			resultEntry.AlertValue = decimal.NewFromFloat(notification.EventThreshold)
 		default:
 			return nil, nil, fmt.Errorf("invalid event name for network notification: %v", notification.EventType)
 		}
