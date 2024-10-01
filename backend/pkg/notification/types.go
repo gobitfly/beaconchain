@@ -425,7 +425,8 @@ type MachineEvents struct {
 type monitorMachineNotification struct {
 	types.NotificationBaseImpl
 
-	MachineName string
+	MachineName    string
+	EventThreshold float64
 }
 
 func (n *monitorMachineNotification) GetInfo(format types.NotificationFormat) string {
@@ -586,9 +587,9 @@ func (n *rocketpoolNotification) GetInfo(format types.NotificationFormat) string
 		return fmt.Sprintf(`The current RPL commission rate of %v has reached your configured threshold.`, n.ExtraData)
 	case types.RocketpoolNewClaimRoundStartedEventName:
 		return `A new reward round has started. You can now claim your rewards from the previous round.`
-	case types.RocketpoolCollateralMaxReached:
+	case types.RocketpoolCollateralMaxReachedEventName:
 		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
-	case types.RocketpoolCollateralMinReached:
+	case types.RocketpoolCollateralMinReachedEventName:
 		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
 	}
 
@@ -601,9 +602,9 @@ func (n *rocketpoolNotification) GetTitle() string {
 		return `Rocketpool Commission`
 	case types.RocketpoolNewClaimRoundStartedEventName:
 		return `Rocketpool Claim Available`
-	case types.RocketpoolCollateralMaxReached:
+	case types.RocketpoolCollateralMaxReachedEventName:
 		return `Rocketpool Max Collateral`
-	case types.RocketpoolCollateralMinReached:
+	case types.RocketpoolCollateralMinReachedEventName:
 		return `Rocketpool Min Collateral`
 	}
 	return ""
@@ -615,9 +616,9 @@ func (n *rocketpoolNotification) GetLegacyInfo() string {
 		return fmt.Sprintf(`The current RPL commission rate of %v has reached your configured threshold.`, n.ExtraData)
 	case types.RocketpoolNewClaimRoundStartedEventName:
 		return `A new reward round has started. You can now claim your rewards from the previous round.`
-	case types.RocketpoolCollateralMaxReached:
+	case types.RocketpoolCollateralMaxReachedEventName:
 		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
-	case types.RocketpoolCollateralMinReached:
+	case types.RocketpoolCollateralMinReachedEventName:
 		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
 	}
 
@@ -630,9 +631,9 @@ func (n *rocketpoolNotification) GetLegacyTitle() string {
 		return `Rocketpool Commission`
 	case types.RocketpoolNewClaimRoundStartedEventName:
 		return `Rocketpool Claim Available`
-	case types.RocketpoolCollateralMaxReached:
+	case types.RocketpoolCollateralMaxReachedEventName:
 		return `Rocketpool Max Collateral`
-	case types.RocketpoolCollateralMinReached:
+	case types.RocketpoolCollateralMinReachedEventName:
 		return `Rocketpool Min Collateral`
 	}
 	return ""
