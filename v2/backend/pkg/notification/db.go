@@ -121,7 +121,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 						}
 						validatorEventFilter := hex.EncodeToString(validatorEventFilterRaw)
 
-						if eventName == types.RocketpoolCollateralMaxReached || eventName == types.RocketpoolCollateralMinReached {
+						if eventName == types.RocketpoolCollateralMaxReachedEventName || eventName == types.RocketpoolCollateralMinReachedEventName {
 							// Those two RPL notifications are not tied to a specific validator but to a node address, create a subscription for each
 							// node in the group
 							nodeAddress, ok := validatorDashboardConfig.RocketpoolNodeByPubkey[validatorEventFilter]

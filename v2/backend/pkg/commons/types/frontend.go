@@ -83,10 +83,10 @@ const (
 	RocketpoolCommissionThresholdEventName  EventName = "rocketpool_commision_threshold"
 	RocketpoolNewClaimRoundStartedEventName EventName = "rocketpool_new_claimround"
 	//nolint:misspell
-	RocketpoolCollateralMinReached EventName = "rocketpool_colleteral_min"
+	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min"
 	//nolint:misspell
-	RocketpoolCollateralMaxReached EventName = "rocketpool_colleteral_max"
-	SyncCommitteeSoon              EventName = "validator_synccommittee_soon"
+	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max"
+	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
 )
 
 var EventSortOrder = []EventName{
@@ -98,7 +98,7 @@ var EventSortOrder = []EventName{
 	MonitoringMachineDiskAlmostFullEventName,
 	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineMemoryUsageEventName,
-	SyncCommitteeSoon,
+	SyncCommitteeSoonEventName,
 	ValidatorIsOfflineEventName,
 	ValidatorReceivedWithdrawalEventName,
 	NetworkLivenessIncreasedEventName,
@@ -106,8 +106,8 @@ var EventSortOrder = []EventName{
 	TaxReportEventName,
 	RocketpoolCommissionThresholdEventName,
 	RocketpoolNewClaimRoundStartedEventName,
-	RocketpoolCollateralMinReached,
-	RocketpoolCollateralMaxReached,
+	RocketpoolCollateralMinReachedEventName,
+	RocketpoolCollateralMaxReachedEventName,
 	ValidatorMissedAttestationEventName,
 }
 
@@ -135,6 +135,13 @@ var UserIndexEventsMap = map[EventName]struct{}{
 	MonitoringMachineMemoryUsageEventName:    {},
 }
 
+var MachineEventsMap = map[EventName]struct{}{
+	MonitoringMachineCpuLoadEventName:        {},
+	MonitoringMachineOfflineEventName:        {},
+	MonitoringMachineDiskAlmostFullEventName: {},
+	MonitoringMachineMemoryUsageEventName:    {},
+}
+
 var LegacyEventLabel map[EventName]string = map[EventName]string{
 	ValidatorMissedProposalEventName:         "Your validator(s) missed a proposal",
 	ValidatorExecutedProposalEventName:       "Your validator(s) submitted a proposal",
@@ -152,9 +159,9 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 	TaxReportEventName:                       "You have an available tax report",
 	RocketpoolCommissionThresholdEventName:   "Your configured Rocket Pool commission threshold is reached",
 	RocketpoolNewClaimRoundStartedEventName:  "Your Rocket Pool claim from last round is available",
-	RocketpoolCollateralMinReached:           "You reached the Rocket Pool min RPL collateral",
-	RocketpoolCollateralMaxReached:           "You reached the Rocket Pool max RPL collateral",
-	SyncCommitteeSoon:                        "Your validator(s) will soon be part of the sync committee",
+	RocketpoolCollateralMinReachedEventName:  "You reached the Rocket Pool min RPL collateral",
+	RocketpoolCollateralMaxReachedEventName:  "You reached the Rocket Pool max RPL collateral",
+	SyncCommitteeSoonEventName:               "Your validator(s) will soon be part of the sync committee",
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
@@ -174,27 +181,19 @@ var EventLabel map[EventName]string = map[EventName]string{
 	TaxReportEventName:                       "Tax report available",
 	RocketpoolCommissionThresholdEventName:   "Rocket pool commission threshold is reached",
 	RocketpoolNewClaimRoundStartedEventName:  "Rocket pool claim from last round is available",
-	RocketpoolCollateralMinReached:           "Rocket pool node min RPL collateral reached",
-	RocketpoolCollateralMaxReached:           "Rocket pool node max RPL collateral reached",
-	SyncCommitteeSoon:                        "Upcoming sync committee",
+	RocketpoolCollateralMinReachedEventName:  "Rocket pool node min RPL collateral reached",
+	RocketpoolCollateralMaxReachedEventName:  "Rocket pool node max RPL collateral reached",
+	SyncCommitteeSoonEventName:               "Upcoming sync committee",
 }
 
 func IsUserIndexed(event EventName) bool {
-	for _, ev := range UserIndexEvents {
-		if ev == event {
-			return true
-		}
-	}
-	return false
+	_, ok := UserIndexEventsMap[event]
+	return ok
 }
 
 func IsMachineNotification(event EventName) bool {
-	for _, ev := range MachineEvents {
-		if ev == event {
-			return true
-		}
-	}
-	return false
+	_, ok := MachineEventsMap[event]
+	return ok
 }
 
 var EventNames = []EventName{
@@ -214,9 +213,9 @@ var EventNames = []EventName{
 	TaxReportEventName,
 	RocketpoolCommissionThresholdEventName,
 	RocketpoolNewClaimRoundStartedEventName,
-	RocketpoolCollateralMinReached,
-	RocketpoolCollateralMaxReached,
-	SyncCommitteeSoon,
+	RocketpoolCollateralMinReachedEventName,
+	RocketpoolCollateralMaxReachedEventName,
+	SyncCommitteeSoonEventName,
 }
 
 type EventNameDesc struct {
@@ -256,7 +255,7 @@ var AddWatchlistEvents = []EventNameDesc{
 	},
 	{
 		Desc:  "Sync committee",
-		Event: SyncCommitteeSoon,
+		Event: SyncCommitteeSoonEventName,
 	},
 	{
 		Desc:    "Attestations missed",

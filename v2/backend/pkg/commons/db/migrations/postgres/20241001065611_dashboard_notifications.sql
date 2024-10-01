@@ -51,7 +51,7 @@ SELECT 'create webhook_target column';
 ALTER TABLE users_val_dashboards_groups ADD COLUMN IF NOT EXISTS webhook_target TEXT; 
 
 SELECT 'create discord_webhook_target column';
-ALTER TABLE users_val_dashboards_groups ADD COLUMN IF NOT EXISTS discord_webhook_target TEXT; 
+ALTER TABLE users_val_dashboards_groups ADD COLUMN IF NOT EXISTS webhook_format TEXT; 
 
 SELECT 'create realtime_notifications column';
 ALTER TABLE users_val_dashboards_groups ADD COLUMN IF NOT EXISTS realtime_notifications BOOL; 
@@ -66,6 +66,6 @@ DROP TABLE IF EXISTS client_notifications_history;
 DROP TABLE IF EXISTS network_notifications_history;
 ALTER TABLE users DROP COLUMN IF EXISTS notifications_do_not_disturb_ts;
 ALTER TABLE users_val_dashboards_groups DROP COLUMN IF EXISTS webhook_target;
-ALTER TABLE users_val_dashboards_groups DROP COLUMN IF EXISTS discord_webhook_target;
+ALTER TABLE users_val_dashboards_groups DROP COLUMN IF EXISTS webhook_format;
 ALTER TABLE users_val_dashboards_groups DROP COLUMN IF EXISTS realtime_notifications;
 -- +goose StatementEnd

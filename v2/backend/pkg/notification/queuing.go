@@ -20,7 +20,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-func queueNotifications(notificationsByUserID types.NotificationsPerUserId) error {
+func queueNotifications(epoch uint64, notificationsByUserID types.NotificationsPerUserId) error {
 	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -45,6 +45,11 @@ func queueNotifications(notificationsByUserID types.NotificationsPerUserId) erro
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	err = ExportNotificationHistory(epoch, notificationsByUserID)
+	if err != nil {
+		return fmt.Errorf("error exporting notification history: %w", err)
 	}
 
 	subByEpoch := map[uint64][]uint64{}
@@ -108,6 +113,119 @@ func queueNotifications(notificationsByUserID types.NotificationsPerUserId) erro
 	return nil
 }
 
+func ExportNotificationHistory(epoch uint64, notificationsByUserID types.NotificationsPerUserId) error {
+	dashboardNotificationHistoryInsertStmt, err := db.WriterDb.Preparex(`
+		INSERT INTO users_val_dashboards_notifications_history 
+		(user_id, dashboard_id, group_id, epoch, event_type, event_count)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`)
+	if err != nil {
+		return fmt.Errorf("error preparing insert statement for dashboard notifications history: %w", err)
+	}
+	defer utils.ClosePreparedStatement(dashboardNotificationHistoryInsertStmt)
+
+	machineNotificationHistoryInsertStmt, err := db.FrontendWriterDB.Preparex(`
+		INSERT INTO machine_notifications_history 
+		(user_id, epoch, machine_id, machine_name, event_type, event_threshold)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`)
+	if err != nil {
+		return fmt.Errorf("error preparing insert statement for machine notifications history: %w", err)
+	}
+	defer utils.ClosePreparedStatement(machineNotificationHistoryInsertStmt)
+
+	clientNotificationHistoryInsertStmt, err := db.FrontendWriterDB.Preparex(`
+		INSERT INTO client_notifications_history 
+		(user_id, epoch, client, client_version, client_url)
+		VALUES ($1, $2, $3, $4, $5)
+	`)
+	if err != nil {
+		return fmt.Errorf("error preparing insert statement for client notifications history: %w", err)
+	}
+	defer utils.ClosePreparedStatement(clientNotificationHistoryInsertStmt)
+
+	networktNotificationHistoryInsertStmt, err := db.FrontendWriterDB.Preparex(`
+		INSERT INTO network_notifications_history 
+		(user_id, epoch, network, event_type, event_threshold)
+		VALUES ($1, $2, $3, $4, $5)
+	`)
+	if err != nil {
+		return fmt.Errorf("error preparing insert statement for client notifications history: %w", err)
+	}
+	defer utils.ClosePreparedStatement(networktNotificationHistoryInsertStmt)
+
+	for userID, notificationsPerDashboard := range notificationsByUserID {
+		for dashboardID, notificationsPerGroup := range notificationsPerDashboard {
+			for group, notifications := range notificationsPerGroup {
+				for eventName, notifications := range notifications {
+					// handle all dashboard related notifications
+					if eventName != types.NetworkLivenessIncreasedEventName && !types.IsUserIndexed(eventName) && !types.IsMachineNotification(eventName) {
+						_, err := dashboardNotificationHistoryInsertStmt.Exec(
+							userID,
+							dashboardID,
+							group,
+							epoch,
+							eventName,
+							len(notifications),
+						)
+						if err != nil {
+							return fmt.Errorf("error inserting into dashboard notifications history: %w", err)
+						}
+					} else if types.IsMachineNotification(eventName) { // handle machine monitoring related events
+						for _, n := range notifications {
+							nTyped, ok := n.(*monitorMachineNotification)
+							if !ok {
+								return fmt.Errorf("error casting machine notification: %w", err)
+							}
+							_, err := machineNotificationHistoryInsertStmt.Exec(
+								userID,
+								epoch,
+								0,
+								nTyped.MachineName,
+								eventName,
+								nTyped.EventThreshold,
+							)
+							if err != nil {
+								return fmt.Errorf("error inserting into machine notifications history: %w", err)
+							}
+						}
+					} else if eventName == types.EthClientUpdateEventName { // handle client update events
+						for _, n := range notifications {
+							nTyped, ok := n.(*ethClientNotification)
+							if !ok {
+								return fmt.Errorf("error casting client update notification: %w", err)
+							}
+							_, err := clientNotificationHistoryInsertStmt.Exec(
+								userID,
+								epoch,
+								nTyped.EthClient,
+								"",
+								"",
+							)
+							if err != nil {
+								return fmt.Errorf("error inserting into client notifications history: %w", err)
+							}
+						}
+					} else if eventName == types.NetworkLivenessIncreasedEventName { // handle network liveness increased events
+						for range notifications {
+							_, err := networktNotificationHistoryInsertStmt.Exec(
+								userID,
+								epoch,
+								utils.Config.Chain.Name,
+								eventName,
+								0,
+							)
+							if err != nil {
+								return fmt.Errorf("error inserting into network notifications history: %w", err)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
 func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserId) (emails []types.TransitEmailContent, err error) {
 	emails = make([]types.TransitEmailContent, 0, 50)
 
@@ -166,7 +284,7 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 						notificationTypesMap[event]++
 
 						if i <= 10 {
-							if event != types.SyncCommitteeSoon {
+							if event != types.SyncCommitteeSoonEventName {
 								// SyncCommitteeSoon notifications are summed up in getEventInfo for all validators
 								//nolint:gosec // this is a static string
 								bodyDetails += template.HTML(fmt.Sprintf("%s<br>", n.GetInfo(types.NotifciationFormatHtml)))
@@ -210,7 +328,7 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 				plural = "s"
 			}
 			switch event {
-			case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
+			case types.RocketpoolCollateralMaxReachedEventName, types.RocketpoolCollateralMinReachedEventName:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural))
 			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
@@ -325,7 +443,7 @@ func RenderPushMessagesForUserEvents(notificationsByUserID types.NotificationsPe
 				plural = "s"
 			}
 			switch event {
-			case types.RocketpoolCollateralMaxReached, types.RocketpoolCollateralMinReached:
+			case types.RocketpoolCollateralMaxReachedEventName, types.RocketpoolCollateralMinReachedEventName:
 				bodySummary += fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural)
 			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
 				bodySummary += fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural)
@@ -470,7 +588,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 										},
 									}
 
-									if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReached || n.GetEventName() == types.RocketpoolCollateralMinReached {
+									if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReachedEventName || n.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
 										fields = append(fields,
 											types.DiscordEmbedField{
 												Name:   "Target",
@@ -542,7 +660,7 @@ func getNetwork() string {
 
 func getEventInfo(event types.EventName, format types.NotificationFormat, ns map[types.EventFilter]types.Notification) string {
 	switch event {
-	case types.SyncCommitteeSoon:
+	case types.SyncCommitteeSoonEventName:
 		return getSyncCommitteeSoonInfo(format, ns)
 	case "validator_balance_decreased":
 		return "<br>You will not receive any further balance decrease mails for these validators until the balance of a validator is increasing again."

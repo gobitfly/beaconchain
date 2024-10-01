@@ -103,7 +103,7 @@ func notificationCollector() {
 				break
 			}
 
-			err = queueNotifications(notifications) // this caused the collected notifications to be queued and sent
+			err = queueNotifications(epoch, notifications) // this caused the collected notifications to be queued and sent
 			if err != nil {
 				log.Error(err, "error queuing notifications for epoch %v in db: %v", 0, log.Fields{"epoch": epoch})
 				services.ReportStatus("notification-collector", "Error", nil)
@@ -121,7 +121,7 @@ func notificationCollector() {
 					continue
 				}
 
-				err = queueNotifications(userNotifications)
+				err = queueNotifications(epoch, userNotifications)
 				if err != nil {
 					log.Error(err, "error queuing user notifications for epoch %v in db: %v", 0, log.Fields{"epoch": epoch})
 					services.ReportStatus("notification-collector", "Error", nil)
@@ -325,14 +325,14 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 			}
 			log.Infof("collecting rocketpool claim round took: %v", time.Since(start))
 
-			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMaxReached, epoch, validatorDashboardConfig)
+			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMaxReachedEventName, epoch, validatorDashboardConfig)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_rpl_collateral_max_reached").Inc()
 				return nil, fmt.Errorf("error collecting rocketpool max collateral: %v", err)
 			}
 			log.Infof("collecting rocketpool max collateral took: %v", time.Since(start))
 
-			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMinReached, epoch, validatorDashboardConfig)
+			err = collectRocketpoolRPLCollateralNotifications(notificationsByUserID, types.RocketpoolCollateralMinReachedEventName, epoch, validatorDashboardConfig)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_collect_rocketpool_rpl_collateral_min_reached").Inc()
 				return nil, fmt.Errorf("error collecting rocketpool min collateral: %v", err)
@@ -1102,7 +1102,8 @@ func collectMonitoringMachine(
 				DashboardGroupId:   r.DashboardGroupId,
 				DashboardGroupName: r.DashboardGroupName,
 			},
-			MachineName: r.EventFilter,
+			MachineName:    r.EventFilter,
+			EventThreshold: r.EventThreshold,
 		}
 		//logrus.Infof("notify %v %v", eventName, n)
 		notificationsByUserID.AddNotification(n)
@@ -1420,7 +1421,7 @@ func collectRocketpoolRPLCollateralNotifications(notificationsByUserID types.Not
 			threshold = 1.0 // default case
 		}
 		inverse := false
-		if eventName == types.RocketpoolCollateralMaxReached {
+		if eventName == types.RocketpoolCollateralMaxReachedEventName {
 			if threshold < 0 {
 				threshold *= -1
 			} else {
@@ -1502,7 +1503,7 @@ func collectSyncCommitteeNotifications(notificationsByUserID types.Notifications
 		mapping[val.PubKey] = val.Index
 	}
 
-	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoon, "(last_sent_ts <= NOW() - INTERVAL '26 hours' OR last_sent_ts IS NULL)", nil, nil, validatorDashboardConfig)
+	dbResult, err := GetSubsForEventFilter(types.SyncCommitteeSoonEventName, "(last_sent_ts <= NOW() - INTERVAL '26 hours' OR last_sent_ts IS NULL)", nil, nil, validatorDashboardConfig)
 
 	if err != nil {
 		return err
