@@ -6,19 +6,40 @@ const { user } = useUserStore()
 const hasAbilityCustomMachineAlerts = computed(() => user.value?.premium_perks.custom_machine_alerts)
 
 const notificationsManagementStore = useNotificationsManagementStore()
-await notificationsManagementStore.getSettings()
+const {
+  status,
+} = useAsyncData(
+  () => notificationsManagementStore
+    .getSettings()
+    .then(({ data }) => notificationsManagementStore.settings = data),
+)
 
 const waitExtraLongForSliders = 5000
-watchDebounced(notificationsManagementStore.settings.general_settings, async () => {
+watchDebounced(() => notificationsManagementStore.settings.general_settings, async () => {
   await notificationsManagementStore.saveSettings()
 }, {
+  deep: true,
   maxWait: waitExtraLongForSliders,
 })
 </script>
 
 <template>
   <div>
-    <BcTabPanel>
+    <BcTabPanel
+      class="loading-container"
+    >
+      <div
+        v-if="status === 'pending'"
+        class="loading"
+      >
+        <BcLoadingSpinner
+          class="spinner"
+          alignment="center"
+          has-backdrop
+          size="large"
+          loading
+        />
+      </div>
       <div class="notifications-management-machines__content">
         <BcListSection>
           <span class="grid-span-2">
@@ -169,6 +190,15 @@ watchDebounced(notificationsManagementStore.settings.general_settings, async () 
 </template>
 
 <style lang="scss" scoped>
+.loading-container {
+  position: relative;;
+}
+.loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
 .info{
   padding: var(--padding);
   text-align: center;
