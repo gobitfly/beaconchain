@@ -27,7 +27,6 @@ export interface NotificationOverviewData {
   adb_subscriptions_count: number /* uint64 */;
   machines_subscription_count: number /* uint64 */;
   clients_subscription_count: number /* uint64 */;
-  rocket_pool_subscription_count: number /* uint64 */;
   networks_subscription_count: number /* uint64 */;
 }
 export type InternalGetUserNotificationsResponse = ApiDataResponse<NotificationOverviewData>;
@@ -43,7 +42,7 @@ export interface NotificationDashboardsTableRow {
   group_name: string;
   notification_id: number /* uint64 */; // may be string? db schema is not defined afaik
   entity_count: number /* uint64 */;
-  event_types: ('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
+  event_types: ('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
 }
 export type InternalGetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
 export interface NotificationEventGroup {
@@ -95,7 +94,7 @@ export type InternalGetUserNotificationsAccountDashboardResponse = ApiDataRespon
  */
 export interface NotificationMachinesTableRow {
   machine_name: string;
-  threshold: number /* float64 */;
+  threshold?: number /* float64 */;
   event_type: 'offline' | 'storage' | 'cpu' | 'memory';
   timestamp: number /* int64 */;
 }
@@ -118,7 +117,7 @@ export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<Notif
 export interface NotificationRocketPoolTableRow {
   timestamp: number /* int64 */;
   event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
-  alert_value?: number /* float64 */; // only for some notification types, e.g. max collateral
+  threshold?: number /* float64 */; // only for some notification types, e.g. max collateral
   node: Address;
 }
 export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<NotificationRocketPoolTableRow>;
@@ -129,8 +128,8 @@ export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<No
 export interface NotificationNetworksTableRow {
   chain_id: number /* uint64 */;
   timestamp: number /* int64 */;
-  event_type: 'gas_above' | 'gas_below' | 'participation_rate';
-  alert_value: string /* decimal.Decimal */; // wei string for gas alerts, otherwise percentage (0-1) for participation rate
+  event_type: 'new_reward_round' | 'gas_above' | 'gas_below' | 'participation_rate';
+  threshold?: string /* decimal.Decimal */;
 }
 export type InternalGetUserNotificationNetworksResponse = ApiPagingResponse<NotificationNetworksTableRow>;
 /**
@@ -144,6 +143,7 @@ export interface NotificationSettingsNetwork {
   gas_below_threshold: string /* decimal.Decimal */;
   is_participation_rate_subscribed: boolean;
   participation_rate_threshold: number /* float64 */;
+  is_new_reward_round_subscribed: boolean;
 }
 export interface NotificationNetwork {
   chain_id: number /* uint64 */;
@@ -175,11 +175,6 @@ export interface NotificationSettingsGeneral {
   machine_cpu_usage_threshold: number /* float64 */;
   is_machine_memory_usage_subscribed: boolean;
   machine_memory_usage_threshold: number /* float64 */;
-  is_rocket_pool_new_reward_round_subscribed: boolean;
-  is_rocket_pool_max_collateral_subscribed: boolean;
-  rocket_pool_max_collateral_threshold: number /* float64 */;
-  is_rocket_pool_min_collateral_subscribed: boolean;
-  rocket_pool_min_collateral_threshold: number /* float64 */;
 }
 export type InternalPutUserNotificationSettingsGeneralResponse = ApiDataResponse<NotificationSettingsGeneral>;
 export interface NotificationSettings {
@@ -203,6 +198,10 @@ export interface NotificationSettingsValidatorDashboard {
   is_sync_subscribed: boolean;
   is_withdrawal_processed_subscribed: boolean;
   is_slashed_subscribed: boolean;
+  is__max_collateral_subscribed: boolean;
+  _max_collateral_threshold: number /* float64 */;
+  is__min_collateral_subscribed: boolean;
+  _min_collateral_threshold: number /* float64 */;
 }
 export type InternalPutUserNotificationSettingsValidatorDashboardResponse = ApiDataResponse<NotificationSettingsValidatorDashboard>;
 export interface NotificationSettingsAccountDashboard {

@@ -2099,7 +2099,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
-//	@Param			search	query		string	false	"Search for TODO"
+//	@Param			search	query		string	false	"Search for Node Address"
 //	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/rocket-pool [get]
@@ -2138,7 +2138,6 @@ func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWrit
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type)
-//	@Param			search	query		string	false	"Search for TODO"
 //	@Success		200		{object}	types.InternalGetUserNotificationNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/networks [get]
@@ -2156,7 +2155,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2219,8 +2218,6 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
 	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
 	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
-	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
-	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -2261,7 +2258,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		IsGasBelowSubscribed          bool    `json:"is_gas_below_subscribed"`
 		GasBelowThreshold             string  `json:"gas_below_threshold" `
 		IsParticipationRateSubscribed bool    `json:"is_participation_rate_subscribed"`
-		ParticipationRateThreshold    float64 `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
+		ParticipationRateThreshold    float64 `json:"participation_rate_threshold"`
+		IsNewRewardRoundSubscribed    bool    `json:"is_new_reward_round_subscribed"`
 	}
 	var req request
 	if err := v.checkBody(&req, r); err != nil {
@@ -2286,6 +2284,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		GasBelowThreshold:             gasBelowThreshold,
 		IsParticipationRateSubscribed: req.IsParticipationRateSubscribed,
 		ParticipationRateThreshold:    req.ParticipationRateThreshold,
+		IsNewRewardRoundSubscribed:    req.IsNewRewardRoundSubscribed,
 	}
 
 	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, settings)
@@ -2491,6 +2490,9 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
+
+	checkMinMax(&v, req.MaxCollateralThreshold, 0, 1, "max_collateral_threshold")
+	checkMinMax(&v, req.MinCollateralThreshold, 0, 1, "min_collateral_threshold")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
