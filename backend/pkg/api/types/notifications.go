@@ -194,7 +194,7 @@ type NotificationSettingsGeneral struct {
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
 	GeneralSettings NotificationSettingsGeneral  `json:"general_settings"`
-	HasUserMachines bool                         `json:"has_user_machines"`
+	HasMachines     bool                         `json:"has_machines"`
 	Networks        []NotificationNetwork        `json:"networks"`
 	PairedDevices   []NotificationPairedDevice   `json:"paired_devices"`
 	Clients         []NotificationSettingsClient `json:"clients" faker:"slice_len=10"`
