@@ -10,7 +10,7 @@ var _ EnumFactory[NotificationDashboardsColumn] = NotificationDashboardsColumn(0
 const (
 	NotificationDashboardChainId NotificationDashboardsColumn = iota
 	NotificationDashboardTimestamp
-	NotificationDashboardDashboardId // sort by name
+	NotificationDashboardDashboardName // sort by name
 )
 
 func (c NotificationDashboardsColumn) Int() int {
@@ -23,8 +23,8 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 		return NotificationDashboardChainId
 	case "timestamp":
 		return NotificationDashboardTimestamp
-	case "dashboard_id":
-		return NotificationDashboardDashboardId
+	case "dashboard_name", "dashboard_id": // accepting id for frontend
+		return NotificationDashboardDashboardName
 	default:
 		return NotificationDashboardsColumn(-1)
 	}
@@ -37,7 +37,7 @@ var NotificationsDashboardsColumns = struct {
 }{
 	NotificationDashboardChainId,
 	NotificationDashboardTimestamp,
-	NotificationDashboardDashboardId,
+	NotificationDashboardDashboardName,
 }
 
 // ------------------------------------------------------------

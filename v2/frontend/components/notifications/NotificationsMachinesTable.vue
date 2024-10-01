@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { NotificationMachinesTableRow } from '~/types/api/notifications'
 import type { Cursor } from '~/types/datatable'
 
 defineEmits<{ (e: 'openDialog'): void }>()
@@ -24,13 +25,20 @@ const colsVisible = computed(() => {
     threshold: width.value > 830,
   }
 })
+const { overview } = useNotificationsDashboardOverviewStore()
+const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => {
+  if (eventType === 'cpu') return $t('notifications.machine.event_type.cpu_overheated')
+  if (eventType === 'memory') return $t('notifications.machine.event_type.high_memory_usage')
+  if (eventType === 'offline') return $t('notifications.machine.event_type.machine_offline')
+  if (eventType === 'storage') return $t('notifications.machine.event_type.no_storage')
+}
 </script>
 
 <template>
   <div>
     <BcTableControl
-      :title="$t('notifications.dashboards.title')"
-      :search-placeholder="$t('notifications.dashboards.search_placeholder')"
+      :title="$t('notifications.machine.title')"
+      :search-placeholder="$t('notifications.machine.search_placeholder')"
       @set-search="setSearch"
     >
       <template #table>
@@ -86,7 +94,7 @@ const colsVisible = computed(() => {
             >
               <template #body="slotProps">
                 <div>
-                  {{ $t(`notifications.machine.event_type.${slotProps.data.event_type}`, slotProps.data.event_type) }}
+                  {{ machineEvent(slotProps.data.event_type) }}
                 </div>
               </template>
             </Column>
@@ -128,10 +136,9 @@ const colsVisible = computed(() => {
                 @open-dialog="$emit('openDialog')"
               />
             </template>
-            <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="colsVisible">
-                {{ $t('notifications.machine.footer.subscriptions', { count: 1 }) }}
+                {{ $t('notifications.machine.footer.subscriptions', { count: overview?.machines_subscription_count }) }}
               </template>
             </template>
           </BcTable>

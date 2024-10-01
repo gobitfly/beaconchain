@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
+	"github.com/shopspring/decimal"
 	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/alexedwards/scs/v2"
@@ -29,11 +30,12 @@ import (
 )
 
 type HandlerService struct {
-	dai dataaccess.DataAccessor
-	scs *scs.SessionManager
+	dai                         dataaccess.DataAccessor
+	scs                         *scs.SessionManager
+	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -43,8 +45,9 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 	}
 
 	return &HandlerService{
-		dai: dataAccessor,
-		scs: sessionManager,
+		dai:                         dataAccessor,
+		scs:                         sessionManager,
+		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
 }
 
@@ -248,6 +251,35 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 		v.add(paramName, fmt.Sprintf("given value %s is not a positive integer", param))
 	}
 	return num
+}
+
+func (v *validationError) checkWeiDecimal(param, paramName string) decimal.Decimal {
+	dec := decimal.Zero
+	// check if only numbers are contained in the string with regex
+	if !reInteger.MatchString(param) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is not a wei string (must be positive integer)", param))
+		return dec
+	}
+	dec, err := decimal.NewFromString(param)
+	if err != nil {
+		v.add(paramName, fmt.Sprintf("given value '%s' is not a wei string (must be positive integer)", param))
+		return dec
+	}
+	return dec
+}
+
+func (v *validationError) checkWeiMinMax(param, paramName string, min, max decimal.Decimal) decimal.Decimal {
+	dec := v.checkWeiDecimal(param, paramName)
+	if v.hasErrors() {
+		return dec
+	}
+	if dec.LessThan(min) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is too small, minimum value is %s", dec, min))
+	}
+	if dec.GreaterThan(max) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is too large, maximum value is %s", dec, max))
+	}
+	return dec
 }
 
 func (v *validationError) checkBool(param, paramName string) bool {
@@ -525,14 +557,10 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
-func checkEnumIsAllowed[T enums.EnumFactory[T]](v *validationError, enum T, allowed []T, name string) {
-	if enums.IsInvalidEnum(enum) {
-		v.add(name, "parameter is missing or invalid, please check the API documentation")
-		return
-	}
+// better func name would be
+func checkValueInAllowed[T cmp.Ordered](v *validationError, value T, allowed []T, name string) {
 	for _, a := range allowed {
-		if enum.Int() == a.Int() {
+		if cmp.Compare(value, a) == 0 {
 			return
 		}
 	}
@@ -656,6 +684,14 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 		return v.checkNetwork(intOrString{intValue: &chainId})
 	}
 	return v.checkNetwork(intOrString{strValue: &param})
+}
+
+func (v *validationError) checkNetworksParameter(param string) []uint64 {
+	var chainIds []uint64
+	for _, network := range splitParameters(param, ',') {
+		chainIds = append(chainIds, v.checkNetworkParameter(network))
+	}
+	return chainIds
 }
 
 // isValidNetwork checks if the given network is a valid network.
