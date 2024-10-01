@@ -27,12 +27,12 @@ func queueNotifications(epoch uint64, notificationsByUserID types.NotificationsP
 	}
 	defer utils.Rollback(tx)
 
-	err = QueueEmailNotifications(notificationsByUserID, tx)
+	err = QueueEmailNotifications(epoch, notificationsByUserID, tx)
 	if err != nil {
 		return fmt.Errorf("error queuing email notifications: %w", err)
 	}
 
-	err = QueuePushNotification(notificationsByUserID, tx)
+	err = QueuePushNotification(epoch, notificationsByUserID, tx)
 	if err != nil {
 		return fmt.Errorf("error queuing push notifications: %w", err)
 	}
@@ -226,7 +226,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 	}
 	return nil
 }
-func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserId) (emails []types.TransitEmailContent, err error) {
+func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.NotificationsPerUserId) (emails []types.TransitEmailContent, err error) {
 	emails = make([]types.TransitEmailContent, 0, 50)
 
 	createdTs := time.Now()
@@ -314,7 +314,8 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 			}
 		}
 
-		bodySummary := template.HTML("<h5>Summary:</h5>")
+		//nolint:gosec // this is a static string
+		bodySummary := template.HTML(fmt.Sprintf("<h5>Summary for epoch %d:</h5>", epoch))
 		for _, event := range types.EventSortOrder {
 			count, ok := notificationTypesMap[event]
 			if !ok {
@@ -367,9 +368,9 @@ func RenderEmailsForUserEvents(notificationsByUserID types.NotificationsPerUserI
 	return emails, nil
 }
 
-func QueueEmailNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
+func QueueEmailNotifications(epoch uint64, notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
 	// for emails multiple notifications will be rendered to one email per user for each run
-	emails, err := RenderEmailsForUserEvents(notificationsByUserID)
+	emails, err := RenderEmailsForUserEvents(epoch, notificationsByUserID)
 	if err != nil {
 		return fmt.Errorf("error rendering emails: %w", err)
 	}
@@ -394,7 +395,7 @@ func QueueEmailNotifications(notificationsByUserID types.NotificationsPerUserId,
 	return nil
 }
 
-func RenderPushMessagesForUserEvents(notificationsByUserID types.NotificationsPerUserId) ([]types.TransitPushContent, error) {
+func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.NotificationsPerUserId) ([]types.TransitPushContent, error) {
 	pushMessages := make([]types.TransitPushContent, 0, 50)
 
 	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
@@ -421,9 +422,7 @@ func RenderPushMessagesForUserEvents(notificationsByUserID types.NotificationsPe
 					if !ok { // nothing to do for this event type
 						continue
 					}
-					for range ns {
-						notificationTypesMap[event]++
-					}
+					notificationTypesMap[event] += len(ns)
 					metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
 				}
 			}
@@ -466,7 +465,7 @@ func RenderPushMessagesForUserEvents(notificationsByUserID types.NotificationsPe
 			message.APNS.Payload.Aps.Sound = "default"
 
 			notification := new(messaging.Notification)
-			notification.Title = fmt.Sprintf("%s Info", getNetwork())
+			notification.Title = fmt.Sprintf("%sInfo for epoch %d", getNetwork(), epoch)
 			notification.Body = bodySummary
 			message.Notification = notification
 			transitPushContent := types.TransitPushContent{
@@ -480,8 +479,8 @@ func RenderPushMessagesForUserEvents(notificationsByUserID types.NotificationsPe
 	return pushMessages, nil
 }
 
-func QueuePushNotification(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
-	pushMessages, err := RenderPushMessagesForUserEvents(notificationsByUserID)
+func QueuePushNotification(epoch uint64, notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
+	pushMessages, err := RenderPushMessagesForUserEvents(epoch, notificationsByUserID)
 	if err != nil {
 		return fmt.Errorf("error rendering push messages: %w", err)
 	}

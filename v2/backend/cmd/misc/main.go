@@ -538,7 +538,7 @@ func collectUserDbNotifications(startEpoch uint64) error {
 
 	log.Infof("found %v dashboard notifications for user", len(notifications[3]))
 
-	emails, err := notification.RenderEmailsForUserEvents(notifications)
+	emails, err := notification.RenderEmailsForUserEvents(0, notifications)
 	if err != nil {
 		return err
 	}
@@ -552,7 +552,7 @@ func collectUserDbNotifications(startEpoch uint64) error {
 		// }
 	}
 
-	pushMessages, err := notification.RenderPushMessagesForUserEvents(notifications)
+	pushMessages, err := notification.RenderPushMessagesForUserEvents(0, notifications)
 	if err != nil {
 		return err
 	}
