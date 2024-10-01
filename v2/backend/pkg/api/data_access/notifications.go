@@ -85,19 +85,17 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	// Create the default settings
 	result := &t.NotificationSettings{
 		GeneralSettings: t.NotificationSettingsGeneral{
-			MachineStorageUsageThreshold:     MachineStorageUsageThresholdDefault,
-			MachineCpuUsageThreshold:         MachineCpuUsageThresholdDefault,
-			MachineMemoryUsageThreshold:      MachineMemoryUsageThresholdDefault,
-			RocketPoolMaxCollateralThreshold: RocketPoolMaxCollateralThresholdDefault,
-			RocketPoolMinCollateralThreshold: RocketPoolMinCollateralThresholdDefault,
+			MachineStorageUsageThreshold: MachineStorageUsageThresholdDefault,
+			MachineCpuUsageThreshold:     MachineCpuUsageThresholdDefault,
+			MachineMemoryUsageThreshold:  MachineMemoryUsageThresholdDefault,
 		},
 	}
 
+	// For networks
 	networks, err := d.GetAllNetworks()
 	if err != nil {
 		return nil, err
 	}
-
 	networksSettings := make(map[string]*t.NotificationNetwork, len(networks))
 	for _, network := range networks {
 		networksSettings[network.Name] = &t.NotificationNetwork{
@@ -107,6 +105,20 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 				GasBelowThreshold:          decimal.NewFromFloat(GasBelowThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
 				ParticipationRateThreshold: ParticipationRateThresholdDefault,
 			},
+		}
+	}
+
+	// For clients
+	clients, err := d.GetAllClients()
+	if err != nil {
+		return nil, err
+	}
+	clientSettings := make(map[string]*t.NotificationSettingsClient, len(clients))
+	for _, client := range clients {
+		clientSettings[client.Name] = &t.NotificationSettingsClient{
+			Id:       client.Id,
+			Name:     client.Name,
+			Category: client.Category,
 		}
 	}
 
@@ -209,6 +221,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			result.GeneralSettings.IsPushNotificationsEnabled = channel.Active
 		}
 	}
+
 	for _, event := range subscribedEvents {
 		eventSplit := strings.Split(string(event.Name), ":")
 
@@ -218,13 +231,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 			switch networkEvent {
 			case types.RocketpoolNewClaimRoundStartedEventName:
-				result.GeneralSettings.IsRocketPoolNewRewardRoundSubscribed = true
-			case types.RocketpoolCollateralMaxReached:
-				result.GeneralSettings.IsRocketPoolMaxCollateralSubscribed = true
-				result.GeneralSettings.RocketPoolMaxCollateralThreshold = event.Threshold
-			case types.RocketpoolCollateralMinReached:
-				result.GeneralSettings.IsRocketPoolMinCollateralSubscribed = true
-				result.GeneralSettings.RocketPoolMinCollateralThreshold = event.Threshold
+				networksSettings[networkName].Settings.IsNewRewardRoundSubscribed = true
 			case types.NetworkGasAboveThresholdEventName:
 				networksSettings[networkName].Settings.IsGasAboveSubscribed = true
 				networksSettings[networkName].Settings.GasAboveThreshold = decimal.NewFromFloat(event.Threshold).Mul(decimal.NewFromInt(params.GWei))
@@ -249,7 +256,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 				result.GeneralSettings.IsMachineMemoryUsageSubscribed = true
 				result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold
 			case types.EthClientUpdateEventName:
-				result.GeneralSettings.SubscribedClients = append(result.GeneralSettings.SubscribedClients, event.Filter)
+				clientSettings[event.Filter].IsSubscribed = true
 			}
 		}
 	}
@@ -266,6 +273,10 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			Name:                   device.DeviceName,
 			IsNotificationsEnabled: device.NotifyEnabled,
 		})
+	}
+
+	for _, settings := range clientSettings {
+		result.Clients = append(result.Clients, *settings)
 	}
 
 	return result, nil

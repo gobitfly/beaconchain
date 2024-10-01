@@ -130,6 +130,12 @@ type NetworkInfo struct {
 	Name    string
 }
 
+type ClientInfo struct {
+	Id       uint64
+	Name     string
+	Category string
+}
+
 // -------------------------
 // validator indices structs, only used between data access and api layer
 
