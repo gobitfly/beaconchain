@@ -47,6 +47,11 @@ const (
 	AccountDashboardEventPrefix   string = "adb"
 
 	DiscordWebhookFormat string = "discord"
+
+	GroupOfflineThresholdDefault             float64 = 0.1
+	MaxCollateralThresholdDefault            float64 = 0.2
+	MinCollateralThresholdDefault            float64 = 0.3
+	ERC20TokenTransfersValueThresholdDefault float64 = 0.4
 )
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
@@ -230,11 +235,17 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		if _, ok := settingsMap[event.Filter]; !ok {
 			if dashboardType == ValidatorDashboardEventPrefix {
 				settingsMap[event.Filter] = &NotificationSettingsDashboardsInfo{
-					Settings: t.NotificationSettingsValidatorDashboard{},
+					Settings: t.NotificationSettingsValidatorDashboard{
+						GroupOfflineThreshold:  GroupOfflineThresholdDefault,
+						MaxCollateralThreshold: MaxCollateralThresholdDefault,
+						MinCollateralThreshold: MinCollateralThresholdDefault,
+					},
 				}
 			} else if dashboardType == AccountDashboardEventPrefix {
 				settingsMap[event.Filter] = &NotificationSettingsDashboardsInfo{
-					Settings: t.NotificationSettingsAccountDashboard{},
+					Settings: t.NotificationSettingsAccountDashboard{
+						ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
+					},
 				}
 			}
 		}
@@ -258,6 +269,12 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				valSettings.IsWithdrawalProcessedSubscribed = true
 			case types.ValidatorGotSlashedEventName:
 				valSettings.IsSlashedSubscribed = true
+			case types.RocketpoolCollateralMinReached:
+				valSettings.IsMinCollateralSubscribed = true
+				valSettings.MinCollateralThreshold = event.Threshold
+			case types.RocketpoolCollateralMaxReached:
+				valSettings.IsMaxCollateralSubscribed = true
+				valSettings.MaxCollateralThreshold = event.Threshold
 			}
 		} else if accSettings, ok := settingsMap[event.Filter].Settings.(*t.NotificationSettingsAccountDashboard); ok {
 			switch event.Name {
@@ -282,7 +299,11 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 		if _, ok := settingsMap[key]; !ok {
 			settingsMap[key] = &NotificationSettingsDashboardsInfo{
-				Settings: t.NotificationSettingsValidatorDashboard{},
+				Settings: t.NotificationSettingsValidatorDashboard{
+					GroupOfflineThreshold:  GroupOfflineThresholdDefault,
+					MaxCollateralThreshold: MaxCollateralThresholdDefault,
+					MinCollateralThreshold: MinCollateralThresholdDefault,
+				},
 			}
 		}
 
@@ -308,7 +329,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 		if _, ok := settingsMap[key]; !ok {
 			settingsMap[key] = &NotificationSettingsDashboardsInfo{
-				Settings: t.NotificationSettingsAccountDashboard{},
+				Settings: t.NotificationSettingsAccountDashboard{
+					ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
+				},
 			}
 		}
 
