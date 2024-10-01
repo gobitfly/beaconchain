@@ -30,6 +30,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         rocket_pool_max_collateral_threshold: 0,
         rocket_pool_min_collateral_threshold: 0,
       },
+      has_machines: true,
       networks: [],
       paired_devices: [],
     },
