@@ -26,7 +26,7 @@ const {
 } = useDashboardKey()
 
 const {
-  isMobile, width,
+  width,
 } = useWindowSize()
 
 const visible = defineModel<boolean>()
@@ -199,6 +199,9 @@ const selectedSort = computed(() =>
     ? `${sortField.value}:${getSortOrder(sortOrder.value)}`
     : undefined,
 )
+const isMobile = computed(() => {
+  return (width.value ?? 0) <= 800
+})
 </script>
 
 <template>
