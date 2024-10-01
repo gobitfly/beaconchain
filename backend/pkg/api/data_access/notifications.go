@@ -461,13 +461,15 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		switch notification.EventType {
 		case types.NetworkGasAboveThresholdEventName:
 			resultEntry.EventType = "gas_above"
-			resultEntry.AlertValue = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
-		case types.NetworkGasAboveThresholdEventName:
+			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
+		case types.NetworkGasBelowThresholdEventName:
 			resultEntry.EventType = "gas_below"
-			resultEntry.AlertValue = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
+			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
 		case types.NetworkParticipationRateThresholdEventName:
 			resultEntry.EventType = "participation_rate"
-			resultEntry.AlertValue = decimal.NewFromFloat(notification.EventThreshold)
+			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold)
+		case types.RocketpoolNewClaimRoundStartedEventName:
+			resultEntry.EventType = "new_reward_round"
 		default:
 			return nil, nil, fmt.Errorf("invalid event name for network notification: %v", notification.EventType)
 		}
