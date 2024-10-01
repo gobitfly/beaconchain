@@ -184,6 +184,7 @@ export interface NotificationSettingsGeneral {
 export type InternalPutUserNotificationSettingsGeneralResponse = ApiDataResponse<NotificationSettingsGeneral>;
 export interface NotificationSettings {
   general_settings: NotificationSettingsGeneral;
+  has_machines: boolean;
   networks: NotificationNetwork[];
   paired_devices: NotificationPairedDevice[];
   clients: NotificationSettingsClient[];
