@@ -107,6 +107,7 @@ export type InternalGetUserNotificationMachinesResponse = ApiPagingResponse<Noti
 export interface NotificationClientsTableRow {
   client_name: string;
   version: string;
+  url: string;
   timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
@@ -118,7 +119,7 @@ export interface NotificationRocketPoolTableRow {
   timestamp: number /* int64 */;
   event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
   alert_value?: number /* float64 */; // only for some notification types, e.g. max collateral
-  node_address: Hash;
+  node: Address;
 }
 export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<NotificationRocketPoolTableRow>;
 /**
@@ -156,6 +157,13 @@ export interface NotificationPairedDevice {
   is_notifications_enabled: boolean;
 }
 export type InternalPutUserNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationPairedDevice>;
+export interface NotificationSettingsClient {
+  id: number /* uint64 */;
+  name: string;
+  category: 'execution_layer' | 'consensus_layer' | 'other';
+  is_subscribed: boolean;
+}
+export type InternalPutUserNotificationSettingsClientResponse = ApiDataResponse<NotificationSettingsClient>;
 export interface NotificationSettingsGeneral {
   do_not_disturb_timestamp: number /* int64 */; // notifications are disabled until this timestamp
   is_email_notifications_enabled: boolean;
@@ -167,7 +175,6 @@ export interface NotificationSettingsGeneral {
   machine_cpu_usage_threshold: number /* float64 */;
   is_machine_memory_usage_subscribed: boolean;
   machine_memory_usage_threshold: number /* float64 */;
-  subscribed_clients: string[];
   is_rocket_pool_new_reward_round_subscribed: boolean;
   is_rocket_pool_max_collateral_subscribed: boolean;
   rocket_pool_max_collateral_threshold: number /* float64 */;
@@ -177,8 +184,10 @@ export interface NotificationSettingsGeneral {
 export type InternalPutUserNotificationSettingsGeneralResponse = ApiDataResponse<NotificationSettingsGeneral>;
 export interface NotificationSettings {
   general_settings: NotificationSettingsGeneral;
+  has_machines: boolean;
   networks: NotificationNetwork[];
   paired_devices: NotificationPairedDevice[];
+  clients: NotificationSettingsClient[];
 }
 export type InternalGetUserNotificationSettingsResponse = ApiDataResponse<NotificationSettings>;
 export interface NotificationSettingsValidatorDashboard {

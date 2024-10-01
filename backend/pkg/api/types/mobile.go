@@ -14,7 +14,7 @@ type MobileWidgetData struct {
 	Last24hIncome        decimal.Decimal      `json:"last_24h_income" faker:"eth"`
 	Last7dIncome         decimal.Decimal      `json:"last_7d_income" faker:"eth"`
 	Last30dApr           float64              `json:"last_30d_apr"`
-	Last30dEfficiency    decimal.Decimal      `json:"last_30d_efficiency" faker:"eth"`
+	Last30dEfficiency    float64              `json:"last_30d_efficiency"`
 	NetworkEfficiency    float64              `json:"network_efficiency"`
 	RplPrice             decimal.Decimal      `json:"rpl_price" faker:"eth"`
 	RplApr               float64              `json:"rpl_apr"`

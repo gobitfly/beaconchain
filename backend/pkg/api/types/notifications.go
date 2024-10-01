@@ -111,6 +111,7 @@ type InternalGetUserNotificationMachinesResponse ApiPagingResponse[NotificationM
 type NotificationClientsTableRow struct {
 	ClientName string `json:"client_name"`
 	Version    string `json:"version"`
+	Url        string `json:"url"`
 	Timestamp  int64  `json:"timestamp"`
 }
 
@@ -119,10 +120,10 @@ type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationCl
 // ------------------------------------------------------------
 // Rocket Pool Table
 type NotificationRocketPoolTableRow struct {
-	Timestamp   int64   `json:"timestamp"`
-	EventType   string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	AlertValue  float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
-	NodeAddress Hash    `json:"node_address"`
+	Timestamp  int64   `json:"timestamp"`
+	EventType  string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
+	AlertValue float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
+	Node       Address `json:"node"`
 }
 
 type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
@@ -162,6 +163,15 @@ type NotificationPairedDevice struct {
 }
 type InternalPutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[NotificationPairedDevice]
 
+type NotificationSettingsClient struct {
+	Id           uint64 `json:"id"`
+	Name         string `json:"name"`
+	Category     string `json:"category" tstype:"'execution_layer' | 'consensus_layer' | 'other'" faker:"oneof: execution_layer, consensus_layer, other"`
+	IsSubscribed bool   `json:"is_subscribed"`
+}
+
+type InternalPutUserNotificationSettingsClientResponse ApiDataResponse[NotificationSettingsClient]
+
 type NotificationSettingsGeneral struct {
 	DoNotDisturbTimestamp       int64 `json:"do_not_disturb_timestamp"` // notifications are disabled until this timestamp
 	IsEmailNotificationsEnabled bool  `json:"is_email_notifications_enabled"`
@@ -175,18 +185,19 @@ type NotificationSettingsGeneral struct {
 	IsMachineMemoryUsageSubscribed  bool    `json:"is_machine_memory_usage_subscribed"`
 	MachineMemoryUsageThreshold     float64 `json:"machine_memory_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
 
-	SubscribedClients                    []string `json:"subscribed_clients"`
-	IsRocketPoolNewRewardRoundSubscribed bool     `json:"is_rocket_pool_new_reward_round_subscribed"`
-	IsRocketPoolMaxCollateralSubscribed  bool     `json:"is_rocket_pool_max_collateral_subscribed"`
-	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
-	IsRocketPoolMinCollateralSubscribed  bool     `json:"is_rocket_pool_min_collateral_subscribed"`
-	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsRocketPoolNewRewardRoundSubscribed bool    `json:"is_rocket_pool_new_reward_round_subscribed"`
+	IsRocketPoolMaxCollateralSubscribed  bool    `json:"is_rocket_pool_max_collateral_subscribed"`
+	RocketPoolMaxCollateralThreshold     float64 `json:"rocket_pool_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsRocketPoolMinCollateralSubscribed  bool    `json:"is_rocket_pool_min_collateral_subscribed"`
+	RocketPoolMinCollateralThreshold     float64 `json:"rocket_pool_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
-	GeneralSettings NotificationSettingsGeneral `json:"general_settings"`
-	Networks        []NotificationNetwork       `json:"networks"`
-	PairedDevices   []NotificationPairedDevice  `json:"paired_devices"`
+	GeneralSettings NotificationSettingsGeneral  `json:"general_settings"`
+	HasMachines     bool                         `json:"has_machines"`
+	Networks        []NotificationNetwork        `json:"networks"`
+	PairedDevices   []NotificationPairedDevice   `json:"paired_devices"`
+	Clients         []NotificationSettingsClient `json:"clients" faker:"slice_len=10"`
 }
 type InternalGetUserNotificationSettingsResponse ApiDataResponse[NotificationSettings]
 
