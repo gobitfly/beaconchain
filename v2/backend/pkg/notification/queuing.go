@@ -448,6 +448,8 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 				bodySummary += fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural)
 			case types.EthClientUpdateEventName:
 				bodySummary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)
+			case types.MonitoringMachineCpuLoadEventName, types.MonitoringMachineMemoryUsageEventName, types.MonitoringMachineDiskAlmostFullEventName, types.MonitoringMachineOfflineEventName:
+				bodySummary += fmt.Sprintf("%s: %d machine%s", types.EventLabel[event], count, plural)
 			default:
 				bodySummary += fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural)
 			}
