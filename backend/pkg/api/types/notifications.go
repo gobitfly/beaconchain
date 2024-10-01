@@ -211,10 +211,10 @@ type NotificationSettingsValidatorDashboard struct {
 	IsWithdrawalProcessedSubscribed   bool    `json:"is_withdrawal_processed_subscribed"`
 	IsSlashedSubscribed               bool    `json:"is_slashed_subscribed"`
 
-	IsMaxCollateralSubscribed bool    `json:"is__max_collateral_subscribed"`
-	MaxCollateralThreshold    float64 `json:"_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
-	IsMinCollateralSubscribed bool    `json:"is__min_collateral_subscribed"`
-	MinCollateralThreshold    float64 `json:"_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMaxCollateralSubscribed bool    `json:"is_max_collateral_subscribed"`
+	MaxCollateralThreshold    float64 `json:"max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMinCollateralSubscribed bool    `json:"is_min_collateral_subscribed"`
+	MinCollateralThreshold    float64 `json:"min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 
 type InternalPutUserNotificationSettingsValidatorDashboardResponse ApiDataResponse[NotificationSettingsValidatorDashboard]

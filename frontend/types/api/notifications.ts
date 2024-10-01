@@ -129,7 +129,7 @@ export interface NotificationNetworksTableRow {
   chain_id: number /* uint64 */;
   timestamp: number /* int64 */;
   event_type: 'new_reward_round' | 'gas_above' | 'gas_below' | 'participation_rate';
-  threshold?: string /* decimal.Decimal */;
+  threshold?: string /* decimal.Decimal */; // participation rate threshold should also be passed as decimal string
 }
 export type InternalGetUserNotificationNetworksResponse = ApiPagingResponse<NotificationNetworksTableRow>;
 /**
@@ -198,10 +198,10 @@ export interface NotificationSettingsValidatorDashboard {
   is_sync_subscribed: boolean;
   is_withdrawal_processed_subscribed: boolean;
   is_slashed_subscribed: boolean;
-  is__max_collateral_subscribed: boolean;
-  _max_collateral_threshold: number /* float64 */;
-  is__min_collateral_subscribed: boolean;
-  _min_collateral_threshold: number /* float64 */;
+  is_max_collateral_subscribed: boolean;
+  max_collateral_threshold: number /* float64 */;
+  is_min_collateral_subscribed: boolean;
+  min_collateral_threshold: number /* float64 */;
 }
 export type InternalPutUserNotificationSettingsValidatorDashboardResponse = ApiDataResponse<NotificationSettingsValidatorDashboard>;
 export interface NotificationSettingsAccountDashboard {
