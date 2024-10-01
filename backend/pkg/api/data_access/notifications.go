@@ -480,6 +480,8 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSyncSubscribed, userId, string(types.SyncCommitteeSoon), eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, string(types.ValidatorReceivedWithdrawalEventName), eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSlashedSubscribed, userId, string(types.ValidatorGotSlashedEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsMaxCollateralSubscribed, userId, string(types.RocketpoolCollateralMaxReached), eventFilter, epoch, settings.MaxCollateralThreshold)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsMinCollateralSubscribed, userId, string(types.RocketpoolCollateralMinReached), eventFilter, epoch, settings.MinCollateralThreshold)
 
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {
