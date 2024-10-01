@@ -75,7 +75,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		return nil, err
 	}
 
-	log.Infof("Found %d subscriptions for event %s", len(subs), eventName)
+	log.Infof("found %d subscriptions for event %s", len(subs), eventName)
 	zero := uint64(0)
 
 	for _, sub := range subs {
