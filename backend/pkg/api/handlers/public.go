@@ -11,6 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gorilla/mux"
+	"github.com/shopspring/decimal"
 )
 
 // All handler function names must include the HTTP method and the path they handle
@@ -2243,7 +2244,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 //	@Accept			json
 //	@Produce		json
 //	@Param			network	path		string								true	"The networks name or chain ID."
-//	@Param			request	body		types.NotificationSettingsNetwork	true	"Description Todo"
+//	@Param			request	body		handlers.PublicPutUserNotificationSettingsNetworks.request	true	"Description Todo"
 //	@Success		200		{object}	types.InternalPutUserNotificationSettingsNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/networks/{network} [put]
@@ -2254,19 +2255,40 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		handleErr(w, r, err)
 		return
 	}
-	var req types.NotificationSettingsNetwork
+	type request struct {
+		IsGasAboveSubscribed          bool    `json:"is_gas_above_subscribed"`
+		GasAboveThreshold             string  `json:"gas_above_threshold"`
+		IsGasBelowSubscribed          bool    `json:"is_gas_below_subscribed"`
+		GasBelowThreshold             string  `json:"gas_below_threshold" `
+		IsParticipationRateSubscribed bool    `json:"is_participation_rate_subscribed"`
+		ParticipationRateThreshold    float64 `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
+	}
+	var req request
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	checkMinMax(&v, req.ParticipationRateThreshold, 0, 1, "participation_rate_threshold")
-
 	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+
+	minWei := decimal.New(1000000, 1)       // 0.001 Gwei
+	maxWei := decimal.New(1000000000000, 1) // 1000 Gwei
+	gasAboveThreshold := v.checkWeiMinMax(req.GasAboveThreshold, "gas_above_threshold", minWei, maxWei)
+	gasBelowThreshold := v.checkWeiMinMax(req.GasBelowThreshold, "gas_below_threshold", minWei, maxWei)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
+	settings := types.NotificationSettingsNetwork{
+		IsGasAboveSubscribed:          req.IsGasAboveSubscribed,
+		GasAboveThreshold:             gasAboveThreshold,
+		IsGasBelowSubscribed:          req.IsGasBelowSubscribed,
+		GasBelowThreshold:             gasBelowThreshold,
+		IsParticipationRateSubscribed: req.IsParticipationRateSubscribed,
+		ParticipationRateThreshold:    req.ParticipationRateThreshold,
+	}
+
+	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, settings)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2274,7 +2296,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 	response := types.InternalPutUserNotificationSettingsNetworksResponse{
 		Data: types.NotificationNetwork{
 			ChainId:  chainId,
-			Settings: req,
+			Settings: settings,
 		},
 	}
 	returnOk(w, r, response)

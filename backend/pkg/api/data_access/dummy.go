@@ -396,7 +396,20 @@ func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Cont
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
-	return getDummyData[[]t.NetworkInfo]()
+	return []types.NetworkInfo{
+		{
+			ChainId: 1,
+			Name:    "ethereum",
+		},
+		{
+			ChainId: 100,
+			Name:    "gnosis",
+		},
+		{
+			ChainId: 17000,
+			Name:    "holesky",
+		},
+	}, nil
 }
 
 func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
