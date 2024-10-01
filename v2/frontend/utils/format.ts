@@ -1,8 +1,11 @@
-import { commify } from '@ethersproject/units'
+import {
+  commify,
+  formatUnits,
+} from '@ethersproject/units'
 import {
   DateTime, type StringUnitLength,
 } from 'luxon'
-import { type ComposerTranslation } from 'vue-i18n'
+import type { ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
 import {
   type ChainIDs, epochToTs, slotToTs,
@@ -380,4 +383,77 @@ export function formatToPercent(value: NumberOrString, option?: { locale?: strin
     style: 'unit',
     unit: 'percent',
   }).format(Number(value))
+}
+
+/**
+ * This should convert 0.2069 to 20%
+ */
+export function formatFractionToPercent(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value)
+  if (number >= 1) throw new Error('number has to be below 1 but was ' + number)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    style: 'unit',
+    unit: 'percent',
+  }).format(number * 100)
+}
+/**
+ * This should convert 0.2069 to 20
+ */
+export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value)
+  if (number >= 1) throw new Error('number has to be below 1 but was ' + number)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(number * 100)
+}
+/**
+ * This should convert 20 to 0.2
+ */
+export function formatToFraction(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value ?? 0)
+  return new Intl.NumberFormat(locale, {
+    // maximumFractionDigits: 0,
+    // minimumFractionDigits: 0,
+  }).format(number / 100)
+}
+
+export function formatWeiTo(wei: string, {
+  maximumFractionDigits = 0,
+  minimumFractionDigits = 0,
+  unit,
+}: {
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+  unit: 'gwei',
+}) {
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits,
+    minimumFractionDigits,
+  }).format(Number(formatUnits(wei, unit)))
+}
+
+export function formatToWei(value: string, {
+  from,
+}: {
+  from: 'gwei',
+},
+) {
+  const bigValue = BigInt(Math.round(Number(value)))
+  let result = ''
+  if (from === 'gwei') {
+    result = `${bigValue * 1_000_000_000n}`
+  }
+  return result
 }
