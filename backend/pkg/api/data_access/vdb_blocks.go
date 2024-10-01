@@ -132,7 +132,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if colSort.Desc {
 		sortOrder = ` DESC`
 	}
-	val := t.VDBValidator(0)
+	var val any
 	sortColName := `slot`
 	switch colSort.Column {
 	case enums.VDBBlockProposer:
@@ -142,8 +142,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		sortColName = `status`
 		val = currentCursor.Status
 	case enums.VDBBlockProposerReward:
-		sortColName = `reward`
-		val = currentCursor.Reward.BigInt().Uint64()
+		sortColName = `el_reward + cl_reward`
+		val = currentCursor.Reward
 	}
 	onlyPrimarySort := sortColName == `slot`
 	if currentCursor.IsValid() {
@@ -161,7 +161,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		params = append(params, currentCursor.Slot)
 		where += `WHERE (`
 		if onlyPrimarySort {
-			where += `blocks.slot` + sign + fmt.Sprintf(`$%d`, len(params))
+			where += `slot` + sign + fmt.Sprintf(`$%d`, len(params))
 		} else {
 			params = append(params, val)
 			secSign := ` < `
@@ -172,7 +172,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				// explicit cast to int because type of 'status' column is text for some reason
 				sortColName += "::int"
 			}
-			where += fmt.Sprintf(`(blocks.slot`+secSign+`$%d AND `+sortColName+` = $%d) OR `+sortColName+sign+`$%d`, len(params)-1, len(params), len(params))
+			where += fmt.Sprintf(`(slot`+secSign+`$%d AND `+sortColName+` = $%d) OR `+sortColName+sign+`$%d`, len(params)-1, len(params), len(params))
 		}
 		where += `) `
 	}
@@ -218,10 +218,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		} else {
 			log.Debugf("duties info not available, skipping scheduled slots: %s", err)
 		}
-		if len(scheduledProposers) > 0 {
-			// make sure the distinct clause filters out the correct duplicated row (e.g. block=nil)
-			orderBy += `, block`
-		}
 	}
 
 	groupIdCol := "group_id"
@@ -233,56 +229,19 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	selectFields := fmt.Sprintf(`
 		blocks.proposer,
-		%s,
 		blocks.epoch,
 		blocks.slot,
+		%s,
 		blocks.status,
 		exec_block_number,
 		COALESCE(rb.proposer_fee_recipient, blocks.exec_fee_recipient) AS fee_recipient,
 		COALESCE(rb.value / 1e18, ep.fee_recipient_reward) AS el_reward,
 		cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9 as cl_reward,
 		blocks.graffiti_text`, groupIdCol)
-	distinct := "slot"
-	if !onlyPrimarySort {
-		distinct = sortColName + ", " + distinct
-	}
-	query := fmt.Sprintf(`SELECT distinct on (%s)
+	cte := fmt.Sprintf(`WITH past_blocks AS (SELECT
 			%s
 		FROM blocks
-		`, distinct, selectFields)
-	// supply scheduled proposals, if any
-	if len(scheduledProposers) > 0 {
-		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
-		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
-		distinct := "slot"
-		if !onlyPrimarySort {
-			distinct = sortColName + ", " + distinct
-		}
-		params = append(params, scheduledProposers)
-		params = append(params, scheduledEpochs)
-		params = append(params, scheduledSlots)
-		query = fmt.Sprintf(`SELECT distinct on (%s)
-			%s
-		FROM ( SELECT * FROM (WITH scheduled_proposals (
-			proposer,
-			epoch,
-			slot,
-			status,
-			block,
-			reward,
-			graffiti_text
-		) AS (SELECT
-			*,
-			'0',
-			null::int,
-			null::int,
-			''
-			FROM unnest($%d::int[], $%d::int[], $%d::int[]))
-		SELECT * FROM scheduled_proposals
-		UNION
-		(`, distinct, selectFields, len(params)-2, len(params)-1, len(params))
-	}
-
+		`, selectFields)
 	/*if dashboardId.Validators == nil {
 		query += `
 		LEFT JOIN cached_proposal_rewards ON cached_proposal_rewards.dashboard_id = $1 AND blocks.slot = cached_proposal_rewards.slot
@@ -300,28 +259,96 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	query += `) as u `*/
 	if dashboardId.Validators == nil {
-		query += fmt.Sprintf(`
+		cte += fmt.Sprintf(`
 		INNER JOIN (%s) validators ON validators.validator_index = proposer
 		`, filteredValidatorsQuery)
 	} else {
-		where += `WHERE proposer = ANY($1) `
+		if len(where) == 0 {
+			where += `WHERE `
+		} else {
+			where += `AND `
+		}
+		where += `proposer = ANY($1) `
 	}
 
 	params = append(params, limit+1)
 	limitStr := fmt.Sprintf(`
 		LIMIT $%d
 	`, len(params))
-	rewardsStr := `
+	// relay bribe deduplication; select most likely (=max) relay bribe value for each block
+	cte += `
 	LEFT JOIN consensus_payloads cp on blocks.slot = cp.slot
 	LEFT JOIN execution_payloads ep ON ep.block_hash = blocks.exec_block_hash
-	LEFT JOIN relays_blocks rb ON rb.exec_block_hash = blocks.exec_block_hash
+	LEFT JOIN LATERAL (SELECT exec_block_hash, proposer_fee_recipient, max(value) as value
+        FROM relays_blocks
+        WHERE relays_blocks.exec_block_hash = blocks.exec_block_hash
+		GROUP BY exec_block_hash, proposer_fee_recipient
+    ) rb ON rb.exec_block_hash = blocks.exec_block_hash
+	)
 	`
-	// relay bribe deduplication; select most likely (=max) relay bribe value for each block
-	if colSort.Column != enums.VDBBlockProposerReward {
-		orderBy += `, rb.value ` + secSort
+
+	distinct := ""
+	if !onlyPrimarySort {
+		distinct = sortColName
 	}
+	from := `past_blocks `
+	selectStr := `SELECT * FROM ` + from
+	if len(distinct) > 0 {
+		selectStr = `SELECT DISTINCT ON (` + distinct + `) * FROM ` + from
+	}
+
+	query := selectStr + from + where + orderBy + limitStr
+	// supply scheduled proposals, if any
+	if len(scheduledProposers) > 0 {
+		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
+		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
+		params = append(params, scheduledProposers)
+		params = append(params, scheduledEpochs)
+		params = append(params, scheduledSlots)
+		cte += fmt.Sprintf(`,
+		scheduled_blocks (
+			proposer,
+			epoch,
+			slot,
+			group_id,
+			status,
+			exec_block_number,
+			fee_recipient,
+			el_reward,
+			cl_reward,
+			graffiti_text
+		) AS (SELECT
+			*,
+			0,
+			'0',
+			null::int,
+			''::bytea,
+			null::int,
+			null::int,
+			''
+			FROM unnest($%d::int[], $%d::int[], $%d::int[])
+		)
+		`, len(params)-2, len(params)-1, len(params))
+		if len(distinct) != 0 {
+			distinct += ", "
+		}
+		// keep all ordering, sorting etc
+		distinct += "slot"
+		selectStr = `SELECT DISTINCT ON (` + distinct + `) * FROM `
+		// encapsulate past blocks query to ensure performance
+		from = `(
+			( ` + query + ` )
+			UNION ALL
+			SELECT * FROM scheduled_blocks
+		) as combined
+		`
+		// make sure the distinct clause filters out the correct duplicated row (e.g. block=nil)
+		orderBy += `, exec_block_number NULLS LAST`
+		query = selectStr + from + where + orderBy + limitStr
+	}
+
 	startTime := time.Now()
-	err = d.alloyReader.SelectContext(ctx, &proposals, query+rewardsStr+where+orderBy+limitStr, params...)
+	err = d.alloyReader.SelectContext(ctx, &proposals, cte+query, params...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
