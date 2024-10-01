@@ -445,14 +445,14 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 	eventFilter := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
 
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, types.ValidatorIsOfflineEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsGroupOfflineSubscribed, userId, types.GroupIsOfflineEventName, eventFilter, epoch, settings.GroupOfflineThreshold)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsBlockProposalSubscribed, userId, types.ValidatorProposalEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, types.ValidatorReceivedWithdrawalEventName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, string(types.ValidatorIsOfflineEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsGroupOfflineSubscribed, userId, string(types.GroupIsOfflineEventName), eventFilter, epoch, settings.GroupOfflineThreshold)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, string(types.ValidatorMissedAttestationEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsBlockProposalSubscribed, userId, string(types.ValidatorProposalEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, string(types.ValidatorUpcomingProposalEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSyncSubscribed, userId, string(types.SyncCommitteeSoon), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, string(types.ValidatorReceivedWithdrawalEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsSlashedSubscribed, userId, string(types.ValidatorGotSlashedEventName), eventFilter, epoch, 0)
 
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {
@@ -528,11 +528,11 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 
 	// eventFilter := fmt.Sprintf("%s:%d:%d", AccountDashboardEventPrefix, dashboardId, groupId)
 
-	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsIncomingTransactionsSubscribed, userId, types.IncomingTransactionEventName, eventFilter, epoch, 0)
-	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsOutgoingTransactionsSubscribed, userId, types.OutgoingTransactionEventName, eventFilter, epoch, 0)
-	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC20TokenTransfersSubscribed, userId, types.ERC20TokenTransferEventName, eventFilter, epoch, settings.ERC20TokenTransfersValueThreshold)
-	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC721TokenTransfersSubscribed, userId, types.ERC721TokenTransferEventName, eventFilter, epoch, 0)
-	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC1155TokenTransfersSubscribed, userId, types.ERC1155TokenTransferEventName, eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsIncomingTransactionsSubscribed, userId, string(types.IncomingTransactionEventName), eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsOutgoingTransactionsSubscribed, userId, string(types.OutgoingTransactionEventName), eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC20TokenTransfersSubscribed, userId, string(types.ERC20TokenTransferEventName), eventFilter, epoch, settings.ERC20TokenTransfersValueThreshold)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC721TokenTransfersSubscribed, userId, string(types.ERC721TokenTransferEventName), eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(eventsToInsert, eventsToDelete, settings.IsERC1155TokenTransfersSubscribed, userId, string(types.ERC1155TokenTransferEventName), eventFilter, epoch, 0)
 
 	// // Insert all the events or update the threshold if they already exist
 	// if len(eventsToInsert) > 0 {
@@ -594,7 +594,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 	return nil
 }
 
-func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert []goqu.Record, eventsToDelete []goqu.Expression, isSubscribed bool, userId uint64, eventName types.EventName, eventFilter string, epoch int64, threshold float64) {
+func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert []goqu.Record, eventsToDelete []goqu.Expression, isSubscribed bool, userId uint64, eventName string, eventFilter string, epoch int64, threshold float64) {
 	if isSubscribed {
 		event := goqu.Record{"user_id": userId, "event_name": eventName, "event_filter": eventFilter, "created_ts": goqu.L("NOW()"), "created_epoch": epoch, "event_threshold": threshold}
 		eventsToInsert = append(eventsToInsert, event)
