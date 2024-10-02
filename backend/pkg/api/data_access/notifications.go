@@ -556,7 +556,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		Select(
 			goqu.L("epoch"),
 			goqu.L("network"),
-			goqu.L("event_name"),
+			goqu.L("event_type"),
 			goqu.L("event_threshold")).
 		From("network_notifications_history").
 		Where(goqu.L("user_id = ?", userId)).
