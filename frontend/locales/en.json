@@ -580,6 +580,16 @@
         "subscriptions": "Clients ({count} Subscriptions)"
       },
       "search_placeholder":"Client",
+      "settings": {
+        "clients": "Clients ({0})",
+        "consensus_clients": "Consensus Clients",
+        "execution_clients": "Execution Clients",
+        "other_clients": "Others Clients",
+        "screenreader": {
+          "edit_notifications": "Edit Notifications for {0} {1}",
+          "empty_clients": "0 clients to edit."
+        }
+      },
       "title": "Clients"
     },
     "col": {
