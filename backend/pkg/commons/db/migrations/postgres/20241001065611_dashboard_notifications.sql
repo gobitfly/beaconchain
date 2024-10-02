@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users_val_dashboards_notifications_history (
     epoch INT NOT NULL,
     event_type TEXT NOT NULL,
     event_count INT NOT NULL,
+    details bytea NOT NULL,
     PRIMARY KEY (user_id, epoch, dashboard_id, group_id, event_type)
 );
 /* On the users db */

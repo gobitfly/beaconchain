@@ -2,11 +2,13 @@ package misc
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"os"
 
 	"database/sql"
 	"encoding/base64"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -512,7 +514,47 @@ func Run() {
 func collectNotifications(startEpoch uint64) error {
 	epoch := startEpoch
 
+	gob.Register(&notification.ValidatorProposalNotification{})
+	gob.Register(&notification.ValidatorAttestationNotification{})
+	gob.Register(&notification.ValidatorIsOfflineNotification{})
+	gob.Register(&notification.ValidatorGotSlashedNotification{})
+	gob.Register(&notification.ValidatorWithdrawalNotification{})
+	gob.Register(&notification.NetworkNotification{})
+	gob.Register(&notification.RocketpoolNotification{})
+	gob.Register(&notification.MonitorMachineNotification{})
+	gob.Register(&notification.TaxReportNotification{})
+	gob.Register(&notification.EthClientNotification{})
+	gob.Register(&notification.SyncCommitteeSoonNotification{})
+
 	log.Infof("collecting notifications for epoch %v", epoch)
+
+	var data []byte
+	err := db.ReaderDb.Get(&data, "SELECT details FROM users_val_dashboards_notifications_history WHERE epoch = 83206 AND user_id = 3 AND dashboard_id = 5001 AND event_type = 'validator_attestation_missed'")
+	if err != nil {
+		return err
+	}
+
+	// gzip decode data and gob decode it into a array of notification.Notification structs
+	// gzip decode data
+	r := bytes.NewReader(data)
+	gz, err := gzip.NewReader(r)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+
+	// gob decode data into a array of notification.Notification structs
+	dec := gob.NewDecoder(gz)
+	var n []types.Notification
+	err = dec.Decode(&n)
+	if err != nil {
+		return err
+	}
+	log.Infof("found %v notifications for epoch %v", len(n), epoch)
+	spew.Dump(n[0])
+
+	return nil
+
 	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
 	if err != nil {
 		return err

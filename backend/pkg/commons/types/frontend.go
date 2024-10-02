@@ -317,6 +317,7 @@ type Notification interface {
 	GetLegacyInfo() string
 	GetLegacyTitle() string
 	GetEventFilter() string
+	SetEventFilter(filter string)
 	GetEmailAttachment() *EmailAttachment
 	GetUserId() UserId
 	GetDashboardId() *int64
@@ -342,63 +343,67 @@ type NotificationBaseImpl struct {
 	DashboardGroupName string
 }
 
-func (n NotificationBaseImpl) GetLatestState() string {
+func (n *NotificationBaseImpl) GetLatestState() string {
 	return n.LatestState
 }
 
-func (n NotificationBaseImpl) GetSubscriptionID() uint64 {
+func (n *NotificationBaseImpl) GetSubscriptionID() uint64 {
 	return n.SubscriptionID
 }
 
-func (n NotificationBaseImpl) GetEventName() EventName {
+func (n *NotificationBaseImpl) GetEventName() EventName {
 	return n.EventName
 }
 
-func (n NotificationBaseImpl) GetEpoch() uint64 {
+func (n *NotificationBaseImpl) GetEpoch() uint64 {
 	return n.Epoch
 }
 
-func (n NotificationBaseImpl) GetInfo(format NotificationFormat) string {
+func (n *NotificationBaseImpl) GetInfo(format NotificationFormat) string {
 	return n.Info
 }
 
-func (n NotificationBaseImpl) GetTitle() string {
+func (n *NotificationBaseImpl) GetTitle() string {
 	return n.Title
 }
 
-func (n NotificationBaseImpl) GetLegacyInfo() string {
+func (n *NotificationBaseImpl) GetLegacyInfo() string {
 	return n.Info
 }
 
-func (n NotificationBaseImpl) GetLegacyTitle() string {
+func (n *NotificationBaseImpl) GetLegacyTitle() string {
 	return n.Title
 }
 
-func (n NotificationBaseImpl) GetEventFilter() string {
+func (n *NotificationBaseImpl) GetEventFilter() string {
 	return n.EventFilter
 }
 
-func (n NotificationBaseImpl) GetEmailAttachment() *EmailAttachment {
+func (n *NotificationBaseImpl) SetEventFilter(filter string) {
+	n.EventFilter = filter
+}
+
+func (n *NotificationBaseImpl) GetEmailAttachment() *EmailAttachment {
 	return n.EmailAttachment
 }
 
-func (n NotificationBaseImpl) GetUserId() UserId {
+func (n *NotificationBaseImpl) GetUserId() UserId {
 	return n.UserID
 }
 
-func (n NotificationBaseImpl) GetDashboardId() *int64 {
+func (n *NotificationBaseImpl) GetDashboardId() *int64 {
 	return n.DashboardId
 }
 
-func (n NotificationBaseImpl) GetDashboardName() string {
+func (n *NotificationBaseImpl) GetDashboardName() string {
 	return n.DashboardName
 }
 
-func (n NotificationBaseImpl) GetDashboardGroupId() *int64 {
+func (n *NotificationBaseImpl) GetDashboardGroupId() *int64 {
 	return n.DashboardGroupId
 }
 
-func (n NotificationBaseImpl) GetDashboardGroupName() string {
+func (n *NotificationBaseImpl) GetDashboardGroupName() string {
 	return n.DashboardGroupName
 }
 
