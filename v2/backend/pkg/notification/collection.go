@@ -509,7 +509,7 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 // collectAttestationAndOfflineValidatorNotifications collects notifications for missed attestations and offline validators
 func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, validatorDashboardConfig *types.ValidatorDashboardConfig) error {
 	// Retrieve subscriptions for missed attestations
-	subMap, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName, "", nil, nil, validatorDashboardConfig)
+	subMapAttestationMissed, err := GetSubsForEventFilter(types.ValidatorMissedAttestationEventName, "", nil, nil, validatorDashboardConfig)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for missted attestations %w", err)
 	}
@@ -547,7 +547,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 			if !participated {
 				pubkey, err := GetPubkeyForIndex(uint64(validatorIndex))
 				if err == nil {
-					if currentEpoch != types.Epoch(epoch) || subMap[hex.EncodeToString(pubkey)] == nil {
+					if currentEpoch != types.Epoch(epoch) || subMapAttestationMissed[hex.EncodeToString(pubkey)] == nil {
 						continue
 					}
 
@@ -568,7 +568,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 	// process missed attestation events
 	for _, event := range events {
-		subscribers, ok := subMap[hex.EncodeToString(event.EventFilter)]
+		subscribers, ok := subMapAttestationMissed[hex.EncodeToString(event.EventFilter)]
 		if !ok {
 			return fmt.Errorf("error event returned that does not exist: %x", event.EventFilter)
 		}
@@ -681,14 +681,14 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 		return fmt.Errorf("retrieved more than %v online validators notifications: %v, exiting", onlineValidatorsLimit, len(onlineValidators))
 	}
 
-	subMap, err = GetSubsForEventFilter(types.ValidatorIsOfflineEventName, "", nil, nil, validatorDashboardConfig)
+	subMapOnlineOffline, err := GetSubsForEventFilter(types.ValidatorIsOfflineEventName, "", nil, nil, validatorDashboardConfig)
 	if err != nil {
 		return fmt.Errorf("failed to get subs for %v: %v", types.ValidatorIsOfflineEventName, err)
 	}
 
 	for _, validator := range offlineValidators {
 		t := hex.EncodeToString(validator.Pubkey)
-		subs := subMap[t]
+		subs := subMapOnlineOffline[t]
 		for _, sub := range subs {
 			if sub.UserID == nil || sub.ID == nil {
 				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
@@ -719,7 +719,7 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 	for _, validator := range onlineValidators {
 		t := hex.EncodeToString(validator.Pubkey)
-		subs := subMap[t]
+		subs := subMapOnlineOffline[t]
 		for _, sub := range subs {
 			if sub.UserID == nil || sub.ID == nil {
 				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
