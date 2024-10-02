@@ -66,7 +66,14 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@vueuse/nuxt',
   ],
-  nitro: { compressPublicAssets: true },
+  nitro: {
+    compressPublicAssets: true,
+    esbuild: {
+      options: {
+        target: 'esnext',
+      },
+    },
+  },
   postcss: { plugins: { autoprefixer: {} } },
   routeRules: { '/': { redirect: '/dashboard' } },
   runtimeConfig: {

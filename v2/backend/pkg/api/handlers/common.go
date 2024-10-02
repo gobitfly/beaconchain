@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
+	"github.com/shopspring/decimal"
 	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/alexedwards/scs/v2"
@@ -250,6 +251,35 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 		v.add(paramName, fmt.Sprintf("given value %s is not a positive integer", param))
 	}
 	return num
+}
+
+func (v *validationError) checkWeiDecimal(param, paramName string) decimal.Decimal {
+	dec := decimal.Zero
+	// check if only numbers are contained in the string with regex
+	if !reInteger.MatchString(param) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is not a wei string (must be positive integer)", param))
+		return dec
+	}
+	dec, err := decimal.NewFromString(param)
+	if err != nil {
+		v.add(paramName, fmt.Sprintf("given value '%s' is not a wei string (must be positive integer)", param))
+		return dec
+	}
+	return dec
+}
+
+func (v *validationError) checkWeiMinMax(param, paramName string, min, max decimal.Decimal) decimal.Decimal {
+	dec := v.checkWeiDecimal(param, paramName)
+	if v.hasErrors() {
+		return dec
+	}
+	if dec.LessThan(min) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is too small, minimum value is %s", dec, min))
+	}
+	if dec.GreaterThan(max) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is too large, maximum value is %s", dec, max))
+	}
+	return dec
 }
 
 func (v *validationError) checkBool(param, paramName string) bool {
