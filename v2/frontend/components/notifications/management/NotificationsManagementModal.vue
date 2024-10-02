@@ -31,7 +31,6 @@ const tabs: HashTabs = [
   {
     icon: faBolt,
     key: 'clients',
-    placeholder: 'Clients coming soon!',
     title: $t('notifications.tabs.clients'),
   },
   {
@@ -64,11 +63,11 @@ const tabs: HashTabs = [
       <template #tab-panel-machines>
         <NotificationsManagementMachines />
       </template>
+      <template #tab-panel-clients>
+        <NotificationsManagementClients />
+      </template>
       <template #tab-panel-network>
         <NotificationsManagementNetwork />
-      </template>
-      <template #tab-header-icon-rocketpool>
-        <IconRocketPool />
       </template>
     </BcTabList>
     <Button
