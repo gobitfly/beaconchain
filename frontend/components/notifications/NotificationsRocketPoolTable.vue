@@ -16,8 +16,6 @@ const {
   setSearch,
 } = useNotificationsRocketpoolStore()
 
-const { overview } = useNotificationsDashboardOverviewStore()
-
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
@@ -117,12 +115,6 @@ const getEventTypeName = (eventType: NotificationRocketPoolTableRow['event_type'
                 v-if="!rocketpoolNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
-            </template>
-            <template
-              v-if="overview?.rocket_pool_subscription_count ?? 0"
-              #bc-table-footer-right
-            >
-              {{ $t('notifications.rocketpool.col.rocketpool_subscription', { count: overview?.rocket_pool_subscription_count }) }}
             </template>
           </BcTable>
         </ClientOnly>

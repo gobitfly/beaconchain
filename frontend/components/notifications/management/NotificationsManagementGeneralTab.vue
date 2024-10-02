@@ -12,6 +12,13 @@ const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
 const notificationsManagementStore = useNotificationsManagementStore()
+const {
+  status,
+} = useAsyncData(
+  () => notificationsManagementStore
+    .getSettings()
+    .then(({ data }) => notificationsManagementStore.settings = data),
+)
 
 const isVisible = ref(false)
 
@@ -100,8 +107,8 @@ const textMutedUntil = computed(() => {
     ),
   })
 })
-await notificationsManagementStore.getSettings()
-watchDebounced(notificationsManagementStore.settings.general_settings, async () => {
+
+watchDebounced(() => notificationsManagementStore.settings.general_settings, async () => {
   await notificationsManagementStore.saveSettings()
 }, {
   deep: true,
@@ -114,6 +121,18 @@ watchDebounced(notificationsManagementStore.settings.general_settings, async () 
     v-model="isVisible"
   />
   <div class="container">
+    <div
+      v-if="status === 'pending'"
+      class="loading"
+    >
+      <BcLoadingSpinner
+        class="spinner"
+        alignment="center"
+        has-backdrop
+        size="large"
+        loading
+      />
+    </div>
     <div class="row divider do-not-disturb">
       <div>
         <span>{{ $t("notifications.general.do_not_disturb") }}</span>
@@ -224,12 +243,20 @@ watchDebounced(notificationsManagementStore.settings.general_settings, async () 
 <style lang="scss" scoped>
 @use "~/assets/css/fonts.scss";
 
+.loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .container {
   border: unset;
   margin-top: var(--padding-xl);
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
   @include fonts.small_text_bold;
 
   .row {

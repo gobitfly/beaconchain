@@ -396,7 +396,20 @@ func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Cont
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
-	return getDummyData[[]t.NetworkInfo]()
+	return []types.NetworkInfo{
+		{
+			ChainId: 1,
+			Name:    "ethereum",
+		},
+		{
+			ChainId: 100,
+			Name:    "gnosis",
+		},
+		{
+			ChainId: 17000,
+			Name:    "holesky",
+		},
+	}, nil
 }
 
 func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
@@ -467,7 +480,7 @@ func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64
 func (d *DummyService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationRocketPoolTableRow]()
 }
-func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationNetworksTableRow]()
 }
 
