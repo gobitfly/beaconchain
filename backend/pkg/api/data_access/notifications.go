@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -204,6 +205,20 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		return nil
 	})
 
+	// -------------------------------------
+	// Get the machines
+	hasMachines := false
+	wg.Go(func() error {
+		machineNames, err := db.BigtableClient.GetMachineMetricsMachineNames(types.UserId(userId))
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for notifications machine names: %w`, err)
+		}
+		if len(machineNames) > 0 {
+			hasMachines = true
+		}
+		return nil
+	})
+
 	err = wg.Wait()
 	if err != nil {
 		return nil, err
@@ -211,9 +226,11 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 	// -------------------------------------
 	// Fill the result
+	result.HasMachines = hasMachines
 	if doNotDisturbTimestamp.Valid {
 		result.GeneralSettings.DoNotDisturbTimestamp = doNotDisturbTimestamp.Time.Unix()
 	}
+
 	for _, channel := range notificationChannels {
 		if channel.Channel == types.EmailNotificationChannel {
 			result.GeneralSettings.IsEmailNotificationsEnabled = channel.Active
