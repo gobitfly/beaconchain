@@ -221,11 +221,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	groupIdCol := "group_id"
-	// this is actually just used for sorting for "reward".. will not consider EL rewards of unfinalized blocks atm
-	// reward := "reward"
 	if dashboardId.Validators != nil {
 		groupIdCol = fmt.Sprintf("%d AS %s", t.DefaultGroupId, groupIdCol)
-		// reward = "coalesce(rb.value / 1e18, ep.fee_recipient_reward) AS " + reward
 	}
 	selectFields := fmt.Sprintf(`
 		blocks.proposer,
@@ -306,29 +303,28 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		params = append(params, scheduledEpochs)
 		params = append(params, scheduledSlots)
 		cte += fmt.Sprintf(`,
-		scheduled_blocks (
-			proposer,
-			epoch,
-			slot,
-			group_id,
-			status,
-			exec_block_number,
-			fee_recipient,
-			el_reward,
-			cl_reward,
-			graffiti_text
-		) AS (SELECT
-			*,
-			0,
-			'0',
-			null::int,
-			''::bytea,
-			null::int,
-			null::int,
-			''
-			FROM unnest($%d::int[], $%d::int[], $%d::int[])
-		)
-		`, len(params)-2, len(params)-1, len(params))
+		scheduled_blocks as (
+			SELECT
+			prov.proposer,
+			prov.epoch,
+			prov.slot,
+			%s,
+			'0'::text AS status,
+			NULL::int AS exec_block_number,
+			''::bytea AS fee_recipient,
+			NULL::float AS el_reward,
+			NULL::float AS cl_reward,
+			''::text AS graffiti_text
+		FROM unnest($%d::int[], $%d::int[], $%d::int[]) AS prov(proposer, epoch, slot)
+		`, groupIdCol, len(params)-2, len(params)-1, len(params))
+		if dashboardId.Validators == nil {
+			// add group id
+			cte += fmt.Sprintf(`INNER JOIN users_val_dashboards_validators validators 
+			ON validators.dashboard_id = $1 
+			AND validators.validator_index = ANY($%d::int[])
+			`, len(params)-2)
+		}
+		cte += `) `
 		if len(distinct) != 0 {
 			distinct += ", "
 		}
