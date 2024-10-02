@@ -250,46 +250,49 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			}
 		}
 
-		if valSettings, ok := settingsMap[event.Filter].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
+		switch settings := settingsMap[event.Filter].Settings.(type) {
+		case t.NotificationSettingsValidatorDashboard:
 			switch event.Name {
 			case types.ValidatorIsOfflineEventName:
-				valSettings.IsValidatorOfflineSubscribed = true
+				settings.IsValidatorOfflineSubscribed = true
 			case types.GroupIsOfflineEventName:
-				valSettings.IsGroupOfflineSubscribed = true
-				valSettings.GroupOfflineThreshold = event.Threshold
+				settings.IsGroupOfflineSubscribed = true
+				settings.GroupOfflineThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
-				valSettings.IsAttestationsMissedSubscribed = true
+				settings.IsAttestationsMissedSubscribed = true
 			case types.ValidatorProposalEventName:
-				valSettings.IsBlockProposalSubscribed = true
+				settings.IsBlockProposalSubscribed = true
 			case types.ValidatorUpcomingProposalEventName:
-				valSettings.IsUpcomingBlockProposalSubscribed = true
+				settings.IsUpcomingBlockProposalSubscribed = true
 			case types.SyncCommitteeSoon:
-				valSettings.IsSyncSubscribed = true
+				settings.IsSyncSubscribed = true
 			case types.ValidatorReceivedWithdrawalEventName:
-				valSettings.IsWithdrawalProcessedSubscribed = true
+				settings.IsWithdrawalProcessedSubscribed = true
 			case types.ValidatorGotSlashedEventName:
-				valSettings.IsSlashedSubscribed = true
+				settings.IsSlashedSubscribed = true
 			case types.RocketpoolCollateralMinReached:
-				valSettings.IsMinCollateralSubscribed = true
-				valSettings.MinCollateralThreshold = event.Threshold
+				settings.IsMinCollateralSubscribed = true
+				settings.MinCollateralThreshold = event.Threshold
 			case types.RocketpoolCollateralMaxReached:
-				valSettings.IsMaxCollateralSubscribed = true
-				valSettings.MaxCollateralThreshold = event.Threshold
+				settings.IsMaxCollateralSubscribed = true
+				settings.MaxCollateralThreshold = event.Threshold
 			}
-		} else if accSettings, ok := settingsMap[event.Filter].Settings.(*t.NotificationSettingsAccountDashboard); ok {
+			settingsMap[event.Filter].Settings = settings
+		case t.NotificationSettingsAccountDashboard:
 			switch event.Name {
 			case types.IncomingTransactionEventName:
-				accSettings.IsIncomingTransactionsSubscribed = true
+				settings.IsIncomingTransactionsSubscribed = true
 			case types.OutgoingTransactionEventName:
-				accSettings.IsOutgoingTransactionsSubscribed = true
+				settings.IsOutgoingTransactionsSubscribed = true
 			case types.ERC20TokenTransferEventName:
-				accSettings.IsERC20TokenTransfersSubscribed = true
-				accSettings.ERC20TokenTransfersValueThreshold = event.Threshold
+				settings.IsERC20TokenTransfersSubscribed = true
+				settings.ERC20TokenTransfersValueThreshold = event.Threshold
 			case types.ERC721TokenTransferEventName:
-				accSettings.IsERC721TokenTransfersSubscribed = true
+				settings.IsERC721TokenTransfersSubscribed = true
 			case types.ERC1155TokenTransferEventName:
-				accSettings.IsERC1155TokenTransfersSubscribed = true
+				settings.IsERC1155TokenTransfersSubscribed = true
 			}
+			settingsMap[event.Filter].Settings = settings
 		}
 	}
 
@@ -354,8 +357,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 	// Apply filter
 	if search != "" {
+		lowerSearch := strings.ToLower(search)
 		for key, setting := range settingsMap {
-			if search != setting.DashboardName && search != setting.GroupName {
+			if lowerSearch != strings.ToLower(setting.DashboardName) && lowerSearch != strings.ToLower(setting.GroupName) {
 				delete(settingsMap, key)
 			}
 		}
@@ -366,41 +370,37 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 	// -------------------------------------
 	// Sort
+	// Each row is uniquely defined by the dashboardId, groupId, and isAccountDashboard so the sort order is DashboardName/GroupName => DashboardId => GroupId => IsAccountDashboard
 	var primarySortParam func(resultEntry *NotificationSettingsDashboardsInfo) string
-	var secondarySortParam func(resultEntry *NotificationSettingsDashboardsInfo) string
 	switch colSort.Column {
 	case enums.NotificationSettingsDashboardColumns.DashboardName:
-		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string {
-			return resultEntry.DashboardName
-		}
-		secondarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string {
-			return resultEntry.GroupName
-		}
+		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string { return resultEntry.DashboardName }
 	case enums.NotificationSettingsDashboardColumns.GroupName:
-		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string {
-			return resultEntry.GroupName
-		}
-		secondarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string {
-			return resultEntry.DashboardName
-		}
+		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string { return resultEntry.GroupName }
 	default:
 		return nil, nil, fmt.Errorf("invalid sort column for notification subscriptions: %v", colSort.Column)
 	}
 	sort.Slice(settings, func(i, j int) bool {
 		if isReverseDirection {
 			if primarySortParam(settings[i]) == primarySortParam(settings[j]) {
-				if secondarySortParam(settings[i]) == secondarySortParam(settings[j]) {
-					return settings[i].IsAccountDashboard
+				if settings[i].DashboardId == settings[j].DashboardId {
+					if settings[i].GroupId == settings[j].GroupId {
+						return settings[i].IsAccountDashboard
+					}
+					return settings[i].GroupId > settings[j].GroupId
 				}
-				return secondarySortParam(settings[i]) > secondarySortParam(settings[j])
+				return settings[i].DashboardId > settings[j].DashboardId
 			}
 			return primarySortParam(settings[i]) > primarySortParam(settings[j])
 		} else {
 			if primarySortParam(settings[i]) == primarySortParam(settings[j]) {
-				if secondarySortParam(settings[i]) == secondarySortParam(settings[j]) {
-					return settings[j].IsAccountDashboard
+				if settings[i].DashboardId == settings[j].DashboardId {
+					if settings[i].GroupId == settings[j].GroupId {
+						return settings[j].IsAccountDashboard
+					}
+					return settings[i].GroupId < settings[j].GroupId
 				}
-				return secondarySortParam(settings[i]) < secondarySortParam(settings[j])
+				return settings[i].DashboardId < settings[j].DashboardId
 			}
 			return primarySortParam(settings[i]) < primarySortParam(settings[j])
 		}
@@ -532,7 +532,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 		UPDATE users_val_dashboards_groups 
 		SET 
 			webhook_target = NULLIF($1, ''),
-			discord_webhook = CASE WHEN $2 THEN $3 ELSE NULL END,
+			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
 			realtime_notifications = CASE WHEN $4 THEN TRUE ELSE NULL END
 		WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsRealTimeModeEnabled, dashboardId, groupId)
 	if err != nil {
@@ -612,7 +612,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 	// 	UPDATE users_acc_dashboards_groups
 	// 	SET
 	// 		webhook_target = NULLIF($1, ''),
-	// 		discord_webhook = CASE WHEN $2 THEN $3 ELSE NULL END,
+	// 		webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
 	// 		ignore_spam_transactions = $4,
 	// 		subscribed_chain_ids = $5
 	// 	WHERE dashboard_id = $6 AND id = $7`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
