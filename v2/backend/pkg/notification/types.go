@@ -66,7 +66,7 @@ func formatDashboardAndGroupLink(format types.NotificationFormat, n types.Notifi
 	return dashboardAndGroupInfo
 }
 
-type validatorProposalNotification struct {
+type ValidatorProposalNotification struct {
 	types.NotificationBaseImpl
 
 	ValidatorIndex uint64
@@ -75,11 +75,11 @@ type validatorProposalNotification struct {
 	Reward         float64
 }
 
-func (n *validatorProposalNotification) GetEntitiyId() string {
+func (n *ValidatorProposalNotification) GetEntitiyId() string {
 	return fmt.Sprintf("%d", n.ValidatorIndex)
 }
 
-func (n *validatorProposalNotification) GetInfo(format types.NotificationFormat) string {
+func (n *ValidatorProposalNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	slot := formatSlotLink(format, n.Slot)
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
@@ -98,7 +98,7 @@ func (n *validatorProposalNotification) GetInfo(format types.NotificationFormat)
 	}
 }
 
-func (n *validatorProposalNotification) GetLegacyInfo() string {
+func (n *ValidatorProposalNotification) GetLegacyInfo() string {
 	var generalPart, suffix string
 	vali := strconv.FormatUint(n.ValidatorIndex, 10)
 	slot := strconv.FormatUint(n.Slot, 10)
@@ -116,7 +116,7 @@ func (n *validatorProposalNotification) GetLegacyInfo() string {
 	return generalPart + suffix
 }
 
-func (n *validatorProposalNotification) GetTitle() string {
+func (n *ValidatorProposalNotification) GetTitle() string {
 	switch n.Status {
 	case 0:
 		return "Block Proposal Scheduled"
@@ -131,7 +131,7 @@ func (n *validatorProposalNotification) GetTitle() string {
 	}
 }
 
-func (n *validatorProposalNotification) GetLegacyTitle() string {
+func (n *ValidatorProposalNotification) GetLegacyTitle() string {
 	switch n.Status {
 	case 0:
 		return "Block Proposal Scheduled"
@@ -145,19 +145,19 @@ func (n *validatorProposalNotification) GetLegacyTitle() string {
 	return "-"
 }
 
-type validatorIsOfflineNotification struct {
+type ValidatorIsOfflineNotification struct {
 	types.NotificationBaseImpl
 
 	ValidatorIndex uint64
 	IsOffline      bool
 }
 
-func (n *validatorIsOfflineNotification) GetEntitiyId() string {
+func (n *ValidatorIsOfflineNotification) GetEntitiyId() string {
 	return fmt.Sprintf("%d", n.ValidatorIndex)
 }
 
 // Overwrite specific methods
-func (n *validatorIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
+func (n *ValidatorIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := ""
 	if n.IsOffline {
@@ -174,7 +174,7 @@ func (n *validatorIsOfflineNotification) GetInfo(format types.NotificationFormat
 	}
 }
 
-func (n *validatorIsOfflineNotification) GetTitle() string {
+func (n *ValidatorIsOfflineNotification) GetTitle() string {
 	if n.IsOffline {
 		return "Validator is Offline"
 	} else {
@@ -182,7 +182,7 @@ func (n *validatorIsOfflineNotification) GetTitle() string {
 	}
 }
 
-func (n *validatorIsOfflineNotification) GetLegacyInfo() string {
+func (n *ValidatorIsOfflineNotification) GetLegacyInfo() string {
 	if n.IsOffline {
 		return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.LatestState)
 	} else {
@@ -190,7 +190,7 @@ func (n *validatorIsOfflineNotification) GetLegacyInfo() string {
 	}
 }
 
-func (n *validatorIsOfflineNotification) GetLegacyTitle() string {
+func (n *ValidatorIsOfflineNotification) GetLegacyTitle() string {
 	if n.IsOffline {
 		return "Validator is Offline"
 	} else {
@@ -248,7 +248,7 @@ func (n *validatorIsOfflineNotification) GetLegacyTitle() string {
 // 	}
 // }
 
-type validatorAttestationNotification struct {
+type ValidatorAttestationNotification struct {
 	types.NotificationBaseImpl
 
 	ValidatorIndex     uint64
@@ -256,11 +256,11 @@ type validatorAttestationNotification struct {
 	Status             uint64 // * Can be 0 = scheduled | missed, 1 executed
 }
 
-func (n *validatorAttestationNotification) GetEntitiyId() string {
+func (n *ValidatorAttestationNotification) GetEntitiyId() string {
 	return fmt.Sprintf("%d", n.ValidatorIndex)
 }
 
-func (n *validatorAttestationNotification) GetInfo(format types.NotificationFormat) string {
+func (n *ValidatorAttestationNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.Epoch)
@@ -297,7 +297,7 @@ func (n *validatorAttestationNotification) GetInfo(format types.NotificationForm
 	return ""
 }
 
-func (n *validatorAttestationNotification) GetTitle() string {
+func (n *ValidatorAttestationNotification) GetTitle() string {
 	switch n.Status {
 	case 0:
 		return "Attestation Missed"
@@ -307,7 +307,7 @@ func (n *validatorAttestationNotification) GetTitle() string {
 	return "-"
 }
 
-func (n *validatorAttestationNotification) GetLegacyInfo() string {
+func (n *ValidatorAttestationNotification) GetLegacyInfo() string {
 	var generalPart = ""
 	switch n.Status {
 	case 0:
@@ -318,7 +318,7 @@ func (n *validatorAttestationNotification) GetLegacyInfo() string {
 	return generalPart
 }
 
-func (n *validatorAttestationNotification) GetLegacyTitle() string {
+func (n *ValidatorAttestationNotification) GetLegacyTitle() string {
 	switch n.Status {
 	case 0:
 		return "Attestation Missed"
@@ -328,7 +328,7 @@ func (n *validatorAttestationNotification) GetLegacyTitle() string {
 	return "-"
 }
 
-type validatorGotSlashedNotification struct {
+type ValidatorGotSlashedNotification struct {
 	types.NotificationBaseImpl
 
 	ValidatorIndex uint64
@@ -336,11 +336,11 @@ type validatorGotSlashedNotification struct {
 	Reason         string
 }
 
-func (n *validatorGotSlashedNotification) GetEntitiyId() string {
+func (n *ValidatorGotSlashedNotification) GetEntitiyId() string {
 	return fmt.Sprintf("%d", n.ValidatorIndex)
 }
 
-func (n *validatorGotSlashedNotification) GetInfo(format types.NotificationFormat) string {
+func (n *ValidatorGotSlashedNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.Epoch)
@@ -349,20 +349,20 @@ func (n *validatorGotSlashedNotification) GetInfo(format types.NotificationForma
 	return fmt.Sprintf(`Validator %v%v has been slashed at epoch %v by validator %v for %s.`, vali, dashboardAndGroupInfo, epoch, slasher, n.Reason)
 }
 
-func (n *validatorGotSlashedNotification) GetTitle() string {
+func (n *ValidatorGotSlashedNotification) GetTitle() string {
 	return "Validator got Slashed"
 }
 
-func (n *validatorGotSlashedNotification) GetLegacyInfo() string {
+func (n *ValidatorGotSlashedNotification) GetLegacyInfo() string {
 	generalPart := fmt.Sprintf(`Validator %v has been slashed at epoch %v by validator %v for %s.`, n.ValidatorIndex, n.Epoch, n.Slasher, n.Reason)
 	return generalPart
 }
 
-func (n *validatorGotSlashedNotification) GetLegacyTitle() string {
+func (n *ValidatorGotSlashedNotification) GetLegacyTitle() string {
 	return "Validator got Slashed"
 }
 
-type validatorWithdrawalNotification struct {
+type ValidatorWithdrawalNotification struct {
 	types.NotificationBaseImpl
 
 	ValidatorIndex uint64
@@ -372,11 +372,11 @@ type validatorWithdrawalNotification struct {
 	Address        []byte
 }
 
-func (n *validatorWithdrawalNotification) GetEntitiyId() string {
+func (n *ValidatorWithdrawalNotification) GetEntitiyId() string {
 	return fmt.Sprintf("%v", n.ValidatorIndex)
 }
 
-func (n *validatorWithdrawalNotification) GetInfo(format types.NotificationFormat) string {
+func (n *ValidatorWithdrawalNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	amount := utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false)
@@ -385,30 +385,30 @@ func (n *validatorWithdrawalNotification) GetInfo(format types.NotificationForma
 	return generalPart
 }
 
-func (n *validatorWithdrawalNotification) GetTitle() string {
+func (n *ValidatorWithdrawalNotification) GetTitle() string {
 	return "Withdrawal Processed"
 }
 
-func (n *validatorWithdrawalNotification) GetLegacyInfo() string {
+func (n *ValidatorWithdrawalNotification) GetLegacyInfo() string {
 	generalPart := fmt.Sprintf(`An automatic withdrawal of %v has been processed for validator %v.`, utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false), n.ValidatorIndex)
 	return generalPart
 }
 
-func (n *validatorWithdrawalNotification) GetLegacyTitle() string {
+func (n *ValidatorWithdrawalNotification) GetLegacyTitle() string {
 	return "Withdrawal Processed"
 }
 
-type ethClientNotification struct {
+type EthClientNotification struct {
 	types.NotificationBaseImpl
 
 	EthClient string
 }
 
-func (n *ethClientNotification) GetEntitiyId() string {
+func (n *EthClientNotification) GetEntitiyId() string {
 	return n.EthClient
 }
 
-func (n *ethClientNotification) GetInfo(format types.NotificationFormat) string {
+func (n *EthClientNotification) GetInfo(format types.NotificationFormat) string {
 	switch format {
 	case types.NotifciationFormatHtml:
 		generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
@@ -475,16 +475,16 @@ func (n *ethClientNotification) GetInfo(format types.NotificationFormat) string 
 	return ""
 }
 
-func (n *ethClientNotification) GetTitle() string {
+func (n *EthClientNotification) GetTitle() string {
 	return fmt.Sprintf("New %s update", n.EthClient)
 }
 
-func (n *ethClientNotification) GetLegacyInfo() string {
+func (n *EthClientNotification) GetLegacyInfo() string {
 	generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
 	return generalPart
 }
 
-func (n *ethClientNotification) GetLegacyTitle() string {
+func (n *EthClientNotification) GetLegacyTitle() string {
 	return fmt.Sprintf("New %s update", n.EthClient)
 }
 
@@ -496,18 +496,18 @@ type MachineEvents struct {
 	EventThreshold  float64        `db:"event_threshold"`
 }
 
-type monitorMachineNotification struct {
+type MonitorMachineNotification struct {
 	types.NotificationBaseImpl
 
 	MachineName    string
 	EventThreshold float64
 }
 
-func (n *monitorMachineNotification) GetEntitiyId() string {
+func (n *MonitorMachineNotification) GetEntitiyId() string {
 	return n.MachineName
 }
 
-func (n *monitorMachineNotification) GetInfo(format types.NotificationFormat) string {
+func (n *MonitorMachineNotification) GetInfo(format types.NotificationFormat) string {
 	switch n.EventName {
 	case types.MonitoringMachineDiskAlmostFullEventName:
 		return fmt.Sprintf(`Your staking machine "%v" is running low on storage space.`, n.MachineName)
@@ -521,7 +521,7 @@ func (n *monitorMachineNotification) GetInfo(format types.NotificationFormat) st
 	return ""
 }
 
-func (n *monitorMachineNotification) GetTitle() string {
+func (n *MonitorMachineNotification) GetTitle() string {
 	switch n.EventName {
 	case types.MonitoringMachineDiskAlmostFullEventName:
 		return "Storage Warning"
@@ -535,7 +535,7 @@ func (n *monitorMachineNotification) GetTitle() string {
 	return ""
 }
 
-func (n *monitorMachineNotification) GetLegacyInfo() string {
+func (n *MonitorMachineNotification) GetLegacyInfo() string {
 	switch n.EventName {
 	case types.MonitoringMachineDiskAlmostFullEventName:
 		return fmt.Sprintf(`Your staking machine "%v" is running low on storage space.`, n.MachineName)
@@ -549,7 +549,7 @@ func (n *monitorMachineNotification) GetLegacyInfo() string {
 	return ""
 }
 
-func (n *monitorMachineNotification) GetLegacyTitle() string {
+func (n *MonitorMachineNotification) GetLegacyTitle() string {
 	switch n.EventName {
 	case types.MonitoringMachineDiskAlmostFullEventName:
 		return "Storage Warning"
@@ -563,19 +563,19 @@ func (n *monitorMachineNotification) GetLegacyTitle() string {
 	return ""
 }
 
-func (n *monitorMachineNotification) GetEventFilter() string {
+func (n *MonitorMachineNotification) GetEventFilter() string {
 	return n.MachineName
 }
 
-type taxReportNotification struct {
+type TaxReportNotification struct {
 	types.NotificationBaseImpl
 }
 
-func (n *taxReportNotification) GetEntitiyId() string {
+func (n *TaxReportNotification) GetEntitiyId() string {
 	return ""
 }
 
-func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
+func (n *TaxReportNotification) GetEmailAttachment() *types.EmailAttachment {
 	tNow := time.Now()
 	lastDay := time.Date(tNow.Year(), tNow.Month(), 1, 0, 0, 0, 0, time.UTC)
 	firstDay := lastDay.AddDate(0, -1, 0)
@@ -609,37 +609,37 @@ func (n *taxReportNotification) GetEmailAttachment() *types.EmailAttachment {
 	return &types.EmailAttachment{Attachment: pdf, Name: fmt.Sprintf("income_history_%v_%v.pdf", firstDay.Format("20060102"), lastDay.Format("20060102"))}
 }
 
-func (n *taxReportNotification) GetInfo(format types.NotificationFormat) string {
+func (n *TaxReportNotification) GetInfo(format types.NotificationFormat) string {
 	generalPart := `Please find attached the income history of your selected validators.`
 	return generalPart
 }
 
-func (n *taxReportNotification) GetTitle() string {
+func (n *TaxReportNotification) GetTitle() string {
 	return "Income Report"
 }
 
-func (n *taxReportNotification) GetLegacyInfo() string {
+func (n *TaxReportNotification) GetLegacyInfo() string {
 	generalPart := `Please find attached the income history of your selected validators.`
 	return generalPart
 }
 
-func (n *taxReportNotification) GetLegacyTitle() string {
+func (n *TaxReportNotification) GetLegacyTitle() string {
 	return "Income Report"
 }
 
-func (n *taxReportNotification) GetEventFilter() string {
+func (n *TaxReportNotification) GetEventFilter() string {
 	return n.EventFilter
 }
 
-type networkNotification struct {
+type NetworkNotification struct {
 	types.NotificationBaseImpl
 }
 
-func (n *networkNotification) GetEntitiyId() string {
+func (n *NetworkNotification) GetEntitiyId() string {
 	return ""
 }
 
-func (n *networkNotification) GetInfo(format types.NotificationFormat) string {
+func (n *NetworkNotification) GetInfo(format types.NotificationFormat) string {
 	switch format {
 	case types.NotifciationFormatHtml, types.NotifciationFormatText:
 		return fmt.Sprintf(`Network experienced finality issues. Learn more at https://%v/charts/network_liveness`, utils.Config.Frontend.SiteDomain)
@@ -649,29 +649,29 @@ func (n *networkNotification) GetInfo(format types.NotificationFormat) string {
 	return ""
 }
 
-func (n *networkNotification) GetTitle() string {
+func (n *NetworkNotification) GetTitle() string {
 	return "Beaconchain Network Issues"
 }
 
-func (n *networkNotification) GetLegacyInfo() string {
+func (n *NetworkNotification) GetLegacyInfo() string {
 	generalPart := fmt.Sprintf(`Network experienced finality issues. Learn more at https://%v/charts/network_liveness`, utils.Config.Frontend.SiteDomain)
 	return generalPart
 }
 
-func (n *networkNotification) GetLegacyTitle() string {
+func (n *NetworkNotification) GetLegacyTitle() string {
 	return "Beaconchain Network Issues"
 }
 
-type rocketpoolNotification struct {
+type RocketpoolNotification struct {
 	types.NotificationBaseImpl
 	ExtraData string
 }
 
-func (n *rocketpoolNotification) GetEntitiyId() string {
+func (n *RocketpoolNotification) GetEntitiyId() string {
 	return ""
 }
 
-func (n *rocketpoolNotification) GetInfo(format types.NotificationFormat) string {
+func (n *RocketpoolNotification) GetInfo(format types.NotificationFormat) string {
 	switch n.EventName {
 	case types.RocketpoolCommissionThresholdEventName:
 		return fmt.Sprintf(`The current RPL commission rate of %v has reached your configured threshold.`, n.ExtraData)
@@ -686,7 +686,7 @@ func (n *rocketpoolNotification) GetInfo(format types.NotificationFormat) string
 	return ""
 }
 
-func (n *rocketpoolNotification) GetTitle() string {
+func (n *RocketpoolNotification) GetTitle() string {
 	switch n.EventName {
 	case types.RocketpoolCommissionThresholdEventName:
 		return `Rocketpool Commission`
@@ -700,7 +700,7 @@ func (n *rocketpoolNotification) GetTitle() string {
 	return ""
 }
 
-func (n *rocketpoolNotification) GetLegacyInfo() string {
+func (n *RocketpoolNotification) GetLegacyInfo() string {
 	switch n.EventName {
 	case types.RocketpoolCommissionThresholdEventName:
 		return fmt.Sprintf(`The current RPL commission rate of %v has reached your configured threshold.`, n.ExtraData)
@@ -715,7 +715,7 @@ func (n *rocketpoolNotification) GetLegacyInfo() string {
 	return ""
 }
 
-func (n *rocketpoolNotification) GetLegacyTitle() string {
+func (n *RocketpoolNotification) GetLegacyTitle() string {
 	switch n.EventName {
 	case types.RocketpoolCommissionThresholdEventName:
 		return `Rocketpool Commission`
@@ -729,34 +729,34 @@ func (n *rocketpoolNotification) GetLegacyTitle() string {
 	return ""
 }
 
-type syncCommitteeSoonNotification struct {
+type SyncCommitteeSoonNotification struct {
 	types.NotificationBaseImpl
 	Validator  uint64
 	StartEpoch uint64
 	EndEpoch   uint64
 }
 
-func (n *syncCommitteeSoonNotification) GetEntitiyId() string {
+func (n *SyncCommitteeSoonNotification) GetEntitiyId() string {
 	return fmt.Sprintf("%d", n.Validator)
 }
 
-func (n *syncCommitteeSoonNotification) GetInfo(format types.NotificationFormat) string {
+func (n *SyncCommitteeSoonNotification) GetInfo(format types.NotificationFormat) string {
 	return getSyncCommitteeSoonInfo(format, map[types.EventFilter]types.Notification{
 		types.EventFilter(n.EventFilter): n,
 	})
 }
 
-func (n *syncCommitteeSoonNotification) GetTitle() string {
+func (n *SyncCommitteeSoonNotification) GetTitle() string {
 	return `Sync Committee Duty`
 }
 
-func (n *syncCommitteeSoonNotification) GetLegacyInfo() string {
+func (n *SyncCommitteeSoonNotification) GetLegacyInfo() string {
 	return getSyncCommitteeSoonLegacyInfo(map[types.EventFilter]types.Notification{
 		types.EventFilter(n.EventFilter): n,
 	})
 }
 
-func (n *syncCommitteeSoonNotification) GetLegacyTitle() string {
+func (n *SyncCommitteeSoonNotification) GetLegacyTitle() string {
 	return `Sync Committee Duty`
 }
 
@@ -767,7 +767,7 @@ func getSyncCommitteeSoonLegacyInfo(ns map[types.EventFilter]types.Notification)
 
 	i := 0
 	for _, n := range ns {
-		n, ok := n.(*syncCommitteeSoonNotification)
+		n, ok := n.(*SyncCommitteeSoonNotification)
 		if !ok {
 			log.Error(nil, "Sync committee notification not of type syncCommitteeSoonNotification", 0)
 			return ""

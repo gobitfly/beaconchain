@@ -1,7 +1,10 @@
 package notification
 
 import (
+	"bytes"
+	"compress/gzip"
 	"database/sql"
+	"encoding/gob"
 	"fmt"
 	"html/template"
 	"maps"
@@ -116,8 +119,8 @@ func queueNotifications(epoch uint64, notificationsByUserID types.NotificationsP
 func ExportNotificationHistory(epoch uint64, notificationsByUserID types.NotificationsPerUserId) error {
 	dashboardNotificationHistoryInsertStmt, err := db.WriterDb.Preparex(`
 		INSERT INTO users_val_dashboards_notifications_history 
-		(user_id, dashboard_id, group_id, epoch, event_type, event_count)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		(user_id, dashboard_id, group_id, epoch, event_type, event_count, details)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`)
 	if err != nil {
 		return fmt.Errorf("error preparing insert statement for dashboard notifications history: %w", err)
@@ -160,20 +163,25 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 				for eventName, notifications := range notifications {
 					// handle all dashboard related notifications
 					if eventName != types.NetworkLivenessIncreasedEventName && !types.IsUserIndexed(eventName) && !types.IsMachineNotification(eventName) {
-						_, err := dashboardNotificationHistoryInsertStmt.Exec(
+						details, err := GetNotificationDetails(notifications)
+						if err != nil {
+							return fmt.Errorf("error getting notification details: %w", err)
+						}
+						_, err = dashboardNotificationHistoryInsertStmt.Exec(
 							userID,
 							dashboardID,
 							group,
 							epoch,
 							eventName,
 							len(notifications),
+							details,
 						)
 						if err != nil {
 							return fmt.Errorf("error inserting into dashboard notifications history: %w", err)
 						}
 					} else if types.IsMachineNotification(eventName) { // handle machine monitoring related events
 						for _, n := range notifications {
-							nTyped, ok := n.(*monitorMachineNotification)
+							nTyped, ok := n.(*MonitorMachineNotification)
 							if !ok {
 								return fmt.Errorf("error casting machine notification: %w", err)
 							}
@@ -191,7 +199,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 						}
 					} else if eventName == types.EthClientUpdateEventName { // handle client update events
 						for _, n := range notifications {
-							nTyped, ok := n.(*ethClientNotification)
+							nTyped, ok := n.(*EthClientNotification)
 							if !ok {
 								return fmt.Errorf("error casting client update notification: %w", err)
 							}
@@ -226,6 +234,29 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 	}
 	return nil
 }
+
+func GetNotificationDetails(notificationsPerEventFilter types.NotificationsPerEventFilter) ([]byte, error) {
+	// get the notifications as array
+	notifications := make([]types.Notification, 0, len(notificationsPerEventFilter))
+	for _, ns := range notificationsPerEventFilter {
+		ns.SetEventFilter("") // zero out the event filter as it is not needed in the details
+		notifications = append(notifications, ns)
+	}
+	// gob encode and gzip compress the notifications
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	enc := gob.NewEncoder(gz)
+	err := enc.Encode(notifications)
+	if err != nil {
+		return nil, fmt.Errorf("error encoding notifications: %w", err)
+	}
+	err = gz.Close()
+	if err != nil {
+		return nil, fmt.Errorf("error compressing notifications: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
 func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.NotificationsPerUserId) (emails []types.TransitEmailContent, err error) {
 	emails = make([]types.TransitEmailContent, 0, 50)
 
@@ -411,13 +442,13 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 		if !exists {
 			continue
 		}
-		log.Infof("generating push notification for user %v", userID)
+		for dashboardId, notficationsPerGroup := range notificationsPerDashboard {
+			for groupdId, userNotifications := range notficationsPerGroup {
+				log.Infof("generating push notification for user %d & dashboard %d and group %d", userID, dashboardId, groupdId)
 
-		notificationTypesMap := make(map[types.EventName][]string)
+				notificationTypesMap := make(map[types.EventName][]string)
 
-		for _, event := range types.EventSortOrder {
-			for _, notficationsPerGroup := range notificationsPerDashboard {
-				for _, userNotifications := range notficationsPerGroup {
+				for _, event := range types.EventSortOrder {
 					ns, ok := userNotifications[event]
 					if !ok { // nothing to do for this event type
 						continue
@@ -430,63 +461,66 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					}
 					metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
 				}
-			}
-		}
 
-		bodySummary := ""
-		for _, event := range types.EventSortOrder {
-			events := notificationTypesMap[event]
-			if len(events) == 0 {
-				continue
-			}
-			count := len(events)
-			if len(bodySummary) > 0 {
-				bodySummary += "\n"
-			}
-			plural := ""
-			if count > 1 {
-				plural = "s"
-			}
-			switch event {
-			case types.RocketpoolCollateralMaxReachedEventName, types.RocketpoolCollateralMinReachedEventName:
-				bodySummary += fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural)
-			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
-				bodySummary += fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural)
-			case types.EthClientUpdateEventName:
-				bodySummary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)
-			case types.MonitoringMachineCpuLoadEventName, types.MonitoringMachineMemoryUsageEventName, types.MonitoringMachineDiskAlmostFullEventName, types.MonitoringMachineOfflineEventName:
-				bodySummary += fmt.Sprintf("%s: %d machine%s", types.EventLabel[event], count, plural)
-			default:
-				bodySummary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
-			}
-			truncated := ""
-			if len(events) > 3 {
-				truncated = ",..."
-				events = events[:3]
-			}
-			bodySummary += fmt.Sprintf(" (%s%s)", strings.Join(events, ","), truncated)
-		}
+				bodySummary := ""
+				for _, event := range types.EventSortOrder {
+					events := notificationTypesMap[event]
+					if len(events) == 0 {
+						continue
+					}
+					count := len(events)
+					if len(bodySummary) > 0 {
+						bodySummary += "\n"
+					}
+					plural := ""
+					if count > 1 {
+						plural = "s"
+					}
+					switch event {
+					case types.RocketpoolCollateralMaxReachedEventName, types.RocketpoolCollateralMinReachedEventName:
+						bodySummary += fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural)
+					case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+						bodySummary += fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural)
+					case types.EthClientUpdateEventName:
+						bodySummary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)
+					case types.MonitoringMachineCpuLoadEventName, types.MonitoringMachineMemoryUsageEventName, types.MonitoringMachineDiskAlmostFullEventName, types.MonitoringMachineOfflineEventName:
+						bodySummary += fmt.Sprintf("%s: %d machine%s", types.EventLabel[event], count, plural)
+					default:
+						bodySummary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
+					}
+					truncated := ""
+					if len(events) > 3 {
+						truncated = ",..."
+						events = events[:3]
+					}
+					bodySummary += fmt.Sprintf(" (%s%s)", strings.Join(events, ","), truncated)
+				}
 
-		if len(bodySummary) > 1000 { // cap the notification body to 1000 characters (firebase limit)
-			bodySummary = bodySummary[:1000]
-		}
-		for _, userToken := range userTokens {
-			message := new(messaging.Message)
-			message.Token = userToken
-			message.APNS = new(messaging.APNSConfig)
-			message.APNS.Payload = new(messaging.APNSPayload)
-			message.APNS.Payload.Aps = new(messaging.Aps)
-			message.APNS.Payload.Aps.Sound = "default"
+				if len(bodySummary) > 1000 { // cap the notification body to 1000 characters (firebase limit)
+					bodySummary = bodySummary[:1000]
+				}
+				for _, userToken := range userTokens {
+					message := new(messaging.Message)
+					message.Token = userToken
+					message.APNS = new(messaging.APNSConfig)
+					message.APNS.Payload = new(messaging.APNSPayload)
+					message.APNS.Payload.Aps = new(messaging.Aps)
+					message.APNS.Payload.Aps.Sound = "default"
 
-			notification := new(messaging.Notification)
-			notification.Title = fmt.Sprintf("%sInfo for epoch %d", getNetwork(), epoch)
-			notification.Body = bodySummary
-			message.Notification = notification
-			transitPushContent := types.TransitPushContent{
-				Messages: []*messaging.Message{message},
+					notification := new(messaging.Notification)
+					notification.Title = fmt.Sprintf("%sInfo for epoch %d", getNetwork(), epoch)
+					notification.Body = bodySummary
+					message.Notification = notification
+					message.Data = map[string]string{
+						"epoch": fmt.Sprintf("%d", epoch),
+					}
+					transitPushContent := types.TransitPushContent{
+						Messages: []*messaging.Message{message},
+					}
+
+					pushMessages = append(pushMessages, transitPushContent)
+				}
 			}
-
-			pushMessages = append(pushMessages, transitPushContent)
 		}
 	}
 
