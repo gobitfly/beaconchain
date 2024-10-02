@@ -198,55 +198,55 @@ func (n *validatorIsOfflineNotification) GetLegacyTitle() string {
 	}
 }
 
-type validatorGroupIsOfflineNotification struct {
-	types.NotificationBaseImpl
+// type validatorGroupIsOfflineNotification struct {
+// 	types.NotificationBaseImpl
 
-	IsOffline bool
-}
+// 	IsOffline bool
+// }
 
-func (n *validatorGroupIsOfflineNotification) GetEntitiyId() string {
-	return fmt.Sprintf("%s - %s", n.GetDashboardName(), n.GetDashboardGroupName())
-}
+// func (n *validatorGroupIsOfflineNotification) GetEntitiyId() string {
+// 	return fmt.Sprintf("%s - %s", n.GetDashboardName(), n.GetDashboardGroupName())
+// }
 
-// Overwrite specific methods
-func (n *validatorGroupIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
-	epoch := ""
-	if n.IsOffline {
-		epoch = formatEpochLink(format, n.LatestState)
-	} else {
-		epoch = formatEpochLink(format, n.Epoch)
-	}
+// // Overwrite specific methods
+// func (n *validatorGroupIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
+// 	epoch := ""
+// 	if n.IsOffline {
+// 		epoch = formatEpochLink(format, n.LatestState)
+// 	} else {
+// 		epoch = formatEpochLink(format, n.Epoch)
+// 	}
 
-	if n.IsOffline {
-		return fmt.Sprintf(`Group %s is offline since epoch %s.`, n.DashboardGroupName, epoch)
-	} else {
-		return fmt.Sprintf(`Group %s is back online since epoch %v.`, n.DashboardGroupName, epoch)
-	}
-}
+// 	if n.IsOffline {
+// 		return fmt.Sprintf(`Group %s is offline since epoch %s.`, n.DashboardGroupName, epoch)
+// 	} else {
+// 		return fmt.Sprintf(`Group %s is back online since epoch %v.`, n.DashboardGroupName, epoch)
+// 	}
+// }
 
-func (n *validatorGroupIsOfflineNotification) GetTitle() string {
-	if n.IsOffline {
-		return "Group is offline"
-	} else {
-		return "Group is back online"
-	}
-}
+// func (n *validatorGroupIsOfflineNotification) GetTitle() string {
+// 	if n.IsOffline {
+// 		return "Group is offline"
+// 	} else {
+// 		return "Group is back online"
+// 	}
+// }
 
-func (n *validatorGroupIsOfflineNotification) GetLegacyInfo() string {
-	if n.IsOffline {
-		return fmt.Sprintf(`Group %s is offline since epoch %s.`, n.DashboardGroupName, n.LatestState)
-	} else {
-		return fmt.Sprintf(`Group %s is back online since epoch %v.`, n.DashboardGroupName, n.Epoch)
-	}
-}
+// func (n *validatorGroupIsOfflineNotification) GetLegacyInfo() string {
+// 	if n.IsOffline {
+// 		return fmt.Sprintf(`Group %s is offline since epoch %s.`, n.DashboardGroupName, n.LatestState)
+// 	} else {
+// 		return fmt.Sprintf(`Group %s is back online since epoch %v.`, n.DashboardGroupName, n.Epoch)
+// 	}
+// }
 
-func (n *validatorGroupIsOfflineNotification) GetLegacyTitle() string {
-	if n.IsOffline {
-		return "Group is offline"
-	} else {
-		return "Group is back online"
-	}
-}
+// func (n *validatorGroupIsOfflineNotification) GetLegacyTitle() string {
+// 	if n.IsOffline {
+// 		return "Group is offline"
+// 	} else {
+// 		return "Group is back online"
+// 	}
+// }
 
 type validatorAttestationNotification struct {
 	types.NotificationBaseImpl
