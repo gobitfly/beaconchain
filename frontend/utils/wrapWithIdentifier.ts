@@ -5,14 +5,14 @@ import type { ApiPagingResponse } from '~/types/api/common'
  * @param getIdFromRow A function that takes a row and builds a unique identifier
  * @returns The wrapped response
  */
-export function wrapWithIdentifier<T>(response: ApiPagingResponse<T> | undefined, getIdFromRow: (row: T) => string) {
+export function wrapWithIdentifier<T>(response: ApiPagingResponse<T> | undefined, ...keys: (keyof T)[]) {
   if (!response) {
     return
   }
   return {
     data: response.data.map(row => ({
       ...row,
-      wrapped_identifier: getIdFromRow(row),
+      wrapped_identifier: keys.map(key => row[key]).join('-'),
     })),
     paging: response.paging,
   }
