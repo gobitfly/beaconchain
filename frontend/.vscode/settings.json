@@ -3,6 +3,7 @@
     "BcButton",
     "BcLink",
     "BcTablePager",
+    "BcToggle",
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
