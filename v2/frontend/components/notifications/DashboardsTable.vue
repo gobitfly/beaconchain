@@ -61,8 +61,11 @@ const { overview } = useNotificationsDashboardOverviewStore()
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="notificationsDashboards"
-            data-key="notification_id"
+            :data="wrapWithIdentifier(
+              notificationsDashboards,
+              row => `${row.is_account_dashboard}-${row.dashboard_id}-${row.group_id}-${row.epoch}`,
+            )"
+            data-key="wrapped_identifier"
             :expandable="!colsVisible.notifications"
             :cursor
             :page-size
@@ -89,7 +92,7 @@ const { overview } = useNotificationsDashboardOverviewStore()
               </template>
             </Column>
             <Column
-              field="timestamp"
+              field="epoch"
               sortable
               header-class="col-age"
               body-class="col-age"
@@ -99,8 +102,8 @@ const { overview } = useNotificationsDashboardOverviewStore()
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
-                  :value="slotProps.data.timestamp"
-                  type="go-timestamp"
+                  :value="slotProps.data.epoch"
+                  type="epoch"
                 />
               </template>
             </Column>
