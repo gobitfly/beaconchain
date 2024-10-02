@@ -56,22 +56,22 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 
 	// validator query
 	vdbQuery := goqu.Dialect("postgres").
-		From(goqu.T("vdb_notifications_history").As("vnh")).
+		From(goqu.T("users_val_dashboards_notifications_history").As("uvdnh")).
 		Select(
 			goqu.L("false").As("is_account_dashboard"),
 			goqu.I("uvd.network").As("chain_id"),
-			goqu.I("vnh.epoch"),
+			goqu.I("uvdnh.epoch"),
 			goqu.I("uvd.id").As("dashboard_id"),
 			goqu.I("uvd.name").As("dashboard_name"),
 			goqu.I("uvdg.id").As("group_id"),
 			goqu.I("uvdg.name").As("group_name"),
-			goqu.SUM("vnh.event_count").As("entity_count"),
+			goqu.SUM("uvdnh.event_count").As("entity_count"),
 			goqu.L("ARRAY_AGG(DISTINCT event_type)").As("event_types"),
 		).
 		InnerJoin(goqu.T("users_val_dashboards").As("uvd"), goqu.On(
-			goqu.Ex{"uvd.id": goqu.I("vnh.dashboard_id")})).
+			goqu.Ex{"uvd.id": goqu.I("uvdnh.dashboard_id")})).
 		InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
-			goqu.Ex{"uvdg.id": goqu.I("vnh.group_id")},
+			goqu.Ex{"uvdg.id": goqu.I("uvdnh.group_id")},
 			goqu.Ex{"uvdg.dashboard_id": goqu.I("uvd.id")},
 		)).
 		Where(
@@ -79,7 +79,7 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
 		).
 		GroupBy(
-			goqu.I("vnh.epoch"),
+			goqu.I("uvdnh.epoch"),
 			goqu.I("uvd.network"),
 			goqu.I("uvd.id"),
 			goqu.I("uvdg.id"),
