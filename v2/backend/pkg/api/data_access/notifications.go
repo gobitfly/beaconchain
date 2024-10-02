@@ -278,7 +278,6 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 	for _, settings := range networksSettings {
 		result.Networks = append(result.Networks, *settings)
-
 	}
 
 	for _, device := range pairedDevices {
