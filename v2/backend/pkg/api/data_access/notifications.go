@@ -401,9 +401,13 @@ func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, user
 
 	// Search
 	if search != "" {
-		nodeAddress, err := hexutil.Decode(search)
-		if err != nil || !utils.eth1AddressRE.MatchString(search) {
+		if !utils.IsEth1Address(search) {
+			// If search is not a valid address, return empty result
 			return result, &paging, nil
+		}
+		nodeAddress, err := hexutil.Decode(search)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to decode node address: %w", err)
 		}
 		ds = ds.Where(goqu.L("node_address = ?", nodeAddress))
 	}
