@@ -13,6 +13,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
 
@@ -194,6 +195,8 @@ func (rp *RocketpoolExporter) Run() error {
 			time.Sleep(errorInterval)
 			continue
 		}
+
+		services.ReportStatus("rocketpoolExporter", "Running", nil)
 
 		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "exported rocketpool-data")
 		count++
