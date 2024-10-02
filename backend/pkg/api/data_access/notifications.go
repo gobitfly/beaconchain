@@ -41,15 +41,13 @@ type NotificationsRepository interface {
 }
 
 const (
-	MachineStorageUsageThresholdDefault     float64 = 0.1
-	MachineCpuUsageThresholdDefault         float64 = 0.2
-	MachineMemoryUsageThresholdDefault      float64 = 0.3
-	RocketPoolMaxCollateralThresholdDefault float64 = 0.4
-	RocketPoolMinCollateralThresholdDefault float64 = 0.5
+	MachineStorageUsageThresholdDefault float64 = 0.9
+	MachineCpuUsageThresholdDefault     float64 = 0.6
+	MachineMemoryUsageThresholdDefault  float64 = 0.8
 
-	GasAboveThresholdDefault          float64 = 1000.0001
-	GasBelowThresholdDefault          float64 = 1000.0002
-	ParticipationRateThresholdDefault float64 = 0.6
+	GasAboveThresholdDefault          float64 = 950
+	GasBelowThresholdDefault          float64 = 150
+	ParticipationRateThresholdDefault float64 = 0.8
 )
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
