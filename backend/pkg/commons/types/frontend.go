@@ -71,6 +71,7 @@ const (
 	ValidatorGotSlashedEventName             EventName = "validator_got_slashed"
 	ValidatorDidSlashEventName               EventName = "validator_did_slash"
 	ValidatorIsOfflineEventName              EventName = "validator_is_offline"
+	ValidatorGroupIsOfflineEventName         EventName = "validator_group_is_offline"
 	ValidatorReceivedWithdrawalEventName     EventName = "validator_withdrawal"
 	NetworkLivenessIncreasedEventName        EventName = "network_liveness_increased"
 	EthClientUpdateEventName                 EventName = "eth_client_update"
