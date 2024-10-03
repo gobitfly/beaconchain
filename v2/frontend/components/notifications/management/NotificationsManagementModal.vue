@@ -35,8 +35,8 @@ const tabs: HashTabs = [
   },
   {
     icon: faNetworkWired,
-    key: 'network',
-    title: $t('notifications.tabs.network'),
+    key: 'networks',
+    title: $t('notifications.tabs.networks'),
   },
 ]
 </script>
@@ -66,7 +66,7 @@ const tabs: HashTabs = [
       <template #tab-panel-clients>
         <NotificationsManagementClients />
       </template>
-      <template #tab-panel-network>
+      <template #tab-panel-networks>
         <NotificationsManagementNetwork />
       </template>
     </BcTabList>
