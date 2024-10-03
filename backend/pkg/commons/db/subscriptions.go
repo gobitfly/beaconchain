@@ -279,9 +279,9 @@ func UpdateSubscriptionLastSent(tx *sqlx.Tx, ts uint64, epoch uint64, subID uint
 }
 
 // CountSentMail increases the count of sent mails for this day.
-func CountSentMail(email string) (int64, error) {
+func CountSentMail(prefix, email string) (int64, error) {
 	day := time.Now().Truncate(utils.Day).Unix()
-	key := fmt.Sprintf("n_mails:%s:%d", email, day)
+	key := fmt.Sprintf("%s:%s:%d", prefix, email, day)
 
 	pipe := PersistentRedisDbClient.TxPipeline()
 	incr := pipe.Incr(context.Background(), key)
