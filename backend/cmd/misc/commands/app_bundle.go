@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
 	"github.com/pkg/errors"
 )
@@ -32,7 +33,6 @@ func (s *AppBundleCommand) ParseCommandOptions() {
 	s.FlagSet.BoolVar(&s.Config.Force, "force", false, "Skips summary and confirmation")
 }
 
-// nolint
 func (s *AppBundleCommand) Run() error {
 	if s.Config.BundleURL == "" {
 		s.showHelp()
@@ -68,19 +68,19 @@ func (s *AppBundleCommand) Run() error {
 
 	if !s.Config.Force {
 		// Summary
-		fmt.Printf("\n=== Bundle Summary ===")
-		fmt.Printf("\nBundle URL: %s", s.Config.BundleURL)
-		fmt.Printf("\nBundle Version Code: %d", s.Config.BundleVersionCode)
-		fmt.Printf("\nMinimum Native Version: %d", s.Config.NativeVersionCode)
+		log.Infof("=== Bundle Summary ===")
+		log.Infof("Bundle URL: %s", s.Config.BundleURL)
+		log.Infof("Bundle Version Code: %d", s.Config.BundleVersionCode)
+		log.Infof("Minimum Native Version: %d", s.Config.NativeVersionCode)
 		if s.Config.TargetInstalls == -1 {
-			fmt.Printf("\nTarget Installs: All")
+			log.Infof("Target Installs: All")
 		} else {
-			fmt.Printf("\nTarget Installs: %d", s.Config.TargetInstalls)
+			log.Infof("Target Installs: %d", s.Config.TargetInstalls)
 		}
-		fmt.Printf("\n======================\n")
+		log.Infof("======================\n")
 
 		// ask for y/n input
-		fmt.Printf("\nDo you want to add this bundle? (y/n)\n")
+		log.Infof("Do you want to add this bundle? (y/n)\n")
 		var input string
 		_, err := fmt.Scanln(&input)
 		if err != nil {
@@ -88,13 +88,13 @@ func (s *AppBundleCommand) Run() error {
 		}
 
 		if input != "y" {
-			fmt.Printf("Bundle not added\n")
+			log.Infof("Bundle not added\n")
 			return nil
 		}
 	}
 
 	if s.Config.DryRun {
-		fmt.Printf("Dry run, not adding bundle\n")
+		log.Infof("Dry run, not adding bundle\n")
 		return nil
 	}
 
@@ -103,16 +103,15 @@ func (s *AppBundleCommand) Run() error {
 		return errors.Wrap(err, "Error inserting app bundle")
 	}
 
-	fmt.Printf("\nBundle added successfully")
+	log.Infof("Bundle added successfully")
 	return nil
 }
 
-// nolint
 func (s *AppBundleCommand) showHelp() {
-	fmt.Printf("Usage: app_bundle [options]")
-	fmt.Printf("Options:")
-	fmt.Printf("  --version-code int\tVersion code of that bundle")
-	fmt.Printf("  --min-native-version int\tMinimum required native version (Default: Current)")
-	fmt.Printf("  --target-installs int\tHow many people to roll out to (Default: All)")
-	fmt.Printf("  --bundle-url string\tURL to bundle that contains the update, bundle.zip")
+	log.Infof("Usage: app_bundle [options]")
+	log.Infof("Options:")
+	log.Infof("  --version-code int\tVersion code of that bundle")
+	log.Infof("  --min-native-version int\tMinimum required native version (Default: Current)")
+	log.Infof("  --target-installs int\tHow many people to roll out to (Default: All)")
+	log.Infof("  --bundle-url string\tURL to bundle that contains the update, bundle.zip")
 }
