@@ -872,7 +872,7 @@
       "dashboards": "Dashboards",
       "general": "General",
       "machines": "Machines",
-      "network": "Network",
+      "networks": "Networks",
       "rocketpool": "Rocket Pool"
     },
     "title": "Notifications"
