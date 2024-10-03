@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/shopspring/decimal"
@@ -384,6 +385,7 @@ func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, user
 	// Get the machine notification history
 	notificationHistory := []struct {
 		Epoch          uint64          `db:"epoch"`
+		LastBlock      int64           `db:"last_block"`
 		EventType      types.EventName `db:"event_type"`
 		EventThreshold float64         `db:"event_threshold"`
 		NodeAddress    []byte          `db:"node_address"`
@@ -392,6 +394,7 @@ func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, user
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("epoch"),
+			goqu.L("last_block"),
 			goqu.L("event_type"),
 			goqu.L("event_threshold"),
 			goqu.L("node_address")).
@@ -474,14 +477,41 @@ func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, user
 	}
 
 	// -------------------------------------
+	// Get the node address info
+	addressMapping := make(map[string]*t.Address)
+	contractStatusRequests := make([]db.ContractInteractionAtRequest, 0)
+
+	for _, notification := range notificationHistory {
+		addressMapping[hexutil.Encode(notification.NodeAddress)] = nil
+		contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
+			Address:  fmt.Sprintf("%x", notification.NodeAddress),
+			Block:    notification.LastBlock,
+			TxIdx:    -1,
+			TraceIdx: -1,
+		})
+	}
+
+	err = d.GetNamesAndEnsForAddresses(ctx, addressMapping)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// -------------------------------------
 	// Calculate the result
 	cursorData := notificationHistory
-	for _, notification := range notificationHistory {
+	for idx, notification := range notificationHistory {
 		resultEntry := t.NotificationRocketPoolTableRow{
-			Threshold: notification.EventThreshold,
-			Node:      t.Address{Hash: t.Hash(hexutil.Encode(notification.NodeAddress))}, // TODO: Get the full correct information
 			Timestamp: utils.EpochToTime(notification.Epoch).Unix(),
+			Threshold: notification.EventThreshold,
+			Node:      *addressMapping[hexutil.Encode(notification.NodeAddress)],
 		}
+		resultEntry.Node.IsContract = contractStatuses[idx] == types.CONTRACT_CREATION || contractStatuses[idx] == types.CONTRACT_PRESENT
+
 		switch notification.EventType {
 		case types.RocketpoolNewClaimRoundStartedEventName:
 			resultEntry.EventType = "reward_round"
