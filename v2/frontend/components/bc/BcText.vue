@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    tag?: 'p' | 'span',
+    tag?: 'h2' | 'p' | 'span',
     variant?: 'base' | 'lg',
   }>(), {
     tag: 'span',
@@ -13,6 +13,7 @@ withDefaults(
 <template>
   <component
     :is="tag"
+    class="reset"
     :class="{
       'variant-lg': variant === 'lg',
     }"
@@ -23,7 +24,9 @@ withDefaults(
 
 <style scoped lang="scss">
 @use '~/assets/css/breakpoints' as *;
-
+.reset {
+  margin-block: unset;
+}
 .variant-lg {
   font-family: "Montserrat";
   font-size: 1.25rem;
