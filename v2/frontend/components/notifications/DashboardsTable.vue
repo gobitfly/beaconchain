@@ -61,8 +61,8 @@ const { overview } = useNotificationsDashboardOverviewStore()
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="wrapWithIdentifier(notificationsDashboards, 'is_account_dashboard', 'dashboard_id', 'group_id', 'epoch')"
-            data-key="wrapped_identifier"
+            :data="addIdentifier(notificationsDashboards, 'is_account_dashboard', 'dashboard_id', 'group_id', 'epoch')"
+            data-key="identifier"
             :expandable="!colsVisible.notifications"
             :cursor
             :page-size
