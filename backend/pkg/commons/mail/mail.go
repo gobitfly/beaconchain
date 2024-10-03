@@ -79,8 +79,8 @@ func SendMailRateLimited(to, subject string, msg types.Email, attachment []types
 		if err != nil {
 			return err
 		}
+		timeLeft := now.Add(utils.Day).Truncate(utils.Day).Sub(now)
 		if count > int64(utils.Config.Frontend.MaxMailsPerEmailPerDay) {
-			timeLeft := now.Add(utils.Day).Truncate(utils.Day).Sub(now)
 			return &types.RateLimitError{TimeLeft: timeLeft}
 		} else if count == int64(utils.Config.Frontend.MaxMailsPerEmailPerDay) {
 			// send an email if this was the last email for today
@@ -89,7 +89,7 @@ func SendMailRateLimited(to, subject string, msg types.Email, attachment []types
 				types.Email{
 					Title: "Email notification threshold limit reached",
 					//nolint: gosec
-					Body: template.HTML(fmt.Sprintf("You have reached the email notification threshold limit of %d emails per day. Further notification emails will be suppressed until tomorrow.", utils.Config.Frontend.MaxMailsPerEmailPerDay)),
+					Body: template.HTML(fmt.Sprintf("You have reached the email notification threshold limit of %d emails per day. Further notification emails will be suppressed for %.1f hours.", utils.Config.Frontend.MaxMailsPerEmailPerDay, timeLeft.Hours())),
 				},
 				[]types.EmailAttachment{})
 			if err != nil {
