@@ -124,7 +124,7 @@ func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context,
 					delivered_count, 
 					COALESCE(target_count, -1) as target_count
 				FROM mobile_app_bundles 
-				WHERE min_native_version = $1 
+				WHERE min_native_version <= $1 
 				ORDER BY bundle_version DESC 
 				LIMIT 1
 			)
