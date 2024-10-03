@@ -76,8 +76,12 @@ func Run() {
 		FlagSet: fs,
 	}
 
+	appBundleCommand := commands.AppBundleCommand{
+		FlagSet: fs,
+	}
+
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, app-bundle")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -101,6 +105,7 @@ func Run() {
 	versionFlag := fs.Bool("version", false, "Show version and exit")
 
 	statsPartitionCommand.ParseCommandOptions()
+	appBundleCommand.ParseCommandOptions()
 	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
@@ -461,7 +466,10 @@ func Run() {
 		err = fixExecTransactionsCount()
 	case "partition-validator-stats":
 		statsPartitionCommand.Config.DryRun = opts.DryRun
-		err = statsPartitionCommand.StartStatsPartitionCommand()
+		err = statsPartitionCommand.Run()
+	case "app-bundle":
+		appBundleCommand.Config.DryRun = opts.DryRun
+		err = appBundleCommand.Run()
 	case "fix-ens":
 		err = fixEns(erigonClient)
 	case "fix-ens-addresses":

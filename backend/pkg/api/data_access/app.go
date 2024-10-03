@@ -110,11 +110,42 @@ func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, payment
 }
 
 func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
-	// @TODO data access
-	return d.dummy.GetLatestBundleForNativeVersion(ctx, nativeVersion)
+	var bundle t.MobileAppBundleStats
+	err := d.alloyReader.Get(&bundle, `
+		WITH 
+			latest_native AS (
+				SELECT max(min_native_version) as max_native_version 
+				FROM mobile_app_bundles
+			),
+			latest_bundle AS (
+				SELECT 
+					bundle_version, 
+					bundle_url, 
+					delivered_count, 
+					COALESCE(target_count, -1) as target_count
+				FROM mobile_app_bundles 
+				WHERE min_native_version = $1 
+				ORDER BY bundle_version DESC 
+				LIMIT 1
+			)
+		SELECT
+			COALESCE(latest_bundle.bundle_version, 0) as bundle_version,
+			COALESCE(latest_bundle.bundle_url, '') as bundle_url,
+			COALESCE(latest_bundle.target_count, -1) as target_count,
+			COALESCE(latest_bundle.delivered_count, 0) as delivered_count,
+			latest_native.max_native_version
+		FROM latest_native
+		LEFT JOIN latest_bundle ON TRUE;`,
+		nativeVersion,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+
+	return &bundle, err
 }
 
-func (d *DataAccessService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
-	// @TODO data access
-	return d.dummy.IncrementBundleDeliveryCount(ctx, bundleVerison)
+func (d *DataAccessService) IncrementBundleDeliveryCount(ctx context.Context, bundleVersion uint64) error {
+	_, err := d.alloyWriter.Exec("UPDATE mobile_app_bundles SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE bundle_version = $1", bundleVersion)
+	return err
 }
