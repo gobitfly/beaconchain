@@ -155,8 +155,8 @@ const findNextEpochDuties = (epoch: number) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="wrapWithIdentifier(rewards, 'epoch', 'group_id')"
-            data-key="wrapped_identifier"
+            :data="addIdentifier(rewards, 'epoch', 'group_id')"
+            data-key="identifier"
             :expandable="true"
             class="rewards-table"
             :cursor
