@@ -1,7 +1,7 @@
 package db
 
 import (
-	"database/sql"
+	"context"
 	"encoding/hex"
 
 	"fmt"
@@ -278,22 +278,19 @@ func UpdateSubscriptionLastSent(tx *sqlx.Tx, ts uint64, epoch uint64, subID uint
 	return err
 }
 
-// CountSentMail increases the count of sent mails in the table `mails_sent` for this day.
-func CountSentMail(email string) error {
+// CountSentMail increases the count of sent mails for this day.
+func CountSentMail(email string) (int64, error) {
 	day := time.Now().Truncate(utils.Day).Unix()
-	_, err := FrontendWriterDB.Exec(`
-		INSERT INTO mails_sent (email, ts, cnt) VALUES ($1, TO_TIMESTAMP($2), 1)
-		ON CONFLICT (email, ts) DO UPDATE SET cnt = mails_sent.cnt+1`, email, day)
-	return err
-}
+	key := fmt.Sprintf("n_mails:%s:%d", email, day)
 
-// GetMailsSentCount returns the number of sent mails for the day of the passed time.
-func GetMailsSentCount(email string, t time.Time) (int, error) {
-	day := t.Truncate(utils.Day).Unix()
-	count := 0
-	err := FrontendWriterDB.Get(&count, "SELECT cnt FROM mails_sent WHERE email = $1 AND ts = TO_TIMESTAMP($2)", email, day)
-	if err == sql.ErrNoRows {
-		return 0, nil
+	pipe := PersistentRedisDbClient.TxPipeline()
+	incr := pipe.Incr(context.Background(), key)
+	pipe.Expire(context.Background(), key, utils.Day)
+	_, err := pipe.Exec(context.Background())
+
+	if incr.Err() != nil {
+		return 0, incr.Err()
 	}
-	return count, err
+
+	return incr.Val(), err
 }
