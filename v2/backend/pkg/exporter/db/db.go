@@ -523,6 +523,16 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		return fmt.Errorf("error preparing insert validator statement: %w", err)
 	}
 
+	validatorStatusUpdateStmt, err := tx.Prepare(`UPDATE validators SET status = $1 WHERE validatorindex = $2;`)
+	if err != nil {
+		return fmt.Errorf("error preparing update validator status statement: %w", err)
+	}
+
+	log.Info("updating validator status and metadata")
+	valiudatorUpdateTs := time.Now()
+
+	validatorStatusCounts := make(map[string]int)
+
 	updates := 0
 	for _, v := range validators {
 		// exchange farFutureEpoch with the corresponding max sql value
@@ -564,6 +574,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			if err != nil {
 				log.Error(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
 			}
+			validatorStatusCounts[v.Status]++
 		} else {
 			// status                     =
 			// CASE
@@ -609,11 +620,16 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				v.Status = string(constypes.DbActiveOnline)
 			}
 
+			validatorStatusCounts[v.Status]++
 			if c.Status != v.Status {
-				log.Infof("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
-				log.Infof("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
-				updates++
+				log.Debugf("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
+				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
+				//queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
+				_, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
+				if err != nil {
+					return fmt.Errorf("error updating validator status: %w", err)
+				}
+				//updates++
 			}
 			// if c.Balance != v.Balance {
 			// 	// log.LogInfo("Balance changed for validator %v from %v to %v", v.Index, c.Balance, v.Balance)
@@ -658,6 +674,11 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		}
 	}
 
+	err = validatorStatusUpdateStmt.Close()
+	if err != nil {
+		return fmt.Errorf("error closing validator status update statement: %w", err)
+	}
+
 	err = insertStmt.Close()
 	if err != nil {
 		return fmt.Errorf("error closing insert validator statement: %w", err)
@@ -673,6 +694,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		}
 		log.Infof("validator table update completed, took %v", time.Since(updateStart))
 	}
+	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
 
 	s := time.Now()
 	newValidators := []struct {
@@ -734,8 +756,21 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			return fmt.Errorf("error updating activation epoch balance for validator %v: %w", newValidator.Validatorindex, err)
 		}
 	}
-
 	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(s))
+
+	log.Infof("updating validator status counts")
+	s = time.Now()
+	_, err = tx.Exec("TRUNCATE TABLE validators_status_counts;")
+	if err != nil {
+		return fmt.Errorf("error truncating validators_status_counts table: %w", err)
+	}
+	for status, count := range validatorStatusCounts {
+		_, err = tx.Exec("INSERT INTO validators_status_counts (status, validator_count) VALUES ($1, $2);", status, count)
+		if err != nil {
+			return fmt.Errorf("error updating validator status counts: %w", err)
+		}
+	}
+	log.Infof("updating validator status counts completed, took %v", time.Since(s))
 
 	s = time.Now()
 	_, err = tx.Exec("ANALYZE (SKIP_LOCKED) validators;")

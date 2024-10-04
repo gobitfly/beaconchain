@@ -247,9 +247,9 @@ type HealthzData struct {
 // Mobile structs
 
 type MobileAppBundleStats struct {
-	LatestBundleVersion uint64
-	BundleUrl           string
-	TargetCount         uint64 // coalesce to 0 if column is null
-	DeliveryCount       uint64
-	MaxNativeVersion    uint64 // the max native version of the whole table for the given environment
+	LatestBundleVersion uint64 `db:"bundle_version"`
+	BundleUrl           string `db:"bundle_url"`
+	TargetCount         int64  `db:"target_count"` // coalesce to -1 if column is null
+	DeliveryCount       int64  `db:"delivered_count"`
+	MaxNativeVersion    uint64 `db:"max_native_version"` // the max native version of the whole table for the given environment
 }

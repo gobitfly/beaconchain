@@ -26,25 +26,17 @@ const tabs: HashTabs = [
   {
     icon: faMonitorWaveform,
     key: 'machines',
-    placeholder: 'Machines coming soon!',
     title: $t('notifications.tabs.machines'),
   },
   {
     icon: faBolt,
     key: 'clients',
-    placeholder: 'Clients coming soon!',
     title: $t('notifications.tabs.clients'),
   },
   {
-    icon: faCog,
-    key: 'rocketpool',
-    title: $t('notifications.tabs.rocketpool'),
-  },
-  {
     icon: faNetworkWired,
-    key: 'network',
-    placeholder: 'Network coming soon!',
-    title: $t('notifications.tabs.network'),
+    key: 'networks',
+    title: $t('notifications.tabs.networks'),
   },
 ]
 </script>
@@ -71,8 +63,11 @@ const tabs: HashTabs = [
       <template #tab-panel-machines>
         <NotificationsManagementMachines />
       </template>
-      <template #tab-header-icon-rocketpool>
-        <IconRocketPool />
+      <template #tab-panel-clients>
+        <NotificationsManagementClients />
+      </template>
+      <template #tab-panel-networks>
+        <NotificationsManagementNetwork />
       </template>
     </BcTabList>
     <Button

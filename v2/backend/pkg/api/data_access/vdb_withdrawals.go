@@ -190,7 +190,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 
 	err = d.readerDb.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting withdrawals for validators: %+v: %w", validators, err)
+		return nil, nil, fmt.Errorf("error getting withdrawals for dashboardId: %d (%d validators): %w", dashboardId.Id, len(validators), err)
 	}
 
 	if len(queryResult) == 0 {

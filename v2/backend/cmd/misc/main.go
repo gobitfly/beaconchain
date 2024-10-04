@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/cmd/misc/commands"
+	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -69,6 +70,14 @@ var opts = struct {
 	DryRun              bool
 }{}
 
+/**
+ * If your command does not require Bigtable, Redis, Node, or DBs, you can remove that requirement for that command here.
+ * By default, all commands that are not in the REQUIRES_LIST will automatically require everything.
+ */
+var REQUIRES_LIST = map[string]misctypes.Requires{
+	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+}
+
 func Run() {
 	fs := flag.NewFlagSet("fs", flag.ExitOnError)
 
@@ -76,8 +85,12 @@ func Run() {
 		FlagSet: fs,
 	}
 
+	appBundleCommand := commands.AppBundleCommand{
+		FlagSet: fs,
+	}
+
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, app-bundle")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -101,6 +114,7 @@ func Run() {
 	versionFlag := fs.Bool("version", false, "Show version and exit")
 
 	statsPartitionCommand.ParseCommandOptions()
+	appBundleCommand.ParseCommandOptions()
 	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
@@ -118,69 +132,91 @@ func Run() {
 	}
 	utils.Config = cfg
 
+	requires, ok := REQUIRES_LIST[opts.Command]
+	if !ok {
+		requires = misctypes.Requires{
+			Bigtable: true,
+			Redis:    true,
+			ClNode:   true,
+			ElNode:   true,
+			DBs:      true,
+		}
+	}
+
 	chainIdString := strconv.FormatUint(utils.Config.Chain.ClConfig.DepositChainID, 10)
 
-	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainIdString, utils.Config.RedisCacheEndpoint)
-	if err != nil {
-		log.Fatal(err, "error initializing bigtable", 0)
+	var bt *db.Bigtable
+	if requires.Bigtable {
+		bt, err = db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainIdString, utils.Config.RedisCacheEndpoint)
+		if err != nil {
+			log.Fatal(err, "error initializing bigtable", 0)
+		}
 	}
 
-	cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-	if !ok {
-		log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
-	}
-	chainIDBig := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-	rpcClient, err := rpc.NewLighthouseClient(nodeImpl, chainIDBig)
-	if err != nil {
-		log.Fatal(err, "lighthouse client error", 0)
-	}
-
-	erigonClient, err := rpc.NewErigonClient(utils.Config.Eth1ErigonEndpoint)
-	if err != nil {
-		log.Fatal(err, "error initializing erigon client", 0)
+	var rpcClient *rpc.LighthouseClient
+	if requires.ClNode {
+		cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
+		nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
+		if !ok {
+			log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
+		}
+		chainIDBig := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
+		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainIDBig)
+		if err != nil {
+			log.Fatal(err, "lighthouse client error", 0)
+		}
 	}
 
-	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
-		Username:     cfg.WriterDatabase.Username,
-		Password:     cfg.WriterDatabase.Password,
-		Name:         cfg.WriterDatabase.Name,
-		Host:         cfg.WriterDatabase.Host,
-		Port:         cfg.WriterDatabase.Port,
-		MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
-		SSL:          cfg.WriterDatabase.SSL,
-	}, &types.DatabaseConfig{
-		Username:     cfg.ReaderDatabase.Username,
-		Password:     cfg.ReaderDatabase.Password,
-		Name:         cfg.ReaderDatabase.Name,
-		Host:         cfg.ReaderDatabase.Host,
-		Port:         cfg.ReaderDatabase.Port,
-		MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-		SSL:          cfg.ReaderDatabase.SSL,
-	}, "pgx", "postgres")
-	defer db.ReaderDb.Close()
-	defer db.WriterDb.Close()
-	db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
-		Username:     cfg.Frontend.WriterDatabase.Username,
-		Password:     cfg.Frontend.WriterDatabase.Password,
-		Name:         cfg.Frontend.WriterDatabase.Name,
-		Host:         cfg.Frontend.WriterDatabase.Host,
-		Port:         cfg.Frontend.WriterDatabase.Port,
-		MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
-	}, &types.DatabaseConfig{
-		Username:     cfg.Frontend.ReaderDatabase.Username,
-		Password:     cfg.Frontend.ReaderDatabase.Password,
-		Name:         cfg.Frontend.ReaderDatabase.Name,
-		Host:         cfg.Frontend.ReaderDatabase.Host,
-		Port:         cfg.Frontend.ReaderDatabase.Port,
-		MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-	}, "pgx", "postgres")
-	defer db.FrontendReaderDB.Close()
-	defer db.FrontendWriterDB.Close()
+	var erigonClient *rpc.ErigonClient
+	if requires.ElNode {
+		erigonClient, err = rpc.NewErigonClient(utils.Config.Eth1ErigonEndpoint)
+		if err != nil {
+			log.Fatal(err, "error initializing erigon client", 0)
+		}
+	}
+
+	if requires.DBs {
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.WriterDatabase.Username,
+			Password:     cfg.WriterDatabase.Password,
+			Name:         cfg.WriterDatabase.Name,
+			Host:         cfg.WriterDatabase.Host,
+			Port:         cfg.WriterDatabase.Port,
+			MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
+			SSL:          cfg.WriterDatabase.SSL,
+		}, &types.DatabaseConfig{
+			Username:     cfg.ReaderDatabase.Username,
+			Password:     cfg.ReaderDatabase.Password,
+			Name:         cfg.ReaderDatabase.Name,
+			Host:         cfg.ReaderDatabase.Host,
+			Port:         cfg.ReaderDatabase.Port,
+			MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
+			SSL:          cfg.ReaderDatabase.SSL,
+		}, "pgx", "postgres")
+		defer db.ReaderDb.Close()
+		defer db.WriterDb.Close()
+		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.Frontend.WriterDatabase.Username,
+			Password:     cfg.Frontend.WriterDatabase.Password,
+			Name:         cfg.Frontend.WriterDatabase.Name,
+			Host:         cfg.Frontend.WriterDatabase.Host,
+			Port:         cfg.Frontend.WriterDatabase.Port,
+			MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.Frontend.ReaderDatabase.Username,
+			Password:     cfg.Frontend.ReaderDatabase.Password,
+			Name:         cfg.Frontend.ReaderDatabase.Name,
+			Host:         cfg.Frontend.ReaderDatabase.Host,
+			Port:         cfg.Frontend.ReaderDatabase.Port,
+			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
+		}, "pgx", "postgres")
+		defer db.FrontendReaderDB.Close()
+		defer db.FrontendWriterDB.Close()
+	}
 
 	// clickhouse
 	// db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
@@ -206,24 +242,26 @@ func Run() {
 	// defer db.ClickHouseWriter.Close()
 
 	// Initialize the persistent redis client
-	rdc := redis.NewClient(&redis.Options{
-		Addr:        utils.Config.RedisSessionStoreEndpoint,
-		ReadTimeout: time.Second * 20,
-	})
+	if requires.Redis {
+		rdc := redis.NewClient(&redis.Options{
+			Addr:        utils.Config.RedisSessionStoreEndpoint,
+			ReadTimeout: time.Second * 20,
+		})
 
-	if err := rdc.Ping(context.Background()).Err(); err != nil {
-		log.Fatal(err, "error connecting to persistent redis store", 0)
-	}
+		if err := rdc.Ping(context.Background()).Err(); err != nil {
+			log.Fatal(err, "error connecting to persistent redis store", 0)
+		}
 
-	db.PersistentRedisDbClient = rdc
-	defer db.PersistentRedisDbClient.Close()
+		db.PersistentRedisDbClient = rdc
+		defer db.PersistentRedisDbClient.Close()
 
-	if utils.Config.TieredCacheProvider != "redis" {
-		log.Fatal(nil, "no cache provider set, please set TierdCacheProvider (redis)", 0)
-	}
-	if utils.Config.TieredCacheProvider == "redis" || len(utils.Config.RedisCacheEndpoint) != 0 {
-		cache.MustInitTieredCache(utils.Config.RedisCacheEndpoint)
-		log.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
+		if utils.Config.TieredCacheProvider != "redis" {
+			log.Fatal(nil, "no cache provider set, please set TierdCacheProvider (redis)", 0)
+		}
+		if utils.Config.TieredCacheProvider == "redis" || len(utils.Config.RedisCacheEndpoint) != 0 {
+			cache.MustInitTieredCache(utils.Config.RedisCacheEndpoint)
+			log.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
+		}
 	}
 
 	switch opts.Command {
@@ -461,7 +499,10 @@ func Run() {
 		err = fixExecTransactionsCount()
 	case "partition-validator-stats":
 		statsPartitionCommand.Config.DryRun = opts.DryRun
-		err = statsPartitionCommand.StartStatsPartitionCommand()
+		err = statsPartitionCommand.Run()
+	case "app-bundle":
+		appBundleCommand.Config.DryRun = opts.DryRun
+		err = appBundleCommand.Run()
 	case "fix-ens":
 		err = fixEns(erigonClient)
 	case "fix-ens-addresses":
