@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
@@ -31,6 +32,12 @@ func (s *AppBundleCommand) ParseCommandOptions() {
 	s.FlagSet.Int64Var(&s.Config.TargetInstalls, "target-installs", -1, "How many people to roll out to (Default: All)")
 	s.FlagSet.StringVar(&s.Config.BundleURL, "bundle-url", "", "URL to bundle that contains the update, bundle.zip")
 	s.FlagSet.BoolVar(&s.Config.Force, "force", false, "Skips summary and confirmation")
+}
+
+func (s *AppBundleCommand) Requires() misctypes.Requires {
+	return misctypes.Requires{
+		DBs: true,
+	}
 }
 
 func (s *AppBundleCommand) Run() error {
