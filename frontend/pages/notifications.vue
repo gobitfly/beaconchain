@@ -21,7 +21,7 @@ const tabKey = {
   clients: 'clients',
   dashboards: 'dashboards',
   machines: 'machines',
-  network: 'network',
+  networks: 'networks',
   rocketpool: 'rocketpool',
 }
 const tabs: HashTabs = [
@@ -46,8 +46,8 @@ const tabs: HashTabs = [
   },
   {
     icon: faNetworkWired,
-    key: tabKey.network,
-    title: $t('notifications.tabs.network'),
+    key: tabKey.networks,
+    title: $t('notifications.tabs.networks'),
   },
 ]
 
@@ -118,7 +118,7 @@ const openManageNotifications = () => {
             @open-dialog="openManageNotifications"
           />
         </template>
-        <template #[getSlotName(tabKey.network)]>
+        <template #[getSlotName(tabKey.networks)]>
           <NotificationsNetworkTable
             @open-dialog="openManageNotifications"
           />
