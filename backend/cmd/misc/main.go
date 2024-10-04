@@ -135,11 +135,12 @@ func Run() {
 	requires, ok := REQUIRES_LIST[opts.Command]
 	if !ok {
 		requires = misctypes.Requires{
-			Bigtable: true,
-			Redis:    true,
-			ClNode:   true,
-			ElNode:   true,
-			DBs:      true,
+			Bigtable:   true,
+			Redis:      true,
+			ClNode:     true,
+			ElNode:     true,
+			UserDBs:    true,
+			NetworkDBs: true,
 		}
 	}
 
@@ -175,7 +176,7 @@ func Run() {
 		}
 	}
 
-	if requires.DBs {
+	if requires.NetworkDBs {
 		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.WriterDatabase.Username,
 			Password:     cfg.WriterDatabase.Password,
@@ -197,6 +198,8 @@ func Run() {
 		}, "pgx", "postgres")
 		defer db.ReaderDb.Close()
 		defer db.WriterDb.Close()
+	}
+	if requires.UserDBs {
 		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.Frontend.WriterDatabase.Username,
 			Password:     cfg.Frontend.WriterDatabase.Password,
