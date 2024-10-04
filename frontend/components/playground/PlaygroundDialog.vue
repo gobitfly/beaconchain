@@ -35,6 +35,8 @@ const validatorSub: NotificationSettingsValidatorDashboard = {
   is_attestations_missed_subscribed: true,
   is_block_proposal_subscribed: true,
   is_group_offline_subscribed: true,
+  is_max_collateral_subscribed: false,
+  is_min_collateral_subscribed: false,
   is_real_time_mode_enabled: false,
   is_slashed_subscribed: false,
   is_sync_subscribed: true,
@@ -42,6 +44,8 @@ const validatorSub: NotificationSettingsValidatorDashboard = {
   is_validator_offline_subscribed: true,
   is_webhook_discord_enabled: true,
   is_withdrawal_processed_subscribed: true,
+  max_collateral_threshold: 0,
+  min_collateral_threshold: 0,
   webhook_url: 'http://bablabla',
 }
 
