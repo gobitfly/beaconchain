@@ -159,8 +159,10 @@ func sendEmailNotifications() error {
 				metrics.Errors.WithLabelValues("notifications_send_email").Inc()
 				log.Error(err, "error sending email notification", 0)
 			} else {
-				metrics.NotificationsSent.WithLabelValues("email", "200").Inc()
+				metrics.NotificationsSent.WithLabelValues("email", "429").Inc()
 			}
+		} else {
+			metrics.NotificationsSent.WithLabelValues("email", "200").Inc()
 		}
 		_, err = db.WriterDb.Exec(`UPDATE notification_queue set sent = now() where id = $1`, n.Id)
 		if err != nil {
