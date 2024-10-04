@@ -36,7 +36,7 @@ func (s *AppBundleCommand) ParseCommandOptions() {
 
 func (s *AppBundleCommand) Requires() misctypes.Requires {
 	return misctypes.Requires{
-		DBs: true,
+		UserDBs: true,
 	}
 }
 
