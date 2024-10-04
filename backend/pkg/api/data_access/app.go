@@ -111,7 +111,7 @@ func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, payment
 
 func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
 	var bundle t.MobileAppBundleStats
-	err := d.alloyReader.Get(&bundle, `
+	err := d.userReader.Get(&bundle, `
 		WITH 
 			latest_native AS (
 				SELECT max(min_native_version) as max_native_version 
@@ -146,6 +146,6 @@ func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context,
 }
 
 func (d *DataAccessService) IncrementBundleDeliveryCount(ctx context.Context, bundleVersion uint64) error {
-	_, err := d.alloyWriter.Exec("UPDATE mobile_app_bundles SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE bundle_version = $1", bundleVersion)
+	_, err := d.userWriter.Exec("UPDATE mobile_app_bundles SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE bundle_version = $1", bundleVersion)
 	return err
 }

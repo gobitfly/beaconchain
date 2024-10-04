@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
@@ -33,6 +34,12 @@ func (s *AppBundleCommand) ParseCommandOptions() {
 	s.FlagSet.BoolVar(&s.Config.Force, "force", false, "Skips summary and confirmation")
 }
 
+func (s *AppBundleCommand) Requires() misctypes.Requires {
+	return misctypes.Requires{
+		DBs: true,
+	}
+}
+
 func (s *AppBundleCommand) Run() error {
 	if s.Config.BundleURL == "" {
 		s.showHelp()
@@ -56,7 +63,7 @@ func (s *AppBundleCommand) Run() error {
 		}
 	}
 	if s.Config.NativeVersionCode <= 0 {
-		err := db.ReaderDb.Get(&s.Config.NativeVersionCode, "SELECT MAX(min_native_version) FROM mobile_app_bundles")
+		err := db.FrontendReaderDB.Get(&s.Config.NativeVersionCode, "SELECT MAX(min_native_version) FROM mobile_app_bundles")
 		if err != nil {
 			return errors.Wrap(err, "Error getting max native version")
 		}
@@ -98,7 +105,7 @@ func (s *AppBundleCommand) Run() error {
 		return nil
 	}
 
-	_, err := db.WriterDb.Exec("INSERT INTO mobile_app_bundles (bundle_url, bundle_version, min_native_version, target_count) VALUES ($1, $2, $3, $4)", s.Config.BundleURL, s.Config.BundleVersionCode, s.Config.NativeVersionCode, s.Config.TargetInstalls)
+	_, err := db.FrontendWriterDB.Exec("INSERT INTO mobile_app_bundles (bundle_url, bundle_version, min_native_version, target_count) VALUES ($1, $2, $3, $4)", s.Config.BundleURL, s.Config.BundleVersionCode, s.Config.NativeVersionCode, s.Config.TargetInstalls)
 	if err != nil {
 		return errors.Wrap(err, "Error inserting app bundle")
 	}
