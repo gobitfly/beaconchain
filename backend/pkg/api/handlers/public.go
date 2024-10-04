@@ -11,6 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gorilla/mux"
+	"github.com/shopspring/decimal"
 )
 
 // All handler function names must include the HTTP method and the path they handle
@@ -2098,7 +2099,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
-//	@Param			search	query		string	false	"Search for TODO"
+//	@Param			search	query		string	false	"Search for Node Address"
 //	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/rocket-pool [get]
@@ -2137,7 +2138,6 @@ func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWrit
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type)
-//	@Param			search	query		string	false	"Search for TODO"
 //	@Success		200		{object}	types.InternalGetUserNotificationNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/networks [get]
@@ -2155,7 +2155,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2218,8 +2218,6 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
 	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
 	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
-	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
-	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -2243,7 +2241,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 //	@Accept			json
 //	@Produce		json
 //	@Param			network	path		string								true	"The networks name or chain ID."
-//	@Param			request	body		types.NotificationSettingsNetwork	true	"Description Todo"
+//	@Param			request	body		handlers.PublicPutUserNotificationSettingsNetworks.request	true	"Description Todo"
 //	@Success		200		{object}	types.InternalPutUserNotificationSettingsNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/networks/{network} [put]
@@ -2254,19 +2252,42 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		handleErr(w, r, err)
 		return
 	}
-	var req types.NotificationSettingsNetwork
+	type request struct {
+		IsGasAboveSubscribed          bool    `json:"is_gas_above_subscribed"`
+		GasAboveThreshold             string  `json:"gas_above_threshold"`
+		IsGasBelowSubscribed          bool    `json:"is_gas_below_subscribed"`
+		GasBelowThreshold             string  `json:"gas_below_threshold" `
+		IsParticipationRateSubscribed bool    `json:"is_participation_rate_subscribed"`
+		ParticipationRateThreshold    float64 `json:"participation_rate_threshold"`
+		IsNewRewardRoundSubscribed    bool    `json:"is_new_reward_round_subscribed"`
+	}
+	var req request
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	checkMinMax(&v, req.ParticipationRateThreshold, 0, 1, "participation_rate_threshold")
-
 	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+
+	minWei := decimal.New(1000000, 1)       // 0.001 Gwei
+	maxWei := decimal.New(1000000000000, 1) // 1000 Gwei
+	gasAboveThreshold := v.checkWeiMinMax(req.GasAboveThreshold, "gas_above_threshold", minWei, maxWei)
+	gasBelowThreshold := v.checkWeiMinMax(req.GasBelowThreshold, "gas_below_threshold", minWei, maxWei)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, req)
+	settings := types.NotificationSettingsNetwork{
+		IsGasAboveSubscribed:          req.IsGasAboveSubscribed,
+		GasAboveThreshold:             gasAboveThreshold,
+		IsGasBelowSubscribed:          req.IsGasBelowSubscribed,
+		GasBelowThreshold:             gasBelowThreshold,
+		IsParticipationRateSubscribed: req.IsParticipationRateSubscribed,
+		ParticipationRateThreshold:    req.ParticipationRateThreshold,
+		IsNewRewardRoundSubscribed:    req.IsNewRewardRoundSubscribed,
+	}
+
+	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, settings)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2274,7 +2295,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 	response := types.InternalPutUserNotificationSettingsNetworksResponse{
 		Data: types.NotificationNetwork{
 			ChainId:  chainId,
-			Settings: req,
+			Settings: settings,
 		},
 	}
 	returnOk(w, r, response)
@@ -2469,6 +2490,9 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
+
+	checkMinMax(&v, req.MaxCollateralThreshold, 0, 1, "max_collateral_threshold")
+	checkMinMax(&v, req.MinCollateralThreshold, 0, 1, "min_collateral_threshold")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
