@@ -599,6 +599,7 @@
       "networks": "Networks",
       "notification": "Notification",
       "subscriptions": "Subscriptions",
+      "threshold": "Threshold",
       "webhook": "Webhook"
     },
     "dashboards": {
@@ -747,9 +748,10 @@
     },
     "network": {
       "event_type": {
-        "gas_above": "Gas price > {_value}",
-        "gas_below": "Gas price < {_value}",
-        "participation_rate": "Participation rate < {_value}"
+        "gas_above": "Gas price maximum reached",
+        "gas_below": "Gas price minimum reached",
+        "new_reward_round": "New reward round",
+        "participation_rate": "Participation rate minimum reached"
       },
       "footer": {
         "subscriptions": "Network ({count} Subscriptions)"
