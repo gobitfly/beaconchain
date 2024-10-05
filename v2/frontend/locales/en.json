@@ -630,6 +630,27 @@
         "accounts": "account | accounts",
         "validators": "validator | validators"
       },
+      "event_type": {
+        "attestation_missed": "Attestation missed",
+        "got_slashed": "Got slashed",
+        "group_offline": "Group offline",
+        "group_online": "Group online",
+        "has_slashed": "Slashing",
+        "incoming_tx": "Incoming Tx.",
+        "max_collateral": "Max. collateral",
+        "min_collateral": "Min. collateral",
+        "outgoing_tx": "Outgoing Tx.",
+        "proposal_missed": "Proposal missed",
+        "proposal_success": "Proposal success",
+        "proposal_upcoming": "Proposal upcoming",
+        "sync": "Sync",
+        "transfer_erc20": "Transfer ERC-20",
+        "transfer_erc721": "Transfer ERC-721",
+        "transfer_erc1155": "Transfer ERC-1155",
+        "validator_offline": "Validator offline",
+        "validator_online": "Validator online",
+        "withdrawal": "Withdrawal"
+      },
       "expansion": {
         "label_dashboard": "Dashboard:",
         "label_group": "Group:",
