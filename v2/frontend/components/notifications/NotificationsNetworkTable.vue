@@ -24,7 +24,6 @@ const { overview } = useNotificationsDashboardOverviewStore()
   <div>
     <BcTableControl
       :title="$t('notifications.network.title')"
-      :search-placeholder="$t('notifications.dashboards.search_placeholder')"
       @set-search="setSearch"
     >
       <template #table>
