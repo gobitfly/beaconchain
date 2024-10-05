@@ -24,6 +24,7 @@
     "git-blame-ignore",
     "i18n",
     "mainHeader",
+    "middleware",
     "notifications",
     "nuxt.config",
     "qrCode",
