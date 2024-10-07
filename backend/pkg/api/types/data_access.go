@@ -105,6 +105,39 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type NotificationMachinesCursor struct {
+	GenericCursor
+
+	MachineId      uint64
+	MachineName    string
+	EventType      string
+	EventThreshold float64
+	Epoch          uint64
+}
+
+type NotificationClientsCursor struct {
+	GenericCursor
+
+	Client string
+	Epoch  uint64
+}
+
+type NotificationRocketPoolsCursor struct {
+	GenericCursor
+
+	NodeAddress []byte
+	EventType   string
+	Epoch       uint64
+}
+
+type NotificationNetworksCursor struct {
+	GenericCursor
+
+	Network   uint64
+	Epoch     uint64
+	EventType string
+}
+
 type UserCredentialInfo struct {
 	Id             uint64 `db:"id"`
 	Email          string `db:"email"`
