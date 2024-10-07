@@ -89,9 +89,9 @@ const (
 	// Account dashboard events
 	IncomingTransactionEventName  EventName = "incoming_transaction"
 	OutgoingTransactionEventName  EventName = "outgoing_transaction"
-	ERC20TokenTransferEventName   EventName = "erc20_token_transfer"
-	ERC721TokenTransferEventName  EventName = "erc721_token_transfer"
-	ERC1155TokenTransferEventName EventName = "erc1155_token_transfer"
+	ERC20TokenTransferEventName   EventName = "erc20_token_transfer"   // #nosec G101
+	ERC721TokenTransferEventName  EventName = "erc721_token_transfer"  // #nosec G101
+	ERC1155TokenTransferEventName EventName = "erc1155_token_transfer" // #nosec G101
 )
 
 var MachineEvents = []EventName{
