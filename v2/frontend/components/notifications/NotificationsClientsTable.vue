@@ -94,7 +94,6 @@ const { overview } = useNotificationsDashboardOverviewStore()
                 @open-dialog="$emit('openDialog')"
               />
             </template>
-            <!-- TODO: implement number of clients subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="colsVisible">
                 {{ $t('notifications.clients.footer.subscriptions', { count: overview?.clients_subscription_count }) }}

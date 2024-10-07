@@ -42,6 +42,9 @@ export enum API_PATH {
   NOTIFICATIONS_CLIENTS = '/notifications/clients',
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
   NOTIFICATIONS_MACHINE = '/notifications/machines',
+  NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION = '/notifications/management/clients/set_notifications',
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION = '/notifications/management/account_dashboard/set_notifications',
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION = '/notifications/management/validator_dashboard/set_notifications',
   NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/management/general',
   NOTIFICATIONS_MANAGEMENT_NETWORK_SET_NOTIFICATION = '/notifications/management/network/set_notification',
   NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE = '/notifications/management/paired_devices/delete',
@@ -294,6 +297,26 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.NOTIFICATIONS_MACHINE]: {
     path: '/users/me/notifications/machines',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/clients/${pathValues?.client_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/clients/{client_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/account-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/account-dashboards/{dashboard_id}/groups/{group_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/validator-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id}',
   },
   [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
     path: '/users/me/notifications/settings',
