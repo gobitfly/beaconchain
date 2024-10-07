@@ -580,6 +580,17 @@
         "subscriptions": "Clients ({count} Subscriptions)"
       },
       "search_placeholder":"Client",
+      "settings": {
+        "clients": "Clients ({0})",
+        "consensus_clients": "Consensus Clients",
+        "execution_clients": "Execution Clients",
+        "other_clients": "Others Clients",
+        "screenreader": {
+          "delete_notifications_for_dashboard_id": "Delete all notifications for {dashboard_id}",
+          "edit_notifications": "Edit Notifications for {0} {1}",
+          "empty_clients": "0 clients to edit."
+        }
+      },
       "title": "Clients"
     },
     "col": {
@@ -597,6 +608,10 @@
       },
       "dialog": {
         "button_webhook_test": "Send Test Notification",
+        "delete_all_notifications":{
+          "heading":"Delete all notifications",
+          "paragraph": "Do you really want to delete all notifications for this dashboard?"
+          },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
           "_link": "Discord webhook",
@@ -862,7 +877,7 @@
       "dashboards": "Dashboards",
       "general": "General",
       "machines": "Machines",
-      "network": "Network",
+      "networks": "Networks",
       "rocketpool": "Rocket Pool"
     },
     "title": "Notifications"

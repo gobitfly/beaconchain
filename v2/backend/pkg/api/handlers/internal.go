@@ -529,7 +529,7 @@ func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r 
 	var data types.MobileBundleData
 	data.HasNativeUpdateAvailable = stats.MaxNativeVersion > nativeVersion
 	// if given bundle version is smaller than the latest and delivery count is less than target count, return the latest bundle
-	if force || (bundleVersion < stats.LatestBundleVersion && (stats.TargetCount == 0 || stats.DeliveryCount < stats.TargetCount)) {
+	if force || (bundleVersion < stats.LatestBundleVersion && (stats.TargetCount == -1 || stats.DeliveryCount < stats.TargetCount)) {
 		data.BundleUrl = stats.BundleUrl
 	}
 	response := types.GetMobileLatestBundleResponse{
