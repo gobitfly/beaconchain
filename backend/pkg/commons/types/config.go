@@ -98,6 +98,7 @@ type Config struct {
 			Port         string `yaml:"port" envconfig:"CLICKHOUSE_READER_DB_PORT"`
 			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"CLICKHOUSE_READER_DB_MAX_OPEN_CONNS"`
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"CLICKHOUSE_READER_DB_MAX_IDLE_CONNS"`
+			SSL          bool   `yaml:"ssl" envconfig:"CLICKHOUSE_READER_DB_SSL"`
 		} `yaml:"readerDatabase"`
 		WriterDatabase struct {
 			Username     string `yaml:"user" envconfig:"CLICKHOUSE_WRITER_DB_USERNAME"`
@@ -107,6 +108,7 @@ type Config struct {
 			Port         string `yaml:"port" envconfig:"CLICKHOUSE_WRITER_DB_PORT"`
 			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"CLICKHOUSE_WRITER_DB_MAX_OPEN_CONNS"`
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"CLICKHOUSE_WRITER_DB_MAX_IDLE_CONNS"`
+			SSL          bool   `yaml:"ssl" envconfig:"CLICKHOUSE_WRITER_DB_SSL"`
 		} `yaml:"writerDatabase"`
 	} `yaml:"clickhouse"`
 	Indexer struct {

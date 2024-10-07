@@ -20,6 +20,7 @@ var CONF = GlobalConf{
 
 	// ---- Seeder specific ---
 	SeederValidatorsInDB: 1000000, // 1m valis
+	SeederUsersInDB:      5000,    // 5k users
 	SeederEpochsInDB:     1,       // 1 day of data (or 225 days of aggregate data)
 	SeederNoOfPartitions: 100,     // unused right now
 }
@@ -30,6 +31,7 @@ func main() {
 	flag.StringVar(&tableName, "table.name", "test_ss", "name of table to create")
 	flag.StringVar(&cmd, "cmd", "seed", "bench or seed")
 	flag.IntVar(&CONF.SeederValidatorsInDB, "seeder.validators", 1000000, "amount of validators in the network")
+	flag.IntVar(&CONF.SeederUsersInDB, "seeder.users", 5000, "amount of users")
 	flag.StringVar(&dsn, "db.dsn", "postgres://user:pass@host:port/dbnames", "data-source-name of db, if it starts with projects/ it will use gcp-secretmanager")
 	flag.Parse()
 
@@ -58,7 +60,7 @@ func main() {
 
 		data := module_userdata.SeederData{
 			ValidatorsInDB: CONF.SeederValidatorsInDB,
-			UsersInDB:      5000,
+			UsersInDB:      CONF.SeederUsersInDB,
 		}
 		seeder := module_userdata.Get(tableName, false, data)
 
@@ -125,6 +127,7 @@ func RunBenchmark(tableName string) error {
 
 type GlobalConf struct {
 	SeederValidatorsInDB int
+	SeederUsersInDB      int
 	SeederEpochsInDB     int
 	BenchmarkDuration    time.Duration
 	BenchUseLatestEpochs bool

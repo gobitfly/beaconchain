@@ -159,7 +159,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.ClickHouse.ReaderDatabase.Port,
 				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-				SSL:          true,
+				SSL:          cfg.ClickHouse.ReaderDatabase.SSL,
 			},
 			// lets just reuse reader to be extra safe
 			&types.DatabaseConfig{
@@ -170,7 +170,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.ClickHouse.ReaderDatabase.Port,
 				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-				SSL:          true,
+				SSL:          cfg.ClickHouse.ReaderDatabase.SSL,
 			}, "clickhouse", "clickhouse",
 		)
 	}()
