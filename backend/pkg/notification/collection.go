@@ -514,6 +514,7 @@ func collectBlockProposalNotifications(notificationsByUserID types.Notifications
 				Status:         event.Status,
 				Reward:         event.ExecRewardETH,
 				Slot:           event.Slot,
+				Block:          event.ExecBlock,
 			}
 			notificationsByUserID.AddNotification(n)
 			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
