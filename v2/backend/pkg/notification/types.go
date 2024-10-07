@@ -71,6 +71,7 @@ type ValidatorProposalNotification struct {
 
 	ValidatorIndex uint64
 	Slot           uint64
+	Block          uint64
 	Status         uint64 // * Can be 0 = scheduled, 1 executed, 2 missed */
 	Reward         float64
 }
