@@ -111,7 +111,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	if cursor != "" {
 		currentCursor, err = utils.StringToCursor[t.NotificationSettingsCursor](cursor)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationSettingsCursor: %w", err)
 		}
 	}
 
@@ -620,7 +620,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 	// 	return err
 	// }
 
-	return nil
+	return d.dummy.UpdateNotificationSettingsAccountDashboard(ctx, userId, dashboardId, groupId, settings)
 }
 
 func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert *[]goqu.Record, eventsToDelete *[]goqu.Expression, isSubscribed bool, userId uint64, eventName string, eventFilter string, epoch int64, threshold float64) {
