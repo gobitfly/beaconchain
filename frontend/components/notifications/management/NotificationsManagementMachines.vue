@@ -155,7 +155,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
         </BcListSection>
       </div>
     </BcTabPanel>
-    <div class="info">
+    <div v-if="!notificationsManagementStore.settings.has_machines" class="info">
       <BcText tag="p" variant="lg">
         {{ $t('notifications.machine.settings.info') }}
       </BcText>

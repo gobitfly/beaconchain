@@ -96,11 +96,31 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       },
     )
   }
+  const setNotificationForClient = async ({
+    client_id,
+    is_subscribed,
+  }: {
+    client_id: number,
+    is_subscribed: boolean,
+  }) => {
+    await fetch<InternalPutUserNotificationSettingsNetworksResponse>(
+      API_PATH.NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION,
+      {
+        body: {
+          is_subscribed,
+        },
+      },
+      {
+        client_id,
+      },
+    )
+  }
 
   return {
     getSettings,
     removeDevice,
     saveSettings,
+    setNotificationForClient,
     setNotificationForNetwork,
     setNotificationForPairedDevice,
     settings,
