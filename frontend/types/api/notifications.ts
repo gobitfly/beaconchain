@@ -63,10 +63,10 @@ export interface NotificationValidatorDashboardDetail {
   group_offline: NotificationEventGroup[];
   proposal_missed: IndexBlocks[];
   proposal_done: IndexBlocks[];
-  upcoming_proposals: number /* uint64 */[]; // slot numbers
+  upcoming_proposals: IndexBlocks[];
   slashed: number /* uint64 */[]; // validator indices
   sync_committee: number /* uint64 */[]; // validator indices
-  attestation_missed: IndexBlocks[];
+  attestation_missed: IndexBlocks[]; // index (epoch)
   withdrawal: IndexBlocks[];
   validator_offline_reminder: number /* uint64 */[]; // validator indices
   group_offline_reminder: NotificationEventGroup[];
