@@ -243,21 +243,45 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	return nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
-	_, err := d.userWriter.ExecContext(ctx, `
+	result, err := d.userWriter.ExecContext(ctx, `
 		UPDATE users_devices 
 		SET 
 			device_name = $1,
 			notify_enabled = $2
 		WHERE user_id = $3 AND device_identifier = $4`,
 		name, IsNotificationsEnabled, userId, pairedDeviceId)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// TODO: This can be deleted when the API layer has an improved check for the device id
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("device with id %s to update notification settings not found", pairedDeviceId)
+	}
+	return nil
 }
 func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error {
-	_, err := d.userWriter.ExecContext(ctx, `
+	result, err := d.userWriter.ExecContext(ctx, `
 		DELETE FROM users_devices 
 		WHERE user_id = $1 AND device_identifier = $2`,
 		userId, pairedDeviceId)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// TODO: This can be deleted when the API layer has an improved check for the device id
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("device with id %s to delete not found", pairedDeviceId)
+	}
+	return nil
 }
 func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
 	result := &t.NotificationSettingsClient{Id: clientId, IsSubscribed: IsSubscribed}
