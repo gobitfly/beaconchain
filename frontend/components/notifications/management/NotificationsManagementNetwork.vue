@@ -17,6 +17,7 @@ const thresholdParticipationRate = ref(formatFraction(currentNetworkSettings.val
 const hasGasAbove = ref(currentNetworkSettings.value?.is_gas_above_subscribed ?? false)
 const hasGasBelow = ref(currentNetworkSettings.value?.is_gas_below_subscribed ?? false)
 const hasParticipationRate = ref(currentNetworkSettings.value?.is_participation_rate_subscribed ?? false)
+const hasNewRewardRound = ref(currentNetworkSettings.value?.is_new_reward_round_subscribed ?? false)
 
 watchDebounced([
   hasGasAbove,
@@ -25,11 +26,13 @@ watchDebounced([
   thresholdGasAbove,
   thresholdGasBelow,
   thresholdParticipationRate,
+  hasNewRewardRound,
 ], async () => {
   if (!currentNetworkSettings.value) return
   currentNetworkSettings.value.is_gas_above_subscribed = hasGasAbove.value
   currentNetworkSettings.value.gas_above_threshold = thresholdGasAbove.value
   currentNetworkSettings.value.is_gas_below_subscribed = hasGasBelow.value
+  currentNetworkSettings.value.is_new_reward_round_subscribed = hasNewRewardRound.value
 
   currentNetworkSettings.value.gas_above_threshold = formatToWei(thresholdGasAbove.value, { from: 'gwei' })
   currentNetworkSettings.value.gas_below_threshold = formatToWei(thresholdGasBelow.value, { from: 'gwei' })
@@ -62,13 +65,13 @@ watchDebounced([
 
       <div class="notifications-management-machines__content">
         <BcListSection class="grid-overwrite">
-          <!-- <span class="grid-span-2">
-              {{ $t('notifications.network.settings.new_reward_round') }}
-            </span>
-            <BcToggle
-              v-model="hasNewRewardRound"
-              class="toggle"
-            /> -->
+          <span class="grid-span-2">
+            {{ $t('notifications.network.settings.new_reward_round') }}
+          </span>
+          <BcToggle
+            v-model="hasNewRewardRound"
+            class="toggle"
+          />
           <span>
             {{ $t('notifications.network.settings.alert_if_gas_below') }}
           </span>
