@@ -59,22 +59,9 @@ const (
 	NetworkValidatorExitQueueFullEventName          EventName = "network_validator_exit_queue_full"
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
-	NetworkGasAboveThresholdEventName               EventName = "network_gas_above_threshold"
-	NetworkGasBelowThresholdEventName               EventName = "network_gas_below_threshold"
-	NetworkParticipationRateThresholdEventName      EventName = "network_participation_rate_threshold"
-	EthClientUpdateEventName                        EventName = "eth_client_update"
-	MonitoringMachineOfflineEventName               EventName = "monitoring_machine_offline"
-	MonitoringMachineDiskAlmostFullEventName        EventName = "monitoring_hdd_almostfull"
-	MonitoringMachineCpuLoadEventName               EventName = "monitoring_cpu_load"
-	MonitoringMachineMemoryUsageEventName           EventName = "monitoring_memory_usage"
 	TaxReportEventName                              EventName = "user_tax_report"
 	//nolint:misspell
-	RocketpoolCommissionThresholdEventName  EventName = "rocketpool_commision_threshold"
-	RocketpoolNewClaimRoundStartedEventName EventName = "rocketpool_new_claimround"
-	//nolint:misspell
-	RocketpoolCollateralMinReached EventName = "rocketpool_colleteral_min"
-	//nolint:misspell
-	RocketpoolCollateralMaxReached EventName = "rocketpool_colleteral_max"
+	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
 	// Validator dashboard events
 	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
@@ -85,6 +72,8 @@ const (
 	SyncCommitteeSoon                    EventName = "validator_synccommittee_soon"
 	ValidatorReceivedWithdrawalEventName EventName = "validator_withdrawal"
 	ValidatorGotSlashedEventName         EventName = "validator_got_slashed"
+	RocketpoolCollateralMinReached       EventName = "rocketpool_colleteral_min" //nolint:misspell
+	RocketpoolCollateralMaxReached       EventName = "rocketpool_colleteral_max" //nolint:misspell
 
 	// Account dashboard events
 	IncomingTransactionEventName  EventName = "incoming_transaction"
@@ -92,6 +81,21 @@ const (
 	ERC20TokenTransferEventName   EventName = "erc20_token_transfer"   // #nosec G101
 	ERC721TokenTransferEventName  EventName = "erc721_token_transfer"  // #nosec G101
 	ERC1155TokenTransferEventName EventName = "erc1155_token_transfer" // #nosec G101
+
+	// Machine events
+	MonitoringMachineOfflineEventName        EventName = "monitoring_machine_offline"
+	MonitoringMachineDiskAlmostFullEventName EventName = "monitoring_hdd_almostfull"
+	MonitoringMachineCpuLoadEventName        EventName = "monitoring_cpu_load"
+	MonitoringMachineMemoryUsageEventName    EventName = "monitoring_memory_usage"
+
+	// Client events
+	EthClientUpdateEventName EventName = "eth_client_update"
+
+	// Network events
+	RocketpoolNewClaimRoundStartedEventName    EventName = "rocketpool_new_claimround"
+	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
+	NetworkGasBelowThresholdEventName          EventName = "network_gas_below_threshold"
+	NetworkParticipationRateThresholdEventName EventName = "network_participation_rate_threshold"
 )
 
 var MachineEvents = []EventName{
