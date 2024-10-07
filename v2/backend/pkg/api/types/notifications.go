@@ -64,10 +64,10 @@ type NotificationValidatorDashboardDetail struct {
 	GroupOffline             []NotificationEventGroup               `json:"group_offline"`
 	ProposalMissed           []IndexBlocks                          `json:"proposal_missed"`
 	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
-	UpcomingProposals        []uint64                               `json:"upcoming_proposals"` // slot numbers
+	UpcomingProposals        []IndexBlocks                          `json:"upcoming_proposals"`
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
 	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
-	AttestationMissed        []IndexBlocks                          `json:"attestation_missed"`
+	AttestationMissed        []IndexBlocks                          `json:"attestation_missed"` // index (epoch)
 	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
 	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices
 	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`
