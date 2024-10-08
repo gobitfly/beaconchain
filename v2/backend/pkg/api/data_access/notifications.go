@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -40,11 +42,21 @@ type NotificationsRepository interface {
 	DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error
 	UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error)
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
-	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
-	UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
+	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
+	UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
 }
 
 const (
+	ValidatorDashboardEventPrefix string = "vdb"
+	AccountDashboardEventPrefix   string = "adb"
+
+	DiscordWebhookFormat string = "discord"
+
+	GroupOfflineThresholdDefault             float64 = 0.1
+	MaxCollateralThresholdDefault            float64 = 1.0
+	MinCollateralThresholdDefault            float64 = 0.2
+	ERC20TokenTransfersValueThresholdDefault float64 = 0.1
+
 	MachineStorageUsageThresholdDefault float64 = 0.9
 	MachineCpuUsageThresholdDefault     float64 = 0.6
 	MachineMemoryUsageThresholdDefault  float64 = 0.8
@@ -1184,13 +1196,528 @@ func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Contex
 	return result, nil
 }
 func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
-	return d.dummy.GetNotificationSettingsDashboards(ctx, userId, cursor, colSort, search, limit)
+	result := make([]t.NotificationSettingsDashboardsTableRow, 0)
+	var paging t.Paging
+
+	wg := errgroup.Group{}
+
+	// Initialize the cursor
+	var currentCursor t.NotificationSettingsCursor
+	var err error
+	if cursor != "" {
+		currentCursor, err = utils.StringToCursor[t.NotificationSettingsCursor](cursor)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationSettingsCursor: %w", err)
+		}
+	}
+
+	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
+
+	// -------------------------------------
+	// Get the events
+	events := []struct {
+		Name      types.EventName `db:"event_name"`
+		Filter    string          `db:"event_filter"`
+		Threshold float64         `db:"event_threshold"`
+	}{}
+	wg.Go(func() error {
+		err := d.userReader.SelectContext(ctx, &events, `
+			SELECT
+				event_name,
+				event_filter,
+				event_threshold
+			FROM users_subscriptions
+			WHERE user_id = $1`, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for account dashboard notifications: %w`, err)
+		}
+
+		return nil
+	})
+
+	// -------------------------------------
+	// Get the validator dashboards
+	valDashboards := []struct {
+		DashboardId             uint64         `db:"dashboard_id"`
+		DashboardName           string         `db:"dashboard_name"`
+		GroupId                 uint64         `db:"group_id"`
+		GroupName               string         `db:"group_name"`
+		Network                 uint64         `db:"network"`
+		WebhookUrl              sql.NullString `db:"webhook_target"`
+		IsWebhookDiscordEnabled sql.NullBool   `db:"discord_webhook"`
+		IsRealTimeModeEnabled   sql.NullBool   `db:"realtime_notifications"`
+	}{}
+	wg.Go(func() error {
+		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
+			SELECT
+				d.id AS dashboard_id,
+				d.name AS dashboard_name,
+				g.id AS group_id,
+				g.name AS group_name,
+				d.network,
+				g.webhook_target,
+				(g.webhook_format = $1) AS discord_webhook,
+				g.realtime_notifications
+			FROM users_val_dashboards d
+			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
+			WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
+		if err != nil {
+			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
+		}
+
+		return nil
+	})
+
+	// -------------------------------------
+	// Get the account dashboards
+	accDashboards := []struct {
+		DashboardId                     uint64         `db:"dashboard_id"`
+		DashboardName                   string         `db:"dashboard_name"`
+		GroupId                         uint64         `db:"group_id"`
+		GroupName                       string         `db:"group_name"`
+		WebhookUrl                      sql.NullString `db:"webhook_target"`
+		IsWebhookDiscordEnabled         sql.NullBool   `db:"discord_webhook"`
+		IsIgnoreSpamTransactionsEnabled bool           `db:"ignore_spam_transactions"`
+		SubscribedChainIds              []uint64       `db:"subscribed_chain_ids"`
+	}{}
+	// TODO: Account dashboard handling will be handled later
+	// wg.Go(func() error {
+	// 	err := d.alloyReader.SelectContext(ctx, &accDashboards, `
+	// 		SELECT
+	// 			d.id AS dashboard_id,
+	// 			d.name AS dashboard_name,
+	// 			g.id AS group_id,
+	// 			g.name AS group_name,
+	// 			g.webhook_target,
+	// 			(g.webhook_format = $1) AS discord_webhook,
+	// 			g.ignore_spam_transactions,
+	// 			g.subscribed_chain_ids
+	// 		FROM users_acc_dashboards d
+	// 		INNER JOIN users_acc_dashboards_groups g ON d.id = g.dashboard_id
+	// 		WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
+	// 	if err != nil {
+	// 		return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
+	// 	}
+
+	// 	return nil
+	// })
+
+	err = wg.Wait()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error retrieving dashboard notification data: %w", err)
+	}
+
+	// -------------------------------------
+	// Evaluate the data
+	type NotificationSettingsDashboardsInfo struct {
+		IsAccountDashboard bool // if false it's a validator dashboard
+		DashboardId        uint64
+		DashboardName      string
+		GroupId            uint64
+		GroupName          string
+		// if it's a validator dashboard, Settings is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
+		Settings interface{}
+		ChainIds []uint64
+	}
+	settingsMap := make(map[string]*NotificationSettingsDashboardsInfo)
+
+	for _, event := range events {
+		eventSplit := strings.Split(event.Filter, ":")
+		if len(eventSplit) != 3 {
+			continue
+		}
+		dashboardType := eventSplit[0]
+
+		if _, ok := settingsMap[event.Filter]; !ok {
+			if dashboardType == ValidatorDashboardEventPrefix {
+				settingsMap[event.Filter] = &NotificationSettingsDashboardsInfo{
+					Settings: t.NotificationSettingsValidatorDashboard{
+						GroupOfflineThreshold:  GroupOfflineThresholdDefault,
+						MaxCollateralThreshold: MaxCollateralThresholdDefault,
+						MinCollateralThreshold: MinCollateralThresholdDefault,
+					},
+				}
+			} else if dashboardType == AccountDashboardEventPrefix {
+				settingsMap[event.Filter] = &NotificationSettingsDashboardsInfo{
+					Settings: t.NotificationSettingsAccountDashboard{
+						ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
+					},
+				}
+			}
+		}
+
+		switch settings := settingsMap[event.Filter].Settings.(type) {
+		case t.NotificationSettingsValidatorDashboard:
+			switch event.Name {
+			case types.ValidatorIsOfflineEventName:
+				settings.IsValidatorOfflineSubscribed = true
+			case types.GroupIsOfflineEventName:
+				settings.IsGroupOfflineSubscribed = true
+				settings.GroupOfflineThreshold = event.Threshold
+			case types.ValidatorMissedAttestationEventName:
+				settings.IsAttestationsMissedSubscribed = true
+			case types.ValidatorProposalEventName:
+				settings.IsBlockProposalSubscribed = true
+			case types.ValidatorUpcomingProposalEventName:
+				settings.IsUpcomingBlockProposalSubscribed = true
+			case types.SyncCommitteeSoon:
+				settings.IsSyncSubscribed = true
+			case types.ValidatorReceivedWithdrawalEventName:
+				settings.IsWithdrawalProcessedSubscribed = true
+			case types.ValidatorGotSlashedEventName:
+				settings.IsSlashedSubscribed = true
+			case types.RocketpoolCollateralMinReached:
+				settings.IsMinCollateralSubscribed = true
+				settings.MinCollateralThreshold = event.Threshold
+			case types.RocketpoolCollateralMaxReached:
+				settings.IsMaxCollateralSubscribed = true
+				settings.MaxCollateralThreshold = event.Threshold
+			}
+			settingsMap[event.Filter].Settings = settings
+		case t.NotificationSettingsAccountDashboard:
+			switch event.Name {
+			case types.IncomingTransactionEventName:
+				settings.IsIncomingTransactionsSubscribed = true
+			case types.OutgoingTransactionEventName:
+				settings.IsOutgoingTransactionsSubscribed = true
+			case types.ERC20TokenTransferEventName:
+				settings.IsERC20TokenTransfersSubscribed = true
+				settings.ERC20TokenTransfersValueThreshold = event.Threshold
+			case types.ERC721TokenTransferEventName:
+				settings.IsERC721TokenTransfersSubscribed = true
+			case types.ERC1155TokenTransferEventName:
+				settings.IsERC1155TokenTransfersSubscribed = true
+			}
+			settingsMap[event.Filter].Settings = settings
+		}
+	}
+
+	// Validator dashboards
+	for _, valDashboard := range valDashboards {
+		key := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, valDashboard.DashboardId, valDashboard.GroupId)
+
+		if _, ok := settingsMap[key]; !ok {
+			settingsMap[key] = &NotificationSettingsDashboardsInfo{
+				Settings: t.NotificationSettingsValidatorDashboard{
+					GroupOfflineThreshold:  GroupOfflineThresholdDefault,
+					MaxCollateralThreshold: MaxCollateralThresholdDefault,
+					MinCollateralThreshold: MinCollateralThresholdDefault,
+				},
+			}
+		}
+
+		// Set general info
+		settingsMap[key].IsAccountDashboard = false
+		settingsMap[key].DashboardId = valDashboard.DashboardId
+		settingsMap[key].DashboardName = valDashboard.DashboardName
+		settingsMap[key].GroupId = valDashboard.GroupId
+		settingsMap[key].GroupName = valDashboard.GroupName
+		settingsMap[key].ChainIds = []uint64{valDashboard.Network}
+
+		// Set the settings
+		if valSettings, ok := settingsMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
+			valSettings.WebhookUrl = valDashboard.WebhookUrl.String
+			valSettings.IsWebhookDiscordEnabled = valDashboard.IsWebhookDiscordEnabled.Bool
+			valSettings.IsRealTimeModeEnabled = valDashboard.IsRealTimeModeEnabled.Bool
+		}
+	}
+
+	// Account dashboards
+	for _, accDashboard := range accDashboards {
+		key := fmt.Sprintf("%s:%d:%d", AccountDashboardEventPrefix, accDashboard.DashboardId, accDashboard.GroupId)
+
+		if _, ok := settingsMap[key]; !ok {
+			settingsMap[key] = &NotificationSettingsDashboardsInfo{
+				Settings: t.NotificationSettingsAccountDashboard{
+					ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
+				},
+			}
+		}
+
+		// Set general info
+		settingsMap[key].IsAccountDashboard = true
+		settingsMap[key].DashboardId = accDashboard.DashboardId
+		settingsMap[key].DashboardName = accDashboard.DashboardName
+		settingsMap[key].GroupId = accDashboard.GroupId
+		settingsMap[key].GroupName = accDashboard.GroupName
+		settingsMap[key].ChainIds = accDashboard.SubscribedChainIds
+
+		// Set the settings
+		if accSettings, ok := settingsMap[key].Settings.(*t.NotificationSettingsAccountDashboard); ok {
+			accSettings.WebhookUrl = accDashboard.WebhookUrl.String
+			accSettings.IsWebhookDiscordEnabled = accDashboard.IsWebhookDiscordEnabled.Bool
+			accSettings.IsIgnoreSpamTransactionsEnabled = accDashboard.IsIgnoreSpamTransactionsEnabled
+			accSettings.SubscribedChainIds = accDashboard.SubscribedChainIds
+		}
+	}
+
+	// Apply filter
+	if search != "" {
+		lowerSearch := strings.ToLower(search)
+		for key, setting := range settingsMap {
+			if !strings.HasPrefix(strings.ToLower(setting.DashboardName), lowerSearch) &&
+				!strings.HasPrefix(strings.ToLower(setting.GroupName), lowerSearch) {
+				delete(settingsMap, key)
+			}
+		}
+	}
+
+	// Convert to a slice for sorting and paging
+	settings := slices.Collect(maps.Values(settingsMap))
+
+	// -------------------------------------
+	// Sort
+	// Each row is uniquely defined by the dashboardId, groupId, and isAccountDashboard so the sort order is DashboardName/GroupName => DashboardId => GroupId => IsAccountDashboard
+	var primarySortParam func(resultEntry *NotificationSettingsDashboardsInfo) string
+	switch colSort.Column {
+	case enums.NotificationSettingsDashboardColumns.DashboardName:
+		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string { return resultEntry.DashboardName }
+	case enums.NotificationSettingsDashboardColumns.GroupName:
+		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string { return resultEntry.GroupName }
+	default:
+		return nil, nil, fmt.Errorf("invalid sort column for notification subscriptions: %v", colSort.Column)
+	}
+	sort.Slice(settings, func(i, j int) bool {
+		if isReverseDirection {
+			if primarySortParam(settings[i]) == primarySortParam(settings[j]) {
+				if settings[i].DashboardId == settings[j].DashboardId {
+					if settings[i].GroupId == settings[j].GroupId {
+						return settings[i].IsAccountDashboard
+					}
+					return settings[i].GroupId > settings[j].GroupId
+				}
+				return settings[i].DashboardId > settings[j].DashboardId
+			}
+			return primarySortParam(settings[i]) > primarySortParam(settings[j])
+		} else {
+			if primarySortParam(settings[i]) == primarySortParam(settings[j]) {
+				if settings[i].DashboardId == settings[j].DashboardId {
+					if settings[i].GroupId == settings[j].GroupId {
+						return settings[j].IsAccountDashboard
+					}
+					return settings[i].GroupId < settings[j].GroupId
+				}
+				return settings[i].DashboardId < settings[j].DashboardId
+			}
+			return primarySortParam(settings[i]) < primarySortParam(settings[j])
+		}
+	})
+
+	// -------------------------------------
+	// Convert to the final result format
+	for _, setting := range settings {
+		result = append(result, t.NotificationSettingsDashboardsTableRow{
+			IsAccountDashboard: setting.IsAccountDashboard,
+			DashboardId:        setting.DashboardId,
+			GroupId:            setting.GroupId,
+			GroupName:          setting.GroupName,
+			Settings:           setting.Settings,
+			ChainIds:           setting.ChainIds,
+		})
+	}
+
+	// -------------------------------------
+	// Paging
+
+	// Find the index for the cursor and limit the data
+	if currentCursor.IsValid() {
+		for idx, row := range settings {
+			if row.DashboardId == currentCursor.DashboardId &&
+				row.GroupId == currentCursor.GroupId &&
+				row.IsAccountDashboard == currentCursor.IsAccountDashboard {
+				result = result[idx+1:]
+				break
+			}
+		}
+	}
+
+	// Flag if above limit
+	moreDataFlag := len(result) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return result, &paging, nil
+	}
+
+	// Remove the last entries from data
+	if moreDataFlag {
+		result = result[:limit]
+	}
+
+	if currentCursor.IsReverse() {
+		slices.Reverse(result)
+	}
+
+	p, err := utils.GetPagingFromData(result, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return result, p, nil
 }
-func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
-	return d.dummy.UpdateNotificationSettingsValidatorDashboard(ctx, dashboardId, groupId, settings)
+func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
+	// For the given dashboardId and groupId update users_subscriptions and users_val_dashboards_groups with the given settings
+	epoch := utils.TimeToEpoch(time.Now())
+
+	var eventsToInsert []goqu.Record
+	var eventsToDelete []goqu.Expression
+
+	tx, err := d.userWriter.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("error starting db transactions to update validator dashboard notification settings: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	eventFilter := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
+
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, string(types.ValidatorIsOfflineEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupOfflineSubscribed, userId, string(types.GroupIsOfflineEventName), eventFilter, epoch, settings.GroupOfflineThreshold)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, string(types.ValidatorMissedAttestationEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, string(types.ValidatorProposalEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, string(types.ValidatorUpcomingProposalEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, string(types.SyncCommitteeSoon), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, string(types.ValidatorReceivedWithdrawalEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, string(types.ValidatorGotSlashedEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, string(types.RocketpoolCollateralMaxReached), eventFilter, epoch, settings.MaxCollateralThreshold)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMinCollateralSubscribed, userId, string(types.RocketpoolCollateralMinReached), eventFilter, epoch, settings.MinCollateralThreshold)
+
+	// Insert all the events or update the threshold if they already exist
+	if len(eventsToInsert) > 0 {
+		insertDs := goqu.Dialect("postgres").
+			Insert("users_subscriptions").
+			Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
+			Rows(eventsToInsert).
+			OnConflict(goqu.DoUpdate(
+				"user_id, event_name, event_filter",
+				goqu.Record{"event_threshold": goqu.L("EXCLUDED.event_threshold")},
+			))
+
+		query, args, err := insertDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		_, err = tx.ExecContext(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Delete all the events
+	if len(eventsToDelete) > 0 {
+		deleteDs := goqu.Dialect("postgres").
+			Delete("users_subscriptions").
+			Where(goqu.Or(eventsToDelete...))
+
+		query, args, err := deleteDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %v", err)
+		}
+
+		_, err = tx.ExecContext(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx to update validator dashboard notification settings: %w", err)
+	}
+
+	// Set non-event settings
+	_, err = d.alloyWriter.ExecContext(ctx, `
+		UPDATE users_val_dashboards_groups 
+		SET 
+			webhook_target = NULLIF($1, ''),
+			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
+			realtime_notifications = CASE WHEN $4 THEN TRUE ELSE NULL END
+		WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsRealTimeModeEnabled, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
-func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
-	return d.dummy.UpdateNotificationSettingsAccountDashboard(ctx, dashboardId, groupId, settings)
+func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
+	// TODO: Account dashboard handling will be handled later
+	// // For the given dashboardId and groupId update users_subscriptions and users_acc_dashboards_groups with the given settings
+	// epoch := utils.TimeToEpoch(time.Now())
+
+	// var eventsToInsert []goqu.Record
+	// var eventsToDelete []goqu.Expression
+
+	// tx, err := d.userWriter.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return fmt.Errorf("error starting db transactions to update validator dashboard notification settings: %w", err)
+	// }
+	// defer utils.Rollback(tx)
+
+	// eventFilter := fmt.Sprintf("%s:%d:%d", AccountDashboardEventPrefix, dashboardId, groupId)
+
+	// d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsIncomingTransactionsSubscribed, userId, string(types.IncomingTransactionEventName), eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsOutgoingTransactionsSubscribed, userId, string(types.OutgoingTransactionEventName), eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsERC20TokenTransfersSubscribed, userId, string(types.ERC20TokenTransferEventName), eventFilter, epoch, settings.ERC20TokenTransfersValueThreshold)
+	// d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsERC721TokenTransfersSubscribed, userId, string(types.ERC721TokenTransferEventName), eventFilter, epoch, 0)
+	// d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsERC1155TokenTransfersSubscribed, userId, string(types.ERC1155TokenTransferEventName), eventFilter, epoch, 0)
+
+	// // Insert all the events or update the threshold if they already exist
+	// if len(eventsToInsert) > 0 {
+	// 	insertDs := goqu.Dialect("postgres").
+	// 		Insert("users_subscriptions").
+	// 		Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
+	// 		Rows(eventsToInsert).
+	// 		OnConflict(goqu.DoUpdate(
+	// 			"user_id, event_name, event_filter",
+	// 			goqu.Record{"event_threshold": goqu.L("EXCLUDED.event_threshold")},
+	// 		))
+
+	// 	query, args, err := insertDs.Prepared(true).ToSQL()
+	// 	if err != nil {
+	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 	}
+
+	// 	_, err = tx.ExecContext(ctx, query, args...)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	// // Delete all the events
+	// if len(eventsToDelete) > 0 {
+	// 	deleteDs := goqu.Dialect("postgres").
+	// 		Delete("users_subscriptions").
+	// 		Where(goqu.Or(eventsToDelete...))
+
+	// 	query, args, err := deleteDs.Prepared(true).ToSQL()
+	// 	if err != nil {
+	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 	}
+
+	// 	_, err = tx.ExecContext(ctx, query, args...)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	// err = tx.Commit()
+	// if err != nil {
+	// 	return fmt.Errorf("error committing tx to update validator dashboard notification settings: %w", err)
+	// }
+
+	// // Set non-event settings
+	// _, err = d.alloyWriter.ExecContext(ctx, `
+	// 	UPDATE users_acc_dashboards_groups
+	// 	SET
+	// 		webhook_target = NULLIF($1, ''),
+	// 		webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
+	// 		ignore_spam_transactions = $4,
+	// 		subscribed_chain_ids = $5
+	// 	WHERE dashboard_id = $6 AND id = $7`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
+	// if err != nil {
+	// 	return err
+	// }
+
+	return d.dummy.UpdateNotificationSettingsAccountDashboard(ctx, userId, dashboardId, groupId, settings)
 }
 
 func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert *[]goqu.Record, eventsToDelete *[]goqu.Expression, isSubscribed bool, userId uint64, eventName string, eventFilter string, epoch int64, threshold float64) {
