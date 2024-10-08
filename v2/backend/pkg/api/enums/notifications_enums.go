@@ -48,10 +48,10 @@ func (c NotificationDashboardsColumn) ToString() string {
 }
 
 var NotificationsDashboardsColumns = struct {
-	ChainId     NotificationDashboardsColumn
-	Timestamp   NotificationDashboardsColumn
-	DashboardId NotificationDashboardsColumn
-	GroupId     NotificationDashboardsColumn
+	ChainId       NotificationDashboardsColumn
+	Timestamp     NotificationDashboardsColumn
+	DashboardName NotificationDashboardsColumn
+	GroupName     NotificationDashboardsColumn
 }{
 	NotificationDashboardChainId,
 	NotificationDashboardTimestamp,

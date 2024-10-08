@@ -66,10 +66,10 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 	// apply ordering
 	queryOrder := []exp.OrderedExpression{}
 	for i := range queryOrderColumns {
+		column := &queryOrderColumns[i]
 		if cursor.IsReverse() {
-			queryOrderColumns[i].Desc = !queryOrderColumns[i].Desc
-		}
-		column := queryOrderColumns[i]
+			column.Desc = !column.Desc
+		}		
 		colOrder := goqu.C(column.Column).Asc()
 		if column.Desc {
 			colOrder = goqu.C(column.Column).Desc()

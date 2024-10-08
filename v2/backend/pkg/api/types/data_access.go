@@ -135,10 +135,10 @@ type BlocksCursor struct {
 type NotificationsDashboardsCursor struct {
 	GenericCursor
 
-	Epoch         uint64
-	ChainId       uint64
-	DashboardName string
-	GroupName     string
+	Epoch       uint64
+	ChainId     uint64
+	DashboardId uint64
+	GroupId     uint64
 }
 
 type NetworkInfo struct {
