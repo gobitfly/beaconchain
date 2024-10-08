@@ -531,11 +531,11 @@ func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uin
 	return getDummyWithPaging[t.NotificationDashboardsTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (*t.NotificationValidatorDashboardDetail, error) {
+func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
 	return getDummyStruct[t.NotificationValidatorDashboardDetail]()
 }
 
-func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64) (*t.NotificationAccountDashboardDetail, error) {
+func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64, search string) (*t.NotificationAccountDashboardDetail, error) {
 	return getDummyStruct[t.NotificationAccountDashboardDetail]()
 }
 
