@@ -28,6 +28,8 @@ const getEventTypeName = (eventType: NotificationRocketPoolTableRow['event_type'
   if (eventType === 'collateral_max') return $t('notifications.rocketpool.event_types.collateral_max')
   if (eventType === 'collateral_min') return $t('notifications.rocketpool.event_types.collateral_min')
   if (eventType === 'reward_round') return $t('notifications.rocketpool.event_types.reward_round')
+  logError(`Unknown rocketpool notification event_type: ${eventType}`)
+  return eventType
 }
 </script>
 

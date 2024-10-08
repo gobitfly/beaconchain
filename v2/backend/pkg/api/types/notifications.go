@@ -40,7 +40,7 @@ type NotificationDashboardsTableRow struct {
 	GroupId            uint64         `db:"group_id" json:"group_id"`
 	GroupName          string         `db:"group_name" json:"group_name"`
 	EntityCount        uint64         `db:"entity_count" json:"entity_count"`
-	EventTypes         pq.StringArray `db:"event_types" json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"oneof: validator_offline, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, slashed_own, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
+	EventTypes         pq.StringArray `db:"event_types" json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
@@ -243,7 +243,7 @@ type NotificationSettingsDashboardsTableRow struct {
 	DashboardId        uint64 `json:"dashboard_id"`
 	GroupId            uint64 `json:"group_id"`
 	GroupName          string `json:"group_name"`
-	// if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
+	// if it's a validator dashboard, Settings is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
 	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard" faker:"-"`
 	ChainIds []uint64    `json:"chain_ids" faker:"chain_ids"`
 }

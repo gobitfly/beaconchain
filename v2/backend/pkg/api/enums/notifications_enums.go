@@ -242,8 +242,8 @@ func (NotificationSettingsDashboardColumn) NewFromString(s string) NotificationS
 }
 
 var NotificationSettingsDashboardColumns = struct {
-	DashboardId NotificationSettingsDashboardColumn
-	GroupName   NotificationSettingsDashboardColumn
+	DashboardName NotificationSettingsDashboardColumn
+	GroupName     NotificationSettingsDashboardColumn
 }{
 	NotificationSettingsDashboardDashboardName,
 	NotificationSettingsDashboardGroupName,

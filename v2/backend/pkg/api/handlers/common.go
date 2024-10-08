@@ -855,9 +855,9 @@ const maxBodySize = 10 * 1024
 func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...log.Fields) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 	requestFields := log.Fields{
-		"endpoint": r.Method + " " + r.URL.Path,
-		"query":    r.URL.RawQuery,
-		"body":     string(body),
+		"request_endpoint": r.Method + " " + r.URL.Path,
+		"request_query":    r.URL.RawQuery,
+		"request_body":     string(body),
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
 }
