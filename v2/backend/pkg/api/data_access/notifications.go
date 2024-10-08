@@ -1455,7 +1455,8 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	if search != "" {
 		lowerSearch := strings.ToLower(search)
 		for key, setting := range settingsMap {
-			if lowerSearch != strings.ToLower(setting.DashboardName) && lowerSearch != strings.ToLower(setting.GroupName) {
+			if !strings.HasPrefix(strings.ToLower(setting.DashboardName), lowerSearch) &&
+				!strings.HasPrefix(strings.ToLower(setting.GroupName), lowerSearch) {
 				delete(settingsMap, key)
 			}
 		}
