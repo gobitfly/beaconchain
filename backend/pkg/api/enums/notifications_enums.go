@@ -11,7 +11,9 @@ const (
 	NotificationDashboardChainId NotificationDashboardsColumn = iota
 	NotificationDashboardTimestamp
 	NotificationDashboardDashboardName // sort by dashboard name
-	NotificationDashboardGroupName     // sort by group name, internal use only
+	NotificationDashboardDashboardId   // internal use
+	NotificationDashboardGroupName     // internal use
+	NotificationDashboardGroupId       // internal use
 )
 
 func (c NotificationDashboardsColumn) Int() int {
@@ -40,8 +42,12 @@ func (c NotificationDashboardsColumn) ToString() string {
 		return "epoch"
 	case NotificationDashboardDashboardName:
 		return "dashboard_name"
+	case NotificationDashboardDashboardId:
+		return "dashboard_id"
 	case NotificationDashboardGroupName:
 		return "group_name"
+	case NotificationDashboardGroupId:
+		return "group_id"
 	default:
 		return ""
 	}
@@ -51,12 +57,16 @@ var NotificationsDashboardsColumns = struct {
 	ChainId       NotificationDashboardsColumn
 	Timestamp     NotificationDashboardsColumn
 	DashboardName NotificationDashboardsColumn
+	DashboardId   NotificationDashboardsColumn
 	GroupName     NotificationDashboardsColumn
+	GroupId       NotificationDashboardsColumn
 }{
 	NotificationDashboardChainId,
 	NotificationDashboardTimestamp,
 	NotificationDashboardDashboardName,
+	NotificationDashboardDashboardId,
 	NotificationDashboardGroupName,
+	NotificationDashboardGroupId,
 }
 
 // ------------------------------------------------------------

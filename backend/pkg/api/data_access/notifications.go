@@ -154,24 +154,13 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	// sorting
 	defaultColumns := []t.SortColumn{
 		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardId},
-		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupId},
+		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
+		{Column: enums.NotificationDashboardDashboardId.ToString(), Desc: false, Offset: currentCursor.DashboardId},
+		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
+		{Column: enums.NotificationDashboardGroupId.ToString(), Desc: false, Offset: currentCursor.GroupId},
 		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
 	}
-	var offset any
-	if currentCursor.IsValid() {
-		switch colSort.Column {
-		case enums.NotificationDashboardTimestamp:
-			offset = currentCursor.Epoch
-		case enums.NotificationDashboardDashboardName:
-			offset = currentCursor.DashboardId
-		case enums.NotificationDashboardGroupName:
-			offset = currentCursor.GroupId
-		case enums.NotificationDashboardChainId:
-			offset = currentCursor.ChainId
-		}
-	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	unionQuery = unionQuery.Order(order...)
 	if directions != nil {
 		unionQuery = unionQuery.Where(directions)
