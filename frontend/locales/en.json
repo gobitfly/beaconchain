@@ -633,10 +633,8 @@
       },
       "event_type": {
         "attestation_missed": "Attestation missed",
-        "got_slashed": "Got slashed",
         "group_offline": "Group offline",
         "group_online": "Group online",
-        "has_slashed": "Slashing",
         "incoming_tx": "Incoming Tx.",
         "max_collateral": "Max. collateral",
         "min_collateral": "Min. collateral",
@@ -648,6 +646,8 @@
         "transfer_erc20": "Transfer ERC-20",
         "transfer_erc721": "Transfer ERC-721",
         "transfer_erc1155": "Transfer ERC-1155",
+        "validator_got_slashed": "Got slashed",
+        "validator_has_slashed": "Slashing",
         "validator_offline": "Validator offline",
         "validator_online": "Validator online",
         "withdrawal": "Withdrawal"
