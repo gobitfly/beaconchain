@@ -250,6 +250,9 @@ func (d *DataAccessService) StartDataAccessServices() {
 	// Create the services
 	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
 
+	// Initialize repositories
+	d.initNotifications()
+
 	// Initialize the services
 	d.services.InitServices()
 }
