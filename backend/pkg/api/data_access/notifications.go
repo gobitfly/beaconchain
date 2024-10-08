@@ -40,7 +40,7 @@ type NotificationsRepository interface {
 	UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
 }
 
-func initNotifications() {
+func (*DataAccessService) initNotifications() {
 	var once sync.Once
 	once.Do(func() {
 		gob.Register(&notification.ValidatorProposalNotification{})
@@ -65,7 +65,6 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (*t.NotificationValidatorDashboardDetail, error) {
-	initNotifications()
 	var notificationDetails t.NotificationValidatorDashboardDetail
 
 	var result []byte
@@ -101,7 +100,8 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 		Missed    []uint64
 	}
 
-	proposalsInfo := map[t.VDBValidator]*ProposalInfo{}
+	proposalsInfo := make(map[t.VDBValidator]*ProposalInfo)
+	addressMapping := make(map[string]*t.Address)
 	for _, not := range notifications {
 		n := not.(types.Notification)
 		switch n.GetEventName() {
@@ -131,7 +131,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if curNotification.Status == 0 {
 				continue
 			}
-			notificationDetails.AttestationMissed = append(notificationDetails.AttestationMissed, t.IndexBlocks{curNotification.ValidatorIndex, []uint64{curNotification.Epoch}})
+			notificationDetails.AttestationMissed = append(notificationDetails.AttestationMissed, t.IndexEpoch{curNotification.ValidatorIndex, curNotification.Epoch})
 		case types.ValidatorGotSlashedEventName:
 			curNotification, ok := not.(notification.ValidatorGotSlashedNotification)
 			if !ok {
@@ -173,30 +173,31 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			// TODO might need to take care of automatic + exit withdrawal happening in the same epoch ?
 			notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.IndexBlocks{curNotification.ValidatorIndex, []uint64{curNotification.Slot}})
 		case types.NetworkLivenessIncreasedEventName,
-		types.EthClientUpdateEventName,
-		types.MonitoringMachineOfflineEventName,
-		types.MonitoringMachineDiskAlmostFullEventName,
-		types.MonitoringMachineCpuLoadEventName,
-		types.MonitoringMachineMemoryUsageEventName,
-		types.TaxReportEventName:
+			types.EthClientUpdateEventName,
+			types.MonitoringMachineOfflineEventName,
+			types.MonitoringMachineDiskAlmostFullEventName,
+			types.MonitoringMachineCpuLoadEventName,
+			types.MonitoringMachineMemoryUsageEventName,
+			types.TaxReportEventName:
 			// not vdb notifications, skip
 			continue
-		case types.ValidatorDidSlashEventName,
-		types.RocketpoolCommissionThresholdEventName,
-		types.RocketpoolNewClaimRoundStartedEventName:
+		case types.ValidatorDidSlashEventName:
+		case types.RocketpoolCommissionThresholdEventName,
+			types.RocketpoolNewClaimRoundStartedEventName:
 			// these could maybe returned later (?)
 			continue
 		case types.RocketpoolCollateralMinReachedEventName, types.RocketpoolCollateralMaxReachedEventName:
-			// TODO API fields still WIP
-			/*RocketpoolNotification, ok := not.(notification.RocketpoolNotification)
+			_, ok := not.(notification.RocketpoolNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to RocketpoolNotification")
 			}
+			addr := t.Address{Hash: t.Hash(n.GetEventFilter()), IsContract: true}
+			addressMapping[n.GetEventFilter()] = &addr
 			if n.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
-				notificationDetails.RPLMinCollateral = ...
+				notificationDetails.MinimumCollateralReached = append(notificationDetails.MinimumCollateralReached, addr)
 			} else {
-				notificationDetails.RPLMaxCollateral = ...
-			}*/
+				notificationDetails.MaximumCollateralReached = append(notificationDetails.MaximumCollateralReached, addr)
+			}
 		case types.SyncCommitteeSoonEventName:
 			curNotification, ok := not.(notification.SyncCommitteeSoonNotification)
 			if !ok {
@@ -218,6 +219,21 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 		}
 		if len(proposalInfo.Missed) > 0 {
 			notificationDetails.ProposalMissed = append(notificationDetails.ProposalMissed, t.IndexBlocks{validatorIndex, proposalInfo.Missed})
+		}
+	}
+
+	// fill addresses
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
+		return nil, err
+	}
+	for i := range notificationDetails.MinimumCollateralReached {
+		if address, ok := addressMapping[string(notificationDetails.MinimumCollateralReached[i].Hash)]; ok {
+			notificationDetails.MinimumCollateralReached[i] = *address
+		}
+	}
+	for i := range notificationDetails.MaximumCollateralReached {
+		if address, ok := addressMapping[string(notificationDetails.MaximumCollateralReached[i].Hash)]; ok {
+			notificationDetails.MaximumCollateralReached[i] = *address
 		}
 	}
 
