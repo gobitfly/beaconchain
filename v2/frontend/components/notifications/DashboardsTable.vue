@@ -51,14 +51,10 @@ const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_typ
   switch (eventType) {
     case 'attestation_missed':
       return $t('notifications.dashboards.event_type.attestation_missed')
-    case 'got_slashed':
-      return $t('notifications.dashboards.event_type.got_slashed')
     case 'group_offline':
       return $t('notifications.dashboards.event_type.group_offline')
     case 'group_online':
       return $t('notifications.dashboards.event_type.group_online')
-    case 'has_slashed':
-      return $t('notifications.dashboards.event_type.has_slashed')
     case 'incoming_tx':
       return $t('notifications.dashboards.event_type.incoming_tx')
     case 'max_collateral':
@@ -81,6 +77,10 @@ const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_typ
       return $t('notifications.dashboards.event_type.transfer_erc721')
     case 'transfer_erc1155':
       return $t('notifications.dashboards.event_type.transfer_erc1155')
+    case 'validator_got_slashed':
+      return $t('notifications.dashboards.event_type.got_slashed')
+    case 'validator_has_slashed':
+      return $t('notifications.dashboards.event_type.has_slashed')
     case 'validator_offline':
       return $t('notifications.dashboards.event_type.validator_offline')
     case 'validator_online':

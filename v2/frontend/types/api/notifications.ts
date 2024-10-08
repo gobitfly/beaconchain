@@ -42,7 +42,7 @@ export interface NotificationDashboardsTableRow {
   group_id: number /* uint64 */;
   group_name: string;
   entity_count: number /* uint64 */;
-  event_types: ('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
+  event_types: ('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
 }
 export type InternalGetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
 export interface NotificationEventGroup {
