@@ -687,6 +687,9 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 }
 
 func (v *validationError) checkNetworksParameter(param string) []uint64 {
+	if param == "" {
+		v.add("networks", "list of networks must not be empty")
+	}
 	var chainIds []uint64
 	for _, network := range splitParameters(param, ',') {
 		chainIds = append(chainIds, v.checkNetworkParameter(network))

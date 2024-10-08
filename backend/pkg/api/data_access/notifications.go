@@ -125,8 +125,8 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	// sorting
 	defaultColumns := []t.SortColumn{
 		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
-		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
+		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardId},
+		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupId},
 		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
 	}
 	var offset any
@@ -135,9 +135,9 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 		case enums.NotificationDashboardTimestamp:
 			offset = currentCursor.Epoch
 		case enums.NotificationDashboardDashboardName:
-			offset = currentCursor.DashboardName
+			offset = currentCursor.DashboardId
 		case enums.NotificationDashboardGroupName:
-			offset = currentCursor.GroupName
+			offset = currentCursor.GroupId
 		case enums.NotificationDashboardChainId:
 			offset = currentCursor.ChainId
 		}
@@ -164,29 +164,9 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	if err != nil {
 		return nil, nil, err
 	}
-	//err = d.alloyReader.SelectContext(ctx, &response, query, args...)
-	rows, err := d.alloyReader.QueryContext(ctx, query, args...)
+	err = d.alloyReader.SelectContext(ctx, &response, query, args...)
 	if err != nil {
 		return nil, nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var row t.NotificationDashboardsTableRow
-		err = rows.Scan(
-			&row.IsAccountDashboard,
-			&row.ChainId,
-			&row.Epoch,
-			&row.DashboardId,
-			&row.DashboardName,
-			&row.GroupId,
-			&row.GroupName,
-			&row.EntityCount,
-			pq.Array(&row.EventTypes),
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		response = append(response, row)
 	}
 
 	moreDataFlag := len(response) > int(limit)
