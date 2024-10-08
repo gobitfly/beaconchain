@@ -51,11 +51,7 @@ const (
 	ValidatorBalanceDecreasedEventName              EventName = "validator_balance_decreased"
 	ValidatorMissedProposalEventName                EventName = "validator_proposal_missed"
 	ValidatorExecutedProposalEventName              EventName = "validator_proposal_submitted"
-	ValidatorMissedAttestationEventName             EventName = "validator_attestation_missed"
-	ValidatorGotSlashedEventName                    EventName = "validator_got_slashed"
 	ValidatorDidSlashEventName                      EventName = "validator_did_slash"
-	ValidatorIsOfflineEventName                     EventName = "validator_is_offline"
-	ValidatorReceivedWithdrawalEventName            EventName = "validator_withdrawal"
 	ValidatorReceivedDepositEventName               EventName = "validator_received_deposit"
 	NetworkSlashingEventName                        EventName = "network_slashing"
 	NetworkValidatorActivationQueueFullEventName    EventName = "network_validator_activation_queue_full"
@@ -63,20 +59,43 @@ const (
 	NetworkValidatorExitQueueFullEventName          EventName = "network_validator_exit_queue_full"
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
-	EthClientUpdateEventName                        EventName = "eth_client_update"
-	MonitoringMachineOfflineEventName               EventName = "monitoring_machine_offline"
-	MonitoringMachineDiskAlmostFullEventName        EventName = "monitoring_hdd_almostfull"
-	MonitoringMachineCpuLoadEventName               EventName = "monitoring_cpu_load"
-	MonitoringMachineMemoryUsageEventName           EventName = "monitoring_memory_usage"
 	TaxReportEventName                              EventName = "user_tax_report"
 	//nolint:misspell
-	RocketpoolCommissionThresholdEventName  EventName = "rocketpool_commision_threshold"
-	RocketpoolNewClaimRoundStartedEventName EventName = "rocketpool_new_claimround"
-	//nolint:misspell
-	RocketpoolCollateralMinReached EventName = "rocketpool_colleteral_min"
-	//nolint:misspell
-	RocketpoolCollateralMaxReached EventName = "rocketpool_colleteral_max"
-	SyncCommitteeSoon              EventName = "validator_synccommittee_soon"
+	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
+
+	// Validator dashboard events
+	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
+	GroupIsOfflineEventName              EventName = "group_is_offline"
+	ValidatorMissedAttestationEventName  EventName = "validator_attestation_missed"
+	ValidatorProposalEventName           EventName = "validator_proposal"
+	ValidatorUpcomingProposalEventName   EventName = "validator_proposal_upcoming"
+	SyncCommitteeSoon                    EventName = "validator_synccommittee_soon"
+	ValidatorReceivedWithdrawalEventName EventName = "validator_withdrawal"
+	ValidatorGotSlashedEventName         EventName = "validator_got_slashed"
+	RocketpoolCollateralMinReached       EventName = "rocketpool_colleteral_min" //nolint:misspell
+	RocketpoolCollateralMaxReached       EventName = "rocketpool_colleteral_max" //nolint:misspell
+
+	// Account dashboard events
+	IncomingTransactionEventName  EventName = "incoming_transaction"
+	OutgoingTransactionEventName  EventName = "outgoing_transaction"
+	ERC20TokenTransferEventName   EventName = "erc20_token_transfer"   // #nosec G101
+	ERC721TokenTransferEventName  EventName = "erc721_token_transfer"  // #nosec G101
+	ERC1155TokenTransferEventName EventName = "erc1155_token_transfer" // #nosec G101
+
+	// Machine events
+	MonitoringMachineOfflineEventName        EventName = "monitoring_machine_offline"
+	MonitoringMachineDiskAlmostFullEventName EventName = "monitoring_hdd_almostfull"
+	MonitoringMachineCpuLoadEventName        EventName = "monitoring_cpu_load"
+	MonitoringMachineMemoryUsageEventName    EventName = "monitoring_memory_usage"
+
+	// Client events
+	EthClientUpdateEventName EventName = "eth_client_update"
+
+	// Network events
+	RocketpoolNewClaimRoundStartedEventName    EventName = "rocketpool_new_claimround"
+	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
+	NetworkGasBelowThresholdEventName          EventName = "network_gas_below_threshold"
+	NetworkParticipationRateThresholdEventName EventName = "network_participation_rate_threshold"
 )
 
 var MachineEvents = []EventName{

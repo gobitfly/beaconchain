@@ -21,6 +21,7 @@ type DataAccessor interface {
 	ValidatorDashboardRepository
 	SearchRepository
 	NetworkRepository
+	ClientRepository
 	UserRepository
 	AppRepository
 	NotificationsRepository

@@ -412,6 +412,74 @@ func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 	}, nil
 }
 
+func (d *DummyService) GetAllClients() ([]types.ClientInfo, error) {
+	return []types.ClientInfo{
+		// Execution Clients
+		{
+			Id:       0,
+			Name:     "Geth",
+			Category: "Execution Clients",
+		},
+		{
+			Id:       1,
+			Name:     "Nethermind",
+			Category: "Execution Clients",
+		},
+		{
+			Id:       2,
+			Name:     "Besu",
+			Category: "Execution Clients",
+		},
+		{
+			Id:       3,
+			Name:     "Erigon",
+			Category: "Execution Clients",
+		},
+		{
+			Id:       4,
+			Name:     "Reth",
+			Category: "Execution Clients",
+		},
+		// Consensus Clients
+		{
+			Id:       5,
+			Name:     "Teku",
+			Category: "Consensus Clients",
+		},
+		{
+			Id:       6,
+			Name:     "Prysm",
+			Category: "Consensus Clients",
+		},
+		{
+			Id:       7,
+			Name:     "Nimbus",
+			Category: "Consensus Clients",
+		},
+		{
+			Id:       8,
+			Name:     "Lighthouse",
+			Category: "Consensus Clients",
+		},
+		{
+			Id:       9,
+			Name:     "Lodestar",
+			Category: "Consensus Clients",
+		},
+		// Other
+		{
+			Id:       10,
+			Name:     "Rocketpool Smart Node",
+			Category: "Other",
+		},
+		{
+			Id:       11,
+			Name:     "MEV-Boost",
+			Category: "Other",
+		},
+	}, nil
+}
+
 func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
 	return getDummyStruct[t.SearchValidator]()
 }
@@ -463,11 +531,11 @@ func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uin
 	return getDummyWithPaging[t.NotificationDashboardsTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (*t.NotificationValidatorDashboardDetail, error) {
+func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
 	return getDummyStruct[t.NotificationValidatorDashboardDetail]()
 }
 
-func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64) (*t.NotificationAccountDashboardDetail, error) {
+func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64, search string) (*t.NotificationAccountDashboardDetail, error) {
 	return getDummyStruct[t.NotificationAccountDashboardDetail]()
 }
 
@@ -518,10 +586,10 @@ func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, us
 	}
 	return r, p, err
 }
-func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
+func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
+func (d *DummyService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
 	return nil
 }
 func (d *DummyService) CreateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {

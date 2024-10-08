@@ -112,6 +112,47 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type NotificationSettingsCursor struct {
+	GenericCursor
+
+	IsAccountDashboard bool // if false it's a validator dashboard
+	DashboardId        uint64
+	GroupId            uint64
+}
+
+type NotificationMachinesCursor struct {
+	GenericCursor
+
+	MachineId      uint64
+	MachineName    string
+	EventType      string
+	EventThreshold float64
+	Epoch          uint64
+}
+
+type NotificationClientsCursor struct {
+	GenericCursor
+
+	Client string
+	Epoch  uint64
+}
+
+type NotificationRocketPoolsCursor struct {
+	GenericCursor
+
+	NodeAddress []byte
+	EventType   string
+	Epoch       uint64
+}
+
+type NotificationNetworksCursor struct {
+	GenericCursor
+
+	Network   uint64
+	Epoch     uint64
+	EventType string
+}
+
 type UserCredentialInfo struct {
 	Id             uint64 `db:"id"`
 	Email          string `db:"email"`
@@ -144,6 +185,12 @@ type NotificationsDashboardsCursor struct {
 type NetworkInfo struct {
 	ChainId uint64
 	Name    string
+}
+
+type ClientInfo struct {
+	Id       uint64
+	Name     string
+	Category string
 }
 
 // -------------------------

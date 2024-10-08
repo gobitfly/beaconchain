@@ -113,7 +113,7 @@ const aprInfos = TimeFrames.map(k =>
         {{ validatorsOffline }}
       </span>
       <BcButtonIcon
-        :sr-text="$t('dashboard.validator.overview.open_validator_overview_modal')"
+        :screenreader-text="$t('dashboard.validator.overview.open_validator_overview_modal')"
         @click="openValidatorModal"
       >
         <FontAwesomeIcon
