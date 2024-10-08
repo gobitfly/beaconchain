@@ -1955,6 +1955,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
+//	@Param			search			query		string	false	"Search for Index"
 //	@Success		200				{object}	types.InternalGetUserNotificationsValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -1964,11 +1965,12 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
+	search := r.URL.Query().Get("search")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1988,6 +1990,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
+//	@Param			search			query		string	false	"Search for Address, ENS"
 //	@Success		200				{object}	types.InternalGetUserNotificationsAccountDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -1997,11 +2000,12 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 	dashboardId := v.checkUint(vars["dashboard_id"], "dashboard_id")
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
+	search := r.URL.Query().Get("search")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
