@@ -200,9 +200,9 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
   pointer-events: none;
 }
 .info{
-  padding: var(--padding);
   text-align: center;
   color: var(--grey);
+  margin-block: 3.75rem;
 }
 .is-text-disabled {
   color: var(--grey);
@@ -220,7 +220,9 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
 }
 .tutorial {
   text-align: center;
-  padding: var(--padding);
+  display: flex;
+  flex-direction: column;
+  gap: 2.125rem;
 }
 .images {
   display: flex;
