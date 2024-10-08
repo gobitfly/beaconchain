@@ -51,16 +51,20 @@ func (d *DataAccessService) GetNamesAndEnsForAddresses(ctx context.Context, addr
 
 // helper function to sort and apply pagination to a query
 // 1st param is the list of all columns necessary to sort the table deterministically; it defines their precedence and sort direction
-// 2nd param is the requested sort column; it may or may not be part of the default columns
+// 2nd param is the requested sort column; it may or may not be part of the default columns (if it is, you don't have to specify the cursor limit again)
 func applySortAndPagination(defaultColumns []types.SortColumn, primary types.SortColumn, cursor types.GenericCursor) ([]exp.OrderedExpression, exp.Expression) {
 	// prepare ordering columns; always need all columns to ensure consistent ordering
 	queryOrderColumns := make([]types.SortColumn, 0, len(defaultColumns))
 	queryOrderColumns = append(queryOrderColumns, primary)
 	// secondary sorts according to default
 	for _, column := range defaultColumns {
-		if column.Column != primary.Column {
-			queryOrderColumns = append(queryOrderColumns, column)
+		if column.Column == primary.Column {
+			if primary.Offset == nil {
+				queryOrderColumns[0].Offset = column.Offset
+			}
+			continue
 		}
+		queryOrderColumns = append(queryOrderColumns, column)
 	}
 
 	// apply ordering
@@ -69,7 +73,7 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 		column := &queryOrderColumns[i]
 		if cursor.IsReverse() {
 			column.Desc = !column.Desc
-		}		
+		}
 		colOrder := goqu.C(column.Column).Asc()
 		if column.Desc {
 			colOrder = goqu.C(column.Column).Desc()
