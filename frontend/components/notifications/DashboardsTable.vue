@@ -78,9 +78,9 @@ const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_typ
     case 'transfer_erc1155':
       return $t('notifications.dashboards.event_type.transfer_erc1155')
     case 'validator_got_slashed':
-      return $t('notifications.dashboards.event_type.got_slashed')
+      return $t('notifications.dashboards.event_type.validator_got_slashed')
     case 'validator_has_slashed':
-      return $t('notifications.dashboards.event_type.has_slashed')
+      return $t('notifications.dashboards.event_type.validator_has_slashed')
     case 'validator_offline':
       return $t('notifications.dashboards.event_type.validator_offline')
     case 'validator_online':
