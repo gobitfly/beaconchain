@@ -68,7 +68,6 @@ const (
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	var response *t.NotificationOverviewData
-
 	eg := errgroup.Group{}
 
 	// enabled channels
@@ -78,16 +77,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			Active  bool   `db:"active"`
 		}
 
-		err := d.userWriter.GetContext(ctx, &channels, `
-		SELECT
-			channel,
-			active
-		FROM
-			users_notification_channels
-		WHERE
-			user_id = $1`,
-			userId,
-		)
+		err := d.userReader.GetContext(ctx, &channels, `SELECT channel, active FROM users_notification_channels WHERE user_id = $1`, userId)
 		if err != nil {
 			return err
 		}
@@ -103,16 +93,110 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		return nil
 	})
 
-	// past activity
+	getMostNotifiedGroups := func(historyTable, groupsTable string) ([3]string, error) {
+		var mostNotifiedGroups [3]string
+		query := goqu.Dialect("postgres").
+			From(goqu.T(historyTable).As("history")).
+			Select(
+				goqu.I("history.dashboard_id"),
+				goqu.I("history.group_id"),
+			).
+			Where(
+				goqu.Ex{"history.user_id": userId},
+			).
+			GroupBy(
+				goqu.I("history.dashboard_id"),
+				goqu.I("history.group_id"),
+			).
+			Order(
+				goqu.L("COUNT(*)").Desc(),
+			).
+			Limit(3)
+
+		// join result with names
+		query = goqu.Dialect("postgres").
+			Select("name").
+			From(query.As("history")).
+			LeftJoin(goqu.I(groupsTable).As("groups"), goqu.On(
+				goqu.Ex{"groups.dashboard_id": goqu.I("history.dashboard_id")},
+				goqu.Ex{"groups.id": goqu.I("history.group_id")},
+			))
+
+		querySql, args, err := query.Prepared(true).ToSQL()
+		if err != nil {
+			return mostNotifiedGroups, err
+		}
+		err = d.alloyReader.SelectContext(ctx, &mostNotifiedGroups, querySql, args...)
+		return mostNotifiedGroups, err
+	}
+
+	// most notified groups
 	eg.Go(func() error {
-		// TODO
+		var err error
+		response.VDBMostNotifiedGroups, err = getMostNotifiedGroups("users_val_dashboards_notifications_history", "users_val_dashboards_groups")
+		return err
+	})
+	eg.Go(func() error {
+		var err error
+		response.VDBMostNotifiedGroups, err = getMostNotifiedGroups("users_acc_dashboards_notifications_history", "users_acc_dashboards_groups")
+		return err
+	})
+
+	// 24h counts
+	eg.Go(func() error {
+		var err error
+		day := time.Now().Truncate(utils.Day).Unix()
+		response.Last24hEmailsCount, err = d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("n_mails:%d:%d", userId, day)).Uint64()
+		if err != nil {
+			return err
+		}
+		response.Last24hPushCount, err = d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("n_push:%d:%d", userId, day)).Uint64()
+		if err != nil {
+			return err
+		}
+		response.Last24hWebhookCount, err = d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("n_webhook:%d:%d", userId, day)).Uint64()
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 
 	// subscription counts
 	eg.Go(func() error {
-		// TODO
-		return nil
+		networks, err := d.GetAllNetworks()
+		if err != nil {
+			return err
+		}
+
+		whereNetwork := ""
+		for _, network := range networks {
+			if len(whereNetwork) > 0 {
+				whereNetwork += " OR "
+			}
+			whereNetwork += "event_name like '" + network.Name + ":rocketpool_%' OR event_name like '" + network.Name + ":network_%'"
+		}
+
+		query := goqu.Dialect("postgres").
+			From("users_subscriptions").
+			Select(
+				goqu.L("count(*) FILTER (WHERE event_filter like 'vdb:%')").As("vdb_subscriptions_count"),
+				goqu.L("count(*) FILTER (WHERE event_filter like 'adb:%')").As("adb_subscriptions_count"),
+				goqu.L("count(*) FILTER (WHERE event_name like 'monitoring_%')").As("machines_subscription_count"),
+				goqu.L("count(*) FILTER (WHERE event_name = 'eth_client_update')").As("clients_subscription_count"),
+				// not sure if there's a better way in goqu
+				goqu.L("count(*) FILTER (WHERE "+whereNetwork+")").As("networks_subscription_count"),
+			).
+			Where(goqu.Ex{
+				"user_id": userId,
+			})
+
+		querySql, args, err := query.Prepared(true).ToSQL()
+		if err != nil {
+			return err
+		}
+
+		err = d.alloyReader.SelectContext(ctx, &response, querySql, args...)
+		return err
 	})
 
 	err := eg.Wait()

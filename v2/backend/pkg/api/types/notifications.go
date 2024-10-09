@@ -17,11 +17,11 @@ type NotificationOverviewData struct {
 	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
 
 	// counts are shown in their respective tables
-	VDBSubscriptionsCount     uint64 `json:"vdb_subscriptions_count"`
-	ADBSubscriptionsCount     uint64 `json:"adb_subscriptions_count"`
-	MachinesSubscriptionCount uint64 `json:"machines_subscription_count"`
-	ClientsSubscriptionCount  uint64 `json:"clients_subscription_count"`
-	NetworksSubscriptionCount uint64 `json:"networks_subscription_count"`
+	VDBSubscriptionsCount     uint64 `db:"vdb_subscriptions_count" json:"vdb_subscriptions_count"`
+	ADBSubscriptionsCount     uint64 `db:"adb_subscriptions_count" json:"adb_subscriptions_count"`
+	MachinesSubscriptionCount uint64 `db:"machines_subscription_count" json:"machines_subscription_count"`
+	ClientsSubscriptionCount  uint64 `db:"clients_subscription_count" json:"clients_subscription_count"`
+	NetworksSubscriptionCount uint64 `db:"networks_subscription_count" json:"networks_subscription_count"`
 }
 
 type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewData]
