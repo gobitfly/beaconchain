@@ -616,7 +616,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
 
 	case req.Graffiti != "":
-		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
+		graffiti := v.checkRegex(reGraffiti, req.Graffiti, "graffiti")
 		if v.hasErrors() {
 			handleErr(w, r, v)
 			return
