@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faGlobe } from '@fortawesome/pro-solid-svg-icons'
+import {
+  faAlarmSnooze,
+  faArrowsRotate,
+  faCube,
+  faFileSignature,
+  faGlobe,
+  faMoneyBill,
+  faUserSlash,
+} from '@fortawesome/pro-solid-svg-icons'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
 
 // const model = defineModel(false)
@@ -33,10 +41,10 @@ const validatorsBackOnline = computed(() => {
 const groupsBackOnline = computed(() => {
   return details.value?.data?.group_back_online
 })
-const proposalMissed = computed(() => {
+const proposalsMissed = computed(() => {
   return details.value?.data?.proposal_missed
 })
-const proposalDone = computed(() => {
+const proposalsDone = computed(() => {
   return details.value?.data?.proposal_done
 })
 const slashed = computed(() => {
@@ -44,19 +52,25 @@ const slashed = computed(() => {
 })
 const syncCommittee = computed(() => {
   return details.value?.data?.sync_committee
-})(
+})
 const attestaitonMissed = computed(() => {
   return details.value?.data?.attestation_missed
 })
 const withdrawl = computed(() => {
-  
+  return details.value?.data?.withdrawal
+})
+const validatorsOfflineReminder = computed(() => {
+  return details.value?.data?.validator_offline_reminder
+})
+const groupsOfflineReminder = computed(() => {
+  return details.value?.data?.group_offline_reminder
 })
 </script>
 
 <template>
-  <pre>
+  <!-- <pre>
     {{ props }}
-  </pre>
+  </pre> -->
   <div class="notifications-dashboard-dialog-entity">
     <header>
       <h2>
@@ -119,6 +133,9 @@ const withdrawl = computed(() => {
       <BcAccordion
         :items="validatorsBackOnline"
       >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faCube" />
+        </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.validator_back_online', [validatorsBackOnline?.length ?? 0]) }}
         </template>
@@ -134,14 +151,17 @@ const withdrawl = computed(() => {
         </template>
       </BcAccordion>
       <BcAccordion
-        :items="proposalMissed"
+        :items="proposalsMissed"
       >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faCube" />
+        </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.proposal_missed', [proposalMissed?.length ?? 0]) }}
+          {{ $t('notifications.dashboards.dialog.entity.proposal_missed', [proposalsMissed?.length ?? 0]) }}
         </template>
         <template #item="{ item: proposal }">
           <BcLink
-            :to="`/validator/{{ validator.index }}`"
+            to=""
           >
             {{ proposal.index }}
           </BcLink>
@@ -155,18 +175,21 @@ const withdrawl = computed(() => {
         </template>
       </BcAccordion>
       <BcAccordion
-        :items="proposalDone"
+        :items="proposalsDone"
       >
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.proposal_done', [proposalDone?.length ?? 0]) }}
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faCube" />
         </template>
-        <template #item="{ item: propossal }">
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.proposal_done', [proposalsDone?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: proposal }">
           <BcLink
             to=""
           >
-            {{ propossal.index }}
+            {{ proposal.index }}
           </BcLink>
-          {{ propossal.blocks }}<!--
+          {{ proposal.blocks }}<!--
             this will remove white space in html
           -->
         </template>
@@ -174,6 +197,9 @@ const withdrawl = computed(() => {
       <BcAccordion
         :items="slashed"
       >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faUserSlash" />
+        </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.slashed', [slashed?.length ?? 0]) }}
         </template>
@@ -181,7 +207,6 @@ const withdrawl = computed(() => {
           <BcLink
             to=""
           >
-            <pre>{{ slashed }}</pre>
             {{ slashed }}
           </BcLink>
           {{ slashed }}<!--
@@ -192,6 +217,9 @@ const withdrawl = computed(() => {
       <BcAccordion
         :items="syncCommittee"
       >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faArrowsRotate" />
+        </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.sync_comittee', [syncCommittee?.length ?? 0]) }}
         </template>
@@ -205,18 +233,21 @@ const withdrawl = computed(() => {
         </template>
       </BcAccordion>
       <BcAccordion
-        :items="proposalMissed"
+        :items="proposalsMissed"
       >
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.proposal_done', [proposalDone?.length ?? 0]) }}
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faCube" />
         </template>
-        <template #item="{ item: propossal }">
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.proposal_done', [proposalsMissed?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: proposal }">
           <BcLink
             to=""
           >
-            {{ propossal.index }}
+            {{ proposal.index }}
           </BcLink>
-          {{ propossal.blocks }}<!--
+          {{ proposal.blocks }}<!--
             this will remove white space in html
           -->
         </template>
@@ -224,8 +255,11 @@ const withdrawl = computed(() => {
       <BcAccordion
         :items="attestaitonMissed"
       >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faFileSignature" />
+        </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.proposal_done', [attestaitonMissed?.length ?? 0]) }}
+          {{ $t('notifications.dashboards.dialog.entity.attestation_missed', [attestaitonMissed?.length ?? 0]) }}
         </template>
         <template #item="{ item: attestaiton }">
           <BcLink
@@ -239,8 +273,60 @@ const withdrawl = computed(() => {
         </template>
       </BcAccordion>
       <BcAccordion
-        :items=""
-      />
+        :items="withdrawl"
+      >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faMoneyBill" />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.withdrawl', [withdrawl?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: withdrawl }">
+          <BcLink
+            to=""
+          >
+            {{ withdrawl.index }}
+          </BcLink>
+          {{ withdrawl.blocks }}<!-- this will remove white space in html
+          -->
+        </template>
+      </BcAccordion>
+      <BcAccordion
+        :items="validatorsOfflineReminder"
+      >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faAlarmSnooze" />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.attestation_missed', [validatorsOfflineReminder?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: validatorOfflineReminder }">
+          <BcLink
+            to=""
+          >
+            {{ validatorOfflineReminder }}
+          </BcLink>
+        </template>
+      </BcAccordion>
+      <BcAccordion
+        :items="groupsOfflineReminder"
+      >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faAlarmSnooze" />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.withdrawl', [groupsOfflineReminder?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: groupOfflineReminder }">
+          <BcLink
+            to=""
+          >
+            {{ groupOfflineReminder.dashboard_id }}
+          </BcLink>
+          {{ groupOfflineReminder.group_name }}<!-- this will remove white space in html
+          -->
+        </template>
+      </BcAccordion>
     </main>
   </div>
 </template>
