@@ -555,8 +555,8 @@ func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint6
 func (d *DummyService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
 	return getDummyStruct[t.NotificationSettings]()
 }
-func (d *DummyService) GetDefaultNotificationSettings(ctx context.Context) (*t.NotificationSettings, error) {
-	return getDummyStruct[t.NotificationSettings]()
+func (d *DummyService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
+	return getDummyStruct[t.NotificationSettingsDefaultValues]()
 }
 func (d *DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
 	return nil

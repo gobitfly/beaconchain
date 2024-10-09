@@ -284,3 +284,20 @@ type MobileAppBundleStats struct {
 	DeliveryCount       int64  `db:"delivered_count"`
 	MaxNativeVersion    uint64 `db:"max_native_version"` // the max native version of the whole table for the given environment
 }
+
+// Notification structs
+
+type NotificationSettingsDefaultValues struct {
+	GroupOfflineThreshold             float64
+	MaxCollateralThreshold            float64
+	MinCollateralThreshold            float64
+	ERC20TokenTransfersValueThreshold float64
+
+	MachineStorageUsageThreshold float64
+	MachineCpuUsageThreshold     float64
+	MachineMemoryUsageThreshold  float64
+
+	GasAboveThreshold                 decimal.Decimal
+	GasBelowThreshold                 decimal.Decimal
+	NetworkParticipationRateThreshold float64
+}
