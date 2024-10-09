@@ -92,13 +92,12 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 				colWhere = goqu.C(column.Column).Lt(column.Offset)
 			}
 
-			equal := goqu.C(column.Column).Eq(column.Offset)
 			if queryWhere == nil {
-				queryWhere = equal
+				queryWhere = colWhere
 			} else {
-				queryWhere = goqu.And(equal, queryWhere)
+				queryWhere = goqu.And(goqu.C(column.Column).Eq(column.Offset), queryWhere)
+				queryWhere = goqu.Or(colWhere, queryWhere)
 			}
-			queryWhere = goqu.Or(colWhere, queryWhere)
 		}
 	}
 
