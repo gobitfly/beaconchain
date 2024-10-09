@@ -18,6 +18,7 @@ import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import {
+  NotificationsManagementModalDashboardsDelete,
   NotificationsManagementModalWebhook,
   NotificationsManagementSubscriptionDialog,
 } from '#components'
@@ -73,6 +74,7 @@ const dialog = useDialog()
 const {
   cursor,
   dashboardGroups,
+  deleteDashboardNotifications,
   isLoading,
   onSort,
   pageSize,
@@ -174,7 +176,12 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
   }
   switch (col) {
     case 'delete':
-      alert('TODO: delete' + row.group_id)
+      dialog.open(NotificationsManagementModalDashboardsDelete, {
+        data: row,
+        emits: {
+          onDelete: handleDelete,
+        },
+      })
       break
     case 'networks':
       alert('TODO: edit networks' + row.group_id)
@@ -238,6 +245,9 @@ function getTypeIcon(type: DashboardType) {
     return faDesktop
   }
   return faUser
+}
+const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0]) => {
+  deleteDashboardNotifications(payload)
 }
 </script>
 
@@ -333,18 +343,9 @@ function getTypeIcon(type: DashboardType) {
           :header="$t('notifications.col.networks')"
         >
           <template #body="slotProps">
-            <BcTablePopoutEdit
-              :truncate-text="true"
-              :no-icon="!slotProps.data.is_account_dashboard"
-              @on-edit="onEdit('networks', slotProps.data)"
-            >
-              <template #content>
-                <BcNetworkSelector
-                  :readonly-networks="slotProps.data.chain_ids"
-                />
-                &nbsp;
-              </template>
-            </BcTablePopoutEdit>
+            <BcNetworkSelector
+              :readonly-networks="slotProps.data.chain_ids"
+            />
           </template>
         </Column>
         <Column
@@ -353,14 +354,20 @@ function getTypeIcon(type: DashboardType) {
           header-class="action-col"
         >
           <template #body="slotProps">
-            <!-- TODO: once we have our api check how to identify 'deleted' rows -->
             <div class="action-row">
-              <FontAwesomeIcon
+              <BcButtonIcon
+                :screenreader-text="
+                  $t('notifications.clients.settings.screenreader.delete_notifications_for_dashboard_id',
+                     { dashboard_id: slotProps.data.dashboard_name },
+                  )"
                 :disabled="!slotProps.data.subscriptions?.length ? true : null"
-                :icon="faTrash"
-                class="link"
                 @click="onEdit('delete', slotProps.data)"
-              />
+              >
+                <FontAwesomeIcon
+                  :icon="faTrash"
+                  class="link"
+                />
+              </BcButtonIcon>
             </div>
           </template>
         </Column>

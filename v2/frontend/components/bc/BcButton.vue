@@ -22,6 +22,7 @@ const shouldAppearDisabled = computed(
     type="button"
     :disabled="isDisabled"
     :aria-disabled="isAriaDisabled"
+    class="bc-button"
     :class="{
       'bc-button--secondary': !shouldAppearDisabled && variant === 'secondary',
       'bc-button--disabled': shouldAppearDisabled,
@@ -39,7 +40,16 @@ const shouldAppearDisabled = computed(
 </template>
 
 <style lang="scss" scoped>
-.bc-button--secondary {
+.bc-button {
+  --outline-width: 0.125rem;
+  --outline-offset: 0.125rem;
+  margin: calc(var(--outline-width) + var(--outline-offset));
+}
+.bc-button:focus-visible {
+  outline: var(--outline-width) solid var(--blue-500);
+  outline-offset: var(--outline-offset);
+}
+button.bc-button--secondary {
   border-color: var(--button-secondary-border-color);
   background-color: var(--button-secondary-background-color);
   color: var(--button-secondary-color);
@@ -52,7 +62,7 @@ const shouldAppearDisabled = computed(
     border-color: var(--button-secondary-border-color);
   }
 }
-.bc-button--disabled {
+button.bc-button--disabled {
   &,
   &:hover,
   &:focus {

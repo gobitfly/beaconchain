@@ -17,12 +17,11 @@ type NotificationOverviewData struct {
 	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
 
 	// counts are shown in their respective tables
-	VDBSubscriptionsCount       uint64 `json:"vdb_subscriptions_count"`
-	ADBSubscriptionsCount       uint64 `json:"adb_subscriptions_count"`
-	MachinesSubscriptionCount   uint64 `json:"machines_subscription_count"`
-	ClientsSubscriptionCount    uint64 `json:"clients_subscription_count"`
-	RocketPoolSubscriptionCount uint64 `json:"rocket_pool_subscription_count"`
-	NetworksSubscriptionCount   uint64 `json:"networks_subscription_count"`
+	VDBSubscriptionsCount     uint64 `json:"vdb_subscriptions_count"`
+	ADBSubscriptionsCount     uint64 `json:"adb_subscriptions_count"`
+	MachinesSubscriptionCount uint64 `json:"machines_subscription_count"`
+	ClientsSubscriptionCount  uint64 `json:"clients_subscription_count"`
+	NetworksSubscriptionCount uint64 `json:"networks_subscription_count"`
 }
 
 type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewData]
@@ -32,12 +31,12 @@ type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewDa
 type NotificationDashboardsTableRow struct {
 	IsAccountDashboard bool     `json:"is_account_dashboard"` // if false it's a validator dashboard
 	ChainId            uint64   `json:"chain_id"`
-	Timestamp          int64    `json:"timestamp"`
+	Epoch              uint64   `json:"epoch"`
 	DashboardId        uint64   `json:"dashboard_id"`
+	GroupId            uint64   `json:"group_id"`
 	GroupName          string   `json:"group_name"`
-	NotificationId     uint64   `json:"notification_id"` // may be string? db schema is not defined afaik
 	EntityCount        uint64   `json:"entity_count"`
-	EventTypes         []string `json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"oneof: validator_offline, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, sync, withdrawal, slashed_own, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
+	EventTypes         []string `json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
@@ -74,6 +73,7 @@ type NotificationValidatorDashboardDetail struct {
 	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
 	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`
+	// TODO min and max collateral events
 }
 
 type InternalGetUserNotificationsValidatorDashboardResponse ApiDataResponse[NotificationValidatorDashboardDetail]
@@ -99,7 +99,7 @@ type InternalGetUserNotificationsAccountDashboardResponse ApiDataResponse[Notifi
 // Machines Table
 type NotificationMachinesTableRow struct {
 	MachineName string  `json:"machine_name"`
-	Threshold   float64 `json:"threshold" faker:"boundary_start=0, boundary_end=1"`
+	Threshold   float64 `json:"threshold,omitempty" faker:"boundary_start=0, boundary_end=1"`
 	EventType   string  `json:"event_type" tstype:"'offline' | 'storage' | 'cpu' | 'memory'" faker:"oneof: offline, storage, cpu, memory"`
 	Timestamp   int64   `json:"timestamp"`
 }
@@ -111,6 +111,7 @@ type InternalGetUserNotificationMachinesResponse ApiPagingResponse[NotificationM
 type NotificationClientsTableRow struct {
 	ClientName string `json:"client_name"`
 	Version    string `json:"version"`
+	Url        string `json:"url"`
 	Timestamp  int64  `json:"timestamp"`
 }
 
@@ -119,10 +120,10 @@ type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationCl
 // ------------------------------------------------------------
 // Rocket Pool Table
 type NotificationRocketPoolTableRow struct {
-	Timestamp   int64   `json:"timestamp"`
-	EventType   string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	AlertValue  float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
-	NodeAddress Hash    `json:"node_address"`
+	Timestamp int64   `json:"timestamp"`
+	EventType string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
+	Threshold float64 `json:"threshold,omitempty"` // only for some notification types, e.g. max collateral
+	Node      Address `json:"node"`
 }
 
 type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
@@ -130,10 +131,10 @@ type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[Notificatio
 // ------------------------------------------------------------
 // Networks Table
 type NotificationNetworksTableRow struct {
-	ChainId    uint64          `json:"chain_id"`
-	Timestamp  int64           `json:"timestamp"`
-	EventType  string          `json:"event_type" tstype:"'gas_above' | 'gas_below' | 'participation_rate'" faker:"oneof: gas_above, gas_below, participation_rate"`
-	AlertValue decimal.Decimal `json:"alert_value"` // wei string for gas alerts, otherwise percentage (0-1) for participation rate
+	ChainId   uint64          `json:"chain_id"`
+	Timestamp int64           `json:"timestamp"`
+	EventType string          `json:"event_type" tstype:"'new_reward_round' | 'gas_above' | 'gas_below' | 'participation_rate'" faker:"oneof: new_reward_round, gas_above, gas_below, participation_rate"`
+	Threshold decimal.Decimal `json:"threshold,omitempty"` // participation rate threshold should also be passed as decimal string
 }
 
 type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationNetworksTableRow]
@@ -141,9 +142,13 @@ type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationN
 // ------------------------------------------------------------
 // Notification Settings
 type NotificationSettingsNetwork struct {
-	GasAboveThreshold          decimal.Decimal `json:"gas_above_threshold" faker:"boundary_start=0, boundary_end=1"`          // 0 is disabled
-	GasBelowThreshold          decimal.Decimal `json:"gas_below_threshold" faker:"boundary_start=0, boundary_end=1"`          // 0 is disabled
-	ParticipationRateThreshold float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 is disabled
+	IsGasAboveSubscribed          bool            `json:"is_gas_above_subscribed"`
+	GasAboveThreshold             decimal.Decimal `json:"gas_above_threshold" faker:"eth"`
+	IsGasBelowSubscribed          bool            `json:"is_gas_below_subscribed"`
+	GasBelowThreshold             decimal.Decimal `json:"gas_below_threshold" faker:"eth"`
+	IsParticipationRateSubscribed bool            `json:"is_participation_rate_subscribed"`
+	ParticipationRateThreshold    float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsNewRewardRoundSubscribed    bool            `json:"is_new_reward_round_subscribed"`
 }
 type NotificationNetwork struct {
 	ChainId  uint64                      `json:"chain_id"`
@@ -159,26 +164,35 @@ type NotificationPairedDevice struct {
 }
 type InternalPutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[NotificationPairedDevice]
 
+type NotificationSettingsClient struct {
+	Id           uint64 `json:"id"`
+	Name         string `json:"name"`
+	Category     string `json:"category" tstype:"'execution_layer' | 'consensus_layer' | 'other'" faker:"oneof: execution_layer, consensus_layer, other"`
+	IsSubscribed bool   `json:"is_subscribed"`
+}
+
+type InternalPutUserNotificationSettingsClientResponse ApiDataResponse[NotificationSettingsClient]
+
 type NotificationSettingsGeneral struct {
 	DoNotDisturbTimestamp       int64 `json:"do_not_disturb_timestamp"` // notifications are disabled until this timestamp
 	IsEmailNotificationsEnabled bool  `json:"is_email_notifications_enabled"`
 	IsPushNotificationsEnabled  bool  `json:"is_push_notifications_enabled"`
 
-	IsMachineOfflineSubscribed   bool    `json:"is_machine_offline_subscribed"`
-	MachineStorageUsageThreshold float64 `json:"machine_storage_usage_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
-	MachineCpuUsageThreshold     float64 `json:"machine_cpu_usage_threshold" faker:"boundary_start=0, boundary_end=1"`     // 0 means disabled
-	MachineMemoryUsageThreshold  float64 `json:"machine_memory_usage_threshold" faker:"boundary_start=0, boundary_end=1"`  // 0 means disabled
-
-	SubscribedClients                    []string `json:"subscribed_clients"`
-	IsRocketPoolNewRewardRoundSubscribed bool     `json:"is_rocket_pool_new_reward_round_subscribed"`
-	RocketPoolMaxCollateralThreshold     float64  `json:"rocket_pool_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
-	RocketPoolMinCollateralThreshold     float64  `json:"rocket_pool_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 means disabled
+	IsMachineOfflineSubscribed      bool    `json:"is_machine_offline_subscribed"`
+	IsMachineStorageUsageSubscribed bool    `json:"is_machine_storage_usage_subscribed"`
+	MachineStorageUsageThreshold    float64 `json:"machine_storage_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMachineCpuUsageSubscribed     bool    `json:"is_machine_cpu_usage_subscribed"`
+	MachineCpuUsageThreshold        float64 `json:"machine_cpu_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMachineMemoryUsageSubscribed  bool    `json:"is_machine_memory_usage_subscribed"`
+	MachineMemoryUsageThreshold     float64 `json:"machine_memory_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
-	GeneralSettings NotificationSettingsGeneral `json:"general_settings"`
-	Networks        []NotificationNetwork       `json:"networks"`
-	PairedDevices   []NotificationPairedDevice  `json:"paired_devices"`
+	GeneralSettings NotificationSettingsGeneral  `json:"general_settings"`
+	HasMachines     bool                         `json:"has_machines"`
+	Networks        []NotificationNetwork        `json:"networks"`
+	PairedDevices   []NotificationPairedDevice   `json:"paired_devices"`
+	Clients         []NotificationSettingsClient `json:"clients" faker:"slice_len=10"`
 }
 type InternalGetUserNotificationSettingsResponse ApiDataResponse[NotificationSettings]
 
@@ -188,13 +202,19 @@ type NotificationSettingsValidatorDashboard struct {
 	IsRealTimeModeEnabled   bool   `json:"is_real_time_mode_enabled"`
 
 	IsValidatorOfflineSubscribed      bool    `json:"is_validator_offline_subscribed"`
-	GroupOfflineThreshold             float64 `json:"group_offline_threshold" faker:"boundary_start=0, boundary_end=1"` // 0 is disabled
+	IsGroupOfflineSubscribed          bool    `json:"is_group_offline_subscribed"`
+	GroupOfflineThreshold             float64 `json:"group_offline_threshold" faker:"boundary_start=0, boundary_end=1"`
 	IsAttestationsMissedSubscribed    bool    `json:"is_attestations_missed_subscribed"`
 	IsBlockProposalSubscribed         bool    `json:"is_block_proposal_subscribed"`
 	IsUpcomingBlockProposalSubscribed bool    `json:"is_upcoming_block_proposal_subscribed"`
 	IsSyncSubscribed                  bool    `json:"is_sync_subscribed"`
 	IsWithdrawalProcessedSubscribed   bool    `json:"is_withdrawal_processed_subscribed"`
 	IsSlashedSubscribed               bool    `json:"is_slashed_subscribed"`
+
+	IsMaxCollateralSubscribed bool    `json:"is_max_collateral_subscribed"`
+	MaxCollateralThreshold    float64 `json:"max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMinCollateralSubscribed bool    `json:"is_min_collateral_subscribed"`
+	MinCollateralThreshold    float64 `json:"min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 
 type InternalPutUserNotificationSettingsValidatorDashboardResponse ApiDataResponse[NotificationSettingsValidatorDashboard]
@@ -208,7 +228,7 @@ type NotificationSettingsAccountDashboard struct {
 	IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 	IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`
 	IsERC20TokenTransfersSubscribed   bool    `json:"is_erc20_token_transfers_subscribed"`
-	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold" faker:"boundary_start=0, boundary_end=1000000"` // 0 does not disable, is_erc20_token_transfers_subscribed determines if it's enabled
+	ERC20TokenTransfersValueThreshold float64 `json:"erc20_token_transfers_value_threshold" faker:"boundary_start=0, boundary_end=1000000"`
 	IsERC721TokenTransfersSubscribed  bool    `json:"is_erc721_token_transfers_subscribed"`
 	IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
 }
@@ -219,7 +239,7 @@ type NotificationSettingsDashboardsTableRow struct {
 	DashboardId        uint64 `json:"dashboard_id"`
 	GroupId            uint64 `json:"group_id"`
 	GroupName          string `json:"group_name"`
-	// if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
+	// if it's a validator dashboard, Settings is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
 	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard" faker:"-"`
 	ChainIds []uint64    `json:"chain_ids" faker:"chain_ids"`
 }

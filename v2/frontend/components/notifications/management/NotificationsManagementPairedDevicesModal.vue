@@ -1,31 +1,67 @@
 <script lang="ts" setup>
-import { useNotificationsManagementSettings } from '~/composables/notifications/useNotificationsManagementSettings'
-
 const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
-const { pairedDevices } = useNotificationsManagementSettings()
+const notificationsManagementStore = useNotificationsManagementStore()
+const close = () => {
+  visible.value = false
+}
+
+const handleToggleNotifications = ({
+  id,
+  value,
+}: {
+  id: string,
+  value: boolean,
+}) => {
+  notificationsManagementStore.setNotificationForPairedDevice({
+    id,
+    value,
+  })
+  const device = notificationsManagementStore.settings.paired_devices.find(device => device.id === id)
+  if (device) {
+    device.is_notifications_enabled = value
+  }
+}
 </script>
 
 <template>
   <BcDialog
     v-model="visible"
     class="paired-devices-modal-container"
+    @keydown.esc.stop.prevent="close"
   >
     <div class="container">
       <h1>{{ $t("notifications.general.paired_devices.title") }}</h1>
-      <div class="paired-devices">
+      <div v-if="notificationsManagementStore.settings.paired_devices.length" class="paired-devices">
         <NotificationsManagementPairedDeviceModalContent
-          v-for="device in pairedDevices"
+          v-for="device in notificationsManagementStore.settings.paired_devices"
           :key="device.id"
           :device
+          @toggle-notifications="handleToggleNotifications"
+          @remove-device="notificationsManagementStore.removeDevice"
         />
       </div>
+      <BcText
+        v-if="!notificationsManagementStore.settings.paired_devices.length"
+        class="info-empty"
+        tag="p" variant="lg"
+      >
+        {{ $t('notifications.general.paired_devices.info_empty.template') }}
+        <br>
+        <BcLink
+          class="link"
+          to="/mobile"
+        >
+          {{ $t('notifications.general.paired_devices.info_empty._link') }}
+        </BcLink>
+      </BcText>
     </div>
     <div class="button-row">
       <Button
         :label="$t('navigation.done')"
-        @click="visible = false"
+        autofocus
+        @click="close"
       />
     </div>
   </BcDialog>
@@ -53,6 +89,10 @@ const { pairedDevices } = useNotificationsManagementSettings()
       border-bottom: 1px solid var(--container-border-color);
     }
   }
+}
+
+.info-empty {
+  text-align: center;
 }
 
 .button-row {
