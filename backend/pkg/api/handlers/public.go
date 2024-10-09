@@ -1955,6 +1955,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
+//	@Param			search			query		string	false	"Search for Index"
 //	@Success		200				{object}	types.InternalGetUserNotificationsValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -1964,11 +1965,12 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
+	search := r.URL.Query().Get("search")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1988,6 +1990,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
+//	@Param			search			query		string	false	"Search for Address, ENS"
 //	@Success		200				{object}	types.InternalGetUserNotificationsAccountDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -1997,11 +2000,12 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 	dashboardId := v.checkUint(vars["dashboard_id"], "dashboard_id")
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
+	search := r.URL.Query().Get("search")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2481,6 +2485,12 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 //	@Router			/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
 	var req types.NotificationSettingsValidatorDashboard
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
@@ -2497,7 +2507,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
+	err = h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), userId, dashboardId, groupId, req)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2523,6 +2533,12 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 //	@Router			/users/me/notifications/settings/account-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
 	// uses a different struct due to `subscribed_chain_ids`, which is a slice of intOrString in the payload but a slice of uint64 in the response
 	type request struct {
 		WebhookUrl                      string        `json:"webhook_url"`
@@ -2564,7 +2580,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
 		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
 	}
-	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
+	err = h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), userId, dashboardId, groupId, settings)
 	if err != nil {
 		handleErr(w, r, err)
 		return
