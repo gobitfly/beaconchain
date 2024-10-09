@@ -2204,16 +2204,17 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 
 	// if users premium perks do not allow custom thresholds, set them to default in the response
 	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
+	const diffTolerance = 0.0001
 	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold {
-		if userGeneralSettings.MachineStorageUsageThreshold != defaultSettings.MachineStorageUsageThreshold {
+		if math.Abs(userGeneralSettings.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance {
 			userGeneralSettings.MachineStorageUsageThreshold = defaultSettings.MachineStorageUsageThreshold
 			userGeneralSettings.IsMachineStorageUsageSubscribed = false
 		}
-		if userGeneralSettings.MachineCpuUsageThreshold != defaultSettings.MachineCpuUsageThreshold {
+		if math.Abs(userGeneralSettings.MachineCpuUsageThreshold-defaultSettings.MachineCpuUsageThreshold) > diffTolerance {
 			userGeneralSettings.MachineCpuUsageThreshold = defaultSettings.MachineCpuUsageThreshold
 			userGeneralSettings.IsMachineCpuUsageSubscribed = false
 		}
-		if userGeneralSettings.MachineMemoryUsageThreshold != defaultSettings.MachineMemoryUsageThreshold {
+		if math.Abs(userGeneralSettings.MachineMemoryUsageThreshold-defaultSettings.MachineMemoryUsageThreshold) > diffTolerance {
 			userGeneralSettings.MachineMemoryUsageThreshold = defaultSettings.MachineMemoryUsageThreshold
 			userGeneralSettings.IsMachineMemoryUsageSubscribed = false
 		}
