@@ -613,6 +613,11 @@
           "heading":"Delete all notifications",
           "paragraph": "Do you really want to delete all notifications for this dashboard?"
           },
+        "entity": {
+          "group_back_online": "Group back online ({0})",
+          "title": "Notifications",
+          "validator_back_online": "Validator back online ({0})"
+        },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
           "_link": "Discord webhook",
