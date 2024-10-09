@@ -2188,6 +2188,39 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+
+	// check premium perks
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetDefaultNotificationSettings(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	userGeneralSettings := data.GeneralSettings
+	defaultGeneralSettings := defaultSettings.GeneralSettings
+
+	// if users premium perks do not allow custom thresholds, set them to default in the response
+	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
+	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold {
+		if userGeneralSettings.MachineStorageUsageThreshold != defaultGeneralSettings.MachineStorageUsageThreshold {
+			userGeneralSettings.MachineStorageUsageThreshold = defaultGeneralSettings.MachineStorageUsageThreshold
+			userGeneralSettings.IsMachineStorageUsageSubscribed = false
+		}
+		if userGeneralSettings.MachineCpuUsageThreshold != defaultGeneralSettings.MachineCpuUsageThreshold {
+			userGeneralSettings.MachineCpuUsageThreshold = defaultGeneralSettings.MachineCpuUsageThreshold
+			userGeneralSettings.IsMachineCpuUsageSubscribed = false
+		}
+		if userGeneralSettings.MachineMemoryUsageThreshold != defaultGeneralSettings.MachineMemoryUsageThreshold {
+			userGeneralSettings.MachineMemoryUsageThreshold = defaultGeneralSettings.MachineMemoryUsageThreshold
+			userGeneralSettings.IsMachineMemoryUsageSubscribed = false
+		}
+		data.GeneralSettings = userGeneralSettings
+	}
+
 	response := types.InternalGetUserNotificationSettingsResponse{
 		Data: *data,
 	}
@@ -2224,6 +2257,27 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, v)
 		return
 	}
+
+	// check premium perks
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetDefaultNotificationSettings(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	isCustomThresholdUsed := req.MachineStorageUsageThreshold != defaultSettings.GeneralSettings.MachineStorageUsageThreshold ||
+		req.MachineCpuUsageThreshold != defaultSettings.GeneralSettings.MachineCpuUsageThreshold ||
+		req.MachineMemoryUsageThreshold != defaultSettings.GeneralSettings.MachineMemoryUsageThreshold
+
+	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold && isCustomThresholdUsed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to set machine settings thresholds"))
+		return
+	}
+
 	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, r, err)
@@ -2461,6 +2515,30 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		handleErr(w, r, err)
 		return
 	}
+	// if users premium perks do not allow subscriptions, set them to false in the response
+	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	for i, dashboard := range data {
+		if dashboard.IsAccountDashboard {
+			continue
+		}
+		settings, ok := dashboard.Settings.(types.NotificationSettingsValidatorDashboard)
+		if !ok {
+			handleErr(w, r, errors.New("invalid settings type"))
+			return
+		}
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && settings.IsGroupOfflineSubscribed {
+			settings.IsGroupOfflineSubscribed = false
+		}
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && settings.IsRealTimeModeEnabled {
+			settings.IsRealTimeModeEnabled = false
+		}
+		data[i].Settings = settings
+	}
 	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
@@ -2505,6 +2583,20 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, v)
 		return
 	}
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && req.IsGroupOfflineSubscribed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group offline"))
+		return
+	}
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && req.IsRealTimeModeEnabled {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe real time mode"))
+		return
+	}
+
 	err = h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), userId, dashboardId, groupId, req)
 	if err != nil {
 		handleErr(w, r, err)
