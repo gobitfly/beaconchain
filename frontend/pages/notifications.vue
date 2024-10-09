@@ -6,57 +6,52 @@ import {
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
-import {
-  BcDialogConfirm, NotificationsNetworkTable,
-} from '#components'
+import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 
+// TODO: get rid of this provider logic -> necessary for `<DashboardHeader`
 useDashboardKeyProvider('notifications')
-const { refreshDashboards } = useUserDashboardStore()
+
 const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
 const { t: $t } = useTranslation()
 
-await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
-
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-
 const manageNotificationsModalVisisble = ref(false)
-
+const tabKey = {
+  clients: 'clients',
+  dashboards: 'dashboards',
+  machines: 'machines',
+  networks: 'networks',
+  rocketpool: 'rocketpool',
+}
 const tabs: HashTabs = [
   {
     icon: faGaugeSimpleMax,
-    key: 'dashboards',
+    key: tabKey.dashboards,
     title: $t('notifications.tabs.dashboards'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faMonitorWaveform,
-    key: 'machines',
-    placeholder: 'Machines coming soon!',
+    key: tabKey.machines,
     title: $t('notifications.tabs.machines'),
   },
   {
-    disabled: !showInDevelopment,
     icon: faBolt,
-    key: 'clients',
-    placeholder: 'Clients coming soon!',
+    key: tabKey.clients,
     title: $t('notifications.tabs.clients'),
   },
   {
-    disabled: !showInDevelopment,
-    key: 'rocketpool',
-    placeholder: 'Rocketpool coming soon!',
+    key: tabKey.rocketpool,
     title: $t('notifications.tabs.rocketpool'),
   },
   {
-    component: NotificationsNetworkTable,
-    disabled: !showInDevelopment,
     icon: faNetworkWired,
-    key: 'network',
-    title: $t('notifications.tabs.network'),
+    key: tabKey.networks,
+    title: $t('notifications.tabs.networks'),
   },
 ]
+
+const getSlotName = (key: string) => `tab-panel-${key}`
 
 useBcSeo('notifications.title')
 
@@ -84,7 +79,9 @@ const openManageNotifications = () => {
       <template #top>
         <DashboardHeader :dashboard-title="$t('notifications.title')" />
         <div class="overview">
-          TODO: Overview
+          <NotificationsOverview
+            @open-dialog="openManageNotifications"
+          />
         </div>
       </template>
       <NotificationsManagementModal
@@ -97,16 +94,37 @@ const openManageNotifications = () => {
         />
       </div>
       <BcTabList
-        :tabs default-tab="dashboards"
+        :tabs
+        default-tab="dashboards"
         :use-route-hash="true"
         class="notifications-tab-view"
         panels-class="notifications-tab-panels"
       >
+        <template #[getSlotName(tabKey.dashboards)]>
+          <NotificationsDashboardsTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+        <template #[getSlotName(tabKey.clients)]>
+          <NotificationsClientsTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
         <template #tab-header-icon-rocketpool>
           <IconRocketPool />
         </template>
-        <template #tab-panel-dashboards>
-          <NotificationsDashboardsTable
+        <template #[getSlotName(tabKey.rocketpool)]>
+          <NotificationsRocketPoolTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+        <template #[getSlotName(tabKey.networks)]>
+          <NotificationsNetworkTable
+            @open-dialog="openManageNotifications"
+          />
+        </template>
+        <template #[getSlotName(tabKey.machines)]>
+          <NotificationsMachinesTable
             @open-dialog="openManageNotifications"
           />
         </template>

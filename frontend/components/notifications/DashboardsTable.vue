@@ -7,6 +7,7 @@ import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import type { ChainIDs } from '~/types/network'
+import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
 
 defineEmits<{ (e: 'openDialog'): void }>()
 
@@ -45,6 +46,55 @@ const openDialog = () => {
 }
 
 const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'account' : 'validator'
+const { overview } = useNotificationsDashboardOverviewStore()
+const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_types'][number]) => {
+  switch (eventType) {
+    case 'attestation_missed':
+      return $t('notifications.dashboards.event_type.attestation_missed')
+    case 'group_offline':
+      return $t('notifications.dashboards.event_type.group_offline')
+    case 'group_online':
+      return $t('notifications.dashboards.event_type.group_online')
+    case 'incoming_tx':
+      return $t('notifications.dashboards.event_type.incoming_tx')
+    case 'max_collateral':
+      return $t('notifications.dashboards.event_type.max_collateral')
+    case 'min_collateral':
+      return $t('notifications.dashboards.event_type.min_collateral')
+    case 'outgoing_tx':
+      return $t('notifications.dashboards.event_type.outgoing_tx')
+    case 'proposal_missed':
+      return $t('notifications.dashboards.event_type.proposal_missed')
+    case 'proposal_success':
+      return $t('notifications.dashboards.event_type.proposal_success')
+    case 'proposal_upcoming':
+      return $t('notifications.dashboards.event_type.proposal_upcoming')
+    case 'sync':
+      return $t('notifications.dashboards.event_type.sync')
+    case 'transfer_erc20':
+      return $t('notifications.dashboards.event_type.transfer_erc20')
+    case 'transfer_erc721':
+      return $t('notifications.dashboards.event_type.transfer_erc721')
+    case 'transfer_erc1155':
+      return $t('notifications.dashboards.event_type.transfer_erc1155')
+    case 'validator_got_slashed':
+      return $t('notifications.dashboards.event_type.validator_got_slashed')
+    case 'validator_has_slashed':
+      return $t('notifications.dashboards.event_type.validator_has_slashed')
+    case 'validator_offline':
+      return $t('notifications.dashboards.event_type.validator_offline')
+    case 'validator_online':
+      return $t('notifications.dashboards.event_type.validator_online')
+    case 'withdrawal':
+      return $t('notifications.dashboards.event_type.withdrawal')
+    default:
+      logError(`Unknown dashboard notification event_type: ${eventType}`)
+      return eventType
+  }
+}
+const textDashboardNotifications = (event_types: NotificationDashboardsTableRow['event_types']) => {
+  return event_types.map(mapEventtypeToText).join(', ')
+}
 </script>
 
 <template>
@@ -60,8 +110,8 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="notificationsDashboards"
-            data-key="notification_id"
+            :data="addIdentifier(notificationsDashboards, 'is_account_dashboard', 'dashboard_id', 'group_id', 'epoch')"
+            data-key="identifier"
             :expandable="!colsVisible.notifications"
             :cursor
             :page-size
@@ -88,7 +138,7 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
               </template>
             </Column>
             <Column
-              field="timestamp"
+              field="epoch"
               sortable
               header-class="col-age"
               body-class="col-age"
@@ -98,8 +148,8 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
-                  :value="slotProps.data.timestamp"
-                  type="go-timestamp"
+                  :value="slotProps.data.epoch"
+                  type="epoch"
                 />
               </template>
             </Column>
@@ -184,7 +234,7 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
               :header="$t('notifications.dashboards.col.notification')"
             >
               <template #body="slotProps">
-                {{ slotProps.data.event_types.join(", ") }}
+                {{ textDashboardNotifications(slotProps.data.event_types) }}
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -222,21 +272,18 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
                 @open-dialog="$emit('openDialog')"
               />
             </template>
-            <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width < 1024">
                 {{
                   $t(
                     "notifications.dashboards.footer.subscriptions.validators_shortened",
-                    { count: 1 },
-                  )
+                    { count: overview?.vdb_subscriptions_count })
                 }}
                 |
                 {{
                   $t(
                     "notifications.dashboards.footer.subscriptions.accounts_shortened",
-                    { count: 1 },
-                  )
+                    { count: overview?.adb_subscriptions_count })
                 }}
               </template>
               <template v-else>
@@ -244,16 +291,16 @@ const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'acc
                   {{
                     $t(
                       "notifications.dashboards.footer.subscriptions.validators",
-                      { count: 1 },
-                    )
+                      { count: overview?.vdb_subscriptions_count })
+
                   }}
                 </div>
                 <div>
                   {{
                     $t(
                       "notifications.dashboards.footer.subscriptions.accounts",
-                      { count: 1 },
-                    )
+                      { count: overview?.adb_subscriptions_count })
+
                   }}
                 </div>
               </template>

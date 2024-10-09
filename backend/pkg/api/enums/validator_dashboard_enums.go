@@ -437,7 +437,7 @@ func (c VDBRocketPoolMinipoolsColumn) Int() int {
 
 func (VDBRocketPoolMinipoolsColumn) NewFromString(s string) VDBRocketPoolMinipoolsColumn {
 	switch s {
-	case "group":
+	case "group_id":
 		return VDBRocketPoolMinipoolsGroup
 	default:
 		return VDBRocketPoolMinipoolsColumn(-1)

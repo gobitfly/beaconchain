@@ -9,12 +9,14 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"slices"
 	"sort"
 	"testing"
 	"time"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gavv/httpexpect/v2"
+	"github.com/go-openapi/spec"
 	"github.com/gobitfly/beaconchain/pkg/api"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	api_types "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -25,6 +27,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -109,6 +112,16 @@ func setup() error {
 	)
 	if err != nil {
 		return fmt.Errorf("error inserting user 2: %w", err)
+	}
+
+	// insert dummy api weight for testing
+	_, err = tempDb.Exec(`
+      INSERT INTO api_weights (bucket, endpoint, method, params, weight, valid_from)
+      VALUES ($1, $2, $3, $4, $5, TO_TIMESTAMP($6))`,
+		"default", "/api/v2/test-ratelimit", "GET", "", 2, time.Now().Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("error inserting api weight: %w", err)
 	}
 
 	cfg := &types.Config{}
@@ -389,6 +402,7 @@ func TestPublicAndSharedDashboards(t *testing.T) {
 			numValidators := resp.Data.Validators.Exited + resp.Data.Validators.Offline + resp.Data.Validators.Pending + resp.Data.Validators.Online + resp.Data.Validators.Slashed
 			assert.Greater(t, numValidators, uint64(0), "dashboard should contain at least one validator")
 			assert.Greater(t, len(resp.Data.Groups), 0, "dashboard should contain at least one group")
+			assert.Greater(t, resp.Data.Network, uint64(0), "dashboard should contain a network id greater than 0")
 		})
 
 		t.Run(fmt.Sprintf("[%s]: test group summary", dashboardId.id), func(t *testing.T) {
@@ -468,4 +482,34 @@ func TestPublicAndSharedDashboards(t *testing.T) {
 			assert.Greater(t, len(resp.Data.Series), 0, "rewards chart series should not be empty")
 		})
 	}
+}
+
+func TestApiDoc(t *testing.T) {
+	e := httpexpect.WithConfig(getExpectConfig(t, ts))
+
+	t.Run("test api doc json", func(t *testing.T) {
+		resp := spec.Swagger{}
+		e.GET("/api/v2/docs/swagger.json").
+			Expect().
+			Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Equal(t, "/api/v2", resp.BasePath, "swagger base path should be '/api/v2'")
+		require.NotNil(t, 0, resp.Paths, "swagger paths should not nil")
+		assert.NotEqual(t, 0, len(resp.Paths.Paths), "swagger paths should not be empty")
+		assert.NotEqual(t, 0, len(resp.Definitions), "swagger definitions should not be empty")
+		assert.NotEqual(t, 0, len(resp.Host), "swagger host should not be empty")
+	})
+
+	t.Run("test api ratelimit weights endpoint", func(t *testing.T) {
+		resp := api_types.InternalGetRatelimitWeightsResponse{}
+		e.GET("/api/i/ratelimit-weights").
+			Expect().
+			Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.GreaterOrEqual(t, len(resp.Data), 1, "ratelimit weights should contain at least one entry")
+		testEndpointIndex := slices.IndexFunc(resp.Data, func(item api_types.ApiWeightItem) bool {
+			return item.Endpoint == "/api/v2/test-ratelimit"
+		})
+		assert.GreaterOrEqual(t, testEndpointIndex, 0, "ratelimit weights should contain an entry for /api/v2/test-ratelimit")
+	})
 }

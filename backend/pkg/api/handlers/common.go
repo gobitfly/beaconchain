@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -18,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
+	"github.com/shopspring/decimal"
 	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/alexedwards/scs/v2"
@@ -28,11 +30,12 @@ import (
 )
 
 type HandlerService struct {
-	dai dataaccess.DataAccessor
-	scs *scs.SessionManager
+	dai                         dataaccess.DataAccessor
+	scs                         *scs.SessionManager
+	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -42,8 +45,9 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 	}
 
 	return &HandlerService{
-		dai: dataAccessor,
-		scs: sessionManager,
+		dai:                         dataAccessor,
+		scs:                         sessionManager,
+		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
 }
 
@@ -78,6 +82,7 @@ const (
 	sortOrderAscending                = "asc"
 	sortOrderDescending               = "desc"
 	defaultSortOrder                  = sortOrderAscending
+	defaultDesc                       = defaultSortOrder == sortOrderDescending
 	ethereum                          = "ethereum"
 	gnosis                            = "gnosis"
 	allowEmpty                        = true
@@ -246,6 +251,35 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 		v.add(paramName, fmt.Sprintf("given value %s is not a positive integer", param))
 	}
 	return num
+}
+
+func (v *validationError) checkWeiDecimal(param, paramName string) decimal.Decimal {
+	dec := decimal.Zero
+	// check if only numbers are contained in the string with regex
+	if !reInteger.MatchString(param) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is not a wei string (must be positive integer)", param))
+		return dec
+	}
+	dec, err := decimal.NewFromString(param)
+	if err != nil {
+		v.add(paramName, fmt.Sprintf("given value '%s' is not a wei string (must be positive integer)", param))
+		return dec
+	}
+	return dec
+}
+
+func (v *validationError) checkWeiMinMax(param, paramName string, min, max decimal.Decimal) decimal.Decimal {
+	dec := v.checkWeiDecimal(param, paramName)
+	if v.hasErrors() {
+		return dec
+	}
+	if dec.LessThan(min) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is too small, minimum value is %s", dec, min))
+	}
+	if dec.GreaterThan(max) {
+		v.add(paramName, fmt.Sprintf("given value '%s' is too large, maximum value is %s", dec, max))
+	}
+	return dec
 }
 
 func (v *validationError) checkBool(param, paramName string) bool {
@@ -476,11 +510,7 @@ func (v *validationError) checkValidatorDashboardPublicId(publicId string) types
 	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
-type number interface {
-	uint64 | int64 | float64
-}
-
-func checkMinMax[T number](v *validationError, param T, min T, max T, paramName string) T {
+func checkMinMax[T cmp.Ordered](v *validationError, param T, min T, max T, paramName string) T {
 	if param < min {
 		v.add(paramName, fmt.Sprintf("given value '%v' is too small, minimum value is %v", param, min))
 	}
@@ -527,15 +557,10 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// checkEnumIsAllowed checks if the given enum is in the list of allowed enums.
-// precondition: the enum is the same type as the allowed enums.
-func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.Enum, name string) {
-	if enums.IsInvalidEnum(enum) {
-		v.add(name, "parameter is missing or invalid, please check the API documentation")
-		return
-	}
+// better func name would be
+func checkValueInAllowed[T cmp.Ordered](v *validationError, value T, allowed []T, name string) {
 	for _, a := range allowed {
-		if enum.Int() == a.Int() {
+		if cmp.Compare(value, a) == 0 {
 			return
 		}
 	}
@@ -545,7 +570,7 @@ func (v *validationError) checkEnumIsAllowed(enum enums.Enum, allowed []enums.En
 func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
-		return defaultSortOrder == sortOrderDescending
+		return defaultDesc
 	case sortOrderAscending:
 		return false
 	case sortOrderDescending:
@@ -559,19 +584,21 @@ func (v *validationError) parseSortOrder(order string) bool {
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
 	var c T
 	if sortString == "" {
-		return &types.Sort[T]{Column: c, Desc: false}
+		return &types.Sort[T]{Column: c, Desc: defaultDesc}
 	}
 	sortSplit := strings.Split(sortString, ":")
 	if len(sortSplit) > 2 {
 		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'", sortString))
 		return nil
 	}
+	var desc bool
 	if len(sortSplit) == 1 {
-		sortSplit = append(sortSplit, "")
+		desc = defaultDesc
+	} else {
+		desc = v.parseSortOrder(sortSplit[1])
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
-	order := v.parseSortOrder(sortSplit[1])
-	return &types.Sort[T]{Column: sortCol, Desc: order}
+	return &types.Sort[T]{Column: sortCol, Desc: desc}
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {
@@ -657,6 +684,14 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 		return v.checkNetwork(intOrString{intValue: &chainId})
 	}
 	return v.checkNetwork(intOrString{strValue: &param})
+}
+
+func (v *validationError) checkNetworksParameter(param string) []uint64 {
+	var chainIds []uint64
+	for _, network := range splitParameters(param, ',') {
+		chainIds = append(chainIds, v.checkNetworkParameter(network))
+	}
+	return chainIds
 }
 
 // isValidNetwork checks if the given network is a valid network.
@@ -817,9 +852,9 @@ const maxBodySize = 10 * 1024
 func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...log.Fields) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 	requestFields := log.Fields{
-		"endpoint": r.Method + " " + r.URL.Path,
-		"query":    r.URL.RawQuery,
-		"body":     string(body),
+		"request_endpoint": r.Method + " " + r.URL.Path,
+		"request_query":    r.URL.RawQuery,
+		"request_body":     string(body),
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
 }

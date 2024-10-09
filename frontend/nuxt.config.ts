@@ -64,8 +64,16 @@ export default defineNuxtConfig({
     ],
     '@primevue/nuxt-module',
     '@nuxt/eslint',
+    '@vueuse/nuxt',
   ],
-  nitro: { compressPublicAssets: true },
+  nitro: {
+    compressPublicAssets: true,
+    esbuild: {
+      options: {
+        target: 'esnext',
+      },
+    },
+  },
   postcss: { plugins: { autoprefixer: {} } },
   routeRules: { '/': { redirect: '/dashboard' } },
   runtimeConfig: {
@@ -108,9 +116,6 @@ export default defineNuxtConfig({
           commonjs(),
         ],
       },
-    },
-    esbuild: {
-      drop: [ 'console' ],
     },
   },
 })

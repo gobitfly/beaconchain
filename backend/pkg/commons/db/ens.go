@@ -436,7 +436,7 @@ func validateEnsAddress(client *ethclient.Client, address common.Address, alread
 				err.Error() == "no resolution" ||
 				err.Error() == "execution reverted" ||
 				strings.HasPrefix(err.Error(), "name is not valid") {
-				log.Warnf("reverse resolving address [%v] resulted in a skippable error [%s], skipping it", address, err.Error())
+				// log.Warnf("reverse resolving address [%v] resulted in a skippable error [%s], skipping it", address, err.Error())
 			} else {
 				return fmt.Errorf("error could not reverse resolve address [%v]: %w", address, err)
 			}
@@ -475,7 +475,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 
 	nameHash, err := go_ens.NameHash(name)
 	if err != nil {
-		log.Warnf("error could not hash name [%v]: %v -> removing ens entry", name, err)
+		// log.Warnf("error could not hash name [%v]: %v -> removing ens entry", name, err)
 		err = removeEnsName(name)
 		if err != nil {
 			return fmt.Errorf("error removing ens name [%v]: %w", name, err)
@@ -488,12 +488,12 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 		if err.Error() == "unregistered name" ||
 			err.Error() == "no address" ||
 			err.Error() == "no resolver" ||
-			err.Error() == "abi: attempting to unmarshall an empty string while arguments are expected" ||
+			err.Error() == "abi: attempting to unmarshal an empty string while arguments are expected" ||
 			strings.Contains(err.Error(), "execution reverted") ||
 			err.Error() == "invalid jump destination" ||
 			err.Error() == "invalid opcode: INVALID" {
 			// the given name is not available anymore or resolving it did not work properly => we can remove it from the db (if it is there)
-			log.Warnf("could not resolve name [%v]: %v -> removing ens entry", name, err)
+			// log.Warnf("could not resolve name [%v]: %v -> removing ens entry", name, err)
 			err = removeEnsName(name)
 			if err != nil {
 				return fmt.Errorf("error removing ens name after resolve failed [%v]: %w", name, err)
@@ -516,7 +516,7 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 	reverseName, err := go_ens.ReverseResolve(client, addr)
 	if err != nil {
 		if err.Error() == "not a resolver" || err.Error() == "no resolution" || err.Error() == "execution reverted" {
-			log.Warnf("reverse resolving address [%v] for name [%v] resulted in an error [%s], marking entry as not primary", addr, name, err.Error())
+			// log.Warnf("reverse resolving address [%v] for name [%v] resulted in an error [%s], marking entry as not primary", addr, name, err.Error())
 		} else {
 			return fmt.Errorf("error could not reverse resolve address [%v]: %w", addr, err)
 		}
@@ -549,12 +549,12 @@ func validateEnsName(client *ethclient.Client, name string, alreadyChecked *EnsC
 		return fmt.Errorf("error writing ens data for name [%v]: %w", name, err)
 	}
 
-	log.InfoWithFields(log.Fields{
-		"name":        name,
-		"address":     addr,
-		"expires":     expires,
-		"reverseName": reverseName,
-	}, "validated ens name")
+	// log.InfoWithFields(log.Fields{
+	// 	"name":        name,
+	// 	"address":     addr,
+	// 	"expires":     expires,
+	// 	"reverseName": reverseName,
+	// }, "validated ens name")
 	return nil
 }
 
@@ -609,15 +609,19 @@ func GetAddressForEnsName(name string) (address *common.Address, err error) {
 	return address, err
 }
 
-func GetEnsNameForAddress(address common.Address) (name string, err error) {
+// pass invalid time to get latest data
+func GetEnsNameForAddress(address common.Address, validUntil time.Time) (name string, err error) {
+	if validUntil.IsZero() {
+		validUntil = time.Now()
+	}
 	err = ReaderDb.Get(&name, `
 	SELECT ens_name
 	FROM ens
 	WHERE
 		address = $1 AND
 		is_primary_name AND
-		valid_to >= now()
-	;`, address.Bytes())
+		valid_to >= $2
+	;`, address.Bytes(), validUntil)
 	return name, err
 }
 
