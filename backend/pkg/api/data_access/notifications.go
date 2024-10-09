@@ -828,10 +828,10 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	// -------------------------------------
 	// Get the paired devices
 	pairedDevices := []struct {
-		DeviceIdentifier string    `db:"device_identifier"`
-		CreatedTs        time.Time `db:"created_ts"`
-		DeviceName       string    `db:"device_name"`
-		NotifyEnabled    bool      `db:"notify_enabled"`
+		DeviceIdentifier sql.NullString `db:"device_identifier"`
+		CreatedTs        time.Time      `db:"created_ts"`
+		DeviceName       string         `db:"device_name"`
+		NotifyEnabled    bool           `db:"notify_enabled"`
 	}{}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &pairedDevices, `
@@ -928,7 +928,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 	for _, device := range pairedDevices {
 		result.PairedDevices = append(result.PairedDevices, t.NotificationPairedDevice{
-			Id:                     device.DeviceIdentifier,
+			Id:                     device.DeviceIdentifier.String,
 			PairedTimestamp:        device.CreatedTs.Unix(),
 			Name:                   device.DeviceName,
 			IsNotificationsEnabled: device.NotifyEnabled,
