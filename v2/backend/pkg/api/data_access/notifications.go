@@ -36,7 +36,7 @@ type NotificationsRepository interface {
 	GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
 
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
-	GetDefaultNotificationSettings(ctx context.Context) (*t.NotificationSettings, error)
+	GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error)
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
 	UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error
 	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error
@@ -943,13 +943,21 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	return result, nil
 }
 
-func (d *DataAccessService) GetDefaultNotificationSettings(ctx context.Context) (*t.NotificationSettings, error) {
-	return &t.NotificationSettings{
-		GeneralSettings: t.NotificationSettingsGeneral{
-			MachineStorageUsageThreshold: MachineStorageUsageThresholdDefault,
-			MachineCpuUsageThreshold:     MachineCpuUsageThresholdDefault,
-			MachineMemoryUsageThreshold:  MachineMemoryUsageThresholdDefault,
-		},
+func (d *DataAccessService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
+	return &t.NotificationSettingsDefaultValues{
+		GroupOfflineThreshold:             GroupOfflineThresholdDefault,
+		MaxCollateralThreshold:            MaxCollateralThresholdDefault,
+		MinCollateralThreshold:            MinCollateralThresholdDefault,
+		ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
+
+		MachineStorageUsageThreshold: MachineStorageUsageThresholdDefault,
+		MachineCpuUsageThreshold:     MachineCpuUsageThresholdDefault,
+		MachineMemoryUsageThreshold:  MachineMemoryUsageThresholdDefault,
+
+		GasAboveThreshold: decimal.NewFromFloat(GasAboveThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
+		GasBelowThreshold: decimal.NewFromFloat(GasAboveThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
+
+		NetworkParticipationRateThreshold: ParticipationRateThresholdDefault,
 	}, nil
 }
 

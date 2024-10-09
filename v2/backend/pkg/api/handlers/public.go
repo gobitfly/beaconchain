@@ -2195,27 +2195,26 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
-	defaultSettings, err := h.dai.GetDefaultNotificationSettings(r.Context())
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	userGeneralSettings := data.GeneralSettings
-	defaultGeneralSettings := defaultSettings.GeneralSettings
 
 	// if users premium perks do not allow custom thresholds, set them to default in the response
 	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
 	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold {
-		if userGeneralSettings.MachineStorageUsageThreshold != defaultGeneralSettings.MachineStorageUsageThreshold {
-			userGeneralSettings.MachineStorageUsageThreshold = defaultGeneralSettings.MachineStorageUsageThreshold
+		if userGeneralSettings.MachineStorageUsageThreshold != defaultSettings.MachineStorageUsageThreshold {
+			userGeneralSettings.MachineStorageUsageThreshold = defaultSettings.MachineStorageUsageThreshold
 			userGeneralSettings.IsMachineStorageUsageSubscribed = false
 		}
-		if userGeneralSettings.MachineCpuUsageThreshold != defaultGeneralSettings.MachineCpuUsageThreshold {
-			userGeneralSettings.MachineCpuUsageThreshold = defaultGeneralSettings.MachineCpuUsageThreshold
+		if userGeneralSettings.MachineCpuUsageThreshold != defaultSettings.MachineCpuUsageThreshold {
+			userGeneralSettings.MachineCpuUsageThreshold = defaultSettings.MachineCpuUsageThreshold
 			userGeneralSettings.IsMachineCpuUsageSubscribed = false
 		}
-		if userGeneralSettings.MachineMemoryUsageThreshold != defaultGeneralSettings.MachineMemoryUsageThreshold {
-			userGeneralSettings.MachineMemoryUsageThreshold = defaultGeneralSettings.MachineMemoryUsageThreshold
+		if userGeneralSettings.MachineMemoryUsageThreshold != defaultSettings.MachineMemoryUsageThreshold {
+			userGeneralSettings.MachineMemoryUsageThreshold = defaultSettings.MachineMemoryUsageThreshold
 			userGeneralSettings.IsMachineMemoryUsageSubscribed = false
 		}
 		data.GeneralSettings = userGeneralSettings
@@ -2264,14 +2263,14 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, err)
 		return
 	}
-	defaultSettings, err := h.dai.GetDefaultNotificationSettings(r.Context())
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	isCustomThresholdUsed := req.MachineStorageUsageThreshold != defaultSettings.GeneralSettings.MachineStorageUsageThreshold ||
-		req.MachineCpuUsageThreshold != defaultSettings.GeneralSettings.MachineCpuUsageThreshold ||
-		req.MachineMemoryUsageThreshold != defaultSettings.GeneralSettings.MachineMemoryUsageThreshold
+	isCustomThresholdUsed := req.MachineStorageUsageThreshold != defaultSettings.MachineStorageUsageThreshold ||
+		req.MachineCpuUsageThreshold != defaultSettings.MachineCpuUsageThreshold ||
+		req.MachineMemoryUsageThreshold != defaultSettings.MachineMemoryUsageThreshold
 
 	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold && isCustomThresholdUsed {
 		returnForbidden(w, r, errors.New("user does not have premium perks to set machine settings thresholds"))
@@ -2522,6 +2521,11 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		handleErr(w, r, err)
 		return
 	}
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	for i, dashboard := range data {
 		if dashboard.IsAccountDashboard {
 			continue
@@ -2533,6 +2537,7 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		}
 		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && settings.IsGroupOfflineSubscribed {
 			settings.IsGroupOfflineSubscribed = false
+			settings.GroupOfflineThreshold = defaultSettings.GroupOfflineThreshold
 		}
 		if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && settings.IsRealTimeModeEnabled {
 			settings.IsRealTimeModeEnabled = false
