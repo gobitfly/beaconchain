@@ -235,6 +235,16 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = $1
 	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("%s:%d:", ValidatorDashboardEventPrefix, dashboardId)
+
+	// Remove all events related to the dashboard
+	_, err = d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_subscriptions WHERE event_filter LIKE ($1 || '%')
+	`, prefix)
 	return err
 }
 
@@ -338,10 +348,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		}
 
 		// Status
-		pubKeyList := make([][]byte, 0, len(validators))
 		for _, validator := range validators {
 			metadata := validatorMapping.ValidatorMetadata[validator]
-			pubKeyList = append(pubKeyList, metadata.PublicKey)
 
 			switch constypes.ValidatorDbStatus(metadata.Status) {
 			case constypes.DbExitingOnline, constypes.DbSlashingOnline, constypes.DbActiveOnline:
@@ -359,32 +367,46 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		// Find rocketpool validators
 		type RpOperatorInfo struct {
-			Pubkey             []byte          `db:"pubkey"`
+			ValidatorIndex     uint64          `db:"validatorindex"`
 			NodeFee            float64         `db:"node_fee"`
 			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
 			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
 		}
 		var queryResult []RpOperatorInfo
-		query := `
-			SELECT 
-				pubkey,
-				node_fee,
-				node_deposit_balance,
-				user_deposit_balance
-			FROM rocketpool_minipools
-			WHERE pubkey = ANY($1)
-				AND node_deposit_balance is not null
-				AND user_deposit_balance is not null
-			`
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("v.validatorindex"),
+				goqu.L("rplm.node_fee"),
+				goqu.L("rplm.node_deposit_balance"),
+				goqu.L("rplm.user_deposit_balance")).
+			From(goqu.L("rocketpool_minipools AS rplm")).
+			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
+			Where(goqu.L("node_deposit_balance IS NOT NULL")).
+			Where(goqu.L("user_deposit_balance IS NOT NULL"))
+
+		if len(dashboardId.Validators) == 0 {
+			ds = ds.
+				LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
+				Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
+		} else {
+			ds = ds.
+				Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
+		}
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %w", err)
+		}
+
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
 		}
 
-		rpValidators := make(map[string]RpOperatorInfo)
+		rpValidators := make(map[uint64]RpOperatorInfo)
 		for _, res := range queryResult {
-			rpValidators[hexutil.Encode(res.Pubkey)] = res
+			rpValidators[res.ValidatorIndex] = res
 		}
 
 		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
@@ -395,7 +417,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
 
-			if rpValidator, ok := rpValidators[hexutil.Encode(metadata.PublicKey)]; ok {
+			if rpValidator, ok := rpValidators[validator]; ok {
 				if protocolModes.RocketPool {
 					// Calculate the balance of the operator
 					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
@@ -571,6 +593,16 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, d
 	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
+
+	// Remove all events related to the group
+	_, err = d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_subscriptions WHERE event_filter = $1
+	`, prefix)
 	return err
 }
 

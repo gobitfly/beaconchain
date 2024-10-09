@@ -43,17 +43,17 @@ func (s *StatsMigratorCommand) ParseCommandOptions() {
 	s.FlagSet.IntVar(&s.NumberOfPartitions, "partitions", 0, "Number of partitions. Recommended 2 - 128 for PostgreSQL 15")
 }
 
-func (s *StatsMigratorCommand) StartStatsPartitionCommand() error {
+func (s *StatsMigratorCommand) Run() error {
 	if s.CurrentTable == "" {
-		showHelp()
+		s.showHelp()
 		return errors.New("Please specify a valid current-table name via --current-table")
 	}
 	if s.DestinationTable == "" {
-		showHelp()
+		s.showHelp()
 		return errors.New("Please specify a valid destination-table name via --destination-table")
 	}
 	if s.NumberOfPartitions <= 0 {
-		showHelp()
+		s.showHelp()
 		return errors.New("Please specify a valid number of partitions via --partitions. Number of partitions must be > 0")
 	}
 
@@ -64,7 +64,7 @@ func (s *StatsMigratorCommand) StartStatsPartitionCommand() error {
 	return nil
 }
 
-func showHelp() {
+func (s *StatsMigratorCommand) showHelp() {
 	log.Infof("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64\n", "validator_stats_partition")
 	log.Infof("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing\n", "validator_stats_partition")
 	log.Infof("Usage: %s --current-table=validator_stats --destination-table=validator_stats_partitioned --partitions=64 --drop-existing --batch-size=20000 --sleep-between-batches=1s --rename-destination-on-complete=true\n", "validator_stats_partition")
