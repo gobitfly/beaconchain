@@ -258,6 +258,33 @@ func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash strin
 	return result, err
 }
 
+var adminPerks = t.PremiumPerks{
+	AdFree:                      false, // admins want to see ads to check ad configuration
+	ValidatorDashboards:         maxJsInt,
+	ValidatorsPerDashboard:      maxJsInt,
+	ValidatorGroupsPerDashboard: maxJsInt,
+	ShareCustomDashboards:       true,
+	ManageDashboardViaApi:       true,
+	BulkAdding:                  true,
+	ChartHistorySeconds: t.ChartHistorySeconds{
+		Epoch:  maxJsInt,
+		Hourly: maxJsInt,
+		Daily:  maxJsInt,
+		Weekly: maxJsInt,
+	},
+	EmailNotificationsPerDay:                    maxJsInt,
+	ConfigureNotificationsViaApi:                true,
+	ValidatorGroupNotifications:                 maxJsInt,
+	WebhookEndpoints:                            maxJsInt,
+	MobileAppCustomThemes:                       true,
+	MobileAppWidget:                             true,
+	MonitorMachines:                             maxJsInt,
+	MachineMonitoringHistorySeconds:             maxJsInt,
+	NotificationsMachineCustomThreshold:         true,
+	NotificationsValidatorDashboardRealTimeMode: true,
+	NotificationsValidatorDashboardGroupOffline: true,
+}
+
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 	// TODO @patrick post-beta improve and unmock
 	userInfo := &t.UserInfo{
@@ -431,6 +458,10 @@ func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.
 		userInfo.PremiumPerks.ValidatorsPerDashboard = productSummary.ValidatorsPerDashboardLimit
 	}
 
+	if userInfo.UserGroup == t.UserGroupAdmin {
+		userInfo.PremiumPerks = adminPerks
+	}
+
 	return userInfo, nil
 }
 
@@ -438,7 +469,7 @@ const hour uint64 = 3600
 const day = 24 * hour
 const week = 7 * day
 const month = 30 * day
-const fullHistory uint64 = 9007199254740991 // 2^53-1 (max int in JS)
+const maxJsInt uint64 = 9007199254740991 // 2^53-1 (max safe int in JS)
 
 var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 	ProductName: "Free",
@@ -631,7 +662,7 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 						Epoch:  3 * week,
 						Hourly: 6 * month,
 						Daily:  12 * month,
-						Weekly: fullHistory,
+						Weekly: maxJsInt,
 					},
 					EmailNotificationsPerDay:                    50,
 					ConfigureNotificationsViaApi:                true,
