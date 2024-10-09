@@ -906,25 +906,35 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 // Middlewares
 
 // returns a middleware that stores user id in context, using the provided function
-func GetUserIdStoreMiddleware(userIdFunc func(r *http.Request) (uint64, error)) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			userId, err := userIdFunc(r)
-			if err != nil {
-				if errors.Is(err, errUnauthorized) {
-					// if next handler requires authentication, it should return 'unauthorized' itself
-					next.ServeHTTP(w, r)
-				} else {
-					handleErr(w, r, err)
-				}
-				return
+func StoreUserIdMiddleware(next http.Handler, userIdFunc func(r *http.Request) (uint64, error)) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userId, err := userIdFunc(r)
+		if err != nil {
+			if errors.Is(err, errUnauthorized) {
+				// if next handler requires authentication, it should return 'unauthorized' itself
+				next.ServeHTTP(w, r)
+			} else {
+				handleErr(w, r, err)
 			}
-			ctx := r.Context()
-			ctx = context.WithValue(ctx, ctxUserIdKey, userId)
-			r = r.WithContext(ctx)
-			next.ServeHTTP(w, r)
-		})
-	}
+			return
+		}
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (h *HandlerService) StoreUserIdBySessionMiddleware(next http.Handler) http.Handler {
+	return StoreUserIdMiddleware(next, func(r *http.Request) (uint64, error) {
+		return h.GetUserIdBySession(r)
+	})
+}
+
+func (h *HandlerService) StoreUserIdByApiKeyMiddleware(next http.Handler) http.Handler {
+	return StoreUserIdMiddleware(next, func(r *http.Request) (uint64, error) {
+		return h.GetUserIdByApiKey(r)
+	})
 }
 
 // returns a middleware that checks if user has access to dashboard when a primary id is used
@@ -966,9 +976,8 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// returns a middleware that checks if user has premium perk to use public validator dashboard api
-// in the middleware chain, this should be used after GetVDBAuthMiddleware
-func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Handler {
+// Common middleware logic for checking user premium perks
+func (h *HandlerService) PremiumPerkCheckMiddleware(next http.Handler, hasRequiredPerk func(premiumPerks types.PremiumPerks) bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get user id from context
 		userId, err := GetUserIdByContext(r)
@@ -976,16 +985,35 @@ func (h *HandlerService) ManageViaApiCheckMiddleware(next http.Handler) http.Han
 			handleErr(w, r, err)
 			return
 		}
+
+		// get user info
 		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
 		if err != nil {
 			handleErr(w, r, err)
 			return
 		}
-		if !userInfo.PremiumPerks.ManageDashboardViaApi {
-			handleErr(w, r, newForbiddenErr("user does not have access to public validator dashboard endpoints"))
+
+		// check if user has the required premium perk
+		if !hasRequiredPerk(userInfo.PremiumPerks) {
+			handleErr(w, r, newForbiddenErr("users premium perks do not allow usage of this endpoint"))
 			return
 		}
+
 		next.ServeHTTP(w, r)
+	})
+}
+
+// Middleware for managing dashboards via API
+func (h *HandlerService) ManageDashboardsViaApiCheckMiddleware(next http.Handler) http.Handler {
+	return h.PremiumPerkCheckMiddleware(next, func(premiumPerks types.PremiumPerks) bool {
+		return premiumPerks.ManageDashboardViaApi
+	})
+}
+
+// Middleware for managing notifications via API
+func (h *HandlerService) ManageNotificationsViaApiCheckMiddleware(next http.Handler) http.Handler {
+	return h.PremiumPerkCheckMiddleware(next, func(premiumPerks types.PremiumPerks) bool {
+		return premiumPerks.ConfigureNotificationsViaApi
 	})
 }
 
