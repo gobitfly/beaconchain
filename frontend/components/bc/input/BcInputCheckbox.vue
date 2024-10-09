@@ -15,9 +15,8 @@ const input = defineModel<boolean>()
 
 <template>
   <BcInputError :error>
-    <span>
+    <span v-if="label">
       <label
-        v-if="label"
         class="label"
         :for="id"
       >

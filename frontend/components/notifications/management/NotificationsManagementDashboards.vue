@@ -167,12 +167,12 @@ type Dialog = 'delete' | 'networks' | 'subscriptions' | 'webhook'
 const onEdit = (col: Dialog, row: WrappedRow) => {
   const dialogProps = {
     dashboardType: row.dashboard_type,
-    initialSettings: row.settings,
     saveUserSettings: (settings: AllOptions) =>
       debouncer.bounce({
         row,
         settings,
       }, true, true),
+    settings: row.settings,
   }
   switch (col) {
     case 'delete':

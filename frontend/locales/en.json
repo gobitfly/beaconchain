@@ -807,7 +807,6 @@
           "option": "ERC20 token transfers",
           "placeholder": "value ≥ $0"
         },
-        "explanation": "",
         "is_erc20_token_transfers_subscribed": {
           "option": "ERC20 token transfers"
         },
@@ -837,16 +836,16 @@
           "option": "Networks"
         }
       },
-      "button": "Close",
-      "dialog_title": "Edit Subscriptions",
       "error_group": "Notification subscriptions",
       "error_message": "We could not save your preferences.",
       "error_title": "Error",
+      "title": "Edit Subscriptions",
       "validators": {
         "all": {
           "option": "All events"
         },
-        "explanation": "All notifications are sent after network finality (~{count} min).",
+        "explanation": "All notifications are sent after network finality (~20min).",
+        "group_is_offline": "Group is offline",
         "group_offline_threshold": {
           "hint": [
             "We will trigger a notification:",
@@ -857,7 +856,6 @@
             "Note:",
             "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
           ],
-          "option": "Group is offline",
           "placeholder": ""
         },
         "is_attestations_missed_subscribed": {
@@ -887,12 +885,12 @@
             "Once the validator has been offline for 3 epochs.",
             "Every 32 Epochs (~3 hours) during your downtime.",
             "Once you are back online again."
-          ],
-          "option": "Validator is offline"
+          ]
         },
         "is_withdrawal_processed_subscribed": {
           "option": "Withdrawal processed"
-        }
+        },
+        "validator_offline":"Validator is offline"
       }
     },
     "tabs": {
