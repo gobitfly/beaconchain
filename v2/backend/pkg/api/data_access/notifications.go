@@ -840,7 +840,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			device_identifier,
 			created_ts,
 			device_name,
-			notify_enabled
+			COALESCE(notify_enabled, false) AS notify_enabled
 		FROM users_devices
 		WHERE user_id = $1`, userId)
 		if err != nil {
