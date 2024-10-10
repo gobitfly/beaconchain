@@ -13,6 +13,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -67,7 +68,7 @@ const (
 )
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
-	var response *t.NotificationOverviewData
+	response := t.NotificationOverviewData{}
 	eg := errgroup.Group{}
 
 	// enabled channels
@@ -77,7 +78,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			Active  bool   `db:"active"`
 		}
 
-		err := d.userReader.GetContext(ctx, &channels, `SELECT channel, active FROM users_notification_channels WHERE user_id = $1`, userId)
+		err := d.userReader.SelectContext(ctx, &channels, `SELECT channel, active FROM users_notification_channels WHERE user_id = $1`, userId)
 		if err != nil {
 			return err
 		}
@@ -94,7 +95,6 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 	})
 
 	getMostNotifiedGroups := func(historyTable, groupsTable string) ([3]string, error) {
-		var mostNotifiedGroups [3]string
 		query := goqu.Dialect("postgres").
 			From(goqu.T(historyTable).As("history")).
 			Select(
@@ -122,11 +122,17 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 				goqu.Ex{"groups.id": goqu.I("history.group_id")},
 			))
 
+		mostNotifiedGroups := [3]string{}
 		querySql, args, err := query.Prepared(true).ToSQL()
 		if err != nil {
 			return mostNotifiedGroups, err
 		}
-		err = d.alloyReader.SelectContext(ctx, &mostNotifiedGroups, querySql, args...)
+		res := []string{}
+		err = d.alloyReader.SelectContext(ctx, &res, querySql, args...)
+		if err != nil {
+			return mostNotifiedGroups, err
+		}
+		copy(mostNotifiedGroups[:], res)
 		return mostNotifiedGroups, err
 	}
 
@@ -136,29 +142,36 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		response.VDBMostNotifiedGroups, err = getMostNotifiedGroups("users_val_dashboards_notifications_history", "users_val_dashboards_groups")
 		return err
 	})
-	eg.Go(func() error {
+	// TODO account dashboards
+	/*eg.Go(func() error {
 		var err error
 		response.VDBMostNotifiedGroups, err = getMostNotifiedGroups("users_acc_dashboards_notifications_history", "users_acc_dashboards_groups")
 		return err
-	})
+	})*/
 
 	// 24h counts
 	eg.Go(func() error {
 		var err error
 		day := time.Now().Truncate(utils.Day).Unix()
-		response.Last24hEmailsCount, err = d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("n_mails:%d:%d", userId, day)).Uint64()
+		getMessageCount := func(prefix string) (uint64, error) {
+			res := d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("%s:%d:%d", prefix, userId, day))
+			if res.Err() == redis.Nil {
+				return 0, nil
+			} else if res.Err() != nil {
+				return 0, res.Err()
+			}
+			return res.Uint64()
+		}
+		response.Last24hPushCount, err = getMessageCount("n_mails")
 		if err != nil {
 			return err
 		}
-		response.Last24hPushCount, err = d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("n_push:%d:%d", userId, day)).Uint64()
+		response.Last24hPushCount, err = getMessageCount("n_push")
 		if err != nil {
 			return err
 		}
-		response.Last24hWebhookCount, err = d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("n_webhook:%d:%d", userId, day)).Uint64()
-		if err != nil {
-			return err
-		}
-		return nil
+		response.Last24hPushCount, err = getMessageCount("n_webhook")
+		return err
 	})
 
 	// subscription counts
@@ -195,12 +208,12 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			return err
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &response, querySql, args...)
+		err = d.alloyReader.GetContext(ctx, &response, querySql, args...)
 		return err
 	})
 
 	err := eg.Wait()
-	return response, err
+	return &response, err
 }
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	return d.dummy.GetDashboardNotifications(ctx, userId, chainIds, cursor, colSort, search, limit)
