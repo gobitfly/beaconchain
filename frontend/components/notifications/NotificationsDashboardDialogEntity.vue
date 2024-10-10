@@ -7,6 +7,7 @@ import {
   faFileSignature,
   faGlobe,
   faMoneyBill,
+  faPowerOff,
   faUserSlash,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
@@ -34,9 +35,19 @@ watch(details, () => {
   //   identifier: props.value?.identifier ?? '',
   // })
 })
+
 // 🥺
+const validatorsOffline = computed(() => {
+  return details.value?.data?.validator_offline
+})
+const groupsOffline = computed(() => {
+  return details.value?.data?.group_offline
+})
 const validatorsBackOnline = computed(() => {
   return details.value?.data?.validator_back_online
+})
+const attestationsMissed = computed(() => {
+  return details.value?.data?.attestation_missed
 })
 const groupsBackOnline = computed(() => {
   return details.value?.data?.group_back_online
@@ -53,10 +64,7 @@ const slashed = computed(() => {
 const syncCommittee = computed(() => {
   return details.value?.data?.sync_committee
 })
-const attestaitonMissed = computed(() => {
-  return details.value?.data?.attestation_missed
-})
-const withdrawl = computed(() => {
+const withdrawls = computed(() => {
   return details.value?.data?.withdrawal
 })
 const validatorsOfflineReminder = computed(() => {
@@ -65,14 +73,24 @@ const validatorsOfflineReminder = computed(() => {
 const groupsOfflineReminder = computed(() => {
   return details.value?.data?.group_offline_reminder
 })
+const upcomingProposals = computed(() => {
+  return details.value?.data?.upcoming_proposals
+})
+// Todo: 🚨 Add it when BEDS-587 is merged.
+// const max_collateral = computed(() => {
+//   return details.value?.data?.max_collateral
+// })
+// const min_collateral = computed(() => {
+//   return details.value?.data?.min_collateral
+// })
 </script>
 
 <template>
   <!-- <pre>
-    {{ props }}
+    {{ details }}
   </pre> -->
   <div class="notifications-dashboard-dialog-entity">
-    <header>
+    <header class="notifications-dashboard-dialog-entity__header">
       <h2>
         <BcText
           variant="lg"
@@ -89,6 +107,7 @@ const groupsOfflineReminder = computed(() => {
       <h3>
         {{ props?.group_name }}
       </h3>
+      <div id="notifications-management-search-placholder" />
     </header>
     <main
       v-if="details?.data"
@@ -106,55 +125,53 @@ const groupsOfflineReminder = computed(() => {
         </span>
       </p>
     </details> -->
+      <!-- validator offline -->
       <BcAccordion
-        :items="groupsBackOnline"
+        :items="validatorsOffline"
       >
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.group_back_online', [groupsBackOnline?.length ?? 0]) }}
-        </template>
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faGlobe" class="notifications-dashboard-dialog-entity__icon__green" />
+          <FontAwesomeIcon :icon="faPowerOff" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
-        <template #item="{ item: group }">
-          <span>
-            {{ group.group_name }}
-          </span>
-          <span>
-            [{{ group.epoch_count }}&nbsp;{{ $t('common.epoch', group.epoch_count) }}]
-          </span>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.validatore_offline', [validatorsOffline?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: validatorOffline }">
           <BcLink
-            :to="`/dashboard/${group.dashboard_id}`"
+            to=""
           >
-            <!-- Todo: 🚨 put in dashboard name here -->
-            (Dashboard {{ group.dashboard_id }})
+            {{ validatorOffline }}
           </BcLink>
+          <!--
+            this will remove white space in html
+          -->
         </template>
       </BcAccordion>
       <BcAccordion
-        :items="validatorsBackOnline"
+        :items="groupsOffline"
       >
-        <template #headingIcon>
-          <FontAwesomeIcon :icon="faCube" class="notifications-dashboard-dialog-entity__icon__red" />
-        </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.validator_back_online', [validatorsBackOnline?.length ?? 0]) }}
+          {{ $t('notifications.dashboards.dialog.entity.group_offline', [groupsOffline?.length ?? 0]) }}
         </template>
-        <template #item="{ item: validator }">
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faPowerOff" class="notifications-dashboard-dialog-entity__icon__red" />
+        </template>
+        <template #item="{ item: groupOffline }">
+          <span>
+            {{ groupOffline.group_name }}
+          </span>
+
           <BcLink
-            :to="`/validator/{{ validator.index }}`"
+            :to="`/dashboard/${groupOffline.dashboard_id}`"
           >
-            {{ validator.index }}
+            ({{ groupOffline.dashboard_id }})
           </BcLink>
-          ({{ validator.epoch_count }} {{ $t('common.epoch', validator.epoch_count) }})<!--
-            this will remove white space in html
-          -->
         </template>
       </BcAccordion>
       <BcAccordion
         :items="proposalsMissed"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faAlarmSnooze" class="notifications-dashboard-dialog-entity__icon__red" />
+          <FontAwesomeIcon :icon="faCube" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.proposal_missed', [proposalsMissed?.length ?? 0]) }}
@@ -218,7 +235,7 @@ const groupsOfflineReminder = computed(() => {
         :items="syncCommittee"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faArrowsRotate" class="notifications-dashboard-dialog-entity__icon__red" />
+          <FontAwesomeIcon :icon="faArrowsRotate" class="notifications-dashboard-dialog-entity__icon__green" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.sync_comittee', [syncCommittee?.length ?? 0]) }}
@@ -232,54 +249,32 @@ const groupsOfflineReminder = computed(() => {
           -->
         </template>
       </BcAccordion>
-      <BcAccordion
-        :items="proposalsMissed"
-      >
-        <template #headingIcon>
-          <FontAwesomeIcon :icon="faCube" class="notifications-dashboard-dialog-entity__icon__red" />
-        </template>
+      <BcAccordion :items="attestationsMissed">
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.proposal_done', [proposalsMissed?.length ?? 0]) }}
+          {{ $t('notifications.dashboards.dialog.entity.attestation_missed', [attestationsMissed?.length ?? 0]) }}
         </template>
-        <template #item="{ item: proposal }">
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faGlobe" class="notifications-dashboard-dialog-entity__icon__red" />
+        </template>
+        <template #item="{ item: attestationMissed }">
           <BcLink
             to=""
           >
-            {{ proposal.index }}
+            {{ attestationMissed.blocks }}
           </BcLink>
-          {{ proposal.blocks }}<!--
+          <!--
             this will remove white space in html
           -->
         </template>
       </BcAccordion>
       <BcAccordion
-        :items="attestaitonMissed"
+        :items="withdrawls"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faFileSignature" class="notifications-dashboard-dialog-entity__icon__red" />
+          <FontAwesomeIcon :icon="faMoneyBill" class="notifications-dashboard-dialog-entity__icon__green" />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.attestation_missed', [attestaitonMissed?.length ?? 0]) }}
-        </template>
-        <template #item="{ item: attestaiton }">
-          <BcLink
-            to=""
-          >
-            {{ attestaiton.index }}
-          </BcLink>
-          {{ attestaiton.blocks }}<!--
-            this will remove white space in html
-          -->
-        </template>
-      </BcAccordion>
-      <BcAccordion
-        :items="withdrawl"
-      >
-        <template #headingIcon>
-          <FontAwesomeIcon :icon="faMoneyBill" class="notifications-dashboard-dialog-entity__icon__red" />
-        </template>
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.withdrawl', [withdrawl?.length ?? 0]) }}
+          {{ $t('notifications.dashboards.dialog.entity.withdrawl', [withdrawls?.length ?? 0]) }}
         </template>
         <template #item="{ item: withdrawl }">
           <BcLink
@@ -292,13 +287,57 @@ const groupsOfflineReminder = computed(() => {
         </template>
       </BcAccordion>
       <BcAccordion
+        :items="validatorsBackOnline"
+      >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faGlobe" class="notifications-dashboard-dialog-entity__icon__green" />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.validator_back_online', [validatorsBackOnline?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: validator }">
+          <BcLink
+            :to="`/validator/{{ validator.index }}`"
+          >
+            {{ validator.index }}
+          </BcLink>
+          ({{ validator.epoch_count }} {{ $t('common.epoch', validator.epoch_count) }})<!--
+            this will remove white space in html
+          -->
+        </template>
+      </BcAccordion>
+      <BcAccordion
+        :items="groupsBackOnline"
+      >
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.group_back_online', [groupsBackOnline?.length ?? 0]) }}
+        </template>
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faGlobe" class="notifications-dashboard-dialog-entity__icon__green" />
+        </template>
+        <template #item="{ item: group }">
+          <span>
+            {{ group.group_name }}
+          </span>
+          <span>
+            [{{ group.epoch_count }}&nbsp;{{ $t('common.epoch', group.epoch_count) }}]
+          </span>
+          <BcLink
+            :to="`/dashboard/${group.dashboard_id}`"
+          >
+            <!-- Todo: 🚨 put in dashboard name here -->
+            (Dashboard {{ group.dashboard_id }})
+          </BcLink>
+        </template>
+      </BcAccordion>
+      <BcAccordion
         :items="validatorsOfflineReminder"
       >
         <template #headingIcon>
           <FontAwesomeIcon :icon="faAlarmSnooze" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.attestation_missed', [validatorsOfflineReminder?.length ?? 0]) }}
+          {{ $t('notifications.dashboards.dialog.entity.validator_offline_reminder', [validatorsOfflineReminder?.length ?? 0]) }}
         </template>
         <template #item="{ item: validatorOfflineReminder }">
           <BcLink
@@ -315,7 +354,7 @@ const groupsOfflineReminder = computed(() => {
           <FontAwesomeIcon :icon="faAlarmSnooze" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.withdrawl', [groupsOfflineReminder?.length ?? 0]) }}
+          {{ $t('notifications.dashboards.dialog.entity.group_offline_reminder', [groupsOfflineReminder?.length ?? 0]) }}
         </template>
         <template #item="{ item: groupOfflineReminder }">
           <BcLink
@@ -327,6 +366,27 @@ const groupsOfflineReminder = computed(() => {
           -->
         </template>
       </BcAccordion>
+      <BcAccordion
+        :items="upcomingProposals"
+      >
+        <template #headingIcon>
+          <FontAwesomeIcon :icon="faCube" class="notifications-dashboard-dialog-entity__icon__green" />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.upcoming_proposal', [upcomingProposals?.length ?? 0]) }}
+        </template>
+        <template #item="{ item: upcomingProposal }">
+          <BcLink
+            to=""
+          >
+            {{ upcomingProposal }}
+          </BcLink>
+          ({{ upcomingProposal }})<!-- this will remove white space in html
+          -->
+        </template>
+      </BcAccordion>
+      <!-- 🚨 TODO: Min Collateral reached -->
+      <!-- 🚨 TODO: Max Collateral reached -->
     </main>
   </div>
 </template>
@@ -334,9 +394,18 @@ const groupsOfflineReminder = computed(() => {
 <style scoped lang="scss">
 .notifications-dashboard-dialog-entity {
   width: 44rem;
+  height:40.875rem;
+}
+.notifications-dashboard-dialog-entity__header{
+  display: flex;
+  flex-direction: column;
+  gap: 0.938rem;
 }
 .notifications-dashboard-dialog-entity__content {
   margin-top: 1.25rem;
+  display:flex;
+  flex-direction: column;
+  gap: 0.625rem;
 }
 .notifications-dashboard-dialog-entity__icon__green {
   color: #7DC382;

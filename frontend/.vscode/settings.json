@@ -8,6 +8,7 @@
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
     "NotificationsClientsTable",
+    "NotificationsDashboardDialogEntity",
     "NotificationsManagementModalWebhook",
     "NotificationsManagmentMachines",
     "NotificationsNetworkTable",
