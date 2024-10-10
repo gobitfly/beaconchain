@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -103,14 +102,20 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
 	var notificationDetails t.NotificationValidatorDashboardDetail
 
-	searchEnabled := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
-	var searchIndex uint64
-	if searchEnabled {
-		idx, err := strconv.Atoi(search)
-		if err != nil {
-			return nil, err
+	var searchIndices []uint64
+	// TODO move to api layer
+	searchIndicesStrings := strings.Split(search, ",")
+	for _, searchIndex := range searchIndicesStrings {
+		idx, err := strconv.Atoi(searchIndex)
+		if err == nil {
+			searchIndices = append(searchIndices, uint64(idx))
 		}
-		searchIndex = uint64(idx)
+	}
+
+	searchEnabled := len(searchIndices) > 0
+	searchIndexSet := make(map[uint64]bool)
+	for _, searchIndex := range searchIndices {
+		searchIndexSet[searchIndex] = true
 	}
 
 	var result []byte
@@ -157,7 +162,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorProposalNotification")
 			}
-			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
 			if _, ok := proposalsInfo[curNotification.ValidatorIndex]; !ok {
@@ -177,7 +182,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorAttestationNotification")
 			}
-			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
 			if curNotification.Status == 0 {
@@ -189,7 +194,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorGotSlashedNotification")
 			}
-			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
 			notificationDetails.Slashed = append(notificationDetails.Slashed, curNotification.ValidatorIndex)
@@ -198,7 +203,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorIsOfflineNotification")
 			}
-			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
 			if curNotification.IsOffline {
@@ -227,7 +232,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorWithdrawalNotification")
 			}
-			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
 			// TODO might need to take care of automatic + exit withdrawal happening in the same epoch ?
@@ -261,7 +266,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to SyncCommitteeSoonNotification")
 			}
-			if searchEnabled && curNotification.Validator != searchIndex {
+			if searchEnabled && !searchIndexSet[curNotification.Validator] {
 				continue
 			}
 			notificationDetails.SyncCommittee = append(notificationDetails.SyncCommittee, curNotification.Validator)
