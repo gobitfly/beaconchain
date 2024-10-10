@@ -41,6 +41,8 @@ export enum API_PATH {
   LOGOUT = '/logout',
   NOTIFICATIONS_CLIENTS = '/notifications/clients',
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
+  NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT = '/notifications/dashboards/details/account',
+  NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR = '/notifications/dashboards/details/validator',
   NOTIFICATIONS_MACHINE = '/notifications/machines',
   NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION = '/notifications/management/clients/set_notifications',
   NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION = '/notifications/management/account_dashboard/set_notifications',
@@ -294,6 +296,18 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
     path: '/users/me/notifications/dashboards',
+  },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT]: {
+    getPath: pathValues =>
+      `/users/me/notifications/account-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}/epochs/${pathValues?.epoch}`,
+    path: '/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}',
+  },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR]: {
+    getPath: pathValues =>
+      `/users/me/notifications/validator-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}/epochs/${pathValues?.epoch}`,
+    path: '/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}',
   },
   [API_PATH.NOTIFICATIONS_MACHINE]: {
     path: '/users/me/notifications/machines',

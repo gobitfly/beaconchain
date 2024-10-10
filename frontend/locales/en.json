@@ -613,6 +613,18 @@
           "heading":"Delete all notifications",
           "paragraph": "Do you really want to delete all notifications for this dashboard?"
           },
+        "entity": {
+          "attestation_missed":"Attestation missed ({0})",
+          "group_back_online": "Group back online ({0})",
+          "proposal_done": "Proposal done ({0})",
+          "proposal_missed": "Proposal missed ({0})",
+          "slashed": "Slashed ({0})",
+          "sync_comittee": "Synce Commitee ({0})",
+          "title": "Notifications ({0})",
+          "validator_back_online": "Validator back online ({0})",
+          "validator_offline_reminder": "Validator offline reminder ({0})",
+          "withdrawl": "Withdrawal ({0})"
+        },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
           "_link": "Discord webhook",
