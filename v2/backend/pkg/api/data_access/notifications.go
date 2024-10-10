@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -101,6 +103,16 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
 	var notificationDetails t.NotificationValidatorDashboardDetail
 
+	searchEnabled := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
+	var searchIndex uint64
+	if searchEnabled {
+		idx, err := strconv.Atoi(search)
+		if err != nil {
+			return nil, err
+		}
+		searchIndex = uint64(idx)
+	}
+
 	var result []byte
 	query := `SELECT details FROM users_val_dashboards_notifications_history WHERE dashboard_id = $1 AND group_id = $2 AND epoch = $3`
 	err := d.alloyReader.SelectContext(ctx, &result, query)
@@ -145,6 +157,9 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorProposalNotification")
 			}
+			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+				continue
+			}
 			if _, ok := proposalsInfo[curNotification.ValidatorIndex]; !ok {
 				proposalsInfo[curNotification.ValidatorIndex] = &ProposalInfo{}
 			}
@@ -162,6 +177,9 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorAttestationNotification")
 			}
+			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+				continue
+			}
 			if curNotification.Status == 0 {
 				continue
 			}
@@ -171,11 +189,17 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorGotSlashedNotification")
 			}
+			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+				continue
+			}
 			notificationDetails.Slashed = append(notificationDetails.Slashed, curNotification.ValidatorIndex)
 		case types.ValidatorIsOfflineEventName:
 			curNotification, ok := not.(notification.ValidatorIsOfflineNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorIsOfflineNotification")
+			}
+			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+				continue
 			}
 			if curNotification.IsOffline {
 				notificationDetails.ValidatorOffline = append(notificationDetails.ValidatorOffline, curNotification.ValidatorIndex)
@@ -198,11 +222,13 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				notificationDetails.GroupBackOnline = ...
 			}
 			*/
-			continue
 		case types.ValidatorReceivedWithdrawalEventName:
 			curNotification, ok := not.(notification.ValidatorWithdrawalNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorWithdrawalNotification")
+			}
+			if searchEnabled && curNotification.ValidatorIndex != searchIndex {
+				continue
 			}
 			// TODO might need to take care of automatic + exit withdrawal happening in the same epoch ?
 			notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.IndexBlocks{curNotification.ValidatorIndex, []uint64{curNotification.Slot}})
@@ -214,12 +240,10 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			types.MonitoringMachineMemoryUsageEventName,
 			types.TaxReportEventName:
 			// not vdb notifications, skip
-			continue
 		case types.ValidatorDidSlashEventName:
 		case types.RocketpoolCommissionThresholdEventName,
 			types.RocketpoolNewClaimRoundStartedEventName:
 			// these could maybe returned later (?)
-			continue
 		case types.RocketpoolCollateralMinReachedEventName, types.RocketpoolCollateralMaxReachedEventName:
 			_, ok := not.(notification.RocketpoolNotification)
 			if !ok {
@@ -236,6 +260,9 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			curNotification, ok := not.(notification.SyncCommitteeSoonNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to SyncCommitteeSoonNotification")
+			}
+			if searchEnabled && curNotification.Validator != searchIndex {
+				continue
 			}
 			notificationDetails.SyncCommittee = append(notificationDetails.SyncCommittee, curNotification.Validator)
 		default:
