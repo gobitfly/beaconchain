@@ -315,6 +315,8 @@ type Config struct {
 
 	ApiKeySecret     string   `yaml:"apiKeySecret" envconfig:"API_KEY_SECRET"`
 	CorsAllowedHosts []string `yaml:"corsAllowedHosts" envconfig:"CORS_ALLOWED_HOSTS"`
+
+	SkipDataAccessServiceInitWait bool `yaml:"skipDataAccessServiceInitWait" envconfig:"SKIP_DATA_ACCESS_SERVICE_INIT_WAIT"`
 }
 
 type InternalAlertDiscord struct {
