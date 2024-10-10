@@ -1,5 +1,6 @@
 {
   "conventionalCommits.scopes": [
+    "BcAccordion",
     "BcButton",
     "BcLink",
     "BcTablePager",
@@ -8,6 +9,8 @@
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
     "NotificationsClientsTable",
+    "NotificationsDashboardDialogEntity",
+    "NotificationsManagementModalWebhook",
     "NotificationsManagmentMachines",
     "NotificationsNetworkTable",
     "NotificationsOverview",

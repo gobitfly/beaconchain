@@ -9,6 +9,7 @@ defineProps<{
 <template>
   <NuxtLink
     :to
+    class="link"
     :no-prefetch="true"
   >
     <template #default>

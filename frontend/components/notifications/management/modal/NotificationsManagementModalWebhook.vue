@@ -150,7 +150,6 @@ const id = useId()
     </BcFormRow>
     <div class="notifications-management-dialog-webhook-footer">
       <BcButton
-        font-awesome-icon="faPaperPlane"
         variant="secondary"
         :is-aria-disabled="!isFormValid || !webhook_url"
         @click="handleTestNotification()"
