@@ -1794,42 +1794,6 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 	returnOk(w, r, response)
 }
 
-// PublicGetValidatorDashboardNodeRocketPool godoc
-//
-//	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			node_address	path		string	true	"The address of the node."
-//	@Success		200				{object}	types.GetValidatorDashboardNodeRocketPoolResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address} [get]
-func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	// support ENS names ?
-	nodeAddress := v.checkAddress(vars["node_address"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-
-	data, err := h.dai.GetValidatorDashboardNodeRocketPool(r.Context(), *dashboardId, nodeAddress)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardNodeRocketPoolResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetValidatorDashboardRocketPoolMinipools godoc
 //
 //	@Description	Get minipools information for a specified Rocket Pool node associated with a specified dashboard.
