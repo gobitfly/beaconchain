@@ -616,14 +616,21 @@
         "entity": {
           "attestation_missed":"Attestation missed ({0})",
           "group_back_online": "Group back online ({0})",
+          "group_offline": "Group Offline ({0})",
+          "group_offline_reminder": "Group Offline reminder ({0})",
+          "max_collteral":"Maximum Collateral reached ({0})",
+          "min_collteral":"Minimum Collateral reached ({0})",
           "proposal_done": "Proposal done ({0})",
           "proposal_missed": "Proposal missed ({0})",
           "slashed": "Slashed ({0})",
           "sync_comittee": "Synce Commitee ({0})",
-          "title": "Notifications ({0})",
+          "title": "Notifications",
+          "upcoming_proposal": "Upcoming proposal ({0})",
           "validator_back_online": "Validator back online ({0})",
-          "validator_offline_reminder": "Validator offline reminder ({0})",
+          "validator_offline_reminder": "Validator Offline reminder ({0})",
+          "validatore_offline": "Validator Offline ({0})",
           "withdrawl": "Withdrawal ({0})"
+
         },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
