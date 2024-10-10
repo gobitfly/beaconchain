@@ -118,18 +118,7 @@ func (n *ValidatorProposalNotification) GetLegacyInfo() string {
 }
 
 func (n *ValidatorProposalNotification) GetTitle() string {
-	switch n.Status {
-	case 0:
-		return "Block Proposal Scheduled"
-	case 1:
-		return "New Block Proposal"
-	case 2:
-		return "Block Proposal Missed"
-	case 3:
-		return "Block Proposal Missed (Orphaned)"
-	default:
-		return "-"
-	}
+	return n.GetLegacyTitle()
 }
 
 func (n *ValidatorProposalNotification) GetLegacyTitle() string {
@@ -176,11 +165,7 @@ func (n *ValidatorIsOfflineNotification) GetInfo(format types.NotificationFormat
 }
 
 func (n *ValidatorIsOfflineNotification) GetTitle() string {
-	if n.IsOffline {
-		return "Validator is Offline"
-	} else {
-		return "Validator Back Online"
-	}
+	return n.GetLegacyTitle()
 }
 
 func (n *ValidatorIsOfflineNotification) GetLegacyInfo() string {
@@ -299,13 +284,7 @@ func (n *ValidatorAttestationNotification) GetInfo(format types.NotificationForm
 }
 
 func (n *ValidatorAttestationNotification) GetTitle() string {
-	switch n.Status {
-	case 0:
-		return "Attestation Missed"
-	case 1:
-		return "Attestation Submitted"
-	}
-	return "-"
+	return n.GetLegacyTitle()
 }
 
 func (n *ValidatorAttestationNotification) GetLegacyInfo() string {
@@ -351,7 +330,7 @@ func (n *ValidatorGotSlashedNotification) GetInfo(format types.NotificationForma
 }
 
 func (n *ValidatorGotSlashedNotification) GetTitle() string {
-	return "Validator got Slashed"
+	return n.GetLegacyTitle()
 }
 
 func (n *ValidatorGotSlashedNotification) GetLegacyInfo() string {
@@ -387,7 +366,7 @@ func (n *ValidatorWithdrawalNotification) GetInfo(format types.NotificationForma
 }
 
 func (n *ValidatorWithdrawalNotification) GetTitle() string {
-	return "Withdrawal Processed"
+	return n.GetLegacyTitle()
 }
 
 func (n *ValidatorWithdrawalNotification) GetLegacyInfo() string {
@@ -448,7 +427,7 @@ func (n *EthClientNotification) GetInfo(format types.NotificationFormat) string 
 }
 
 func (n *EthClientNotification) GetTitle() string {
-	return fmt.Sprintf("New %s update", n.EthClient)
+	return n.GetLegacyTitle()
 }
 
 func (n *EthClientNotification) GetLegacyInfo() string {
@@ -480,31 +459,11 @@ func (n *MonitorMachineNotification) GetEntitiyId() string {
 }
 
 func (n *MonitorMachineNotification) GetInfo(format types.NotificationFormat) string {
-	switch n.EventName {
-	case types.MonitoringMachineDiskAlmostFullEventName:
-		return fmt.Sprintf(`Your staking machine "%v" is running low on storage space.`, n.MachineName)
-	case types.MonitoringMachineOfflineEventName:
-		return fmt.Sprintf(`Your staking machine "%v" might be offline. It has not been seen for a couple minutes now.`, n.MachineName)
-	case types.MonitoringMachineCpuLoadEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has reached your configured CPU usage threshold.`, n.MachineName)
-	case types.MonitoringMachineMemoryUsageEventName:
-		return fmt.Sprintf(`Your staking machine "%v" has reached your configured RAM threshold.`, n.MachineName)
-	}
-	return ""
+	return n.GetLegacyInfo()
 }
 
 func (n *MonitorMachineNotification) GetTitle() string {
-	switch n.EventName {
-	case types.MonitoringMachineDiskAlmostFullEventName:
-		return "Storage Warning"
-	case types.MonitoringMachineOfflineEventName:
-		return "Staking Machine Offline"
-	case types.MonitoringMachineCpuLoadEventName:
-		return "High CPU Load"
-	case types.MonitoringMachineMemoryUsageEventName:
-		return "Memory Warning"
-	}
-	return ""
+	return n.GetLegacyTitle()
 }
 
 func (n *MonitorMachineNotification) GetLegacyInfo() string {
@@ -582,12 +541,11 @@ func (n *TaxReportNotification) GetEmailAttachment() *types.EmailAttachment {
 }
 
 func (n *TaxReportNotification) GetInfo(format types.NotificationFormat) string {
-	generalPart := `Please find attached the income history of your selected validators.`
-	return generalPart
+	return n.GetLegacyInfo()
 }
 
 func (n *TaxReportNotification) GetTitle() string {
-	return "Income Report"
+	return n.GetLegacyTitle()
 }
 
 func (n *TaxReportNotification) GetLegacyInfo() string {
@@ -622,7 +580,7 @@ func (n *NetworkNotification) GetInfo(format types.NotificationFormat) string {
 }
 
 func (n *NetworkNotification) GetTitle() string {
-	return "Beaconchain Network Issues"
+	return n.GetLegacyTitle()
 }
 
 func (n *NetworkNotification) GetLegacyInfo() string {
@@ -644,32 +602,11 @@ func (n *RocketpoolNotification) GetEntitiyId() string {
 }
 
 func (n *RocketpoolNotification) GetInfo(format types.NotificationFormat) string {
-	switch n.EventName {
-	case types.RocketpoolCommissionThresholdEventName:
-		return fmt.Sprintf(`The current RPL commission rate of %v has reached your configured threshold.`, n.ExtraData)
-	case types.RocketpoolNewClaimRoundStartedEventName:
-		return `A new reward round has started. You can now claim your rewards from the previous round.`
-	case types.RocketpoolCollateralMaxReachedEventName:
-		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
-	case types.RocketpoolCollateralMinReachedEventName:
-		return fmt.Sprintf(`Your RPL collateral has reached your configured threshold at %v%%.`, n.ExtraData)
-	}
-
-	return ""
+	return n.GetLegacyInfo()
 }
 
 func (n *RocketpoolNotification) GetTitle() string {
-	switch n.EventName {
-	case types.RocketpoolCommissionThresholdEventName:
-		return `Rocketpool Commission`
-	case types.RocketpoolNewClaimRoundStartedEventName:
-		return `Rocketpool Claim Available`
-	case types.RocketpoolCollateralMaxReachedEventName:
-		return `Rocketpool Max Collateral`
-	case types.RocketpoolCollateralMinReachedEventName:
-		return `Rocketpool Min Collateral`
-	}
-	return ""
+	return n.GetLegacyTitle()
 }
 
 func (n *RocketpoolNotification) GetLegacyInfo() string {
@@ -719,7 +656,7 @@ func (n *SyncCommitteeSoonNotification) GetInfo(format types.NotificationFormat)
 }
 
 func (n *SyncCommitteeSoonNotification) GetTitle() string {
-	return `Sync Committee Duty`
+	return n.GetLegacyTitle()
 }
 
 func (n *SyncCommitteeSoonNotification) GetLegacyInfo() string {
