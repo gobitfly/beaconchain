@@ -105,6 +105,47 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type NotificationSettingsCursor struct {
+	GenericCursor
+
+	IsAccountDashboard bool // if false it's a validator dashboard
+	DashboardId        uint64
+	GroupId            uint64
+}
+
+type NotificationMachinesCursor struct {
+	GenericCursor
+
+	MachineId      uint64
+	MachineName    string
+	EventType      string
+	EventThreshold float64
+	Epoch          uint64
+}
+
+type NotificationClientsCursor struct {
+	GenericCursor
+
+	Client string
+	Epoch  uint64
+}
+
+type NotificationRocketPoolsCursor struct {
+	GenericCursor
+
+	NodeAddress []byte
+	EventType   string
+	Epoch       uint64
+}
+
+type NotificationNetworksCursor struct {
+	GenericCursor
+
+	Network   uint64
+	Epoch     uint64
+	EventType string
+}
+
 type UserCredentialInfo struct {
 	Id             uint64 `db:"id"`
 	Email          string `db:"email"`
@@ -128,6 +169,12 @@ type BlocksCursor struct {
 type NetworkInfo struct {
 	ChainId uint64
 	Name    string
+}
+
+type ClientInfo struct {
+	Id       uint64
+	Name     string
+	Category string
 }
 
 // -------------------------
@@ -236,4 +283,21 @@ type MobileAppBundleStats struct {
 	TargetCount         int64  `db:"target_count"` // coalesce to -1 if column is null
 	DeliveryCount       int64  `db:"delivered_count"`
 	MaxNativeVersion    uint64 `db:"max_native_version"` // the max native version of the whole table for the given environment
+}
+
+// Notification structs
+
+type NotificationSettingsDefaultValues struct {
+	GroupOfflineThreshold             float64
+	MaxCollateralThreshold            float64
+	MinCollateralThreshold            float64
+	ERC20TokenTransfersValueThreshold float64
+
+	MachineStorageUsageThreshold float64
+	MachineCpuUsageThreshold     float64
+	MachineMemoryUsageThreshold  float64
+
+	GasAboveThreshold                 decimal.Decimal
+	GasBelowThreshold                 decimal.Decimal
+	NetworkParticipationRateThreshold float64
 }
