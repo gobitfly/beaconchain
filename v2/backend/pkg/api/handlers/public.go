@@ -2172,6 +2172,8 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
+const diffTolerance = 0.0001
+
 // PublicGetUserNotificationPairedDevices godoc
 //
 //	@Description	Get notification settings for the authenticated user. Excludes dashboard notification settings.
@@ -2207,7 +2209,6 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 
 	// if users premium perks do not allow custom thresholds, set them to default in the response
 	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
-	const diffTolerance = 0.0001
 	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold {
 		if math.Abs(userGeneralSettings.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance {
 			userGeneralSettings.MachineStorageUsageThreshold = defaultSettings.MachineStorageUsageThreshold
@@ -2272,9 +2273,11 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, err)
 		return
 	}
-	isCustomThresholdUsed := req.MachineStorageUsageThreshold != defaultSettings.MachineStorageUsageThreshold ||
-		req.MachineCpuUsageThreshold != defaultSettings.MachineCpuUsageThreshold ||
-		req.MachineMemoryUsageThreshold != defaultSettings.MachineMemoryUsageThreshold
+
+	// use tolarance for float comparison
+	isCustomThresholdUsed := math.Abs(req.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance ||
+		math.Abs(req.MachineCpuUsageThreshold-defaultSettings.MachineCpuUsageThreshold) > diffTolerance ||
+		math.Abs(req.MachineMemoryUsageThreshold-defaultSettings.MachineMemoryUsageThreshold) > diffTolerance
 
 	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold && isCustomThresholdUsed {
 		returnForbidden(w, r, errors.New("user does not have premium perks to set machine settings thresholds"))
