@@ -34,7 +34,7 @@ watch(details, () => {
   //   identifier: props.value?.identifier ?? '',
   // })
 })
-
+// 🥺
 const validatorsBackOnline = computed(() => {
   return details.value?.data?.validator_back_online
 })
@@ -113,7 +113,7 @@ const groupsOfflineReminder = computed(() => {
           {{ $t('notifications.dashboards.dialog.entity.group_back_online', [groupsBackOnline?.length ?? 0]) }}
         </template>
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faGlobe" />
+          <FontAwesomeIcon :icon="faGlobe" class="notifications-dashboard-dialog-entity__icon__green" />
         </template>
         <template #item="{ item: group }">
           <span>
@@ -134,7 +134,7 @@ const groupsOfflineReminder = computed(() => {
         :items="validatorsBackOnline"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faCube" />
+          <FontAwesomeIcon :icon="faCube" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.validator_back_online', [validatorsBackOnline?.length ?? 0]) }}
@@ -154,7 +154,7 @@ const groupsOfflineReminder = computed(() => {
         :items="proposalsMissed"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faCube" />
+          <FontAwesomeIcon :icon="faAlarmSnooze" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.proposal_missed', [proposalsMissed?.length ?? 0]) }}
@@ -178,7 +178,7 @@ const groupsOfflineReminder = computed(() => {
         :items="proposalsDone"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faCube" />
+          <FontAwesomeIcon :icon="faCube" class="notifications-dashboard-dialog-entity__icon__green" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.proposal_done', [proposalsDone?.length ?? 0]) }}
@@ -198,7 +198,7 @@ const groupsOfflineReminder = computed(() => {
         :items="slashed"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faUserSlash" />
+          <FontAwesomeIcon :icon="faUserSlash" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.slashed', [slashed?.length ?? 0]) }}
@@ -218,7 +218,7 @@ const groupsOfflineReminder = computed(() => {
         :items="syncCommittee"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faArrowsRotate" />
+          <FontAwesomeIcon :icon="faArrowsRotate" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.sync_comittee', [syncCommittee?.length ?? 0]) }}
@@ -236,7 +236,7 @@ const groupsOfflineReminder = computed(() => {
         :items="proposalsMissed"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faCube" />
+          <FontAwesomeIcon :icon="faCube" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.proposal_done', [proposalsMissed?.length ?? 0]) }}
@@ -256,7 +256,7 @@ const groupsOfflineReminder = computed(() => {
         :items="attestaitonMissed"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faFileSignature" />
+          <FontAwesomeIcon :icon="faFileSignature" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.attestation_missed', [attestaitonMissed?.length ?? 0]) }}
@@ -276,7 +276,7 @@ const groupsOfflineReminder = computed(() => {
         :items="withdrawl"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faMoneyBill" />
+          <FontAwesomeIcon :icon="faMoneyBill" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.withdrawl', [withdrawl?.length ?? 0]) }}
@@ -295,7 +295,7 @@ const groupsOfflineReminder = computed(() => {
         :items="validatorsOfflineReminder"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faAlarmSnooze" />
+          <FontAwesomeIcon :icon="faAlarmSnooze" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.attestation_missed', [validatorsOfflineReminder?.length ?? 0]) }}
@@ -312,7 +312,7 @@ const groupsOfflineReminder = computed(() => {
         :items="groupsOfflineReminder"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faAlarmSnooze" />
+          <FontAwesomeIcon :icon="faAlarmSnooze" class="notifications-dashboard-dialog-entity__icon__red" />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.withdrawl', [groupsOfflineReminder?.length ?? 0]) }}
@@ -337,5 +337,11 @@ const groupsOfflineReminder = computed(() => {
 }
 .notifications-dashboard-dialog-entity__content {
   margin-top: 1.25rem;
+}
+.notifications-dashboard-dialog-entity__icon__green {
+  color: #7DC382;
+}
+.notifications-dashboard-dialog-entity__icon__red {
+  color: #F3454A;
 }
 </style>
