@@ -61,19 +61,20 @@ type NotificationEventValidatorBackOnline struct {
 
 type NotificationValidatorDashboardDetail struct {
 	ValidatorOffline         []uint64                               `json:"validator_offline"` // validator indices
-	GroupOffline             []NotificationEventGroup               `json:"group_offline"`
+	GroupOffline             []NotificationEventGroup               `json:"group_offline"`     // TODO not filled yet
 	ProposalMissed           []IndexBlocks                          `json:"proposal_missed"`
 	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
-	UpcomingProposals        []uint64                               `json:"upcoming_proposals"` // slot numbers
+	UpcomingProposals        []IndexBlocks                          `json:"upcoming_proposals"`
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
 	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
-	AttestationMissed        []IndexBlocks                          `json:"attestation_missed"`
+	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
 	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
-	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices
-	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`
+	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
+	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
-	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`
-	// TODO min and max collateral events
+	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`      // TODO not filled yet
+	MinimumCollateralReached []Address                              `json:"min_collateral_reached"` // node addresses
+	MaximumCollateralReached []Address                              `json:"max_collateral_reached"` // node addresses
 }
 
 type InternalGetUserNotificationsValidatorDashboardResponse ApiDataResponse[NotificationValidatorDashboardDetail]
