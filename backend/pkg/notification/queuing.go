@@ -394,6 +394,7 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 			Email:       msg,
 			Attachments: attachments,
 			CreatedTs:   createdTs,
+			UserId:      userID,
 		})
 	}
 	return emails, nil
@@ -516,6 +517,7 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					}
 					transitPushContent := types.TransitPushContent{
 						Messages: []*messaging.Message{message},
+						UserId:   userID,
 					}
 
 					pushMessages = append(pushMessages, transitPushContent)
@@ -623,6 +625,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 											DiscordRequest: types.DiscordReq{
 												Username: utils.Config.Frontend.SiteDomain,
 											},
+											UserId: userID,
 										})
 										l_notifs++
 									}
@@ -663,6 +666,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 												Epoch:       n.GetEpoch(),
 												Target:      n.GetEventFilter(),
 											},
+											UserId: userID,
 										},
 									})
 								}

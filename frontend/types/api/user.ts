@@ -118,7 +118,9 @@ export interface PremiumPerks {
   mobile_app_widget: boolean;
   monitor_machines: number /* uint64 */;
   machine_monitoring_history_seconds: number /* uint64 */;
-  custom_machine_alerts: boolean;
+  notifications_machine_custom_threshold: boolean;
+  notifications_validator_dashboard_real_time_mode: boolean;
+  notifications_validator_dashboard_group_offline: boolean;
 }
 export interface StripeCreateCheckoutSession {
   sessionId?: string;

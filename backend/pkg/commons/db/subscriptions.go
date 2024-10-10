@@ -279,9 +279,43 @@ func UpdateSubscriptionLastSent(tx *sqlx.Tx, ts uint64, epoch uint64, subID uint
 }
 
 // CountSentMail increases the count of sent mails for this day.
-func CountSentMail(prefix, email string) (int64, error) {
+func CountSentMail(prefix string, userId types.UserId) (int64, error) {
 	day := time.Now().Truncate(utils.Day).Unix()
-	key := fmt.Sprintf("%s:%s:%d", prefix, email, day)
+	key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
+
+	pipe := PersistentRedisDbClient.TxPipeline()
+	incr := pipe.Incr(context.Background(), key)
+	pipe.Expire(context.Background(), key, utils.Day)
+	_, err := pipe.Exec(context.Background())
+
+	if incr.Err() != nil {
+		return 0, incr.Err()
+	}
+
+	return incr.Val(), err
+}
+
+// CountSentPush increases the count of sent push messages for this day.
+func CountSentPush(prefix string, userId types.UserId) (int64, error) {
+	day := time.Now().Truncate(utils.Day).Unix()
+	key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
+
+	pipe := PersistentRedisDbClient.TxPipeline()
+	incr := pipe.Incr(context.Background(), key)
+	pipe.Expire(context.Background(), key, utils.Day)
+	_, err := pipe.Exec(context.Background())
+
+	if incr.Err() != nil {
+		return 0, incr.Err()
+	}
+
+	return incr.Val(), err
+}
+
+// CountSentPush increases the count of sent webhook messages for this day.
+func CountSentWebhook(prefix string, userId types.UserId) (int64, error) {
+	day := time.Now().Truncate(utils.Day).Unix()
+	key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
 
 	pipe := PersistentRedisDbClient.TxPipeline()
 	incr := pipe.Incr(context.Background(), key)

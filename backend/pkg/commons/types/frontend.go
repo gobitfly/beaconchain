@@ -65,29 +65,62 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 }
 
 const (
-	ValidatorMissedProposalEventName         EventName = "validator_proposal_missed"
-	ValidatorExecutedProposalEventName       EventName = "validator_proposal_submitted"
-	ValidatorMissedAttestationEventName      EventName = "validator_attestation_missed"
-	ValidatorGotSlashedEventName             EventName = "validator_got_slashed"
-	ValidatorDidSlashEventName               EventName = "validator_did_slash"
-	ValidatorIsOfflineEventName              EventName = "validator_is_offline"
-	ValidatorGroupIsOfflineEventName         EventName = "validator_group_is_offline"
-	ValidatorReceivedWithdrawalEventName     EventName = "validator_withdrawal"
-	NetworkLivenessIncreasedEventName        EventName = "network_liveness_increased"
-	EthClientUpdateEventName                 EventName = "eth_client_update"
-	MonitoringMachineOfflineEventName        EventName = "monitoring_machine_offline"
-	MonitoringMachineDiskAlmostFullEventName EventName = "monitoring_hdd_almostfull"
-	MonitoringMachineCpuLoadEventName        EventName = "monitoring_cpu_load"
-	MonitoringMachineMemoryUsageEventName    EventName = "monitoring_memory_usage"
-	TaxReportEventName                       EventName = "user_tax_report"
-	//nolint:misspell
-	RocketpoolCommissionThresholdEventName  EventName = "rocketpool_commision_threshold"
-	RocketpoolNewClaimRoundStartedEventName EventName = "rocketpool_new_claimround"
+	ValidatorMissedProposalEventName   EventName = "validator_proposal_missed"
+	ValidatorExecutedProposalEventName EventName = "validator_proposal_submitted"
+
+	ValidatorDidSlashEventName         EventName = "validator_did_slash"
+	ValidatorGroupIsOfflineEventName   EventName = "validator_group_is_offline"
+	ValidatorBalanceDecreasedEventName EventName = "validator_balance_decreased"
+
+	ValidatorReceivedDepositEventName               EventName = "validator_received_deposit"
+	NetworkSlashingEventName                        EventName = "network_slashing"
+	NetworkValidatorActivationQueueFullEventName    EventName = "network_validator_activation_queue_full"
+	NetworkValidatorActivationQueueNotFullEventName EventName = "network_validator_activation_queue_not_full"
+	NetworkValidatorExitQueueFullEventName          EventName = "network_validator_exit_queue_full"
+	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
+	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
+	TaxReportEventName                              EventName = "user_tax_report"
 	//nolint:misspell
 	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min"
 	//nolint:misspell
 	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max"
 	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
+	//nolint:misspell
+	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
+
+	// Validator dashboard events
+	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
+	GroupIsOfflineEventName              EventName = "group_is_offline"
+	ValidatorMissedAttestationEventName  EventName = "validator_attestation_missed"
+	ValidatorProposalEventName           EventName = "validator_proposal"
+	ValidatorUpcomingProposalEventName   EventName = "validator_proposal_upcoming"
+	SyncCommitteeSoon                    EventName = "validator_synccommittee_soon"
+	ValidatorReceivedWithdrawalEventName EventName = "validator_withdrawal"
+	ValidatorGotSlashedEventName         EventName = "validator_got_slashed"
+	RocketpoolCollateralMinReached       EventName = "rocketpool_colleteral_min" //nolint:misspell
+	RocketpoolCollateralMaxReached       EventName = "rocketpool_colleteral_max" //nolint:misspell
+
+	// Account dashboard events
+	IncomingTransactionEventName  EventName = "incoming_transaction"
+	OutgoingTransactionEventName  EventName = "outgoing_transaction"
+	ERC20TokenTransferEventName   EventName = "erc20_token_transfer"   // #nosec G101
+	ERC721TokenTransferEventName  EventName = "erc721_token_transfer"  // #nosec G101
+	ERC1155TokenTransferEventName EventName = "erc1155_token_transfer" // #nosec G101
+
+	// Machine events
+	MonitoringMachineOfflineEventName        EventName = "monitoring_machine_offline"
+	MonitoringMachineDiskAlmostFullEventName EventName = "monitoring_hdd_almostfull"
+	MonitoringMachineCpuLoadEventName        EventName = "monitoring_cpu_load"
+	MonitoringMachineMemoryUsageEventName    EventName = "monitoring_memory_usage"
+
+	// Client events
+	EthClientUpdateEventName EventName = "eth_client_update"
+
+	// Network events
+	RocketpoolNewClaimRoundStartedEventName    EventName = "rocketpool_new_claimround"
+	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
+	NetworkGasBelowThresholdEventName          EventName = "network_gas_below_threshold"
+	NetworkParticipationRateThresholdEventName EventName = "network_participation_rate_threshold"
 )
 
 var EventSortOrder = []EventName{
@@ -483,6 +516,7 @@ type TransitEmailContent struct {
 	Subject     string            `json:"subject,omitempty"`
 	Email       Email             `json:"email,omitempty"`
 	Attachments []EmailAttachment `json:"attachments,omitempty"`
+	UserId      UserId            `json:"userId,omitempty"`
 	CreatedTs   time.Time         `json:"-"`
 }
 
@@ -511,6 +545,7 @@ type TransitWebhook struct {
 type TransitWebhookContent struct {
 	Webhook UserWebhook
 	Event   WebhookEvent `json:"event"`
+	UserId  UserId       `json:"userId"`
 }
 
 type WebhookEvent struct {
@@ -547,6 +582,7 @@ type TransitDiscord struct {
 type TransitDiscordContent struct {
 	Webhook        UserWebhook
 	DiscordRequest DiscordReq `json:"discordRequest"`
+	UserId         UserId     `json:"userId"`
 }
 
 func (e *TransitDiscordContent) Scan(value interface{}) error {
@@ -573,6 +609,7 @@ type TransitPush struct {
 
 type TransitPushContent struct {
 	Messages []*messaging.Message
+	UserId   UserId `json:"userId"`
 }
 
 func (e *TransitPushContent) Scan(value interface{}) error {

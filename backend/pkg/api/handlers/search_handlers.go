@@ -40,7 +40,7 @@ var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
 	validatorsByWithdrawalCredential: reWithdrawalCredential,
 	validatorsByWithdrawalAddress:    reEthereumAddress,
 	validatorsByWithdrawalEns:        reEnsName,
-	validatorsByGraffiti:             reNonEmpty,
+	validatorsByGraffiti:             reGraffiti,
 }
 
 // --------------------------------------
