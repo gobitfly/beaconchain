@@ -394,6 +394,7 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 			Email:       msg,
 			Attachments: attachments,
 			CreatedTs:   createdTs,
+			UserId:      userID,
 		})
 	}
 	return emails, nil
