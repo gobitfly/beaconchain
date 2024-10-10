@@ -282,6 +282,7 @@ type GetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithd
 
 // ------------------------------------------------------------
 // Rocket Pool Tab
+
 type VDBRocketPoolTableRow struct {
 	Node   Address `json:"node" extensions:"x-order=1"`
 	Staked struct {
@@ -308,12 +309,7 @@ type VDBRocketPoolTableRow struct {
 		Claimed   decimal.Decimal `json:"claimed"`
 		Unclaimed decimal.Decimal `json:"unclaimed"`
 	} `json:"smoothing_pool"`
-}
-type GetValidatorDashboardRocketPoolResponse ApiPagingResponse[VDBRocketPoolTableRow]
 
-type GetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBRocketPoolTableRow]
-
-type VDBNodeRocketPoolData struct {
 	Timezone      string          `json:"timezone"`
 	RefundBalance decimal.Decimal `json:"refund_balance"`
 	DepositCredit decimal.Decimal `json:"deposit_credit"`
@@ -322,8 +318,9 @@ type VDBNodeRocketPoolData struct {
 		Max decimal.Decimal `json:"max"`
 	} `json:"rpl_stake"`
 }
+type GetValidatorDashboardRocketPoolResponse ApiPagingResponse[VDBRocketPoolTableRow]
 
-type GetValidatorDashboardNodeRocketPoolResponse ApiDataResponse[VDBNodeRocketPoolData]
+type GetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBRocketPoolTableRow]
 
 type VDBRocketPoolMinipoolsTableRow struct {
 	Node             Address         `json:"node"`

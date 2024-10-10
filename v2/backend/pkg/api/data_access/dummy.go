@@ -387,10 +387,6 @@ func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context,
 	return getDummyStruct[t.VDBRocketPoolTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
-	return getDummyStruct[t.VDBNodeRocketPoolData]()
-}
-
 func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolMinipoolsTableRow]()
 }
