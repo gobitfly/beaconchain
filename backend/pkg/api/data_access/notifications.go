@@ -16,6 +16,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/shopspring/decimal"
@@ -918,7 +919,11 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 				result.GeneralSettings.IsMachineMemoryUsageSubscribed = true
 				result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold
 			case types.EthClientUpdateEventName:
-				clientSettings[event.Filter].IsSubscribed = true
+				if clientSettings[event.Filter] != nil {
+					clientSettings[event.Filter].IsSubscribed = true
+				} else {
+					log.Warnf("client %s is not found in the client settings", event.Filter)
+				}
 			}
 		}
 	}
