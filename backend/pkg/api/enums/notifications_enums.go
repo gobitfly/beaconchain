@@ -10,7 +10,10 @@ var _ EnumFactory[NotificationDashboardsColumn] = NotificationDashboardsColumn(0
 const (
 	NotificationDashboardChainId NotificationDashboardsColumn = iota
 	NotificationDashboardTimestamp
-	NotificationDashboardDashboardName // sort by name
+	NotificationDashboardDashboardName // sort by dashboard name
+	NotificationDashboardDashboardId   // internal use
+	NotificationDashboardGroupName     // internal use
+	NotificationDashboardGroupId       // internal use
 )
 
 func (c NotificationDashboardsColumn) Int() int {
@@ -30,14 +33,40 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 	}
 }
 
+// internal use, used to map to query column names
+func (c NotificationDashboardsColumn) ToString() string {
+	switch c {
+	case NotificationDashboardChainId:
+		return "chain_id"
+	case NotificationDashboardTimestamp:
+		return "epoch"
+	case NotificationDashboardDashboardName:
+		return "dashboard_name"
+	case NotificationDashboardDashboardId:
+		return "dashboard_id"
+	case NotificationDashboardGroupName:
+		return "group_name"
+	case NotificationDashboardGroupId:
+		return "group_id"
+	default:
+		return ""
+	}
+}
+
 var NotificationsDashboardsColumns = struct {
-	ChainId     NotificationDashboardsColumn
-	Timestamp   NotificationDashboardsColumn
-	DashboardId NotificationDashboardsColumn
+	ChainId       NotificationDashboardsColumn
+	Timestamp     NotificationDashboardsColumn
+	DashboardName NotificationDashboardsColumn
+	DashboardId   NotificationDashboardsColumn
+	GroupName     NotificationDashboardsColumn
+	GroupId       NotificationDashboardsColumn
 }{
 	NotificationDashboardChainId,
 	NotificationDashboardTimestamp,
 	NotificationDashboardDashboardName,
+	NotificationDashboardDashboardId,
+	NotificationDashboardGroupName,
+	NotificationDashboardGroupId,
 }
 
 // ------------------------------------------------------------

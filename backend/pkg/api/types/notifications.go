@@ -1,6 +1,9 @@
 package types
 
-import "github.com/shopspring/decimal"
+import (
+	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
+)
 
 // ------------------------------------------------------------
 // Overview
@@ -29,14 +32,15 @@ type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewDa
 // ------------------------------------------------------------
 // Dashboards Table
 type NotificationDashboardsTableRow struct {
-	IsAccountDashboard bool     `json:"is_account_dashboard"` // if false it's a validator dashboard
-	ChainId            uint64   `json:"chain_id"`
-	Epoch              uint64   `json:"epoch"`
-	DashboardId        uint64   `json:"dashboard_id"`
-	GroupId            uint64   `json:"group_id"`
-	GroupName          string   `json:"group_name"`
-	EntityCount        uint64   `json:"entity_count"`
-	EventTypes         []string `json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
+	IsAccountDashboard bool           `db:"is_account_dashboard" json:"is_account_dashboard"` // if false it's a validator dashboard
+	ChainId            uint64         `db:"chain_id" json:"chain_id"`
+	Epoch              uint64         `db:"epoch" json:"epoch"`
+	DashboardId        uint64         `db:"dashboard_id" json:"dashboard_id"`
+	DashboardName      string         `db:"dashboard_name" json:"-"` // not exported, internal use only
+	GroupId            uint64         `db:"group_id" json:"group_id"`
+	GroupName          string         `db:"group_name" json:"group_name"`
+	EntityCount        uint64         `db:"entity_count" json:"entity_count"`
+	EventTypes         pq.StringArray `db:"event_types" json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
