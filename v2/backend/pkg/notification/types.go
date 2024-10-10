@@ -410,63 +410,34 @@ func (n *EthClientNotification) GetEntitiyId() string {
 }
 
 func (n *EthClientNotification) GetInfo(format types.NotificationFormat) string {
+	clientUrls := map[string]string{
+		"Geth":       "https://github.com/ethereum/go-ethereum/releases",
+		"Nethermind": "https://github.com/NethermindEth/nethermind/releases",
+		"Teku":       "https://github.com/ConsenSys/teku/releases",
+		"Prysm":      "https://github.com/prysmaticlabs/prysm/releases",
+		"Nimbus":     "https://github.com/status-im/nimbus-eth2/releases",
+		"Lighthouse": "https://github.com/sigp/lighthouse/releases",
+		"Erigon":     "https://github.com/erigontech/erigon/releases",
+		"Rocketpool": "https://github.com/rocket-pool/smartnode-install/releases",
+		"MEV-Boost":  "https://github.com/flashbots/mev-boost/releases",
+		"Lodestar":   "https://github.com/chainsafe/lodestar/releases",
+	}
+	defaultUrl := "https://beaconcha.in/ethClients"
+
 	switch format {
 	case types.NotifciationFormatHtml:
 		generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
-		url := ""
-		switch n.EthClient {
-		case "Geth":
-			url = "https://github.com/ethereum/go-ethereum/releases"
-		case "Nethermind":
-			url = "https://github.com/NethermindEth/nethermind/releases"
-		case "Teku":
-			url = "https://github.com/ConsenSys/teku/releases"
-		case "Prysm":
-			url = "https://github.com/prysmaticlabs/prysm/releases"
-		case "Nimbus":
-			url = "https://github.com/status-im/nimbus-eth2/releases"
-		case "Lighthouse":
-			url = "https://github.com/sigp/lighthouse/releases"
-		case "Erigon":
-			url = "https://github.com/erigontech/erigon/releases"
-		case "Rocketpool":
-			url = "https://github.com/rocket-pool/smartnode-install/releases"
-		case "MEV-Boost":
-			url = "https://github.com/flashbots/mev-boost/releases"
-		case "Lodestar":
-			url = "https://github.com/chainsafe/lodestar/releases"
-		default:
-			url = "https://beaconcha.in/ethClients"
+		url := clientUrls[n.EthClient]
+		if url == "" {
+			url = defaultUrl
 		}
-
 		return generalPart + " " + url
 	case types.NotifciationFormatText:
 		return fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
 	case types.NotifciationFormatMarkdown:
-		url := ""
-		switch n.EthClient {
-		case "Geth":
-			url = "https://github.com/ethereum/go-ethereum/releases"
-		case "Nethermind":
-			url = "https://github.com/NethermindEth/nethermind/releases"
-		case "Teku":
-			url = "https://github.com/ConsenSys/teku/releases"
-		case "Prysm":
-			url = "https://github.com/prysmaticlabs/prysm/releases"
-		case "Nimbus":
-			url = "https://github.com/status-im/nimbus-eth2/releases"
-		case "Lighthouse":
-			url = "https://github.com/sigp/lighthouse/releases"
-		case "Erigon":
-			url = "https://github.com/erigontech/erigon/releases"
-		case "Rocketpool":
-			url = "https://github.com/rocket-pool/smartnode-install/releases"
-		case "MEV-Boost":
-			url = "https://github.com/flashbots/mev-boost/releases"
-		case "Lodestar":
-			url = "https://github.com/chainsafe/lodestar/releases"
-		default:
-			url = "https://beaconcha.in/ethClients"
+		url := clientUrls[n.EthClient]
+		if url == "" {
+			url = defaultUrl
 		}
 
 		generalPart := fmt.Sprintf(`A new version for [%s](%s) is available.`, n.EthClient, url)
@@ -732,13 +703,13 @@ func (n *RocketpoolNotification) GetLegacyTitle() string {
 
 type SyncCommitteeSoonNotification struct {
 	types.NotificationBaseImpl
-	Validator  uint64
-	StartEpoch uint64
-	EndEpoch   uint64
+	ValidatorIndex uint64
+	StartEpoch     uint64
+	EndEpoch       uint64
 }
 
 func (n *SyncCommitteeSoonNotification) GetEntitiyId() string {
-	return fmt.Sprintf("%d", n.Validator)
+	return fmt.Sprintf("%d", n.ValidatorIndex)
 }
 
 func (n *SyncCommitteeSoonNotification) GetInfo(format types.NotificationFormat) string {
@@ -774,7 +745,7 @@ func getSyncCommitteeSoonLegacyInfo(ns map[types.EventFilter]types.Notification)
 			return ""
 		}
 
-		validators = append(validators, fmt.Sprintf("%d", n.Validator))
+		validators = append(validators, fmt.Sprintf("%d", n.ValidatorIndex))
 		if i == 0 {
 			// startEpoch, endEpoch and inTime must be the same for all validators
 			startEpoch = fmt.Sprintf("%d", n.StartEpoch)

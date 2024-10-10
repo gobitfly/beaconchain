@@ -232,7 +232,7 @@ func sendWebhookNotifications() error {
 	log.Infof("processing %v webhook notifications", len(notificationQueueItem))
 
 	for _, n := range notificationQueueItem {
-		_, err := db.CountSentWebhook("n_webhooks", n.Content.UserId)
+		_, err := db.CountSentMessage("n_webhooks", n.Content.UserId)
 		if err != nil {
 			log.Error(err, "error counting sent webhook", 0)
 		}

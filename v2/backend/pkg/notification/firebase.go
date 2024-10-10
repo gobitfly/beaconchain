@@ -64,7 +64,7 @@ func SendPushBatch(userId types.UserId, messages []*messaging.Message, dryRun bo
 	currentMessages := messages
 
 	for range messages {
-		_, err := db.CountSentPush("n_push", userId)
+		_, err := db.CountSentMessage("n_push", userId)
 		if err != nil {
 			log.Error(err, "error counting sent push", 0)
 		}

@@ -75,7 +75,7 @@ func createTextMessage(msg types.Email) string {
 func SendMailRateLimited(content types.TransitEmailContent) error {
 	if utils.Config.Frontend.MaxMailsPerEmailPerDay > 0 {
 		now := time.Now()
-		count, err := db.CountSentMail("n_mails", content.UserId)
+		count, err := db.CountSentMessage("n_mails", content.UserId)
 		if err != nil {
 			return err
 		}

@@ -149,7 +149,6 @@ var MachineEvents = []EventName{
 	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineOfflineEventName,
 	MonitoringMachineDiskAlmostFullEventName,
-	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineMemoryUsageEventName,
 }
 
