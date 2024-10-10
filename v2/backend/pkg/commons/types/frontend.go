@@ -483,6 +483,7 @@ type TransitEmailContent struct {
 	Subject     string            `json:"subject,omitempty"`
 	Email       Email             `json:"email,omitempty"`
 	Attachments []EmailAttachment `json:"attachments,omitempty"`
+	UserId      UserId            `json:"userId,omitempty"`
 	CreatedTs   time.Time         `json:"-"`
 }
 
@@ -511,6 +512,7 @@ type TransitWebhook struct {
 type TransitWebhookContent struct {
 	Webhook UserWebhook
 	Event   WebhookEvent `json:"event"`
+	UserId  UserId       `json:"userId"`
 }
 
 type WebhookEvent struct {
@@ -547,6 +549,7 @@ type TransitDiscord struct {
 type TransitDiscordContent struct {
 	Webhook        UserWebhook
 	DiscordRequest DiscordReq `json:"discordRequest"`
+	UserId         UserId     `json:"userId"`
 }
 
 func (e *TransitDiscordContent) Scan(value interface{}) error {
@@ -573,6 +576,7 @@ type TransitPush struct {
 
 type TransitPushContent struct {
 	Messages []*messaging.Message
+	UserId   UserId `json:"userId"`
 }
 
 func (e *TransitPushContent) Scan(value interface{}) error {
