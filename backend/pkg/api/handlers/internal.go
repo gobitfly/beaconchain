@@ -467,10 +467,6 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalRocketPool(w http.Res
 	h.PublicGetValidatorDashboardTotalRocketPool(w, r)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardNodeRocketPool(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardRocketPoolMinipools(w, r)
 }
