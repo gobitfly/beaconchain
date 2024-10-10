@@ -586,6 +586,7 @@
         "execution_clients": "Execution Clients",
         "other_clients": "Others Clients",
         "screenreader": {
+          "delete_notifications_for_dashboard_id": "Delete all notifications for {dashboard_id}",
           "edit_notifications": "Edit Notifications for {0} {1}",
           "empty_clients": "0 clients to edit."
         }
@@ -598,6 +599,7 @@
       "networks": "Networks",
       "notification": "Notification",
       "subscriptions": "Subscriptions",
+      "threshold": "Threshold",
       "webhook": "Webhook"
     },
     "dashboards": {
@@ -607,6 +609,10 @@
       },
       "dialog": {
         "button_webhook_test": "Send Test Notification",
+        "delete_all_notifications":{
+          "heading":"Delete all notifications",
+          "paragraph": "Do you really want to delete all notifications for this dashboard?"
+          },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
           "_link": "Discord webhook",
@@ -624,6 +630,27 @@
       "entity": {
         "accounts": "account | accounts",
         "validators": "validator | validators"
+      },
+      "event_type": {
+        "attestation_missed": "Attestation missed",
+        "group_offline": "Group offline",
+        "group_online": "Group online",
+        "incoming_tx": "Incoming Tx.",
+        "max_collateral": "Max. collateral",
+        "min_collateral": "Min. collateral",
+        "outgoing_tx": "Outgoing Tx.",
+        "proposal_missed": "Proposal missed",
+        "proposal_success": "Proposal success",
+        "proposal_upcoming": "Proposal upcoming",
+        "sync": "Sync",
+        "transfer_erc20": "Transfer ERC-20",
+        "transfer_erc721": "Transfer ERC-721",
+        "transfer_erc1155": "Transfer ERC-1155",
+        "validator_got_slashed": "Got slashed",
+        "validator_has_slashed": "Slashing",
+        "validator_offline": "Validator offline",
+        "validator_online": "Validator online",
+        "withdrawal": "Withdrawal"
       },
       "expansion": {
         "label_dashboard": "Dashboard:",
@@ -721,9 +748,10 @@
     },
     "network": {
       "event_type": {
-        "gas_above": "Gas price > {_value}",
-        "gas_below": "Gas price < {_value}",
-        "participation_rate": "Participation rate < {_value}"
+        "gas_above": "Gas price maximum reached",
+        "gas_below": "Gas price minimum reached",
+        "new_reward_round": "New reward round",
+        "participation_rate": "Participation rate minimum reached"
       },
       "footer": {
         "subscriptions": "Network ({count} Subscriptions)"
@@ -734,7 +762,7 @@
         "alert_if_participation_rate_below": "Alert if participation rate is below",
         "new_reward_round": "New reward round"
       },
-      "title": "Network"
+      "title": "Networks"
     },
     "overview": {
       "email_activate": "Click here to activate Email notifications",

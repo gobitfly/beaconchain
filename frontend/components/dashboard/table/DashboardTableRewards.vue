@@ -137,19 +137,6 @@ const findNextEpochDuties = (epoch: number) => {
 
   return list.join(', ')
 }
-
-const wrappedRewards = computed(() => {
-  if (!rewards.value) {
-    return
-  }
-  return {
-    data: rewards.value.data.map(d => ({
-      ...d,
-      identifier: `${d.epoch}-${d.group_id}`,
-    })),
-    paging: rewards.value.paging,
-  }
-})
 </script>
 
 <template>
@@ -168,7 +155,7 @@ const wrappedRewards = computed(() => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="wrappedRewards"
+            :data="addIdentifier(rewards, 'epoch', 'group_id')"
             data-key="identifier"
             :expandable="true"
             class="rewards-table"

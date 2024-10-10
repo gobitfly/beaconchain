@@ -21,6 +21,7 @@ type DataAccessor interface {
 	ValidatorDashboardRepository
 	SearchRepository
 	NetworkRepository
+	ClientRepository
 	UserRepository
 	AppRepository
 	NotificationsRepository
@@ -32,7 +33,6 @@ type DataAccessor interface {
 	HealthzRepository
 	MachineRepository
 
-	StartDataAccessServices()
 	Close()
 
 	GetLatestFinalizedEpoch() (uint64, error)
@@ -61,6 +61,8 @@ type DataAccessService struct {
 	persistentRedisDbClient *redis.Client
 
 	services *services.Services
+
+	skipServiceInitWait bool
 }
 
 // ensure DataAccessService pointer implements DataAccessor
@@ -88,7 +90,9 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 
 func createDataAccessService(cfg *types.Config) *DataAccessService {
 	dataAccessService := DataAccessService{
-		dummy: NewDummyService()}
+		dummy:               NewDummyService(),
+		skipServiceInitWait: cfg.SkipDataAccessServiceInitWait,
+	}
 
 	// Initialize the database
 	wg := &sync.WaitGroup{}
@@ -249,9 +253,13 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 func (d *DataAccessService) StartDataAccessServices() {
 	// Create the services
 	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
-
 	// Initialize the services
-	d.services.InitServices()
+
+	if d.skipServiceInitWait {
+		go d.services.InitServices()
+	} else {
+		d.services.InitServices()
+	}
 }
 
 func (d *DataAccessService) Close() {
