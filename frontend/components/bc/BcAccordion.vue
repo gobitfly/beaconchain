@@ -51,7 +51,9 @@ const isOpen = ref(false)
   gap: 0.625rem;
 }
 .bc-accordion__content {
-margin-top: 0.625rem;
+  margin-top: 0.625rem;
+  width: 41.75rem;
+  min-height: 2.563rem;
 }
 .bc-accordion-list {
   list-style: none;

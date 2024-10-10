@@ -1,5 +1,6 @@
 {
   "conventionalCommits.scopes": [
+    "BcAccordion",
     "BcButton",
     "BcLink",
     "BcTablePager",
