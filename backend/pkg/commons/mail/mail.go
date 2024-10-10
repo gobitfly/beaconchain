@@ -72,10 +72,10 @@ func createTextMessage(msg types.Email) string {
 
 // SendMailRateLimited sends an email to a given address with the given message.
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
-func SendMailRateLimited(to, subject string, msg types.Email, attachment []types.EmailAttachment) error {
+func SendMailRateLimited(content types.TransitEmailContent) error {
 	if utils.Config.Frontend.MaxMailsPerEmailPerDay > 0 {
 		now := time.Now()
-		count, err := db.CountSentMail("n_mails", to)
+		count, err := db.CountSentMail("n_mails", content.UserId)
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func SendMailRateLimited(to, subject string, msg types.Email, attachment []types
 			return &types.RateLimitError{TimeLeft: timeLeft}
 		} else if count == int64(utils.Config.Frontend.MaxMailsPerEmailPerDay) {
 			// send an email if this was the last email for today
-			err := SendHTMLMail(to,
+			err := SendHTMLMail(content.Address,
 				"beaconcha.in - Email notification threshold limit reached",
 				types.Email{
 					Title: "Email notification threshold limit reached",
@@ -98,7 +98,7 @@ func SendMailRateLimited(to, subject string, msg types.Email, attachment []types
 		}
 	}
 
-	err := SendHTMLMail(to, subject, msg, attachment)
+	err := SendHTMLMail(content.Address, content.Subject, content.Email, content.Attachments)
 	if err != nil {
 		return err
 	}

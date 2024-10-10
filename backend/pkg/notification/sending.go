@@ -153,7 +153,7 @@ func sendEmailNotifications() error {
 	log.Infof("processing %v email notifications", len(notificationQueueItem))
 
 	for _, n := range notificationQueueItem {
-		err = mail.SendMailRateLimited(n.Content.Address, n.Content.Subject, n.Content.Email, n.Content.Attachments)
+		err = mail.SendMailRateLimited(n.Content)
 		if err != nil {
 			if !strings.Contains(err.Error(), "rate limit has been exceeded") {
 				metrics.Errors.WithLabelValues("notifications_send_email").Inc()
@@ -197,7 +197,7 @@ func sendPushNotifications() error {
 				end = len(n.Content.Messages)
 			}
 
-			err = SendPushBatch(n.Content.Messages[start:end], false)
+			err = SendPushBatch(n.Content.UserId, n.Content.Messages[start:end], false)
 			if err != nil {
 				metrics.Errors.WithLabelValues("notifications_send_push_batch").Inc()
 				log.Error(err, "error sending firebase batch job", 0)
@@ -232,6 +232,11 @@ func sendWebhookNotifications() error {
 	log.Infof("processing %v webhook notifications", len(notificationQueueItem))
 
 	for _, n := range notificationQueueItem {
+		_, err := db.CountSentWebhook("n_webhooks", n.Content.UserId)
+		if err != nil {
+			log.Error(err, "error counting sent webhook", 0)
+		}
+
 		// do not retry after 5 attempts
 		if n.Content.Webhook.Retries > 5 {
 			_, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE id = $1`, n.Id)
@@ -243,7 +248,7 @@ func sendWebhookNotifications() error {
 
 		reqBody := new(bytes.Buffer)
 
-		err := json.NewEncoder(reqBody).Encode(n.Content)
+		err = json.NewEncoder(reqBody).Encode(n.Content)
 		if err != nil {
 			log.Error(err, "error marshalling webhook event", 0)
 		}
