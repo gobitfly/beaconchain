@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -19,6 +19,8 @@ import (
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/go-redis/redis/v8"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"golang.org/x/exp/maps"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/deposit_contract"
@@ -38,37 +40,41 @@ import (
 
 type executionDepositsExporter struct {
 	ModuleContext
-	Client                 rpc.Client
-	ErigonClient           *gethrpc.Client
-	GethClient             *gethrpc.Client
-	LogClient              *ethclient.Client
-	LogFilterer            *deposit_contract.DepositContractFilterer
-	DepositContractAddress common.Address
-	LastExportedBlock      uint64
-	ExportMutex            *sync.Mutex
-	StopEarlyMutex         *sync.Mutex
-	StopEarly              context.CancelFunc
-	Signer                 gethtypes.Signer
-	DepositMethod          abi.Method
+	Client                             rpc.Client
+	ErigonClient                       *gethrpc.Client
+	GethClient                         *gethrpc.Client
+	LogClient                          *ethclient.Client
+	LogFilterer                        *deposit_contract.DepositContractFilterer
+	DepositContractAddress             common.Address
+	LastExportedBlock                  uint64
+	LastExportedFinalizedBlock         uint64
+	LastExportedFinalizedBlockRedisKey string
+	CurrentHeadBlock                   atomic.Uint64
+	Signer                             gethtypes.Signer
+	DepositMethod                      abi.Method
+	exportedTxsCache                   *lru.Cache[string, bool]
 }
 
 func NewExecutionDepositsExporter(moduleContext ModuleContext) ModuleInterface {
 	return &executionDepositsExporter{
-		ModuleContext:          moduleContext,
-		Client:                 moduleContext.ConsClient,
-		DepositContractAddress: common.HexToAddress(utils.Config.Chain.ClConfig.DepositContractAddress),
-		LastExportedBlock:      0,
-		ExportMutex:            &sync.Mutex{},
-		StopEarlyMutex:         &sync.Mutex{},
+		ModuleContext:              moduleContext,
+		Client:                     moduleContext.ConsClient,
+		DepositContractAddress:     common.HexToAddress(utils.Config.Chain.ClConfig.DepositContractAddress),
+		LastExportedBlock:          0,
+		LastExportedFinalizedBlock: 0,
 	}
 }
 
-func (d *executionDepositsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
-	return nil // nop
-}
-
 func (d *executionDepositsExporter) Init() error {
-	d.Signer = gethtypes.NewCancunSigner(big.NewInt(int64(utils.Config.Chain.ClConfig.DepositChainID)))
+	exportedTxsCache, err := lru.New[string, bool](1000)
+	if err != nil {
+		log.Fatal(err, "error creating exportedTxsCache", 0)
+	}
+	d.exportedTxsCache = exportedTxsCache
+
+	d.Signer = gethtypes.NewCancunSigner(big.NewInt(0).SetUint64(utils.Config.Chain.ClConfig.DepositChainID))
+
+	d.LastExportedFinalizedBlockRedisKey = fmt.Sprintf("%d:execution_deposits_exporter:last_exported_finalized_block", utils.Config.Chain.ClConfig.DepositChainID)
 
 	rpcClient, err := gethrpc.Dial(utils.Config.Eth1GethEndpoint)
 	if err != nil {
@@ -124,14 +130,29 @@ func (d *executionDepositsExporter) Init() error {
 		d.LastExportedBlock = utils.Config.Indexer.ELDepositContractFirstBlock
 	}
 
-	log.Infof("initialized execution deposits exporter with last exported block: %v", d.LastExportedBlock)
+	val, err := db.PersistentRedisDbClient.Get(context.Background(), d.LastExportedFinalizedBlockRedisKey).Uint64()
+	switch {
+	case err == redis.Nil:
+		log.Warnf("%v missing in redis, exporting from beginning", d.LastExportedFinalizedBlockRedisKey)
+	case err != nil:
+		log.Fatal(err, "error getting last exported finalized block from redis", 0)
+	}
 
-	// quick kick-start
+	d.LastExportedFinalizedBlock = val
+	// avoid fetching old bocks on a chain without deposits
+	if d.LastExportedFinalizedBlock > d.LastExportedBlock {
+		d.LastExportedBlock = d.LastExportedFinalizedBlock
+	}
+
+	log.Infof("initialized execution deposits exporter with last exported block/finalizedBlock: %v/%v", d.LastExportedBlock, d.LastExportedFinalizedBlock)
+
 	go func() {
-		err := d.OnFinalizedCheckpoint(nil)
+		// quick kick-start
+		err = d.OnHead(nil)
 		if err != nil {
-			log.Error(err, "error during kick-start", 0)
+			log.Error(err, "error kick-starting executionDepositsExporter", 0)
 		}
+		d.exportLoop()
 	}()
 
 	return nil
@@ -145,89 +166,110 @@ func (d *executionDepositsExporter) OnChainReorg(event *constypes.StandardEventC
 	return nil // nop
 }
 
-// can take however long it wants to run, is run in a separate goroutine, so no need to worry about blocking
 func (d *executionDepositsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
-	// important: have to fetch the actual finalized epoch because even tho its called on finalized checkpoint it actually emits for each justified epoch
-	// so we have to do an extra request to get the actual latest finalized epoch
-	res, err := d.CL.GetFinalityCheckpoints("head")
-	if err != nil {
-		return err
-	}
+	return nil // nop
+}
 
+func (d *executionDepositsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
 	var nearestELBlock sql.NullInt64
-	err = db.ReaderDb.Get(&nearestELBlock, "select exec_block_number from blocks where slot <= $1 and exec_block_number > 0 order by slot desc limit 1", res.Data.Finalized.Epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	err = db.ReaderDb.Get(&nearestELBlock, "select exec_block_number from blocks where exec_block_number > 0 order by slot desc limit 1")
 	if err != nil {
 		return err
 	}
 	if !nearestELBlock.Valid {
-		return fmt.Errorf("no block found for finalized epoch %v", res.Data.Finalized.Epoch)
+		return fmt.Errorf("no block found for head slot %v", event.Slot)
 	}
-	log.Debugf("exporting execution layer deposits till block %v", nearestELBlock.Int64)
-
-	err = d.exportTillBlock(uint64(nearestELBlock.Int64))
-	if err != nil {
-		return err
-	}
-
+	log.Debugf("setting nearestELBlock for execution_deposits_exporter: %v", nearestELBlock.Int64)
+	d.CurrentHeadBlock.Store(uint64(nearestELBlock.Int64))
 	return nil
 }
 
-// this is basically synchronous, each time it gets called it will kill the previous export and replace it with itself
+func (d *executionDepositsExporter) exportLoop() {
+	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
+	for ; true; <-ticker.C {
+		currentHeadBlock := d.CurrentHeadBlock.Load()
+		if currentHeadBlock == 0 {
+			continue
+		}
+		if currentHeadBlock <= d.LastExportedBlock {
+			continue
+		}
+		err := d.exportTillBlock(currentHeadBlock)
+		if err != nil {
+			log.Error(err, fmt.Sprintf("error during export to currentHeadBlock %d", currentHeadBlock), 0)
+		}
+	}
+}
+
 func (d *executionDepositsExporter) exportTillBlock(block uint64) (err error) {
-	// following blocks if a previous function call is still waiting for an export to stop early
-	d.StopEarlyMutex.Lock()
-	if d.StopEarly != nil {
-		// this will run even if the previous export has already finished
-		// preventing this would require an overly complex solution
-		log.Debugf("asking potentially running export to stop early")
-		d.StopEarly()
+	// important: have to fetch the actual finalized epoch because even tho its called on finalized checkpoint it actually emits for each justified epoch
+	res, err := d.CL.GetFinalityCheckpoints("head")
+	if err != nil {
+		return fmt.Errorf("failed calling GetFinalityCheckpoints(head): %w", err)
 	}
 
-	// following blocks as long as the running export hasn't finished yet
-	d.ExportMutex.Lock()
-	ctx, cancel := context.WithCancel(context.Background())
-	d.StopEarly = cancel
-	// we have over taken and allow potentially newer function calls to signal us to stop early
-	d.StopEarlyMutex.Unlock()
+	// note: nextFinalizedSlot can actually be in the next epoch, but for this exporter we do not care about such details
+	nextFinalizedSlot := res.Data.Finalized.Epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	nextFinalizedBlock, err := db.GetBlockNumber(nextFinalizedSlot)
+	if err != nil {
+		return fmt.Errorf("error getting next finalized block: %w", err)
+	}
 
 	blockOffset := d.LastExportedBlock + 1
+	// make sure to reexport every block since last exported finalized blocks to handle reorgs
+	if blockOffset > d.LastExportedFinalizedBlock {
+		blockOffset = d.LastExportedFinalizedBlock + 1
+	}
 	blockTarget := block
-
-	defer d.ExportMutex.Unlock()
 
 	log.Infof("exporting execution layer deposits from %v to %v", blockOffset, blockTarget)
 
-	depositsToSave := make([]*types.ELDeposit, 0)
-
+	depositsToSaveBatchSize := 10_000 // limit how much deposits we save in one go
+	blockBatchSize := uint64(10_000)  // limit how much blocks we fetch until updating the redis-key
+	depositsToSave := make([]*types.ELDeposit, 0, depositsToSaveBatchSize)
 	for blockOffset < blockTarget {
-		tmpBlockTarget := blockOffset + 1000
-		if tmpBlockTarget > blockTarget {
-			tmpBlockTarget = blockTarget
+		depositsToSave = depositsToSave[:0]
+		blockBatchStart := blockOffset
+		for blockOffset < blockTarget && len(depositsToSave) <= depositsToSaveBatchSize && blockOffset < blockBatchStart+blockBatchSize {
+			tmpBlockTarget := blockOffset + 1000
+			if tmpBlockTarget > blockTarget {
+				tmpBlockTarget = blockTarget
+			}
+			log.Debugf("fetching deposits from %v to %v", blockOffset, tmpBlockTarget)
+			tmp, err := d.fetchDeposits(blockOffset, tmpBlockTarget)
+			if err != nil {
+				return err
+			}
+			depositsToSave = append(depositsToSave, tmp...)
+			blockOffset = tmpBlockTarget
 		}
-		log.Debugf("fetching deposits from %v to %v", blockOffset, tmpBlockTarget)
-		tmp, err := d.fetchDeposits(blockOffset, tmpBlockTarget)
+
+		log.Debugf("saving %v deposits", len(depositsToSave))
+		err = d.saveDeposits(depositsToSave)
 		if err != nil {
 			return err
 		}
-		depositsToSave = append(depositsToSave, tmp...)
-		blockOffset = tmpBlockTarget
+		d.LastExportedBlock = blockOffset
 
-		select {
-		case <-ctx.Done(): // a newer function call has asked us to stop early
-			log.Warnf("stop early signal received, stopping export early")
-			blockTarget = tmpBlockTarget
-		default:
-			continue
+		prevLastExportedFinalizedBlock := d.LastExportedFinalizedBlock
+		if nextFinalizedBlock > d.LastExportedBlock && d.LastExportedBlock > d.LastExportedFinalizedBlock {
+			d.LastExportedFinalizedBlock = d.LastExportedBlock
+		} else if nextFinalizedBlock > d.LastExportedFinalizedBlock {
+			d.LastExportedFinalizedBlock = nextFinalizedBlock
+		}
+
+		// update redis to keep track of last exported finalized block persistently
+		if prevLastExportedFinalizedBlock != d.LastExportedFinalizedBlock {
+			log.Infof("updating %v: %v", d.LastExportedFinalizedBlockRedisKey, d.LastExportedFinalizedBlock)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+			err := db.PersistentRedisDbClient.Set(ctx, d.LastExportedFinalizedBlockRedisKey, d.LastExportedFinalizedBlock, 0).Err()
+			if err != nil {
+				log.Error(err, fmt.Sprintf("error setting redis %v = %v", d.LastExportedFinalizedBlockRedisKey, d.LastExportedFinalizedBlock), 0)
+			}
 		}
 	}
-
-	log.Debugf("saving %v deposits", len(depositsToSave))
-	err = d.saveDeposits(depositsToSave)
-	if err != nil {
-		return err
-	}
-
-	d.LastExportedBlock = blockTarget
 
 	start := time.Now()
 	// update cached view
@@ -271,8 +313,13 @@ func (d *executionDepositsExporter) fetchDeposits(fromBlock, toBlock uint64) (de
 			return nil, fmt.Errorf("nil deposit-log")
 		}
 
-		depositLog :=
-			depositLogIterator.Event
+		depositLog := depositLogIterator.Event
+
+		if d.exportedTxsCache.Contains(fmt.Sprintf("%x", depositLog.Raw.TxHash.Bytes())) {
+			log.Debugf("skipping already exported deposit-tx: block: %d, tx: %x", depositLog.Raw.BlockNumber, depositLog.Raw.TxHash.Bytes())
+			continue
+		}
+
 		err = utils.VerifyDepositSignature(&phase0.DepositData{
 			PublicKey:             phase0.BLSPubKey(depositLog.Pubkey),
 			WithdrawalCredentials: depositLog.WithdrawalCredentials,
@@ -387,6 +434,10 @@ func (d *executionDepositsExporter) fetchDeposits(fromBlock, toBlock uint64) (de
 }
 
 func (d *executionDepositsExporter) saveDeposits(depositsToSave []*types.ELDeposit) error {
+	if len(depositsToSave) == 0 {
+		return nil
+	}
+
 	tx, err := db.WriterDb.Beginx()
 	if err != nil {
 		return err
@@ -446,6 +497,11 @@ func (d *executionDepositsExporter) saveDeposits(depositsToSave []*types.ELDepos
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing db-tx for execution layer deposits: %w", err)
+	}
+
+	// mark txs as exported, avoid extra work re-exporting them
+	for _, dd := range depositsToSave {
+		d.exportedTxsCache.Add(fmt.Sprintf("%x", dd.TxHash), true)
 	}
 
 	return nil
