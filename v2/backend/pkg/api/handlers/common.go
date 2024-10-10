@@ -67,6 +67,7 @@ var (
 	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[01])?[0-9a-fA-F]{62}$`)
 	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
 	reNonEmpty                     = regexp.MustCompile(`^\s*\S.*$`)
+	reGraffiti                     = regexp.MustCompile(`^.{2,}$`)          // at least 2 characters, so that queries won't time out
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
@@ -852,9 +853,9 @@ const maxBodySize = 10 * 1024
 func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...log.Fields) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 	requestFields := log.Fields{
-		"endpoint": r.Method + " " + r.URL.Path,
-		"query":    r.URL.RawQuery,
-		"body":     string(body),
+		"request_endpoint": r.Method + " " + r.URL.Path,
+		"request_query":    r.URL.RawQuery,
+		"request_body":     string(body),
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
 }

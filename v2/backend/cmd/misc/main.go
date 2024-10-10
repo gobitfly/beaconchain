@@ -584,7 +584,7 @@ func collectUserDbNotifications(startEpoch uint64) error {
 		if message.Token == "" {
 			log.Info("sending test message")
 
-			err = notification.SendPushBatch([]*messaging.Message{message}, false)
+			err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, false)
 			if err != nil {
 				log.Error(err, "error sending firebase batch job", 0)
 			}

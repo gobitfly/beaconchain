@@ -9,7 +9,9 @@ import (
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"google.golang.org/api/option"
 )
@@ -27,7 +29,7 @@ func isRelevantError(response *messaging.SendResponse) bool {
 	return false
 }
 
-func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
+func SendPushBatch(userId types.UserId, messages []*messaging.Message, dryRun bool) error {
 	credentialsPath := utils.Config.Notifications.FirebaseCredentialsPath
 	if credentialsPath == "" {
 		log.Error(fmt.Errorf("firebase credentials path not provided, disabling push notifications"), "error initializing SendPushBatch", 0)
@@ -60,6 +62,14 @@ func SendPushBatch(messages []*messaging.Message, dryRun bool) error {
 	var result *messaging.BatchResponse
 
 	currentMessages := messages
+
+	for range messages {
+		_, err := db.CountSentPush("n_push", userId)
+		if err != nil {
+			log.Error(err, "error counting sent push", 0)
+		}
+	}
+
 	tries := 0
 	for _, s := range waitBeforeTryInSeconds {
 		time.Sleep(time.Duration(s) * time.Second)
