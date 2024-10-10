@@ -100,7 +100,7 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
-	var notificationDetails t.NotificationValidatorDashboardDetail
+	notificationDetails := t.NotificationValidatorDashboardDetail{}
 
 	var searchIndices []uint64
 	// TODO move to api layer
@@ -118,11 +118,14 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 		searchIndexSet[searchIndex] = true
 	}
 
-	var result []byte
+	result := []byte{}
 	query := `SELECT details FROM users_val_dashboards_notifications_history WHERE dashboard_id = $1 AND group_id = $2 AND epoch = $3`
-	err := d.alloyReader.SelectContext(ctx, &result, query)
+	err := d.alloyReader.GetContext(ctx, &result, query, dashboardId, groupId, epoch)
 	if err != nil {
 		return nil, err
+	}
+	if len(result) == 0 {
+		return &notificationDetails, nil
 	}
 
 	buf := bytes.NewBuffer(result)
@@ -132,6 +135,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	}
 	defer gz.Close()
 
+	// might need to loop if we get memory issues with large dashboards and can't ReadAll
 	decompressedData, err := io.ReadAll(gz)
 	if err != nil {
 		return nil, err
@@ -139,7 +143,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 
 	decoder := gob.NewDecoder(bytes.NewReader(decompressedData))
 
-	var notifications []any
+	notifications := []types.Notification{}
 	err = decoder.Decode(&notifications)
 	if err != nil {
 		return nil, err
@@ -154,11 +158,10 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	proposalsInfo := make(map[t.VDBValidator]*ProposalInfo)
 	addressMapping := make(map[string]*t.Address)
 	for _, not := range notifications {
-		n := not.(types.Notification)
-		switch n.GetEventName() {
+		switch not.GetEventName() {
 		case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName /*, types.ValidatorScheduledProposalEventName*/ :
 			// aggregate proposals
-			curNotification, ok := not.(notification.ValidatorProposalNotification)
+			curNotification, ok := not.(*notification.ValidatorProposalNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorProposalNotification")
 			}
@@ -178,19 +181,19 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				prop.Missed = append(prop.Missed, curNotification.Slot)
 			}
 		case types.ValidatorMissedAttestationEventName:
-			curNotification, ok := not.(notification.ValidatorAttestationNotification)
+			curNotification, ok := not.(*notification.ValidatorAttestationNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorAttestationNotification")
 			}
 			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
-			if curNotification.Status == 0 {
+			if curNotification.Status != 0 {
 				continue
 			}
 			notificationDetails.AttestationMissed = append(notificationDetails.AttestationMissed, t.IndexEpoch{curNotification.ValidatorIndex, curNotification.Epoch})
 		case types.ValidatorGotSlashedEventName:
-			curNotification, ok := not.(notification.ValidatorGotSlashedNotification)
+			curNotification, ok := not.(*notification.ValidatorGotSlashedNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorGotSlashedNotification")
 			}
@@ -199,7 +202,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			}
 			notificationDetails.Slashed = append(notificationDetails.Slashed, curNotification.ValidatorIndex)
 		case types.ValidatorIsOfflineEventName:
-			curNotification, ok := not.(notification.ValidatorIsOfflineNotification)
+			curNotification, ok := not.(*notification.ValidatorIsOfflineNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorIsOfflineNotification")
 			}
@@ -216,7 +219,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			//notificationDetails.ValidatorOfflineReminder = ...
 		case types.ValidatorGroupIsOfflineEventName:
 			// TODO type / collection not present yet, skipping
-			/*curNotification, ok := not.(notification.validatorGroupIsOfflineNotification)
+			/*curNotification, ok := not.(*notification.validatorGroupIsOfflineNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to validatorGroupIsOfflineNotification")
 			}
@@ -228,7 +231,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			}
 			*/
 		case types.ValidatorReceivedWithdrawalEventName:
-			curNotification, ok := not.(notification.ValidatorWithdrawalNotification)
+			curNotification, ok := not.(*notification.ValidatorWithdrawalNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to ValidatorWithdrawalNotification")
 			}
@@ -250,19 +253,19 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			types.RocketpoolNewClaimRoundStartedEventName:
 			// these could maybe returned later (?)
 		case types.RocketpoolCollateralMinReachedEventName, types.RocketpoolCollateralMaxReachedEventName:
-			_, ok := not.(notification.RocketpoolNotification)
+			_, ok := not.(*notification.RocketpoolNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to RocketpoolNotification")
 			}
-			addr := t.Address{Hash: t.Hash(n.GetEventFilter()), IsContract: true}
-			addressMapping[n.GetEventFilter()] = &addr
-			if n.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
+			addr := t.Address{Hash: t.Hash(not.GetEventFilter()), IsContract: true}
+			addressMapping[not.GetEventFilter()] = &addr
+			if not.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
 				notificationDetails.MinimumCollateralReached = append(notificationDetails.MinimumCollateralReached, addr)
 			} else {
 				notificationDetails.MaximumCollateralReached = append(notificationDetails.MaximumCollateralReached, addr)
 			}
 		case types.SyncCommitteeSoonEventName:
-			curNotification, ok := not.(notification.SyncCommitteeSoonNotification)
+			curNotification, ok := not.(*notification.SyncCommitteeSoonNotification)
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to SyncCommitteeSoonNotification")
 			}
@@ -271,7 +274,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			}
 			notificationDetails.SyncCommittee = append(notificationDetails.SyncCommittee, curNotification.Validator)
 		default:
-			log.Debugf("Unhandled notification type: %s", n.GetEventName())
+			log.Debugf("Unhandled notification type: %s", not.GetEventName())
 		}
 	}
 
