@@ -1612,9 +1612,9 @@ func collectSyncCommitteeNotifications(notificationsByUserID types.Notifications
 						DashboardGroupId:   sub.DashboardGroupId,
 						DashboardGroupName: sub.DashboardGroupName,
 					},
-					Validator:  mapping[sub.EventFilter],
-					StartEpoch: nextPeriod * utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod,
-					EndEpoch:   (nextPeriod + 1) * utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod,
+					ValidatorIndex: mapping[sub.EventFilter],
+					StartEpoch:     nextPeriod * utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod,
+					EndEpoch:       (nextPeriod + 1) * utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod,
 				}
 				notificationsByUserID.AddNotification(n)
 				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
@@ -1638,7 +1638,7 @@ func getSyncCommitteeSoonInfo(format types.NotificationFormat, ns map[types.Even
 			return ""
 		}
 
-		validators = append(validators, n.Validator)
+		validators = append(validators, n.ValidatorIndex)
 		if i == 0 {
 			// startEpoch, endEpoch and inTime must be the same for all validators
 			startEpoch = n.StartEpoch
