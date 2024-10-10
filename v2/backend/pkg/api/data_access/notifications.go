@@ -945,6 +945,17 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		result.Clients = append(result.Clients, *settings)
 	}
 
+	// properly sort the responses
+	sort.Slice(result.Networks, func(i, j int) bool { // sort by chain id ascending
+		return result.Networks[i].ChainId < result.Networks[j].ChainId
+	})
+	sort.Slice(result.Clients, func(i, j int) bool { // sort by client name ascending
+		return result.Clients[i].Name < result.Clients[j].Name
+	})
+	sort.Slice(result.PairedDevices, func(i, j int) bool { // sort by paired timestamp descending
+		return result.PairedDevices[i].PairedTimestamp > result.PairedDevices[j].PairedTimestamp
+	})
+
 	return result, nil
 }
 
