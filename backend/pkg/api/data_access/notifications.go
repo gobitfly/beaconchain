@@ -55,7 +55,7 @@ type NotificationsRepository interface {
 	UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
 }
 
-func (*DataAccessService) initNotifications() {
+func (*DataAccessService) registerNotificationInterfaceTypes() {
 	var once sync.Once
 	once.Do(func() {
 		gob.Register(&notification.ValidatorProposalNotification{})
