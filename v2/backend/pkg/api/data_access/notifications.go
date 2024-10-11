@@ -19,6 +19,7 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -93,7 +94,158 @@ const (
 )
 
 func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
-	return d.dummy.GetNotificationOverview(ctx, userId)
+	response := t.NotificationOverviewData{}
+	eg := errgroup.Group{}
+
+	// enabled channels
+	eg.Go(func() error {
+		var channels []struct {
+			Channel string `db:"channel"`
+			Active  bool   `db:"active"`
+		}
+
+		err := d.userReader.SelectContext(ctx, &channels, `SELECT channel, active FROM users_notification_channels WHERE user_id = $1`, userId)
+		if err != nil {
+			return err
+		}
+
+		for _, channel := range channels {
+			switch channel.Channel {
+			case "email":
+				response.IsEmailNotificationsEnabled = channel.Active
+			case "push":
+				response.IsPushNotificationsEnabled = channel.Active
+			}
+		}
+		return nil
+	})
+
+	// most notified groups
+	latestSlot, err := d.GetLatestSlot()
+	if err != nil {
+		return nil, err
+	}
+	epoch30dAgo := utils.TimeToEpoch(utils.EpochToTime(utils.EpochOfSlot(latestSlot)).Add(time.Duration(-30) * time.Hour * 24))
+	getMostNotifiedGroups := func(historyTable, groupsTable string) ([3]string, error) {
+		query := goqu.Dialect("postgres").
+			From(goqu.T(historyTable).As("history")).
+			Select(
+				goqu.I("history.dashboard_id"),
+				goqu.I("history.group_id"),
+			).
+			Where(
+				goqu.Ex{"history.user_id": userId},
+				goqu.I("history.epoch").Gt(epoch30dAgo),
+			).
+			GroupBy(
+				goqu.I("history.dashboard_id"),
+				goqu.I("history.group_id"),
+			).
+			Order(
+				goqu.L("COUNT(*)").Desc(),
+			).
+			Limit(3)
+
+		// join result with names
+		query = goqu.Dialect("postgres").
+			Select("name").
+			From(query.As("history")).
+			LeftJoin(goqu.I(groupsTable).As("groups"), goqu.On(
+				goqu.Ex{"groups.dashboard_id": goqu.I("history.dashboard_id")},
+				goqu.Ex{"groups.id": goqu.I("history.group_id")},
+			))
+
+		mostNotifiedGroups := [3]string{}
+		querySql, args, err := query.Prepared(true).ToSQL()
+		if err != nil {
+			return mostNotifiedGroups, err
+		}
+		res := []string{}
+		err = d.alloyReader.SelectContext(ctx, &res, querySql, args...)
+		if err != nil {
+			return mostNotifiedGroups, err
+		}
+		copy(mostNotifiedGroups[:], res)
+		return mostNotifiedGroups, err
+	}
+
+	eg.Go(func() error {
+		var err error
+		response.VDBMostNotifiedGroups, err = getMostNotifiedGroups("users_val_dashboards_notifications_history", "users_val_dashboards_groups")
+		return err
+	})
+	// TODO account dashboards
+	/*eg.Go(func() error {
+		var err error
+		response.VDBMostNotifiedGroups, err = getMostNotifiedGroups("users_acc_dashboards_notifications_history", "users_acc_dashboards_groups")
+		return err
+	})*/
+
+	// 24h counts
+	eg.Go(func() error {
+		var err error
+		day := time.Now().Truncate(utils.Day).Unix()
+		getMessageCount := func(prefix string) (uint64, error) {
+			res := d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("%s:%d:%d", prefix, userId, day))
+			if res.Err() == redis.Nil {
+				return 0, nil
+			} else if res.Err() != nil {
+				return 0, res.Err()
+			}
+			return res.Uint64()
+		}
+		response.Last24hPushCount, err = getMessageCount("n_mails")
+		if err != nil {
+			return err
+		}
+		response.Last24hPushCount, err = getMessageCount("n_push")
+		if err != nil {
+			return err
+		}
+		response.Last24hPushCount, err = getMessageCount("n_webhook")
+		return err
+	})
+
+	// subscription counts
+	eg.Go(func() error {
+		networks, err := d.GetAllNetworks()
+		if err != nil {
+			return err
+		}
+
+		whereNetwork := ""
+		for _, network := range networks {
+			if len(whereNetwork) > 0 {
+				whereNetwork += " OR "
+			}
+			whereNetwork += "event_name like '" + network.Name + ":rocketpool_%' OR event_name like '" + network.Name + ":network_%'"
+		}
+
+		query := goqu.Dialect("postgres").
+			From("users_subscriptions").
+			Select(
+				goqu.L("count(*) FILTER (WHERE event_filter like 'vdb:%')").As("vdb_subscriptions_count"),
+				goqu.L("count(*) FILTER (WHERE event_filter like 'adb:%')").As("adb_subscriptions_count"),
+				goqu.L("count(*) FILTER (WHERE event_name like 'monitoring_%')").As("machines_subscription_count"),
+				goqu.L("count(*) FILTER (WHERE event_name = 'eth_client_update')").As("clients_subscription_count"),
+				// not sure if there's a better way in goqu
+				goqu.L("count(*) FILTER (WHERE "+whereNetwork+")").As("networks_subscription_count"),
+			).
+			Where(goqu.Ex{
+				"user_id": userId,
+			})
+
+		querySql, args, err := query.Prepared(true).ToSQL()
+		if err != nil {
+			return err
+		}
+
+		err = d.alloyReader.GetContext(ctx, &response, querySql, args...)
+		return err
+	})
+
+	err = eg.Wait()
+	return &response, err
 }
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	return d.dummy.GetDashboardNotifications(ctx, userId, chainIds, cursor, colSort, search, limit)
