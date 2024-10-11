@@ -1,14 +1,20 @@
 package dataaccess
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"database/sql"
+	"encoding/gob"
 	"fmt"
+	"io"
 	"maps"
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -17,8 +23,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -38,6 +46,7 @@ type NotificationsRepository interface {
 	GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
 
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
+	GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error)
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
 	UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error
 	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error
@@ -46,6 +55,23 @@ type NotificationsRepository interface {
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
 	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
 	UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
+}
+
+func (*DataAccessService) registerNotificationInterfaceTypes() {
+	var once sync.Once
+	once.Do(func() {
+		gob.Register(&notification.ValidatorProposalNotification{})
+		gob.Register(&notification.ValidatorAttestationNotification{})
+		gob.Register(&notification.ValidatorIsOfflineNotification{})
+		gob.Register(&notification.ValidatorGotSlashedNotification{})
+		gob.Register(&notification.ValidatorWithdrawalNotification{})
+		gob.Register(&notification.NetworkNotification{})
+		gob.Register(&notification.RocketpoolNotification{})
+		gob.Register(&notification.MonitorMachineNotification{})
+		gob.Register(&notification.TaxReportNotification{})
+		gob.Register(&notification.EthClientNotification{})
+		gob.Register(&notification.SyncCommitteeSoonNotification{})
+	})
 }
 
 const (
@@ -206,7 +232,213 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
-	return d.dummy.GetValidatorDashboardNotificationDetails(ctx, dashboardId, groupId, epoch, search)
+	notificationDetails := t.NotificationValidatorDashboardDetail{}
+
+	var searchIndices []uint64
+	// TODO move to api layer
+	searchIndicesStrings := strings.Split(search, ",")
+	for _, searchIndex := range searchIndicesStrings {
+		idx, err := strconv.Atoi(searchIndex)
+		if err == nil {
+			searchIndices = append(searchIndices, uint64(idx))
+		}
+	}
+
+	searchEnabled := len(searchIndices) > 0
+	searchIndexSet := make(map[uint64]bool)
+	for _, searchIndex := range searchIndices {
+		searchIndexSet[searchIndex] = true
+	}
+
+	result := []byte{}
+	query := `SELECT details FROM users_val_dashboards_notifications_history WHERE dashboard_id = $1 AND group_id = $2 AND epoch = $3`
+	err := d.alloyReader.GetContext(ctx, &result, query, dashboardId, groupId, epoch)
+	if err != nil {
+		return nil, err
+	}
+	if len(result) == 0 {
+		return &notificationDetails, nil
+	}
+
+	buf := bytes.NewBuffer(result)
+	gz, err := gzip.NewReader(buf)
+	if err != nil {
+		return nil, err
+	}
+	defer gz.Close()
+
+	// might need to loop if we get memory issues with large dashboards and can't ReadAll
+	decompressedData, err := io.ReadAll(gz)
+	if err != nil {
+		return nil, err
+	}
+
+	decoder := gob.NewDecoder(bytes.NewReader(decompressedData))
+
+	notifications := []types.Notification{}
+	err = decoder.Decode(&notifications)
+	if err != nil {
+		return nil, err
+	}
+
+	type ProposalInfo struct {
+		Proposed  []uint64
+		Scheduled []uint64
+		Missed    []uint64
+	}
+
+	proposalsInfo := make(map[t.VDBValidator]*ProposalInfo)
+	addressMapping := make(map[string]*t.Address)
+	for _, not := range notifications {
+		switch not.GetEventName() {
+		case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName /*, types.ValidatorScheduledProposalEventName*/ :
+			// aggregate proposals
+			curNotification, ok := not.(*notification.ValidatorProposalNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to ValidatorProposalNotification")
+			}
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+				continue
+			}
+			if _, ok := proposalsInfo[curNotification.ValidatorIndex]; !ok {
+				proposalsInfo[curNotification.ValidatorIndex] = &ProposalInfo{}
+			}
+			prop := proposalsInfo[curNotification.ValidatorIndex]
+			switch curNotification.Status {
+			case 0:
+				prop.Scheduled = append(prop.Scheduled, curNotification.Slot)
+			case 1:
+				prop.Proposed = append(prop.Proposed, curNotification.Block)
+			case 2:
+				prop.Missed = append(prop.Missed, curNotification.Slot)
+			}
+		case types.ValidatorMissedAttestationEventName:
+			curNotification, ok := not.(*notification.ValidatorAttestationNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to ValidatorAttestationNotification")
+			}
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+				continue
+			}
+			if curNotification.Status != 0 {
+				continue
+			}
+			notificationDetails.AttestationMissed = append(notificationDetails.AttestationMissed, t.IndexEpoch{curNotification.ValidatorIndex, curNotification.Epoch})
+		case types.ValidatorGotSlashedEventName:
+			curNotification, ok := not.(*notification.ValidatorGotSlashedNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to ValidatorGotSlashedNotification")
+			}
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+				continue
+			}
+			notificationDetails.Slashed = append(notificationDetails.Slashed, curNotification.ValidatorIndex)
+		case types.ValidatorIsOfflineEventName:
+			curNotification, ok := not.(*notification.ValidatorIsOfflineNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to ValidatorIsOfflineNotification")
+			}
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+				continue
+			}
+			if curNotification.IsOffline {
+				notificationDetails.ValidatorOffline = append(notificationDetails.ValidatorOffline, curNotification.ValidatorIndex)
+			} else {
+				// TODO EpochCount is not correct, missing / cumbersome to retrieve from backend - using "back online since" instead atm
+				notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
+			}
+			// TODO not present in backend yet
+			//notificationDetails.ValidatorOfflineReminder = ...
+		case types.ValidatorGroupIsOfflineEventName:
+			// TODO type / collection not present yet, skipping
+			/*curNotification, ok := not.(*notification.validatorGroupIsOfflineNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to validatorGroupIsOfflineNotification")
+			}
+			if curNotification.Status == 0 {
+				notificationDetails.GroupOffline = ...
+				notificationDetails.GroupOfflineReminder = ...
+			} else {
+				notificationDetails.GroupBackOnline = ...
+			}
+			*/
+		case types.ValidatorReceivedWithdrawalEventName:
+			curNotification, ok := not.(*notification.ValidatorWithdrawalNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to ValidatorWithdrawalNotification")
+			}
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+				continue
+			}
+			// TODO might need to take care of automatic + exit withdrawal happening in the same epoch ?
+			notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.IndexBlocks{curNotification.ValidatorIndex, []uint64{curNotification.Slot}})
+		case types.NetworkLivenessIncreasedEventName,
+			types.EthClientUpdateEventName,
+			types.MonitoringMachineOfflineEventName,
+			types.MonitoringMachineDiskAlmostFullEventName,
+			types.MonitoringMachineCpuLoadEventName,
+			types.MonitoringMachineMemoryUsageEventName,
+			types.TaxReportEventName:
+			// not vdb notifications, skip
+		case types.ValidatorDidSlashEventName:
+		case types.RocketpoolCommissionThresholdEventName,
+			types.RocketpoolNewClaimRoundStartedEventName:
+			// these could maybe returned later (?)
+		case types.RocketpoolCollateralMinReachedEventName, types.RocketpoolCollateralMaxReachedEventName:
+			_, ok := not.(*notification.RocketpoolNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to RocketpoolNotification")
+			}
+			addr := t.Address{Hash: t.Hash(not.GetEventFilter()), IsContract: true}
+			addressMapping[not.GetEventFilter()] = &addr
+			if not.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
+				notificationDetails.MinimumCollateralReached = append(notificationDetails.MinimumCollateralReached, addr)
+			} else {
+				notificationDetails.MaximumCollateralReached = append(notificationDetails.MaximumCollateralReached, addr)
+			}
+		case types.SyncCommitteeSoonEventName:
+			curNotification, ok := not.(*notification.SyncCommitteeSoonNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to SyncCommitteeSoonNotification")
+			}
+			if searchEnabled && !searchIndexSet[curNotification.Validator] {
+				continue
+			}
+			notificationDetails.SyncCommittee = append(notificationDetails.SyncCommittee, curNotification.Validator)
+		default:
+			log.Debugf("Unhandled notification type: %s", not.GetEventName())
+		}
+	}
+
+	// fill proposals
+	for validatorIndex, proposalInfo := range proposalsInfo {
+		if len(proposalInfo.Proposed) > 0 {
+			notificationDetails.ProposalDone = append(notificationDetails.ProposalDone, t.IndexBlocks{validatorIndex, proposalInfo.Proposed})
+		}
+		if len(proposalInfo.Scheduled) > 0 {
+			notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexBlocks{validatorIndex, proposalInfo.Scheduled})
+		}
+		if len(proposalInfo.Missed) > 0 {
+			notificationDetails.ProposalMissed = append(notificationDetails.ProposalMissed, t.IndexBlocks{validatorIndex, proposalInfo.Missed})
+		}
+	}
+
+	// fill addresses
+	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
+		return nil, err
+	}
+	for i := range notificationDetails.MinimumCollateralReached {
+		if address, ok := addressMapping[string(notificationDetails.MinimumCollateralReached[i].Hash)]; ok {
+			notificationDetails.MinimumCollateralReached[i] = *address
+		}
+	}
+	for i := range notificationDetails.MaximumCollateralReached {
+		if address, ok := addressMapping[string(notificationDetails.MaximumCollateralReached[i].Hash)]; ok {
+			notificationDetails.MaximumCollateralReached[i] = *address
+		}
+	}
+
+	return &notificationDetails, nil
 }
 
 func (d *DataAccessService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64, search string) (*t.NotificationAccountDashboardDetail, error) {
@@ -892,7 +1124,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	}
 	clientSettings := make(map[string]*t.NotificationSettingsClient, len(clients))
 	for _, client := range clients {
-		clientSettings[client.Name] = &t.NotificationSettingsClient{
+		clientSettings[strings.ToLower(client.Name)] = &t.NotificationSettingsClient{
 			Id:       client.Id,
 			Name:     client.Name,
 			Category: client.Category,
@@ -960,10 +1192,10 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	// -------------------------------------
 	// Get the paired devices
 	pairedDevices := []struct {
-		DeviceIdentifier string    `db:"device_identifier"`
-		CreatedTs        time.Time `db:"created_ts"`
-		DeviceName       string    `db:"device_name"`
-		NotifyEnabled    bool      `db:"notify_enabled"`
+		DeviceIdentifier sql.NullString `db:"device_identifier"`
+		CreatedTs        time.Time      `db:"created_ts"`
+		DeviceName       string         `db:"device_name"`
+		NotifyEnabled    bool           `db:"notify_enabled"`
 	}{}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &pairedDevices, `
@@ -971,7 +1203,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			device_identifier,
 			created_ts,
 			device_name,
-			notify_enabled
+			COALESCE(notify_enabled, false) AS notify_enabled
 		FROM users_devices
 		WHERE user_id = $1`, userId)
 		if err != nil {
@@ -1049,7 +1281,11 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 				result.GeneralSettings.IsMachineMemoryUsageSubscribed = true
 				result.GeneralSettings.MachineMemoryUsageThreshold = event.Threshold
 			case types.EthClientUpdateEventName:
-				clientSettings[event.Filter].IsSubscribed = true
+				if clientSettings[event.Filter] != nil {
+					clientSettings[event.Filter].IsSubscribed = true
+				} else {
+					log.Warnf("client %s is not found in the client settings", event.Filter)
+				}
 			}
 		}
 	}
@@ -1060,7 +1296,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 	for _, device := range pairedDevices {
 		result.PairedDevices = append(result.PairedDevices, t.NotificationPairedDevice{
-			Id:                     device.DeviceIdentifier,
+			Id:                     device.DeviceIdentifier.String,
 			PairedTimestamp:        device.CreatedTs.Unix(),
 			Name:                   device.DeviceName,
 			IsNotificationsEnabled: device.NotifyEnabled,
@@ -1071,8 +1307,38 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		result.Clients = append(result.Clients, *settings)
 	}
 
+	// properly sort the responses
+	sort.Slice(result.Networks, func(i, j int) bool { // sort by chain id ascending
+		return result.Networks[i].ChainId < result.Networks[j].ChainId
+	})
+	sort.Slice(result.Clients, func(i, j int) bool { // sort by client name ascending
+		return result.Clients[i].Name < result.Clients[j].Name
+	})
+	sort.Slice(result.PairedDevices, func(i, j int) bool { // sort by paired timestamp descending
+		return result.PairedDevices[i].PairedTimestamp > result.PairedDevices[j].PairedTimestamp
+	})
+
 	return result, nil
 }
+
+func (d *DataAccessService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
+	return &t.NotificationSettingsDefaultValues{
+		GroupOfflineThreshold:             GroupOfflineThresholdDefault,
+		MaxCollateralThreshold:            MaxCollateralThresholdDefault,
+		MinCollateralThreshold:            MinCollateralThresholdDefault,
+		ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
+
+		MachineStorageUsageThreshold: MachineStorageUsageThresholdDefault,
+		MachineCpuUsageThreshold:     MachineCpuUsageThresholdDefault,
+		MachineMemoryUsageThreshold:  MachineMemoryUsageThresholdDefault,
+
+		GasAboveThreshold: decimal.NewFromFloat(GasAboveThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
+		GasBelowThreshold: decimal.NewFromFloat(GasAboveThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
+
+		NetworkParticipationRateThreshold: ParticipationRateThresholdDefault,
+	}, nil
+}
+
 func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
 	epoch := utils.TimeToEpoch(time.Now())
 
@@ -1313,10 +1579,10 @@ func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Contex
 				VALUES ($1, $2, $3, NOW(), $4)
 			ON CONFLICT (user_id, event_name, event_filter) 
 				DO NOTHING`,
-			userId, types.EthClientUpdateEventName, clientInfo.Name, utils.TimeToEpoch(time.Now()))
+			userId, types.EthClientUpdateEventName, strings.ToLower(clientInfo.Name), utils.TimeToEpoch(time.Now()))
 	} else {
 		_, err = d.userWriter.ExecContext(ctx, `DELETE FROM users_subscriptions WHERE user_id = $1 AND event_name = $2 AND event_filter = $3`,
-			userId, types.EthClientUpdateEventName, clientInfo.Name)
+			userId, types.EthClientUpdateEventName, strings.ToLower(clientInfo.Name))
 	}
 	if err != nil {
 		return nil, err
