@@ -94,6 +94,12 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		return nil
 	})
 
+	// most notified groups
+	latestSlot, err := d.GetLatestSlot()
+	if err != nil {
+		return nil, err
+	}
+	epoch30dAgo := utils.TimeToEpoch(utils.EpochToTime(utils.EpochOfSlot(latestSlot)).Add(time.Duration(-30) * time.Hour * 24))
 	getMostNotifiedGroups := func(historyTable, groupsTable string) ([3]string, error) {
 		query := goqu.Dialect("postgres").
 			From(goqu.T(historyTable).As("history")).
@@ -103,6 +109,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			).
 			Where(
 				goqu.Ex{"history.user_id": userId},
+				goqu.I("history.epoch").Gt(epoch30dAgo),
 			).
 			GroupBy(
 				goqu.I("history.dashboard_id"),
@@ -136,7 +143,6 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		return mostNotifiedGroups, err
 	}
 
-	// most notified groups
 	eg.Go(func() error {
 		var err error
 		response.VDBMostNotifiedGroups, err = getMostNotifiedGroups("users_val_dashboards_notifications_history", "users_val_dashboards_groups")
@@ -212,7 +218,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		return err
 	})
 
-	err := eg.Wait()
+	err = eg.Wait()
 	return &response, err
 }
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
