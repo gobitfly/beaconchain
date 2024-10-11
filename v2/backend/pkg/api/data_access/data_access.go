@@ -253,6 +253,9 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 func (d *DataAccessService) StartDataAccessServices() {
 	// Create the services
 	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
+
+	// Initialize repositories
+	d.registerNotificationInterfaceTypes()
 	// Initialize the services
 
 	if d.skipServiceInitWait {
