@@ -3,7 +3,6 @@ package notification
 import (
 	"bytes"
 	"compress/gzip"
-	"database/sql"
 	"encoding/gob"
 	"fmt"
 	"html/template"
@@ -19,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -556,29 +556,42 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 }
 
 func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
+	// first fetch all the webhooks for the users
+	var userWebhooksRows []*types.UserWebhook
+
+	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
+	err := db.FrontendWriterDB.Select(&userWebhooksRows, `
+		SELECT
+			id,
+			user_id,
+			url,
+			retries,
+			event_names,
+			last_sent,
+			destination
+		FROM
+			users_webhooks
+		WHERE
+			user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)
+			AND user_id = ANY($1)
+	`, types.WebhookNotificationChannel, pq.Array(userIDs))
+	if err != nil {
+		return fmt.Errorf("error quering users_webhooks, err: %w", err)
+	}
+	userWebhooks := make(map[types.UserId][]*types.UserWebhook)
+	for _, w := range userWebhooksRows {
+		if _, ok := userWebhooks[types.UserId(w.UserID)]; !ok {
+			userWebhooks[types.UserId(w.UserID)] = make([]*types.UserWebhook, 0)
+		}
+		userWebhooks[types.UserId(w.UserID)] = append(userWebhooks[types.UserId(w.UserID)], w)
+	}
+
 	for userID, userNotifications := range notificationsByUserID {
-		var webhooks []types.UserWebhook
-		err := db.FrontendWriterDB.Select(&webhooks, `
-			SELECT
-				id,
-				user_id,
-				url,
-				retries,
-				event_names,
-				last_sent,
-				destination
-			FROM
-				users_webhooks
-			WHERE
-				user_id = $1 AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)
-		`, userID, types.WebhookNotificationChannel)
-		// continue if the user does not have a webhook
-		if err == sql.ErrNoRows {
+		webhooks, ok := userWebhooks[userID]
+		if !ok {
 			continue
 		}
-		if err != nil {
-			return fmt.Errorf("error quering users_webhooks, err: %w", err)
-		}
+
 		// webhook => [] notifications
 		discordNotifMap := make(map[uint64][]types.TransitDiscordContent)
 		notifs := make([]types.TransitWebhook, 0)
@@ -621,7 +634,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 									l_notifs := len(discordNotifMap[w.ID])
 									if l_notifs == 0 || len(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds) >= 10 {
 										discordNotifMap[w.ID] = append(discordNotifMap[w.ID], types.TransitDiscordContent{
-											Webhook: w,
+											Webhook: *w,
 											DiscordRequest: types.DiscordReq{
 												Username: utils.Config.Frontend.SiteDomain,
 											},
@@ -657,7 +670,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 									notifs = append(notifs, types.TransitWebhook{
 										Channel: w.Destination.String,
 										Content: types.TransitWebhookContent{
-											Webhook: w,
+											Webhook: *w,
 											Event: types.WebhookEvent{
 												Network:     utils.GetNetwork(),
 												Name:        string(n.GetEventName()),

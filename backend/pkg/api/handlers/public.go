@@ -10,6 +10,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gorilla/mux"
 	"github.com/shopspring/decimal"
 )
@@ -1106,6 +1107,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/summary-chart [get]
 func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
+	log.Info("handler ok")
 	var v validationError
 	ctx := r.Context()
 	dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])

@@ -553,6 +553,11 @@ func Run() {
 }
 
 func collectNotifications(startEpoch uint64) error {
+	err := notification.SendTestNotificationEmail(3)
+	if err != nil {
+		return err
+	}
+	return nil
 	epoch := startEpoch
 
 	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)

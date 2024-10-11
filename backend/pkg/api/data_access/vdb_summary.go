@@ -895,6 +895,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 // for summary charts: series id is group id, no stack
 
 func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
+	log.Info("OK")
 	ret := &t.ChartData[int, float64]{}
 
 	if len(groupIds) == 0 { // short circuit if no groups are selected
@@ -972,6 +973,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		INNER JOIN validators v ON d.validator_index = v.validator_index
 		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
 		GROUP BY 1, 2;`, dataTable, dateColumn)
+
+		log.Info(query)
+		log.Info(afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
 
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
 		if err != nil {

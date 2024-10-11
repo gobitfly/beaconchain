@@ -432,3 +432,48 @@ func sendDiscordNotifications() error {
 
 	return nil
 }
+
+func SendTestNotificationEmail(userId types.UserId) error {
+	// retrieve the email address of the user
+	var email string
+	err := db.FrontendWriterDB.Get(&email, `SELECT email FROM users WHERE id = $1`, userId)
+	if err != nil {
+		return fmt.Errorf("error querying user email, err: %w", err)
+	}
+
+	err = mail.SendHTMLMail(email, "beaconcha.in - Test Notification", types.Email{
+		Title: "beaconcha.in - Test Notification",
+		Body:  "This is a test notification",
+	}, nil)
+	return err
+}
+
+func SendTestNotificationWebhook(userId types.UserId, dashboardId types.DashboardId, groupId types.DashboardGroupId) error {
+	webhook := &struct {
+		Target string `db:"webhook_target"`
+		Format string `db:"webhook_format"`
+	}{}
+
+	err := db.ReaderDb.Get(webhook, `SELECT webhook_target, webhook_format FROM users_val_dashboards LEFT JOIN users_val_dashboards_groups ON users_val_dashboards.id = users_val_dashboards_groups.dashboard_id WHERE user_id = $1 AND users_val_dashboards.id = $2 AND users_val_dashboards_groups.id = $3`, userId, dashboardId, groupId)
+	if err != nil {
+		return fmt.Errorf("error querying user webhook, err: %w", err)
+	}
+
+	u, err := url.Parse(webhook.Target)
+	if err != nil {
+		return fmt.Errorf("error parsing webhook address, err: %w", err)
+	}
+
+	if u.Scheme != "" && u.Host != "" {
+		return fmt.Errorf("invalid webhook address (scheme is empty or address is a relative url)")
+	}
+
+	client := &http.Client{Timeout: time.Second * 5}
+	resp, err := client.Post(webhook.Target, "application/json", strings.NewReader(`{"test": "notification"}`))
+	if err != nil {
+		return fmt.Errorf("error sending test webhook, err: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return nil
+}

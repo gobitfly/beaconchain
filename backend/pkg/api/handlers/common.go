@@ -393,6 +393,7 @@ type ChartTimeDashboardLimits struct {
 
 // helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
 func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (ChartTimeDashboardLimits, error) {
+	log.Info("getCurrentChartTimeLimitsForDashboard")
 	limits := ChartTimeDashboardLimits{}
 	var err error
 	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
