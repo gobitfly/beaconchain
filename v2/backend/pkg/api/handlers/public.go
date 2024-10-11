@@ -187,7 +187,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards && !isUserAdmin(userInfo) {
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
 		returnConflict(w, r, errors.New("maximum number of validator dashboards reached"))
 		return
 	}
@@ -374,7 +374,7 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 		handleErr(w, r, err)
 		return
 	}
-	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
+	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
 		returnConflict(w, r, errors.New("maximum number of validator dashboard groups reached"))
 		return
 	}
@@ -563,7 +563,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding {
 		returnForbidden(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
@@ -616,7 +616,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
 
 	case req.Graffiti != "":
-		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
+		graffiti := v.checkRegex(reGraffiti, req.Graffiti, "graffiti")
 		if v.hasErrors() {
 			handleErr(w, r, v)
 			return
@@ -925,25 +925,23 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		handleErr(w, r, err)
 		return
 	}
-	if !isUserAdmin(userInfo) {
-		if req.IsArchived {
-			if dashboardCount >= MaxArchivedDashboardsCount {
-				returnConflict(w, r, errors.New("maximum number of archived validator dashboards reached"))
-				return
-			}
-		} else {
-			if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
-				returnConflict(w, r, errors.New("maximum number of active validator dashboards reached"))
-				return
-			}
-			if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
-				returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
-				return
-			}
-			if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
-				returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
-				return
-			}
+	if req.IsArchived {
+		if dashboardCount >= MaxArchivedDashboardsCount && !isUserAdmin(userInfo) {
+			returnConflict(w, r, errors.New("maximum number of archived validator dashboards reached"))
+			return
+		}
+	} else {
+		if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
+			returnConflict(w, r, errors.New("maximum number of active validator dashboards reached"))
+			return
+		}
+		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+			returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
+			return
+		}
+		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+			returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
+			return
 		}
 	}
 
@@ -2190,6 +2188,39 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+
+	// check premium perks
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	userGeneralSettings := data.GeneralSettings
+
+	// if users premium perks do not allow custom thresholds, set them to default in the response
+	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
+	const diffTolerance = 0.0001
+	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold {
+		if math.Abs(userGeneralSettings.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance {
+			userGeneralSettings.MachineStorageUsageThreshold = defaultSettings.MachineStorageUsageThreshold
+			userGeneralSettings.IsMachineStorageUsageSubscribed = false
+		}
+		if math.Abs(userGeneralSettings.MachineCpuUsageThreshold-defaultSettings.MachineCpuUsageThreshold) > diffTolerance {
+			userGeneralSettings.MachineCpuUsageThreshold = defaultSettings.MachineCpuUsageThreshold
+			userGeneralSettings.IsMachineCpuUsageSubscribed = false
+		}
+		if math.Abs(userGeneralSettings.MachineMemoryUsageThreshold-defaultSettings.MachineMemoryUsageThreshold) > diffTolerance {
+			userGeneralSettings.MachineMemoryUsageThreshold = defaultSettings.MachineMemoryUsageThreshold
+			userGeneralSettings.IsMachineMemoryUsageSubscribed = false
+		}
+		data.GeneralSettings = userGeneralSettings
+	}
+
 	response := types.InternalGetUserNotificationSettingsResponse{
 		Data: *data,
 	}
@@ -2226,6 +2257,27 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, v)
 		return
 	}
+
+	// check premium perks
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	isCustomThresholdUsed := req.MachineStorageUsageThreshold != defaultSettings.MachineStorageUsageThreshold ||
+		req.MachineCpuUsageThreshold != defaultSettings.MachineCpuUsageThreshold ||
+		req.MachineMemoryUsageThreshold != defaultSettings.MachineMemoryUsageThreshold
+
+	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold && isCustomThresholdUsed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to set machine settings thresholds"))
+		return
+	}
+
 	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, r, err)
@@ -2463,6 +2515,36 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		handleErr(w, r, err)
 		return
 	}
+	// if users premium perks do not allow subscriptions, set them to false in the response
+	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	for i, dashboard := range data {
+		if dashboard.IsAccountDashboard {
+			continue
+		}
+		settings, ok := dashboard.Settings.(types.NotificationSettingsValidatorDashboard)
+		if !ok {
+			handleErr(w, r, errors.New("invalid settings type"))
+			return
+		}
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && settings.IsGroupOfflineSubscribed {
+			settings.IsGroupOfflineSubscribed = false
+			settings.GroupOfflineThreshold = defaultSettings.GroupOfflineThreshold
+		}
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && settings.IsRealTimeModeEnabled {
+			settings.IsRealTimeModeEnabled = false
+		}
+		data[i].Settings = settings
+	}
 	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
@@ -2507,6 +2589,20 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, v)
 		return
 	}
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && req.IsGroupOfflineSubscribed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group offline"))
+		return
+	}
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && req.IsRealTimeModeEnabled {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe real time mode"))
+		return
+	}
+
 	err = h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), userId, dashboardId, groupId, req)
 	if err != nil {
 		handleErr(w, r, err)
