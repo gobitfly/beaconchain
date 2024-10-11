@@ -1,6 +1,7 @@
 package notification_sender
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -146,6 +148,21 @@ func Run() {
 			log.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
 		}()
 	}
+
+	// Initialize the persistent redis client
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rdc := redis.NewClient(&redis.Options{
+			Addr:        cfg.RedisSessionStoreEndpoint,
+			ReadTimeout: time.Second * 60,
+		})
+
+		if err := rdc.Ping(context.Background()).Err(); err != nil {
+			log.Fatal(err, "error connecting to persistent redis store", 0)
+		}
+		db.PersistentRedisDbClient = rdc
+	}()
 
 	wg.Wait()
 
