@@ -191,7 +191,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if curNotification.Status != 0 {
 				continue
 			}
-			notificationDetails.AttestationMissed = append(notificationDetails.AttestationMissed, t.IndexEpoch{curNotification.ValidatorIndex, curNotification.Epoch})
+			notificationDetails.AttestationMissed = append(notificationDetails.AttestationMissed, t.IndexEpoch{Index: curNotification.ValidatorIndex, Epoch: curNotification.Epoch})
 		case types.ValidatorGotSlashedEventName:
 			curNotification, ok := not.(*notification.ValidatorGotSlashedNotification)
 			if !ok {
@@ -239,7 +239,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				continue
 			}
 			// TODO might need to take care of automatic + exit withdrawal happening in the same epoch ?
-			notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.IndexBlocks{curNotification.ValidatorIndex, []uint64{curNotification.Slot}})
+			notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.IndexBlocks{Index: curNotification.ValidatorIndex, Blocks: []uint64{curNotification.Slot}})
 		case types.NetworkLivenessIncreasedEventName,
 			types.EthClientUpdateEventName,
 			types.MonitoringMachineOfflineEventName,
@@ -269,10 +269,10 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if !ok {
 				return nil, fmt.Errorf("failed to cast notification to SyncCommitteeSoonNotification")
 			}
-			if searchEnabled && !searchIndexSet[curNotification.Validator] {
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
-			notificationDetails.SyncCommittee = append(notificationDetails.SyncCommittee, curNotification.Validator)
+			notificationDetails.SyncCommittee = append(notificationDetails.SyncCommittee, curNotification.ValidatorIndex)
 		default:
 			log.Debugf("Unhandled notification type: %s", not.GetEventName())
 		}
@@ -281,13 +281,13 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	// fill proposals
 	for validatorIndex, proposalInfo := range proposalsInfo {
 		if len(proposalInfo.Proposed) > 0 {
-			notificationDetails.ProposalDone = append(notificationDetails.ProposalDone, t.IndexBlocks{validatorIndex, proposalInfo.Proposed})
+			notificationDetails.ProposalDone = append(notificationDetails.ProposalDone, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Proposed})
 		}
 		if len(proposalInfo.Scheduled) > 0 {
-			notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexBlocks{validatorIndex, proposalInfo.Scheduled})
+			notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Scheduled})
 		}
 		if len(proposalInfo.Missed) > 0 {
-			notificationDetails.ProposalMissed = append(notificationDetails.ProposalMissed, t.IndexBlocks{validatorIndex, proposalInfo.Missed})
+			notificationDetails.ProposalMissed = append(notificationDetails.ProposalMissed, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Missed})
 		}
 	}
 
