@@ -255,7 +255,7 @@ func (d *DataAccessService) StartDataAccessServices() {
 	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
 
 	// Initialize repositories
-	d.initNotifications()
+	d.registerNotificationInterfaceTypes()
 	// Initialize the services
 
 	if d.skipServiceInitWait {
