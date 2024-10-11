@@ -252,7 +252,27 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
-	notificationDetails := t.NotificationValidatorDashboardDetail{}
+	// dev hack; TODO remove
+	if dashboardId == 5426 || dashboardId == 5334 {
+		return d.dummy.GetValidatorDashboardNotificationDetails(ctx, dashboardId, groupId, epoch, search)
+	}
+	notificationDetails := t.NotificationValidatorDashboardDetail{
+		ValidatorOffline:         []uint64{},
+		GroupOffline:             []t.NotificationEventGroup{},
+		ProposalMissed:           []t.IndexBlocks{},
+		ProposalDone:             []t.IndexBlocks{},
+		UpcomingProposals:        []t.IndexBlocks{},
+		Slashed:                  []uint64{},
+		SyncCommittee:            []uint64{},
+		AttestationMissed:        []t.IndexEpoch{},
+		Withdrawal:               []t.IndexBlocks{},
+		ValidatorOfflineReminder: []uint64{},
+		GroupOfflineReminder:     []t.NotificationEventGroup{},
+		ValidatorBackOnline:      []t.NotificationEventValidatorBackOnline{},
+		GroupBackOnline:          []t.NotificationEventGroupBackOnline{},
+		MinimumCollateralReached: []t.Address{},
+		MaximumCollateralReached: []t.Address{},
+	}
 
 	var searchIndices []uint64
 	// TODO move to api layer
@@ -274,6 +294,9 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	query := `SELECT details FROM users_val_dashboards_notifications_history WHERE dashboard_id = $1 AND group_id = $2 AND epoch = $3`
 	err := d.alloyReader.GetContext(ctx, &result, query, dashboardId, groupId, epoch)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return &notificationDetails, nil
+		}
 		return nil, err
 	}
 	if len(result) == 0 {
