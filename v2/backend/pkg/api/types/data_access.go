@@ -174,6 +174,7 @@ type NetworkInfo struct {
 type ClientInfo struct {
 	Id       uint64
 	Name     string
+	DbName   string
 	Category string
 }
 
