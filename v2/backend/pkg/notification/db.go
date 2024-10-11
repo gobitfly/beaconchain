@@ -66,12 +66,10 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		ds = ds.Where(goqu.L("event_filter = ANY(?)", pq.StringArray(eventFilters)))
 	}
 
-	query, args, err := ds.Prepared(false).ToSQL()
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
 	}
-
-	log.Info(query)
 
 	subMap := make(map[string][]types.Subscription, 0)
 	err = db.FrontendWriterDB.Select(&subs, query, args...)
