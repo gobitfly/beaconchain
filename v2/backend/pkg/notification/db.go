@@ -44,14 +44,16 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		eventNameForQuery = string(eventName)
 	}
 	ds := goqu.Dialect("postgres").From("users_subscriptions").Select(
-		goqu.C("id"),
+		goqu.T("users_subscriptions").Col("id"),
 		goqu.C("user_id"),
 		goqu.C("event_filter"),
 		goqu.C("last_sent_epoch"),
 		goqu.C("created_epoch"),
 		goqu.C("event_threshold"),
 		goqu.C("event_name"),
-	).Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery))
+	).Join(goqu.T("users"), goqu.On(goqu.T("users").Col("id").Eq(goqu.T("users_subscriptions").Col("user_id")))).
+		Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery)).
+		Where(goqu.L("users.notifications_do_not_disturb_ts IS NULL OR users.notifications_do_not_disturb_ts < NOW()"))
 
 	if lastSentFilter != "" {
 		if len(lastSentFilterArgs) > 0 {
@@ -64,10 +66,12 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		ds = ds.Where(goqu.L("event_filter = ANY(?)", pq.StringArray(eventFilters)))
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
+	query, args, err := ds.Prepared(false).ToSQL()
 	if err != nil {
 		return nil, err
 	}
+
+	log.Info(query)
 
 	subMap := make(map[string][]types.Subscription, 0)
 	err = db.FrontendWriterDB.Select(&subs, query, args...)

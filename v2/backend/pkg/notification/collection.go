@@ -199,6 +199,8 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 		GroupId        types.DashboardGroupId `db:"group_id"`
 		GroupName      string                 `db:"group_name"`
 		ValidatorIndex types.ValidatorIndex   `db:"validator_index"`
+		WebhookTarget  string                 `db:"webhook_target"`
+		WebhookFormat  string                 `db:"webhook_format"`
 	}
 	var dashboardDefinitions []dashboardDefinitionRow
 	err = db.AlloyWriter.Select(&dashboardDefinitions, `
@@ -208,7 +210,9 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 			users_val_dashboards.user_id,
 			users_val_dashboards_groups.id as group_id,
 			users_val_dashboards_groups.name as group_name,
-			users_val_dashboards_validators.validator_index
+			users_val_dashboards_validators.validator_index,
+			COALESCE(users_val_dashboards_groups.webhook_target, '') AS webhook_target,
+			COALESCE(users_val_dashboards_groups.webhook_format, '') AS webhook_format
 		FROM users_val_dashboards
 		LEFT JOIN users_val_dashboards_groups ON users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
 		LEFT JOIN users_val_dashboards_validators ON users_val_dashboards_validators.dashboard_id = users_val_dashboards_groups.dashboard_id AND users_val_dashboards_validators.group_id = users_val_dashboards_groups.id
