@@ -148,7 +148,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 
 		// join result with names
 		query = goqu.Dialect("postgres").
-			Select("name").
+			Select(goqu.L("COALESCE(name, 'default') AS name")).
 			From(query.As("history")).
 			LeftJoin(goqu.I(groupsTable).As("groups"), goqu.On(
 				goqu.Ex{"groups.dashboard_id": goqu.I("history.dashboard_id")},
@@ -158,12 +158,12 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		mostNotifiedGroups := [3]string{}
 		querySql, args, err := query.Prepared(true).ToSQL()
 		if err != nil {
-			return mostNotifiedGroups, err
+			return mostNotifiedGroups, fmt.Errorf("failed to prepare getMostNotifiedGroups query: %w", err)
 		}
 		res := []string{}
 		err = d.alloyReader.SelectContext(ctx, &res, querySql, args...)
 		if err != nil {
-			return mostNotifiedGroups, err
+			return mostNotifiedGroups, fmt.Errorf("failed to execute getMostNotifiedGroups query: %w", err)
 		}
 		copy(mostNotifiedGroups[:], res)
 		return mostNotifiedGroups, err
