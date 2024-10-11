@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/go-redis/redis/v8"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"golang.org/x/exp/maps"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/deposit_contract"
@@ -52,7 +51,6 @@ type executionDepositsExporter struct {
 	CurrentHeadBlock                   atomic.Uint64
 	Signer                             gethtypes.Signer
 	DepositMethod                      abi.Method
-	exportedTxsCache                   *lru.Cache[string, bool]
 }
 
 func NewExecutionDepositsExporter(moduleContext ModuleContext) ModuleInterface {
@@ -66,12 +64,6 @@ func NewExecutionDepositsExporter(moduleContext ModuleContext) ModuleInterface {
 }
 
 func (d *executionDepositsExporter) Init() error {
-	exportedTxsCache, err := lru.New[string, bool](1000)
-	if err != nil {
-		log.Fatal(err, "error creating exportedTxsCache", 0)
-	}
-	d.exportedTxsCache = exportedTxsCache
-
 	d.Signer = gethtypes.NewCancunSigner(big.NewInt(0).SetUint64(utils.Config.Chain.ClConfig.DepositChainID))
 
 	d.LastExportedFinalizedBlockRedisKey = fmt.Sprintf("%d:execution_deposits_exporter:last_exported_finalized_block", utils.Config.Chain.ClConfig.DepositChainID)
@@ -315,11 +307,6 @@ func (d *executionDepositsExporter) fetchDeposits(fromBlock, toBlock uint64) (de
 
 		depositLog := depositLogIterator.Event
 
-		if d.exportedTxsCache.Contains(fmt.Sprintf("%x", depositLog.Raw.TxHash.Bytes())) {
-			log.Debugf("skipping already exported deposit-tx: block: %d, tx: %x", depositLog.Raw.BlockNumber, depositLog.Raw.TxHash.Bytes())
-			continue
-		}
-
 		err = utils.VerifyDepositSignature(&phase0.DepositData{
 			PublicKey:             phase0.BLSPubKey(depositLog.Pubkey),
 			WithdrawalCredentials: depositLog.WithdrawalCredentials,
@@ -497,11 +484,6 @@ func (d *executionDepositsExporter) saveDeposits(depositsToSave []*types.ELDepos
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing db-tx for execution layer deposits: %w", err)
-	}
-
-	// mark txs as exported, avoid extra work re-exporting them
-	for _, dd := range depositsToSave {
-		d.exportedTxsCache.Add(fmt.Sprintf("%x", dd.TxHash), true)
 	}
 
 	return nil
