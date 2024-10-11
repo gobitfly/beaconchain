@@ -186,7 +186,8 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		var err error
 		day := time.Now().Truncate(utils.Day).Unix()
 		getMessageCount := func(prefix string) (uint64, error) {
-			res := d.persistentRedisDbClient.Get(ctx, fmt.Sprintf("%s:%d:%d", prefix, userId, day))
+			key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
+			res := d.persistentRedisDbClient.Get(ctx, key)
 			if res.Err() == redis.Nil {
 				return 0, nil
 			} else if res.Err() != nil {
@@ -194,7 +195,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			}
 			return res.Uint64()
 		}
-		response.Last24hPushCount, err = getMessageCount("n_mails")
+		response.Last24hEmailsCount, err = getMessageCount("n_mails")
 		if err != nil {
 			return err
 		}
@@ -202,7 +203,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		if err != nil {
 			return err
 		}
-		response.Last24hPushCount, err = getMessageCount("n_webhook")
+		response.Last24hWebhookCount, err = getMessageCount("n_webhook")
 		return err
 	})
 
