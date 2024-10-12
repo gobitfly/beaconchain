@@ -29,6 +29,8 @@ type BigTableEthRaw struct {
 	tr http.RoundTripper
 	db RawStore
 
+	chainID uint64
+
 	// cache to store link between block hash and number
 	// ethclient.Client.BlockByNumber retrieves the uncles by hash
 	// so we need a way to access it simply
@@ -36,10 +38,11 @@ type BigTableEthRaw struct {
 	hashToNumber sync.Map
 }
 
-func NewBigTableEthRaw(tr http.RoundTripper, db RawStore) *BigTableEthRaw {
+func NewBigTableEthRaw(tr http.RoundTripper, db RawStore, chainID uint64) *BigTableEthRaw {
 	return &BigTableEthRaw{
 		tr:           tr,
 		db:           db,
+		chainID:      chainID,
 		hashToNumber: sync.Map{},
 	}
 }
@@ -171,7 +174,7 @@ type MinimalBlock struct {
 }
 
 func (r *BigTableEthRaw) BlockByNumber(ctx context.Context, number *big.Int) ([]byte, error) {
-	block, err := r.db.ReadBlock(1, number.Int64())
+	block, err := r.db.ReadBlock(r.chainID, number.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +192,7 @@ func (r *BigTableEthRaw) BlockByNumber(ctx context.Context, number *big.Int) ([]
 }
 
 func (r *BigTableEthRaw) BlockReceipts(ctx context.Context, number *big.Int) ([]byte, error) {
-	block, err := r.db.ReadBlock(1, number.Int64())
+	block, err := r.db.ReadBlock(r.chainID, number.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +200,7 @@ func (r *BigTableEthRaw) BlockReceipts(ctx context.Context, number *big.Int) ([]
 }
 
 func (r *BigTableEthRaw) TraceBlockByNumber(ctx context.Context, number *big.Int) ([]byte, error) {
-	block, err := r.db.ReadBlock(1, number.Int64())
+	block, err := r.db.ReadBlock(r.chainID, number.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +208,7 @@ func (r *BigTableEthRaw) TraceBlockByNumber(ctx context.Context, number *big.Int
 }
 
 func (r *BigTableEthRaw) UncleByBlockNumberAndIndex(ctx context.Context, number *big.Int, index int64) ([]byte, error) {
-	block, err := r.db.ReadBlock(1, number.Int64())
+	block, err := r.db.ReadBlock(r.chainID, number.Int64())
 	if err != nil {
 		return nil, err
 	}
