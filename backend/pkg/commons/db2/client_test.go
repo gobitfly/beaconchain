@@ -17,14 +17,16 @@ import (
 
 func TestBigTableClient(t *testing.T) {
 	tests := []struct {
-		name   string
-		number int64
-		block  FullBlockRawData
+		name  string
+		block FullBlockRawData
 	}{
 		{
-			name:   "test block",
-			number: testBlockNumber,
-			block:  testFullBlock,
+			name:  "test block",
+			block: testFullBlock,
+		},
+		{
+			name:  "two uncles",
+			block: testTwoUnclesFullBlock,
 		},
 	}
 
@@ -36,7 +38,7 @@ func TestBigTableClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rawStore := NewRawStore(store.Wrap(bg, blocRawTable, ""))
+			rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
 			if err := rawStore.AddBlocks([]FullBlockRawData{tt.block}); err != nil {
 				t.Fatal(err)
 			}
@@ -49,15 +51,15 @@ func TestBigTableClient(t *testing.T) {
 			}
 			ethClient := ethclient.NewClient(rpcClient)
 
-			block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.number))
+			block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.block.BlockNumber))
 			if err != nil {
 				t.Fatalf("BlockByNumber() error = %v", err)
 			}
-			if got, want := block.Number().Int64(), tt.number; got != want {
+			if got, want := block.Number().Int64(), tt.block.BlockNumber; got != want {
 				t.Errorf("got %v, want %v", got, want)
 			}
 
-			receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(tt.number)))
+			receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(tt.block.BlockNumber)))
 			if err != nil {
 				t.Fatalf("BlockReceipts() error = %v", err)
 			}
