@@ -687,6 +687,7 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 	return v.checkNetwork(intOrString{strValue: &param})
 }
 
+//nolint:unused
 func (v *validationError) checkNetworksParameter(param string) []uint64 {
 	if param == "" {
 		v.add("networks", "list of networks must not be empty")
