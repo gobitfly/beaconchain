@@ -86,7 +86,9 @@ func TestStore(t *testing.T) {
 		t.Run(dbName, func(t *testing.T) {
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					defer db.Clear()
+					defer func() {
+						_ = db.Clear()
+					}()
 
 					if tt.bulk {
 						itemsByKey := make(map[string][]Item)

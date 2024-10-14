@@ -77,8 +77,9 @@ func (r *BigTableEthRaw) RoundTrip(request *http.Request) (*http.Response, error
 	if len(resps) == 0 {
 		return r.tr.RoundTrip(request)
 	}
+	respBody, _ := makeBody(isSingle, resps)
 	return &http.Response{
-		Body:       makeBody(isSingle, resps),
+		Body:       respBody,
 		StatusCode: http.StatusOK,
 	}, nil
 }
@@ -167,14 +168,18 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 	return &resp, nil
 }
 
-func makeBody(isSingle bool, messages []*jsonrpcMessage) io.ReadCloser {
+func makeBody(isSingle bool, messages []*jsonrpcMessage) (io.ReadCloser, error) {
 	var b []byte
+	var err error
 	if isSingle {
-		b, _ = json.Marshal(messages[0])
+		b, err = json.Marshal(messages[0])
 	} else {
-		b, _ = json.Marshal(messages)
+		b, err = json.Marshal(messages)
 	}
-	return io.NopCloser(bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	return io.NopCloser(bytes.NewReader(b)), nil
 }
 
 type MinimalBlock struct {
