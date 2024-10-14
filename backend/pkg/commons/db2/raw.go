@@ -28,7 +28,7 @@ func NewRawStore(store store.Store) RawStore {
 func (db RawStore) AddBlocks(blocks []FullBlockRawData) error {
 	itemsByKey := make(map[string][]store.Item)
 	for _, fullBlock := range blocks {
-		if len(fullBlock.Block) == 0 || len(fullBlock.Traces) == 0 {
+		if len(fullBlock.Block) == 0 || len(fullBlock.BlockTxs) != 0 && len(fullBlock.Traces) == 0 {
 			return fmt.Errorf("block %d: empty data", fullBlock.BlockNumber)
 		}
 		key := blockKey(fullBlock.ChainID, fullBlock.BlockNumber)

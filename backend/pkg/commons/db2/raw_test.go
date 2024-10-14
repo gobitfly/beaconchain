@@ -71,8 +71,8 @@ var testTwoUnclesFullBlock = FullBlockRawData{
 	BlockNumber:      testTwoUnclesBlockNumber,
 	BlockUnclesCount: 2,
 	Block:            []byte(testTwoUnclesBlock),
-	Receipts:         []byte(testReceipts),
-	Traces:           []byte(testTraces),
+	Receipts:         nil,
+	Traces:           nil,
 	Uncles:           []byte(testTwoUnclesBlockUncles),
 }
 
