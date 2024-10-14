@@ -252,6 +252,10 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 }
 
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+	// dev hack; TODO remove
+	if userId == 127504 {
+		return d.dummy.GetDashboardNotifications(ctx, userId, chainIds, cursor, colSort, search, limit)
+	}
 	response := []t.NotificationDashboardsTableRow{}
 	var err error
 
