@@ -78,7 +78,8 @@ var opts = struct {
  * By default, all commands that are not in the REQUIRES_LIST will automatically require everything.
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
-	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+	"app-bundle":                (&commands.AppBundleCommand{}).Requires(),
+	"clickhouse-data-validator": (&commands.ClickhouseDataValidatorCommand{}).Requires(),
 }
 
 func Run() {
@@ -89,6 +90,10 @@ func Run() {
 	}
 
 	appBundleCommand := commands.AppBundleCommand{
+		FlagSet: fs,
+	}
+
+	clickhouseDataValidatorCommand := commands.ClickhouseDataValidatorCommand{
 		FlagSet: fs,
 	}
 
@@ -118,6 +123,8 @@ func Run() {
 
 	statsPartitionCommand.ParseCommandOptions()
 	appBundleCommand.ParseCommandOptions()
+	clickhouseDataValidatorCommand.ParseCommandOptions()
+
 	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
@@ -247,27 +254,29 @@ func Run() {
 	}
 
 	// clickhouse
-	// db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
-	// 	Username:     cfg.ClickHouse.WriterDatabase.Username,
-	// 	Password:     cfg.ClickHouse.WriterDatabase.Password,
-	// 	Name:         cfg.ClickHouse.WriterDatabase.Name,
-	// 	Host:         cfg.ClickHouse.WriterDatabase.Host,
-	// 	Port:         cfg.ClickHouse.WriterDatabase.Port,
-	// 	MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
-	// 	SSL:          true,
-	// 	MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
-	// }, &types.DatabaseConfig{
-	// 	Username:     cfg.ClickHouse.ReaderDatabase.Username,
-	// 	Password:     cfg.ClickHouse.ReaderDatabase.Password,
-	// 	Name:         cfg.ClickHouse.ReaderDatabase.Name,
-	// 	Host:         cfg.ClickHouse.ReaderDatabase.Host,
-	// 	Port:         cfg.ClickHouse.ReaderDatabase.Port,
-	// 	MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-	// 	SSL:          true,
-	// 	MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	// }, "clickhouse", "clickhouse")
-	// defer db.ClickHouseReader.Close()
-	// defer db.ClickHouseWriter.Close()
+	if requires.Clickhouse {
+		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.ClickHouse.WriterDatabase.Username,
+			Password:     cfg.ClickHouse.WriterDatabase.Password,
+			Name:         cfg.ClickHouse.WriterDatabase.Name,
+			Host:         cfg.ClickHouse.WriterDatabase.Host,
+			Port:         cfg.ClickHouse.WriterDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.ClickHouse.ReaderDatabase.Username,
+			Password:     cfg.ClickHouse.ReaderDatabase.Password,
+			Name:         cfg.ClickHouse.ReaderDatabase.Name,
+			Host:         cfg.ClickHouse.ReaderDatabase.Host,
+			Port:         cfg.ClickHouse.ReaderDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+		}, "clickhouse", "clickhouse")
+		defer db.ClickHouseReader.Close()
+		defer db.ClickHouseWriter.Close()
+	}
 
 	// Initialize the persistent redis client
 	if requires.Redis {
@@ -531,6 +540,8 @@ func Run() {
 	case "app-bundle":
 		appBundleCommand.Config.DryRun = opts.DryRun
 		err = appBundleCommand.Run()
+	case "clickhouse-data-validator":
+		err = clickhouseDataValidatorCommand.Run()
 	case "fix-ens":
 		err = fixEns(erigonClient)
 	case "fix-ens-addresses":
