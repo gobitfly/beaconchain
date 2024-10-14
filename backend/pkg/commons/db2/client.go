@@ -26,7 +26,6 @@ type EthClient interface {
 }
 
 type BigTableEthRaw struct {
-	tr http.RoundTripper
 	db RawStore
 
 	chainID uint64
@@ -38,9 +37,8 @@ type BigTableEthRaw struct {
 	hashToNumber sync.Map
 }
 
-func NewBigTableEthRaw(tr http.RoundTripper, db RawStore, chainID uint64) *BigTableEthRaw {
+func NewBigTableEthRaw(db RawStore, chainID uint64) *BigTableEthRaw {
 	return &BigTableEthRaw{
-		tr:           tr,
 		db:           db,
 		chainID:      chainID,
 		hashToNumber: sync.Map{},
@@ -74,9 +72,6 @@ func (r *BigTableEthRaw) RoundTrip(request *http.Request) (*http.Response, error
 		resps = append(resps, resp)
 	}
 
-	if len(resps) == 0 {
-		return r.tr.RoundTrip(request)
-	}
 	respBody, _ := makeBody(isSingle, resps)
 	return &http.Response{
 		Body:       respBody,
@@ -85,14 +80,14 @@ func (r *BigTableEthRaw) RoundTrip(request *http.Request) (*http.Response, error
 }
 
 func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*jsonrpcMessage, error) {
+	var args []interface{}
+	if err := json.Unmarshal(message.Params, &args); err != nil {
+		return nil, err
+	}
+
 	var respBody []byte
 	switch message.Method {
 	case "eth_getBlockByNumber":
-		var args []interface{}
-		if err := json.Unmarshal(message.Params, &args); err != nil {
-			return nil, err
-		}
-
 		// we decode only big.Int maybe we should also handle "latest"
 		block, err := hexutil.DecodeBig(args[0].(string))
 		if err != nil {
@@ -106,11 +101,6 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 		respBody = b
 
 	case "debug_traceBlockByNumber":
-		var args []interface{}
-		if err := json.Unmarshal(message.Params, &args); err != nil {
-			return nil, err
-		}
-
 		block, err := hexutil.DecodeBig(args[0].(string))
 		if err != nil {
 			return nil, err
@@ -123,11 +113,6 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 		respBody = b
 
 	case "eth_getBlockReceipts":
-		var args []interface{}
-		if err := json.Unmarshal(message.Params, &args); err != nil {
-			return nil, err
-		}
-
 		block, err := hexutil.DecodeBig(args[0].(string))
 		if err != nil {
 			return nil, err
@@ -140,10 +125,6 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 		respBody = b
 
 	case "eth_getUncleByBlockHashAndIndex":
-		var args []interface{}
-		if err := json.Unmarshal(message.Params, &args); err != nil {
-			return nil, err
-		}
 		number, exist := r.hashToNumber.Load(args[0].(string))
 		if !exist {
 			return nil, fmt.Errorf("cannot find hash '%s' in cache", args[0].(string))
@@ -159,11 +140,12 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 		}
 		respBody = b
 	}
-	if len(respBody) == 0 {
-		return nil, nil
-	}
 	var resp jsonrpcMessage
 	_ = json.Unmarshal(respBody, &resp)
+	if len(respBody) == 0 {
+		resp.Version = message.Version
+		resp.Result = []byte("[]")
+	}
 	resp.ID = message.ID
 	return &resp, nil
 }

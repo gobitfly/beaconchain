@@ -44,7 +44,7 @@ func TestBigTableClient(t *testing.T) {
 			}
 
 			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
-				Transport: NewBigTableEthRaw(http.DefaultTransport, rawStore, tt.block.ChainID),
+				Transport: NewBigTableEthRaw(rawStore, tt.block.ChainID),
 			}))
 			if err != nil {
 				t.Fatal(err)
@@ -63,7 +63,7 @@ func TestBigTableClient(t *testing.T) {
 			if err != nil {
 				t.Fatalf("BlockReceipts() error = %v", err)
 			}
-			if len(receipts) == 0 {
+			if len(block.Transactions()) != 0 && len(receipts) == 0 {
 				t.Errorf("receipts should not be empty")
 			}
 
@@ -71,7 +71,7 @@ func TestBigTableClient(t *testing.T) {
 			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
 				t.Fatalf("debug_traceBlockByNumber() error = %v", err)
 			}
-			if len(traces) == 0 {
+			if len(block.Transactions()) != 0 && len(traces) == 0 {
 				t.Errorf("traces should not be empty")
 			}
 		})
