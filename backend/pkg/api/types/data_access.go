@@ -22,6 +22,13 @@ type Sort[T enums.Enum] struct {
 	Desc   bool
 }
 
+type SortColumn struct {
+	Column string
+	Desc   bool
+	// represents value from cursor
+	Offset any
+}
+
 type VDBIdPrimary int
 type VDBIdPublic string
 type VDBIdValidatorSet []VDBValidator
@@ -164,6 +171,17 @@ type BlocksCursor struct {
 	Group    uint64
 	Status   uint64
 	Reward   decimal.Decimal
+}
+
+type NotificationsDashboardsCursor struct {
+	GenericCursor
+
+	Epoch         uint64
+	ChainId       uint64
+	DashboardName string
+	DashboardId   uint64
+	GroupName     string
+	GroupId       uint64
 }
 
 type NetworkInfo struct {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -27,6 +28,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/notification"
+	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
@@ -248,8 +250,138 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 	err = eg.Wait()
 	return &response, err
 }
+
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
-	return d.dummy.GetDashboardNotifications(ctx, userId, chainIds, cursor, colSort, search, limit)
+	response := []t.NotificationDashboardsTableRow{}
+	var err error
+
+	var currentCursor t.NotificationsDashboardsCursor
+	if cursor != "" {
+		if currentCursor, err = utils.StringToCursor[t.NotificationsDashboardsCursor](cursor); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationsDashboardsCursor: %w", err)
+		}
+	}
+
+	// validator query
+	vdbQuery := goqu.Dialect("postgres").
+		From(goqu.T("users_val_dashboards_notifications_history").As("uvdnh")).
+		Select(
+			goqu.L("false").As("is_account_dashboard"),
+			goqu.I("uvd.network").As("chain_id"),
+			goqu.I("uvdnh.epoch"),
+			goqu.I("uvd.id").As("dashboard_id"),
+			goqu.I("uvd.name").As("dashboard_name"),
+			goqu.I("uvdg.id").As("group_id"),
+			goqu.I("uvdg.name").As("group_name"),
+			goqu.SUM("uvdnh.event_count").As("entity_count"),
+			goqu.L("ARRAY_AGG(DISTINCT event_type)").As("event_types"),
+		).
+		InnerJoin(goqu.T("users_val_dashboards").As("uvd"), goqu.On(
+			goqu.Ex{"uvd.id": goqu.I("uvdnh.dashboard_id")})).
+		InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+			goqu.Ex{"uvdg.id": goqu.I("uvdnh.group_id")},
+			goqu.Ex{"uvdg.dashboard_id": goqu.I("uvd.id")},
+		)).
+		Where(
+			goqu.Ex{"uvd.user_id": userId},
+			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
+		).
+		GroupBy(
+			goqu.I("uvdnh.epoch"),
+			goqu.I("uvd.network"),
+			goqu.I("uvd.id"),
+			goqu.I("uvdg.id"),
+			goqu.I("uvdg.name"),
+		)
+
+	// TODO account dashboards
+	/*adbQuery := goqu.Dialect("postgres").
+		From(goqu.T("adb_notifications_history").As("anh")).
+		Select(
+			goqu.L("true").As("is_account_dashboard"),
+			goqu.I("anh.network").As("chain_id"),
+			goqu.I("anh.epoch"),
+			goqu.I("uad.id").As("dashboard_id"),
+			goqu.I("uad.name").As("dashboard_name"),
+			goqu.I("uadg.id").As("group_id"),
+			goqu.I("uadg.name").As("group_name"),
+			goqu.SUM("anh.event_count").As("entity_count"),
+			goqu.L("ARRAY_AGG(DISTINCT event_type)").As("event_types"),
+		).
+		InnerJoin(goqu.T("users_acc_dashboards").As("uad"), goqu.On(
+			goqu.Ex{"uad.id": goqu.I("anh.dashboard_id"),
+			})).
+		InnerJoin(goqu.T("users_acc_dashboards_groups").As("uadg"), goqu.On(
+			goqu.Ex{"uadg.id": goqu.I("anh.group_id"),
+			goqu.Ex{"uadg.dashboard_id": goqu.I("uad.id")},
+			})).
+		Where(
+			goqu.Ex{"uad.user_id": userId},
+			goqu.L("anh.network = ANY(?)", pq.Array(chainIds)),
+		).
+		GroupBy(
+			goqu.I("anh.epoch"),
+			goqu.I("anh.network"),
+			goqu.I("uad.id"),
+			goqu.I("uadg.id"),
+			goqu.I("uadg.name"),
+		)
+
+	unionQuery := vdbQuery.Union(adbQuery)*/
+	unionQuery := goqu.From(vdbQuery)
+
+	// sorting
+	defaultColumns := []t.SortColumn{
+		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
+		{Column: enums.NotificationDashboardDashboardId.ToString(), Desc: false, Offset: currentCursor.DashboardId},
+		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
+		{Column: enums.NotificationDashboardGroupId.ToString(), Desc: false, Offset: currentCursor.GroupId},
+		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
+	}
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	unionQuery = unionQuery.Order(order...)
+	if directions != nil {
+		unionQuery = unionQuery.Where(directions)
+	}
+
+	// search
+	searchName := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
+	if searchName {
+		searchLower := strings.ToLower(strings.Replace(search, "_", "\\_", -1)) + "%"
+		unionQuery = unionQuery.Where(exp.NewExpressionList(
+			exp.OrType,
+			goqu.L("LOWER(?)", goqu.I("dashboard_name")).Like(searchLower),
+			goqu.L("LOWER(?)", goqu.I("group_name")).Like(searchLower),
+		))
+	}
+	unionQuery = unionQuery.Limit(uint(limit + 1))
+
+	query, args, err := unionQuery.ToSQL()
+	if err != nil {
+		return nil, nil, err
+	}
+	err = d.alloyReader.SelectContext(ctx, &response, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	moreDataFlag := len(response) > int(limit)
+	if moreDataFlag {
+		response = response[:len(response)-1]
+	}
+	if currentCursor.IsReverse() {
+		slices.Reverse(response)
+	}
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return response, &t.Paging{}, nil
+	}
+	paging, err := utils.GetPagingFromData(response, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, err
+	}
+	return response, paging, nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {

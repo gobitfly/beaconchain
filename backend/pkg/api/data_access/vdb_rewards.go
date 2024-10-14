@@ -35,7 +35,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	if cursor != "" {
 		currentCursor, err = utils.StringToCursor[t.RewardsCursor](cursor)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as RewardsCursor: %w", err)
 		}
 	}
 
