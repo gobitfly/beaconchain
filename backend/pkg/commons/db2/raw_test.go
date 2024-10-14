@@ -315,7 +315,7 @@ const (
     }
   ]
 }`
-	testUncles = `{
+	testUncles = `[{
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
@@ -339,7 +339,7 @@ const (
     "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
     "uncles": []
   }
-}`
+}]`
 
 	testTwoUnclesBlockNumber = 141
 	testTwoUnclesBlock       = `{

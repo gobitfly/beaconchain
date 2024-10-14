@@ -209,12 +209,6 @@ func (r *BigTableEthRaw) UncleByBlockNumberAndIndex(ctx context.Context, number 
 	if err != nil {
 		return nil, err
 	}
-
-	// len of one uncle without tx is 1473
-	if len(block.Uncles) < 2000 {
-		return block.Uncles, nil
-	}
-	// we have two uncles so we need to retrieve the good index
 	var uncles []*jsonrpcMessage
 	_ = json.Unmarshal(block.Uncles, &uncles)
 	return json.Marshal(uncles[index])

@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -14,6 +15,73 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/storetest"
 )
+
+func TestBigTableClientRealCondition(t *testing.T) {
+	project := os.Getenv("BIGTABLE_PROJECT")
+	instance := os.Getenv("BIGTABLE_INSTANCE")
+	if project == "" || instance == "" {
+		t.Skip("skipping test, set BIGTABLE_PROJECT and BIGTABLE_INSTANCE")
+	}
+
+	tests := []struct {
+		name    string
+		chainID uint64
+		block   int64
+	}{
+		{
+			name:    "test block",
+			chainID: 1,
+			block:   6008149,
+		},
+		{
+			name:    "test block 2",
+			chainID: 1,
+			block:   141,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bg, err := store.NewBigTable(project, instance, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
+			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
+				Transport: NewBigTableEthRaw(rawStore, tt.chainID),
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			ethClient := ethclient.NewClient(rpcClient)
+
+			block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.block))
+			if err != nil {
+				t.Fatalf("BlockByNumber() error = %v", err)
+			}
+			if got, want := block.Number().Int64(), tt.block; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+
+			receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(tt.block)))
+			if err != nil {
+				t.Fatalf("BlockReceipts() error = %v", err)
+			}
+			if len(block.Transactions()) != 0 && len(receipts) == 0 {
+				t.Errorf("receipts should not be empty")
+			}
+
+			var traces []GethTraceCallResultWrapper
+			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+				t.Fatalf("debug_traceBlockByNumber() error = %v", err)
+			}
+			if len(block.Transactions()) != 0 && len(traces) == 0 {
+				t.Errorf("traces should not be empty")
+			}
+		})
+	}
+}
 
 func TestBigTableClient(t *testing.T) {
 	tests := []struct {

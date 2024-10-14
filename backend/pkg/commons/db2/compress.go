@@ -23,6 +23,9 @@ func (gzipCompressor) compress(src []byte) ([]byte, error) {
 }
 
 func (gzipCompressor) decompress(src []byte) ([]byte, error) {
+	if len(src) == 0 {
+		return nil, nil
+	}
 	zr, err := gzip.NewReader(bytes.NewReader(src))
 	if err != nil {
 		return nil, fmt.Errorf("gzip cannot create reader: %w", err)
