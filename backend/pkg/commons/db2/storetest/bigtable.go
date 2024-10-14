@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func NewBigTable(t *testing.T) (*bigtable.Client, *bigtable.AdminClient) {
+func NewBigTable(t testing.TB) (*bigtable.Client, *bigtable.AdminClient) {
 	srv, err := bttest.NewServer("localhost:0")
 	if err != nil {
 		t.Fatal(err)
