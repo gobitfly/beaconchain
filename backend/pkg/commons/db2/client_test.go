@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -83,6 +84,98 @@ func TestBigTableClientRealCondition(t *testing.T) {
 	}
 }
 
+func BenchmarkBigTableClientRealCondition(b *testing.B) {
+	project := os.Getenv("BIGTABLE_PROJECT")
+	instance := os.Getenv("BIGTABLE_INSTANCE")
+	if project == "" || instance == "" {
+		b.Skip("skipping test, set BIGTABLE_PROJECT and BIGTABLE_INSTANCE")
+	}
+
+	tests := []struct {
+		name    string
+		chainID uint64
+		block   int64
+	}{
+		{
+			name:    "test block 1",
+			chainID: 1,
+			block:   6008148,
+		},
+		{
+			name:    "test block 2",
+			chainID: 1,
+			block:   6008149,
+		},
+		{
+			name:    "test block 3",
+			chainID: 1,
+			block:   6008150,
+		},
+		{
+			name:    "test block 4",
+			chainID: 1,
+			block:   6008151,
+		},
+		{
+			name:    "test block 5",
+			chainID: 1,
+			block:   6008152,
+		},
+	}
+
+	for j := 0; j < b.N; j++ {
+		for _, tt := range tests {
+			testCase := tt
+			b.Run(testCase.name, func(t *testing.B) {
+				start := time.Now()
+
+				bg, err := store.NewBigTable(project, instance, nil)
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
+				rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
+					Transport: NewBigTableEthRaw(rawStore, tt.chainID),
+				}))
+				if err != nil {
+					b.Fatal(err)
+				}
+				ethClient := ethclient.NewClient(rpcClient)
+
+				b.ResetTimer() // exclude setup time
+
+				block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.block))
+				if err != nil {
+					b.Fatalf("BlockByNumber() error = %v", err)
+				}
+				if got, want := block.Number().Int64(), tt.block; got != want {
+					b.Errorf("got %v, want %v", got, want)
+				}
+
+				receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(tt.block)))
+				if err != nil {
+					b.Fatalf("BlockReceipts() error = %v", err)
+				}
+				if len(block.Transactions()) != 0 && len(receipts) == 0 {
+					b.Errorf("receipts should not be empty")
+				}
+
+				var traces []GethTraceCallResultWrapper
+				if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+					b.Fatalf("debug_traceBlockByNumber() error = %v", err)
+				}
+				if len(block.Transactions()) != 0 && len(traces) == 0 {
+					b.Errorf("traces should not be empty")
+				}
+
+				duration := time.Since(start)
+				b.Logf("Test duration for %s is: %v", testCase.name, duration)
+			})
+		}
+	}
+}
+
 func TestBigTableClient(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -146,12 +239,7 @@ func TestBigTableClient(t *testing.T) {
 	}
 }
 
-func TestBigTableClientWithFallback(t *testing.T) {
-	node := os.Getenv("ETH1_ERIGON_ENDPOINT")
-	if node == "" {
-		t.Skip("skipping test, set ETH1_ERIGON_ENDPOINT")
-	}
-
+func BenchmarkBigTableClient(b *testing.B) {
 	tests := []struct {
 		name  string
 		block FullBlockRawData
@@ -160,56 +248,65 @@ func TestBigTableClientWithFallback(t *testing.T) {
 			name:  "test block",
 			block: testFullBlock,
 		},
+		{
+			name:  "two uncles",
+			block: testTwoUnclesFullBlock,
+		},
 	}
 
-	client, admin := storetest.NewBigTable(t)
+	client, admin := storetest.NewBigTable(b)
 	bg, err := store.NewBigTableWithClient(context.Background(), client, admin, raw)
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		testCase := tt
+		b.Run(testCase.name, func(b *testing.B) {
 			rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
-
-			rpcClient, err := rpc.DialOptions(context.Background(), node, rpc.WithHTTPClient(&http.Client{
-				Transport: NewWithFallback(NewBigTableEthRaw(rawStore, tt.block.ChainID), http.DefaultTransport),
-			}))
-			if err != nil {
-				t.Fatal(err)
-			}
-			ethClient := ethclient.NewClient(rpcClient)
-
-			balance, err := ethClient.BalanceAt(context.Background(), common.Address{}, big.NewInt(tt.block.BlockNumber))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if balance == nil {
-				t.Errorf("empty balance")
+			if err := rawStore.AddBlocks([]FullBlockRawData{tt.block}); err != nil {
+				b.Fatal(err)
 			}
 
-			block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.block.BlockNumber))
-			if err != nil {
-				t.Fatalf("BlockByNumber() error = %v", err)
-			}
-			if got, want := block.Number().Int64(), tt.block.BlockNumber; got != want {
-				t.Errorf("got %v, want %v", got, want)
-			}
+			b.ResetTimer()
 
-			receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(tt.block.BlockNumber)))
-			if err != nil {
-				t.Fatalf("BlockReceipts() error = %v", err)
-			}
-			if len(block.Transactions()) != 0 && len(receipts) == 0 {
-				t.Errorf("receipts should not be empty")
-			}
+			for j := 0; j < b.N; j++ {
+				start := time.Now()
 
-			var traces []GethTraceCallResultWrapper
-			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
-				t.Fatalf("debug_traceBlockByNumber() error = %v", err)
-			}
-			if len(block.Transactions()) != 0 && len(traces) == 0 {
-				t.Errorf("traces should not be empty")
+				rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
+					Transport: NewBigTableEthRaw(rawStore, tt.block.ChainID),
+				}))
+				if err != nil {
+					b.Fatal(err)
+				}
+				ethClient := ethclient.NewClient(rpcClient)
+
+				block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.block.BlockNumber))
+				if err != nil {
+					b.Fatalf("BlockByNumber() error = %v", err)
+				}
+				if got, want := block.Number().Int64(), tt.block.BlockNumber; got != want {
+					b.Errorf("got %v, want %v", got, want)
+				}
+
+				receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(tt.block.BlockNumber)))
+				if err != nil {
+					b.Fatalf("BlockReceipts() error = %v", err)
+				}
+				if len(block.Transactions()) != 0 && len(receipts) == 0 {
+					b.Errorf("receipts should not be empty")
+				}
+
+				var traces []GethTraceCallResultWrapper
+				if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+					b.Fatalf("debug_traceBlockByNumber() error = %v", err)
+				}
+				if len(block.Transactions()) != 0 && len(traces) == 0 {
+					b.Errorf("traces should not be empty")
+				}
+
+				duration := time.Since(start)
+				b.Logf("Test duration for %s is: %v", testCase.name, duration)
 			}
 		})
 	}
