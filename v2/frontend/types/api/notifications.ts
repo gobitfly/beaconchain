@@ -60,7 +60,7 @@ export interface NotificationValidatorDashboardDetail {
   slashed: number /* uint64 */[]; // validator indices
   sync_committee: number /* uint64 */[]; // validator indices
   attestation_missed: IndexEpoch[]; // index (epoch)
-  withdrawal: IndexBlocks[];
+  withdrawal: IndexSlots[];
   validator_offline_reminder: number /* uint64 */[]; // validator indices; TODO not filled yet
   group_offline_reminder: boolean; // TODO not filled yet
   validator_back_online: NotificationEventValidatorBackOnline[];

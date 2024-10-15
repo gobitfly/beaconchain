@@ -393,7 +393,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 		Slashed:                  []uint64{},
 		SyncCommittee:            []uint64{},
 		AttestationMissed:        []t.IndexEpoch{},
-		Withdrawal:               []t.IndexBlocks{},
+		Withdrawal:               []t.IndexSlots{},
 		ValidatorOfflineReminder: []uint64{},
 		ValidatorBackOnline:      []t.NotificationEventValidatorBackOnline{},
 		MinimumCollateralReached: []t.Address{},
@@ -560,7 +560,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				continue
 			}
 			// TODO might need to take care of automatic + exit withdrawal happening in the same epoch ?
-			notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.IndexBlocks{Index: curNotification.ValidatorIndex, Blocks: []uint64{curNotification.Slot}})
+			notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.IndexSlots{Index: curNotification.ValidatorIndex, Slots: []uint64{curNotification.Slot}})
 		case types.NetworkLivenessIncreasedEventName,
 			types.EthClientUpdateEventName,
 			types.MonitoringMachineOfflineEventName,
