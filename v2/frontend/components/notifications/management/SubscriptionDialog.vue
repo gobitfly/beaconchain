@@ -1,362 +1,188 @@
 <script setup lang="ts">
-import { warn } from 'vue'
-import type {
-  APIentry,
-  InternalEntry,
-} from '~/types/notifications/subscriptionModal'
-import type {
-  NotificationSettingsAccountDashboard,
-  NotificationSettingsValidatorDashboard,
-} from '~/types/api/notifications'
-import { ChainFamily } from '~/types/network'
-import type { DashboardType } from '~/types/dashboard'
-
-type AllOptions = NotificationSettingsAccountDashboard &
-  NotificationSettingsValidatorDashboard
-type DefinedAPIentry = Exclude<APIentry, null | undefined>
-
-interface Props {
-  dashboardType: DashboardType,
-  initialSettings: AllOptions,
-  saveUserSettings: (
-    settings: Record<keyof AllOptions, DefinedAPIentry>,
-  ) => void,
-}
-
-// #### CONFIGURATION OF THE DIALOGS ####
-
-const DefaultValues = new Map<keyof AllOptions, InternalEntry>([
-  [
-    'erc20_token_transfers_value_threshold',
-    {
-      check: false,
-      num: NaN,
-      type: 'amount',
-    },
-  ], // NaN will leave the input field empty (the user sees the placeholder)
-  [
-    'group_offline_threshold',
-    {
-      check: false,
-      num: 10,
-      type: 'percent',
-    },
-  ],
-  [
-    'is_real_time_mode_enabled',
-    {
-      check: false,
-      type: 'binary',
-    },
-  ],
-  [
-    'subscribed_chain_ids',
-    {
-      networks: [],
-      type: 'networks',
-    },
-  ],
-])
-const orderOfTheRowsInValidatorModal: Array<
-  'ALL' | keyof NotificationSettingsValidatorDashboard
-> = [
-  'is_validator_offline_subscribed',
-  'group_offline_threshold',
-  'is_attestations_missed_subscribed',
-  'is_block_proposal_subscribed',
-  'is_upcoming_block_proposal_subscribed',
-  'is_sync_subscribed',
-  'is_withdrawal_processed_subscribed',
-  'is_slashed_subscribed',
-  'is_real_time_mode_enabled',
-  'ALL',
-]
-const orderOfTheRowsInAccountModal: Array<
-  'ALL' | keyof NotificationSettingsAccountDashboard
-> = [
-  'is_incoming_transactions_subscribed',
-  'is_outgoing_transactions_subscribed',
-  'erc20_token_transfers_value_threshold',
-  'is_erc721_token_transfers_subscribed',
-  'is_erc1155_token_transfers_subscribed',
-  'ALL',
-  'subscribed_chain_ids',
-  'is_ignore_spam_transactions_enabled',
-]
-const RowsWhoseCheckBoxIsInASeparateField = new Map<
-  keyof AllOptions,
-  keyof AllOptions
->([ [
-  'erc20_token_transfers_value_threshold',
-  'is_erc20_token_transfers_subscribed',
-] ])
-const OptionsOutsideTheScopeOfCheckboxall: Array<keyof AllOptions> = [
-  'subscribed_chain_ids',
-  'is_ignore_spam_transactions_enabled',
-] // options that are not in the group of the all-checkbox
-const OptionsNeedingPremium: Array<keyof AllOptions> = [
-  'group_offline_threshold',
-  'is_real_time_mode_enabled',
-]
-const RowsThatExpectAPercentage: Array<keyof AllOptions> = [ 'group_offline_threshold' ]
-
-// #### END OF CONFIGURATION OF THE DIALOGS ####
-
-type ModifiableOptions = Record<keyof AllOptions, InternalEntry>
+import type { NotificationSettingsValidatorDashboard } from '~/types/api/notifications'
 
 const {
-  dialogRef, props,
-} = useBcDialog<Props>({ showHeader: false })
-const { t } = useTranslation()
-const { networkInfo } = useNetworkStore()
-const { user } = useUserStore()
-
-const tPath = ref('')
-let orderOfTheRows:
-  | typeof orderOfTheRowsInAccountModal
-  | typeof orderOfTheRowsInValidatorModal = []
-let originalSettings: AllOptions
-const modifiableOptions = ref({} as ModifiableOptions)
-const checkboxAll = ref<InternalEntry>({
-  check: false,
-  type: 'binary',
-})
-
-// used by the watcher of `modifiableOptions` to know when it is unnecessary
-// to send changes to the API (it doesn't send if the nonce is 0)
-let dataNonce = 0
-
-const getOptionType = (key: keyof AllOptions) =>
-  Array.isArray(originalSettings[key])
-    ? 'networks'
-    : typeof originalSettings[key] === 'boolean'
-      ? 'binary'
-      : RowsThatExpectAPercentage.includes(key)
-        ? 'percent'
-        : 'amount'
-const isOptionValueKnownInDB = (key: keyof AllOptions) =>
-  originalSettings[key] !== undefined
-  && originalSettings[key] !== null
-  && (typeof originalSettings[key] !== 'number'
-  || (originalSettings[key] as number) > 0
-  || isOptionActivatedInDB(key))
-  && (!Array.isArray(originalSettings[key])
-  || !!(originalSettings[key] as Array<any>).length)
-const isOptionActivatedInDB = (key: keyof AllOptions) =>
-  RowsWhoseCheckBoxIsInASeparateField.has(key)
-    ? !!originalSettings[RowsWhoseCheckBoxIsInASeparateField.get(key)!]
-    : !!originalSettings[key]
-const isOptionAvailable = (key: keyof AllOptions) =>
-  user.value?.premium_perks.ad_free || !OptionsNeedingPremium.includes(key)
-
-watch(
+  dialogRef,
   props,
-  (props) => {
-    if (!props || !props.initialSettings) {
-      return
-    }
-    originalSettings = toRaw(props.initialSettings)
-    switch (props.dashboardType) {
-      case 'validator':
-        tPath.value = 'notifications.subscriptions.validators.'
-        orderOfTheRows = orderOfTheRowsInValidatorModal
-        break
-      case 'account':
-        tPath.value = 'notifications.subscriptions.accounts.'
-        orderOfTheRows = orderOfTheRowsInAccountModal
-        break
-      default:
-        return
-    }
-    modifiableOptions.value = {} as ModifiableOptions
-    dataNonce = 0
-    for (const key of orderOfTheRows) {
-      if (key === 'ALL') continue
-      modifiableOptions.value[key] = convertAPIentryToInternalEntry(key)
-    }
-  },
-  { immediate: true },
+} = useBcDialog<NotificationSettingsValidatorDashboard>({ showHeader: false })
+const { t: $t } = useTranslation()
+const {
+  secondsPerEpoch,
+} = useNetworkStore()
+const { user } = useUserStore()
+const hasPremiumPerkGroupOffline = computed(
+  () => user.value?.premium_perks.notifications_validator_dashboard_group_offline,
 )
-
-function checkboxAllHasBeenClicked(checked: boolean): void {
-  for (const k of Object.keys(modifiableOptions.value)) {
-    const key = k as keyof ModifiableOptions
-    if (
-      isOptionAvailable(key)
-      && !OptionsOutsideTheScopeOfCheckboxall.includes(key)
-    ) {
-      modifiableOptions.value[key].check = checked
-    }
-  }
-}
-
-watch(
-  modifiableOptions,
-  (options) => {
-    checkboxAll.value.check = true
-    for (const k in options) {
-      const key = k as keyof ModifiableOptions
-      if (
-        isOptionAvailable(key)
-        && !OptionsOutsideTheScopeOfCheckboxall.includes(key)
-      ) {
-        checkboxAll.value.check &&= options[key].check
-      }
-    }
-    if (dataNonce > 0) {
-      sendUserPreferencesToAPI()
-    }
-    dataNonce++
-  },
-  {
-    deep: true,
-    immediate: true,
-  },
+const hasPremiumPerkRealTimeMode = computed(
+  () => user.value?.premium_perks.notifications_validator_dashboard_real_time_mode,
 )
-
-/** reads data that our parent received from the API and converts it to our internal format */
-function convertAPIentryToInternalEntry(
-  apiKey: keyof AllOptions,
-): InternalEntry {
-  const srcValue = originalSettings[apiKey]
-  const type = getOptionType(apiKey)
-  if (!isOptionValueKnownInDB(apiKey)) {
-    if (DefaultValues.has(apiKey)) {
-      return { ...DefaultValues.get(apiKey)! }
-    }
-    else {
-      warn(
-        'A value for entry `'
-        + apiKey
-        + '` is not in the the database and the front-end does not have a default value for it.',
-      )
-      return {} as InternalEntry
-    }
-  }
-  switch (type) {
-    case 'amount':
-      return {
-        check: isOptionActivatedInDB(apiKey),
-        num: srcValue as number,
-        type,
-      }
-    case 'binary':
-      return {
-        check: srcValue as boolean,
-        type,
-      }
-    case 'networks':
-      return {
-        networks: [ ...(srcValue as number[]) ],
-        type,
-      }
-    case 'percent':
-      return {
-        check: isOptionActivatedInDB(apiKey),
-        num: (srcValue as number) * 100,
-        type,
-      }
-  }
-}
-
-/** converts our internal data to the format understood by the API and sends it */
-function sendUserPreferencesToAPI() {
-  // conversion
-  const output = {} as Record<keyof AllOptions, DefinedAPIentry>
-  for (const k in modifiableOptions.value) {
-    const key = k as keyof ModifiableOptions
-    const value = toRaw(modifiableOptions.value[key])
-    switch (value.type) {
-      case 'binary':
-        output[key] = value.check!
-        break
-      case 'percent':
-      case 'amount': {
-        const num = value.type === 'percent' ? value.num! / 100 : value.num!
-        const activate = !isNaN(num) && value.check!
-        if (RowsWhoseCheckBoxIsInASeparateField.has(key)) {
-          output[key] = !isNaN(num) ? num : 0
-          output[RowsWhoseCheckBoxIsInASeparateField.get(key)!] = activate
-        }
-        else {
-          output[key] = activate ? num : 0
-        }
-        break
-      }
-      case 'networks':
-        output[key] = value.networks!
-        break
-    }
-  }
-  // sending
-  props.value?.saveUserSettings(output)
-}
 
 function closeDialog(): void {
   dialogRef?.value.close()
 }
+
+const checkboxes = ref({
+  is_attestations_missed_subscribed: props.value?.is_attestations_missed_subscribed ?? false,
+  is_block_proposal_subscribed: props.value?.is_block_proposal_subscribed ?? false,
+  is_group_offline_subscribed: props.value?.is_group_offline_subscribed ?? false,
+  is_max_collateral_subscribed: props.value?.is_max_collateral_subscribed ?? false,
+  is_min_collateral_subscribed: props.value?.is_min_collateral_subscribed ?? false,
+  is_real_time_mode_enabled: props.value?.is_real_time_mode_enabled ?? false,
+  is_slashed_subscribed: props.value?.is_slashed_subscribed ?? false,
+  is_sync_subscribed: props.value?.is_sync_subscribed ?? false,
+  is_upcoming_block_proposal_subscribed: props.value?.is_upcoming_block_proposal_subscribed ?? false,
+  is_validator_offline_subscribed: props.value?.is_validator_offline_subscribed ?? false,
+  is_withdrawal_processed_subscribed: props.value?.is_withdrawal_processed_subscribed ?? false,
+})
+const thresholds = ref({
+  group_offline_threshold: formatFraction(props.value?.group_offline_threshold ?? 0),
+  max_collateral_threshold: formatFraction(props.value?.max_collateral_threshold ?? 0),
+  min_collateral_threshold: formatFraction(props.value?.min_collateral_threshold ?? 0),
+})
+const emit = defineEmits<{
+  (e: 'change-settings', settings: Omit<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>): void,
+}>()
+watchDebounced([
+  checkboxes,
+  thresholds,
+], () => {
+  emit('change-settings', {
+    ...checkboxes.value,
+    group_offline_threshold: Number(formatToFraction(thresholds.value.group_offline_threshold)),
+    max_collateral_threshold: Number(formatToFraction(thresholds.value.max_collateral_threshold)),
+    min_collateral_threshold: Number(formatToFraction(thresholds.value.min_collateral_threshold)),
+  })
+}, {
+  deep: true,
+})
+
+const hasAllEvents = ref(Object.values(checkboxes.value).every(value => value === true))
+
+watch(hasAllEvents, () => {
+  if (hasAllEvents.value) {
+    (Object.keys(checkboxes.value) as Array<keyof typeof checkboxes.value>).forEach((key) => {
+      checkboxes.value[key] = true
+    })
+    return
+  }
+  (Object.keys(checkboxes.value) as Array<keyof typeof checkboxes.value>).forEach((key) => {
+    checkboxes.value[key] = false
+  })
+})
 </script>
 
 <template>
   <div
-    v-if="props && tPath"
     class="content"
   >
     <div class="title">
-      {{ t("notifications.subscriptions.dialog_title") }}
+      {{ $t("notifications.subscriptions.title") }}
     </div>
 
-    <div
-      v-if="t(tPath + 'explanation')"
-      class="explanation"
-    >
-      {{
-        t(
-          tPath + "explanation",
-          networkInfo.family === ChainFamily.Gnosis ? 5 : 20,
-        )
-      }}
+    <div class="explanation">
+      {{ $t('notifications.subscriptions.validators.explanation') }}
     </div>
-
     <div
-      v-for="row of orderOfTheRows"
-      :key="row"
       class="row-container"
     >
-      <NotificationsManagementSubscriptionRow
-        v-if="row != 'ALL'"
-        v-model="modifiableOptions[row]"
-        :t-path="tPath + row"
-        :lacks-premium-subscription="!isOptionAvailable(row)"
-        :value-in-text="
-          row == 'is_attestations_missed_subscribed'
-            ? Math.round(
-              (networkInfo.secondsPerSlot * networkInfo.slotsPerEpoch) / 6,
-            ) / 10
-            : undefined
-        "
-        class="row"
-      />
-      <div
-        v-if="row == 'ALL'"
-        class="separation"
-      />
-      <NotificationsManagementSubscriptionRow
-        v-if="row == 'ALL'"
-        v-model="checkboxAll"
-        :t-path="tPath + 'all'"
-        :lacks-premium-subscription="false"
-        class="row"
-        @checkbox-click="checkboxAllHasBeenClicked"
-      />
-    </div>
+      <BcSettings>
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_validator_offline_subscribed"
+          :label="$t('notifications.subscriptions.validators.validator_is_offline.label')"
+        >
+          <template #info>
+            <BcTranslation
+              keypath="notifications.subscriptions.validators.validator_is_offline.info.template"
+              listpath="notifications.subscriptions.validators.validator_is_offline.info._list"
+            />
+          </template>
+        </BcSettingsRow>
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_group_offline_subscribed"
+          v-model:input="thresholds.group_offline_threshold"
+          :label="$t('notifications.subscriptions.validators.group_is_offline.label')"
+          has-unit
+          :has-premium-gem="!hasPremiumPerkGroupOffline"
+        >
+          <template #info>
+            <BcTranslation
+              keypath="notifications.subscriptions.validators.group_is_offline.info.template"
+              listpath="notifications.subscriptions.validators.group_is_offline.info._list"
+            >
+              <template #_list="{ listpath }">
+                <ul v-if="listpath">
+                  <li v-for="(item, index) in $t(listpath).split('\n')" :key="item">
+                    {{ item }}
+                    <template v-if="index ===3 ">
+                      <br>
+                      <span class="bold">{{ $t('notifications.subscriptions.validators.group_is_offline.info.note_bold') }}</span>
+                      <span>{{ $t('notifications.subscriptions.validators.group_is_offline.info.note') }}</span>
+                    </template>
+                  </li>
+                </ul>
+              </template>
+            </BcTranslation>
+          </template>
+        </BcSettingsRow>
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_attestations_missed_subscribed"
+          :label="$t('notifications.subscriptions.validators.attestation_missed.label')"
+          :info="$t('notifications.subscriptions.validators.attestation_missed.info', { count: formatSecondsTo(secondsPerEpoch, { minimumFractionDigits: 1 }).minutes })"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_block_proposal_subscribed"
+          :label="$t('notifications.subscriptions.validators.block_proposal.label')"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_upcoming_block_proposal_subscribed"
+          :label="$t('notifications.subscriptions.validators.upcoming_block_proposal.label')"
+          :info="$t('notifications.subscriptions.validators.upcoming_block_proposal.info')"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_sync_subscribed"
+          :label="$t('notifications.subscriptions.validators.sync_committee.label')"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_withdrawal_processed_subscribed"
+          :label="$t('notifications.subscriptions.validators.withdrawal_processed.label')"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_slashed_subscribed"
+          :label="$t('notifications.subscriptions.validators.validator_got_slashed.label')"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_min_collateral_subscribed"
+          v-model:input="thresholds.min_collateral_threshold"
+          has-unit
+          :label="$t('notifications.subscriptions.validators.min_collateral_reached.label')"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_max_collateral_subscribed"
+          v-model:input="thresholds.max_collateral_threshold"
+          has-unit
+          :label="$t('notifications.subscriptions.validators.max_collateral_reached.label')"
+        />
 
-    <div class="footer">
-      <Button
-        type="button"
-        :label="t('notifications.subscriptions.button')"
-        @click="closeDialog"
-      />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_real_time_mode_enabled"
+          :label="$t('notifications.subscriptions.validators.real_time_mode.label')"
+          :info="$t('notifications.subscriptions.validators.real_time_mode.info')"
+          :has-premium-gem="!hasPremiumPerkRealTimeMode"
+        />
+        <BcSettingsRow
+          v-model:checkbox="hasAllEvents"
+          :label="$t('notifications.subscriptions.validators.all_events.label')"
+          has-border-top
+        />
+      </BcSettings>
+
+      <div class="footer">
+        <BcButton
+          @click="closeDialog"
+        >
+          {{ $t('navigation.done') }}
+        </BcButton>
+      </div>
     </div>
   </div>
 </template>
@@ -375,9 +201,8 @@ function closeDialog(): void {
   }
 
   .explanation {
-    margin-bottom: var(--padding);
     @include fonts.small_text;
-    color: var(--text-color-discreet);
+    text-align: center;
   }
 
   .row-container {

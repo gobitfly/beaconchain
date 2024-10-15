@@ -53,7 +53,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		goqu.C("event_name"),
 	).Join(goqu.T("users"), goqu.On(goqu.T("users").Col("id").Eq(goqu.T("users_subscriptions").Col("user_id")))).
 		Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery)).
-		Where(goqu.L("users.notifications_do_not_disturb_ts IS NULL OR users.notifications_do_not_disturb_ts < NOW()"))
+		Where(goqu.L("(users.notifications_do_not_disturb_ts IS NULL OR users.notifications_do_not_disturb_ts < NOW())"))
 
 	if lastSentFilter != "" {
 		if len(lastSentFilterArgs) > 0 {
@@ -63,7 +63,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		}
 	}
 	if len(eventFilters) > 0 {
-		ds = ds.Where(goqu.L("event_filter = ANY(?)", pq.StringArray(eventFilters)))
+		ds = ds.Where(goqu.L("(event_filter = ANY(?))", pq.StringArray(eventFilters)))
 	}
 
 	query, args, err := ds.Prepared(true).ToSQL()

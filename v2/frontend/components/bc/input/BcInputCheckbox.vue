@@ -15,9 +15,8 @@ const input = defineModel<boolean>()
 
 <template>
   <BcInputError :error>
-    <span>
+    <span v-if="label">
       <label
-        v-if="label"
         class="label"
         :for="id"
       >
@@ -38,6 +37,7 @@ const input = defineModel<boolean>()
     </span>
     <Checkbox
       v-model="input"
+      class="bc-input-ckeckbox__checkbox"
       :input-id="id"
       v-bind="$attrs"
       binary
@@ -51,5 +51,16 @@ const input = defineModel<boolean>()
 }
 .bc-input-checkbox__info {
   margin-left: var(--padding);
+}
+.bc-input-ckeckbox__checkbox {
+  --outline-width: 0.125rem;
+  --outline-offset: 0.125rem;
+  margin: calc(var(--outline-width) + var(--outline-offset));
+}
+.bc-input-ckeckbox__checkbox:has(input:focus-visible) {
+  outline: var(--outline-width) solid var(--blue-500);
+  outline-offset: var(--outline-offset);
+  border-radius: 0.125rem;
+
 }
 </style>
