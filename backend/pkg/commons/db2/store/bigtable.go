@@ -11,6 +11,8 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+var ErrNotFound = fmt.Errorf("not found")
+
 const (
 	timeout = time.Minute // Timeout duration for Bigtable operations
 )
@@ -245,6 +247,9 @@ func (b BigTableStore) GetRow(table, key string) (map[string][]byte, error) {
 
 	if err != nil {
 		return nil, fmt.Errorf("could not read rows: %v", err)
+	}
+	if len(data) == 0 {
+		return nil, ErrNotFound
 	}
 
 	return data, nil
