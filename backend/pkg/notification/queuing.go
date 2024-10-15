@@ -423,6 +423,10 @@ func QueueEmailNotifications(epoch uint64, notificationsByUserID types.Notificat
 		})
 	}
 
+	if len(insertRows) == 0 {
+		return nil
+	}
+
 	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'email', :content)`, insertRows)
 	if err != nil {
 		log.Error(err, "error writing transit email to db", 0)
@@ -551,6 +555,9 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 		})
 	}
 
+	if len(insertRows) == 0 {
+		return nil
+	}
 	_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'push', :content)`, insertRows)
 	if err != nil {
 		return fmt.Errorf("error writing transit push to db: %w", err)
