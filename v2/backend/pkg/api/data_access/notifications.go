@@ -389,13 +389,8 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
-	// dev hack; TODO remove
-	if dashboardId == 5426 || dashboardId == 5334 {
-		return d.dummy.GetValidatorDashboardNotificationDetails(ctx, dashboardId, groupId, epoch, search)
-	}
 	notificationDetails := t.NotificationValidatorDashboardDetail{
 		ValidatorOffline:         []uint64{},
-		GroupOffline:             []string{},
 		ProposalMissed:           []t.IndexSlots{},
 		ProposalDone:             []t.IndexBlocks{},
 		UpcomingProposals:        []t.IndexSlots{},
@@ -404,9 +399,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 		AttestationMissed:        []t.IndexEpoch{},
 		Withdrawal:               []t.IndexBlocks{},
 		ValidatorOfflineReminder: []uint64{},
-		GroupOfflineReminder:     []string{},
 		ValidatorBackOnline:      []t.NotificationEventValidatorBackOnline{},
-		GroupBackOnline:          []t.NotificationEventGroupBackOnline{},
 		MinimumCollateralReached: []t.Address{},
 		MaximumCollateralReached: []t.Address{},
 	}
@@ -427,13 +420,24 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 		searchIndexSet[searchIndex] = true
 	}
 
-	query := `SELECT name FROM users_val_dashboards WHERE id = $1`
-	err := d.alloyReader.GetContext(ctx, &notificationDetails.DashboardName, query, dashboardId)
+	query := `SELECT
+		uvd.name AS dashboard_name,
+		uvdg.name AS group_name
+	FROM
+		users_val_dashboards uvd
+	INNER JOIN
+		users_val_dashboards_groups uvdg ON uvdg.dashboard_id = uvd.id
+	WHERE uvd.id = $1 AND uvdg.id = $2`
+	err := d.alloyReader.GetContext(ctx, &notificationDetails, query, dashboardId, groupId)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &notificationDetails, nil
 		}
 		return nil, err
+	}
+
+	if notificationDetails.GroupName == "" {
+		notificationDetails.GroupName = t.DefaultGroupName
 	}
 
 	result := []byte{}
