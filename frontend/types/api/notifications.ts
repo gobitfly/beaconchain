@@ -45,18 +45,15 @@ export interface NotificationDashboardsTableRow {
   event_types: ('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
 }
 export type InternalGetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
-export interface NotificationEventGroupBackOnline {
-  group_name: string;
-  epoch_count: number /* uint64 */;
-}
 export interface NotificationEventValidatorBackOnline {
   index: number /* uint64 */;
   epoch_count: number /* uint64 */;
 }
 export interface NotificationValidatorDashboardDetail {
   dashboard_name: string;
+  group_name: string;
   validator_offline: number /* uint64 */[]; // validator indices
-  group_offline: string[]; // TODO not filled yet
+  group_offline: boolean; // TODO not filled yet
   proposal_missed: IndexSlots[];
   proposal_done: IndexBlocks[];
   upcoming_proposals: IndexSlots[];
@@ -65,9 +62,9 @@ export interface NotificationValidatorDashboardDetail {
   attestation_missed: IndexEpoch[]; // index (epoch)
   withdrawal: IndexBlocks[];
   validator_offline_reminder: number /* uint64 */[]; // validator indices; TODO not filled yet
-  group_offline_reminder: string[]; // TODO not filled yet
+  group_offline_reminder: boolean; // TODO not filled yet
   validator_back_online: NotificationEventValidatorBackOnline[];
-  group_back_online: NotificationEventGroupBackOnline[]; // TODO not filled yet
+  group_back_online: number /* uint64 */; // TODO not filled yet
   min_collateral_reached: Address[]; // node addresses
   max_collateral_reached: Address[]; // node addresses
 }

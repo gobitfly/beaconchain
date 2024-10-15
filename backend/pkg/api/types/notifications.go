@@ -48,20 +48,16 @@ type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[Notificatio
 // ------------------------------------------------------------
 // Validator Dashboard Notification Detail
 
-type NotificationEventGroupBackOnline struct {
-	GroupName  string `json:"group_name"`
-	EpochCount uint64 `json:"epoch_count"`
-}
-
 type NotificationEventValidatorBackOnline struct {
 	Index      uint64 `json:"index"`
 	EpochCount uint64 `json:"epoch_count"`
 }
 
 type NotificationValidatorDashboardDetail struct {
-	DashboardName            string                                 `json:"dashboard_name"`
+	DashboardName            string                                 `db:"dashboard_name" json:"dashboard_name"`
+	GroupName                string                                 `db:"group_name" json:"group_name"`
 	ValidatorOffline         []uint64                               `json:"validator_offline"` // validator indices
-	GroupOffline             []string                               `json:"group_offline"`     // TODO not filled yet
+	GroupOffline             bool                                   `json:"group_offline"`     // TODO not filled yet
 	ProposalMissed           []IndexSlots                           `json:"proposal_missed"`
 	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
 	UpcomingProposals        []IndexSlots                           `json:"upcoming_proposals"`
@@ -70,9 +66,9 @@ type NotificationValidatorDashboardDetail struct {
 	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
 	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
 	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
-	GroupOfflineReminder     []string                               `json:"group_offline_reminder"`     // TODO not filled yet
+	GroupOfflineReminder     bool                                   `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
-	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`      // TODO not filled yet
+	GroupBackOnline          uint64                                 `json:"group_back_online"`      // TODO not filled yet
 	MinimumCollateralReached []Address                              `json:"min_collateral_reached"` // node addresses
 	MaximumCollateralReached []Address                              `json:"max_collateral_reached"` // node addresses
 }
