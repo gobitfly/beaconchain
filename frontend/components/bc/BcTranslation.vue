@@ -3,11 +3,13 @@ import type { MessageSchema } from '~/i18n.config'
 import type { KeyPaths } from '~/types/helper'
 
 defineProps<{
+  boldpath?: KeyPaths<MessageSchema>,
   /**
    * The path to the key in the translation file (e.g. en.json)
    */
   keypath: KeyPaths<MessageSchema>,
   linkpath?: KeyPaths<MessageSchema>,
+  listpath?: KeyPaths<MessageSchema>,
   tag?: keyof HTMLElementTagNameMap,
   /**
    * URL to link to
@@ -33,6 +35,9 @@ defineProps<{
     scope="global"
     :tag="tag || 'span'"
   >
+    <template #_bold>
+      <span v-if="boldpath" class="bc-translation-bold">{{ $t(boldpath) }}</span>
+    </template>
     <template #_link>
       <slot
         v-if="to && linkpath"
@@ -47,7 +52,20 @@ defineProps<{
         </BcLink>
       </slot>
     </template>
+    <template #_list>
+      <slot name="_list" :listpath>
+        <ul v-if="listpath">
+          <li v-for="item in $t(listpath).split('\n')" :key="item">
+            {{ item }}
+          </li>
+        </ul>
+      </slot>
+    </template>
   </I18nT>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.bc-translation-bold {
+  font-weight: 800;
+}
+</style>

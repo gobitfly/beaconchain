@@ -252,10 +252,6 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 }
 
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
-	// dev hack; TODO remove
-	if userId == 127504 || userId == 127227 {
-		return d.dummy.GetDashboardNotifications(ctx, userId, chainIds, cursor, colSort, search, limit)
-	}
 	response := []t.NotificationDashboardsTableRow{}
 	var err error
 
@@ -1398,7 +1394,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			device_name,
 			COALESCE(notify_enabled, false) AS notify_enabled
 		FROM users_devices
-		WHERE user_id = $1`, userId)
+		WHERE user_id = $1 AND device_identifier IS NOT NULL`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for notifications paired devices: %w`, err)
 		}
