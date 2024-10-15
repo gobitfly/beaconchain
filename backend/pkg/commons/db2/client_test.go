@@ -312,6 +312,75 @@ func BenchmarkBigTableClient(b *testing.B) {
 	}
 }
 
+func TestBigTableClientWithFallback(t *testing.T) {
+	node := os.Getenv("ETH1_ERIGON_ENDPOINT")
+	if node == "" {
+		t.Skip("skipping test, set ETH1_ERIGON_ENDPOINT")
+	}
+
+	tests := []struct {
+		name  string
+		block FullBlockRawData
+	}{
+		{
+			name:  "test block",
+			block: testFullBlock,
+		},
+	}
+
+	client, admin := storetest.NewBigTable(t)
+	bg, err := store.NewBigTableWithClient(context.Background(), client, admin, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
+
+			rpcClient, err := rpc.DialOptions(context.Background(), node, rpc.WithHTTPClient(&http.Client{
+				Transport: NewWithFallback(NewBigTableEthRaw(rawStore, tt.block.ChainID), http.DefaultTransport),
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			ethClient := ethclient.NewClient(rpcClient)
+
+			balance, err := ethClient.BalanceAt(context.Background(), common.Address{}, big.NewInt(tt.block.BlockNumber))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if balance == nil {
+				t.Errorf("empty balance")
+			}
+
+			block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.block.BlockNumber))
+			if err != nil {
+				t.Fatalf("BlockByNumber() error = %v", err)
+			}
+			if got, want := block.Number().Int64(), tt.block.BlockNumber; got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+
+			receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(tt.block.BlockNumber)))
+			if err != nil {
+				t.Fatalf("BlockReceipts() error = %v", err)
+			}
+			if len(block.Transactions()) != 0 && len(receipts) == 0 {
+				t.Errorf("receipts should not be empty")
+			}
+
+			var traces []GethTraceCallResultWrapper
+			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+				t.Fatalf("debug_traceBlockByNumber() error = %v", err)
+			}
+			if len(block.Transactions()) != 0 && len(traces) == 0 {
+				t.Errorf("traces should not be empty")
+			}
+		})
+	}
+}
+
 // TODO import those 3 from somewhere
 var gethTracerArg = map[string]string{
 	"tracer": "callTracer",
