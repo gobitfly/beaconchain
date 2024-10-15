@@ -1304,7 +1304,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	}
 	clientSettings := make(map[string]*t.NotificationSettingsClient, len(clients))
 	for _, client := range clients {
-		clientSettings[strings.ToLower(client.Name)] = &t.NotificationSettingsClient{
+		clientSettings[client.DbName] = &t.NotificationSettingsClient{
 			Id:       client.Id,
 			Name:     client.Name,
 			Category: client.Category,
@@ -1759,10 +1759,10 @@ func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Contex
 				VALUES ($1, $2, $3, NOW(), $4)
 			ON CONFLICT (user_id, event_name, event_filter) 
 				DO NOTHING`,
-			userId, types.EthClientUpdateEventName, strings.ToLower(clientInfo.Name), utils.TimeToEpoch(time.Now()))
+			userId, types.EthClientUpdateEventName, clientInfo.DbName, utils.TimeToEpoch(time.Now()))
 	} else {
 		_, err = d.userWriter.ExecContext(ctx, `DELETE FROM users_subscriptions WHERE user_id = $1 AND event_name = $2 AND event_filter = $3`,
-			userId, types.EthClientUpdateEventName, strings.ToLower(clientInfo.Name))
+			userId, types.EthClientUpdateEventName, clientInfo.DbName)
 	}
 	if err != nil {
 		return nil, err
