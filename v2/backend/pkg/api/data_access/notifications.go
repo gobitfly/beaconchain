@@ -336,7 +336,7 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 
 	// sorting
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationDashboardTimestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationDashboardEpoch.ToString(), Desc: true, Offset: currentCursor.Epoch},
 		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
 		{Column: enums.NotificationDashboardDashboardId.ToString(), Desc: false, Offset: currentCursor.DashboardId},
 		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
