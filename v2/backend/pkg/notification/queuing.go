@@ -52,7 +52,7 @@ func queueNotifications(epoch uint64, notificationsByUserID types.NotificationsP
 
 	err = ExportNotificationHistory(epoch, notificationsByUserID)
 	if err != nil {
-		return fmt.Errorf("error exporting notification history: %w", err)
+		log.Error(err, "error exporting notification historyw", 0)
 	}
 
 	subByEpoch := map[uint64][]uint64{}
@@ -165,7 +165,8 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 					if eventName != types.NetworkLivenessIncreasedEventName && !types.IsUserIndexed(eventName) && !types.IsMachineNotification(eventName) {
 						details, err := GetNotificationDetails(notifications)
 						if err != nil {
-							return fmt.Errorf("error getting notification details: %w", err)
+							log.Error(err, "error getting notification details", 0)
+							continue
 						}
 						_, err = dashboardNotificationHistoryInsertStmt.Exec(
 							userID,
@@ -177,13 +178,14 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 							details,
 						)
 						if err != nil {
-							return fmt.Errorf("error inserting into dashboard notifications history: %w", err)
+							log.Error(err, "error inserting into dashboard notifications history", 0)
 						}
 					} else if types.IsMachineNotification(eventName) { // handle machine monitoring related events
 						for _, n := range notifications {
 							nTyped, ok := n.(*MonitorMachineNotification)
 							if !ok {
-								return fmt.Errorf("error casting machine notification: %w", err)
+								log.Error(err, "error casting machine notification", 0)
+								continue
 							}
 							_, err := machineNotificationHistoryInsertStmt.Exec(
 								userID,
@@ -194,14 +196,15 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 								nTyped.EventThreshold,
 							)
 							if err != nil {
-								return fmt.Errorf("error inserting into machine notifications history: %w", err)
+								log.Error(err, "error inserting into machine notifications history", 0)
 							}
 						}
 					} else if eventName == types.EthClientUpdateEventName { // handle client update events
 						for _, n := range notifications {
 							nTyped, ok := n.(*EthClientNotification)
 							if !ok {
-								return fmt.Errorf("error casting client update notification: %w", err)
+								log.Error(err, "error casting client update notification", 0)
+								continue
 							}
 							_, err := clientNotificationHistoryInsertStmt.Exec(
 								userID,
@@ -211,7 +214,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 								"",
 							)
 							if err != nil {
-								return fmt.Errorf("error inserting into client notifications history: %w", err)
+								log.Error(err, "error inserting into client notifications history", 0)
 							}
 						}
 					} else if eventName == types.NetworkLivenessIncreasedEventName { // handle network liveness increased events
@@ -224,7 +227,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 								0,
 							)
 							if err != nil {
-								return fmt.Errorf("error inserting into network notifications history: %w", err)
+								log.Error(err, "error inserting into network notifications history", 0)
 							}
 						}
 					}
