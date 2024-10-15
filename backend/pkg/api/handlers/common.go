@@ -31,11 +31,12 @@ import (
 
 type HandlerService struct {
 	dai                         dataaccess.DataAccessor
+	dummy                       dataaccess.DataAccessor
 	scs                         *scs.SessionManager
 	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -46,6 +47,7 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 
 	return &HandlerService{
 		dai:                         dataAccessor,
+		dummy:                       dummy,
 		scs:                         sessionManager,
 		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
@@ -1068,4 +1070,12 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 			{Type: "string"}, {Type: "integer"},
 		},
 	}
+}
+
+func isMockEnabled(r *http.Request) bool {
+	isMockEnabled, ok := r.Context().Value(ctxIsMockEnabledKey).(bool)
+	if !ok {
+		return false
+	}
+	return isMockEnabled
 }
