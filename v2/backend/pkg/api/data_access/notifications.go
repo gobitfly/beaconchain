@@ -253,7 +253,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	// dev hack; TODO remove
-	if userId == 127504 {
+	if userId == 127504 || userId == 127227 {
 		return d.dummy.GetDashboardNotifications(ctx, userId, chainIds, cursor, colSort, search, limit)
 	}
 	response := []t.NotificationDashboardsTableRow{}
@@ -395,16 +395,16 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	}
 	notificationDetails := t.NotificationValidatorDashboardDetail{
 		ValidatorOffline:         []uint64{},
-		GroupOffline:             []t.NotificationEventGroup{},
-		ProposalMissed:           []t.IndexBlocks{},
+		GroupOffline:             []string{},
+		ProposalMissed:           []t.IndexSlots{},
 		ProposalDone:             []t.IndexBlocks{},
-		UpcomingProposals:        []t.IndexBlocks{},
+		UpcomingProposals:        []t.IndexSlots{},
 		Slashed:                  []uint64{},
 		SyncCommittee:            []uint64{},
 		AttestationMissed:        []t.IndexEpoch{},
 		Withdrawal:               []t.IndexBlocks{},
 		ValidatorOfflineReminder: []uint64{},
-		GroupOfflineReminder:     []t.NotificationEventGroup{},
+		GroupOfflineReminder:     []string{},
 		ValidatorBackOnline:      []t.NotificationEventValidatorBackOnline{},
 		GroupBackOnline:          []t.NotificationEventGroupBackOnline{},
 		MinimumCollateralReached: []t.Address{},
@@ -427,9 +427,18 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 		searchIndexSet[searchIndex] = true
 	}
 
+	query := `SELECT name FROM users_val_dashboards WHERE id = $1`
+	err := d.alloyReader.GetContext(ctx, &notificationDetails.DashboardName, query, dashboardId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &notificationDetails, nil
+		}
+		return nil, err
+	}
+
 	result := []byte{}
-	query := `SELECT details FROM users_val_dashboards_notifications_history WHERE dashboard_id = $1 AND group_id = $2 AND epoch = $3`
-	err := d.alloyReader.GetContext(ctx, &result, query, dashboardId, groupId, epoch)
+	query = `SELECT details FROM users_val_dashboards_notifications_history WHERE dashboard_id = $1 AND group_id = $2 AND epoch = $3`
+	err = d.alloyReader.GetContext(ctx, &result, query, dashboardId, groupId, epoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &notificationDetails, nil
@@ -596,10 +605,10 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			notificationDetails.ProposalDone = append(notificationDetails.ProposalDone, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Proposed})
 		}
 		if len(proposalInfo.Scheduled) > 0 {
-			notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Scheduled})
+			notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexSlots{Index: validatorIndex, Slots: proposalInfo.Scheduled})
 		}
 		if len(proposalInfo.Missed) > 0 {
-			notificationDetails.ProposalMissed = append(notificationDetails.ProposalMissed, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Missed})
+			notificationDetails.ProposalMissed = append(notificationDetails.ProposalMissed, t.IndexSlots{Index: validatorIndex, Slots: proposalInfo.Missed})
 		}
 	}
 

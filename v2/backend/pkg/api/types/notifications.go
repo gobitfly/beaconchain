@@ -48,14 +48,9 @@ type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[Notificatio
 // ------------------------------------------------------------
 // Validator Dashboard Notification Detail
 
-type NotificationEventGroup struct {
-	GroupName   string `json:"group_name"`
-	DashboardID uint64 `json:"dashboard_id"`
-}
 type NotificationEventGroupBackOnline struct {
-	GroupName   string `json:"group_name"`
-	DashboardID uint64 `json:"dashboard_id"`
-	EpochCount  uint64 `json:"epoch_count"`
+	GroupName  string `json:"group_name"`
+	EpochCount uint64 `json:"epoch_count"`
 }
 
 type NotificationEventValidatorBackOnline struct {
@@ -64,17 +59,18 @@ type NotificationEventValidatorBackOnline struct {
 }
 
 type NotificationValidatorDashboardDetail struct {
+	DashboardName            string                                 `json:"dashboard_name"`
 	ValidatorOffline         []uint64                               `json:"validator_offline"` // validator indices
-	GroupOffline             []NotificationEventGroup               `json:"group_offline"`     // TODO not filled yet
-	ProposalMissed           []IndexBlocks                          `json:"proposal_missed"`
+	GroupOffline             []string                               `json:"group_offline"`     // TODO not filled yet
+	ProposalMissed           []IndexSlots                           `json:"proposal_missed"`
 	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
-	UpcomingProposals        []IndexBlocks                          `json:"upcoming_proposals"`
+	UpcomingProposals        []IndexSlots                           `json:"upcoming_proposals"`
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
 	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
 	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
 	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
 	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
-	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`     // TODO not filled yet
+	GroupOfflineReminder     []string                               `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
 	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`      // TODO not filled yet
 	MinimumCollateralReached []Address                              `json:"min_collateral_reached"` // node addresses

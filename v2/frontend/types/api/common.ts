@@ -121,6 +121,10 @@ export interface IndexBlocks {
   index: number /* uint64 */;
   blocks: number /* uint64 */[];
 }
+export interface IndexSlots {
+  index: number /* uint64 */;
+  slots: number /* uint64 */[];
+}
 export interface ValidatorStateCounts {
   online: number /* uint64 */;
   offline: number /* uint64 */;
