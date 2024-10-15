@@ -217,12 +217,14 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		// Find rocketpool node effective balance
 		type RpOperatorInfo struct {
 			EffectiveRPLStake decimal.Decimal `db:"effective_rpl_stake"`
+			RPLStake          decimal.Decimal `db:"rpl_stake"`
 		}
 		var queryResult RpOperatorInfo
 
 		ds := goqu.Dialect("postgres").
 			Select(
-				goqu.COALESCE(goqu.SUM("rpln.effective_rpl_stake"), 0).As("effective_rpl_stake")).
+				goqu.COALESCE(goqu.SUM("rpln.effective_rpl_stake"), 0).As("effective_rpl_stake"),
+				goqu.COALESCE(goqu.SUM("rpln.rpl_stake"), 0).As("rpl_stake")).
 			From(goqu.L("rocketpool_nodes AS rpln")).
 			LeftJoin(goqu.L("rocketpool_minipools AS m"), goqu.On(goqu.L("m.node_address = rpln.address"))).
 			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("m.pubkey = v.pubkey"))).
@@ -242,14 +244,15 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		}
 
 		if !rpNetworkStats.EffectiveRPLStaked.IsZero() && !queryResult.EffectiveRPLStake.IsZero() && !rpNetworkStats.NodeOperatorRewards.IsZero() && rpNetworkStats.ClaimIntervalHours > 0 {
-			share := rpNetworkStats.EffectiveRPLStaked.Div(queryResult.EffectiveRPLStake)
+			share := queryResult.EffectiveRPLStake.Div(rpNetworkStats.EffectiveRPLStaked)
 
-			data.RplApr = rpNetworkStats.NodeOperatorRewards. // global rewards to distribute
-										Mul(share).                                                          // node operator effective rpl stakte
-										Div(decimal.NewFromFloat(rpNetworkStats.ClaimIntervalHours / 24.0)). // days per period
-										Mul(decimal.NewFromInt(365)).                                        // 365 days per year
-										Mul(decimal.NewFromInt(100)).
-										InexactFloat64()
+			periodsPerYear := decimal.NewFromFloat(365 / (rpNetworkStats.ClaimIntervalHours / 24))
+			data.RplApr = rpNetworkStats.NodeOperatorRewards.
+				Mul(share).
+				Div(queryResult.RPLStake).
+				Mul(periodsPerYear).
+				Mul(decimal.NewFromInt(100)).InexactFloat64()
+
 		}
 		return nil
 	})
