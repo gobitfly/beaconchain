@@ -77,7 +77,8 @@ type NotificationMachinesColumn int
 var _ EnumFactory[NotificationMachinesColumn] = NotificationMachinesColumn(0)
 
 const (
-	NotificationMachineName NotificationMachinesColumn = iota
+	NotificationMachineId NotificationMachinesColumn = iota // internal use
+	NotificationMachineName
 	NotificationMachineThreshold
 	NotificationMachineEventType
 	NotificationMachineTimestamp
@@ -102,12 +103,32 @@ func (NotificationMachinesColumn) NewFromString(s string) NotificationMachinesCo
 	}
 }
 
+// internal use, used to map to query column names
+func (c NotificationMachinesColumn) ToString() string {
+	switch c {
+	case NotificationMachineId:
+		return "machine_id"
+	case NotificationMachineName:
+		return "machine_name"
+	case NotificationMachineThreshold:
+		return "threshold"
+	case NotificationMachineEventType:
+		return "event_type"
+	case NotificationMachineTimestamp:
+		return "epoch"
+	default:
+		return ""
+	}
+}
+
 var NotificationsMachinesColumns = struct {
+	MachineId   NotificationMachinesColumn
 	MachineName NotificationMachinesColumn
 	Threshold   NotificationMachinesColumn
 	EventType   NotificationMachinesColumn
 	Timestamp   NotificationMachinesColumn
 }{
+	NotificationMachineId,
 	NotificationMachineName,
 	NotificationMachineThreshold,
 	NotificationMachineEventType,
@@ -138,6 +159,18 @@ func (NotificationClientsColumn) NewFromString(s string) NotificationClientsColu
 		return NotificationClientTimestamp
 	default:
 		return NotificationClientsColumn(-1)
+	}
+}
+
+// internal use, used to map to query column names
+func (c NotificationClientsColumn) ToString() string {
+	switch c {
+	case NotificationClientName:
+		return "client_name"
+	case NotificationClientTimestamp:
+		return "epoch"
+	default:
+		return ""
 	}
 }
 
@@ -198,6 +231,7 @@ var _ EnumFactory[NotificationNetworksColumn] = NotificationNetworksColumn(0)
 
 const (
 	NotificationNetworkTimestamp NotificationNetworksColumn = iota
+	NotificationNetworkNetwork                              // internal use
 	NotificationNetworkEventType
 )
 
@@ -216,11 +250,27 @@ func (NotificationNetworksColumn) NewFromString(s string) NotificationNetworksCo
 	}
 }
 
+// internal use, used to map to query column names
+func (c NotificationNetworksColumn) ToString() string {
+	switch c {
+	case NotificationNetworkTimestamp:
+		return "epoch"
+	case NotificationNetworkNetwork:
+		return "network"
+	case NotificationNetworkEventType:
+		return "event_type"
+	default:
+		return ""
+	}
+}
+
 var NotificationNetworksColumns = struct {
 	Timestamp NotificationNetworksColumn
+	Network   NotificationNetworksColumn
 	EventType NotificationNetworksColumn
 }{
 	NotificationNetworkTimestamp,
+	NotificationNetworkNetwork,
 	NotificationNetworkEventType,
 }
 
