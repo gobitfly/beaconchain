@@ -53,6 +53,12 @@ type NotificationEventValidatorBackOnline struct {
 	EpochCount uint64 `json:"epoch_count"`
 }
 
+type NotificationEventWithdrawal struct {
+	Index   uint64          `json:"index"`
+	Amount  decimal.Decimal `json:"amount"`
+	Address Address         `json:"address"`
+}
+
 type NotificationValidatorDashboardDetail struct {
 	DashboardName            string                                 `db:"dashboard_name" json:"dashboard_name"`
 	GroupName                string                                 `db:"group_name" json:"group_name"`
@@ -64,7 +70,7 @@ type NotificationValidatorDashboardDetail struct {
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
 	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
 	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
-	Withdrawal               []IndexSlots                           `json:"withdrawal"`
+	Withdrawal               []NotificationEventWithdrawal          `json:"withdrawal"`
 	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
 	GroupOfflineReminder     bool                                   `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`

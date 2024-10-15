@@ -16,6 +16,7 @@ const DefaultGroupId = 0
 const AllGroups = -1
 const NetworkAverage = -2
 const DefaultGroupName = "default"
+const DefaultDashboardName = DefaultGroupName
 
 type Sort[T enums.Enum] struct {
 	Column T
