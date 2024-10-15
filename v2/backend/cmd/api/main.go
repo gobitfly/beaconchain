@@ -64,7 +64,10 @@ func Run() {
 	}
 	defer dataAccessor.Close()
 
-	router := api.NewApiRouter(dataAccessor, cfg)
+	var dummy dataaccess.DataAccessor
+	dummy = dataaccess.NewDummyService()
+
+	router := api.NewApiRouter(dataAccessor, dummy, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
 
 	if utils.Config.Metrics.Enabled {

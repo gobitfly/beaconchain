@@ -252,10 +252,6 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 }
 
 func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
-	// dev hack; TODO remove
-	if userId == 127504 {
-		return d.dummy.GetDashboardNotifications(ctx, userId, chainIds, cursor, colSort, search, limit)
-	}
 	response := []t.NotificationDashboardsTableRow{}
 	var err error
 
@@ -389,10 +385,6 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 }
 
 func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
-	// dev hack; TODO remove
-	if dashboardId == 5426 || dashboardId == 5334 {
-		return d.dummy.GetValidatorDashboardNotificationDetails(ctx, dashboardId, groupId, epoch, search)
-	}
 	notificationDetails := t.NotificationValidatorDashboardDetail{
 		ValidatorOffline:         []uint64{},
 		GroupOffline:             []t.NotificationEventGroup{},
