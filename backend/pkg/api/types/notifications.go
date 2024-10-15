@@ -64,7 +64,7 @@ type NotificationValidatorDashboardDetail struct {
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
 	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
 	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
-	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
+	Withdrawal               []IndexSlots                           `json:"withdrawal"`
 	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
 	GroupOfflineReminder     bool                                   `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
