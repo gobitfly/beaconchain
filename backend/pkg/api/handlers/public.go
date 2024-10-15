@@ -1935,7 +1935,12 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+
+	dataAccessor := h.dai
+	if isMockEnabled(r) {
+		dataAccessor = h.dummy
+	}
+	data, paging, err := dataAccessor.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1971,7 +1976,11 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
+	dataAccessor := h.dai
+	if isMockEnabled(r) {
+		dataAccessor = h.dummy
+	}
+	data, err := dataAccessor.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
