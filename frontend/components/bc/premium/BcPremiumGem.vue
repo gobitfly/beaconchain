@@ -19,7 +19,7 @@ defineProps<{
       target="_blank"
       class="link"
     >
-      <div>
+      <span>
         <LazyBcScreenreaderOnly v-if="screenreaderText">
           {{ screenreaderText }}
         </LazyBcScreenreaderOnly>
@@ -27,7 +27,7 @@ defineProps<{
           :icon="faGem"
           class="gem"
         />
-      </div>
+      </span>
     </BcLink>
   </BcTooltip>
 </template>
