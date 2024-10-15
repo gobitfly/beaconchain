@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -14,15 +15,48 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
 )
 
 var ttl = 2 * time.Second
+
+var ErrNotFoundInCache = fmt.Errorf("cannot find hash in cache")
 
 type EthClient interface {
 	ethereum.ChainReader
 	ethereum.ContractCaller
 	bind.ContractBackend
 	ethereum.ChainStateReader
+}
+
+type WithFallback struct {
+	roundTripper http.RoundTripper
+	fallback     http.RoundTripper
+}
+
+func NewWithFallback(roundTripper http.RoundTripper, fallback http.RoundTripper) *WithFallback {
+	return &WithFallback{
+		roundTripper: roundTripper,
+		fallback:     fallback,
+	}
+}
+
+func (r WithFallback) RoundTrip(request *http.Request) (*http.Response, error) {
+	resp, err := r.roundTripper.RoundTrip(request)
+	if err == nil {
+		// no fallback needed
+		return resp, nil
+	}
+
+	var e1 *json.SyntaxError
+	if !errors.As(err, &e1) &&
+		!errors.Is(err, ErrNotFoundInCache) &&
+		!errors.Is(err, store.ErrNotFound) {
+		return nil, err
+	}
+
+	return r.fallback.RoundTrip(request)
 }
 
 type BigTableEthRaw struct {
@@ -50,6 +84,9 @@ func (r *BigTableEthRaw) RoundTrip(request *http.Request) (*http.Response, error
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		request.Body = io.NopCloser(bytes.NewBuffer(body))
+	}()
 	var messages []*jsonrpcMessage
 	var isSingle bool
 	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&messages); err != nil {
@@ -64,10 +101,7 @@ func (r *BigTableEthRaw) RoundTrip(request *http.Request) (*http.Response, error
 	for _, message := range messages {
 		resp, err := r.handle(request.Context(), message)
 		if err != nil {
-			return &http.Response{
-				Body:       io.NopCloser(bytes.NewBufferString(err.Error())),
-				StatusCode: http.StatusBadRequest,
-			}, nil
+			return nil, err
 		}
 		resps = append(resps, resp)
 	}
@@ -94,11 +128,10 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 			return nil, err
 		}
 
-		b, err := r.BlockByNumber(ctx, block)
+		respBody, err = r.BlockByNumber(ctx, block)
 		if err != nil {
 			return nil, err
 		}
-		respBody = b
 
 	case "debug_traceBlockByNumber":
 		block, err := hexutil.DecodeBig(args[0].(string))
@@ -106,11 +139,10 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 			return nil, err
 		}
 
-		b, err := r.TraceBlockByNumber(ctx, block)
+		respBody, err = r.TraceBlockByNumber(ctx, block)
 		if err != nil {
 			return nil, err
 		}
-		respBody = b
 
 	case "eth_getBlockReceipts":
 		block, err := hexutil.DecodeBig(args[0].(string))
@@ -118,27 +150,25 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 			return nil, err
 		}
 
-		b, err := r.BlockReceipts(ctx, block)
+		respBody, err = r.BlockReceipts(ctx, block)
 		if err != nil {
 			return nil, err
 		}
-		respBody = b
 
 	case "eth_getUncleByBlockHashAndIndex":
 		number, exist := r.hashToNumber.Load(args[0].(string))
 		if !exist {
-			return nil, fmt.Errorf("cannot find hash '%s' in cache", args[0].(string))
+			return nil, ErrNotFoundInCache
 		}
 
 		index, err := hexutil.DecodeBig(args[1].(string))
 		if err != nil {
 			return nil, err
 		}
-		b, err := r.UncleByBlockNumberAndIndex(ctx, number.(*big.Int), index.Int64())
+		respBody, err = r.UncleByBlockNumberAndIndex(ctx, number.(*big.Int), index.Int64())
 		if err != nil {
 			return nil, err
 		}
-		respBody = b
 	}
 	var resp jsonrpcMessage
 	_ = json.Unmarshal(respBody, &resp)
