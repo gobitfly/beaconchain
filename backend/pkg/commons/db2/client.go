@@ -22,6 +22,7 @@ import (
 var ttl = 2 * time.Second
 
 var ErrNotFoundInCache = fmt.Errorf("cannot find hash in cache")
+var ErrMethodNotSupported = fmt.Errorf("methode not supported")
 
 type EthClient interface {
 	ethereum.ChainReader
@@ -52,6 +53,7 @@ func (r WithFallback) RoundTrip(request *http.Request) (*http.Response, error) {
 	var e1 *json.SyntaxError
 	if !errors.As(err, &e1) &&
 		!errors.Is(err, ErrNotFoundInCache) &&
+		!errors.Is(err, ErrMethodNotSupported) &&
 		!errors.Is(err, store.ErrNotFound) {
 		return nil, err
 	}
@@ -169,6 +171,8 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, ErrMethodNotSupported
 	}
 	var resp jsonrpcMessage
 	_ = json.Unmarshal(respBody, &resp)

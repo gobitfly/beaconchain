@@ -180,6 +180,14 @@ func TestBigTableClientWithFallback(t *testing.T) {
 			}
 			ethClient := ethclient.NewClient(rpcClient)
 
+			balance, err := ethClient.BalanceAt(context.Background(), common.Address{}, big.NewInt(tt.block.BlockNumber))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if balance == nil {
+				t.Errorf("empty balance")
+			}
+
 			block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(tt.block.BlockNumber))
 			if err != nil {
 				t.Fatalf("BlockByNumber() error = %v", err)
