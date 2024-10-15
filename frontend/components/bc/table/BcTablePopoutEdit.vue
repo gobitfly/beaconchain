@@ -20,8 +20,9 @@ defineProps<Props>()
     <slot name="content">
       <BcTooltip
         v-if="label"
+        tooltip-width="320px"
+        tooltip-text-align="left"
         :hide="!truncateText"
-        :fit-content="true"
         class="content"
         :text="label"
       >
