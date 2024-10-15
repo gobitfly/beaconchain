@@ -252,7 +252,6 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				Div(queryResult.RPLStake).
 				Mul(periodsPerYear).
 				Mul(decimal.NewFromInt(100)).InexactFloat64()
-
 		}
 		return nil
 	})
