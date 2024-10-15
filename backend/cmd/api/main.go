@@ -64,8 +64,7 @@ func Run() {
 	}
 	defer dataAccessor.Close()
 
-	var dummy dataaccess.DataAccessor
-	dummy = dataaccess.NewDummyService()
+	dummy := dataaccess.NewDummyService()
 
 	router := api.NewApiRouter(dataAccessor, dummy, cfg)
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
