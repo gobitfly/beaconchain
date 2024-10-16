@@ -40,7 +40,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware)
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
-	addLegacyRoutes(handlerService, legacyRouter, cfg)
+	addLegacyRoutes(handlerService, legacyRouter)
 
 	// serve static files
 	publicRouter.PathPrefix("/docs/").Handler(http.StripPrefix("/api/v2/docs/", http.FileServer(http.FS(docs.Files))))
@@ -246,7 +246,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 }
 
 // Legacy routes are available behind the /v1 prefix and guarantee backwards compatibility with the old API
-func addLegacyRoutes(hs *handlers.HandlerService, publicRouter *mux.Router, cfg *types.Config) {
+func addLegacyRoutes(hs *handlers.HandlerService, publicRouter *mux.Router) {
 	publicRouter.HandleFunc("/client/metrics", hs.LegacyPostUserMachineMetrics).Methods(http.MethodPost, http.MethodOptions)
 }
 
