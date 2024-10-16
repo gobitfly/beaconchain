@@ -36,7 +36,7 @@ var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 			Daily:  0,
 			Weekly: 0,
 		},
-		EmailNotificationsPerDay:                    5,
+		EmailNotificationsPerDay:                    10,
 		ConfigureNotificationsViaApi:                false,
 		ValidatorGroupNotifications:                 1,
 		WebhookEndpoints:                            1,
