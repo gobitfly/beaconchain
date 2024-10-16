@@ -118,27 +118,20 @@ func (h *HandlerService) LegacyPostUserMachineMetrics(w http.ResponseWriter, r *
 	}
 
 	var rateLimitErrs = 0
-	var result bool = false
 	for i := 0; i < len(jsonObjects); i++ {
 		err := h.internal_processMachine(r.Context(), machine, &jsonObjects[i], userInfo)
-		result = err == nil
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "rate limit") {
-				result = true
 				rateLimitErrs++
 				continue
 			}
-			break
+			handleErr(w, r, err)
+			return
 		}
 	}
 
 	if rateLimitErrs >= len(jsonObjects) {
 		returnTooManyRequests(w, r, fmt.Errorf("too many metric requests, max allowed is 1 per user per machine per process"))
-		return
-	}
-
-	if !result {
-		returnError(w, r, http.StatusInternalServerError, fmt.Errorf("could not insert stats"))
 		return
 	}
 
@@ -149,7 +142,7 @@ func (h *HandlerService) internal_processMachine(context context.Context, machin
 	var parsedMeta *commontypes.StatsMeta
 	err := mapstructure.Decode(obj, &parsedMeta)
 	if err != nil {
-		return errors.Wrap(err, "could not parse meta")
+		return fmt.Errorf("%w: %w", errBadRequest, err)
 	}
 
 	parsedMeta.Machine = machine
@@ -179,7 +172,7 @@ func (h *HandlerService) internal_processMachine(context context.Context, machin
 		var parsedResponse *commontypes.MachineMetricSystem
 		err = DecodeMapStructure(obj, &parsedResponse)
 		if err != nil {
-			return errors.Wrap(err, "could not parse stats (system stats)")
+			return fmt.Errorf("%w: %w could not parse stats (system stats)", errBadRequest, err)
 		}
 		data, err = proto.Marshal(parsedResponse)
 		if err != nil {
@@ -189,7 +182,7 @@ func (h *HandlerService) internal_processMachine(context context.Context, machin
 		var parsedResponse *commontypes.MachineMetricValidator
 		err = DecodeMapStructure(obj, &parsedResponse)
 		if err != nil {
-			return errors.Wrap(err, "could not parse stats (validator stats)")
+			return fmt.Errorf("%w: %w could not parse stats (validator stats)", errBadRequest, err)
 		}
 		data, err = proto.Marshal(parsedResponse)
 		if err != nil {
@@ -199,7 +192,7 @@ func (h *HandlerService) internal_processMachine(context context.Context, machin
 		var parsedResponse *commontypes.MachineMetricNode
 		err = DecodeMapStructure(obj, &parsedResponse)
 		if err != nil {
-			return errors.Wrap(err, "could not parse stats (beaconnode stats)")
+			return fmt.Errorf("%w: %w could not parse stats (beaconnode stats)", errBadRequest, err)
 		}
 		data, err = proto.Marshal(parsedResponse)
 		if err != nil {
