@@ -104,7 +104,6 @@ const (
 	Last24h
 	Last7d
 	Last30d
-	Last365d
 )
 
 func (t TimePeriod) Int() int {
@@ -123,27 +122,23 @@ func (TimePeriod) NewFromString(s string) TimePeriod {
 		return Last7d
 	case "last_30d":
 		return Last30d
-	case "last_365d":
-		return Last365d
 	default:
 		return TimePeriod(-1)
 	}
 }
 
 var TimePeriods = struct {
-	AllTime  TimePeriod
-	Last1h   TimePeriod
-	Last24h  TimePeriod
-	Last7d   TimePeriod
-	Last30d  TimePeriod
-	Last365d TimePeriod
+	AllTime TimePeriod
+	Last1h  TimePeriod
+	Last24h TimePeriod
+	Last7d  TimePeriod
+	Last30d TimePeriod
 }{
 	AllTime,
 	Last1h,
 	Last24h,
 	Last7d,
 	Last30d,
-	Last365d,
 }
 
 func (t TimePeriod) Duration() time.Duration {
@@ -157,8 +152,6 @@ func (t TimePeriod) Duration() time.Duration {
 		return 7 * day
 	case Last30d:
 		return 30 * day
-	case Last365d:
-		return 365 * day
 	default:
 		return 0
 	}
