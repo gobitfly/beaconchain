@@ -30,9 +30,9 @@ export function useNotificationsManagementDashboards() {
   }, 10)
   const isLoading = ref(false)
 
-  const dashboardGroups = computed(() => data.value)
+  const dashboards = computed(() => data.value)
 
-  async function getDashboardGroups(q?: TableQueryParams) {
+  async function getDashboards(q?: TableQueryParams) {
     isLoading.value = true
     setStoredQuery(q)
     const res
@@ -55,7 +55,7 @@ export function useNotificationsManagementDashboards() {
   watch(
     query,
     (q) => {
-      getDashboardGroups(q)
+      getDashboards(q)
     },
     { immediate: true },
   )
@@ -141,14 +141,69 @@ export function useNotificationsManagementDashboards() {
     )
   }
 
+  function patchDashboardSettings(
+    {
+      dashboard_id,
+      group_id,
+      settings,
+    }:
+    {
+      dashboard_id: number,
+      group_id: number,
+      settings: NotificationSettingsValidatorDashboard,
+    },
+  ) {
+    const currentDashboard = dashboards.value?.data.find((dashboard) => {
+      if (dashboard.dashboard_id === dashboard_id && dashboard.group_id === group_id) {
+        return dashboard
+      }
+    })
+    if (currentDashboard) {
+      currentDashboard.settings = settings
+    }
+  }
+  async function saveSubscriptions(
+    {
+      dashboard_id,
+      group_id,
+      settings,
+    }:
+    {
+      dashboard_id: number,
+      group_id: number,
+      settings: NotificationSettingsValidatorDashboard,
+    },
+  ) {
+    await fetch<InternalPutUserNotificationSettingsValidatorDashboardResponse>(
+      API_PATH.SAVE_VALIDATOR_DASHBOARDS_SETTINGS,
+      {
+        body: {
+          ...settings,
+        },
+        method: 'PUT',
+      },
+      {
+        dashboard_id,
+        group_id,
+      },
+    ).then(({ data: settings }) => {
+      patchDashboardSettings({
+        dashboard_id,
+        group_id,
+        settings,
+      })
+    })
+  }
+
   return {
     cursor,
-    dashboardGroups,
+    dashboards,
     deleteDashboardNotifications,
     isLoading,
     onSort,
     pageSize,
     query: pendingQuery,
+    saveSubscriptions,
     setCursor,
     setPageSize,
     setSearch,

@@ -11,68 +11,80 @@ func (d *DataAccessService) GetAllClients() ([]types.ClientInfo, error) {
 	// probably should load the clients into mem from some config when the service is created
 
 	return []types.ClientInfo{
-		// Execution Clients
+		// execution_layer
 		{
 			Id:       0,
 			Name:     "Geth",
-			Category: "Execution Clients",
+			DbName:   "geth",
+			Category: "execution_layer",
 		},
 		{
 			Id:       1,
 			Name:     "Nethermind",
-			Category: "Execution Clients",
+			DbName:   "nethermind",
+			Category: "execution_layer",
 		},
 		{
 			Id:       2,
 			Name:     "Besu",
-			Category: "Execution Clients",
+			DbName:   "besu",
+			Category: "execution_layer",
 		},
 		{
 			Id:       3,
 			Name:     "Erigon",
-			Category: "Execution Clients",
+			DbName:   "erigon",
+			Category: "execution_layer",
 		},
 		{
 			Id:       4,
 			Name:     "Reth",
-			Category: "Execution Clients",
+			DbName:   "reth",
+			Category: "execution_layer",
 		},
-		// Consensus Clients
+		// consensus_layer
 		{
 			Id:       5,
 			Name:     "Teku",
-			Category: "Consensus Clients",
+			DbName:   "teku",
+			Category: "consensus_layer",
 		},
 		{
 			Id:       6,
 			Name:     "Prysm",
-			Category: "Consensus Clients",
+			DbName:   "prysm",
+			Category: "consensus_layer",
 		},
 		{
 			Id:       7,
 			Name:     "Nimbus",
-			Category: "Consensus Clients",
+			DbName:   "nimbus",
+			Category: "consensus_layer",
 		},
 		{
 			Id:       8,
 			Name:     "Lighthouse",
-			Category: "Consensus Clients",
+			DbName:   "lighthouse",
+			Category: "consensus_layer",
 		},
 		{
 			Id:       9,
 			Name:     "Lodestar",
-			Category: "Consensus Clients",
+			DbName:   "lodestar",
+			Category: "consensus_layer",
 		},
-		// Other
+		// other
 		{
 			Id:       10,
 			Name:     "Rocketpool Smart Node",
-			Category: "Other",
+			DbName:   "rocketpool",
+			Category: "other",
 		},
 		{
 			Id:       11,
 			Name:     "MEV-Boost",
-			Category: "Other",
+			DbName:   "mev-boost",
+			Category: "other",
 		},
 	}, nil
 }

@@ -21,7 +21,7 @@ type endpoint struct {
 	InternalHander func(w http.ResponseWriter, r *http.Request)
 }
 
-func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
+func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	router := mux.NewRouter()
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
@@ -32,11 +32,11 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, cfg *types.Config) *mux.
 	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
-	handlerService := handlers.NewHandlerService(dataAccessor, sessionManager, !cfg.Frontend.DisableStatsInserts)
+	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, !cfg.Frontend.DisableStatsInserts)
 
 	// store user id in context, if available
-	publicRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdByApiKey))
-	internalRouter.Use(handlers.GetUserIdStoreMiddleware(handlerService.GetUserIdBySession))
+	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware)
+	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware)
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 
@@ -253,7 +253,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 
 	// add middleware to check if user has access to dashboard
 	if !cfg.Frontend.Debug {
-		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageViaApiCheckMiddleware)
+		publicDashboardRouter.Use(hs.VDBAuthMiddleware, hs.ManageDashboardsViaApiCheckMiddleware)
 		internalDashboardRouter.Use(hs.VDBAuthMiddleware)
 	}
 
@@ -317,7 +317,7 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	internalNotificationRouter := internalRouter.PathPrefix(path).Subrouter()
 
 	if !debug {
-		publicNotificationRouter.Use(hs.ManageViaApiCheckMiddleware)
+		publicNotificationRouter.Use(hs.ManageNotificationsViaApiCheckMiddleware)
 	}
 	endpoints := []endpoint{
 		{http.MethodGet, "", hs.PublicGetUserNotifications, hs.InternalGetUserNotifications},

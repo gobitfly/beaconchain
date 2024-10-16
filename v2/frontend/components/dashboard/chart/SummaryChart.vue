@@ -110,7 +110,7 @@ const categories = computed<number[]>(() => {
   let step = 0
   switch (aggregation.value) {
     case 'epoch':
-      step = secondsPerEpoch()
+      step = secondsPerEpoch.value
       break
     case 'daily':
       step = ONE_DAY

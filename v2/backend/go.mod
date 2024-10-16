@@ -5,7 +5,6 @@ go 1.23
 require (
 	cloud.google.com/go/bigtable v1.21.0
 	cloud.google.com/go/secretmanager v1.11.5
-	firebase.google.com/go v3.13.0+incompatible
 	firebase.google.com/go/v4 v4.14.1
 	github.com/ClickHouse/clickhouse-go/v2 v2.17.1
 	github.com/Gurpartap/storekit-go v0.0.0-20201205024111-36b6cd5c6a21
@@ -43,6 +42,7 @@ require (
 	github.com/gzuidhof/tygo v0.2.13
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v1.0.2
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/invopop/jsonschema v0.12.0
 	github.com/jackc/pgconn v1.9.1-0.20210724152538-d89c8390a530
 	github.com/jackc/pgtype v1.14.2
@@ -72,6 +72,7 @@ require (
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
 	github.com/wealdtech/go-eth2-util v1.8.0
 	github.com/xeipuuv/gojsonschema v1.2.0
+	go.uber.org/atomic v1.11.0
 	golang.org/x/crypto v0.21.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	golang.org/x/sync v0.6.0
@@ -164,7 +165,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.3 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/herumi/bls-eth-go-binary v1.31.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/huandu/go-clone v1.6.0 // indirect
@@ -260,7 +260,6 @@ require (
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/mod v0.15.0 // indirect
