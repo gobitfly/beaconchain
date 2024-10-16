@@ -367,6 +367,34 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 	h.PublicGetValidatorDashboardValidators(w, r)
 }
 
+func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+
+	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
+	sort := checkSort[enums.VDBMobileValidatorsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.dai.GetValidatorDashboardMobileValidators(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardMobileValidatorsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
 func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	h.PublicDeleteValidatorDashboardValidators(w, r)
 }
