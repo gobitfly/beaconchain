@@ -23,8 +23,8 @@ export interface MobileWidgetData {
 export type InternalGetValidatorDashboardMobileWidgetResponse = ApiDataResponse<MobileWidgetData>;
 export interface MobileValidatorDashboardValidatorsRocketPool {
   deposit_Amount: string /* decimal.Decimal */;
-  commision: number /* float64 */; // percentage, 0-1
-  status: 'staking' | 'dissolved' | 'prelaunch' | 'initialized' | 'withdrawable';
+  commission: number /* float64 */; // percentage, 0-1
+  status: 'Staking' | 'Dissolved' | 'Prelaunch' | 'Initialized' | 'Withdrawable';
   penalty_count: number /* uint64 */;
   is_in_smokaothing_pool: boolean;
 }
