@@ -130,7 +130,7 @@ const emit = defineEmits<{
       </section>
       <section class="box-item">
         <h3 class="overwrite-h3 big_text_label">
-          {{ $t('notifications.overview.headers.most_notifications_24h') }}
+          {{ $t('notifications.overview.headers.notifications_24h') }}
         </h3>
         <div class="big_text">
           {{ notificationsTotal }}
