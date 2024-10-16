@@ -25,6 +25,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	router := mux.NewRouter()
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
+	legacyRouter := apiRouter.PathPrefix("/v1").Subrouter()
 	internalRouter := apiRouter.PathPrefix("/i").Subrouter()
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
@@ -39,6 +40,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware)
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
+	addLegacyRoutes(handlerService, legacyRouter, cfg)
 
 	// serve static files
 	publicRouter.PathPrefix("/docs/").Handler(http.StripPrefix("/api/v2/docs/", http.FileServer(http.FS(docs.Files))))
@@ -241,6 +243,11 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodGet, "/multisig-transactions/{hash}/confirmations", hs.PublicGetMultisigTransactionConfirmations, nil},
 	}
 	addEndpointsToRouters(endpoints, publicRouter, internalRouter)
+}
+
+// Legacy routes are available behind the /v1 prefix and guarantee backwards compatibility with the old API
+func addLegacyRoutes(hs *handlers.HandlerService, publicRouter *mux.Router, cfg *types.Config) {
+	publicRouter.HandleFunc("/client/metrics", hs.LegacyPostUserMachineMetrics).Methods(http.MethodPost, http.MethodOptions)
 }
 
 func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
