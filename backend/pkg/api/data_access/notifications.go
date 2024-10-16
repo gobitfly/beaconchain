@@ -332,12 +332,12 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 
 	// sorting
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationDashboardEpoch.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationDashboardDashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
-		{Column: enums.NotificationDashboardDashboardId.ToString(), Desc: false, Offset: currentCursor.DashboardId},
-		{Column: enums.NotificationDashboardGroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
-		{Column: enums.NotificationDashboardGroupId.ToString(), Desc: false, Offset: currentCursor.GroupId},
-		{Column: enums.NotificationDashboardChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
+		{Column: enums.NotificationsDashboardsColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsDashboardsColumns.DashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
+		{Column: enums.NotificationsDashboardsColumns.DashboardId.ToString(), Desc: false, Offset: currentCursor.DashboardId},
+		{Column: enums.NotificationsDashboardsColumns.GroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
+		{Column: enums.NotificationsDashboardsColumns.GroupId.ToString(), Desc: false, Offset: currentCursor.GroupId},
+		{Column: enums.NotificationsDashboardsColumns.ChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
 	}
 	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	unionQuery = unionQuery.Order(order...)
@@ -631,12 +631,6 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		}
 	}
 
-	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
-	sortSearchDirection := ">"
-	if isReverseDirection {
-		sortSearchDirection = "<"
-	}
-
 	// -------------------------------------
 	// Get the machine notification history
 	notificationHistory := []struct {
@@ -664,70 +658,23 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	}
 
 	// Sorting and limiting if cursor is present
-	// Rows can be uniquely identified by (epoch, machine_id, event_type)
-	sortDirFunc := func(column string) exp.OrderedExpression {
-		return goqu.I(column).Asc()
+	defaultColumns := []t.SortColumn{
+		{Column: enums.NotificationsMachinesColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsMachinesColumns.MachineId.ToString(), Desc: false, Offset: currentCursor.MachineId},
+		{Column: enums.NotificationsMachinesColumns.EventType.ToString(), Desc: false, Offset: currentCursor.EventType},
 	}
-	if isReverseDirection {
-		sortDirFunc = func(column string) exp.OrderedExpression {
-			return goqu.I(column).Desc()
-		}
-	}
+	var offset interface{}
 	switch colSort.Column {
 	case enums.NotificationsMachinesColumns.MachineName:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(machine_name %s ?)", sortSearchDirection), currentCursor.MachineName),
-				goqu.L(fmt.Sprintf("(machine_name = ? AND epoch %s ?)", sortSearchDirection), currentCursor.MachineName, currentCursor.Epoch),
-				goqu.L(fmt.Sprintf("(machine_name = ? AND epoch = ? AND machine_id %s ?)", sortSearchDirection), currentCursor.MachineName, currentCursor.Epoch, currentCursor.MachineId),
-				goqu.L(fmt.Sprintf("(machine_name = ? AND epoch = ? AND machine_id = ? AND event_type %s ?)", sortSearchDirection), currentCursor.MachineName, currentCursor.Epoch, currentCursor.MachineId, currentCursor.EventType),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("machine_name"),
-			sortDirFunc("epoch"),
-			sortDirFunc("machine_id"),
-			sortDirFunc("event_type"))
+		offset = currentCursor.MachineName
 	case enums.NotificationsMachinesColumns.Threshold:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(event_threshold %s ?)", sortSearchDirection), currentCursor.EventThreshold),
-				goqu.L(fmt.Sprintf("(event_threshold = ? AND epoch %s ?)", sortSearchDirection), currentCursor.EventThreshold, currentCursor.Epoch),
-				goqu.L(fmt.Sprintf("(event_threshold = ? AND epoch = ? AND machine_id %s ?)", sortSearchDirection), currentCursor.EventThreshold, currentCursor.Epoch, currentCursor.MachineId),
-				goqu.L(fmt.Sprintf("(event_threshold = ? AND epoch = ? AND machine_id = ? AND event_type %s ?)", sortSearchDirection), currentCursor.EventThreshold, currentCursor.Epoch, currentCursor.MachineId, currentCursor.EventType),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("event_threshold"),
-			sortDirFunc("epoch"),
-			sortDirFunc("machine_id"),
-			sortDirFunc("event_type"))
-	case enums.NotificationsMachinesColumns.EventType:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(event_type %s ?)", sortSearchDirection), currentCursor.EventType),
-				goqu.L(fmt.Sprintf("(event_type = ? AND epoch %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch),
-				goqu.L(fmt.Sprintf("(event_type = ? AND epoch = ? AND machine_id %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch, currentCursor.MachineId),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("event_type"),
-			sortDirFunc("epoch"),
-			sortDirFunc("machine_id"))
-	case enums.NotificationsMachinesColumns.Timestamp:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(epoch %s ?)", sortSearchDirection), currentCursor.Epoch),
-				goqu.L(fmt.Sprintf("(epoch = ? AND machine_id %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.MachineId),
-				goqu.L(fmt.Sprintf("(epoch = ? AND machine_id = ? AND event_type %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.MachineId, currentCursor.EventType),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("epoch"),
-			sortDirFunc("machine_id"),
-			sortDirFunc("event_type"))
-	default:
-		return nil, nil, fmt.Errorf("invalid column for sorting of machine notification history: %v", colSort.Column)
+		offset = currentCursor.EventThreshold
+	}
+
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	ds = ds.Order(order...)
+	if directions != nil {
+		ds = ds.Where(directions)
 	}
 
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -806,12 +753,6 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 		}
 	}
 
-	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
-	sortSearchDirection := ">"
-	if isReverseDirection {
-		sortSearchDirection = "<"
-	}
-
 	// -------------------------------------
 	// Get the client notification history
 	notificationHistory := []struct {
@@ -838,37 +779,14 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (epoch, client)
-	sortDirFunc := func(column string) exp.OrderedExpression {
-		return goqu.I(column).Asc()
+	defaultColumns := []t.SortColumn{
+		{Column: enums.NotificationsClientsColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsClientsColumns.ClientName.ToString(), Desc: false, Offset: currentCursor.Client},
 	}
-	if isReverseDirection {
-		sortDirFunc = func(column string) exp.OrderedExpression {
-			return goqu.I(column).Desc()
-		}
-	}
-	switch colSort.Column {
-	case enums.NotificationsClientsColumns.ClientName:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(client %s ?)", sortSearchDirection), currentCursor.Client),
-				goqu.L(fmt.Sprintf("(client = ? AND epoch %s ?)", sortSearchDirection), currentCursor.Client, currentCursor.Epoch),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("client"),
-			sortDirFunc("epoch"))
-	case enums.NotificationsClientsColumns.Timestamp:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(epoch %s ?)", sortSearchDirection), currentCursor.Epoch),
-				goqu.L(fmt.Sprintf("(epoch = ? AND client %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.Client),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("epoch"),
-			sortDirFunc("client"))
-	default:
-		return nil, nil, fmt.Errorf("invalid column for sorting of client notification history: %v", colSort.Column)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	ds = ds.Order(order...)
+	if directions != nil {
+		ds = ds.Where(directions)
 	}
 
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -1131,12 +1049,6 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		}
 	}
 
-	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
-	sortSearchDirection := ">"
-	if isReverseDirection {
-		sortSearchDirection = "<"
-	}
-
 	// -------------------------------------
 	// Get the network notification history
 	notificationHistory := []struct {
@@ -1158,41 +1070,15 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (epoch, network, event_type)
-	sortDirFunc := func(column string) exp.OrderedExpression {
-		return goqu.I(column).Asc()
+	defaultColumns := []t.SortColumn{
+		{Column: enums.NotificationNetworksColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationNetworksColumns.Network.ToString(), Desc: false, Offset: currentCursor.Network},
+		{Column: enums.NotificationNetworksColumns.EventType.ToString(), Desc: false, Offset: currentCursor.EventType},
 	}
-	if isReverseDirection {
-		sortDirFunc = func(column string) exp.OrderedExpression {
-			return goqu.I(column).Desc()
-		}
-	}
-	switch colSort.Column {
-	case enums.NotificationNetworksColumns.EventType:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(event_type %s ?)", sortSearchDirection), currentCursor.EventType),
-				goqu.L(fmt.Sprintf("(event_type = ? AND epoch %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch),
-				goqu.L(fmt.Sprintf("(event_type = ? AND epoch = ? AND network %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch, currentCursor.Network),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("event_type"),
-			sortDirFunc("epoch"),
-			sortDirFunc("network"))
-	case enums.NotificationNetworksColumns.Timestamp:
-		if currentCursor.IsValid() {
-			ds = ds.Where(goqu.Or(
-				goqu.L(fmt.Sprintf("(epoch %s ?)", sortSearchDirection), currentCursor.Epoch),
-				goqu.L(fmt.Sprintf("(epoch = ? AND network %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.Network),
-				goqu.L(fmt.Sprintf("(epoch = ? AND network = ? AND event_type %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.Network, currentCursor.EventType),
-			))
-		}
-		ds = ds.Order(
-			sortDirFunc("epoch"),
-			sortDirFunc("network"),
-			sortDirFunc("event_type"))
-	default:
-		return nil, nil, fmt.Errorf("invalid column for sorting of network notification history: %v", colSort.Column)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	ds = ds.Order(order...)
+	if directions != nil {
+		ds = ds.Where(directions)
 	}
 
 	query, args, err := ds.Prepared(true).ToSQL()
