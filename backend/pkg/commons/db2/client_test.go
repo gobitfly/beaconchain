@@ -122,17 +122,18 @@ func BenchmarkBigTableClientRealCondition(b *testing.B) {
 		},
 	}
 
+	bg, err := store.NewBigTable(project, instance, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
+
 	for j := 0; j < b.N; j++ {
 		for _, tt := range tests {
 			testCase := tt
 			b.Run(testCase.name, func(t *testing.B) {
 
-				bg, err := store.NewBigTable(project, instance, nil)
-				if err != nil {
-					b.Fatal(err)
-				}
-
-				rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
 				rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
 					Transport: NewBigTableEthRaw(rawStore, tt.chainID),
 				}))
