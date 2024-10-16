@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -127,7 +126,6 @@ func BenchmarkBigTableClientRealCondition(b *testing.B) {
 		for _, tt := range tests {
 			testCase := tt
 			b.Run(testCase.name, func(t *testing.B) {
-				start := time.Now()
 
 				bg, err := store.NewBigTable(project, instance, nil)
 				if err != nil {
@@ -169,8 +167,6 @@ func BenchmarkBigTableClientRealCondition(b *testing.B) {
 					b.Errorf("traces should not be empty")
 				}
 
-				duration := time.Since(start)
-				b.Logf("Test duration for %s is: %v", testCase.name, duration)
 			})
 		}
 	}
