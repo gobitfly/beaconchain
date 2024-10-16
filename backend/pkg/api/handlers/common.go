@@ -560,16 +560,6 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// better func name would be
-func checkValueInAllowed[T cmp.Ordered](v *validationError, value T, allowed []T, name string) {
-	for _, a := range allowed {
-		if cmp.Compare(value, a) == 0 {
-			return
-		}
-	}
-	v.add(name, "parameter is missing or invalid, please check the API documentation")
-}
-
 func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
