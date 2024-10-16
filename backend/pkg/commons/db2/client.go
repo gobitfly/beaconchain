@@ -9,8 +9,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,8 +16,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
 )
-
-var ttl = 2 * time.Second
 
 var ErrNotFoundInCache = fmt.Errorf("cannot find hash in cache")
 var ErrMethodNotSupported = fmt.Errorf("methode not supported")
@@ -62,22 +58,14 @@ func (r WithFallback) RoundTrip(request *http.Request) (*http.Response, error) {
 }
 
 type BigTableEthRaw struct {
-	db RawStore
-
+	db      RawStoreReader
 	chainID uint64
-
-	// cache to store link between block hash and number
-	// ethclient.Client.BlockByNumber retrieves the uncles by hash
-	// so we need a way to access it simply
-	// we also could use postgres db
-	hashToNumber sync.Map
 }
 
-func NewBigTableEthRaw(db RawStore, chainID uint64) *BigTableEthRaw {
+func NewBigTableEthRaw(db RawStoreReader, chainID uint64) *BigTableEthRaw {
 	return &BigTableEthRaw{
-		db:           db,
-		chainID:      chainID,
-		hashToNumber: sync.Map{},
+		db:      db,
+		chainID: chainID,
 	}
 }
 
@@ -158,16 +146,11 @@ func (r *BigTableEthRaw) handle(ctx context.Context, message *jsonrpcMessage) (*
 		}
 
 	case "eth_getUncleByBlockHashAndIndex":
-		number, exist := r.hashToNumber.Load(args[0].(string))
-		if !exist {
-			return nil, ErrNotFoundInCache
-		}
-
 		index, err := hexutil.DecodeBig(args[1].(string))
 		if err != nil {
 			return nil, err
 		}
-		respBody, err = r.UncleByBlockNumberAndIndex(ctx, number.(*big.Int), index.Int64())
+		respBody, err = r.UncleByBlockHashAndIndex(ctx, args[0].(string), index.Int64())
 		if err != nil {
 			return nil, err
 		}
@@ -198,32 +181,16 @@ func makeBody(isSingle bool, messages []*jsonrpcMessage) (io.ReadCloser, error) 
 	return io.NopCloser(bytes.NewReader(b)), nil
 }
 
-type MinimalBlock struct {
-	Result struct {
-		Hash string `json:"hash"`
-	} `json:"result"`
-}
-
 func (r *BigTableEthRaw) BlockByNumber(ctx context.Context, number *big.Int) ([]byte, error) {
-	block, err := r.db.ReadBlock(r.chainID, number.Int64())
+	block, err := r.db.ReadBlockByNumber(r.chainID, number.Int64())
 	if err != nil {
 		return nil, err
 	}
-	// retrieve the block hash for caching purpose
-	var mini MinimalBlock
-	if err := json.Unmarshal(block.Block, &mini); err != nil {
-		return nil, err
-	}
-	r.hashToNumber.Store(mini.Result.Hash, number)
-	go func(hash string) {
-		time.Sleep(ttl)
-		r.hashToNumber.Delete(hash)
-	}(mini.Result.Hash)
 	return block.Block, nil
 }
 
 func (r *BigTableEthRaw) BlockReceipts(ctx context.Context, number *big.Int) ([]byte, error) {
-	block, err := r.db.ReadBlock(r.chainID, number.Int64())
+	block, err := r.db.ReadBlockByNumber(r.chainID, number.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +198,7 @@ func (r *BigTableEthRaw) BlockReceipts(ctx context.Context, number *big.Int) ([]
 }
 
 func (r *BigTableEthRaw) TraceBlockByNumber(ctx context.Context, number *big.Int) ([]byte, error) {
-	block, err := r.db.ReadBlock(r.chainID, number.Int64())
+	block, err := r.db.ReadBlockByNumber(r.chainID, number.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +206,17 @@ func (r *BigTableEthRaw) TraceBlockByNumber(ctx context.Context, number *big.Int
 }
 
 func (r *BigTableEthRaw) UncleByBlockNumberAndIndex(ctx context.Context, number *big.Int, index int64) ([]byte, error) {
-	block, err := r.db.ReadBlock(r.chainID, number.Int64())
+	block, err := r.db.ReadBlockByNumber(r.chainID, number.Int64())
+	if err != nil {
+		return nil, err
+	}
+	var uncles []*jsonrpcMessage
+	_ = json.Unmarshal(block.Uncles, &uncles)
+	return json.Marshal(uncles[index])
+}
+
+func (r *BigTableEthRaw) UncleByBlockHashAndIndex(ctx context.Context, hash string, index int64) ([]byte, error) {
+	block, err := r.db.ReadBlockByHash(r.chainID, hash)
 	if err != nil {
 		return nil, err
 	}
