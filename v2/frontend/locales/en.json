@@ -770,8 +770,8 @@
       "headers": {
         "account_groups": "Most notified account groups",
         "email_notifications": "Email Notifications",
-        "most_notifications_24h": "Most Notifications in 24h",
         "most_notifications_30d": "Most Notifications in 30d",
+        "notifications_24h": "Notifications in 24h",
         "push_notifications": "Push Notifications",
         "validator_groups": "Most notified validator groups"
       },
