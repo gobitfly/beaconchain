@@ -186,7 +186,7 @@ func TestBigTableClient(t *testing.T) {
 			}
 
 			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
-				Transport: NewBigTableEthRaw(rawStore, chainID),
+				Transport: NewBigTableEthRaw(rawStore, tt.block.ChainID),
 			}))
 			if err != nil {
 				t.Fatal(err)
@@ -247,7 +247,7 @@ func TestBigTableClientWithFallback(t *testing.T) {
 			rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
 
 			rpcClient, err := rpc.DialOptions(context.Background(), node, rpc.WithHTTPClient(&http.Client{
-				Transport: NewWithFallback(NewBigTableEthRaw(rawStore, chainID), http.DefaultTransport),
+				Transport: NewWithFallback(NewBigTableEthRaw(rawStore, tt.block.ChainID), http.DefaultTransport),
 			}))
 			if err != nil {
 				t.Fatal(err)
