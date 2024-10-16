@@ -388,10 +388,6 @@ func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context,
 	return getDummyStruct[t.VDBRocketPoolTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
-	return getDummyStruct[t.VDBNodeRocketPoolData]()
-}
-
 func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolMinipoolsTableRow]()
 }
@@ -776,4 +772,8 @@ func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64,
 
 func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64, machine, process string, data []byte) error {
 	return nil
+}
+
+func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow]()
 }

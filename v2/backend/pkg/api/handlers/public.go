@@ -996,8 +996,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
-var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-
 // PublicGetValidatorDashboardSummary godoc
 //
 //	@Description	Get summary information for a specified dashboard
@@ -1026,8 +1024,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1073,8 +1069,6 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1167,9 +1161,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	checkValueInAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1789,42 +1780,6 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 		return
 	}
 	response := types.GetValidatorDashboardTotalRocketPoolResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
-// PublicGetValidatorDashboardNodeRocketPool godoc
-//
-//	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			node_address	path		string	true	"The address of the node."
-//	@Success		200				{object}	types.GetValidatorDashboardNodeRocketPoolResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address} [get]
-func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	// support ENS names ?
-	nodeAddress := v.checkAddress(vars["node_address"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-
-	data, err := h.dai.GetValidatorDashboardNodeRocketPool(r.Context(), *dashboardId, nodeAddress)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardNodeRocketPoolResponse{
 		Data: *data,
 	}
 	returnOk(w, r, response)
