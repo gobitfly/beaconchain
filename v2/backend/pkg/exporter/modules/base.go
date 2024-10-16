@@ -32,8 +32,8 @@ type ModuleInterface interface {
 var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
-func StartAll(context ModuleContext) {
-	if !utils.Config.JustV2 {
+func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
+	if !justV2 {
 		go networkLivenessUpdater(context.ConsClient)
 		go genesisDepositsExporter(context.ConsClient)
 		go syncCommitteesExporter(context.ConsClient)
@@ -65,19 +65,6 @@ func StartAll(context ModuleContext) {
 	}
 
 	// start subscription modules
-
-	modules := []ModuleInterface{}
-
-	if utils.Config.JustV2 {
-		modules = append(modules, NewDashboardDataModule(context))
-	} else {
-		modules = append(modules,
-			NewSlotExporter(context),
-			NewExecutionDepositsExporter(context),
-			NewExecutionPayloadsExporter(context),
-		)
-	}
-
 	startSubscriptionModules(&context, modules)
 }
 

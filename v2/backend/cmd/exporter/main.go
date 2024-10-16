@@ -193,7 +193,19 @@ func Run() {
 		go services.StartHistoricPriceService()
 	}
 
-	go modules.StartAll(context)
+	usedModules := []modules.ModuleInterface{}
+
+	if cfg.JustV2 {
+		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
+	} else {
+		usedModules = append(usedModules,
+			modules.NewSlotExporter(context),
+			modules.NewExecutionDepositsExporter(context),
+			modules.NewExecutionPayloadsExporter(context),
+		)
+	}
+
+	go modules.StartAll(context, usedModules, cfg.JustV2)
 
 	// Keep the program alive until Ctrl+C is pressed
 	utils.WaitForCtrlC()
