@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
-	"math/rand/v2"
 	"net/http"
 	"os"
 	"testing"
@@ -17,8 +16,7 @@ import (
 )
 
 const (
-	blockTestNumber int64  = 6008149
-	chainID         uint64 = 1
+	chainID uint64 = 1
 )
 
 func TestBigTableClientRealCondition(t *testing.T) {
@@ -88,7 +86,7 @@ func TestBigTableClientRealCondition(t *testing.T) {
 func benchmarkBlockRetrieval(b *testing.B, ethClient *ethclient.Client, rpcClient *rpc.Client) {
 	b.ResetTimer()
 	for j := 0; j < b.N; j++ {
-		blockTestNumber := rand.Int64N(20978000)
+		blockTestNumber := int64(20978000 + b.N)
 		_, err := ethClient.BlockByNumber(context.Background(), big.NewInt(blockTestNumber))
 		if err != nil {
 			b.Fatalf("BlockByNumber() error = %v", err)
@@ -142,38 +140,12 @@ func BenchmarkRawBigTable(b *testing.B) {
 	benchmarkBlockRetrieval(b, ethclient.NewClient(rpcClient), rpcClient)
 }
 
-func BenchmarkRawBigTable2(b *testing.B) {
-	project := os.Getenv("BIGTABLE_PROJECT")
-	instance := os.Getenv("BIGTABLE_INSTANCE")
-	if project == "" || instance == "" {
-		b.Skip("skipping test, set BIGTABLE_PROJECT and BIGTABLE_INSTANCE")
-	}
-
-	bt, err := store.NewBigTable(project, instance, nil)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	rawStore := WithCache2(NewRawStore(store.Wrap(bt, BlocRawTable, "")))
-	rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
-		Transport: NewBigTableEthRaw(rawStore, chainID),
-	}))
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	benchmarkBlockRetrieval(b, ethclient.NewClient(rpcClient), rpcClient)
-}
-
 func BenchmarkAll(b *testing.B) {
 	b.Run("BenchmarkErigonNode", func(b *testing.B) {
 		BenchmarkErigonNode(b)
 	})
 	b.Run("BenchmarkRawBigTable", func(b *testing.B) {
 		BenchmarkRawBigTable(b)
-	})
-	b.Run("BenchmarkRawBigTable2", func(b *testing.B) {
-		BenchmarkRawBigTable2(b)
 	})
 }
 

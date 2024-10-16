@@ -10,8 +10,6 @@ import (
 	"math/big"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
@@ -20,11 +18,9 @@ import (
 var ErrNotFoundInCache = fmt.Errorf("cannot find hash in cache")
 var ErrMethodNotSupported = fmt.Errorf("methode not supported")
 
-type EthClient interface {
-	ethereum.ChainReader
-	ethereum.ContractCaller
-	bind.ContractBackend
-	ethereum.ChainStateReader
+type RawStoreReader interface {
+	ReadBlockByNumber(chainID uint64, number int64) (*FullBlockRawData, error)
+	ReadBlockByHash(chainID uint64, hash string) (*FullBlockRawData, error)
 }
 
 type WithFallback struct {

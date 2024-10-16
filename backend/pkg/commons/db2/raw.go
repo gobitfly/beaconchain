@@ -7,16 +7,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
-var rawStoreTTL = 1 // in second
-
 type compressor interface {
 	compress(src []byte) ([]byte, error)
 	decompress(src []byte) ([]byte, error)
-}
-
-type RawStoreReader interface {
-	ReadBlockByNumber(chainID uint64, number int64) (*FullBlockRawData, error)
-	ReadBlockByHash(chainID uint64, hash string) (*FullBlockRawData, error)
 }
 
 type RawStore struct {
