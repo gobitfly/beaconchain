@@ -16,6 +16,11 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/storetest"
 )
 
+const (
+	blockTestNumber int64  = 6008149
+	chainID         uint64 = 1
+)
+
 func TestBigTableClientRealCondition(t *testing.T) {
 	project := os.Getenv("BIGTABLE_PROJECT")
 	instance := os.Getenv("BIGTABLE_INSTANCE")
@@ -24,19 +29,16 @@ func TestBigTableClientRealCondition(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		chainID uint64
-		block   int64
+		name  string
+		block int64
 	}{
 		{
-			name:    "test block",
-			chainID: 1,
-			block:   6008149,
+			name:  "test block",
+			block: 6008149,
 		},
 		{
-			name:    "test block 2",
-			chainID: 1,
-			block:   141,
+			name:  "test block 2",
+			block: 141,
 		},
 	}
 
@@ -49,7 +51,7 @@ func TestBigTableClientRealCondition(t *testing.T) {
 
 			rawStore := NewRawStore(store.Wrap(bg, BlocRawTable, ""))
 			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
-				Transport: NewBigTableEthRaw(rawStore, tt.chainID),
+				Transport: NewBigTableEthRaw(rawStore, chainID),
 			}))
 			if err != nil {
 				t.Fatal(err)
@@ -81,6 +83,78 @@ func TestBigTableClientRealCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+func benchmarkBlockRetrieval(b *testing.B, ethClient *ethclient.Client, rpcClient *rpc.Client) {
+	b.ResetTimer()
+
+	for j := 0; j < b.N; j++ {
+		block, err := ethClient.BlockByNumber(context.Background(), big.NewInt(blockTestNumber))
+		if err != nil {
+			b.Fatalf("BlockByNumber() error = %v", err)
+		}
+		if got, want := block.Number().Int64(), blockTestNumber; got != want {
+			b.Errorf("got %v, want %v", got, want)
+		}
+
+		receipts, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockTestNumber)))
+		if err != nil {
+			b.Fatalf("BlockReceipts() error = %v", err)
+		}
+		if len(block.Transactions()) != 0 && len(receipts) == 0 {
+			b.Errorf("receipts should not be empty")
+		}
+
+		var traces []GethTraceCallResultWrapper
+		if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+			b.Fatalf("debug_traceBlockByNumber() error = %v", err)
+		}
+		if len(block.Transactions()) != 0 && len(traces) == 0 {
+			b.Errorf("traces should not be empty")
+		}
+	}
+}
+
+func BenchmarkErigonNode(b *testing.B) {
+	node := os.Getenv("ETH1_ERIGON_ENDPOINT")
+	if node == "" {
+		b.Skip("skipping test, please set ETH1_ERIGON_ENDPOINT")
+	}
+
+	rpcClient, err := rpc.DialOptions(context.Background(), node)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	ethClient := ethclient.NewClient(rpcClient)
+
+	benchmarkBlockRetrieval(b, ethClient, rpcClient)
+}
+
+func BenchmarkRawBigTable(b *testing.B) {
+	project := os.Getenv("BIGTABLE_PROJECT")
+	instance := os.Getenv("BIGTABLE_INSTANCE")
+	if project == "" || instance == "" {
+		b.Skip("skipping test, set BIGTABLE_PROJECT and BIGTABLE_INSTANCE")
+	}
+
+	bt, err := store.NewBigTable(project, instance, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	rawStore := NewRawStore(store.Wrap(bt, BlocRawTable, ""))
+	rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
+		Transport: NewBigTableEthRaw(rawStore, chainID),
+	}))
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	ethClient := ethclient.NewClient(rpcClient)
+
+	benchmarkBlockRetrieval(b, ethClient, rpcClient)
+
 }
 
 func TestBigTableClient(t *testing.T) {
