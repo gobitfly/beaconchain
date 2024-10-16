@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -17,13 +18,38 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
 )
 
+type table string
+
+// Stringer interface
+func (t table) String() string {
+	return string(t)
+}
+
+//func (t table) C(column string) exp.IdentifierExpression {
+//	return goqu.I(string(t) + "." + column)
+//}
+
+func (t table) C(column string) string {
+	return string(t) + "." + column
+}
+
 func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
+
+	// -------------------------------------
+	// Setup
 	var err error
 	var currentCursor t.BlocksCursor
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return nil, nil, err
+	}
+	validators := table("validators")
+	groups := table("goups")
 
 	// TODO @LuccaBitfly move validation to handler?
 	if cursor != "" {
@@ -32,82 +58,126 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		}
 	}
 
-	// regexes taken from api handler common.go
 	searchPubkey := regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`).MatchString(search)
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
-	validatorMap := make(map[t.VDBValidator]bool)
-	params := []interface{}{}
-	filteredValidatorsQuery := ""
-	validatorMapping, err := d.services.GetCurrentValidatorMapping()
-	if err != nil {
-		return nil, nil, err
+	// -------------------------------------
+	// Goqu Query: Determine validators filtered by search
+	type validatorGroup struct {
+		Validator t.VDBValidator `db:"validator_index"`
+		Group     uint64         `db:"group_id"`
 	}
-
-	// determine validators of interest first
+	var filteredValidators []validatorGroup
+	validatorsDs := goqu.Dialect("postgres").
+		From(
+			goqu.T("users_val_dashboards_validators").As(validators),
+		).
+		Select(
+			validators.C("validator_index"),
+		)
 	if dashboardId.Validators == nil {
-		// could also optimize this for the average and/or the whale case; will go with some middle-ground, needs testing
-		// (query validators twice: once without search applied (fast) to pre-filter scheduled proposals (which are sent to db, want to minimize),
-		// again for blocks query with search applied to not having to send potentially huge validator-list)
-		startTime := time.Now()
-		valis, err := d.getDashboardValidators(ctx, dashboardId, nil)
-		log.Debugf("=== getting validators took %s", time.Since(startTime))
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, v := range valis {
-			validatorMap[v] = true
-		}
+		validatorsDs = validatorsDs.
+			Select(
+				// TODO mustn't be here, can be done further down
+				validators.C("group_id"),
+			).
+			Where(goqu.Ex{validators.C("dashboard_id"): dashboardId.Id})
 
-		// create a subquery to get the (potentially filtered) validators and their groups for later
-		params = append(params, dashboardId.Id)
-		selectStr := `SELECT validator_index, group_id `
-		from := `FROM users_val_dashboards_validators validators `
-		where := `WHERE validators.dashboard_id = $1`
-		extraConds := make([]string, 0, 3)
+		// apply search filters
 		if searchIndex {
-			params = append(params, search)
-			extraConds = append(extraConds, fmt.Sprintf(`validator_index = $%d`, len(params)))
+			validatorsDs = validatorsDs.Where(goqu.Ex{validators.C("validator_index"): search})
 		}
 		if searchGroup {
-			from += `INNER JOIN users_val_dashboards_groups groups ON validators.dashboard_id = groups.dashboard_id AND validators.group_id = groups.id `
-			// escape the psql single character wildcard "_"; apply prefix-search
-			params = append(params, strings.Replace(search, "_", "\\_", -1)+"%")
-			extraConds = append(extraConds, fmt.Sprintf(`LOWER(name) LIKE LOWER($%d)`, len(params)))
+			validatorsDs = validatorsDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As(groups), goqu.On(
+					goqu.Ex{validators.C("dashboard_id"): groups.C("dashboard_id")},
+					goqu.Ex{validators.C("group_id"): groups.C("id")},
+				)).
+				Where(
+					goqu.L("LOWER(?)", groups.C("name")).Like(strings.Replace(search, "_", "\\_", -1) + "%"),
+				)
 		}
 		if searchPubkey {
 			index, ok := validatorMapping.ValidatorIndices[search]
-			if !ok && len(extraConds) == 0 {
-				// don't even need to query
+			if !ok && !searchGroup && !searchIndex {
+				// searched pubkey doesn't exist, don't even need to query anything
 				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 			}
-			params = append(params, index)
-			extraConds = append(extraConds, fmt.Sprintf(`validator_index = $%d`, len(params)))
-		}
-		if len(extraConds) > 0 {
-			where += ` AND (` + strings.Join(extraConds, ` OR `) + `)`
-		}
 
-		filteredValidatorsQuery = selectStr + from + where
+			validatorsDs = validatorsDs.
+				Where(goqu.Ex{validators.C("validator_index"): index})
+		}
 	} else {
-		validators := make([]t.VDBValidator, 0, len(dashboardId.Validators))
 		for _, validator := range dashboardId.Validators {
 			if searchIndex && fmt.Sprint(validator) != search ||
 				searchPubkey && validator != validatorMapping.ValidatorIndices[search] {
 				continue
 			}
-			validatorMap[validator] = true
-			validators = append(validators, validator)
+			filteredValidators = append(filteredValidators, validatorGroup{
+				Validator: validator,
+				Group:     t.DefaultGroupId,
+			})
 			if searchIndex || searchPubkey {
 				break
 			}
 		}
-		if len(validators) == 0 {
-			return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
-		}
-		params = append(params, validators)
+		validatorsDs = validatorsDs.
+			Where(goqu.L(
+				validators.C("validator_index")+" = ANY(?)", pq.Array(filteredValidators)),
+			)
 	}
+
+	if dashboardId.Validators == nil {
+		validatorsQuery, validatorsArgs, err := validatorsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return nil, nil, err
+		}
+		if err = d.alloyReader.SelectContext(ctx, &filteredValidators, validatorsQuery, validatorsArgs...); err != nil {
+			return nil, nil, err
+		}
+	}
+	if len(filteredValidators) == 0 {
+		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
+	}
+
+	// -------------------------------------
+	// Gather scheduled blocks
+	// found in dutiesInfo; pass results to final query later and let db do the sorting etc
+	validatorSet := make(map[t.VDBValidator]bool)
+	for _, v := range filteredValidators {
+		validatorSet[v.Validator] = true
+	}
+	var scheduledProposers []t.VDBValidator
+	var scheduledEpochs []uint64
+	var scheduledSlots []uint64
+	// don't need if requested slots are in the past
+	latestSlot := cache.LatestSlot.Get()
+	onlyPrimarySort := colSort.Column == enums.VDBBlockSlot || colSort.Column == enums.VDBBlockBlock
+	if !onlyPrimarySort || !currentCursor.IsValid() ||
+		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
+		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
+		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
+		if err == nil {
+			for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
+				// only gather scheduled slots
+				if _, ok := dutiesInfo.SlotStatus[slot]; ok {
+					continue
+				}
+				// only gather slots scheduled for our validators
+				if _, ok := validatorSet[vali]; !ok {
+					continue
+				}
+				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
+				scheduledEpochs = append(scheduledEpochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
+				scheduledSlots = append(scheduledSlots, slot)
+			}
+		} else {
+			log.Debugf("duties info not available, skipping scheduled slots: %s", err)
+		}
+	}
+
+	// WIP
 
 	var proposals []struct {
 		Proposer     t.VDBValidator      `db:"proposer"`
@@ -126,26 +196,26 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	// handle sorting
+	params := make([]any, 0)
 	where := ``
 	orderBy := `ORDER BY `
 	sortOrder := ` ASC`
 	if colSort.Desc {
 		sortOrder = ` DESC`
 	}
-	var val any
+	var offset any
 	sortColName := `slot`
 	switch colSort.Column {
 	case enums.VDBBlockProposer:
 		sortColName = `proposer`
-		val = currentCursor.Proposer
+		offset = currentCursor.Proposer
 	case enums.VDBBlockStatus:
 		sortColName = `status`
-		val = currentCursor.Status
+		offset = currentCursor.Status
 	case enums.VDBBlockProposerReward:
 		sortColName = `el_reward + cl_reward`
-		val = currentCursor.Reward
+		offset = currentCursor.Reward
 	}
-	onlyPrimarySort := sortColName == `slot`
 	if currentCursor.IsValid() {
 		sign := ` > `
 		if colSort.Desc && !currentCursor.IsReverse() || !colSort.Desc && currentCursor.IsReverse() {
@@ -163,7 +233,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		if onlyPrimarySort {
 			where += `slot` + sign + fmt.Sprintf(`$%d`, len(params))
 		} else {
-			params = append(params, val)
+			params = append(params, offset)
 			secSign := ` < `
 			if currentCursor.IsReverse() {
 				secSign = ` > `
@@ -188,36 +258,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			secSort = `ASC`
 		}
 		orderBy += `, slot ` + secSort
-	}
-
-	// Get scheduled blocks. They aren't written to blocks table, get from duties
-	// Will just pass scheduled proposals to query and let db do the sorting etc
-	var scheduledProposers []t.VDBValidator
-	var scheduledEpochs []uint64
-	var scheduledSlots []uint64
-	// don't need to query if requested slots are in the past
-	latestSlot := cache.LatestSlot.Get()
-	if !onlyPrimarySort || !currentCursor.IsValid() ||
-		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
-		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
-		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
-		if err == nil {
-			for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
-				// only gather scheduled slots
-				if _, ok := dutiesInfo.SlotStatus[slot]; ok {
-					continue
-				}
-				// only gather slots scheduled for our validators
-				if _, ok := validatorMap[vali]; !ok {
-					continue
-				}
-				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
-				scheduledEpochs = append(scheduledEpochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
-				scheduledSlots = append(scheduledSlots, slot)
-			}
-		} else {
-			log.Debugf("duties info not available, skipping scheduled slots: %s", err)
-		}
 	}
 
 	groupIdCol := "group_id"
@@ -256,9 +296,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	query += `) as u `*/
 	if dashboardId.Validators == nil {
-		cte += fmt.Sprintf(`
-		INNER JOIN (%s) validators ON validators.validator_index = proposer
-		`, filteredValidatorsQuery)
+		//cte += fmt.Sprintf(`
+		//INNER JOIN (%s) validators ON validators.validator_index = proposer`, filteredValidatorsQuery)
 	} else {
 		if len(where) == 0 {
 			where += `WHERE `
