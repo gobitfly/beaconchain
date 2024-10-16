@@ -22,6 +22,13 @@ type Sort[T enums.Enum] struct {
 	Desc   bool
 }
 
+type SortColumn struct {
+	Column string
+	Desc   bool
+	// represents value from cursor
+	Offset any
+}
+
 type VDBIdPrimary int
 type VDBIdPublic string
 type VDBIdValidatorSet []VDBValidator
@@ -166,6 +173,17 @@ type BlocksCursor struct {
 	Reward   decimal.Decimal
 }
 
+type NotificationsDashboardsCursor struct {
+	GenericCursor
+
+	Epoch         uint64
+	ChainId       uint64
+	DashboardName string
+	DashboardId   uint64
+	GroupName     string
+	GroupId       uint64
+}
+
 type NetworkInfo struct {
 	ChainId uint64
 	Name    string
@@ -174,6 +192,7 @@ type NetworkInfo struct {
 type ClientInfo struct {
 	Id       uint64
 	Name     string
+	DbName   string
 	Category string
 }
 
@@ -283,4 +302,21 @@ type MobileAppBundleStats struct {
 	TargetCount         int64  `db:"target_count"` // coalesce to -1 if column is null
 	DeliveryCount       int64  `db:"delivered_count"`
 	MaxNativeVersion    uint64 `db:"max_native_version"` // the max native version of the whole table for the given environment
+}
+
+// Notification structs
+
+type NotificationSettingsDefaultValues struct {
+	GroupOfflineThreshold             float64
+	MaxCollateralThreshold            float64
+	MinCollateralThreshold            float64
+	ERC20TokenTransfersValueThreshold float64
+
+	MachineStorageUsageThreshold float64
+	MachineCpuUsageThreshold     float64
+	MachineMemoryUsageThreshold  float64
+
+	GasAboveThreshold                 decimal.Decimal
+	GasBelowThreshold                 decimal.Decimal
+	NetworkParticipationRateThreshold float64
 }

@@ -1,6 +1,9 @@
 package types
 
-import "github.com/shopspring/decimal"
+import (
+	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
+)
 
 // ------------------------------------------------------------
 // Overview
@@ -17,11 +20,11 @@ type NotificationOverviewData struct {
 	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
 
 	// counts are shown in their respective tables
-	VDBSubscriptionsCount     uint64 `json:"vdb_subscriptions_count"`
-	ADBSubscriptionsCount     uint64 `json:"adb_subscriptions_count"`
-	MachinesSubscriptionCount uint64 `json:"machines_subscription_count"`
-	ClientsSubscriptionCount  uint64 `json:"clients_subscription_count"`
-	NetworksSubscriptionCount uint64 `json:"networks_subscription_count"`
+	VDBSubscriptionsCount     uint64 `db:"vdb_subscriptions_count" json:"vdb_subscriptions_count"`
+	ADBSubscriptionsCount     uint64 `db:"adb_subscriptions_count" json:"adb_subscriptions_count"`
+	MachinesSubscriptionCount uint64 `db:"machines_subscription_count" json:"machines_subscription_count"`
+	ClientsSubscriptionCount  uint64 `db:"clients_subscription_count" json:"clients_subscription_count"`
+	NetworksSubscriptionCount uint64 `db:"networks_subscription_count" json:"networks_subscription_count"`
 }
 
 type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewData]
@@ -29,14 +32,15 @@ type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewDa
 // ------------------------------------------------------------
 // Dashboards Table
 type NotificationDashboardsTableRow struct {
-	IsAccountDashboard bool     `json:"is_account_dashboard"` // if false it's a validator dashboard
-	ChainId            uint64   `json:"chain_id"`
-	Epoch              uint64   `json:"epoch"`
-	DashboardId        uint64   `json:"dashboard_id"`
-	GroupId            uint64   `json:"group_id"`
-	GroupName          string   `json:"group_name"`
-	EntityCount        uint64   `json:"entity_count"`
-	EventTypes         []string `json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
+	IsAccountDashboard bool           `db:"is_account_dashboard" json:"is_account_dashboard"` // if false it's a validator dashboard
+	ChainId            uint64         `db:"chain_id" json:"chain_id"`
+	Epoch              uint64         `db:"epoch" json:"epoch"`
+	DashboardId        uint64         `db:"dashboard_id" json:"dashboard_id"`
+	DashboardName      string         `db:"dashboard_name" json:"-"` // not exported, internal use only
+	GroupId            uint64         `db:"group_id" json:"group_id"`
+	GroupName          string         `db:"group_name" json:"group_name"`
+	EntityCount        uint64         `db:"entity_count" json:"entity_count"`
+	EventTypes         pq.StringArray `db:"event_types" json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
@@ -61,19 +65,20 @@ type NotificationEventValidatorBackOnline struct {
 
 type NotificationValidatorDashboardDetail struct {
 	ValidatorOffline         []uint64                               `json:"validator_offline"` // validator indices
-	GroupOffline             []NotificationEventGroup               `json:"group_offline"`
+	GroupOffline             []NotificationEventGroup               `json:"group_offline"`     // TODO not filled yet
 	ProposalMissed           []IndexBlocks                          `json:"proposal_missed"`
 	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
-	UpcomingProposals        []uint64                               `json:"upcoming_proposals"` // slot numbers
+	UpcomingProposals        []IndexBlocks                          `json:"upcoming_proposals"`
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
 	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
-	AttestationMissed        []IndexBlocks                          `json:"attestation_missed"`
+	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
 	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
-	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices
-	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`
+	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
+	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
-	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`
-	// TODO min and max collateral events
+	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`      // TODO not filled yet
+	MinimumCollateralReached []Address                              `json:"min_collateral_reached"` // node addresses
+	MaximumCollateralReached []Address                              `json:"max_collateral_reached"` // node addresses
 }
 
 type InternalGetUserNotificationsValidatorDashboardResponse ApiDataResponse[NotificationValidatorDashboardDetail]

@@ -58,7 +58,7 @@ export enum API_PATH {
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test_webhook',
   PRODUCT_SUMMARY = '/productSummary',
   REGISTER = '/register',
-  SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards',
+  SAVE_VALIDATOR_DASHBOARDS_SETTINGS = '/settings-dashboards',
   SEARCH = '/search',
   STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
   STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
@@ -377,12 +377,11 @@ export const mapping: Record<string, MappingData> = {
     mock: true,
     path: '/users',
   },
-  [API_PATH.SAVE_DASHBOARDS_SETTINGS]: {
+  [API_PATH.SAVE_VALIDATOR_DASHBOARDS_SETTINGS]: {
     getPath: values =>
-      `/users/me/notifications/settings/${values?.for}-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
+      `/users/me/notifications/settings/validator-dashboards/${values?.dashboard_id}/groups/${values?.group_id}`,
     method: 'POST',
-    mock: false,
-    path: '/users/me/notifications/settings/{for}-dashboards/{dashboard_key}/groups/{group_id}',
+    path: '/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id}',
   },
   [API_PATH.SEARCH]: {
     method: 'POST',

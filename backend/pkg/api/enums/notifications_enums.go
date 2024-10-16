@@ -9,8 +9,11 @@ var _ EnumFactory[NotificationDashboardsColumn] = NotificationDashboardsColumn(0
 
 const (
 	NotificationDashboardChainId NotificationDashboardsColumn = iota
-	NotificationDashboardTimestamp
-	NotificationDashboardDashboardName // sort by name
+	NotificationDashboardEpoch
+	NotificationDashboardDashboardName // sort by dashboard name
+	NotificationDashboardDashboardId   // internal use
+	NotificationDashboardGroupName     // internal use
+	NotificationDashboardGroupId       // internal use
 )
 
 func (c NotificationDashboardsColumn) Int() int {
@@ -21,8 +24,8 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 	switch s {
 	case "chain_id":
 		return NotificationDashboardChainId
-	case "timestamp":
-		return NotificationDashboardTimestamp
+	case "epoch":
+		return NotificationDashboardEpoch
 	case "dashboard_name", "dashboard_id": // accepting id for frontend
 		return NotificationDashboardDashboardName
 	default:
@@ -30,14 +33,40 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 	}
 }
 
+// internal use, used to map to query column names
+func (c NotificationDashboardsColumn) ToString() string {
+	switch c {
+	case NotificationDashboardChainId:
+		return "chain_id"
+	case NotificationDashboardEpoch:
+		return "epoch"
+	case NotificationDashboardDashboardName:
+		return "dashboard_name"
+	case NotificationDashboardDashboardId:
+		return "dashboard_id"
+	case NotificationDashboardGroupName:
+		return "group_name"
+	case NotificationDashboardGroupId:
+		return "group_id"
+	default:
+		return ""
+	}
+}
+
 var NotificationsDashboardsColumns = struct {
-	ChainId     NotificationDashboardsColumn
-	Timestamp   NotificationDashboardsColumn
-	DashboardId NotificationDashboardsColumn
+	ChainId       NotificationDashboardsColumn
+	Timestamp     NotificationDashboardsColumn
+	DashboardName NotificationDashboardsColumn
+	DashboardId   NotificationDashboardsColumn
+	GroupName     NotificationDashboardsColumn
+	GroupId       NotificationDashboardsColumn
 }{
 	NotificationDashboardChainId,
-	NotificationDashboardTimestamp,
+	NotificationDashboardEpoch,
 	NotificationDashboardDashboardName,
+	NotificationDashboardDashboardId,
+	NotificationDashboardGroupName,
+	NotificationDashboardGroupId,
 }
 
 // ------------------------------------------------------------
@@ -48,7 +77,8 @@ type NotificationMachinesColumn int
 var _ EnumFactory[NotificationMachinesColumn] = NotificationMachinesColumn(0)
 
 const (
-	NotificationMachineName NotificationMachinesColumn = iota
+	NotificationMachineId NotificationMachinesColumn = iota // internal use
+	NotificationMachineName
 	NotificationMachineThreshold
 	NotificationMachineEventType
 	NotificationMachineTimestamp
@@ -73,12 +103,32 @@ func (NotificationMachinesColumn) NewFromString(s string) NotificationMachinesCo
 	}
 }
 
+// internal use, used to map to query column names
+func (c NotificationMachinesColumn) ToString() string {
+	switch c {
+	case NotificationMachineId:
+		return "machine_id"
+	case NotificationMachineName:
+		return "machine_name"
+	case NotificationMachineThreshold:
+		return "threshold"
+	case NotificationMachineEventType:
+		return "event_type"
+	case NotificationMachineTimestamp:
+		return "epoch"
+	default:
+		return ""
+	}
+}
+
 var NotificationsMachinesColumns = struct {
+	MachineId   NotificationMachinesColumn
 	MachineName NotificationMachinesColumn
 	Threshold   NotificationMachinesColumn
 	EventType   NotificationMachinesColumn
 	Timestamp   NotificationMachinesColumn
 }{
+	NotificationMachineId,
 	NotificationMachineName,
 	NotificationMachineThreshold,
 	NotificationMachineEventType,
@@ -109,6 +159,18 @@ func (NotificationClientsColumn) NewFromString(s string) NotificationClientsColu
 		return NotificationClientTimestamp
 	default:
 		return NotificationClientsColumn(-1)
+	}
+}
+
+// internal use, used to map to query column names
+func (c NotificationClientsColumn) ToString() string {
+	switch c {
+	case NotificationClientName:
+		return "client_name"
+	case NotificationClientTimestamp:
+		return "epoch"
+	default:
+		return ""
 	}
 }
 
@@ -169,6 +231,7 @@ var _ EnumFactory[NotificationNetworksColumn] = NotificationNetworksColumn(0)
 
 const (
 	NotificationNetworkTimestamp NotificationNetworksColumn = iota
+	NotificationNetworkNetwork                              // internal use
 	NotificationNetworkEventType
 )
 
@@ -187,11 +250,27 @@ func (NotificationNetworksColumn) NewFromString(s string) NotificationNetworksCo
 	}
 }
 
+// internal use, used to map to query column names
+func (c NotificationNetworksColumn) ToString() string {
+	switch c {
+	case NotificationNetworkTimestamp:
+		return "epoch"
+	case NotificationNetworkNetwork:
+		return "network"
+	case NotificationNetworkEventType:
+		return "event_type"
+	default:
+		return ""
+	}
+}
+
 var NotificationNetworksColumns = struct {
 	Timestamp NotificationNetworksColumn
+	Network   NotificationNetworksColumn
 	EventType NotificationNetworksColumn
 }{
 	NotificationNetworkTimestamp,
+	NotificationNetworkNetwork,
 	NotificationNetworkEventType,
 }
 
