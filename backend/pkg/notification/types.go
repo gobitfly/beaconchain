@@ -135,6 +135,41 @@ func (n *ValidatorProposalNotification) GetLegacyTitle() string {
 	return "-"
 }
 
+type ValidatorUpcomingProposalNotification struct {
+	types.NotificationBaseImpl
+
+	ValidatorIndex uint64
+	Slot           uint64
+}
+
+func (n *ValidatorUpcomingProposalNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%d", n.ValidatorIndex)
+}
+
+func (n *ValidatorUpcomingProposalNotification) GetInfo(format types.NotificationFormat) string {
+	vali := formatValidatorLink(format, n.ValidatorIndex)
+	slot := formatSlotLink(format, n.Slot)
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	return fmt.Sprintf(`New scheduled block proposal at slot %s for Validator %s%s.`, slot, vali, dashboardAndGroupInfo)
+}
+
+func (n *ValidatorUpcomingProposalNotification) GetLegacyInfo() string {
+	var generalPart, suffix string
+	vali := strconv.FormatUint(n.ValidatorIndex, 10)
+	slot := strconv.FormatUint(n.Slot, 10)
+	generalPart = fmt.Sprintf(`New scheduled block proposal at slot %s for Validator %s.`, slot, vali)
+
+	return generalPart + suffix
+}
+
+func (n *ValidatorUpcomingProposalNotification) GetTitle() string {
+	return n.GetLegacyTitle()
+}
+
+func (n *ValidatorUpcomingProposalNotification) GetLegacyTitle() string {
+	return "Upcoming Block Proposal"
+}
+
 type ValidatorIsOfflineNotification struct {
 	types.NotificationBaseImpl
 
