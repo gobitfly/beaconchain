@@ -282,7 +282,6 @@ type GetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithd
 
 // ------------------------------------------------------------
 // Rocket Pool Tab
-
 type VDBRocketPoolTableRow struct {
 	Node   Address `json:"node" extensions:"x-order=1"`
 	Staked struct {
