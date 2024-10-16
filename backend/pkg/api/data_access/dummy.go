@@ -768,3 +768,7 @@ func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64,
 	})
 	return data, nil
 }
+
+func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow]()
+}
