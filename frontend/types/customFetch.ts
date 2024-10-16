@@ -69,7 +69,7 @@ export enum API_PATH {
   USER_DELETE = '/user/delete',
 }
 
-export type PathValues = Record<string, number | string>
+export type PathValues = Record<string, boolean | number | string>
 
 interface MockFunction {
   (body?: any, param?: PathValues, query?: PathValues): any,
