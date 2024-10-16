@@ -155,11 +155,11 @@ func (h *HandlerService) internal_processMachine(context context.Context, machin
 	parsedMeta.Machine = machine
 
 	if parsedMeta.Version > 2 || parsedMeta.Version <= 0 {
-		return errors.New("unsupported data format version")
+		return newBadRequestErr("unsupported data format version")
 	}
 
 	if parsedMeta.Process != "validator" && parsedMeta.Process != "beaconnode" && parsedMeta.Process != "slasher" && parsedMeta.Process != "system" {
-		return errors.New("unknown process")
+		return newBadRequestErr("unknown process")
 	}
 
 	maxNodes := userInfo.PremiumPerks.MonitorMachines
@@ -170,7 +170,7 @@ func (h *HandlerService) internal_processMachine(context context.Context, machin
 	}
 
 	if count > maxNodes {
-		return fmt.Errorf("user has reached max machine count")
+		return newForbiddenErr("user has reached max machine count")
 	}
 
 	// protobuf encode
