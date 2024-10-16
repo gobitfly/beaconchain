@@ -24,7 +24,7 @@ type InternalGetValidatorDashboardMobileWidgetResponse ApiDataResponse[MobileWid
 
 type MobileValidatorDashboardValidatorsRocketPool struct {
 	DepositAmount     decimal.Decimal `json:"deposit_Amount"`
-	Commision         float64         `json:"commision"` // percentage, 0-1
+	Commission        float64         `json:"commission"` // percentage, 0-1
 	Status            string          `json:"status"  tstype:"'staking' | 'dissolved' | 'prelaunch' | 'initialized' | 'withdrawable'" faker:"oneof: staking, dissolved, prelaunch, initialized, withdrawable"`
 	PenaltyCount      uint64          `json:"penalty_count"`
 	IsInSmoothingPool bool            `json:"is_in_smokaothing_pool"`
