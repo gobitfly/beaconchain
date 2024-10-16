@@ -996,8 +996,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
-var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-
 // PublicGetValidatorDashboardSummary godoc
 //
 //	@Description	Get summary information for a specified dashboard
@@ -1026,8 +1024,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1073,8 +1069,6 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1167,9 +1161,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	checkValueInAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
