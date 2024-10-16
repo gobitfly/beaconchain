@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var ttl2 = 200 * time.Millisecond
+var ttl = 200 * time.Millisecond
 
 type MinimalBlock struct {
 	Result struct {
@@ -42,7 +42,7 @@ func (c *CachedRawStore) ReadBlockByNumber(chainID uint64, number int64) (*FullB
 		_ = json.Unmarshal(block.Block, &mini)
 		c.cache.Store(mini.Result.Hash, number)
 		go func() {
-			time.Sleep(ttl2)
+			time.Sleep(ttl)
 			c.cache.Delete(key)
 			c.cache.Delete(mini.Result.Hash)
 		}()
