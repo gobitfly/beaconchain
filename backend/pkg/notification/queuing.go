@@ -513,12 +513,9 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					default:
 						bodySummary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
 					}
-					truncated := ""
-					if len(events) > 3 {
-						truncated = ",..."
-						events = events[:3]
+					if len(events) < 3 {
+						bodySummary += fmt.Sprintf(" (%s)", strings.Join(events, ","))
 					}
-					bodySummary += fmt.Sprintf(" (%s%s)", strings.Join(events, ","), truncated)
 				}
 
 				if len(bodySummary) > 1000 { // cap the notification body to 1000 characters (firebase limit)

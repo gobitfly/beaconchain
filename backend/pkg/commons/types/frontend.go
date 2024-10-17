@@ -68,9 +68,8 @@ const (
 	ValidatorMissedProposalEventName   EventName = "validator_proposal_missed"
 	ValidatorExecutedProposalEventName EventName = "validator_proposal_submitted"
 
-	ValidatorDidSlashEventName         EventName = "validator_did_slash"
-	ValidatorGroupIsOfflineEventName   EventName = "validator_group_is_offline"
-	ValidatorBalanceDecreasedEventName EventName = "validator_balance_decreased"
+	ValidatorDidSlashEventName       EventName = "validator_did_slash"
+	ValidatorGroupIsOfflineEventName EventName = "validator_group_is_offline"
 
 	ValidatorReceivedDepositEventName               EventName = "validator_received_deposit"
 	NetworkSlashingEventName                        EventName = "network_slashing"
