@@ -44,6 +44,16 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 	}
 }
 
+// getDataAccessor returns the correct data accessor based on the request context.
+// if the request is mocked, the data access dummy is returned; otherwise the data access service.
+// should only be used if getting mocked data for the endpoint is appropriate
+func (h *HandlerService) getDataAccessor(r *http.Request) dataaccess.DataAccessor {
+	if isMocked(r) {
+		return h.daDummy
+	}
+	return h.daService
+}
+
 // all networks available in the system, filled on startup in NewHandlerService
 var allNetworks []types.NetworkInfo
 
