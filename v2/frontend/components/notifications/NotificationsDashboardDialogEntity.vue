@@ -6,7 +6,6 @@ import {
   faCube,
   faFileSignature,
   faGlobe,
-  faMoneyBill,
   faPowerOff,
   faRocket,
   faUserSlash,
@@ -90,30 +89,6 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.group_offline?.length"
-        :items="details?.group_offline"
-        :info-copy="$t('notifications.dashboards.dialog.entity.group_offline')"
-      >
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.group_offline') }} ({{ details?.group_offline?.length ?? 0 }})
-        </template>
-        <template #headingIcon>
-          <FontAwesomeIcon :icon="faPowerOff" class="notifications-dashboard-dialog-entity__icon__red" />
-        </template>
-        <template #item="{ item: groupOffline }">
-          <span>
-            {{ groupOffline.group_name }}
-          </span>
-
-          <BcLink
-            :to="`/dashboard/${groupOffline.dashboard_id}`"
-            class="link"
-          >
-            ({{ groupOffline.dashboard_id }})
-          </BcLink>
-        </template>
-      </BcAccordion>
-      <BcAccordion
         v-if="details?.proposal_missed?.length"
         :items="details?.proposal_missed"
         :info-copy="$t('notifications.dashboards.dialog.entity.proposal_missed')"
@@ -134,9 +109,9 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
           >
             {{ proposal.index }}
           </BcLink>
-          <template v-if="proposal.blocks.length">
+          <template v-if="proposal.slots.length">
             [<BcLink
-              v-for="block in proposal.blocks"
+              v-for="block in proposal.slots"
               :key="block"
               :to="`/block/${block}`"
               class="notifications-dashboard-dialog-entity__list-item link"
@@ -235,42 +210,18 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: attestation }">
           <BcLink
-            :to="`/validator/${attestation.Index}`"
+            :to="`/validator/${attestation.index}`"
             class="link"
           >
-            {{ attestation.Index }}
+            {{ attestation.index }}
           </BcLink>
           (<BcLink
-            :to="`/epoch/${attestation.Epoch}`"
+            :to="`/epoch/${attestation.epoch}`"
             class="link"
           >
             {{ $t('common.epoch') }}
-            {{ attestation.Epoch }}
+            {{ attestation.epoch }}
           </BcLink>)
-        </template>
-      </BcAccordion>
-      <BcAccordion
-        v-if="details?.withdrawal?.length"
-        :items="details?.withdrawal"
-        :info-copy="$t('notifications.dashboards.dialog.entity.withdrawal')"
-      >
-        <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faMoneyBill"
-            class="notifications-dashboard-dialog-entity__icon__green"
-          />
-        </template>
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.withdrawal') }} ({{ details?.withdrawal?.length ?? 0 }})
-        </template>
-        <template #item="{ item: withdrawalItem }">
-          <BcLink
-            :to="`/validator/${withdrawalItem.index}`"
-            class="link"
-          >
-            {{ withdrawalItem.index }}
-          </BcLink>
-          <template v-if="withdrawalItem.blocks.length" />
         </template>
       </BcAccordion>
       <BcAccordion
@@ -300,36 +251,6 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.group_back_online?.length"
-        :items="details?.group_back_online"
-        :info-copy="$t('notifications.dashboards.dialog.entity.group_back_online')"
-      >
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.group_back_online') }} ({{ details?.group_back_online?.length ?? 0 }})
-        </template>
-        <template #headingIcon>
-          <FontAwesomeIcon :icon="faGlobe" class="notifications-dashboard-dialog-entity__icon__green" />
-        </template>
-        <template #item="{ item: group }">
-          <span>
-            {{ group.group_name }}
-          </span>
-          <span>
-            [{{ group.epoch_count }}&nbsp;{{ $t('common.epoch', group.epoch_count) }}]
-          </span>
-          (<BcLink
-            class="link"
-            :to="`/dashboard/${group.dashboard_id}`"
-          >
-            <!--
-            this will remove white space in html
-          -->Dashboard {{ group.dashboard_id }}
-          </BcLink>)<!--
-            this will remove white space in html
-          -->
-        </template>
-      </BcAccordion>
-      <BcAccordion
         v-if="details?.validator_offline_reminder?.length"
         :items="details?.validator_offline_reminder"
         :info-copy="$t('notifications.dashboards.dialog.entity.validator_offline_reminder')"
@@ -353,35 +274,6 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.group_offline_reminder?.length"
-        :items="details?.group_offline_reminder"
-        :info-copy="$t('notifications.dashboards.dialog.entity.group_offline_reminder')"
-      >
-        <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faAlarmSnooze"
-            class="notifications-dashboard-dialog-entity__icon__red"
-          />
-        </template>
-        <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.group_offline_reminder') }} ({{ details?.group_offline_reminder?.length ?? 0 }})
-        </template>
-        <template #item="{ item: groupOfflineReminder }">
-          {{ groupOfflineReminder.group_name }}
-          (<BcLink
-            class="link"
-            :to="`/dashboard/${groupOfflineReminder.dashboard_id}`"
-          >
-            <!--
-          this will remove white space in html
-          -->Dashboard {{ groupOfflineReminder.dashboard_id }}
-          </BcLink>)
-          <!--
-          this will remove white space in html
-          -->
-        </template>
-      </BcAccordion>
-      <BcAccordion
         v-if="details?.upcoming_proposals?.length"
         :items="details?.upcoming_proposals"
         :info-copy="$t('notifications.dashboards.dialog.entity.upcoming_proposal')"
@@ -402,9 +294,9 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
           >
             {{ upcomingProposal.index }}
           </BcLink>
-          <template v-if="upcomingProposal.blocks.length">
+          <template v-if="upcomingProposal.slots.length">
             [<BcLink
-              v-for="block in upcomingProposal.blocks"
+              v-for="block in upcomingProposal.slots"
               :key="block"
               :to="`/block/${block}`"
               class="notifications-dashboard-dialog-entity__list-item link"
