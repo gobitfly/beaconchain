@@ -283,10 +283,6 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.Ex{"uvdg.id": goqu.I("uvdnh.group_id")},
 			goqu.Ex{"uvdg.dashboard_id": goqu.I("uvd.id")},
 		)).
-		Where(
-			goqu.Ex{"uvd.user_id": userId},
-			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
-		).
 		GroupBy(
 			goqu.I("uvdnh.epoch"),
 			goqu.I("uvd.network"),
@@ -294,6 +290,13 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.I("uvdg.id"),
 			goqu.I("uvdg.name"),
 		)
+
+	if len(chainIds) > 0 {
+		vdbQuery = vdbQuery.Where(
+			goqu.Ex{"uvd.user_id": userId},
+			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
+		)
+	}
 
 	// TODO account dashboards
 	/*adbQuery := goqu.Dialect("postgres").
