@@ -520,10 +520,7 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 	}
 }
 
-func isMockEnabled(r *http.Request) bool {
-	isMockEnabled, ok := r.Context().Value(ctxIsMockEnabledKey).(bool)
-	if !ok {
-		return false
-	}
-	return isMockEnabled
+func isMocked(r *http.Request) bool {
+	isMocked, ok := r.Context().Value(ctxIsMockedKey).(bool)
+	return ok && isMocked
 }
