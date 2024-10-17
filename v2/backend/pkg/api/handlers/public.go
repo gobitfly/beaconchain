@@ -47,7 +47,7 @@ func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	data := h.dai.GetHealthz(ctx, showAll)
+	data := h.getDataAccessor(r).GetHealthz(ctx, showAll)
 
 	responseCode := http.StatusOK
 	if data.TotalOkPercentage != 1 {
@@ -74,7 +74,7 @@ func (h *HandlerService) PublicGetUserDashboards(w http.ResponseWriter, r *http.
 		handleErr(w, r, err)
 		return
 	}
-	data, err := h.dai.GetUserDashboards(r.Context(), userId)
+	data, err := h.getDataAccessor(r).GetUserDashboards(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -177,12 +177,12 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		return
 	}
 
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, true)
+	dashboardCount, err := h.getDataAccessor(r).GetUserValidatorDashboardCount(r.Context(), userId, true)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -192,7 +192,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboard(r.Context(), userId, name, chainId)
+	data, err := h.getDataAccessor(r).CreateValidatorDashboard(r.Context(), userId, name, chainId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -232,10 +232,10 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 	// set name depending on dashboard id
 	var name string
 	if reInteger.MatchString(dashboardIdParam) {
-		name, err = h.dai.GetValidatorDashboardName(r.Context(), dashboardId.Id)
+		name, err = h.getDataAccessor(r).GetValidatorDashboardName(r.Context(), dashboardId.Id)
 	} else if reValidatorDashboardPublicId.MatchString(dashboardIdParam) {
 		var publicIdInfo *types.VDBPublicId
-		publicIdInfo, err = h.dai.GetValidatorDashboardPublicId(r.Context(), types.VDBIdPublic(dashboardIdParam))
+		publicIdInfo, err = h.getDataAccessor(r).GetValidatorDashboardPublicId(r.Context(), types.VDBIdPublic(dashboardIdParam))
 		name = publicIdInfo.Name
 	}
 	if err != nil {
@@ -249,7 +249,7 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 		handleErr(w, r, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardOverview(r.Context(), *dashboardId, protocolModes)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardOverview(r.Context(), *dashboardId, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -281,7 +281,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r
 		handleErr(w, r, v)
 		return
 	}
-	err := h.dai.RemoveValidatorDashboard(r.Context(), dashboardId)
+	err := h.getDataAccessor(r).RemoveValidatorDashboard(r.Context(), dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -317,7 +317,7 @@ func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, 
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.UpdateValidatorDashboardName(r.Context(), dashboardId, name)
+	data, err := h.getDataAccessor(r).UpdateValidatorDashboardName(r.Context(), dashboardId, name)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -364,12 +364,12 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 		handleErr(w, r, err)
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(ctx, userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(ctx, userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	groupCount, err := h.dai.GetValidatorDashboardGroupCount(ctx, dashboardId)
+	groupCount, err := h.getDataAccessor(r).GetValidatorDashboardGroupCount(ctx, dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -379,7 +379,7 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboardGroup(ctx, dashboardId, name)
+	data, err := h.getDataAccessor(r).CreateValidatorDashboardGroup(ctx, dashboardId, name)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -423,7 +423,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
+	groupExists, err := h.getDataAccessor(r).GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -432,7 +432,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 		returnNotFound(w, r, errors.New("group not found"))
 		return
 	}
-	data, err := h.dai.UpdateValidatorDashboardGroup(r.Context(), dashboardId, groupId, name)
+	data, err := h.getDataAccessor(r).UpdateValidatorDashboardGroup(r.Context(), dashboardId, groupId, name)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -470,7 +470,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 		returnBadRequest(w, r, errors.New("cannot delete default group"))
 		return
 	}
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
+	groupExists, err := h.getDataAccessor(r).GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -479,7 +479,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 		returnNotFound(w, r, errors.New("group not found"))
 		return
 	}
-	err = h.dai.RemoveValidatorDashboardGroup(r.Context(), dashboardId, groupId)
+	err = h.getDataAccessor(r).RemoveValidatorDashboardGroup(r.Context(), dashboardId, groupId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -544,7 +544,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	}
 
 	ctx := r.Context()
-	groupExists, err := h.dai.GetValidatorDashboardGroupExists(ctx, dashboardId, groupId)
+	groupExists, err := h.getDataAccessor(r).GetValidatorDashboardGroupExists(ctx, dashboardId, groupId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -558,7 +558,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(ctx, userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(ctx, userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -568,7 +568,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 	dashboardLimit := userInfo.PremiumPerks.ValidatorsPerDashboard
-	existingValidatorCount, err := h.dai.GetValidatorDashboardValidatorsCount(ctx, dashboardId)
+	existingValidatorCount, err := h.getDataAccessor(r).GetValidatorDashboardValidatorsCount(ctx, dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -589,7 +589,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, v)
 			return
 		}
-		validators, err := h.dai.GetValidatorsFromSlices(indices, pubkeys)
+		validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(indices, pubkeys)
 		if err != nil {
 			handleErr(w, r, err)
 			return
@@ -597,7 +597,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		if len(validators) > int(limit) {
 			validators = validators[:limit]
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
+		data, dataErr = h.getDataAccessor(r).AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
 
 	case req.DepositAddress != "":
 		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
@@ -605,7 +605,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
+		data, dataErr = h.getDataAccessor(r).AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
 
 	case req.WithdrawalAddress != "":
 		withdrawalAddress := v.checkRegex(reWithdrawalCredential, req.WithdrawalAddress, "withdrawal_address")
@@ -613,7 +613,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
+		data, dataErr = h.getDataAccessor(r).AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
 
 	case req.Graffiti != "":
 		graffiti := v.checkRegex(reGraffiti, req.Graffiti, "graffiti")
@@ -621,7 +621,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, v)
 			return
 		}
-		data, dataErr = h.dai.AddValidatorDashboardValidatorsByGraffiti(ctx, dashboardId, groupId, graffiti, limit)
+		data, dataErr = h.getDataAccessor(r).AddValidatorDashboardValidatorsByGraffiti(ctx, dashboardId, groupId, graffiti, limit)
 	}
 
 	if dataErr != nil {
@@ -663,7 +663,7 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetValidatorDashboardValidators(r.Context(), *dashboardId, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardValidators(r.Context(), *dashboardId, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -703,12 +703,12 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, r, v)
 		return
 	}
-	validators, err := h.dai.GetValidatorsFromSlices(indices, publicKeys)
+	validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(indices, publicKeys)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	err = h.dai.RemoveValidatorDashboardValidators(r.Context(), dashboardId, validators)
+	err = h.getDataAccessor(r).RemoveValidatorDashboardValidators(r.Context(), dashboardId, validators)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -749,7 +749,7 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 		handleErr(w, r, v)
 		return
 	}
-	publicIdCount, err := h.dai.GetValidatorDashboardPublicIdCount(r.Context(), dashboardId)
+	publicIdCount, err := h.getDataAccessor(r).GetValidatorDashboardPublicIdCount(r.Context(), dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -759,7 +759,7 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 		return
 	}
 
-	data, err := h.dai.CreateValidatorDashboardPublicId(r.Context(), dashboardId, name, req.ShareSettings.ShareGroups)
+	data, err := h.getDataAccessor(r).CreateValidatorDashboardPublicId(r.Context(), dashboardId, name, req.ShareSettings.ShareGroups)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -805,7 +805,7 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 		handleErr(w, r, v)
 		return
 	}
-	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
+	fetchedId, err := h.getDataAccessor(r).GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -815,7 +815,7 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 		return
 	}
 
-	data, err := h.dai.UpdateValidatorDashboardPublicId(r.Context(), publicDashboardId, name, req.ShareSettings.ShareGroups)
+	data, err := h.getDataAccessor(r).UpdateValidatorDashboardPublicId(r.Context(), publicDashboardId, name, req.ShareSettings.ShareGroups)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -847,7 +847,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 		handleErr(w, r, v)
 		return
 	}
-	fetchedId, err := h.dai.GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
+	fetchedId, err := h.getDataAccessor(r).GetValidatorDashboardIdByPublicId(r.Context(), publicDashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -857,7 +857,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 		return
 	}
 
-	err = h.dai.RemoveValidatorDashboardPublicId(r.Context(), publicDashboardId)
+	err = h.getDataAccessor(r).RemoveValidatorDashboardPublicId(r.Context(), publicDashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -896,7 +896,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 	}
 
 	// check conditions for changing archival status
-	dashboardInfo, err := h.dai.GetValidatorDashboardInfo(r.Context(), dashboardId)
+	dashboardInfo, err := h.getDataAccessor(r).GetValidatorDashboardInfo(r.Context(), dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -914,13 +914,13 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		handleErr(w, r, err)
 		return
 	}
-	dashboardCount, err := h.dai.GetUserValidatorDashboardCount(r.Context(), userId, !req.IsArchived)
+	dashboardCount, err := h.getDataAccessor(r).GetUserValidatorDashboardCount(r.Context(), userId, !req.IsArchived)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -950,7 +950,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		archivedReason = &enums.VDBArchivedReasons.User
 	}
 
-	data, err := h.dai.UpdateValidatorDashboardArchiving(r.Context(), dashboardId, archivedReason)
+	data, err := h.getDataAccessor(r).UpdateValidatorDashboardArchiving(r.Context(), dashboardId, archivedReason)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -984,7 +984,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardSlotViz(r.Context(), *dashboardId, groupIds)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardSlotViz(r.Context(), *dashboardId, groupIds)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -995,8 +995,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 
 	returnOk(w, r, response)
 }
-
-var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
 
 // PublicGetValidatorDashboardSummary godoc
 //
@@ -1026,14 +1024,12 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardSummary(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardSummary(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1073,14 +1069,12 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupSummary(r.Context(), *dashboardId, groupId, period, protocolModes)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardGroupSummary(r.Context(), *dashboardId, groupId, period, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1133,7 +1127,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardSummaryChart(ctx, *dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardSummaryChart(ctx, *dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1167,9 +1161,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	checkValueInAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1180,13 +1171,13 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	duties := enums.ValidatorDuties
 	switch duty {
 	case duties.None:
-		indices, err = h.dai.GetValidatorDashboardSummaryValidators(r.Context(), *dashboardId, groupId)
+		indices, err = h.getDataAccessor(r).GetValidatorDashboardSummaryValidators(r.Context(), *dashboardId, groupId)
 	case duties.Sync:
-		indices, err = h.dai.GetValidatorDashboardSyncSummaryValidators(r.Context(), *dashboardId, groupId, period)
+		indices, err = h.getDataAccessor(r).GetValidatorDashboardSyncSummaryValidators(r.Context(), *dashboardId, groupId, period)
 	case duties.Slashed:
-		indices, err = h.dai.GetValidatorDashboardSlashingsSummaryValidators(r.Context(), *dashboardId, groupId, period)
+		indices, err = h.getDataAccessor(r).GetValidatorDashboardSlashingsSummaryValidators(r.Context(), *dashboardId, groupId, period)
 	case duties.Proposal:
-		indices, err = h.dai.GetValidatorDashboardProposalSummaryValidators(r.Context(), *dashboardId, groupId, period)
+		indices, err = h.getDataAccessor(r).GetValidatorDashboardProposalSummaryValidators(r.Context(), *dashboardId, groupId, period)
 	}
 	if err != nil {
 		handleErr(w, r, err)
@@ -1236,7 +1227,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardRewards(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardRewards(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1277,7 +1268,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupRewards(r.Context(), *dashboardId, groupId, epoch, protocolModes)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardGroupRewards(r.Context(), *dashboardId, groupId, epoch, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1313,7 +1304,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardRewardsChart(r.Context(), *dashboardId, protocolModes)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardRewardsChart(r.Context(), *dashboardId, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1359,7 +1350,7 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardDuties(r.Context(), *dashboardId, epoch, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardDuties(r.Context(), *dashboardId, epoch, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1401,7 +1392,7 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1451,7 +1442,7 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardHeatmap(r.Context(), *dashboardId, protocolModes, aggregation, afterTs, beforeTs)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardHeatmap(r.Context(), *dashboardId, protocolModes, aggregation, afterTs, beforeTs)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1501,7 +1492,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.Response
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardGroupHeatmap(r.Context(), *dashboardId, groupId, protocolModes, aggregation, requestedTimestamp)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardGroupHeatmap(r.Context(), *dashboardId, groupId, protocolModes, aggregation, requestedTimestamp)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1536,7 +1527,7 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardElDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardElDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1572,7 +1563,7 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardClDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardClDeposits(r.Context(), *dashboardId, pagingParams.cursor, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1601,7 +1592,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalConsensusLayerDeposits(
 		handleErr(w, r, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardTotalClDeposits(r.Context(), *dashboardId)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardTotalClDeposits(r.Context(), *dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1629,7 +1620,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalExecutionLayerDeposits(
 		handleErr(w, r, err)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardTotalElDeposits(r.Context(), *dashboardId)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardTotalElDeposits(r.Context(), *dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1671,7 +1662,7 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardWithdrawals(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardWithdrawals(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1708,7 +1699,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardTotalWithdrawals(r.Context(), *dashboardId, pagingParams.search, protocolModes)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardTotalWithdrawals(r.Context(), *dashboardId, pagingParams.search, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1748,7 +1739,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWr
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardRocketPool(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardRocketPool(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1783,48 +1774,12 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 		return
 	}
 
-	data, err := h.dai.GetValidatorDashboardTotalRocketPool(r.Context(), *dashboardId, pagingParams.search)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardTotalRocketPool(r.Context(), *dashboardId, pagingParams.search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	response := types.GetValidatorDashboardTotalRocketPoolResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
-// PublicGetValidatorDashboardNodeRocketPool godoc
-//
-//	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			node_address	path		string	true	"The address of the node."
-//	@Success		200				{object}	types.GetValidatorDashboardNodeRocketPoolResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address} [get]
-func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	// support ENS names ?
-	nodeAddress := v.checkAddress(vars["node_address"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-
-	data, err := h.dai.GetValidatorDashboardNodeRocketPool(r.Context(), *dashboardId, nodeAddress)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardNodeRocketPoolResponse{
 		Data: *data,
 	}
 	returnOk(w, r, response)
@@ -1862,7 +1817,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 		return
 	}
 
-	data, paging, err := h.dai.GetValidatorDashboardRocketPoolMinipools(r.Context(), *dashboardId, nodeAddress, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardRocketPoolMinipools(r.Context(), *dashboardId, nodeAddress, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1892,7 +1847,7 @@ func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *ht
 		handleErr(w, r, err)
 		return
 	}
-	data, err := h.dai.GetNotificationOverview(r.Context(), userId)
+	data, err := h.getDataAccessor(r).GetNotificationOverview(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1927,20 +1882,13 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
-	chainId := v.checkNetworkParameter(q.Get("network"))
-	chainIds := []uint64{chainId}
-	// TODO replace with "networks" once multiple networks are supported
-	//chainIds := v.checkNetworksParameter(q.Get("networks"))
+	chainIds := v.checkNetworksParameter(q.Get("networks"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
 
-	dataAccessor := h.dai
-	if isMockEnabled(r) {
-		dataAccessor = h.dummy
-	}
-	data, paging, err := dataAccessor.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1976,11 +1924,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 		handleErr(w, r, v)
 		return
 	}
-	dataAccessor := h.dai
-	if isMockEnabled(r) {
-		dataAccessor = h.dummy
-	}
-	data, err := dataAccessor.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2015,7 +1959,7 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
+	data, err := h.getDataAccessor(r).GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2053,7 +1997,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetMachineNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetMachineNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2092,7 +2036,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetClientNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetClientNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2131,7 +2075,7 @@ func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWrit
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2169,7 +2113,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2197,19 +2141,19 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
-	data, err := h.dai.GetNotificationSettings(r.Context(), userId)
+	data, err := h.getDataAccessor(r).GetNotificationSettings(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
 	// check premium perks
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	defaultSettings, err := h.getDataAccessor(r).GetNotificationSettingsDefaultValues(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2272,12 +2216,12 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 	}
 
 	// check premium perks
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	defaultSettings, err := h.getDataAccessor(r).GetNotificationSettingsDefaultValues(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2293,7 +2237,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		return
 	}
 
-	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
+	err = h.getDataAccessor(r).UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2358,7 +2302,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		IsNewRewardRoundSubscribed:    req.IsNewRewardRoundSubscribed,
 	}
 
-	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, settings)
+	err = h.getDataAccessor(r).UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, settings)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2407,7 +2351,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		handleErr(w, r, v)
 		return
 	}
-	err = h.dai.UpdateNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId, name, req.IsNotificationsEnabled)
+	err = h.getDataAccessor(r).UpdateNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId, name, req.IsNotificationsEnabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2447,7 +2391,7 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 		handleErr(w, r, v)
 		return
 	}
-	err = h.dai.DeleteNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId)
+	err = h.getDataAccessor(r).DeleteNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2487,7 +2431,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsClient(w http.Response
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.UpdateNotificationSettingsClients(r.Context(), userId, clientId, req.IsSubscribed)
+	data, err := h.getDataAccessor(r).UpdateNotificationSettingsClients(r.Context(), userId, clientId, req.IsSubscribed)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2525,19 +2469,19 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetNotificationSettingsDashboards(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(r).GetNotificationSettingsDashboards(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	// if users premium perks do not allow subscriptions, set them to false in the response
 	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	defaultSettings, err := h.getDataAccessor(r).GetNotificationSettingsDefaultValues(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2604,7 +2548,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, v)
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2618,7 +2562,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		return
 	}
 
-	err = h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), userId, dashboardId, groupId, req)
+	err = h.getDataAccessor(r).UpdateNotificationSettingsValidatorDashboard(r.Context(), userId, dashboardId, groupId, req)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2691,7 +2635,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
 		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
 	}
-	err = h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), userId, dashboardId, groupId, settings)
+	err = h.getDataAccessor(r).UpdateNotificationSettingsAccountDashboard(r.Context(), userId, dashboardId, groupId, settings)
 	if err != nil {
 		handleErr(w, r, err)
 		return

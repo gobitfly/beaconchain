@@ -30,7 +30,7 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
     setStoredQuery,
   } = useTableQuery({
     limit: 10,
-    sort: 'timestamp:desc',
+    sort: 'epoch:desc',
   }, 10)
   const isLoading = ref(false)
 
@@ -40,7 +40,7 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
     try {
       const result = await fetch<InternalGetUserNotificationDashboardsResponse>(
         API_PATH.NOTIFICATIONS_DASHBOARDS,
-        { query: { network: networkId.value } },
+        { query: { networks: networkId.value } },
         undefined,
         q,
       )
