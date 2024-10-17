@@ -1889,7 +1889,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 	}
 
 	dataAccessor := h.daService
-	if isMockEnabled(r) {
+	if isMocked(r) {
 		dataAccessor = h.daDummy
 	}
 	data, paging, err := dataAccessor.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
@@ -1929,7 +1929,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 		return
 	}
 	dataAccessor := h.daService
-	if isMockEnabled(r) {
+	if isMocked(r) {
 		dataAccessor = h.daDummy
 	}
 	data, err := dataAccessor.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)

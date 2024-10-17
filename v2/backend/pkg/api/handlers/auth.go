@@ -37,7 +37,7 @@ const authEmailExpireTime = time.Minute * 30
 type ctxKey string
 
 const ctxUserIdKey ctxKey = "user_id"
-const ctxIsMockEnabledKey ctxKey = "is_mock_enabled"
+const ctxIsMockedKey ctxKey = "is_mocked"
 
 var errBadCredentials = newUnauthorizedErr("invalid email or password")
 

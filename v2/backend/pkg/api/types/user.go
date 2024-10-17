@@ -1,6 +1,7 @@
 package types
 
 const UserGroupAdmin = "ADMIN"
+const UserGroupDev = "DEV"
 
 type UserInfo struct {
 	Id            uint64             `json:"id"`
