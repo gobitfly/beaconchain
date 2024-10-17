@@ -367,7 +367,7 @@ func CreateVoluntaryExitNodeJob(nj *types.NodeJob) (*types.NodeJob, error) {
 	}
 
 	forkVersion := utils.ForkVersionAtEpoch(uint64(njd.Message.Epoch))
-	err = utils.VerifyVoluntaryExitSignature(njd, forkVersion.CurrentVersion, vali.Pubkey)
+	err = utils.VerifyVoluntaryExitSignature(njd, utils.MustParseHex(forkVersion.CurrentVersion), vali.Pubkey)
 	if err != nil {
 		return nil, err
 	}

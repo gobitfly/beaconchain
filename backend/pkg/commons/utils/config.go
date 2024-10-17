@@ -336,7 +336,7 @@ func setCLConfig(cfg *types.Config) error {
 		// 	return fmt.Errorf("error setting chainConfig (%v) for prysmParams: %w", cfg.Chain.Name, err)
 		// }
 	} else if cfg.Chain.ClConfigPath == "node" {
-		nodeEndpoint := fmt.Sprintf("http://%s", net.JoinHostPort(cfg.Indexer.Node.Host, cfg.Indexer.Node.Port))
+		nodeEndpoint := fmt.Sprintf("http://%s", net.JoinHostPort(cfg.Indexer.Node[0].Host, cfg.Indexer.Node[0].Port))
 		client := consapi.NewClient(nodeEndpoint)
 
 		jr, err := client.GetSpec()
@@ -373,8 +373,8 @@ func setCLConfig(cfg *types.Config) error {
 			AltairForkEpoch:                         *jr.Data.AltairForkEpoch,
 			BellatrixForkVersion:                    jr.Data.BellatrixForkVersion,
 			BellatrixForkEpoch:                      *jr.Data.BellatrixForkEpoch,
-			CappellaForkVersion:                     jr.Data.CapellaForkVersion,
-			CappellaForkEpoch:                       *jr.Data.CapellaForkEpoch,
+			CapellaForkVersion:                      jr.Data.CapellaForkVersion,
+			CapellaForkEpoch:                        *jr.Data.CapellaForkEpoch,
 			DenebForkVersion:                        jr.Data.DenebForkVersion,
 			DenebForkEpoch:                          *jr.Data.DenebForkEpoch,
 			SecondsPerSlot:                          uint64(jr.Data.SecondsPerSlot),

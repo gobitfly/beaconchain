@@ -20,9 +20,23 @@ const (
 
 // eth/v1/beacon/states/{state_id}/validators
 type StandardValidatorsResponse struct {
-	ExecutionOptimistic bool                `json:"execution_optimistic"`
-	Finalized           bool                `json:"finalized"`
-	Data                []StandardValidator `json:"data"`
+	//ExecutionOptimistic bool                `json:"execution_optimistic"`
+	//Finalized           bool                `json:"finalized"`
+	Data []StandardValidator `json:"data"`
+}
+
+type LightStandardValidatorsResponse struct {
+	Epoch uint64
+	Data  []LightStandardValidator
+}
+
+type UltraLightStandardValidatorsResponse struct {
+	Data []UltraLightStandardValidator
+}
+type UltraLightStandardValidator struct {
+	Index            uint64
+	EffectiveBalance uint64
+	Status           ValidatorStatus
 }
 
 // eth/v1/beacon/states/{state_id}/validators/{validator_id}
@@ -41,11 +55,20 @@ type StandardValidator struct {
 		WithdrawalCredentials      hexutil.Bytes `json:"withdrawal_credentials"`
 		EffectiveBalance           uint64        `json:"effective_balance,string"`
 		Slashed                    bool          `json:"slashed"`
-		ActivationEligibilityEpoch uint64        `json:"activation_eligibility_epoch,string"`
-		ActivationEpoch            uint64        `json:"activation_epoch,string"`
-		ExitEpoch                  uint64        `json:"exit_epoch,string"`
-		WithdrawableEpoch          uint64        `json:"withdrawable_epoch,string"`
+		ActivationEligibilityEpoch uint64        `json:"activation_eligibility_epoch,string"` // drop, not used
+		ActivationEpoch            uint64        `json:"activation_epoch,string"`             // drop, not used
+		ExitEpoch                  uint64        `json:"exit_epoch,string"`                   // drop, not used
+		WithdrawableEpoch          uint64        `json:"withdrawable_epoch,string"`           // drop, not used
 	} `json:"validator"`
+}
+
+type LightStandardValidator struct {
+	Index            uint64
+	Balance          uint64
+	Status           ValidatorStatus
+	Pubkey           hexutil.Bytes
+	EffectiveBalance uint64
+	Slashed          bool
 }
 
 // /eth/v1/validator/duties/proposer/{epoch}

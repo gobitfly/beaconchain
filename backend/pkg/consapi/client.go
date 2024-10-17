@@ -7,7 +7,7 @@ import (
 )
 
 type Client struct {
-	ClientInt
+	ClientInt	
 }
 type ClientInt interface {
 	// /eth/v2/beacon/blocks/{block_id}

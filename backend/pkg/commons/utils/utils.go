@@ -96,31 +96,31 @@ func SliceContains(list []string, target string) bool {
 
 // ForkVersionAtEpoch returns the forkversion active a specific epoch
 func ForkVersionAtEpoch(epoch uint64) *types.ForkVersion {
-	if epoch >= Config.Chain.ClConfig.CappellaForkEpoch {
+	if epoch >= Config.Chain.ClConfig.CapellaForkEpoch {
 		return &types.ForkVersion{
-			Epoch:           Config.Chain.ClConfig.CappellaForkEpoch,
-			CurrentVersion:  MustParseHex(Config.Chain.ClConfig.CappellaForkVersion),
-			PreviousVersion: MustParseHex(Config.Chain.ClConfig.BellatrixForkVersion),
+			Epoch:           Config.Chain.ClConfig.CapellaForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.CapellaForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.BellatrixForkVersion,
 		}
 	}
 	if epoch >= Config.Chain.ClConfig.BellatrixForkEpoch {
 		return &types.ForkVersion{
 			Epoch:           Config.Chain.ClConfig.BellatrixForkEpoch,
-			CurrentVersion:  MustParseHex(Config.Chain.ClConfig.BellatrixForkVersion),
-			PreviousVersion: MustParseHex(Config.Chain.ClConfig.AltairForkVersion),
+			CurrentVersion:  Config.Chain.ClConfig.BellatrixForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.AltairForkVersion,
 		}
 	}
 	if epoch >= Config.Chain.ClConfig.AltairForkEpoch {
 		return &types.ForkVersion{
 			Epoch:           Config.Chain.ClConfig.AltairForkEpoch,
-			CurrentVersion:  MustParseHex(Config.Chain.ClConfig.AltairForkVersion),
-			PreviousVersion: MustParseHex(Config.Chain.ClConfig.GenesisForkVersion),
+			CurrentVersion:  Config.Chain.ClConfig.AltairForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.GenesisForkVersion,
 		}
 	}
 	return &types.ForkVersion{
 		Epoch:           0,
-		CurrentVersion:  MustParseHex(Config.Chain.ClConfig.GenesisForkVersion),
-		PreviousVersion: MustParseHex(Config.Chain.ClConfig.GenesisForkVersion),
+		CurrentVersion:  Config.Chain.ClConfig.GenesisForkVersion,
+		PreviousVersion: Config.Chain.ClConfig.GenesisForkVersion,
 	}
 }
 

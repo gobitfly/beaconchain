@@ -3,7 +3,6 @@ package db
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"regexp"
@@ -12,18 +11,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
-
-	"github.com/attestantio/go-eth2-client/spec/phase0"
 )
 
 func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
@@ -855,22 +853,172 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	return nil
 }
 
-func GetLatestDashboardEpoch() (uint64, error) {
-	var lastEpoch uint64
-	err := db.AlloyWriter.Get(&lastEpoch, fmt.Sprintf("SELECT COALESCE(max(epoch), 0) FROM %s", EpochWriterTableName))
-	return lastEpoch, err
+type EpochMetadata struct {
+	Epoch             uint64     `db:"epoch"`
+	InsertBatchID     *uuid.UUID `db:"insert_batch_id"`
+	SucesfulInsert    *time.Time `db:"successful_insert"`
+	TransferBatchId   *uuid.UUID `db:"transfer_batch_id"`
+	SucessfulTransfer *time.Time `db:"successful_transfer"`
 }
 
-func GetOldestDashboardEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(min(epoch), 0) FROM %s", EpochWriterTableName))
-	return epoch, err
+func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
+	var epochs []EpochMetadata
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %s
+			FINAL
+			WHERE (successful_insert IS NULL) AND (insert_batch_id IS NOT NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, err
+	}
+	return epochs, nil
 }
 
-func GetMinOldHourlyEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT min(epoch_start) as epoch_start FROM %s", HourWriterTableName))
-	return epoch, err
+// order of action
+// |-GetIncompleteInsertEpochs
+// | - FetchEpochs
+// | - PushEpochs
+// | - PushEpochMetadata (successful_insert)
+// |-GetPendingInsertEpochs
+// | - allocate insert batch ids
+// | - PushEpochMetadata (insert_batch_id)
+// | - FetchEpochs
+// | - PushEpochs
+// | - PushEpochMetadata (successful_insert)
+//
+// |-GetIncompleteTransferEpochs
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
+// |-GetPendingTransferEpochs
+// | - allocate transfer batch ids
+// | - PushEpochMetadata (transfer_batch_id)
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
+
+func GetPendingInsertEpochs(maxEpoch uint64, limit int64) ([]EpochMetadata, error) {
+	var epochs []EpochMetadata
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %s
+			FINAL
+			WHERE (successful_insert IS NULL) AND (insert_batch_id IS NULL) AND (epoch <= %d)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName, maxEpoch))
+	if err != nil {
+		return nil, err
+	}
+	return epochs, nil
+}
+
+func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
+	var epochs []EpochMetadata
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %s
+			FINAL
+			WHERE (successful_transfer IS NULL) AND (transfer_batch_id IS NOT NULL) AND (successful_insert IS NOT NULL) 
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, err
+	}
+	return epochs, nil
+}
+
+func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
+	var epochs []EpochMetadata
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %s
+			FINAL
+			WHERE (successful_transfer IS NULL) AND (successful_insert IS NOT NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, err
+	}
+	return epochs, nil
+}
+
+func PushEpochMetadata(metdata []EpochMetadata) error {
+	if len(metdata) == 0 {
+		return nil
+	}
+	_, err := db.ClickHouseWriter.NamedExec(fmt.Sprintf(`
+		INSERT INTO %s
+		(epoch, insert_batch_id, successful_insert, transfer_batch_id, successful_transfer)
+		VALUES
+		(:epoch, :insert_batch_id, :successful_insert, :transfer_batch_id, :successful_transfer)
+	`, ExporterMetadataTableName), metdata)
+	return err
+}
+
+func DeleteUnsafeEpoch(epoch uint64) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf("DELETE FROM %s WHERE epoch_timestamp = $1", UnsafeEpochsTableName), utils.EpochToTime(epoch))
+	return err
+}
+
+func GetGapsInEpochMap(table string, minEpoch uint64, maxStaleEpoch int64, latestMapOnly bool) ([]uint64, error) {
+	var epochs []uint64
+	if maxStaleEpoch < 0 {
+		return epochs, nil
+	}
+	/// TODO: need to expand query to max lookback - or else your risk missing epochs in the smaller aggregates (hourly for example) beyone their latest boundary
+	queryTemplate := ""
+	if latestMapOnly {
+		queryTemplate = `
+			with _raw_epoch_map as (
+				select -e as epoch
+				from %[1]s final
+				array join finalizeAggregation(epoch_map) as e
+				where validator_index = 0 and t = (select max(t) from %[1]s x final where x.validator_index = 0)
+				order by e
+			),
+			`
+	} else {
+		queryTemplate = `
+			with _raw_epoch_map as (
+				select -e as epoch
+				from %[1]s final
+				array join finalizeAggregation(epoch_map) as e
+				where validator_index = 0
+				order by e
+			),
+			`
+	}
+	// limit to the specified range
+	queryTemplate += `
+		epoch_map as (
+			select epoch
+			from _raw_epoch_map
+			where epoch >= %[2]d and epoch <= %[3]d
+		),
+		min_max_epochs as (
+				select min(epoch) as min_epoch, max(epoch) as max_epoch
+				from epoch_map
+			),
+			all_epochs as (
+				select number as epoch
+				from numbers(greatest(coalesce((select min_epoch from min_max_epochs), 0), %[2]d), coalesce((select greatest(%[2]d, max_epoch) - min_epoch + 1 from min_max_epochs),0))
+			)
+			-- Select the epochs that are missing
+			select epoch as missing_epoch
+			from all_epochs
+			where epoch not in (select epoch from epoch_map)
+			order by missing_epoch SETTINGS select_sequential_consistency=1;`
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(queryTemplate, table, minEpoch, maxStaleEpoch-1))
+	return epochs, err
 }
 
 type EpochBounds struct {
@@ -884,27 +1032,9 @@ type DayBounds struct {
 	EpochEnd   uint64    `db:"epoch_end"`
 }
 
-func GetLastExportedTotalEpoch() (*EpochBounds, error) {
-	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", RollingTotalWriterTableName))
-	return &epoch, err
-}
-
-func GetLastExportedHour() (*EpochBounds, error) {
-	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", HourWriterTableName))
-	return &epoch, err
-}
-
-func GetLastExportedDay() (*DayBounds, error) {
-	var epoch DayBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %s ORDER BY day DESC LIMIT 1", DayWriterTableName))
-	return &epoch, err
-}
-
 func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
 	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterTableName), targetEpoch)
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterSink), targetEpoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -923,63 +1053,74 @@ func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
 		return nil, nil
 	}
 
-	if end-start > 100 {
+	if end-start > 0 {
 		// for large ranges we use a different approach to avoid making tons of selects
 		// this performs better for large ranges but is slow for short ranges
 		var epochs []uint64
-		err := db.AlloyWriter.Select(&epochs, fmt.Sprintf(`
+		err := db.ClickHouseReader.Select(&epochs, fmt.Sprintf(`
 			WITH
-			epoch_range AS (
-				SELECT generate_series($1::bigint, $2::bigint) AS epoch
-			),
-			distinct_present_epochs AS (
-				SELECT DISTINCT epoch
-				FROM %s
-				WHERE epoch >= $1 AND epoch <= $2
-			)
+				epoch_range AS
+				(
+					SELECT CAST(number, 'Int64') AS epoch
+					FROM numbers($1, $2-$1 + 1)
+				),
+				distinct_present_epochs AS
+				(
+					SELECT DISTINCT toNullable(epoch) AS epoch
+					FROM (
+						select epoch from %s WHERE (epoch >= $1) AND (epoch <= $2) AND (validator_index = 0)
+						union distinct
+						select epoch from %s WHERE (epoch >= $1) AND (epoch <= $2) AND (validator_index = 0)
+					)
+				)
 			SELECT epoch_range.epoch
 			FROM epoch_range
 			LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
 			WHERE distinct_present_epochs.epoch IS NULL
-			ORDER BY epoch_range.epoch
-		`, EpochWriterTableName), start, end-1)
+			ORDER BY epoch_range.epoch ASC
+		`, UnsafeEpochsTableName, FinalEpochsTableName), start, end)
 		return epochs, err
 	}
+	// idk if the below code makes sense for clickhouse, lets just role with the above query for now
+	// and see if its fast enough
+	/*
 
-	query := `SELECT TO_JSON(ARRAY_AGG(epoch)) AS result_array FROM (`
+		query := `SELECT TO_JSON(ARRAY_AGG(epoch)) AS result_array FROM (`
 
-	for epoch := start; epoch < end; epoch++ {
-		if epoch != start {
-			query += " UNION "
+		for epoch := start; epoch < end; epoch++ {
+			if epoch != start {
+				query += " UNION "
+			}
+			query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM %[2]s WHERE epoch = %[1]d LIMIT 1)`, epoch, EpochWriterTableName)
 		}
-		query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM %[2]s WHERE epoch = %[1]d LIMIT 1)`, epoch, EpochWriterTableName)
-	}
 
-	query += `) AS result_array;`
+		query += `) AS result_array;`
 
-	var jsonArray sql.NullString
+		var jsonArray sql.NullString
 
-	err := db.AlloyReader.Get(&jsonArray, query)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query")
-	}
+		err := db.AlloyReader.Get(&jsonArray, query)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to query")
+		}
 
-	if !jsonArray.Valid {
-		return nil, nil
-	}
+		if !jsonArray.Valid {
+			return nil, nil
+		}
 
-	missingEpochs := make([]uint64, 0)
-	err = json.Unmarshal([]byte(jsonArray.String), &missingEpochs)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal")
-	}
+		missingEpochs := make([]uint64, 0)
+		err = json.Unmarshal([]byte(jsonArray.String), &missingEpochs)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal")
+		}
 
-	// sort asc
-	sort.Slice(missingEpochs, func(i, j int) bool {
-		return missingEpochs[i] < missingEpochs[j]
-	})
+		// sort asc
+		sort.Slice(missingEpochs, func(i, j int) bool {
+			return missingEpochs[i] < missingEpochs[j]
+		})
 
-	return missingEpochs, nil
+		return missingEpochs, nil
+	*/
+	return nil, fmt.Errorf("not implemented")
 }
 
 func GetPartitionNamesOfTable(tableName string) ([]string, error) {
@@ -1011,9 +1152,14 @@ func AddToColumnEngineAllColumns(table string) error {
 	return err
 }
 
-const EpochWriterTableName = "validator_dashboard_data_epoch"
-const DayWriterTableName = "validator_dashboard_data_daily"
-const HourWriterTableName = "validator_dashboard_data_hourly"
+const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil
+const EpochWriterSink = "_insert_sink_validator_dashboard_data_epoch"
+const UnsafeEpochsTableName = "_unsafe_validator_dashboard_data_epoch"
+const FinalEpochsTableName = "_final_validator_dashboard_data_epoch"
+const FinalHourlyTableName = "_final_validator_dashboard_data_hourly"
+const FinalDailyTableName = "_final_validator_dashboard_data_daily"
+const FinalWeeklyTableName = "_final_validator_dashboard_data_weekly"
+const FinalMonthlyTableName = "_final_validator_dashboard_data_monthly"
 
 const RollingTotalWriterTableName = "validator_dashboard_data_rolling_total"
 const RollingDailyWriterTable = "validator_dashboard_data_rolling_daily"

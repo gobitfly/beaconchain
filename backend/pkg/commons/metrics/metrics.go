@@ -66,6 +66,10 @@ var (
 		Name: "notifications_sent",
 		Help: "Counter of notifications sent with the channel and notification type in the label",
 	}, []string{"channel", "status"})
+	State = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "state",
+		Help: "Gauge for various states",
+	}, []string{"state"})
 )
 
 func init() {

@@ -39,7 +39,7 @@ type slotExporterData struct {
 func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
 	return &slotExporterData{
 		ModuleContext: moduleContext,
-		Client:        moduleContext.ConsClient,
+		Client:        moduleContext.ConsClient[0],
 		FirstRun:      true,
 	}
 }

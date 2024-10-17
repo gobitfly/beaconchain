@@ -105,8 +105,13 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		if writer.SSL {
 			sslParam = "secure=true"
 		}
+		// ensure binds work
+		if sqlx.BindType("clickhouse") != sqlx.DOLLAR {
+			log.Infof("changing bind type from %v to %v", sqlx.BindType("clickhouse"), sqlx.DOLLAR)
+			sqlx.BindDriver("clickhouse", sqlx.DOLLAR)
+		}
 		// debug
-		// sslParam += "&debug=true"
+		//sslParam += "&debug=true"
 	} else {
 		sslParam = "sslmode=disable"
 		if writer.SSL {
@@ -119,7 +124,6 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
-
 	dbTestConnection(dbConnWriter, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
 	dbConnWriter.SetConnMaxIdleTime(time.Second * 30)
 	dbConnWriter.SetConnMaxLifetime(time.Minute)
@@ -136,7 +140,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 			sslParam = "secure=true"
 		}
 		// debug
-		// sslParam += "&debug=true"
+		//sslParam += "&debug=true"
 	} else {
 		sslParam = "sslmode=disable"
 		if writer.SSL {
@@ -188,10 +192,11 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 	switch {
 	case version == -3:
 		// downgrade once branch. 15 second countdown to prevent shit hitting the fan
-		for i := 0; i < 15; i++ {
+		/*for i := 0; i < 15; i++ {
 			log.Warnf("downgrading %s by one version. you have %d seconds to abort the command", database, 15-i)
 			time.Sleep(time.Second)
 		}
+		*/
 		if err := goose.Down(targetDB.DB, migrationPath); err != nil {
 			return err
 		}

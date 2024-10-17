@@ -9,8 +9,10 @@ import (
 
 // Config is a struct to hold the configuration data
 type Config struct {
-	JustV2         bool `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
-	ReaderDatabase struct {
+	JustV2               bool   `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
+	HostNameSuffix       string `yaml:"hostNameSuffix" envconfig:"HOST_NAME_SUFFIX"`
+	FetchEpochsOverwrite int    `yaml:"fetchEpochsOverwrite" envconfig:"FETCH_EPOCHS_OVERWRITE"`
+	ReaderDatabase       struct {
 		Username     string `yaml:"user" envconfig:"READER_DB_USERNAME"`
 		Password     string `yaml:"password" envconfig:"READER_DB_PASSWORD"`
 		Name         string `yaml:"name" envconfig:"READER_DB_NAME"`
@@ -108,7 +110,7 @@ type Config struct {
 	} `yaml:"clickhouse"`
 	Indexer struct {
 		Enabled bool `yaml:"enabled" envconfig:"INDEXER_ENABLED"`
-		Node    struct {
+		Node    []struct {
 			Port     string `yaml:"port" envconfig:"INDEXER_NODE_PORT"`
 			Host     string `yaml:"host" envconfig:"INDEXER_NODE_HOST"`
 			Type     string `yaml:"type" envconfig:"INDEXER_NODE_TYPE"`
