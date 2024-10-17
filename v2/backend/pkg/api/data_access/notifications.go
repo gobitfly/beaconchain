@@ -283,6 +283,9 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.Ex{"uvdg.id": goqu.I("uvdnh.group_id")},
 			goqu.Ex{"uvdg.dashboard_id": goqu.I("uvd.id")},
 		)).
+		Where(
+			goqu.Ex{"uvd.user_id": userId},
+		).
 		GroupBy(
 			goqu.I("uvdnh.epoch"),
 			goqu.I("uvd.network"),
@@ -291,9 +294,8 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.I("uvdg.name"),
 		)
 
-	if len(chainIds) > 0 {
+	if chainIds != nil {
 		vdbQuery = vdbQuery.Where(
-			goqu.Ex{"uvd.user_id": userId},
 			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
 		)
 	}
