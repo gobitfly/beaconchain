@@ -158,7 +158,7 @@ func (n *ValidatorIsOfflineNotification) GetTitle() string {
 }
 
 func (n *ValidatorIsOfflineNotification) GetLegacyInfo() string {
-	return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.Epoch)
+	return fmt.Sprintf(`Validator %v is offline since epoch %d.`, n.ValidatorIndex, n.Epoch)
 }
 
 func (n *ValidatorIsOfflineNotification) GetLegacyTitle() string {
