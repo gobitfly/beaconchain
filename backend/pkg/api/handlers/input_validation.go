@@ -271,9 +271,9 @@ func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string)
 	// possibly add other values like "genesis", "finalized", hardforks etc. later
 	case "latest":
 		if paramName == "block" {
-			value, err = h.dai.GetLatestBlock()
+			value, err = h.daService.GetLatestBlock()
 		} else if paramName == "slot" {
-			value, err = h.dai.GetLatestSlot()
+			value, err = h.daService.GetLatestSlot()
 		}
 		if err != nil {
 			return 0, 0, err
@@ -501,7 +501,6 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 	return v.checkNetwork(intOrString{strValue: &param})
 }
 
-//nolint:unused
 func (v *validationError) checkNetworksParameter(param string) []uint64 {
 	var chainIds []uint64
 	for _, network := range splitParameters(param, ',') {

@@ -21,8 +21,8 @@ import (
 )
 
 type HandlerService struct {
-	dai                         dataaccess.DataAccessor
-	dummy                       dataaccess.DataAccessor
+	daService                   dataaccess.DataAccessor
+	daDummy                     dataaccess.DataAccessor
 	scs                         *scs.SessionManager
 	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
@@ -37,8 +37,8 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 	}
 
 	return &HandlerService{
-		dai:                         dataAccessor,
-		dummy:                       dummy,
+		daService:                   dataAccessor,
+		daDummy:                     dummy,
 		scs:                         sessionManager,
 		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
@@ -103,13 +103,13 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 	case types.VDBIdPrimary:
 		return &types.VDBId{Id: dashboardId, Validators: nil}, nil
 	case types.VDBIdPublic:
-		dashboardInfo, err := h.dai.GetValidatorDashboardPublicId(ctx, dashboardId)
+		dashboardInfo, err := h.daService.GetValidatorDashboardPublicId(ctx, dashboardId)
 		if err != nil {
 			return nil, err
 		}
 		return &types.VDBId{Id: types.VDBIdPrimary(dashboardInfo.DashboardId), Validators: nil, AggregateGroups: !dashboardInfo.ShareSettings.ShareGroups}, nil
 	case validatorSet:
-		validators, err := h.dai.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
+		validators, err := h.daService.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -163,7 +163,7 @@ func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Conte
 	if maxAge == 0 {
 		return limits, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
 	}
-	limits.LatestExportedTs, err = h.dai.GetLatestExportedChartTs(ctx, aggregation)
+	limits.LatestExportedTs, err = h.daService.GetLatestExportedChartTs(ctx, aggregation)
 	if err != nil {
 		return limits, err
 	}
@@ -178,18 +178,18 @@ func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Conte
 func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
 	// for guest dashboards, return free tier perks
 	if id.Validators != nil {
-		perk, err := h.dai.GetFreeTierPerks(ctx)
+		perk, err := h.daService.GetFreeTierPerks(ctx)
 		if err != nil {
 			return nil, err
 		}
 		return perk, nil
 	}
 	// could be made into a single query if needed
-	dashboardUser, err := h.dai.GetValidatorDashboardUser(ctx, id.Id)
+	dashboardUser, err := h.daService.GetValidatorDashboardUser(ctx, id.Id)
 	if err != nil {
 		return nil, err
 	}
-	userInfo, err := h.dai.GetUserInfo(ctx, dashboardUser.UserId)
+	userInfo, err := h.daService.GetUserInfo(ctx, dashboardUser.UserId)
 	if err != nil {
 		return nil, err
 	}
