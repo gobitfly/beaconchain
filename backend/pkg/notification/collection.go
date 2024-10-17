@@ -47,6 +47,7 @@ func notificationCollector() {
 		gob.Register(&ValidatorProposalNotification{})
 		gob.Register(&ValidatorAttestationNotification{})
 		gob.Register(&ValidatorIsOfflineNotification{})
+		gob.Register(&ValidatorIsOnlineNotification{})
 		gob.Register(&ValidatorGotSlashedNotification{})
 		gob.Register(&ValidatorWithdrawalNotification{})
 		gob.Register(&NetworkNotification{})
@@ -731,7 +732,6 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 					DashboardGroupName: sub.DashboardGroupName,
 				},
 				ValidatorIndex: validator.Index,
-				IsOffline:      true,
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -749,12 +749,12 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 			log.Infof("new event: validator %v detected as online again at epoch %v", validator.Index, epoch)
 
-			n := &ValidatorIsOfflineNotification{
+			n := &ValidatorIsOnlineNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
 					SubscriptionID:     *sub.ID,
 					UserID:             *sub.UserID,
 					Epoch:              epoch,
-					EventName:          sub.EventName,
+					EventName:          types.ValidatorIsOnlineEventName,
 					EventFilter:        hex.EncodeToString(validator.Pubkey),
 					LatestState:        "-",
 					DashboardId:        sub.DashboardId,
@@ -763,7 +763,6 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 					DashboardGroupName: sub.DashboardGroupName,
 				},
 				ValidatorIndex: validator.Index,
-				IsOffline:      false,
 			}
 
 			notificationsByUserID.AddNotification(n)

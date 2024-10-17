@@ -64,6 +64,7 @@ func (*DataAccessService) registerNotificationInterfaceTypes() {
 		gob.Register(&notification.ValidatorProposalNotification{})
 		gob.Register(&notification.ValidatorAttestationNotification{})
 		gob.Register(&notification.ValidatorIsOfflineNotification{})
+		gob.Register(&notification.ValidatorIsOnlineNotification{})
 		gob.Register(&notification.ValidatorGotSlashedNotification{})
 		gob.Register(&notification.ValidatorWithdrawalNotification{})
 		gob.Register(&notification.NetworkNotification{})
@@ -513,12 +514,17 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 				continue
 			}
-			if curNotification.IsOffline {
-				notificationDetails.ValidatorOffline = append(notificationDetails.ValidatorOffline, curNotification.ValidatorIndex)
-			} else {
-				// TODO EpochCount is not correct, missing / cumbersome to retrieve from backend - using "back online since" instead atm
-				notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
+			notificationDetails.ValidatorOffline = append(notificationDetails.ValidatorOffline, curNotification.ValidatorIndex)
+		case types.ValidatorIsOnlineEventName:
+			curNotification, ok := not.(*notification.ValidatorIsOnlineNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to ValidatorIsOnlineNotification")
 			}
+			if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+				continue
+			}
+			// TODO EpochCount is not correct, missing / cumbersome to retrieve from backend - using "back online since" instead atm
+			notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
 			// TODO not present in backend yet
 			//notificationDetails.ValidatorOfflineReminder = ...
 		case types.ValidatorGroupIsOfflineEventName:
