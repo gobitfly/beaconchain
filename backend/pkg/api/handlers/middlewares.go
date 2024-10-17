@@ -2,11 +2,9 @@ package handlers
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
@@ -15,31 +13,7 @@ import (
 
 // Middlewares
 
-func hashUint64(data uint64) [32]byte {
-	// Convert uint64 to a byte slice
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, data)
-
-	// Compute SHA-256 hash
-	hash := sha256.Sum256(buf)
-	return hash
-}
-
-func checkHash(data uint64, hashStr string) bool {
-	// Decode the hexadecimal string into a byte slice
-	hashToCheck, err := hex.DecodeString(hashStr)
-	if err != nil {
-		return false
-	}
-
-	// Hash the uint64 value
-	computedHash := hashUint64(data)
-
-	// Compare the computed hash with the provided hash
-	return string(computedHash[:]) == string(hashToCheck)
-}
-
-// returns a middleware that stores user id in context, using the provided function
+// middleware that stores user id in context, using the provided function
 func StoreUserIdMiddleware(next http.Handler, userIdFunc func(r *http.Request) (uint64, error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userId, err := userIdFunc(r)
@@ -53,20 +27,7 @@ func StoreUserIdMiddleware(next http.Handler, userIdFunc func(r *http.Request) (
 			return
 		}
 
-		// if user id matches a given hash, allow access without checking dashboard access and return mock data
-		// TODO: move to config, exposing this in source code is a minor security risk for now
-		validHashes := []string{
-			"2cab06069254b5555b617efa1d17f0748324270bb587b73422e6840d59ff322c",
-			"fc624cf355b84bc583661552982894621568b59c0a1c92ab0c1e03ed3bbf649b",
-			"03e7fb02cbc33eb45e98ab50b4bcad7fc338e5edfb5eca33ad9eb7d13d4ff106",
-		}
-		for _, hash := range validHashes {
-			if checkHash(userId, hash) {
-				ctx := r.Context()
-				ctx = context.WithValue(ctx, ctxIsMockEnabledKey, true)
-				r = r.WithContext(ctx)
-			}
-		}
+		// store user id in context
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 		r = r.WithContext(ctx)
@@ -74,23 +35,25 @@ func StoreUserIdMiddleware(next http.Handler, userIdFunc func(r *http.Request) (
 	})
 }
 
+// middleware that stores user id in context, using the session to get the user id
 func (h *HandlerService) StoreUserIdBySessionMiddleware(next http.Handler) http.Handler {
 	return StoreUserIdMiddleware(next, func(r *http.Request) (uint64, error) {
 		return h.GetUserIdBySession(r)
 	})
 }
 
+// middleware that stores user id in context, using the api key to get the user id
 func (h *HandlerService) StoreUserIdByApiKeyMiddleware(next http.Handler) http.Handler {
 	return StoreUserIdMiddleware(next, func(r *http.Request) (uint64, error) {
 		return h.GetUserIdByApiKey(r)
 	})
 }
 
-// returns a middleware that checks if user has access to dashboard when a primary id is used
+// middleware that checks if user has access to dashboard when a primary id is used
 func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// if mock data is used, no need to check access
-		if isMockEnabled, ok := r.Context().Value(ctxIsMockEnabledKey).(bool); ok && isMockEnabled {
+		if isMockEnabled, ok := r.Context().Value(ctxIsMockedKey).(bool); ok && isMockEnabled {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -193,6 +156,39 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 			handleErr(w, r, newForbiddenErr("dashboard with id %v is archived", dashboardId))
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// middleware that checks if the request wants mocked data and if the user is allowed to use it. the flag is stored in the request context.
+// note that mocked data is only returned by handlers that support it.
+func (h *HandlerService) SetIsMockedFlagMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		isMocked, _ := strconv.ParseBool(r.Header.Get("is_mocked"))
+		if !isMocked {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// fetch user group
+		userId, err := h.GetUserIdBySession(r)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+		userCredentials, err := h.daService.GetUserInfo(r.Context(), userId)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+		allowedGroups := []string{types.UserGroupAdmin, types.UserGroupDev}
+		if !slices.Contains(allowedGroups, userCredentials.UserGroup) {
+			handleErr(w, r, newForbiddenErr("user is not allowed to use mock data"))
+			return
+		}
+		// store isMocked flag in context
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxIsMockedKey, true)
+		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
 }
