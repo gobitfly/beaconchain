@@ -192,7 +192,6 @@ func (n *ValidatorIsOnlineNotification) GetLegacyInfo() string {
 }
 
 func (n *ValidatorIsOnlineNotification) GetLegacyTitle() string {
-
 	return "Validator Back Online"
 }
 
