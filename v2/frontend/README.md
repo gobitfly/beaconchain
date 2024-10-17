@@ -122,6 +122,14 @@ bun run preview
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
 
+## Get mocked api data
+
+If your `user` was added to the `ADMIN` or `DEV` group by the `api team`, you can get
+`mocked data` from the `api` for certain `endpoints` by adding `?is_mocked=true` as a 
+`query parameter`.
+
+You can `turn on` mocked data `globally` for all `configured enpoints` by setting `NUXT_PUBLIC_IS_API_MOCKED=true`.
+
 ## Descision Record
 
 We documented our decisions in the [decisions](decisions.md) file.

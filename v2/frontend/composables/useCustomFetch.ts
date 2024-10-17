@@ -85,6 +85,7 @@ export function useCustomFetch() {
     options.query = {
       ...options.query,
       ...query,
+      is_mocked: true,
     }
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
