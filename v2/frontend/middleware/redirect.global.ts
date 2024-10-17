@@ -44,6 +44,8 @@ export default function ({
         return redirectToV1('/user/notifications')
       }
       break
+    case 'register':
+      return redirectToV1('/register')
     case 'requestReset':
       return redirectToV1('/requestReset')
     case 'slot':

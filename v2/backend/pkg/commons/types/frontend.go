@@ -79,11 +79,7 @@ const (
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
 	TaxReportEventName                              EventName = "user_tax_report"
-	//nolint:misspell
-	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min"
-	//nolint:misspell
-	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max"
-	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
+	SyncCommitteeSoonEventName                      EventName = "validator_synccommittee_soon"
 	//nolint:misspell
 	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
