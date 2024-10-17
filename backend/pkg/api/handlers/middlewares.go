@@ -138,6 +138,10 @@ func (h *HandlerService) ManageNotificationsViaApiCheckMiddleware(next http.Hand
 // middleware check to return if specified dashboard is not archived (and accessible)
 func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isMockEnabled, ok := r.Context().Value(ctxIsMockedKey).(bool); ok && isMockEnabled {
+			next.ServeHTTP(w, r)
+			return
+		}
 		dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
 		if err != nil {
 			handleErr(w, r, err)
@@ -160,9 +164,11 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 	})
 }
 
-// middleware that checks if the request wants mocked data and if the user is allowed to use it. the flag is stored in the request context.
-// note that mocked data is only returned by handlers that support it.
-func (h *HandlerService) SetIsMockedFlagMiddleware(next http.Handler) http.Handler {
+// middleware that checks for `is_mocked` query param and stores it in the request context.
+// should bypass auth checks if the flag is set and cause handlers to return mocked data.
+// only allowed for users in the admin or dev group.
+// note that mocked data is only returned by handlers that check for it.
+func (h *HandlerService) StoreIsMockedFlagMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isMocked, _ := strconv.ParseBool(r.Header.Get("is_mocked"))
 		if !isMocked {
