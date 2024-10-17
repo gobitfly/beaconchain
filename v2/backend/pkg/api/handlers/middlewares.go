@@ -170,7 +170,7 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 // note that mocked data is only returned by handlers that check for it.
 func (h *HandlerService) StoreIsMockedFlagMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		isMocked, _ := strconv.ParseBool(r.Header.Get("is_mocked"))
+		isMocked, _ := strconv.ParseBool(r.URL.Query().Get("is_mocked"))
 		if !isMocked {
 			next.ServeHTTP(w, r)
 			return
