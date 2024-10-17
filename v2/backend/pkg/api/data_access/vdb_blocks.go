@@ -323,15 +323,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	)
 	`
 
-	distinct := ""
-	if !onlyPrimarySort {
-		distinct = sortColName
-	}
 	from := `past_blocks `
-	selectStr := `SELECT * FROM ` + from
-	if len(distinct) > 0 {
-		selectStr = `SELECT DISTINCT ON (` + distinct + `) * FROM ` + from
-	}
+	selectStr := `SELECT * FROM `
 
 	query := selectStr + from + where + orderBy + limitStr
 	// supply scheduled proposals, if any
@@ -364,11 +357,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			`, len(params)-2)
 		}
 		cte += `) `
-		if len(distinct) != 0 {
-			distinct += ", "
+		distinct := "slot"
+		if !onlyPrimarySort {
+			distinct = sortColName + ", " + distinct
 		}
 		// keep all ordering, sorting etc
-		distinct += "slot"
 		selectStr = `SELECT DISTINCT ON (` + distinct + `) * FROM `
 		// encapsulate past blocks query to ensure performance
 		from = `(
