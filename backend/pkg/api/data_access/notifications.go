@@ -1053,9 +1053,9 @@ func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, user
 	// 	switch notification.EventType {
 	// 	case types.RocketpoolNewClaimRoundStartedEventName:
 	// 		resultEntry.EventType = "reward_round"
-	// 	case types.RocketpoolCollateralMinReached:
+	// 	case types.RocketpoolCollateralMinReachedEventName:
 	// 		resultEntry.EventType = "collateral_min"
-	// 	case types.RocketpoolCollateralMaxReached:
+	// 	case types.RocketpoolCollateralMaxReachedEventName:
 	// 		resultEntry.EventType = "collateral_max"
 	// 	default:
 	// 		return nil, nil, fmt.Errorf("invalid event name for rocketpool notification: %v", notification.EventType)
@@ -1868,7 +1868,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.GroupOfflineThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
 				settings.IsAttestationsMissedSubscribed = true
-			case types.ValidatorProposalEventName:
+			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName:
 				settings.IsBlockProposalSubscribed = true
 			case types.ValidatorUpcomingProposalEventName:
 				settings.IsUpcomingBlockProposalSubscribed = true
@@ -1878,10 +1878,10 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.IsWithdrawalProcessedSubscribed = true
 			case types.ValidatorGotSlashedEventName:
 				settings.IsSlashedSubscribed = true
-			case types.RocketpoolCollateralMinReached:
+			case types.RocketpoolCollateralMinReachedEventName:
 				settings.IsMinCollateralSubscribed = true
 				settings.MinCollateralThreshold = event.Threshold
-			case types.RocketpoolCollateralMaxReached:
+			case types.RocketpoolCollateralMaxReachedEventName:
 				settings.IsMaxCollateralSubscribed = true
 				settings.MaxCollateralThreshold = event.Threshold
 			}
@@ -2085,13 +2085,15 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, string(types.ValidatorIsOfflineEventName), eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupOfflineSubscribed, userId, string(types.GroupIsOfflineEventName), eventFilter, epoch, settings.GroupOfflineThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, string(types.ValidatorMissedAttestationEventName), eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, string(types.ValidatorProposalEventName), eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, string(types.ValidatorUpcomingProposalEventName), eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, string(types.SyncCommitteeSoon), eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, string(types.ValidatorReceivedWithdrawalEventName), eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, string(types.ValidatorGotSlashedEventName), eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, string(types.RocketpoolCollateralMaxReached), eventFilter, epoch, settings.MaxCollateralThreshold)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMinCollateralSubscribed, userId, string(types.RocketpoolCollateralMinReached), eventFilter, epoch, settings.MinCollateralThreshold)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, string(types.RocketpoolCollateralMaxReachedEventName), eventFilter, epoch, settings.MaxCollateralThreshold)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMinCollateralSubscribed, userId, string(types.RocketpoolCollateralMinReachedEventName), eventFilter, epoch, settings.MinCollateralThreshold)
+	// Set two events for IsBlockProposalSubscribed
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, string(types.ValidatorMissedProposalEventName), eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, string(types.ValidatorExecutedProposalEventName), eventFilter, epoch, 0)
 
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {
