@@ -996,8 +996,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
-var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-
 // PublicGetValidatorDashboardSummary godoc
 //
 //	@Description	Get summary information for a specified dashboard
@@ -1026,8 +1024,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1073,8 +1069,6 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1167,9 +1161,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	checkValueInAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1794,42 +1785,6 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 	returnOk(w, r, response)
 }
 
-// PublicGetValidatorDashboardNodeRocketPool godoc
-//
-//	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			node_address	path		string	true	"The address of the node."
-//	@Success		200				{object}	types.GetValidatorDashboardNodeRocketPoolResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address} [get]
-func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	// support ENS names ?
-	nodeAddress := v.checkAddress(vars["node_address"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-
-	data, err := h.dai.GetValidatorDashboardNodeRocketPool(r.Context(), *dashboardId, nodeAddress)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardNodeRocketPoolResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetValidatorDashboardRocketPoolMinipools godoc
 //
 //	@Description	Get minipools information for a specified Rocket Pool node associated with a specified dashboard.
@@ -1935,7 +1890,12 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+
+	dataAccessor := h.dai
+	if isMockEnabled(r) {
+		dataAccessor = h.dummy
+	}
+	data, paging, err := dataAccessor.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1971,7 +1931,11 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
+	dataAccessor := h.dai
+	if isMockEnabled(r) {
+		dataAccessor = h.dummy
+	}
+	data, err := dataAccessor.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2172,6 +2136,8 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
+const diffTolerance = 0.0001
+
 // PublicGetUserNotificationPairedDevices godoc
 //
 //	@Description	Get notification settings for the authenticated user. Excludes dashboard notification settings.
@@ -2207,7 +2173,6 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 
 	// if users premium perks do not allow custom thresholds, set them to default in the response
 	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
-	const diffTolerance = 0.0001
 	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold {
 		if math.Abs(userGeneralSettings.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance {
 			userGeneralSettings.MachineStorageUsageThreshold = defaultSettings.MachineStorageUsageThreshold
@@ -2272,9 +2237,11 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, err)
 		return
 	}
-	isCustomThresholdUsed := req.MachineStorageUsageThreshold != defaultSettings.MachineStorageUsageThreshold ||
-		req.MachineCpuUsageThreshold != defaultSettings.MachineCpuUsageThreshold ||
-		req.MachineMemoryUsageThreshold != defaultSettings.MachineMemoryUsageThreshold
+
+	// use tolarance for float comparison
+	isCustomThresholdUsed := math.Abs(req.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance ||
+		math.Abs(req.MachineCpuUsageThreshold-defaultSettings.MachineCpuUsageThreshold) > diffTolerance ||
+		math.Abs(req.MachineMemoryUsageThreshold-defaultSettings.MachineMemoryUsageThreshold) > diffTolerance
 
 	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold && isCustomThresholdUsed {
 		returnForbidden(w, r, errors.New("user does not have premium perks to set machine settings thresholds"))
