@@ -1965,6 +1965,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		result = append(result, t.NotificationSettingsDashboardsTableRow{
 			IsAccountDashboard: setting.IsAccountDashboard,
 			DashboardId:        setting.DashboardId,
+			DashboardName:      setting.DashboardName,
 			GroupId:            setting.GroupId,
 			GroupName:          setting.GroupName,
 			Settings:           setting.Settings,
