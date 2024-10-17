@@ -36,8 +36,13 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, !cfg.Frontend.DisableStatsInserts)
 
 	// store user id in context, if available
-	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware, handlerService.SetIsMockedFlagMiddleware)
-	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware, handlerService.SetIsMockedFlagMiddleware)
+	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware)
+	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware)
+
+	if cfg.DeploymentType != "production" {
+		publicRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
+		internalRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
+	}
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 	addLegacyRoutes(handlerService, legacyRouter)
