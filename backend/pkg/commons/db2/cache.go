@@ -2,6 +2,7 @@ package db2
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -39,7 +40,9 @@ func (c *CachedRawStore) ReadBlockByNumber(chainID uint64, number int64) (*FullB
 
 		// retrieve the block hash for caching purpose
 		var mini MinimalBlock
-		_ = json.Unmarshal(block.Block, &mini)
+		if err := json.Unmarshal(block.Block, &mini); err != nil {
+			return nil, fmt.Errorf("cannot unmarshal block: %w", err)
+		}
 		c.cache.Store(mini.Result.Hash, number)
 		go func() {
 			time.Sleep(ttl)
