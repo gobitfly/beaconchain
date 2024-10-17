@@ -54,7 +54,6 @@ export enum API_PATH {
   NOTIFICATIONS_MANAGEMENT_SAVE = '/notifications/management/save',
   NOTIFICATIONS_NETWORK = '/notifications/networks',
   NOTIFICATIONS_OVERVIEW = '/notifications',
-  NOTIFICATIONS_ROCKETPOOL = '/notifications/rocket_pool',
   NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test_webhook',
@@ -364,10 +363,6 @@ export const mapping: Record<string, MappingData> = {
     method: 'GET',
     mock: false,
     path: '/users/me/notifications',
-  },
-  [API_PATH.NOTIFICATIONS_ROCKETPOOL]: {
-    method: 'GET',
-    path: '/users/me/notifications/rocket-pool',
   },
   [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
     method: 'POST',
