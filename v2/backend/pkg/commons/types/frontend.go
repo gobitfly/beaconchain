@@ -90,6 +90,7 @@ const (
 
 	// Validator dashboard events
 	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
+	ValidatorIsOnlineEventName           EventName = "validator_is_online"
 	GroupIsOfflineEventName              EventName = "group_is_offline"
 	ValidatorMissedAttestationEventName  EventName = "validator_attestation_missed"
 	ValidatorProposalEventName           EventName = "validator_proposal"
@@ -134,6 +135,7 @@ var EventSortOrder = []EventName{
 	MonitoringMachineMemoryUsageEventName,
 	SyncCommitteeSoonEventName,
 	ValidatorIsOfflineEventName,
+	ValidatorIsOnlineEventName,
 	ValidatorReceivedWithdrawalEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,
@@ -181,7 +183,8 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 	ValidatorMissedAttestationEventName:      "Your validator(s) missed an attestation",
 	ValidatorGotSlashedEventName:             "Your validator(s) got slashed",
 	ValidatorDidSlashEventName:               "Your validator(s) slashed another validator",
-	ValidatorIsOfflineEventName:              "Your validator(s) state changed",
+	ValidatorIsOfflineEventName:              "Your validator(s) went offline",
+	ValidatorIsOnlineEventName:               "Your validator(s) came back online",
 	ValidatorReceivedWithdrawalEventName:     "A withdrawal was initiated for your validators",
 	NetworkLivenessIncreasedEventName:        "The network is experiencing liveness issues",
 	EthClientUpdateEventName:                 "An Ethereum client has a new update available",
@@ -203,7 +206,8 @@ var EventLabel map[EventName]string = map[EventName]string{
 	ValidatorMissedAttestationEventName:      "Attestation missed",
 	ValidatorGotSlashedEventName:             "Validator slashed",
 	ValidatorDidSlashEventName:               "Validator has slashed",
-	ValidatorIsOfflineEventName:              "Validator online / offline",
+	ValidatorIsOfflineEventName:              "Validator offline",
+	ValidatorIsOnlineEventName:               "Validator back online",
 	ValidatorReceivedWithdrawalEventName:     "Withdrawal processed",
 	NetworkLivenessIncreasedEventName:        "The network is experiencing liveness issues",
 	EthClientUpdateEventName:                 "An Ethereum client has a new update available",
@@ -236,6 +240,7 @@ var EventNames = []EventName{
 	ValidatorGotSlashedEventName,
 	ValidatorDidSlashEventName,
 	ValidatorIsOfflineEventName,
+	ValidatorIsOnlineEventName,
 	ValidatorReceivedWithdrawalEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,

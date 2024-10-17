@@ -139,7 +139,6 @@ type ValidatorIsOfflineNotification struct {
 	types.NotificationBaseImpl
 
 	ValidatorIndex uint64
-	IsOffline      bool
 }
 
 func (n *ValidatorIsOfflineNotification) GetEntitiyId() string {
@@ -149,19 +148,9 @@ func (n *ValidatorIsOfflineNotification) GetEntitiyId() string {
 // Overwrite specific methods
 func (n *ValidatorIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
-	epoch := ""
-	if n.IsOffline {
-		epoch = formatEpochLink(format, n.LatestState)
-	} else {
-		epoch = formatEpochLink(format, n.Epoch)
-	}
+	epoch := formatEpochLink(format, n.LatestState)
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
-
-	if n.IsOffline {
-		return fmt.Sprintf(`Validator %v%v is offline since epoch %s.`, vali, dashboardAndGroupInfo, epoch)
-	} else {
-		return fmt.Sprintf(`Validator %v%v is back online since epoch %v.`, vali, dashboardAndGroupInfo, epoch)
-	}
+	return fmt.Sprintf(`Validator %v%v is offline since epoch %s.`, vali, dashboardAndGroupInfo, epoch)
 }
 
 func (n *ValidatorIsOfflineNotification) GetTitle() string {
@@ -169,19 +158,42 @@ func (n *ValidatorIsOfflineNotification) GetTitle() string {
 }
 
 func (n *ValidatorIsOfflineNotification) GetLegacyInfo() string {
-	if n.IsOffline {
-		return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.LatestState)
-	} else {
-		return fmt.Sprintf(`Validator %v is back online since epoch %v.`, n.ValidatorIndex, n.Epoch)
-	}
+	return fmt.Sprintf(`Validator %v is offline since epoch %s.`, n.ValidatorIndex, n.Epoch)
 }
 
 func (n *ValidatorIsOfflineNotification) GetLegacyTitle() string {
-	if n.IsOffline {
-		return "Validator is Offline"
-	} else {
-		return "Validator Back Online"
-	}
+	return "Validator is Offline"
+}
+
+type ValidatorIsOnlineNotification struct {
+	types.NotificationBaseImpl
+
+	ValidatorIndex uint64
+}
+
+func (n *ValidatorIsOnlineNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%d", n.ValidatorIndex)
+}
+
+// Overwrite specific methods
+func (n *ValidatorIsOnlineNotification) GetInfo(format types.NotificationFormat) string {
+	vali := formatValidatorLink(format, n.ValidatorIndex)
+	epoch := formatEpochLink(format, n.Epoch)
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	return fmt.Sprintf(`Validator %v%v is back online since epoch %v.`, vali, dashboardAndGroupInfo, epoch)
+}
+
+func (n *ValidatorIsOnlineNotification) GetTitle() string {
+	return n.GetLegacyTitle()
+}
+
+func (n *ValidatorIsOnlineNotification) GetLegacyInfo() string {
+	return fmt.Sprintf(`Validator %v is back online since epoch %v.`, n.ValidatorIndex, n.Epoch)
+}
+
+func (n *ValidatorIsOnlineNotification) GetLegacyTitle() string {
+
+	return "Validator Back Online"
 }
 
 // type validatorGroupIsOfflineNotification struct {

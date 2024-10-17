@@ -452,6 +452,7 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 
 				notificationTypesMap := make(map[types.EventName][]string)
 
+				totalBlockReward := float64(0)
 				for _, event := range types.EventSortOrder {
 					ns, ok := userNotifications[event]
 					if !ok { // nothing to do for this event type
@@ -462,6 +463,15 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					}
 					for _, n := range ns {
 						notificationTypesMap[event] = append(notificationTypesMap[event], n.GetEntitiyId())
+
+						if event == types.ValidatorProposalEventName {
+							proposalNotification, ok := n.(*ValidatorProposalNotification)
+							if !ok {
+								log.Error(fmt.Errorf("error casting proposal notification"), "", 0)
+								continue
+							}
+							totalBlockReward += proposalNotification.Reward
+						}
 					}
 					metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
 				}
@@ -489,6 +499,8 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 						bodySummary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)
 					case types.MonitoringMachineCpuLoadEventName, types.MonitoringMachineMemoryUsageEventName, types.MonitoringMachineDiskAlmostFullEventName, types.MonitoringMachineOfflineEventName:
 						bodySummary += fmt.Sprintf("%s: %d machine%s", types.EventLabel[event], count, plural)
+					case types.ValidatorProposalEventName:
+						bodySummary += fmt.Sprintf("%s: %d validator%s, total block reward: %.3f ETH", types.EventLabel[event], count, plural, totalBlockReward)
 					default:
 						bodySummary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
 					}
