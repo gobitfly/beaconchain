@@ -616,9 +616,6 @@
           },
         "entity": {
           "attestation_missed":"Attestation missed",
-          "group_back_online": "Group back online",
-          "group_offline": "Group offline",
-          "group_offline_reminder": "Group offline reminder",
           "max_collateral":"Maximum collateral reached",
           "min_collateral":"Minimum collateral reached",
           "proposal_done": "Proposal done",
