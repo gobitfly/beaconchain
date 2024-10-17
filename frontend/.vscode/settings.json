@@ -13,6 +13,7 @@
     "NotificationsManagmentMachines",
     "NotificationsNetworkTable",
     "NotificationsOverview",
+    "SubscriptionDialog",
     "a11y",
     "checkout",
     "ci",

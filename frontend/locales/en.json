@@ -844,24 +844,11 @@
           "label": "Block proposal (missed & success)"
         },
         "explanation": "All notifications are sent after network finality (~20min).",
-        "group_is_offline": {
-          "info": {
-            "_list": "Once 10% of your group is offline\nOnce you have been offline for 3 epochs\nEvery 32 Epochs (~3 hours) during your downtime\nOnce you are back online again",
-            "note": "Notification resets if you do not meet the threshold of 10%",
-            "note_bold": "Note: ",
-            "template": "We will trigger a notification: {_list}"
-          },
-          "label": "Group is offline"
-        },
         "max_collateral_reached": {
           "label": "Max collateral reached"
         },
         "min_collateral_reached": {
           "label": "Min collateral reached"
-        },
-        "real_time_mode": {
-          "info": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications.",
-          "label": "Realtime mode"
         },
         "sync_committee": {
           "label": "Sync committee"
@@ -875,7 +862,7 @@
         },
         "validator_is_offline": {
           "info": {
-            "_list": "Once the validator has been offline for 3 epochs\nEvery 32 Epochs (~3 hours) during your downtime\nOnce you are back online again",
+            "_list": "Once the validator has been offline for 3 epochs\nOnce you are back online again",
             "template": "We will trigger a notification: {_list}"
           },
           "label": "Validator is offline"
