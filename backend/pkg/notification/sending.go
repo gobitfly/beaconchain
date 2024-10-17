@@ -17,6 +17,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 )
 
@@ -268,7 +269,8 @@ func sendWebhookNotifications() error {
 			}
 			resp, err := client.Post(n.Content.Webhook.Url, "application/json", reqBody)
 			if err != nil {
-				log.Error(err, "error sending webhook request", 0)
+				log.Warnf("error sending webhook request: %v", err)
+				metrics.NotificationsSent.WithLabelValues("webhook", "error").Inc()
 				return
 			} else {
 				metrics.NotificationsSent.WithLabelValues("webhook", resp.Status).Inc()
@@ -393,7 +395,8 @@ func sendDiscordNotifications() error {
 
 				resp, err := client.Post(webhook.Url, "application/json", reqBody)
 				if err != nil {
-					log.Error(err, "error sending discord webhook request", 0)
+					log.Warnf("failed sending discord webhook request %v: %v", webhook.ID, err)
+					metrics.NotificationsSent.WithLabelValues("webhook_discord", "error").Inc()
 				} else {
 					metrics.NotificationsSent.WithLabelValues("webhook_discord", resp.Status).Inc()
 				}
@@ -413,10 +416,8 @@ func sendDiscordNotifications() error {
 						errResp.Status = resp.Status
 						resp.Body.Close()
 
-						if resp.StatusCode == http.StatusTooManyRequests {
-							log.Warnf("could not push to discord webhook due to rate limit. %v url: %v", errResp.Body, webhook.Url)
-						} else {
-							log.Error(nil, "error pushing discord webhook", 0, map[string]interface{}{"errResp.Body": errResp.Body, "webhook.Url": webhook.Url})
+						if resp.StatusCode != http.StatusOK {
+							log.WarnWithFields(map[string]interface{}{"errResp.Body": utils.FirstN(errResp.Body, 1000), "webhook.Url": webhook.Url}, "error pushing discord webhook")
 						}
 						_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, reqs[i].Content.DiscordRequest, errResp)
 						if err != nil {

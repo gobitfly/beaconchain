@@ -16,6 +16,7 @@
   },
   "clipboard": {
     "copied": "Copied!",
+    "copied_to_clipboard": "Copied to clipboard!",
     "copy": "Copy to clipboard"
   },
   "common": {
@@ -613,6 +614,25 @@
           "heading":"Delete all notifications",
           "paragraph": "Do you really want to delete all notifications for this dashboard?"
           },
+        "entity": {
+          "attestation_missed":"Attestation missed",
+          "group_back_online": "Group back online",
+          "group_offline": "Group offline",
+          "group_offline_reminder": "Group offline reminder",
+          "max_collateral":"Maximum collateral reached",
+          "min_collateral":"Minimum collateral reached",
+          "proposal_done": "Proposal done",
+          "proposal_missed": "Proposal missed",
+          "slashed": "Slashed",
+          "sync_committee": "Sync committee",
+          "title": "Notifications",
+          "upcoming_proposal": "Upcoming proposal",
+          "validator_back_online": "Validator back online",
+          "validator_offline": "Validator offline",
+          "validator_offline_reminder": "Validator offline reminder",
+          "withdrawal": "Withdrawal"
+
+        },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
           "_link": "Discord webhook",
@@ -770,8 +790,8 @@
       "headers": {
         "account_groups": "Most notified account groups",
         "email_notifications": "Email Notifications",
-        "most_notifications_24h": "Most Notifications in 24h",
         "most_notifications_30d": "Most Notifications in 30d",
+        "notifications_24h": "Notifications in 24h",
         "push_notifications": "Push Notifications",
         "validator_groups": "Most notified validator groups"
       },
@@ -784,19 +804,6 @@
         "template": "Download the {_link} to activate"
       },
       "push": "Push"
-    },
-    "rocketpool": {
-      "col": {
-        "node_address": "Node Address",
-        "notification": "Notification",
-        "rocketpool_subscription":"Rocketpool ({count} Subscriptions)"
-      },
-      "event_types": {
-        "collateral_max": "Max collateral reached",
-        "collateral_min": "Min collateral reached",
-        "reward_round": "New reward round"
-      },
-      "search_placeholder": "Node Address"
     },
     "subscriptions": {
       "accounts": {
@@ -886,8 +893,7 @@
       "dashboards": "Dashboards",
       "general": "General",
       "machines": "Machines",
-      "networks": "Networks",
-      "rocketpool": "Rocket Pool"
+      "networks": "Networks"
     },
     "title": "Notifications"
   },

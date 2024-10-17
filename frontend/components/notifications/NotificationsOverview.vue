@@ -44,7 +44,7 @@ const emit = defineEmits<{
   <div class="container">
     <div class="box">
       <section class="box-item">
-        <h3 class="overwrite-h3 big_text_label">
+        <h3 class="big_text_label">
           {{ $t('notifications.overview.headers.email_notifications') }}
         </h3>
         <div
@@ -130,7 +130,7 @@ const emit = defineEmits<{
       </section>
       <section class="box-item">
         <h3 class="overwrite-h3 big_text_label">
-          {{ $t('notifications.overview.headers.most_notifications_24h') }}
+          {{ $t('notifications.overview.headers.notifications_24h') }}
         </h3>
         <div class="big_text">
           {{ notificationsTotal }}
@@ -151,9 +151,6 @@ const emit = defineEmits<{
   @include main.container;
   padding: 17px 20px;
   position: relative;
-}
-.overwrite-h3 {
-  margin-block: unset;
 }
 .info-section, .action-section {
   display: flex;
