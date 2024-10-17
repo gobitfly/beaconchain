@@ -19,7 +19,6 @@ const tabKey = {
   dashboards: 'dashboards',
   machines: 'machines',
   networks: 'networks',
-  rocketpool: 'rocketpool',
 }
 const tabs: HashTabs = [
   {
@@ -36,10 +35,6 @@ const tabs: HashTabs = [
     icon: faBolt,
     key: tabKey.clients,
     title: $t('notifications.tabs.clients'),
-  },
-  {
-    key: tabKey.rocketpool,
-    title: $t('notifications.tabs.rocketpool'),
   },
   {
     icon: faNetworkWired,
@@ -103,14 +98,6 @@ const openManageNotifications = () => {
         </template>
         <template #[getSlotName(tabKey.clients)]>
           <NotificationsClientsTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-        <template #tab-header-icon-rocketpool>
-          <IconRocketPool />
-        </template>
-        <template #[getSlotName(tabKey.rocketpool)]>
-          <NotificationsRocketPoolTable
             @open-dialog="openManageNotifications"
           />
         </template>

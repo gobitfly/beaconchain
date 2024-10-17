@@ -805,19 +805,6 @@
       },
       "push": "Push"
     },
-    "rocketpool": {
-      "col": {
-        "node_address": "Node Address",
-        "notification": "Notification",
-        "rocketpool_subscription":"Rocketpool ({count} Subscriptions)"
-      },
-      "event_types": {
-        "collateral_max": "Max collateral reached",
-        "collateral_min": "Min collateral reached",
-        "reward_round": "New reward round"
-      },
-      "search_placeholder": "Node Address"
-    },
     "subscriptions": {
       "accounts": {
          "erc20_token_transfers": {
@@ -906,8 +893,7 @@
       "dashboards": "Dashboards",
       "general": "General",
       "machines": "Machines",
-      "networks": "Networks",
-      "rocketpool": "Rocket Pool"
+      "networks": "Networks"
     },
     "title": "Notifications"
   },
