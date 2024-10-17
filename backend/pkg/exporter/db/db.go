@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -854,11 +856,77 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 }
 
 type EpochMetadata struct {
-	Epoch             uint64     `db:"epoch"`
-	InsertBatchID     *uuid.UUID `db:"insert_batch_id"`
-	SucesfulInsert    *time.Time `db:"successful_insert"`
-	TransferBatchId   *uuid.UUID `db:"transfer_batch_id"`
-	SucessfulTransfer *time.Time `db:"successful_transfer"`
+	Epoch              uint64     `db:"epoch"`
+	InsertBatchID      *uuid.UUID `db:"insert_batch_id"`
+	SucesfulInsert     *time.Time `db:"successful_insert"`
+	TransferBatchId    *uuid.UUID `db:"transfer_batch_id"`
+	SuccessfulTransfer *time.Time `db:"successful_transfer"`
+}
+
+//
+// |-GetIncompleteTransferEpochs
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
+// |-GetPendingTransferEpochs
+// | - allocate transfer batch ids
+// | - PushEpochMetadata (transfer_batch_id)
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
+
+func TransferEpochs(epochs []EpochMetadata) error {
+	// sanity check, verify that the transfer batch id is set and identical for all epochs
+	transferBatchID := epochs[0].TransferBatchId
+	for _, e := range epochs {
+		if e.TransferBatchId == nil || *e.TransferBatchId != *transferBatchID {
+			return fmt.Errorf("transfer batch id is not set or not identical for all epochs")
+		}
+	}
+	// sort the epochs
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i].Epoch < epochs[j].Epoch
+	})
+	// transfer the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"insert_deduplication_token":    transferBatchID.String(),
+		"select_sequential_consistency": 1,
+	}))
+	// sanity check, check that there are more than a thousand entries for each epoch
+	const minEpochEntries = 1000
+	for _, e := range epochs {
+		var count int
+		err := db.ClickHouseReader.Get(&count, fmt.Sprintf(`
+			SELECT count() as count
+			FROM %s
+			FINAL
+			WHERE epoch_timestamp = $1
+			SETTINGS select_sequential_consistency = 1
+		`, UnsafeEpochsTableName), utils.EpochToTime(e.Epoch))
+		if err != nil {
+			return fmt.Errorf("error fetching epoch count: %w", err)
+		}
+		if count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the unsafe table", e.Epoch)
+		}
+	}
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into %s
+		select
+			* EXCEPT _inserted_at
+		from
+			%s FINAL
+		where
+			epoch_timestamp >= $1 and epoch_timestamp <= $2 
+	`, FinalEpochsTableName, UnsafeEpochsTableName),
+		utils.EpochToTime(epochs[0].Epoch),
+		utils.EpochToTime(epochs[len(epochs)-1].Epoch),
+	)
+	if err != nil {
+		return fmt.Errorf("error transferring epochs: %w", err)
+	}
+	return nil
 }
 
 func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
@@ -873,45 +941,34 @@ func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because 
 			SETTINGS select_sequential_consistency = 1
 		`, ExporterMetadataTableName))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching incomplete insert epochs: %w", err)
 	}
 	return epochs, nil
 }
 
-// order of action
-// |-GetIncompleteInsertEpochs
-// | - FetchEpochs
-// | - PushEpochs
-// | - PushEpochMetadata (successful_insert)
-// |-GetPendingInsertEpochs
-// | - allocate insert batch ids
-// | - PushEpochMetadata (insert_batch_id)
-// | - FetchEpochs
-// | - PushEpochs
-// | - PushEpochMetadata (successful_insert)
-//
-// |-GetIncompleteTransferEpochs
-// | - TransferEpochs
-// | - PushEpochMetadata (successful_transfer)
-// |-GetPendingTransferEpochs
-// | - allocate transfer batch ids
-// | - PushEpochMetadata (transfer_batch_id)
-// | - TransferEpochs
-// | - PushEpochMetadata (successful_transfer)
-
-func GetPendingInsertEpochs(maxEpoch uint64, limit int64) ([]EpochMetadata, error) {
+func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error) { // done
 	var epochs []EpochMetadata
-	err := db.ClickHouseReader.Select(&epochs,
-		fmt.Sprintf(`
-			SELECT *
-			FROM %s
-			FINAL
-			WHERE (successful_insert IS NULL) AND (insert_batch_id IS NULL) AND (epoch <= %d)
-			ORDER BY epoch ASC
-			SETTINGS select_sequential_consistency = 1
-		`, ExporterMetadataTableName, maxEpoch))
+	// max epoch with assigned insert batch id
+	maxAssignedEpoch := int64(0)
+	err := db.ClickHouseReader.Get(&maxAssignedEpoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch)), -1) as max_epoch
+		FROM %s
+		FINAL
+		WHERE (insert_batch_id IS NOT NULL)
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching max assigned epoch: %w", err)
+	}
+	// cap the max epoch to the limit
+	if maxAssignedEpoch > maxEpoch {
+		return nil, fmt.Errorf("max assigned epoch %v is greater than the max epoch %v", maxAssignedEpoch, maxEpoch)
+	}
+	if maxEpoch > maxAssignedEpoch+limit {
+		maxEpoch = maxAssignedEpoch + limit
+	}
+	for i := maxAssignedEpoch + 1; i <= maxEpoch; i++ {
+		epochs = append(epochs, EpochMetadata{Epoch: uint64(i)})
 	}
 	return epochs, nil
 }
@@ -928,7 +985,7 @@ func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit becaus
 			SETTINGS select_sequential_consistency = 1
 		`, ExporterMetadataTableName))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching incomplete transfer epochs: %w", err)
 	}
 	return epochs, nil
 }
@@ -945,7 +1002,7 @@ func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 			SETTINGS select_sequential_consistency = 1
 		`, ExporterMetadataTableName))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching pending transfer epochs: %w", err)
 	}
 	return epochs, nil
 }
@@ -954,18 +1011,21 @@ func PushEpochMetadata(metdata []EpochMetadata) error {
 	if len(metdata) == 0 {
 		return nil
 	}
-	_, err := db.ClickHouseWriter.NamedExec(fmt.Sprintf(`
-		INSERT INTO %s
-		(epoch, insert_batch_id, successful_insert, transfer_batch_id, successful_transfer)
-		VALUES
-		(:epoch, :insert_batch_id, :successful_insert, :transfer_batch_id, :successful_transfer)
-	`, ExporterMetadataTableName), metdata)
-	return err
-}
-
-func DeleteUnsafeEpoch(epoch uint64) error {
-	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf("DELETE FROM %s WHERE epoch_timestamp = $1", UnsafeEpochsTableName), utils.EpochToTime(epoch))
-	return err
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO`+ExporterMetadataTableName)
+	if err != nil {
+		return fmt.Errorf("error preparing batch: %w", err)
+	}
+	for _, m := range metdata {
+		if err := batch.AppendStruct(m); err != nil {
+			return fmt.Errorf("error appending struct to batch: %w", err)
+		}
+	}
+	if err := batch.Send(); err != nil {
+		return fmt.Errorf("error sending batch: %w", err)
+	}
+	return nil
 }
 
 func GetGapsInEpochMap(table string, minEpoch uint64, maxStaleEpoch int64, latestMapOnly bool) ([]uint64, error) {

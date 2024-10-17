@@ -192,11 +192,10 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 	switch {
 	case version == -3:
 		// downgrade once branch. 15 second countdown to prevent shit hitting the fan
-		/*for i := 0; i < 15; i++ {
+		for i := 0; i < 15; i++ {
 			log.Warnf("downgrading %s by one version. you have %d seconds to abort the command", database, 15-i)
 			time.Sleep(time.Second)
 		}
-		*/
 		if err := goose.Down(targetDB.DB, migrationPath); err != nil {
 			return err
 		}

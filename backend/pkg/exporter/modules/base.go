@@ -65,7 +65,7 @@ func StartAll(context ModuleContext) {
 	*/
 	// wait until the beacon-node is available
 	for {
-		head, err := context.ConsClient[0].GetChainHead()
+		head, err := context.ConsClient.GetChainHead()
 		if err == nil {
 			log.Infof("beacon node is available with head slot: %v", head.HeadSlot)
 			break
@@ -182,7 +182,7 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 	log.Infof("subscribing to node events")
 
 	// subscribe to node events and notify modules
-	events := context.CL[0].GetEvents([]types.EventTopic{
+	events := context.CL.GetEvents([]types.EventTopic{
 		types.EventHead,
 		types.EventFinalizedCheckpoint,
 		types.EventChainReorg,
@@ -251,37 +251,35 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 func GetModuleContext() (ModuleContext, error) {
 	var moduleContext ModuleContext
 
-	for _, node := range utils.Config.Indexer.Node {
-		cl := consapi.NewClient("http://" + node.Host + ":" + node.Port)
+	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 
-		spec, err := cl.GetSpec()
-		if err != nil {
-			log.Fatal(err, "error getting spec", 0)
-		}
-
-		config.ClConfig = &spec.Data
-
-		nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-		if !ok {
-			return ModuleContext{}, errors.New("lighthouse client can only be used with real node impl")
-		}
-
-		chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-
-		clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
-		if err != nil {
-			log.Fatal(err, "error creating lighthouse client", 0)
-		}
-		moduleContext.CL = append(moduleContext.CL, cl)
-		moduleContext.ConsClient = append(moduleContext.ConsClient, clClient)
+	spec, err := cl.GetSpec()
+	if err != nil {
+		log.Fatal(err, "error getting spec", 0)
 	}
+
+	config.ClConfig = &spec.Data
+
+	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
+	if !ok {
+		return ModuleContext{}, errors.New("lighthouse client can only be used with real node impl")
+	}
+
+	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
+
+	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
+	if err != nil {
+		log.Fatal(err, "error creating lighthouse client", 0)
+	}
+	moduleContext.CL = cl
+	moduleContext.ConsClient = clClient
 
 	return moduleContext, nil
 }
 
 type ModuleContext struct {
-	CL         []consapi.Client
-	ConsClient []*rpc.LighthouseClient
+	CL         consapi.Client
+	ConsClient *rpc.LighthouseClient
 }
 
 type ModuleLog struct {

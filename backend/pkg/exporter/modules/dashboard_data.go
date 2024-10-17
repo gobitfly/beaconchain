@@ -79,10 +79,6 @@ const databaseAggregationParallelism = 2
 // Try 0 if agg_and_storage_time is < node_fetch_time
 const backfillMaxUnaggregatedIterations = 1
 
-func getNodeId[T int64 | uint64](a T) int {
-	return int(a) % len(utils.Config.Indexer.Node)
-}
-
 type dashboardData struct {
 	ModuleContext
 	log               ModuleLog
@@ -129,51 +125,7 @@ type Task struct {
 }
 
 func (d *dashboardData) Init() error {
-	for {
-		// get tasks
-		tasks, err := d.getTasksFromDb()
-		if err != nil {
-			d.log.Error(err, "failed to get tasks from db", 0)
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		// debug log tasks
-		for _, task := range tasks {
-			// nicely formatted log message. you can see the schema above
-			d.log.Infof("uuid: %s, priority: %d, start_ts: %s, end_ts: %s, status: %s", task.UUID, task.Priority, task.StartTs, task.EndTs, task.Status)
-		}
-
-		// get next todo task - task that is not marked as complete
-		var nextTask *Task
-		for _, task := range tasks {
-			if task.Status != "completed" {
-				nextTask = &task
-				break
-			}
-		}
-		if nextTask == nil {
-			d.log.Warnf("no tasks to do, idling and checking again in 60 seconds")
-			time.Sleep(60 * time.Second)
-			continue
-		}
-		if nextTask.Status == "running" {
-			// we will will overtake this task, we assume that only one exporter ever runs per hostname
-			d.log.Warnf("task %s is already running, taking over and continuing", nextTask.UUID)
-		} else {
-			// update
-			_ = db.ClickHouseWriter.MustExec("ALTER TABLE _exporter_tasks UPDATE status = 'running' WHERE uuid = ?", nextTask.UUID)
-		}
-		// start export using startTs and endTs
-		err = d.backfillHeadEpochData(nextTask.StartTs, nextTask.EndTs)
-		if err != nil {
-			// try again in 10 seconds
-			d.log.Error(err, "failed to backfill epoch data", 0)
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		// update task to completed
-		_ = db.ClickHouseWriter.MustExec("ALTER TABLE _exporter_tasks UPDATE status = 'completed' WHERE uuid = ?", nextTask.UUID)
-	}
+	go d.maintenanceTask() // does all the transferring of the data
 	/*
 		go func() {
 			d.processHeadQueue()
@@ -212,83 +164,6 @@ func (d *dashboardData) Init() error {
 
 	return nil
 }
-
-/*
-
-func (d *dashboardData) processHeadQueue() {
-	reachedHead := false
-	for {
-		epoch := <-d.headEpochQueue
-
-		// skip any intermediate epochs
-		for len(d.headEpochQueue) > 1 {
-			epoch = <-d.headEpochQueue
-		}
-		if d.backFillCompleted {
-			if len(d.headEpochQueue) == 0 && !reachedHead {
-				d.log.Infof("exporter is at head of the chain")
-				reachedHead = true
-			}
-
-			startTime := time.Now()
-			d.log.Infof("exporting dashboard epoch data for epoch %d", epoch)
-			for {
-				_, err := d.backfillHeadEpochData(&epoch)
-				if err != nil {
-					d.log.Error(err, "failed to backfill head epoch data", 0, map[string]interface{}{"epoch": epoch})
-					metrics.Errors.WithLabelValues("exporter_v25dash_backfill_fail").Inc()
-					time.Sleep(time.Second * 10)
-					continue
-				}
-				// update rollings using refreshRollings
-				err = d.refreshAllRollings(epoch)
-				if err != nil {
-					d.log.Error(err, "failed to refresh rollings", 0, map[string]interface{}{"epoch": epoch})
-					metrics.Errors.WithLabelValues("exporter_v25dash_refresh_rollings_fail").Inc()
-					time.Sleep(time.Second * 10)
-					continue
-				}
-
-				break
-			}
-
-			d.log.Infof("[time] completed dashboard epoch data for epoch %d in %v", epoch, time.Since(startTime))
-			metrics.State.WithLabelValues("exporter_v25dash_last_exported_epoch").Set(float64(epoch))
-		}
-		// we do maintenance tasks even if backfill is not completed
-		s := time.Now()
-		utils.SendMessage(fmt.Sprintf("🔧 v2.5 Dashboard %s - Starting maintenance tasks", utils.Config.Chain.Name), &utils.Config.InternalAlerts)
-		var staleEpochs []uint64
-		for {
-			var err error
-			staleEpochs, err = edb.GetStaleEpochs(epoch, 450) // 2 days, for mainnet.
-			if err != nil {
-				d.log.Error(err, "failed to get stale epochs", 0)
-				metrics.Errors.WithLabelValues("exporter_v25dash_stale_epochs_fail").Inc()
-				time.Sleep(time.Second * 10)
-				continue
-			}
-			break
-		}
-		utils.SendMessage(fmt.Sprintf("🔧 v2.5 Dashboard %s - Found stale epochs: `%v`", utils.Config.Chain.Name, staleEpochs), &utils.Config.InternalAlerts)
-		for {
-			err := d.maintainEpochs(staleEpochs)
-			if err != nil {
-				d.log.Error(err, "failed to maintain epochs", 0)
-				metrics.Errors.WithLabelValues("exporter_v25dash_maintenance_fail").Inc()
-				time.Sleep(time.Second * 10)
-				continue
-			}
-			break
-		}
-		d.log.Infof("[time] completed maintenance tasks in %v", time.Since(s))
-		metrics.TaskDuration.WithLabelValues("exporter_v25dash_maintenance").Observe(time.Since(s).Seconds())
-		utils.SendMessage(fmt.Sprintf("🔧 v2.5 Dashboard %s - Completed maintenance tasks in %s", utils.Config.Chain.Name, time.Since(s)), &utils.Config.InternalAlerts)
-
-	}
-	d.log.Fatal(errors.Errorf("head epoch queue closed"), "head epoch queue closed", 0)
-}
-*/
 
 // fetches and processes epoch data and provides them via the nextDataChan
 // expects ordered epochs in ascending order
@@ -388,63 +263,6 @@ func getEpochParallelGroups(epochs []uint64, parallelism int) []EpochParallelGro
 	return parallelGroups
 }
 
-func (d *dashboardData) maintainGroupsTask(startEpoch, endEpoch uint64, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		stale, err := edb.GetStaleEpochs(startEpoch, endEpoch, 1000)
-		if err != nil {
-			d.log.Error(err, "failed to get stale epochs", 0)
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		// limit to x parallel runs
-		g := &errgroup.Group{}
-		g.SetLimit(6)
-		d.log.Infof("maintainGroupsTask, found %d stale epochs", len(stale))
-		for _, e := range stale {
-			epoch := e
-			g.Go(func() error {
-				d.log.Infof("maintainGroupsTask, maintaining epoch %d", epoch)
-				for {
-					err = d.maintainEpochGroup([]uint64{epoch})
-					if err != nil {
-						d.log.Error(err, "failed to maintain epoch", 0, map[string]interface{}{"epoch": epoch})
-						utils.SendMessage(fmt.Sprintf("🔧 v2.5 Dashboard %s - Failed to maintain epoch %d", utils.Config.Chain.Name, epoch), &utils.Config.InternalAlerts)
-						time.Sleep(10 * time.Second)
-						continue
-					}
-					break
-				}
-				d.log.Infof("maintainGroupsTask, done maintaining epoch %d", epoch)
-
-				return nil
-			})
-		}
-		g.Wait()
-		// check if there are the expected amount of epochs in the final table
-		// if not, repeat
-		// if yes, break
-		is_done, err := edb.IsEpochsInFinalTable(startEpoch, endEpoch)
-		if !is_done || err != nil {
-			if err != nil {
-				d.log.Error(err, "failed to check if epochs are in final table", 0)
-			}
-			if len(stale) != 0 {
-				d.log.Infof("maintainGroupsTask, epochs %d to %d not in final table, repeating maintenance (did %d this loop)", startEpoch, endEpoch, len(stale))
-				utils.SendMessage(fmt.Sprintf("🔧 v2.5 Dashboard %s - Epochs %d to %d not in final table, repeating maintenance (did %d this loop)", utils.Config.Chain.Name, startEpoch, endEpoch, len(stale)), &utils.Config.InternalAlerts)
-				time.Sleep(30 * time.Second)
-			} else {
-				d.log.Infof("maintainGroupsTask, epochs %d to %d not in final table, repeating maintenance", startEpoch, endEpoch)
-				time.Sleep(10 * time.Second)
-			}
-			continue
-		}
-		d.log.Infof("maintainGroupsTask, epochs %d to %d are in final table", startEpoch, endEpoch)
-		break
-	}
-
-}
-
 // can be used to start a backfill up to epoch
 // returns true if there was nothing to backfill, otherwise returns false
 // if upToEpoch is nil, it will backfill until the latest finalized epoch
@@ -459,7 +277,7 @@ func (d *dashboardData) backfillHeadEpochData(startTs time.Time, endTs time.Time
 	var startEpoch, endEpoch int64
 	startEpoch = utils.TimeToEpoch(startTs)
 	if backfillToChainFinalizedHead {
-		res, err := d.CL[0].GetFinalityCheckpoints("head")
+		res, err := d.CL.GetFinalityCheckpoints("head")
 		if err != nil {
 			return errors.Wrap(err, "failed to get finalized checkpoint")
 		}
@@ -474,7 +292,6 @@ func (d *dashboardData) backfillHeadEpochData(startTs time.Time, endTs time.Time
 	} else {
 		endEpoch = utils.TimeToEpoch(endTs)
 	}
-	go d.maintainGroupsTask(uint64(startEpoch), uint64(endEpoch), &wg)
 	gaps, err := edb.GetMissingEpochsBetween(startEpoch, endEpoch)
 	if err != nil {
 		return errors.Wrap(err, "failed to get epoch gaps")
@@ -630,30 +447,20 @@ func (d *dashboardData) writeEpochDatas(datas []db.VDBDataEpochColumns) {
 }
 
 func (d *dashboardData) OnFinalizedCheckpoint(t *constypes.StandardFinalizedCheckpointResponse) error {
-	d.log.Infof("finalized checkpoint %v (backfill completed: %v)", t, d.backFillCompleted)
-	// random sleep to hit race condition due to load balancer
-	time.Sleep(12 * time.Second)
+	d.log.Infof("=>finalized checkpoint %v", t)
+	if t == nil { // idk man you gave me a pointer it could be nil
+		return nil
+	}
 
-	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
-	// An epoch becomes finalized once the next epoch gets justified
-	// Hence we just listen for new justified epochs here and fetch the latest finalized one from the node
-	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
-	res, err := d.CL[0].GetFinalityCheckpoints("head")
+	res, err := d.CL.GetFinalityCheckpoints("head")
 	if err != nil {
 		return err
 	}
 
-	latestExported, err := edb.GetLatestDashboardEpoch()
 	if err != nil {
 		return err
 	}
 
-	if latestExported != 0 {
-		if res.Data.Finalized.Epoch-2 <= latestExported {
-			d.log.Infof("dashboard epoch data already exported for epoch %d", res.Data.Finalized.Epoch)
-			return nil
-		}
-	}
 	metrics.State.WithLabelValues("exporter_v25dash_last_finalized_epoch").Set(float64(res.Data.Finalized.Epoch))
 	metrics.State.WithLabelValues("exporter_v25dash_safe_to_export_epoch").Set(float64(res.Data.Finalized.Epoch - 2))
 
@@ -1819,7 +1626,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			virtualEpoch := startEpoch + int64(i)
 			g2.Go(func() error {
 				// aquiring semaphore
-				nodeId := getNodeId(virtualEpoch)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("heavy")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
@@ -1830,9 +1636,9 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				start := time.Now()
 				var valis *constypes.StandardValidatorsResponse
 				if slot == 0 {
-					valis, err = d.CL[nodeId].GetValidators("genesis", nil, nil)
+					valis, err = d.CL.GetValidators("genesis", nil, nil)
 				} else {
-					valis, err = d.CL[nodeId].GetValidators(slot, nil, nil)
+					valis, err = d.CL.GetValidators(slot, nil, nil)
 				}
 				d.log.Infof("retrieved validator state at slot %d in %v", slot, time.Since(start))
 				if err != nil {
@@ -1905,7 +1711,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			syncPeriod := s
 			g2.Go(func() error {
 				// aquiring semaphore
-				nodeId := getNodeId(syncPeriod)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("medium")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
@@ -1914,7 +1719,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
 				relevantSlot := utils.FirstEpochOfSyncPeriod(syncPeriod) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-				assignments, err := d.CL[nodeId].GetSyncCommitteesAssignments(nil, relevantSlot)
+				assignments, err := d.CL.GetSyncCommitteesAssignments(nil, relevantSlot)
 				if err != nil {
 					d.log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"syncPeriod": syncPeriod})
 					return err
@@ -1935,7 +1740,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			g2.Go(func() error {
 				slot := utils.FirstEpochOfSyncPeriod(syncPeriod) * utils.Config.Chain.ClConfig.SlotsPerEpoch
 				// aquiring semaphore
-				nodeId := getNodeId(slot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("heavy")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
@@ -1943,7 +1747,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
-				valis, err := d.CL[nodeId].GetValidators(slot, nil, nil)
+				valis, err := d.CL.GetValidators(slot, nil, nil)
 				if err != nil {
 					d.log.Error(err, "can not get sync committee state", 0, map[string]interface{}{"syncPeriod": syncPeriod})
 					return err
@@ -2003,7 +1807,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 
-				block, err := d.CL[getNodeId(slot)].GetSlot(slot)
+				block, err := d.CL.GetSlot(slot)
 				if err != nil {
 					httpErr := network.SpecificError(err)
 					if httpErr != nil && httpErr.StatusCode == 404 {
@@ -2014,7 +1818,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					return err
 				}
 				// header
-				header, err := d.CL[getNodeId(slot)].GetBlockHeader(slot)
+				header, err := d.CL.GetBlockHeader(slot)
 				if err != nil {
 					d.log.Error(err, "can not get block header", 0, map[string]interface{}{"slot": slot})
 					return err
@@ -2084,7 +1888,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			slot := i
 			g2.Go(func() error {
 				// aquiring semaphore
-				nodeId := getNodeId(slot)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("light")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
@@ -2092,7 +1895,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				//start := time.Now()
-				data, err := d.CL[nodeId].GetPropoalRewards(slot)
+				data, err := d.CL.GetPropoalRewards(slot)
 				if err != nil {
 					httpErr := network.SpecificError(err)
 					if httpErr != nil && httpErr.StatusCode == 404 {
@@ -2135,7 +1938,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			}
 			g2.Go(func() error {
 				// aquiring semaphore
-				nodeId := getNodeId(slot)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("medium")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
@@ -2143,7 +1945,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				//start := time.Now()
-				data, err := d.CL[nodeId].GetSyncRewards(slot)
+				data, err := d.CL.GetSyncRewards(slot)
 				if err != nil {
 					httpErr := network.SpecificError(err)
 					if httpErr != nil && httpErr.StatusCode == 404 {
@@ -2186,7 +1988,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				//start := time.Now()
 				start := time.Now()
-				data, err := d.CL[getNodeId(epoch)].GetPropoalAssignments(epoch)
+				data, err := d.CL.GetPropoalAssignments(epoch)
 				if err != nil {
 					d.log.Error(err, "can not get block assignments", 0, map[string]interface{}{"epoch": epoch})
 					return err
@@ -2220,7 +2022,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			epoch := e
 			g2.Go(func() error {
 				// aquiring semaphore
-				nodeId := getNodeId(epoch)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("heavy")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
@@ -2228,7 +2029,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
-				data, err := d.CL[nodeId].GetAttestationRewards(epoch)
+				data, err := d.CL.GetAttestationRewards(epoch)
 				if err != nil {
 					d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
 					return err
@@ -2265,7 +2066,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			g2.Go(func() error {
 				// fetch assignment using last fetchSlot in epoch. somehow thats faster than using the first fetchSlot. dont ask why
 				fetchSlot := (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
-				nodeId := getNodeId(epoch)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("heavy")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
@@ -2273,7 +2073,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
-				data, err := d.CL[nodeId].GetCommittees(fetchSlot, nil, nil, nil)
+				data, err := d.CL.GetCommittees(fetchSlot, nil, nil, nil)
 				if err != nil {
 					d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"slot": fetchSlot})
 					return err
@@ -2913,29 +2713,7 @@ func (d *dashboardData) maintainEpochs(staleEpochs []uint64) error {
 }
 
 func (d *dashboardData) maintainEpochGroup(targetGroup []uint64) error {
-	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
-		"insert_deduplication_token":    fmt.Sprintf("epoch_%d_%d", targetGroup[0], targetGroup[len(targetGroup)-1]),
-		"select_sequential_consistency": 1,
-	}), ch.WithLogs(func(l *ch.Log) {
-		d.log.Infof("clickhouse log: %s", l.Text)
-	}))
-	err := db.ClickHouseNativeWriter.Exec(ctx,
-		fmt.Sprintf(`
-		insert into %s
-		select
-			* EXCEPT _inserted_at
-		from
-			%s FINAL
-		where
-			epoch_timestamp >= $1 and epoch_timestamp <= $2 
-	`, edb.FinalEpochsTableName, edb.UnsafeEpochsTableName),
-		utils.EpochToTime(targetGroup[0]),
-		utils.EpochToTime(targetGroup[len(targetGroup)-1]))
-	if err != nil {
-		return fmt.Errorf("error in maintainEpochGroup: %w", err)
-	}
+
 	return nil
 }
 

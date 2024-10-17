@@ -118,7 +118,7 @@ func main() {
 		log.Fatal(err, "error initializing bigtable", 0)
 	}
 
-	cl := consapi.NewClient("http://" + cfg.Indexer.Node[0].Host + ":" + cfg.Indexer.Node[0].Port)
+	cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
 	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
 	if !ok {
 		log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)

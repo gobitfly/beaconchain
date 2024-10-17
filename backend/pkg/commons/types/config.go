@@ -110,7 +110,7 @@ type Config struct {
 	} `yaml:"clickhouse"`
 	Indexer struct {
 		Enabled bool `yaml:"enabled" envconfig:"INDEXER_ENABLED"`
-		Node    []struct {
+		Node    struct {
 			Port     string `yaml:"port" envconfig:"INDEXER_NODE_PORT"`
 			Host     string `yaml:"host" envconfig:"INDEXER_NODE_HOST"`
 			Type     string `yaml:"type" envconfig:"INDEXER_NODE_TYPE"`
