@@ -343,6 +343,11 @@ func handleErr(w http.ResponseWriter, r *http.Request, err error) {
 		returnTooManyRequests(w, r, err)
 	case errors.Is(err, errGone):
 		returnGone(w, r, err)
+	case errors.Is(err, context.Canceled):
+		if r.Context().Err() != context.Canceled { // only return error if the request context was canceled
+			logApiError(r, err, 1)
+			returnError(w, r, http.StatusInternalServerError, err)
+		}
 	default:
 		logApiError(r, err, 1)
 		// TODO: don't return the error message to the user in production
