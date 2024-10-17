@@ -28,6 +28,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 	n "github.com/gobitfly/beaconchain/pkg/notification"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -62,17 +63,18 @@ type NotificationsRepository interface {
 func (*DataAccessService) registerNotificationInterfaceTypes() {
 	var once sync.Once
 	once.Do(func() {
-		gob.Register(&n.ValidatorProposalNotification{})
-		gob.Register(&n.ValidatorAttestationNotification{})
-		gob.Register(&n.ValidatorIsOfflineNotification{})
-		gob.Register(&n.ValidatorGotSlashedNotification{})
-		gob.Register(&n.ValidatorWithdrawalNotification{})
-		gob.Register(&n.NetworkNotification{})
-		gob.Register(&n.RocketpoolNotification{})
-		gob.Register(&n.MonitorMachineNotification{})
-		gob.Register(&n.TaxReportNotification{})
-		gob.Register(&n.EthClientNotification{})
-		gob.Register(&n.SyncCommitteeSoonNotification{})
+		gob.Register(&notification.ValidatorProposalNotification{})
+		gob.Register(&notification.ValidatorAttestationNotification{})
+		gob.Register(&notification.ValidatorIsOfflineNotification{})
+		gob.Register(&notification.ValidatorIsOnlineNotification{})
+		gob.Register(&notification.ValidatorGotSlashedNotification{})
+		gob.Register(&notification.ValidatorWithdrawalNotification{})
+		gob.Register(&notification.NetworkNotification{})
+		gob.Register(&notification.RocketpoolNotification{})
+		gob.Register(&notification.MonitorMachineNotification{})
+		gob.Register(&notification.TaxReportNotification{})
+		gob.Register(&notification.EthClientNotification{})
+		gob.Register(&notification.SyncCommitteeSoonNotification{})
 	})
 }
 
@@ -546,14 +548,18 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 					continue
 				}
-				if curNotification.IsOffline {
-					notificationDetails.ValidatorOffline = append(notificationDetails.ValidatorOffline, curNotification.ValidatorIndex)
-				} else {
-					// TODO EpochCount is not correct, missing / cumbersome to retrieve from backend - using "back online since" instead atm
-					notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
-				}
+				notificationDetails.ValidatorOffline = append(notificationDetails.ValidatorOffline, curNotification.ValidatorIndex)
 				// TODO not present in backend yet
 				//notificationDetails.ValidatorOfflineReminder = ...
+			case types.ValidatorIsOnlineEventName:
+				curNotification, ok := notification.(*n.ValidatorIsOnlineNotification)
+				if !ok {
+					return nil, fmt.Errorf("failed to cast notification to ValidatorIsOnlineNotification")
+				}
+				if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+					continue
+				}
+				notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
 			case types.ValidatorGroupIsOfflineEventName:
 				// TODO type / collection not present yet, skipping
 				/*curNotification, ok := not.(*notification.validatorGroupIsOfflineNotification)
