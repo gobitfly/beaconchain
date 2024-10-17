@@ -1,6 +1,9 @@
 package types
 
-import "github.com/shopspring/decimal"
+import (
+	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
+)
 
 // ------------------------------------------------------------
 // Overview
@@ -17,12 +20,11 @@ type NotificationOverviewData struct {
 	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
 
 	// counts are shown in their respective tables
-	VDBSubscriptionsCount       uint64 `json:"vdb_subscriptions_count"`
-	ADBSubscriptionsCount       uint64 `json:"adb_subscriptions_count"`
-	MachinesSubscriptionCount   uint64 `json:"machines_subscription_count"`
-	ClientsSubscriptionCount    uint64 `json:"clients_subscription_count"`
-	RocketPoolSubscriptionCount uint64 `json:"rocket_pool_subscription_count"`
-	NetworksSubscriptionCount   uint64 `json:"networks_subscription_count"`
+	VDBSubscriptionsCount     uint64 `db:"vdb_subscriptions_count" json:"vdb_subscriptions_count"`
+	ADBSubscriptionsCount     uint64 `db:"adb_subscriptions_count" json:"adb_subscriptions_count"`
+	MachinesSubscriptionCount uint64 `db:"machines_subscription_count" json:"machines_subscription_count"`
+	ClientsSubscriptionCount  uint64 `db:"clients_subscription_count" json:"clients_subscription_count"`
+	NetworksSubscriptionCount uint64 `db:"networks_subscription_count" json:"networks_subscription_count"`
 }
 
 type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewData]
@@ -30,14 +32,15 @@ type InternalGetUserNotificationsResponse ApiDataResponse[NotificationOverviewDa
 // ------------------------------------------------------------
 // Dashboards Table
 type NotificationDashboardsTableRow struct {
-	IsAccountDashboard bool     `json:"is_account_dashboard"` // if false it's a validator dashboard
-	ChainId            uint64   `json:"chain_id"`
-	Timestamp          int64    `json:"timestamp"`
-	DashboardId        uint64   `json:"dashboard_id"`
-	GroupName          string   `json:"group_name"`
-	NotificationId     uint64   `json:"notification_id"` // may be string? db schema is not defined afaik
-	EntityCount        uint64   `json:"entity_count"`
-	EventTypes         []string `json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'sync' | 'withdrawal' | 'got_slashed' | 'has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"oneof: validator_offline, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, sync, withdrawal, slashed_own, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
+	IsAccountDashboard bool           `db:"is_account_dashboard" json:"is_account_dashboard"` // if false it's a validator dashboard
+	ChainId            uint64         `db:"chain_id" json:"chain_id"`
+	Epoch              uint64         `db:"epoch" json:"epoch"`
+	DashboardId        uint64         `db:"dashboard_id" json:"dashboard_id"`
+	DashboardName      string         `db:"dashboard_name" json:"-"` // not exported, internal use only
+	GroupId            uint64         `db:"group_id" json:"group_id"`
+	GroupName          string         `db:"group_name" json:"group_name"`
+	EntityCount        uint64         `db:"entity_count" json:"entity_count"`
+	EventTypes         pq.StringArray `db:"event_types" json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
@@ -45,35 +48,35 @@ type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[Notificatio
 // ------------------------------------------------------------
 // Validator Dashboard Notification Detail
 
-type NotificationEventGroup struct {
-	GroupName   string `json:"group_name"`
-	DashboardID uint64 `json:"dashboard_id"`
-}
-type NotificationEventGroupBackOnline struct {
-	GroupName   string `json:"group_name"`
-	DashboardID uint64 `json:"dashboard_id"`
-	EpochCount  uint64 `json:"epoch_count"`
-}
-
 type NotificationEventValidatorBackOnline struct {
 	Index      uint64 `json:"index"`
 	EpochCount uint64 `json:"epoch_count"`
 }
 
+type NotificationEventWithdrawal struct {
+	Index   uint64          `json:"index"`
+	Amount  decimal.Decimal `json:"amount"`
+	Address Address         `json:"address"`
+}
+
 type NotificationValidatorDashboardDetail struct {
+	DashboardName            string                                 `db:"dashboard_name" json:"dashboard_name"`
+	GroupName                string                                 `db:"group_name" json:"group_name"`
 	ValidatorOffline         []uint64                               `json:"validator_offline"` // validator indices
-	GroupOffline             []NotificationEventGroup               `json:"group_offline"`
-	ProposalMissed           []IndexBlocks                          `json:"proposal_missed"`
+	GroupOffline             bool                                   `json:"group_offline"`     // TODO not filled yet
+	ProposalMissed           []IndexSlots                           `json:"proposal_missed"`
 	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
-	UpcomingProposals        []uint64                               `json:"upcoming_proposals"` // slot numbers
+	UpcomingProposals        []IndexSlots                           `json:"upcoming_proposals"`
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
 	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
-	AttestationMissed        []IndexBlocks                          `json:"attestation_missed"`
-	Withdrawal               []IndexBlocks                          `json:"withdrawal"`
-	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices
-	GroupOfflineReminder     []NotificationEventGroup               `json:"group_offline_reminder"`
+	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
+	Withdrawal               []NotificationEventWithdrawal          `json:"withdrawal"`
+	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
+	GroupOfflineReminder     bool                                   `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
-	GroupBackOnline          []NotificationEventGroupBackOnline     `json:"group_back_online"`
+	GroupBackOnline          uint64                                 `json:"group_back_online"`      // TODO not filled yet
+	MinimumCollateralReached []Address                              `json:"min_collateral_reached"` // node addresses
+	MaximumCollateralReached []Address                              `json:"max_collateral_reached"` // node addresses
 }
 
 type InternalGetUserNotificationsValidatorDashboardResponse ApiDataResponse[NotificationValidatorDashboardDetail]
@@ -99,7 +102,7 @@ type InternalGetUserNotificationsAccountDashboardResponse ApiDataResponse[Notifi
 // Machines Table
 type NotificationMachinesTableRow struct {
 	MachineName string  `json:"machine_name"`
-	Threshold   float64 `json:"threshold" faker:"boundary_start=0, boundary_end=1"`
+	Threshold   float64 `json:"threshold,omitempty" faker:"boundary_start=0, boundary_end=1"`
 	EventType   string  `json:"event_type" tstype:"'offline' | 'storage' | 'cpu' | 'memory'" faker:"oneof: offline, storage, cpu, memory"`
 	Timestamp   int64   `json:"timestamp"`
 }
@@ -120,10 +123,10 @@ type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationCl
 // ------------------------------------------------------------
 // Rocket Pool Table
 type NotificationRocketPoolTableRow struct {
-	Timestamp  int64   `json:"timestamp"`
-	EventType  string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	AlertValue float64 `json:"alert_value,omitempty"` // only for some notification types, e.g. max collateral
-	Node       Address `json:"node"`
+	Timestamp int64   `json:"timestamp"`
+	EventType string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
+	Threshold float64 `json:"threshold,omitempty"` // only for some notification types, e.g. max collateral
+	Node      Address `json:"node"`
 }
 
 type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
@@ -131,10 +134,10 @@ type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[Notificatio
 // ------------------------------------------------------------
 // Networks Table
 type NotificationNetworksTableRow struct {
-	ChainId    uint64          `json:"chain_id"`
-	Timestamp  int64           `json:"timestamp"`
-	EventType  string          `json:"event_type" tstype:"'gas_above' | 'gas_below' | 'participation_rate'" faker:"oneof: gas_above, gas_below, participation_rate"`
-	AlertValue decimal.Decimal `json:"alert_value"` // wei string for gas alerts, otherwise percentage (0-1) for participation rate
+	ChainId   uint64          `json:"chain_id"`
+	Timestamp int64           `json:"timestamp"`
+	EventType string          `json:"event_type" tstype:"'new_reward_round' | 'gas_above' | 'gas_below' | 'participation_rate'" faker:"oneof: new_reward_round, gas_above, gas_below, participation_rate"`
+	Threshold decimal.Decimal `json:"threshold,omitempty"` // participation rate threshold should also be passed as decimal string
 }
 
 type InternalGetUserNotificationNetworksResponse ApiPagingResponse[NotificationNetworksTableRow]
@@ -148,6 +151,7 @@ type NotificationSettingsNetwork struct {
 	GasBelowThreshold             decimal.Decimal `json:"gas_below_threshold" faker:"eth"`
 	IsParticipationRateSubscribed bool            `json:"is_participation_rate_subscribed"`
 	ParticipationRateThreshold    float64         `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsNewRewardRoundSubscribed    bool            `json:"is_new_reward_round_subscribed"`
 }
 type NotificationNetwork struct {
 	ChainId  uint64                      `json:"chain_id"`
@@ -184,16 +188,11 @@ type NotificationSettingsGeneral struct {
 	MachineCpuUsageThreshold        float64 `json:"machine_cpu_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
 	IsMachineMemoryUsageSubscribed  bool    `json:"is_machine_memory_usage_subscribed"`
 	MachineMemoryUsageThreshold     float64 `json:"machine_memory_usage_threshold" faker:"boundary_start=0, boundary_end=1"`
-
-	IsRocketPoolNewRewardRoundSubscribed bool    `json:"is_rocket_pool_new_reward_round_subscribed"`
-	IsRocketPoolMaxCollateralSubscribed  bool    `json:"is_rocket_pool_max_collateral_subscribed"`
-	RocketPoolMaxCollateralThreshold     float64 `json:"rocket_pool_max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
-	IsRocketPoolMinCollateralSubscribed  bool    `json:"is_rocket_pool_min_collateral_subscribed"`
-	RocketPoolMinCollateralThreshold     float64 `json:"rocket_pool_min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 type InternalPutUserNotificationSettingsGeneralResponse ApiDataResponse[NotificationSettingsGeneral]
 type NotificationSettings struct {
 	GeneralSettings NotificationSettingsGeneral  `json:"general_settings"`
+	HasMachines     bool                         `json:"has_machines"`
 	Networks        []NotificationNetwork        `json:"networks"`
 	PairedDevices   []NotificationPairedDevice   `json:"paired_devices"`
 	Clients         []NotificationSettingsClient `json:"clients" faker:"slice_len=10"`
@@ -214,6 +213,11 @@ type NotificationSettingsValidatorDashboard struct {
 	IsSyncSubscribed                  bool    `json:"is_sync_subscribed"`
 	IsWithdrawalProcessedSubscribed   bool    `json:"is_withdrawal_processed_subscribed"`
 	IsSlashedSubscribed               bool    `json:"is_slashed_subscribed"`
+
+	IsMaxCollateralSubscribed bool    `json:"is_max_collateral_subscribed"`
+	MaxCollateralThreshold    float64 `json:"max_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsMinCollateralSubscribed bool    `json:"is_min_collateral_subscribed"`
+	MinCollateralThreshold    float64 `json:"min_collateral_threshold" faker:"boundary_start=0, boundary_end=1"`
 }
 
 type InternalPutUserNotificationSettingsValidatorDashboardResponse ApiDataResponse[NotificationSettingsValidatorDashboard]
@@ -236,9 +240,10 @@ type InternalPutUserNotificationSettingsAccountDashboardResponse ApiDataResponse
 type NotificationSettingsDashboardsTableRow struct {
 	IsAccountDashboard bool   `json:"is_account_dashboard"` // if false it's a validator dashboard
 	DashboardId        uint64 `json:"dashboard_id"`
+	DashboardName      string `json:"dashboard_name"`
 	GroupId            uint64 `json:"group_id"`
 	GroupName          string `json:"group_name"`
-	// if it's a validator dashboard, SubscribedEvents is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
+	// if it's a validator dashboard, Settings is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
 	Settings interface{} `json:"settings" tstype:"NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard" faker:"-"`
 	ChainIds []uint64    `json:"chain_ids" faker:"chain_ids"`
 }

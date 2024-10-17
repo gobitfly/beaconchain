@@ -9,9 +9,6 @@ import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
 
-// TODO: get rid of this provider logic -> necessary for `<DashboardHeader`
-useDashboardKeyProvider('notifications')
-
 const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
 const { t: $t } = useTranslation()
@@ -21,7 +18,7 @@ const tabKey = {
   clients: 'clients',
   dashboards: 'dashboards',
   machines: 'machines',
-  network: 'network',
+  networks: 'networks',
   rocketpool: 'rocketpool',
 }
 const tabs: HashTabs = [
@@ -46,8 +43,8 @@ const tabs: HashTabs = [
   },
   {
     icon: faNetworkWired,
-    key: tabKey.network,
-    title: $t('notifications.tabs.network'),
+    key: tabKey.networks,
+    title: $t('notifications.tabs.networks'),
   },
 ]
 
@@ -77,7 +74,6 @@ const openManageNotifications = () => {
   <div>
     <BcPageWrapper>
       <template #top>
-        <DashboardHeader :dashboard-title="$t('notifications.title')" />
         <div class="overview">
           <NotificationsOverview
             @open-dialog="openManageNotifications"
@@ -118,7 +114,7 @@ const openManageNotifications = () => {
             @open-dialog="openManageNotifications"
           />
         </template>
-        <template #[getSlotName(tabKey.network)]>
+        <template #[getSlotName(tabKey.networks)]>
           <NotificationsNetworkTable
             @open-dialog="openManageNotifications"
           />
@@ -135,6 +131,9 @@ const openManageNotifications = () => {
 
 <style lang="scss" scoped>
 .overview {
+  --dashboardHeader-height: 54px;
+  --dashboardHeader-padding-bottom: 15px;
+  margin-top: calc(var(--dashboardHeader-height) + var(--dashboardHeader-padding-bottom));
   margin-bottom: var(--padding-large);
 }
 

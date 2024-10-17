@@ -14,6 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
 )
@@ -387,10 +388,6 @@ func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context,
 	return getDummyStruct[t.VDBRocketPoolTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
-	return getDummyStruct[t.VDBNodeRocketPoolData]()
-}
-
 func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolMinipoolsTableRow]()
 }
@@ -408,6 +405,86 @@ func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 		{
 			ChainId: 17000,
 			Name:    "holesky",
+		},
+	}, nil
+}
+
+func (d *DummyService) GetAllClients() ([]types.ClientInfo, error) {
+	return []types.ClientInfo{
+		// execution_layer
+		{
+			Id:       0,
+			Name:     "Geth",
+			DbName:   "geth",
+			Category: "execution_layer",
+		},
+		{
+			Id:       1,
+			Name:     "Nethermind",
+			DbName:   "nethermind",
+			Category: "execution_layer",
+		},
+		{
+			Id:       2,
+			Name:     "Besu",
+			DbName:   "besu",
+			Category: "execution_layer",
+		},
+		{
+			Id:       3,
+			Name:     "Erigon",
+			DbName:   "erigon",
+			Category: "execution_layer",
+		},
+		{
+			Id:       4,
+			Name:     "Reth",
+			DbName:   "reth",
+			Category: "execution_layer",
+		},
+		// consensus_layer
+		{
+			Id:       5,
+			Name:     "Teku",
+			DbName:   "teku",
+			Category: "consensus_layer",
+		},
+		{
+			Id:       6,
+			Name:     "Prysm",
+			DbName:   "prysm",
+			Category: "consensus_layer",
+		},
+		{
+			Id:       7,
+			Name:     "Nimbus",
+			DbName:   "nimbus",
+			Category: "consensus_layer",
+		},
+		{
+			Id:       8,
+			Name:     "Lighthouse",
+			DbName:   "lighthouse",
+			Category: "consensus_layer",
+		},
+		{
+			Id:       9,
+			Name:     "Lodestar",
+			DbName:   "lodestar",
+			Category: "consensus_layer",
+		},
+		// other
+		{
+			Id:       10,
+			Name:     "Rocketpool Smart Node",
+			DbName:   "rocketpool",
+			Category: "other",
+		},
+		{
+			Id:       11,
+			Name:     "MEV-Boost",
+			DbName:   "mev-boost",
+			Category: "other",
 		},
 	}, nil
 }
@@ -463,11 +540,11 @@ func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uin
 	return getDummyWithPaging[t.NotificationDashboardsTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64) (*t.NotificationValidatorDashboardDetail, error) {
+func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
 	return getDummyStruct[t.NotificationValidatorDashboardDetail]()
 }
 
-func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64) (*t.NotificationAccountDashboardDetail, error) {
+func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64, search string) (*t.NotificationAccountDashboardDetail, error) {
 	return getDummyStruct[t.NotificationAccountDashboardDetail]()
 }
 
@@ -480,12 +557,15 @@ func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64
 func (d *DummyService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationRocketPoolTableRow]()
 }
-func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], search string, limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationNetworksTableRow]()
 }
 
 func (d *DummyService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
 	return getDummyStruct[t.NotificationSettings]()
+}
+func (d *DummyService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
+	return getDummyStruct[t.NotificationSettingsDefaultValues]()
 }
 func (d *DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
 	return nil
@@ -518,10 +598,10 @@ func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, us
 	}
 	return r, p, err
 }
-func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
+func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
+func (d *DummyService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
 	return nil
 }
 func (d *DummyService) CreateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
@@ -673,19 +753,27 @@ func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, da
 	return getDummyStruct[t.MobileWidgetData]()
 }
 
-func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit uint64, offset uint64) (*types.MachineMetricsData, error) {
+func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*types.MachineMetricsData, error) {
 	data, err := getDummyStruct[types.MachineMetricsData]()
 	if err != nil {
 		return nil, err
 	}
-	data.SystemMetrics = slices.SortedFunc(slices.Values(data.SystemMetrics), func(i, j *t.MachineMetricSystem) int {
+	data.SystemMetrics = slices.SortedFunc(slices.Values(data.SystemMetrics), func(i, j *commontypes.MachineMetricSystem) int {
 		return int(i.Timestamp) - int(j.Timestamp)
 	})
-	data.ValidatorMetrics = slices.SortedFunc(slices.Values(data.ValidatorMetrics), func(i, j *t.MachineMetricValidator) int {
+	data.ValidatorMetrics = slices.SortedFunc(slices.Values(data.ValidatorMetrics), func(i, j *commontypes.MachineMetricValidator) int {
 		return int(i.Timestamp) - int(j.Timestamp)
 	})
-	data.NodeMetrics = slices.SortedFunc(slices.Values(data.NodeMetrics), func(i, j *t.MachineMetricNode) int {
+	data.NodeMetrics = slices.SortedFunc(slices.Values(data.NodeMetrics), func(i, j *commontypes.MachineMetricNode) int {
 		return int(i.Timestamp) - int(j.Timestamp)
 	})
 	return data, nil
+}
+
+func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64, machine, process string, data []byte) error {
+	return nil
+}
+
+func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow]()
 }

@@ -31,13 +31,12 @@ const tabs: HashTabs = [
   {
     icon: faBolt,
     key: 'clients',
-    placeholder: 'Clients coming soon!',
     title: $t('notifications.tabs.clients'),
   },
   {
     icon: faNetworkWired,
-    key: 'network',
-    title: $t('notifications.tabs.network'),
+    key: 'networks',
+    title: $t('notifications.tabs.networks'),
   },
 ]
 </script>
@@ -64,11 +63,11 @@ const tabs: HashTabs = [
       <template #tab-panel-machines>
         <NotificationsManagementMachines />
       </template>
-      <template #tab-panel-network>
-        <NotificationsManagementNetwork />
+      <template #tab-panel-clients>
+        <NotificationsManagementClients />
       </template>
-      <template #tab-header-icon-rocketpool>
-        <IconRocketPool />
+      <template #tab-panel-networks>
+        <NotificationsManagementNetwork />
       </template>
     </BcTabList>
     <Button

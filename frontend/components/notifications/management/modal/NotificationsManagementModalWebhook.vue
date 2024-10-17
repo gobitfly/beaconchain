@@ -4,11 +4,9 @@ import { faPaperPlane } from '@fortawesome/pro-solid-svg-icons'
 import { useForm } from 'vee-validate'
 import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
+import type { NotificationSettingsValidatorDashboard } from '~/types/api/notifications'
 
-export type WebhookForm = {
-  is_discord_webhook_enabled: boolean,
-  webhook_url: string,
-}
+type WebhookForm = Pick<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>
 const {
   close, props,
 } = useBcDialog<WebhookForm>()
@@ -16,7 +14,7 @@ const {
 const { t: $t } = useTranslation()
 
 const validationSchema = createSchemaObject({
-  is_discord_webhook_enabled: validation.boolean(),
+  is_webhook_discord_enabled: validation.boolean(),
   webhook_url: validation.url($t('validation.url.invalid')),
 })
 
@@ -25,8 +23,8 @@ const {
 }
   = useForm({
     initialValues: {
-      is_discord_webhook_enabled:
-        props.value?.is_discord_webhook_enabled || false,
+      is_webhook_discord_enabled:
+        props.value?.is_webhook_discord_enabled || false,
       webhook_url: props.value?.webhook_url || '',
     },
     validationSchema,
@@ -38,10 +36,10 @@ const [
 ] = defineField('webhook_url', { validateOnModelUpdate: false })
 
 const [
-  is_discord_webhook_enabled,
-  is_discord_webhook_enabled_attrs,
+  is_webhook_discord_enabled,
+  is_webhook_discord_enabled_attrs,
 ]
-  = defineField('is_discord_webhook_enabled', { validateOnModelUpdate: false })
+  = defineField('is_webhook_discord_enabled', { validateOnModelUpdate: false })
 
 const isFormDirty = computed(() => meta.value.dirty)
 const isFormValid = computed(() => meta.value.valid)
@@ -51,12 +49,12 @@ const { fetch } = useCustomFetch()
 const handleTestNotification = async () => {
   // 1. could not be implemented as a custom validation rule,
   // as they are always triggerd onMounted (at cast time)
-  if (!webhook_url.value && is_discord_webhook_enabled.value) {
+  if (!webhook_url.value && is_webhook_discord_enabled.value) {
     // 1.
     setFieldError('webhook_url', $t('validation.webhook.discord_empty'))
     return
   }
-  if (!webhook_url.value && !is_discord_webhook_enabled.value) {
+  if (!webhook_url.value && !is_webhook_discord_enabled.value) {
     // 1.
     setFieldError('webhook_url', $t('validation.webhook.empty'))
     return
@@ -65,10 +63,10 @@ const handleTestNotification = async () => {
     return
   }
   try {
-    if (is_discord_webhook_enabled.value) {
+    if (is_webhook_discord_enabled.value) {
       await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
         body: {
-          is_discord_webhook_enabled: is_discord_webhook_enabled.value,
+          is_webhook_discord_enabled: is_webhook_discord_enabled.value,
           webhook_url: webhook_url.value,
         },
         method: 'POST',
@@ -83,7 +81,7 @@ const handleTestNotification = async () => {
     toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
   }
   catch (error) {
-    const summary = is_discord_webhook_enabled.value
+    const summary = is_webhook_discord_enabled.value
       ? $t('notifications.dashboards.toast.error.discord')
       : $t('notifications.dashboards.toast.error.webhook_url')
     toast.showError({ summary })
@@ -134,10 +132,10 @@ const id = useId()
     </BcFormRow>
     <BcFormRow>
       <BcInputCheckbox
-        v-model="is_discord_webhook_enabled"
-        v-bind="is_discord_webhook_enabled_attrs"
+        v-model="is_webhook_discord_enabled"
+        v-bind="is_webhook_discord_enabled_attrs"
         :label="$t('notifications.dashboards.dialog.label_send_via_discord')"
-        :error="errors.is_discord_webhook_enabled"
+        :error="errors.is_webhook_discord_enabled"
       >
         <template #tooltip>
           <BcTranslation
@@ -150,7 +148,6 @@ const id = useId()
     </BcFormRow>
     <div class="notifications-management-dialog-webhook-footer">
       <BcButton
-        font-awesome-icon="faPaperPlane"
         variant="secondary"
         :is-aria-disabled="!isFormValid || !webhook_url"
         @click="handleTestNotification()"

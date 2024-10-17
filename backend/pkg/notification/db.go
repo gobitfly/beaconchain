@@ -1,6 +1,9 @@
 package notification
 
 import (
+	"encoding/hex"
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/doug-martin/goqu/v9"
@@ -18,7 +21,7 @@ import (
 // or a machine name for machine notifications or a eth client name for ethereum client update notifications
 // optionally it is possible to set a filter on the last sent ts and the event filter
 // fields
-func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string) (map[string][]types.Subscription, error) {
+func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string, validatorDashboardConfig *types.ValidatorDashboardConfig) (map[string][]types.Subscription, error) {
 	var subs []types.Subscription
 
 	// subQuery := `
@@ -41,14 +44,16 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		eventNameForQuery = string(eventName)
 	}
 	ds := goqu.Dialect("postgres").From("users_subscriptions").Select(
-		goqu.C("id"),
+		goqu.T("users_subscriptions").Col("id"),
 		goqu.C("user_id"),
 		goqu.C("event_filter"),
 		goqu.C("last_sent_epoch"),
 		goqu.C("created_epoch"),
 		goqu.C("event_threshold"),
 		goqu.C("event_name"),
-	).Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery))
+	).Join(goqu.T("users"), goqu.On(goqu.T("users").Col("id").Eq(goqu.T("users_subscriptions").Col("user_id")))).
+		Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery)).
+		Where(goqu.L("(users.notifications_do_not_disturb_ts IS NULL OR users.notifications_do_not_disturb_ts < NOW())"))
 
 	if lastSentFilter != "" {
 		if len(lastSentFilterArgs) > 0 {
@@ -58,7 +63,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		}
 	}
 	if len(eventFilters) > 0 {
-		ds = ds.Where(goqu.L("event_filter = ANY(?)", pq.StringArray(eventFilters)))
+		ds = ds.Where(goqu.L("(event_filter = ANY(?))", pq.StringArray(eventFilters)))
 	}
 
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -72,14 +77,110 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		return nil, err
 	}
 
-	log.Infof("Found %d subscriptions for event %s", len(subs), eventName)
+	log.Infof("found %d subscriptions for event %s", len(subs), eventName)
 
 	for _, sub := range subs {
 		sub.EventName = types.EventName(strings.Replace(string(sub.EventName), utils.GetNetwork()+":", "", 1)) // remove the network name from the event name
-		if _, ok := subMap[sub.EventFilter]; !ok {
-			subMap[sub.EventFilter] = make([]types.Subscription, 0)
+		if strings.HasPrefix(sub.EventFilter, "vdb:") {
+			dashboardData := strings.Split(sub.EventFilter, ":")
+			if len(dashboardData) != 3 {
+				log.Error(fmt.Errorf("invalid dashboard subscription: %s", sub.EventFilter), "invalid dashboard subscription", 0)
+				continue
+			}
+			dashboardId, err := strconv.ParseInt(dashboardData[1], 10, 64)
+			if err != nil {
+				log.Error(err, "Invalid dashboard subscription", 0)
+				continue
+			}
+			sub.DashboardId = &dashboardId
+
+			dashboardGroupId, err := strconv.ParseInt(dashboardData[2], 10, 64)
+			if err != nil {
+				log.Error(err, "Invalid dashboard subscription", 0)
+				continue
+			}
+			sub.DashboardGroupId = &dashboardGroupId
+			if dashboard, ok := validatorDashboardConfig.DashboardsById[types.DashboardId(dashboardId)]; ok {
+				if dashboard.Name == "" {
+					dashboard.Name = fmt.Sprintf("Dashboard %d", dashboardId)
+				}
+				if group, ok := dashboard.Groups[types.DashboardGroupId(dashboardGroupId)]; ok {
+					if group.Name == "" {
+						group.Name = "default"
+					}
+
+					uniqueRPLNodes := make(map[string]struct{})
+
+					for _, validatorIndex := range group.Validators {
+						validatorEventFilterRaw, err := GetPubkeyForIndex(validatorIndex)
+						if err != nil {
+							log.Error(err, "error retrieving pubkey for validator", 0, map[string]interface{}{"validator": validatorIndex})
+							continue
+						}
+						validatorEventFilter := hex.EncodeToString(validatorEventFilterRaw)
+
+						if eventName == types.RocketpoolCollateralMaxReachedEventName || eventName == types.RocketpoolCollateralMinReachedEventName {
+							// Those two RPL notifications are not tied to a specific validator but to a node address, create a subscription for each
+							// node in the group
+							nodeAddress, ok := validatorDashboardConfig.RocketpoolNodeByPubkey[validatorEventFilter]
+							if !ok {
+								// Validator is not a rocketpool minipool
+								continue
+							}
+							if _, ok := uniqueRPLNodes[nodeAddress]; !ok {
+								if _, ok := subMap[nodeAddress]; !ok {
+									subMap[nodeAddress] = make([]types.Subscription, 0)
+								}
+								hydratedSub := types.Subscription{
+									ID:                 sub.ID,
+									UserID:             sub.UserID,
+									EventName:          sub.EventName,
+									EventFilter:        nodeAddress,
+									LastSent:           sub.LastSent,
+									LastEpoch:          sub.LastEpoch,
+									CreatedTime:        sub.CreatedTime,
+									CreatedEpoch:       sub.CreatedEpoch,
+									EventThreshold:     sub.EventThreshold,
+									DashboardId:        sub.DashboardId,
+									DashboardName:      dashboard.Name,
+									DashboardGroupId:   sub.DashboardGroupId,
+									DashboardGroupName: group.Name,
+								}
+								subMap[nodeAddress] = append(subMap[nodeAddress], hydratedSub)
+							}
+							uniqueRPLNodes[nodeAddress] = struct{}{}
+						} else {
+							if _, ok := subMap[validatorEventFilter]; !ok {
+								subMap[validatorEventFilter] = make([]types.Subscription, 0)
+							}
+							hydratedSub := types.Subscription{
+								ID:                 sub.ID,
+								UserID:             sub.UserID,
+								EventName:          sub.EventName,
+								EventFilter:        validatorEventFilter,
+								LastSent:           sub.LastSent,
+								LastEpoch:          sub.LastEpoch,
+								CreatedTime:        sub.CreatedTime,
+								CreatedEpoch:       sub.CreatedEpoch,
+								EventThreshold:     sub.EventThreshold,
+								DashboardId:        sub.DashboardId,
+								DashboardName:      dashboard.Name,
+								DashboardGroupId:   sub.DashboardGroupId,
+								DashboardGroupName: group.Name,
+							}
+							subMap[validatorEventFilter] = append(subMap[validatorEventFilter], hydratedSub)
+						}
+
+						//log.Infof("hydrated subscription for validator %v of dashboard %d and group %d for user %d", hydratedSub.EventFilter, *hydratedSub.DashboardId, *hydratedSub.DashboardGroupId, *hydratedSub.UserID)
+					}
+				}
+			}
+		} else {
+			if _, ok := subMap[sub.EventFilter]; !ok {
+				subMap[sub.EventFilter] = make([]types.Subscription, 0)
+			}
+			subMap[sub.EventFilter] = append(subMap[sub.EventFilter], sub)
 		}
-		subMap[sub.EventFilter] = append(subMap[sub.EventFilter], sub)
 	}
 
 	return subMap, nil

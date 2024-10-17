@@ -16,8 +16,6 @@ const {
   setSearch,
 } = useNotificationsRocketpoolStore()
 
-const { overview } = useNotificationsDashboardOverviewStore()
-
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
@@ -30,6 +28,8 @@ const getEventTypeName = (eventType: NotificationRocketPoolTableRow['event_type'
   if (eventType === 'collateral_max') return $t('notifications.rocketpool.event_types.collateral_max')
   if (eventType === 'collateral_min') return $t('notifications.rocketpool.event_types.collateral_min')
   if (eventType === 'reward_round') return $t('notifications.rocketpool.event_types.reward_round')
+  logError(`Unknown rocketpool notification event_type: ${eventType}`)
+  return eventType
 }
 </script>
 
@@ -117,12 +117,6 @@ const getEventTypeName = (eventType: NotificationRocketPoolTableRow['event_type'
                 v-if="!rocketpoolNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
-            </template>
-            <template
-              v-if="overview?.rocket_pool_subscription_count ?? 0"
-              #bc-table-footer-right
-            >
-              {{ $t('notifications.rocketpool.col.rocketpool_subscription', { count: overview?.rocket_pool_subscription_count }) }}
             </template>
           </BcTable>
         </ClientOnly>

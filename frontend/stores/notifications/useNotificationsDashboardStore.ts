@@ -30,7 +30,7 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
     setStoredQuery,
   } = useTableQuery({
     limit: 10,
-    sort: 'timestamp:desc',
+    sort: 'epoch:desc',
   }, 10)
   const isLoading = ref(false)
 

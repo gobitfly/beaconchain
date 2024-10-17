@@ -148,11 +148,14 @@ func setup() error {
 	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	log.Info("initializing data access service")
-	dataAccessor = dataaccess.NewDataAccessService(cfg)
-	dataAccessor.StartDataAccessServices()
+	dataAccessService := dataaccess.NewDataAccessService(cfg)
+	dataAccessService.StartDataAccessServices()
+	dataAccessor = dataAccessService
+
+	dummy := dataaccess.NewDummyService()
 
 	log.Info("initializing api router")
-	router := api.NewApiRouter(dataAccessor, cfg)
+	router := api.NewApiRouter(dataAccessor, dummy, cfg)
 
 	ts = httptest.NewTLSServer(router)
 	jar, err := cookiejar.New(nil)

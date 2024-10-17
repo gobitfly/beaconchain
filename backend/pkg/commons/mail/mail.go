@@ -3,6 +3,7 @@ package mail
 import (
 	"bytes"
 	"context"
+	"html/template"
 
 	"fmt"
 	"net/smtp"
@@ -71,26 +72,33 @@ func createTextMessage(msg types.Email) string {
 
 // SendMailRateLimited sends an email to a given address with the given message.
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
-func SendMailRateLimited(to, subject string, msg types.Email, attachment []types.EmailAttachment) error {
+func SendMailRateLimited(content types.TransitEmailContent) error {
 	if utils.Config.Frontend.MaxMailsPerEmailPerDay > 0 {
 		now := time.Now()
-		count, err := db.GetMailsSentCount(to, now)
+		count, err := db.CountSentMessage("n_mails", content.UserId)
 		if err != nil {
 			return err
 		}
-		if count >= utils.Config.Frontend.MaxMailsPerEmailPerDay {
-			timeLeft := now.Add(utils.Day).Truncate(utils.Day).Sub(now)
+		timeLeft := now.Add(utils.Day).Truncate(utils.Day).Sub(now)
+		if count > int64(utils.Config.Frontend.MaxMailsPerEmailPerDay) {
 			return &types.RateLimitError{TimeLeft: timeLeft}
+		} else if count == int64(utils.Config.Frontend.MaxMailsPerEmailPerDay) {
+			// send an email if this was the last email for today
+			err := SendHTMLMail(content.Address,
+				"beaconcha.in - Email notification threshold limit reached",
+				types.Email{
+					Title: "Email notification threshold limit reached",
+					//nolint: gosec
+					Body: template.HTML(fmt.Sprintf("You have reached the email notification threshold limit of %d emails per day. Further notification emails will be suppressed for %.1f hours.", utils.Config.Frontend.MaxMailsPerEmailPerDay, timeLeft.Hours())),
+				},
+				[]types.EmailAttachment{})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	err := db.CountSentMail(to)
-	if err != nil {
-		// only log if counting did not work
-		return fmt.Errorf("error counting sent email: %v", err)
-	}
-
-	err = SendHTMLMail(to, subject, msg, attachment)
+	err := SendHTMLMail(content.Address, content.Subject, content.Email, content.Attachments)
 	if err != nil {
 		return err
 	}

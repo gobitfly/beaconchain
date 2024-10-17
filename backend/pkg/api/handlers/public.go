@@ -187,7 +187,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		handleErr(w, r, err)
 		return
 	}
-	if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards && !isUserAdmin(userInfo) {
+	if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
 		returnConflict(w, r, errors.New("maximum number of validator dashboards reached"))
 		return
 	}
@@ -374,7 +374,7 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 		handleErr(w, r, err)
 		return
 	}
-	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard && !isUserAdmin(userInfo) {
+	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
 		returnConflict(w, r, errors.New("maximum number of validator dashboard groups reached"))
 		return
 	}
@@ -563,7 +563,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding && !isUserAdmin(userInfo) {
+	if req.Validators == nil && !userInfo.PremiumPerks.BulkAdding {
 		returnForbidden(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
@@ -616,7 +616,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		data, dataErr = h.dai.AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
 
 	case req.Graffiti != "":
-		graffiti := v.checkRegex(reNonEmpty, req.Graffiti, "graffiti")
+		graffiti := v.checkRegex(reGraffiti, req.Graffiti, "graffiti")
 		if v.hasErrors() {
 			handleErr(w, r, v)
 			return
@@ -925,25 +925,23 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		handleErr(w, r, err)
 		return
 	}
-	if !isUserAdmin(userInfo) {
-		if req.IsArchived {
-			if dashboardCount >= MaxArchivedDashboardsCount {
-				returnConflict(w, r, errors.New("maximum number of archived validator dashboards reached"))
-				return
-			}
-		} else {
-			if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
-				returnConflict(w, r, errors.New("maximum number of active validator dashboards reached"))
-				return
-			}
-			if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
-				returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
-				return
-			}
-			if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
-				returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
-				return
-			}
+	if req.IsArchived {
+		if dashboardCount >= MaxArchivedDashboardsCount && !isUserAdmin(userInfo) {
+			returnConflict(w, r, errors.New("maximum number of archived validator dashboards reached"))
+			return
+		}
+	} else {
+		if dashboardCount >= userInfo.PremiumPerks.ValidatorDashboards {
+			returnConflict(w, r, errors.New("maximum number of active validator dashboards reached"))
+			return
+		}
+		if dashboardInfo.GroupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
+			returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
+			return
+		}
+		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+			returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
+			return
 		}
 	}
 
@@ -998,8 +996,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
-var summaryAllowedPeriods = []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-
 // PublicGetValidatorDashboardSummary godoc
 //
 //	@Description	Get summary information for a specified dashboard
@@ -1028,8 +1024,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1075,8 +1069,6 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.Response
 	}
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	checkValueInAllowed(&v, period, summaryAllowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1169,9 +1161,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	// allowed periods are: all_time, last_30d, last_7d, last_24h, last_1h
-	allowedPeriods := []enums.TimePeriod{enums.TimePeriods.AllTime, enums.TimePeriods.Last30d, enums.TimePeriods.Last7d, enums.TimePeriods.Last24h, enums.TimePeriods.Last1h}
-	checkValueInAllowed(&v, period, allowedPeriods, "period")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1796,42 +1785,6 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 	returnOk(w, r, response)
 }
 
-// PublicGetValidatorDashboardNodeRocketPool godoc
-//
-//	@Description	Get details for a specific Rocket Pool node associated with a specified dashboard.
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			node_address	path		string	true	"The address of the node."
-//	@Success		200				{object}	types.GetValidatorDashboardNodeRocketPoolResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/rocket-pool/{node_address} [get]
-func (h *HandlerService) PublicGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	// support ENS names ?
-	nodeAddress := v.checkAddress(vars["node_address"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-
-	data, err := h.dai.GetValidatorDashboardNodeRocketPool(r.Context(), *dashboardId, nodeAddress)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardNodeRocketPoolResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetValidatorDashboardRocketPoolMinipools godoc
 //
 //	@Description	Get minipools information for a specified Rocket Pool node associated with a specified dashboard.
@@ -1929,12 +1882,20 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
-	chainIds := v.checkNetworksParameter(q.Get("networks"))
+	chainId := v.checkNetworkParameter(q.Get("network"))
+	chainIds := []uint64{chainId}
+	// TODO replace with "networks" once multiple networks are supported
+	//chainIds := v.checkNetworksParameter(q.Get("networks"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+
+	dataAccessor := h.dai
+	if isMockEnabled(r) {
+		dataAccessor = h.dummy
+	}
+	data, paging, err := dataAccessor.GetDashboardNotifications(r.Context(), userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1955,6 +1916,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
+//	@Param			search			query		string	false	"Search for Index"
 //	@Success		200				{object}	types.InternalGetUserNotificationsValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -1964,11 +1926,16 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
+	search := r.URL.Query().Get("search")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	dataAccessor := h.dai
+	if isMockEnabled(r) {
+		dataAccessor = h.dummy
+	}
+	data, err := dataAccessor.GetValidatorDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1988,6 +1955,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
+//	@Param			search			query		string	false	"Search for Address, ENS"
 //	@Success		200				{object}	types.InternalGetUserNotificationsAccountDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
@@ -1997,11 +1965,12 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 	dashboardId := v.checkUint(vars["dashboard_id"], "dashboard_id")
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
+	search := r.URL.Query().Get("search")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch)
+	data, err := h.dai.GetAccountDashboardNotificationDetails(r.Context(), dashboardId, groupId, epoch, search)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2099,7 +2068,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
-//	@Param			search	query		string	false	"Search for TODO"
+//	@Param			search	query		string	false	"Search for Node Address"
 //	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/rocket-pool [get]
@@ -2138,7 +2107,6 @@ func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWrit
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type)
-//	@Param			search	query		string	false	"Search for TODO"
 //	@Success		200		{object}	types.InternalGetUserNotificationNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/networks [get]
@@ -2156,7 +2124,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.dai.GetNetworkNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2167,6 +2135,8 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 	}
 	returnOk(w, r, response)
 }
+
+const diffTolerance = 0.0001
 
 // PublicGetUserNotificationPairedDevices godoc
 //
@@ -2187,6 +2157,38 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+
+	// check premium perks
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	userGeneralSettings := data.GeneralSettings
+
+	// if users premium perks do not allow custom thresholds, set them to default in the response
+	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
+	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold {
+		if math.Abs(userGeneralSettings.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance {
+			userGeneralSettings.MachineStorageUsageThreshold = defaultSettings.MachineStorageUsageThreshold
+			userGeneralSettings.IsMachineStorageUsageSubscribed = false
+		}
+		if math.Abs(userGeneralSettings.MachineCpuUsageThreshold-defaultSettings.MachineCpuUsageThreshold) > diffTolerance {
+			userGeneralSettings.MachineCpuUsageThreshold = defaultSettings.MachineCpuUsageThreshold
+			userGeneralSettings.IsMachineCpuUsageSubscribed = false
+		}
+		if math.Abs(userGeneralSettings.MachineMemoryUsageThreshold-defaultSettings.MachineMemoryUsageThreshold) > diffTolerance {
+			userGeneralSettings.MachineMemoryUsageThreshold = defaultSettings.MachineMemoryUsageThreshold
+			userGeneralSettings.IsMachineMemoryUsageSubscribed = false
+		}
+		data.GeneralSettings = userGeneralSettings
+	}
+
 	response := types.InternalGetUserNotificationSettingsResponse{
 		Data: *data,
 	}
@@ -2219,12 +2221,33 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
 	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
 	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
-	checkMinMax(&v, req.RocketPoolMaxCollateralThreshold, 0, 1, "rocket_pool_max_collateral_threshold")
-	checkMinMax(&v, req.RocketPoolMinCollateralThreshold, 0, 1, "rocket_pool_min_collateral_threshold")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
+
+	// check premium perks
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
+	// use tolarance for float comparison
+	isCustomThresholdUsed := math.Abs(req.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance ||
+		math.Abs(req.MachineCpuUsageThreshold-defaultSettings.MachineCpuUsageThreshold) > diffTolerance ||
+		math.Abs(req.MachineMemoryUsageThreshold-defaultSettings.MachineMemoryUsageThreshold) > diffTolerance
+
+	if !userInfo.PremiumPerks.NotificationsMachineCustomThreshold && isCustomThresholdUsed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to set machine settings thresholds"))
+		return
+	}
+
 	err = h.dai.UpdateNotificationSettingsGeneral(r.Context(), userId, req)
 	if err != nil {
 		handleErr(w, r, err)
@@ -2261,7 +2284,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		IsGasBelowSubscribed          bool    `json:"is_gas_below_subscribed"`
 		GasBelowThreshold             string  `json:"gas_below_threshold" `
 		IsParticipationRateSubscribed bool    `json:"is_participation_rate_subscribed"`
-		ParticipationRateThreshold    float64 `json:"participation_rate_threshold" faker:"boundary_start=0, boundary_end=1"`
+		ParticipationRateThreshold    float64 `json:"participation_rate_threshold"`
+		IsNewRewardRoundSubscribed    bool    `json:"is_new_reward_round_subscribed"`
 	}
 	var req request
 	if err := v.checkBody(&req, r); err != nil {
@@ -2286,6 +2310,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		GasBelowThreshold:             gasBelowThreshold,
 		IsParticipationRateSubscribed: req.IsParticipationRateSubscribed,
 		ParticipationRateThreshold:    req.ParticipationRateThreshold,
+		IsNewRewardRoundSubscribed:    req.IsNewRewardRoundSubscribed,
 	}
 
 	err = h.dai.UpdateNotificationSettingsNetworks(r.Context(), userId, chainId, settings)
@@ -2460,6 +2485,36 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		handleErr(w, r, err)
 		return
 	}
+	// if users premium perks do not allow subscriptions, set them to false in the response
+	// TODO: once stripe payments run in v2, this should be removed and the notification settings should be updated upon a tier change instead
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	defaultSettings, err := h.dai.GetNotificationSettingsDefaultValues(r.Context())
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	for i, dashboard := range data {
+		if dashboard.IsAccountDashboard {
+			continue
+		}
+		settings, ok := dashboard.Settings.(types.NotificationSettingsValidatorDashboard)
+		if !ok {
+			handleErr(w, r, errors.New("invalid settings type"))
+			return
+		}
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && settings.IsGroupOfflineSubscribed {
+			settings.IsGroupOfflineSubscribed = false
+			settings.GroupOfflineThreshold = defaultSettings.GroupOfflineThreshold
+		}
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && settings.IsRealTimeModeEnabled {
+			settings.IsRealTimeModeEnabled = false
+		}
+		data[i].Settings = settings
+	}
 	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
@@ -2482,6 +2537,12 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 //	@Router			/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
 	var req types.NotificationSettingsValidatorDashboard
 	if err := v.checkBody(&req, r); err != nil {
 		handleErr(w, r, err)
@@ -2491,11 +2552,28 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
+
+	checkMinMax(&v, req.MaxCollateralThreshold, 0, 1, "max_collateral_threshold")
+	checkMinMax(&v, req.MinCollateralThreshold, 0, 1, "min_collateral_threshold")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	err := h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), dashboardId, groupId, req)
+	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && req.IsGroupOfflineSubscribed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group offline"))
+		return
+	}
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && req.IsRealTimeModeEnabled {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe real time mode"))
+		return
+	}
+
+	err = h.dai.UpdateNotificationSettingsValidatorDashboard(r.Context(), userId, dashboardId, groupId, req)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2521,6 +2599,12 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 //	@Router			/users/me/notifications/settings/account-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
 	// uses a different struct due to `subscribed_chain_ids`, which is a slice of intOrString in the payload but a slice of uint64 in the response
 	type request struct {
 		WebhookUrl                      string        `json:"webhook_url"`
@@ -2562,7 +2646,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		IsERC721TokenTransfersSubscribed:  req.IsERC721TokenTransfersSubscribed,
 		IsERC1155TokenTransfersSubscribed: req.IsERC1155TokenTransfersSubscribed,
 	}
-	err := h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), dashboardId, groupId, settings)
+	err = h.dai.UpdateNotificationSettingsAccountDashboard(r.Context(), userId, dashboardId, groupId, settings)
 	if err != nil {
 		handleErr(w, r, err)
 		return

@@ -113,9 +113,17 @@ export interface ChartHistorySeconds {
   daily: number /* uint64 */;
   weekly: number /* uint64 */;
 }
+export interface IndexEpoch {
+  index: number /* uint64 */;
+  epoch: number /* uint64 */;
+}
 export interface IndexBlocks {
   index: number /* uint64 */;
   blocks: number /* uint64 */[];
+}
+export interface IndexSlots {
+  index: number /* uint64 */;
+  slots: number /* uint64 */[];
 }
 export interface ValidatorStateCounts {
   online: number /* uint64 */;

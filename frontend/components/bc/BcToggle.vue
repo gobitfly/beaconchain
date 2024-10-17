@@ -22,7 +22,9 @@ const selected = defineModel<boolean>({ required: true })
     </slot>
     <ToggleSwitch
       v-model="selected"
+      class="bc-toggle__input"
       :disabled
+      v-bind="$attrs"
     />
     <slot name="trueOption">
       <div
@@ -37,6 +39,11 @@ const selected = defineModel<boolean>({ required: true })
 </template>
 
 <style lang="scss" scoped>
+.bc-toggle__input:has(input:focus-visible) {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
 .toggle-container {
   display: flex;
   align-items: center;

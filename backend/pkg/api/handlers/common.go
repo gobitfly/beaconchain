@@ -31,11 +31,12 @@ import (
 
 type HandlerService struct {
 	dai                         dataaccess.DataAccessor
+	dummy                       dataaccess.DataAccessor
 	scs                         *scs.SessionManager
 	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -46,6 +47,7 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 
 	return &HandlerService{
 		dai:                         dataAccessor,
+		dummy:                       dummy,
 		scs:                         sessionManager,
 		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
@@ -67,6 +69,7 @@ var (
 	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[01])?[0-9a-fA-F]{62}$`)
 	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
 	reNonEmpty                     = regexp.MustCompile(`^\s*\S.*$`)
+	reGraffiti                     = regexp.MustCompile(`^.{2,}$`)          // at least 2 characters, so that queries won't time out
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
@@ -557,16 +560,6 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// better func name would be
-func checkValueInAllowed[T cmp.Ordered](v *validationError, value T, allowed []T, name string) {
-	for _, a := range allowed {
-		if cmp.Compare(value, a) == 0 {
-			return
-		}
-	}
-	v.add(name, "parameter is missing or invalid, please check the API documentation")
-}
-
 func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
@@ -686,7 +679,11 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 	return v.checkNetwork(intOrString{strValue: &param})
 }
 
+//nolint:unused
 func (v *validationError) checkNetworksParameter(param string) []uint64 {
+	if param == "" {
+		v.add("networks", "list of networks must not be empty")
+	}
 	var chainIds []uint64
 	for _, network := range splitParameters(param, ',') {
 		chainIds = append(chainIds, v.checkNetworkParameter(network))
@@ -852,9 +849,9 @@ const maxBodySize = 10 * 1024
 func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...log.Fields) {
 	body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 	requestFields := log.Fields{
-		"endpoint": r.Method + " " + r.URL.Path,
-		"query":    r.URL.RawQuery,
-		"body":     string(body),
+		"request_endpoint": r.Method + " " + r.URL.Path,
+		"request_query":    r.URL.RawQuery,
+		"request_body":     string(body),
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
 }
@@ -1063,4 +1060,12 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 			{Type: "string"}, {Type: "integer"},
 		},
 	}
+}
+
+func isMockEnabled(r *http.Request) bool {
+	isMockEnabled, ok := r.Context().Value(ctxIsMockEnabledKey).(bool)
+	if !ok {
+		return false
+	}
+	return isMockEnabled
 }

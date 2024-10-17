@@ -21,15 +21,11 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         is_machine_offline_subscribed: false,
         is_machine_storage_usage_subscribed: false,
         is_push_notifications_enabled: false,
-        is_rocket_pool_max_collateral_subscribed: false,
-        is_rocket_pool_min_collateral_subscribed: false,
-        is_rocket_pool_new_reward_round_subscribed: false,
         machine_cpu_usage_threshold: 0.0,
         machine_memory_usage_threshold: 0.0,
         machine_storage_usage_threshold: 0.0,
-        rocket_pool_max_collateral_threshold: 0,
-        rocket_pool_min_collateral_threshold: 0,
       },
+      has_machines: true,
       networks: [],
       paired_devices: [],
     },
@@ -100,11 +96,31 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       },
     )
   }
+  const setNotificationForClient = async ({
+    client_id,
+    is_subscribed,
+  }: {
+    client_id: number,
+    is_subscribed: boolean,
+  }) => {
+    await fetch<InternalPutUserNotificationSettingsNetworksResponse>(
+      API_PATH.NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION,
+      {
+        body: {
+          is_subscribed,
+        },
+      },
+      {
+        client_id,
+      },
+    )
+  }
 
   return {
     getSettings,
     removeDevice,
     saveSettings,
+    setNotificationForClient,
     setNotificationForNetwork,
     setNotificationForPairedDevice,
     settings,

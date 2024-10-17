@@ -5,7 +5,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
-import { uniq } from 'lodash-es'
 import {
   BcDialogConfirm,
   BcPremiumModal,
@@ -111,9 +110,8 @@ const onClose = () => {
 const mapIndexOrPubKey = (
   validators?: VDBManageValidatorsTableRow[],
 ): string[] => {
-  return uniq(
-    validators?.map(vali => vali.index?.toString() ?? vali.public_key) ?? [],
-  )
+  return [ ...new Set(validators?.map(
+    validator => validator.index?.toString() ?? validator.public_key)) ]
 }
 
 const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {

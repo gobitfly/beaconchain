@@ -16,10 +16,18 @@ const DefaultGroupId = 0
 const AllGroups = -1
 const NetworkAverage = -2
 const DefaultGroupName = "default"
+const DefaultDashboardName = DefaultGroupName
 
 type Sort[T enums.Enum] struct {
 	Column T
 	Desc   bool
+}
+
+type SortColumn struct {
+	Column string
+	Desc   bool
+	// represents value from cursor
+	Offset any
 }
 
 type VDBIdPrimary int
@@ -105,6 +113,47 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type NotificationSettingsCursor struct {
+	GenericCursor
+
+	IsAccountDashboard bool // if false it's a validator dashboard
+	DashboardId        uint64
+	GroupId            uint64
+}
+
+type NotificationMachinesCursor struct {
+	GenericCursor
+
+	MachineId      uint64
+	MachineName    string
+	EventType      string
+	EventThreshold float64
+	Epoch          uint64
+}
+
+type NotificationClientsCursor struct {
+	GenericCursor
+
+	Client string
+	Epoch  uint64
+}
+
+type NotificationRocketPoolsCursor struct {
+	GenericCursor
+
+	NodeAddress []byte
+	EventType   string
+	Epoch       uint64
+}
+
+type NotificationNetworksCursor struct {
+	GenericCursor
+
+	Network   uint64
+	Epoch     uint64
+	EventType string
+}
+
 type UserCredentialInfo struct {
 	Id             uint64 `db:"id"`
 	Email          string `db:"email"`
@@ -125,9 +174,27 @@ type BlocksCursor struct {
 	Reward   decimal.Decimal
 }
 
+type NotificationsDashboardsCursor struct {
+	GenericCursor
+
+	Epoch         uint64
+	ChainId       uint64
+	DashboardName string
+	DashboardId   uint64
+	GroupName     string
+	GroupId       uint64
+}
+
 type NetworkInfo struct {
 	ChainId uint64
 	Name    string
+}
+
+type ClientInfo struct {
+	Id       uint64
+	Name     string
+	DbName   string
+	Category string
 }
 
 // -------------------------
@@ -231,9 +298,26 @@ type HealthzData struct {
 // Mobile structs
 
 type MobileAppBundleStats struct {
-	LatestBundleVersion uint64
-	BundleUrl           string
-	TargetCount         uint64 // coalesce to 0 if column is null
-	DeliveryCount       uint64
-	MaxNativeVersion    uint64 // the max native version of the whole table for the given environment
+	LatestBundleVersion uint64 `db:"bundle_version"`
+	BundleUrl           string `db:"bundle_url"`
+	TargetCount         int64  `db:"target_count"` // coalesce to -1 if column is null
+	DeliveryCount       int64  `db:"delivered_count"`
+	MaxNativeVersion    uint64 `db:"max_native_version"` // the max native version of the whole table for the given environment
+}
+
+// Notification structs
+
+type NotificationSettingsDefaultValues struct {
+	GroupOfflineThreshold             float64
+	MaxCollateralThreshold            float64
+	MinCollateralThreshold            float64
+	ERC20TokenTransfersValueThreshold float64
+
+	MachineStorageUsageThreshold float64
+	MachineCpuUsageThreshold     float64
+	MachineMemoryUsageThreshold  float64
+
+	GasAboveThreshold                 decimal.Decimal
+	GasBelowThreshold                 decimal.Decimal
+	NetworkParticipationRateThreshold float64
 }

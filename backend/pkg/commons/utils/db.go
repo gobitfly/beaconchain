@@ -14,7 +14,13 @@ var duplicateEntryError = &pgconn.PgError{Code: "23505"}
 func Rollback(tx *sqlx.Tx) {
 	err := tx.Rollback()
 	if err != nil && !errors.Is(err, sql.ErrTxDone) {
-		log.Error(err, "error rolling back transaction", 0)
+		log.Error(err, "error rolling back transaction", 1)
+	}
+}
+func ClosePreparedStatement(stmt *sqlx.Stmt) {
+	err := stmt.Close()
+	if err != nil {
+		log.Error(err, "error closing prepared statement", 1)
 	}
 }
 

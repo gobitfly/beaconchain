@@ -1093,17 +1093,17 @@ func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggreg
 	var dateColumn string
 	switch aggregation {
 	case enums.IntervalEpoch:
-		table = "validator_dashboard_data_epoch"
-		dateColumn = "epoch_timestamp"
+		table = "view_validator_dashboard_data_epoch_max_ts"
+		dateColumn = "t"
 	case enums.IntervalHourly:
-		table = "validator_dashboard_data_hourly"
-		dateColumn = "hour"
+		table = "view_validator_dashboard_data_hourly_max_ts"
+		dateColumn = "t"
 	case enums.IntervalDaily:
-		table = "validator_dashboard_data_daily"
-		dateColumn = "day"
+		table = "view_validator_dashboard_data_daily_max_ts"
+		dateColumn = "t"
 	case enums.IntervalWeekly:
-		table = "validator_dashboard_data_weekly"
-		dateColumn = "week"
+		table = "view_validator_dashboard_data_weekly_max_ts"
+		dateColumn = "t"
 	default:
 		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
 	}

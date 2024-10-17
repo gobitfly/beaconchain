@@ -7,6 +7,8 @@ import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
 import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import type { ChainIDs } from '~/types/network'
+import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
+import { NotificationsDashboardDialogEntity } from '#components'
 
 defineEmits<{ (e: 'openDialog'): void }>()
 
@@ -39,13 +41,70 @@ const colsVisible = computed(() => {
   }
 })
 
-const openDialog = () => {
-  // TODO: implement dialog
-  alert('not implemented yet 😪')
-}
-
 const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'account' : 'validator'
 const { overview } = useNotificationsDashboardOverviewStore()
+const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_types'][number]) => {
+  switch (eventType) {
+    case 'attestation_missed':
+      return $t('notifications.dashboards.event_type.attestation_missed')
+    case 'group_offline':
+      return $t('notifications.dashboards.event_type.group_offline')
+    case 'group_online':
+      return $t('notifications.dashboards.event_type.group_online')
+    case 'incoming_tx':
+      return $t('notifications.dashboards.event_type.incoming_tx')
+    case 'max_collateral':
+      return $t('notifications.dashboards.event_type.max_collateral')
+    case 'min_collateral':
+      return $t('notifications.dashboards.event_type.min_collateral')
+    case 'outgoing_tx':
+      return $t('notifications.dashboards.event_type.outgoing_tx')
+    case 'proposal_missed':
+      return $t('notifications.dashboards.event_type.proposal_missed')
+    case 'proposal_success':
+      return $t('notifications.dashboards.event_type.proposal_success')
+    case 'proposal_upcoming':
+      return $t('notifications.dashboards.event_type.proposal_upcoming')
+    case 'sync':
+      return $t('notifications.dashboards.event_type.sync')
+    case 'transfer_erc20':
+      return $t('notifications.dashboards.event_type.transfer_erc20')
+    case 'transfer_erc721':
+      return $t('notifications.dashboards.event_type.transfer_erc721')
+    case 'transfer_erc1155':
+      return $t('notifications.dashboards.event_type.transfer_erc1155')
+    case 'validator_got_slashed':
+      return $t('notifications.dashboards.event_type.validator_got_slashed')
+    case 'validator_has_slashed':
+      return $t('notifications.dashboards.event_type.validator_has_slashed')
+    case 'validator_offline':
+      return $t('notifications.dashboards.event_type.validator_offline')
+    case 'validator_online':
+      return $t('notifications.dashboards.event_type.validator_online')
+    case 'withdrawal':
+      return $t('notifications.dashboards.event_type.withdrawal')
+    default:
+      logError(`Unknown dashboard notification event_type: ${eventType}`)
+      return eventType
+  }
+}
+const textDashboardNotifications = (event_types: NotificationDashboardsTableRow['event_types']) => {
+  return event_types.map(mapEventtypeToText).join(', ')
+}
+
+const dialog = useDialog()
+
+const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow) => {
+  dialog.open(NotificationsDashboardDialogEntity, {
+    data: {
+      dashboard_id: row.dashboard_id,
+      epoch: row.epoch,
+      group_id: row.group_id,
+      group_name: row.group_name,
+      identifier: row.identifier,
+    },
+  })
+}
 </script>
 
 <template>
@@ -55,14 +114,11 @@ const { overview } = useNotificationsDashboardOverviewStore()
       :search-placeholder="$t('notifications.dashboards.search_placeholder')"
       @set-search="setSearch"
     >
-      <template #header-left>
-        NETWORK_SWITCHER_COMPONENT
-      </template>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="notificationsDashboards"
-            data-key="notification_id"
+            :data="addIdentifier(notificationsDashboards, 'is_account_dashboard', 'dashboard_id', 'group_id', 'epoch')"
+            data-key="identifier"
             :expandable="!colsVisible.notifications"
             :cursor
             :page-size
@@ -89,7 +145,7 @@ const { overview } = useNotificationsDashboardOverviewStore()
               </template>
             </Column>
             <Column
-              field="timestamp"
+              field="epoch"
               sortable
               header-class="col-age"
               body-class="col-age"
@@ -99,8 +155,8 @@ const { overview } = useNotificationsDashboardOverviewStore()
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
-                  :value="slotProps.data.timestamp"
-                  type="go-timestamp"
+                  :value="slotProps.data.epoch"
+                  type="epoch"
                 />
               </template>
             </Column>
@@ -168,11 +224,15 @@ const { overview } = useNotificationsDashboardOverviewStore()
                       }}
                     </span>
                   </template>
-                  <FontAwesomeIcon
-                    class="link"
-                    :icon="faArrowUpRightFromSquare"
-                    @click="openDialog"
-                  />
+                  <BcButtonIcon
+                    screenreader-text="Open notification details"
+                    @click="showDialog(slotProps.data)"
+                  >
+                    <FontAwesomeIcon
+                      class="link"
+                      :icon="faArrowUpRightFromSquare"
+                    />
+                  </BcButtonIcon>
                 </div>
               </template>
             </Column>
@@ -185,7 +245,7 @@ const { overview } = useNotificationsDashboardOverviewStore()
               :header="$t('notifications.dashboards.col.notification')"
             >
               <template #body="slotProps">
-                {{ slotProps.data.event_types.join(", ") }}
+                {{ textDashboardNotifications(slotProps.data.event_types) }}
               </template>
             </Column>
             <template #expansion="slotProps">
@@ -324,17 +384,6 @@ $breakpoint-lg: 1024px;
   @include utils.truncate-text;
 }
 
-:deep(.bc-table-header) {
-  .h1 {
-    display: none;
-  }
-
-  @media (min-width: $breakpoint-lg) {
-    .h1 {
-      display: block;
-    }
-  }
-}
 :deep(.right-info) {
   flex-direction: column;
   justify-content: center;

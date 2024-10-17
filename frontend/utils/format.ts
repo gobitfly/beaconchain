@@ -393,7 +393,6 @@ export function formatFractionToPercent(value: NumberOrString, option?: { locale
     locale = 'en-US',
   } = option ?? {}
   const number = Number(value)
-  if (number >= 1) throw new Error('number has to be below 1 but was ' + number)
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
@@ -409,7 +408,6 @@ export function formatFraction(value: NumberOrString, option?: { locale?: string
     locale = 'en-US',
   } = option ?? {}
   const number = Number(value)
-  if (number >= 1) throw new Error('number has to be below 1 but was ' + number)
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,

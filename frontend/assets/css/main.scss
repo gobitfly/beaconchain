@@ -3,9 +3,17 @@
 @import "~/assets/css/fonts.scss";
 @import "~/assets/css/utils.scss";
 
-html {
+html,
+h1,h2,h3,h4,h5,h6,
+ul,
+li
+ {
   margin: 0;
   padding: 0;
+  font: inherit;
+}
+ul {
+  padding-inline-start: 1.5rem;
 }
 body {
   @include standard_text;

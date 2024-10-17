@@ -2,15 +2,16 @@
 const props = defineProps<{
   /**
    *
-   * ♿️ screenreader text every button with just an icon should describe what it does
+   * ♿️ screenreader text
+   * every button with just an icon has to describe what it does
    */
-  srText: string,
+  screenreaderText: string,
 }>()
 </script>
 
 <template>
   <button class="bc-button-icon">
-    <BcScreenreaderOnly>{{ props.srText }}</BcScreenreaderOnly>
+    <BcScreenreaderOnly>{{ props.screenreaderText }}</BcScreenreaderOnly>
     <slot />
   </button>
 </template>

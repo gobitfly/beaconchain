@@ -41,7 +41,12 @@ export enum API_PATH {
   LOGOUT = '/logout',
   NOTIFICATIONS_CLIENTS = '/notifications/clients',
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
+  NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT = '/notifications/dashboards/details/account',
+  NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR = '/notifications/dashboards/details/validator',
   NOTIFICATIONS_MACHINE = '/notifications/machines',
+  NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION = '/notifications/management/clients/set_notifications',
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION = '/notifications/management/account_dashboard/set_notifications',
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION = '/notifications/management/validator_dashboard/set_notifications',
   NOTIFICATIONS_MANAGEMENT_GENERAL = '/notifications/management/general',
   NOTIFICATIONS_MANAGEMENT_NETWORK_SET_NOTIFICATION = '/notifications/management/network/set_notification',
   NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE = '/notifications/management/paired_devices/delete',
@@ -55,7 +60,7 @@ export enum API_PATH {
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test_webhook',
   PRODUCT_SUMMARY = '/productSummary',
   REGISTER = '/register',
-  SAVE_DASHBOARDS_SETTINGS = '/settings-dashboards',
+  SAVE_VALIDATOR_DASHBOARDS_SETTINGS = '/settings-dashboards',
   SEARCH = '/search',
   STRIPE_CHECKOUT_SESSION = '/stripe/checkout-session',
   STRIPE_CUSTOMER_PORTAL = '/stripe/customer-portal',
@@ -66,7 +71,7 @@ export enum API_PATH {
   USER_DELETE = '/user/delete',
 }
 
-export type PathValues = Record<string, number | string>
+export type PathValues = Record<string, boolean | number | string>
 
 interface MockFunction {
   (body?: any, param?: PathValues, query?: PathValues): any,
@@ -292,8 +297,40 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
     path: '/users/me/notifications/dashboards',
   },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT]: {
+    getPath: pathValues =>
+      `/users/me/notifications/account-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}/epochs/${pathValues?.epoch}`,
+    path: '/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}',
+  },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR]: {
+    getPath: pathValues =>
+      `/users/me/notifications/validator-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}/epochs/${pathValues?.epoch}`,
+    path: '/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}',
+  },
   [API_PATH.NOTIFICATIONS_MACHINE]: {
     path: '/users/me/notifications/machines',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/clients/${pathValues?.client_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/clients/{client_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/account-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/account-dashboards/{dashboard_id}/groups/{group_id}',
+  },
+  [API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION]: {
+    getPath: pathValues =>
+      `/users/me/notifications/settings/validator-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}`,
+    method: 'PUT',
+    path: '/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id}',
   },
   [API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL]: {
     path: '/users/me/notifications/settings',
@@ -354,12 +391,11 @@ export const mapping: Record<string, MappingData> = {
     mock: true,
     path: '/users',
   },
-  [API_PATH.SAVE_DASHBOARDS_SETTINGS]: {
+  [API_PATH.SAVE_VALIDATOR_DASHBOARDS_SETTINGS]: {
     getPath: values =>
-      `/users/me/notifications/settings/${values?.for}-dashboards/${values?.dashboardKey}/groups/${values?.groupId}`,
+      `/users/me/notifications/settings/validator-dashboards/${values?.dashboard_id}/groups/${values?.group_id}`,
     method: 'POST',
-    mock: false,
-    path: '/users/me/notifications/settings/{for}-dashboards/{dashboard_key}/groups/{group_id}',
+    path: '/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id}',
   },
   [API_PATH.SEARCH]: {
     method: 'POST',

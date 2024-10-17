@@ -23,7 +23,7 @@ const input = defineModel<string>()
 .bc-input-unit {
   display: flex;
   align-items: baseline;
-  gap: 0.375rem;
+  gap: 0.25rem;
 }
 :deep(.bc-input-unit__input) {
   -moz-appearance:textfield;
