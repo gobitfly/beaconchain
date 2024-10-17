@@ -84,17 +84,17 @@ const (
 	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
 	// Validator dashboard events
-	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
-	ValidatorIsOnlineEventName           EventName = "validator_is_online"
-	GroupIsOfflineEventName              EventName = "group_is_offline"
-	ValidatorMissedAttestationEventName  EventName = "validator_attestation_missed"
-	ValidatorProposalEventName           EventName = "validator_proposal"
-	ValidatorUpcomingProposalEventName   EventName = "validator_proposal_upcoming"
-	SyncCommitteeSoon                    EventName = "validator_synccommittee_soon"
-	ValidatorReceivedWithdrawalEventName EventName = "validator_withdrawal"
-	ValidatorGotSlashedEventName         EventName = "validator_got_slashed"
-	RocketpoolCollateralMinReached       EventName = "rocketpool_colleteral_min" //nolint:misspell
-	RocketpoolCollateralMaxReached       EventName = "rocketpool_colleteral_max" //nolint:misspell
+	ValidatorIsOfflineEventName             EventName = "validator_is_offline"
+	ValidatorIsOnlineEventName              EventName = "validator_is_online"
+	GroupIsOfflineEventName                 EventName = "group_is_offline"
+	ValidatorMissedAttestationEventName     EventName = "validator_attestation_missed"
+	ValidatorProposalEventName              EventName = "validator_proposal"
+	ValidatorUpcomingProposalEventName      EventName = "validator_proposal_upcoming"
+	SyncCommitteeSoon                       EventName = "validator_synccommittee_soon"
+	ValidatorReceivedWithdrawalEventName    EventName = "validator_withdrawal"
+	ValidatorGotSlashedEventName            EventName = "validator_got_slashed"
+	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min" //nolint:misspell
+	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max" //nolint:misspell
 
 	// Account dashboard events
 	IncomingTransactionEventName  EventName = "incoming_transaction"
