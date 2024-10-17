@@ -107,9 +107,10 @@ func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
 	if offset != 0 {
 		url += fmt.Sprintf("&cursor=%v", offset)
 	}
-
-	//nolint:gosec
-	resp, err := http.Get(url)
+	client := &http.Client{
+		Timeout: time.Second * 30,
+	}
+	resp, err := client.Get(url)
 
 	if err != nil {
 		log.Error(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": r.ID})
