@@ -31,11 +31,12 @@ import (
 
 type HandlerService struct {
 	dai                         dataaccess.DataAccessor
+	dummy                       dataaccess.DataAccessor
 	scs                         *scs.SessionManager
 	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -46,6 +47,7 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, sessionManager *scs
 
 	return &HandlerService{
 		dai:                         dataAccessor,
+		dummy:                       dummy,
 		scs:                         sessionManager,
 		isPostMachineMetricsEnabled: enablePostMachineMetrics,
 	}
@@ -558,16 +560,6 @@ func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, na
 	return enum
 }
 
-// better func name would be
-func checkValueInAllowed[T cmp.Ordered](v *validationError, value T, allowed []T, name string) {
-	for _, a := range allowed {
-		if cmp.Compare(value, a) == 0 {
-			return
-		}
-	}
-	v.add(name, "parameter is missing or invalid, please check the API documentation")
-}
-
 func (v *validationError) parseSortOrder(order string) bool {
 	switch order {
 	case "":
@@ -1068,4 +1060,12 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 			{Type: "string"}, {Type: "integer"},
 		},
 	}
+}
+
+func isMockEnabled(r *http.Request) bool {
+	isMockEnabled, ok := r.Context().Value(ctxIsMockEnabledKey).(bool)
+	if !ok {
+		return false
+	}
+	return isMockEnabled
 }

@@ -152,8 +152,10 @@ func setup() error {
 	dataAccessService.StartDataAccessServices()
 	dataAccessor = dataAccessService
 
+	dummy := dataaccess.NewDummyService()
+
 	log.Info("initializing api router")
-	router := api.NewApiRouter(dataAccessor, cfg)
+	router := api.NewApiRouter(dataAccessor, dummy, cfg)
 
 	ts = httptest.NewTLSServer(router)
 	jar, err := cookiejar.New(nil)

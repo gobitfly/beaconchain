@@ -122,7 +122,7 @@ func notificationCollector() {
 
 			err = queueNotifications(epoch, notifications) // this caused the collected notifications to be queued and sent
 			if err != nil {
-				log.Error(err, "error queuing notifications for epoch %v in db: %v", 0, log.Fields{"epoch": epoch})
+				log.Error(err, fmt.Sprintf("error queuing notifications for epoch %v in db", epoch), 0)
 				services.ReportStatus("notification-collector", "Error", nil)
 				break
 			}
@@ -140,7 +140,7 @@ func notificationCollector() {
 
 				err = queueNotifications(epoch, userNotifications)
 				if err != nil {
-					log.Error(err, "error queuing user notifications for epoch %v in db: %v", 0, log.Fields{"epoch": epoch})
+					log.Error(err, fmt.Sprintf("error queuing user notifications for epoch %v in db", epoch), 0)
 					services.ReportStatus("notification-collector", "Error", nil)
 					time.Sleep(time.Minute * 2)
 					continue
