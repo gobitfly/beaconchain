@@ -285,7 +285,6 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 		)).
 		Where(
 			goqu.Ex{"uvd.user_id": userId},
-			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
 		).
 		GroupBy(
 			goqu.I("uvdnh.epoch"),
@@ -294,6 +293,12 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 			goqu.I("uvdg.id"),
 			goqu.I("uvdg.name"),
 		)
+
+	if chainIds != nil {
+		vdbQuery = vdbQuery.Where(
+			goqu.L("uvd.network = ANY(?)", pq.Array(chainIds)),
+		)
+	}
 
 	// TODO account dashboards
 	/*adbQuery := goqu.Dialect("postgres").
