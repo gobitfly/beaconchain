@@ -2,6 +2,7 @@ package db2
 
 import (
 	"fmt"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
 	"github.com/gobitfly/beaconchain/pkg/commons/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
