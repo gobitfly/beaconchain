@@ -56,7 +56,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
       </h2>
       <div class="notifications-dashboard-dialog-entity__subheader">
         <h3>
-          {{ props?.group_name }}
+          {{ props?.group_name }} ({{ details?.dashboard_name }})
         </h3>
         <BcContentFilter
           :search-placeholder="$t('common.index')"
