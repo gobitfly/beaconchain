@@ -25,6 +25,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	router := mux.NewRouter()
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
+	legacyRouter := apiRouter.PathPrefix("/v1").Subrouter()
 	internalRouter := apiRouter.PathPrefix("/i").Subrouter()
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave)
@@ -38,7 +39,13 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware)
 	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware)
 
+	if cfg.DeploymentType != "production" {
+		publicRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
+		internalRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
+	}
+
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
+	addLegacyRoutes(handlerService, legacyRouter)
 
 	// serve static files
 	publicRouter.PathPrefix("/docs/").Handler(http.StripPrefix("/api/v2/docs/", http.FileServer(http.FS(docs.Files))))
@@ -243,6 +250,11 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 	addEndpointsToRouters(endpoints, publicRouter, internalRouter)
 }
 
+// Legacy routes are available behind the /v1 prefix and guarantee backwards compatibility with the old API
+func addLegacyRoutes(hs *handlers.HandlerService, publicRouter *mux.Router) {
+	publicRouter.HandleFunc("/client/metrics", hs.LegacyPostUserMachineMetrics).Methods(http.MethodPost, http.MethodOptions)
+}
+
 func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
 	vdbPath := "/validator-dashboards"
 	publicRouter.HandleFunc(vdbPath, hs.PublicPostValidatorDashboards).Methods(http.MethodPost, http.MethodOptions)
@@ -304,9 +316,9 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/total-withdrawals", hs.PublicGetValidatorDashboardTotalWithdrawals, hs.InternalGetValidatorDashboardTotalWithdrawals},
 		{http.MethodGet, "/{dashboard_id}/rocket-pool", hs.PublicGetValidatorDashboardRocketPool, hs.InternalGetValidatorDashboardRocketPool},
 		{http.MethodGet, "/{dashboard_id}/total-rocket-pool", hs.PublicGetValidatorDashboardTotalRocketPool, hs.InternalGetValidatorDashboardTotalRocketPool},
-		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}", hs.PublicGetValidatorDashboardNodeRocketPool, hs.InternalGetValidatorDashboardNodeRocketPool},
 		{http.MethodGet, "/{dashboard_id}/rocket-pool/{node_address}/minipools", hs.PublicGetValidatorDashboardRocketPoolMinipools, hs.InternalGetValidatorDashboardRocketPoolMinipools},
-		{http.MethodGet, "/{dashboard_id}/mobile-widget", nil, hs.InternalGetValidatorDashboardMobileWidget},
+		{http.MethodGet, "/{dashboard_id}/mobile/widget", nil, hs.InternalGetValidatorDashboardMobileWidget},
+		{http.MethodGet, "/{dashboard_id}/mobile/validators", nil, hs.InternalGetValidatorDashboardMobileValidators},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
 }

@@ -14,7 +14,7 @@ import (
 // Premium Plans
 
 func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *http.Request) {
-	data, err := h.dai.GetProductSummary(r.Context())
+	data, err := h.daService.GetProductSummary(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -29,7 +29,7 @@ func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *htt
 // API Ratelimit Weights
 
 func (h *HandlerService) InternalGetRatelimitWeights(w http.ResponseWriter, r *http.Request) {
-	data, err := h.dai.GetApiWeights(r.Context())
+	data, err := h.daService.GetApiWeights(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -44,19 +44,19 @@ func (h *HandlerService) InternalGetRatelimitWeights(w http.ResponseWriter, r *h
 // Latest State
 
 func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
-	latestSlot, err := h.dai.GetLatestSlot()
+	latestSlot, err := h.daService.GetLatestSlot()
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	finalizedEpoch, err := h.dai.GetLatestFinalizedEpoch()
+	finalizedEpoch, err := h.daService.GetLatestFinalizedEpoch()
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	exchangeRates, err := h.dai.GetLatestExchangeRates()
+	exchangeRates, err := h.daService.GetLatestExchangeRates()
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -74,7 +74,7 @@ func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.R
 }
 
 func (h *HandlerService) InternalGetRocketPool(w http.ResponseWriter, r *http.Request) {
-	data, err := h.dai.GetRocketPoolOverview(r.Context())
+	data, err := h.daService.GetRocketPoolOverview(r.Context())
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -126,7 +126,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		return
 	}
 
-	err = h.dai.CreateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
+	err = h.daService.CreateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -156,7 +156,7 @@ func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *h
 		return
 	}
 
-	data, err := h.dai.GetAdConfigurations(r.Context(), keys)
+	data, err := h.daService.GetAdConfigurations(r.Context(), keys)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -202,7 +202,7 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 		return
 	}
 
-	err = h.dai.UpdateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
+	err = h.daService.UpdateAdConfiguration(r.Context(), key, req.JQuerySelector, insertMode, req.RefreshInterval, req.ForAllUsers, req.BannerId, req.HtmlContent, req.Enabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -232,7 +232,7 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 		return
 	}
 
-	err = h.dai.RemoveAdConfiguration(r.Context(), key)
+	err = h.daService.RemoveAdConfiguration(r.Context(), key)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -251,7 +251,7 @@ func (h *HandlerService) InternalGetUserInfo(w http.ResponseWriter, r *http.Requ
 		handleErr(w, r, err)
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(r.Context(), user.Id)
+	userInfo, err := h.daService.GetUserInfo(r.Context(), user.Id)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -367,6 +367,34 @@ func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.Response
 	h.PublicGetValidatorDashboardValidators(w, r)
 }
 
+func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	pagingParams := v.checkPagingParams(q)
+
+	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
+	sort := checkSort[enums.VDBMobileValidatorsColumn](&v, q.Get("sort"))
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	data, paging, err := h.daService.GetValidatorDashboardMobileValidators(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.InternalGetValidatorDashboardMobileValidatorsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
 func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	h.PublicDeleteValidatorDashboardValidators(w, r)
 }
@@ -467,10 +495,6 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalRocketPool(w http.Res
 	h.PublicGetValidatorDashboardTotalRocketPool(w, r)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardNodeRocketPool(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardNodeRocketPool(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardRocketPoolMinipools(w, r)
 }
@@ -488,7 +512,7 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.Respon
 		handleErr(w, r, err)
 		return
 	}
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.daService.GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -497,7 +521,7 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.Respon
 		returnForbidden(w, r, errors.New("user does not have access to mobile app widget"))
 		return
 	}
-	data, err := h.dai.GetValidatorDashboardMobileWidget(r.Context(), dashboardId)
+	data, err := h.daService.GetValidatorDashboardMobileWidget(r.Context(), dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -521,7 +545,7 @@ func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r 
 		handleErr(w, r, v)
 		return
 	}
-	stats, err := h.dai.GetLatestBundleForNativeVersion(r.Context(), nativeVersion)
+	stats, err := h.daService.GetLatestBundleForNativeVersion(r.Context(), nativeVersion)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -546,7 +570,7 @@ func (h *HandlerService) InternalPostMobileBundleDeliveries(w http.ResponseWrite
 		handleErr(w, r, v)
 		return
 	}
-	err := h.dai.IncrementBundleDeliveryCount(r.Context(), bundleVersion)
+	err := h.daService.IncrementBundleDeliveryCount(r.Context(), bundleVersion)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -647,7 +671,7 @@ func (h *HandlerService) InternalGetBlock(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	data, err := h.dai.GetBlock(r.Context(), chainId, block)
+	data, err := h.daService.GetBlock(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -666,7 +690,7 @@ func (h *HandlerService) InternalGetBlockOverview(w http.ResponseWriter, r *http
 		return
 	}
 
-	data, err := h.dai.GetBlockOverview(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockOverview(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -684,7 +708,7 @@ func (h *HandlerService) InternalGetBlockTransactions(w http.ResponseWriter, r *
 		return
 	}
 
-	data, err := h.dai.GetBlockTransactions(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockTransactions(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -703,7 +727,7 @@ func (h *HandlerService) InternalGetBlockVotes(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	data, err := h.dai.GetBlockVotes(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockVotes(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -722,7 +746,7 @@ func (h *HandlerService) InternalGetBlockAttestations(w http.ResponseWriter, r *
 		return
 	}
 
-	data, err := h.dai.GetBlockAttestations(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockAttestations(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -741,7 +765,7 @@ func (h *HandlerService) InternalGetBlockWithdrawals(w http.ResponseWriter, r *h
 		return
 	}
 
-	data, err := h.dai.GetBlockWithdrawals(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockWithdrawals(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -760,7 +784,7 @@ func (h *HandlerService) InternalGetBlockBlsChanges(w http.ResponseWriter, r *ht
 		return
 	}
 
-	data, err := h.dai.GetBlockBlsChanges(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockBlsChanges(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -779,7 +803,7 @@ func (h *HandlerService) InternalGetBlockVoluntaryExits(w http.ResponseWriter, r
 		return
 	}
 
-	data, err := h.dai.GetBlockVoluntaryExits(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockVoluntaryExits(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -798,7 +822,7 @@ func (h *HandlerService) InternalGetBlockBlobs(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	data, err := h.dai.GetBlockBlobs(r.Context(), chainId, block)
+	data, err := h.daService.GetBlockBlobs(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -820,7 +844,7 @@ func (h *HandlerService) InternalGetSlot(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	data, err := h.dai.GetSlot(r.Context(), chainId, block)
+	data, err := h.daService.GetSlot(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -839,7 +863,7 @@ func (h *HandlerService) InternalGetSlotOverview(w http.ResponseWriter, r *http.
 		return
 	}
 
-	data, err := h.dai.GetSlotOverview(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotOverview(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -857,7 +881,7 @@ func (h *HandlerService) InternalGetSlotTransactions(w http.ResponseWriter, r *h
 		return
 	}
 
-	data, err := h.dai.GetSlotTransactions(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotTransactions(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -876,7 +900,7 @@ func (h *HandlerService) InternalGetSlotVotes(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	data, err := h.dai.GetSlotVotes(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotVotes(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -895,7 +919,7 @@ func (h *HandlerService) InternalGetSlotAttestations(w http.ResponseWriter, r *h
 		return
 	}
 
-	data, err := h.dai.GetSlotAttestations(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotAttestations(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -914,7 +938,7 @@ func (h *HandlerService) InternalGetSlotWithdrawals(w http.ResponseWriter, r *ht
 		return
 	}
 
-	data, err := h.dai.GetSlotWithdrawals(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotWithdrawals(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -933,7 +957,7 @@ func (h *HandlerService) InternalGetSlotBlsChanges(w http.ResponseWriter, r *htt
 		return
 	}
 
-	data, err := h.dai.GetSlotBlsChanges(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotBlsChanges(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -952,7 +976,7 @@ func (h *HandlerService) InternalGetSlotVoluntaryExits(w http.ResponseWriter, r 
 		return
 	}
 
-	data, err := h.dai.GetSlotVoluntaryExits(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotVoluntaryExits(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -971,7 +995,7 @@ func (h *HandlerService) InternalGetSlotBlobs(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	data, err := h.dai.GetSlotBlobs(r.Context(), chainId, block)
+	data, err := h.daService.GetSlotBlobs(r.Context(), chainId, block)
 	if err != nil {
 		handleErr(w, r, err)
 		return
