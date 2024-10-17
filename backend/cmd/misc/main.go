@@ -564,6 +564,40 @@ func collectNotifications(startEpoch uint64) error {
 	if len(notifications[0]) > 0 {
 		spew.Dump(notifications[0])
 	}
+
+	emails, err := notification.RenderEmailsForUserEvents(0, notifications)
+	if err != nil {
+		return err
+	}
+
+	for _, email := range emails {
+		// if email.Address == "" {
+		log.Infof("to: %v", email.Address)
+		log.Infof("subject: %v", email.Subject)
+		log.Infof("body: %v", email.Email.Body)
+		log.Info("-----")
+		// }
+	}
+
+	// pushMessages, err := notification.RenderPushMessagesForUserEvents(0, notifications)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, pushMessage := range pushMessages {
+	// 	message := pushMessage.Messages[0]
+	// 	log.Infof("title: %v body: %v", message.Notification.Title, message.Notification.Body)
+
+	// 	if message.Token == "" {
+	// 		log.Info("sending test message")
+
+	// 		err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, false)
+	// 		if err != nil {
+	// 			log.Error(err, "error sending firebase batch job", 0)
+	// 		}
+	// 	}
+	// }
+
 	return nil
 }
 
@@ -606,7 +640,7 @@ func collectUserDbNotifications(startEpoch uint64) error {
 		if message.Token == "" {
 			log.Info("sending test message")
 
-			err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, false)
+			err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, true)
 			if err != nil {
 				log.Error(err, "error sending firebase batch job", 0)
 			}
