@@ -204,7 +204,7 @@ var EventLabel map[EventName]string = map[EventName]string{
 	ValidatorGotSlashedEventName:             "Validator slashed",
 	ValidatorDidSlashEventName:               "Validator has slashed",
 	ValidatorIsOfflineEventName:              "Validator online / offline",
-	ValidatorReceivedWithdrawalEventName:     "Validator withdrawal initiated",
+	ValidatorReceivedWithdrawalEventName:     "Withdrawal processed",
 	NetworkLivenessIncreasedEventName:        "The network is experiencing liveness issues",
 	EthClientUpdateEventName:                 "An Ethereum client has a new update available",
 	MonitoringMachineOfflineEventName:        "Machine offline",
