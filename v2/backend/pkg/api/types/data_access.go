@@ -164,11 +164,10 @@ type UserCredentialInfo struct {
 
 type BlocksCursor struct {
 	GenericCursor
-	Slot uint64 // basically the same as Block, Epoch, Age; mandatory, used to index
 
-	// optional, max one of those (for now)
 	Proposer uint64
-	Group    uint64
+	Slot     uint64 // same as Age
+	Block    uint64
 	Status   uint64
 	Reward   decimal.Decimal
 }
