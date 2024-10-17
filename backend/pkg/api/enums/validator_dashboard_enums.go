@@ -156,6 +156,23 @@ func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 	}
 }
 
+func (c VDBBlocksColumn) ToString() string {
+	switch c {
+	case VDBBlockProposer:
+		return "proposer"
+	case VDBBlockSlot:
+		return "slot"
+	case VDBBlockBlock:
+		return "block"
+	case VDBBlockStatus:
+		return "status"
+	case VDBBlockProposerReward:
+		return "reward"
+	default:
+		return ""
+	}
+}
+
 var VDBBlocksColumns = struct {
 	Proposer       VDBBlocksColumn
 	Slot           VDBBlocksColumn
