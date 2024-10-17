@@ -301,7 +301,6 @@ func (v *validationError) checkExistingGroupId(param string) uint64 {
 	return v.checkUint(param, "group_id")
 }
 
-//nolint:unparam
 func splitParameters(params string, delim rune) []string {
 	// This splits the string by delim and removes empty strings
 	f := func(c rune) bool {
@@ -402,7 +401,7 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	if sortString == "" {
 		return &types.Sort[T]{Column: c, Desc: defaultDesc}
 	}
-	sortSplit := strings.Split(sortString, ":")
+	sortSplit := splitParameters(sortString, ':')
 	if len(sortSplit) > 2 {
 		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'", sortString))
 		return nil
