@@ -1882,10 +1882,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
-	chainId := v.checkNetworkParameter(q.Get("network"))
-	chainIds := []uint64{chainId}
-	// TODO replace with "networks" once multiple networks are supported
-	//chainIds := v.checkNetworksParameter(q.Get("networks"))
+	chainIds := v.checkNetworksParameter(q.Get("networks"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
