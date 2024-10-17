@@ -381,11 +381,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		}
 		graffiti := proposal.GraffitiText
 		data[i].Graffiti = &graffiti
+		block := uint64(proposal.Block.Int64)
+		data[i].Block = &block
 		if proposal.Status == 3 {
 			continue
 		}
-		block := uint64(proposal.Block.Int64)
-		data[i].Block = &block
 		var reward t.ClElValue[decimal.Decimal]
 		if proposal.ElReward.Valid {
 			rewardRecp := t.Address{
