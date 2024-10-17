@@ -114,7 +114,7 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
 		r = r.WithContext(ctx)
 
-		dashboardUser, err := h.dai.GetValidatorDashboardUser(r.Context(), types.VDBIdPrimary(dashboardId))
+		dashboardUser, err := h.daService.GetValidatorDashboardUser(r.Context(), types.VDBIdPrimary(dashboardId))
 		if err != nil {
 			handleErr(w, r, err)
 			return
@@ -142,7 +142,7 @@ func (h *HandlerService) PremiumPerkCheckMiddleware(next http.Handler, hasRequir
 		}
 
 		// get user info
-		userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+		userInfo, err := h.daService.GetUserInfo(r.Context(), userId)
 		if err != nil {
 			handleErr(w, r, err)
 			return
@@ -184,7 +184,7 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 			next.ServeHTTP(w, r)
 			return
 		}
-		dashboard, err := h.dai.GetValidatorDashboardInfo(r.Context(), dashboardId.Id)
+		dashboard, err := h.daService.GetValidatorDashboardInfo(r.Context(), dashboardId.Id)
 		if err != nil {
 			handleErr(w, r, err)
 			return

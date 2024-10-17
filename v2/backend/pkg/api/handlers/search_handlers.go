@@ -148,7 +148,7 @@ func (h *HandlerService) handleSearchValidatorByIndex(ctx context.Context, input
 		// input should've been checked by the regex before, this should never happen
 		return nil, err
 	}
-	result, err := h.dai.GetSearchValidatorByIndex(ctx, chainId, index)
+	result, err := h.daService.GetSearchValidatorByIndex(ctx, chainId, index)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, i
 		// input should've been checked by the regex before, this should never happen
 		return nil, err
 	}
-	result, err := h.dai.GetSearchValidatorByPublicKey(ctx, chainId, publicKey)
+	result, err := h.daService.GetSearchValidatorByPublicKey(ctx, chainId, publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Cont
 	if err != nil {
 		return nil, err
 	}
-	result, err := h.dai.GetSearchValidatorsByDepositAddress(ctx, chainId, address)
+	result, err := h.daService.GetSearchValidatorsByDepositAddress(ctx, chainId, address)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Cont
 }
 
 func (h *HandlerService) handleSearchValidatorsByDepositEnsName(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	result, err := h.dai.GetSearchValidatorsByDepositEnsName(ctx, chainId, input)
+	result, err := h.daService.GetSearchValidatorsByDepositEnsName(ctx, chainId, input)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalCredential(ctx contex
 	if err != nil {
 		return nil, err
 	}
-	result, err := h.dai.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
+	result, err := h.daService.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	result, err := h.dai.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
+	result, err := h.daService.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.C
 }
 
 func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	result, err := h.dai.GetSearchValidatorsByWithdrawalEnsName(ctx, chainId, input)
+	result, err := h.daService.GetSearchValidatorsByWithdrawalEnsName(ctx, chainId, input)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 }
 
 func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	result, err := h.dai.GetSearchValidatorsByGraffiti(ctx, chainId, input)
+	result, err := h.daService.GetSearchValidatorsByGraffiti(ctx, chainId, input)
 	if err != nil {
 		return nil, err
 	}

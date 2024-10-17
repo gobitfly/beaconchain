@@ -30,7 +30,7 @@ func (h *HandlerService) PublicGetUserMachineMetrics(w http.ResponseWriter, r *h
 		return
 	}
 
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userId)
+	userInfo, err := h.daService.GetUserInfo(r.Context(), userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -51,7 +51,7 @@ func (h *HandlerService) PublicGetUserMachineMetrics(w http.ResponseWriter, r *h
 		offset = 0
 	}
 
-	data, err := h.dai.GetUserMachineMetrics(r.Context(), userId, int(limit), int(offset))
+	data, err := h.daService.GetUserMachineMetrics(r.Context(), userId, int(limit), int(offset))
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -77,13 +77,13 @@ func (h *HandlerService) LegacyPostUserMachineMetrics(w http.ResponseWriter, r *
 		return
 	}
 
-	userID, err := h.dai.GetUserIdByApiKey(r.Context(), apiKey)
+	userID, err := h.daService.GetUserIdByApiKey(r.Context(), apiKey)
 	if err != nil {
 		returnBadRequest(w, r, fmt.Errorf("no user found with api key"))
 		return
 	}
 
-	userInfo, err := h.dai.GetUserInfo(r.Context(), userID)
+	userInfo, err := h.daService.GetUserInfo(r.Context(), userID)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -200,7 +200,7 @@ func (h *HandlerService) internal_processMachine(context context.Context, machin
 		}
 	}
 
-	return h.dai.PostUserMachineMetrics(context, userInfo.Id, machine, parsedMeta.Process, data)
+	return h.daService.PostUserMachineMetrics(context, userInfo.Id, machine, parsedMeta.Process, data)
 }
 
 func DecodeMapStructure(input interface{}, output interface{}) error {
