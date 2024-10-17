@@ -65,9 +65,6 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 }
 
 const (
-	ValidatorMissedProposalEventName   EventName = "validator_proposal_missed"
-	ValidatorExecutedProposalEventName EventName = "validator_proposal_submitted"
-
 	ValidatorDidSlashEventName         EventName = "validator_did_slash"
 	ValidatorGroupIsOfflineEventName   EventName = "validator_group_is_offline"
 	ValidatorBalanceDecreasedEventName EventName = "validator_balance_decreased"
@@ -80,25 +77,22 @@ const (
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
 	TaxReportEventName                              EventName = "user_tax_report"
-	//nolint:misspell
-	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min"
-	//nolint:misspell
-	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max"
-	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
+	SyncCommitteeSoonEventName                      EventName = "validator_synccommittee_soon"
 	//nolint:misspell
 	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
 	// Validator dashboard events
-	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
-	GroupIsOfflineEventName              EventName = "group_is_offline"
-	ValidatorMissedAttestationEventName  EventName = "validator_attestation_missed"
-	ValidatorProposalEventName           EventName = "validator_proposal"
-	ValidatorUpcomingProposalEventName   EventName = "validator_proposal_upcoming"
-	SyncCommitteeSoon                    EventName = "validator_synccommittee_soon"
-	ValidatorReceivedWithdrawalEventName EventName = "validator_withdrawal"
-	ValidatorGotSlashedEventName         EventName = "validator_got_slashed"
-	RocketpoolCollateralMinReached       EventName = "rocketpool_colleteral_min" //nolint:misspell
-	RocketpoolCollateralMaxReached       EventName = "rocketpool_colleteral_max" //nolint:misspell
+	ValidatorIsOfflineEventName             EventName = "validator_is_offline"
+	GroupIsOfflineEventName                 EventName = "group_is_offline"
+	ValidatorMissedAttestationEventName     EventName = "validator_attestation_missed"
+	ValidatorMissedProposalEventName        EventName = "validator_proposal_missed"
+	ValidatorExecutedProposalEventName      EventName = "validator_proposal_submitted"
+	ValidatorUpcomingProposalEventName      EventName = "validator_proposal_upcoming"
+	SyncCommitteeSoon                       EventName = "validator_synccommittee_soon"
+	ValidatorReceivedWithdrawalEventName    EventName = "validator_withdrawal"
+	ValidatorGotSlashedEventName            EventName = "validator_got_slashed"
+	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min" //nolint:misspell
+	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max" //nolint:misspell
 
 	// Account dashboard events
 	IncomingTransactionEventName  EventName = "incoming_transaction"
