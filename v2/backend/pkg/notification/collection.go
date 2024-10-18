@@ -905,7 +905,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 		return fmt.Errorf("error getting withdrawals from database, err: %w", err)
 	}
 
-	// log.Infof("retrieved %v events", len(events))
+	log.Infof("retrieved %v events", len(events))
 	for _, event := range events {
 		subscribers, ok := subMap[hex.EncodeToString(event.Pubkey)]
 		if ok {
@@ -919,7 +919,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 						continue
 					}
 				}
-				// log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
+				log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
 				n := &ValidatorWithdrawalNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
 						SubscriptionID:     *sub.ID,
