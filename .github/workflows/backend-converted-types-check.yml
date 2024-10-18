@@ -3,7 +3,7 @@ on:
   push:
     paths:
       - 'backend/**'
-      - 'frontend/**'
+      - 'frontend/types/api/**'
     branches:
       - main
       - staging
