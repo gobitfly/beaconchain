@@ -86,7 +86,7 @@ func SendMailRateLimited(content types.TransitEmailContent) error {
 	}
 	timeLeft := time.Until(time.Now().Add(utils.Day).Truncate(utils.Day))
 
-	log.Infof("User %d has sent %d emails today, time left is %v", content.UserId, count, timeLeft)
+	log.Debugf("user %d has sent %d of %d emails today, time left is %v", content.UserId, count, maxEmailsPerDay, timeLeft)
 	if count > maxEmailsPerDay {
 		return &types.RateLimitError{TimeLeft: timeLeft}
 	} else if count == maxEmailsPerDay {
