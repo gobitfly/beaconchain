@@ -296,16 +296,14 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 
 		bodyDetails := template.HTML("")
 
+		totalBlockReward := float64(0)
+
 		for _, event := range types.EventSortOrder {
 			for _, notificationsPerGroup := range notificationsPerDashboard {
 				for _, userNotifications := range notificationsPerGroup {
 					ns, ok := userNotifications[event]
 					if !ok { // nothing to do for this event type
 						continue
-					}
-
-					if len(bodyDetails) > 0 {
-						bodyDetails += "<br>"
 					}
 					//nolint:gosec // this is a static string
 					bodyDetails += template.HTML(fmt.Sprintf("<u>%s</u><br>", types.EventLabel[event]))
@@ -329,6 +327,15 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 							}
 						}
 
+						if event == types.ValidatorExecutedProposalEventName {
+							proposalNotification, ok := n.(*ValidatorProposalNotification)
+							if !ok {
+								log.Error(fmt.Errorf("error casting proposal notification"), "", 0)
+								continue
+							}
+							totalBlockReward += proposalNotification.Reward
+						}
+
 						metrics.NotificationsQueued.WithLabelValues("email", string(event)).Inc()
 						i++
 
@@ -344,19 +351,17 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 						//nolint:gosec // this is a static string
 						bodyDetails += template.HTML(fmt.Sprintf("%s<br>", eventInfo))
 					}
+					bodyDetails += "<br>"
 				}
 			}
 		}
 
 		//nolint:gosec // this is a static string
-		bodySummary := template.HTML(fmt.Sprintf("<h5>Summary for epoch %d:</h5>", epoch))
+		bodySummary := template.HTML(fmt.Sprintf("<h2 style='margin-bottom: 0px;'>Summary for epoch %d:</h2>", epoch))
 		for _, event := range types.EventSortOrder {
 			count, ok := notificationTypesMap[event]
 			if !ok {
 				continue
-			}
-			if len(bodySummary) > 0 {
-				bodySummary += "<br>"
 			}
 			plural := ""
 			if count > 1 {
@@ -372,13 +377,17 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 			case types.EthClientUpdateEventName:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural))
+			case types.ValidatorExecutedProposalEventName:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d validator%s, Reward: %.3f ETH", types.EventLabel[event], count, plural, totalBlockReward))
 			default:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
 			}
+			bodySummary += "<br>"
 		}
 		msg.Body += bodySummary
-		msg.Body += template.HTML("<br><br><h5>Details:</h5>")
+		msg.Body += template.HTML("<h2 style='margin-bottom: 0px;'>Details:</h2>")
 		msg.Body += bodyDetails
 
 		if len(uniqueNotificationTypes) > 2 {
@@ -412,6 +421,9 @@ func QueueEmailNotifications(epoch uint64, notificationsByUserID types.Notificat
 
 	// now batch insert the emails in one go
 	log.Infof("queueing %v email notifications", len(emails))
+	if len(emails) == 0 {
+		return nil
+	}
 	type insertData struct {
 		Content types.TransitEmailContent `db:"content"`
 	}
@@ -456,6 +468,7 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 
 				notificationTypesMap := make(map[types.EventName][]string)
 
+				totalBlockReward := float64(0)
 				for _, event := range types.EventSortOrder {
 					ns, ok := userNotifications[event]
 					if !ok { // nothing to do for this event type
@@ -466,6 +479,15 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					}
 					for _, n := range ns {
 						notificationTypesMap[event] = append(notificationTypesMap[event], n.GetEntitiyId())
+
+						if event == types.ValidatorExecutedProposalEventName {
+							proposalNotification, ok := n.(*ValidatorProposalNotification)
+							if !ok {
+								log.Error(fmt.Errorf("error casting proposal notification"), "", 0)
+								continue
+							}
+							totalBlockReward += proposalNotification.Reward
+						}
 					}
 					metrics.NotificationsQueued.WithLabelValues("push", string(event)).Inc()
 				}
@@ -493,15 +515,14 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 						bodySummary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)
 					case types.MonitoringMachineCpuLoadEventName, types.MonitoringMachineMemoryUsageEventName, types.MonitoringMachineDiskAlmostFullEventName, types.MonitoringMachineOfflineEventName:
 						bodySummary += fmt.Sprintf("%s: %d machine%s", types.EventLabel[event], count, plural)
+					case types.ValidatorExecutedProposalEventName:
+						bodySummary += fmt.Sprintf("%s: %d validator%s, Reward: %.3f ETH", types.EventLabel[event], count, plural, totalBlockReward)
 					default:
 						bodySummary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
 					}
-					truncated := ""
-					if len(events) > 3 {
-						truncated = ",..."
-						events = events[:3]
+					if len(events) < 3 {
+						bodySummary += fmt.Sprintf(" (%s)", strings.Join(events, ","))
 					}
-					bodySummary += fmt.Sprintf(" (%s%s)", strings.Join(events, ","), truncated)
 				}
 
 				if len(bodySummary) > 1000 { // cap the notification body to 1000 characters (firebase limit)
@@ -544,6 +565,9 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 
 	// now batch insert the push messages in one go
 	log.Infof("queueing %v push notifications", len(pushMessages))
+	if len(pushMessages) == 0 {
+		return nil
+	}
 	type insertData struct {
 		Content types.TransitPushContent `db:"content"`
 	}

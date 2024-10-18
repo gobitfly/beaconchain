@@ -16,6 +16,7 @@
   },
   "clipboard": {
     "copied": "Copied!",
+    "copied_to_clipboard": "Copied to clipboard!",
     "copy": "Copy to clipboard"
   },
   "common": {
@@ -613,6 +614,22 @@
           "heading":"Delete all notifications",
           "paragraph": "Do you really want to delete all notifications for this dashboard?"
           },
+        "entity": {
+          "attestation_missed":"Attestation missed",
+          "max_collateral":"Maximum collateral reached",
+          "min_collateral":"Minimum collateral reached",
+          "proposal_done": "Proposal done",
+          "proposal_missed": "Proposal missed",
+          "slashed": "Slashed",
+          "sync_committee": "Sync committee",
+          "title": "Notifications",
+          "upcoming_proposal": "Upcoming proposal",
+          "validator_back_online": "Validator back online",
+          "validator_offline": "Validator offline",
+          "validator_offline_reminder": "Validator offline reminder",
+          "withdrawal": "Withdrawal"
+
+        },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
           "_link": "Discord webhook",
@@ -770,8 +787,8 @@
       "headers": {
         "account_groups": "Most notified account groups",
         "email_notifications": "Email Notifications",
-        "most_notifications_24h": "Most Notifications in 24h",
         "most_notifications_30d": "Most Notifications in 30d",
+        "notifications_24h": "Notifications in 24h",
         "push_notifications": "Push Notifications",
         "validator_groups": "Most notified validator groups"
       },
@@ -785,39 +802,19 @@
       },
       "push": "Push"
     },
-    "rocketpool": {
-      "col": {
-        "node_address": "Node Address",
-        "notification": "Notification",
-        "rocketpool_subscription":"Rocketpool ({count} Subscriptions)"
-      },
-      "event_types": {
-        "collateral_max": "Max collateral reached",
-        "collateral_min": "Min collateral reached",
-        "reward_round": "New reward round"
-      },
-      "search_placeholder": "Node Address"
-    },
     "subscriptions": {
       "accounts": {
-        "all": {
-          "option": "All events"
+         "erc20_token_transfers": {
+          "label": "ERC20 token transfers"
         },
-        "erc20_token_transfers_value_threshold": {
-          "option": "ERC20 token transfers",
-          "placeholder": "value ≥ $0"
+
+        "erc721_token_transfers": {
+          "label": "ERC721 token transfers"
         },
-        "explanation": "",
-        "is_erc20_token_transfers_subscribed": {
-          "option": "ERC20 token transfers"
+        "erc1155_token_transfers": {
+          "label": "ERC1155 token transfers"
         },
-        "is_erc721_token_transfers_subscribed": {
-          "option": "ERC721 token transfers"
-        },
-        "is_erc1155_token_transfers_subscribed": {
-          "option": "ERC1155 token transfers"
-        },
-        "is_ignore_spam_transactions_enabled": {
+        "ignore_spam_transactions": {
           "hint": [
             "Ignores",
             "zero value transfer tx's",
@@ -825,73 +822,66 @@
             "\"hidden\" token label",
             "."
           ],
-          "option": "Ignore spam transactions"
+          "label": "Ignore spam transactions"
         },
-        "is_incoming_transactions_subscribed": {
-          "option": "Incoming transactions"
+        "incoming_transactions": {
+          "label": "Incoming transactions"
         },
-        "is_outgoing_transactions_subscribed": {
-          "option": "Outgoing transactions"
-        },
-        "subscribed_chain_ids": {
-          "option": "Networks"
+        "outgoing_transactions": {
+          "label": "Outgoing transactions"
         }
       },
-      "button": "Close",
-      "dialog_title": "Edit Subscriptions",
-      "error_group": "Notification subscriptions",
-      "error_message": "We could not save your preferences.",
-      "error_title": "Error",
+      "title": "Edit Subscriptions",
       "validators": {
-        "all": {
-          "option": "All events"
+        "all_events": {
+          "label": "All events"
         },
-        "explanation": "All notifications are sent after network finality (~{count} min).",
-        "group_offline_threshold": {
-          "hint": [
-            "We will trigger a notification:",
-            "Once validators in your group are offline. | Once {count}% of your group is offline. | Once {count}% of your group is offline.",
-            "Once you have been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online.",
-            "Note:",
-            "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
-          ],
-          "option": "Group is offline",
-          "placeholder": ""
+        "attestation_missed": {
+          "info": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime.",
+          "label": "Attestations missed"
         },
-        "is_attestations_missed_subscribed": {
-          "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime.",
-          "option": "Attestations missed"
+        "block_proposal": {
+          "label": "Block proposal (missed & success)"
         },
-        "is_block_proposal_subscribed": {
-          "option": "Block proposal (missed & success)"
+        "explanation": "All notifications are sent after network finality (~20min).",
+        "group_is_offline": {
+          "info": {
+            "_list": "Once 10% of your group is offline\nOnce you have been offline for 3 epochs\nEvery 32 Epochs (~3 hours) during your downtime\nOnce you are back online again",
+            "note": "Notification resets if you do not meet the threshold of 10%",
+            "note_bold": "Note: ",
+            "template": "We will trigger a notification: {_list}"
+          },
+          "label": "Group is offline"
         },
-        "is_real_time_mode_enabled": {
-          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications.",
-          "option": "Realtime mode"
+        "max_collateral_reached": {
+          "label": "Max collateral reached"
         },
-        "is_slashed_subscribed": {
-          "option": "Validator got slashed"
+        "min_collateral_reached": {
+          "label": "Min collateral reached"
         },
-        "is_sync_subscribed": {
-          "option": "Sync committee"
+        "real_time_mode": {
+          "info": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications.",
+          "label": "Realtime mode"
         },
-        "is_upcoming_block_proposal_subscribed": {
-          "hint": "May trigger false positive notifications during reorgs.",
-          "option": "Upcoming block proposal"
+        "sync_committee": {
+          "label": "Sync committee"
         },
-        "is_validator_offline_subscribed": {
-          "hint": [
-            "We will trigger a notification:",
-            "Once the validator has been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online again."
-          ],
-          "option": "Validator is offline"
+        "upcoming_block_proposal": {
+          "info": "May trigger false positive notifications during reorgs.",
+          "label": "Upcoming block proposal"
         },
-        "is_withdrawal_processed_subscribed": {
-          "option": "Withdrawal processed"
+        "validator_got_slashed": {
+          "label": "Validator got slashed"
+        },
+        "validator_is_offline": {
+          "info": {
+            "_list": "Once the validator has been offline for 3 epochs\nEvery 32 Epochs (~3 hours) during your downtime\nOnce you are back online again",
+            "template": "We will trigger a notification: {_list}"
+          },
+          "label": "Validator is offline"
+        },
+        "withdrawal_processed": {
+          "label": "Withdrawal processed"
         }
       }
     },
@@ -900,8 +890,7 @@
       "dashboards": "Dashboards",
       "general": "General",
       "machines": "Machines",
-      "networks": "Networks",
-      "rocketpool": "Rocket Pool"
+      "networks": "Networks"
     },
     "title": "Notifications"
   },

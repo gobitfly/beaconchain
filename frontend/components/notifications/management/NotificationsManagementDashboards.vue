@@ -4,11 +4,7 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-import { getGroupLabel } from '~/utils/dashboard/group'
-import { API_PATH } from '~/types/customFetch'
-import type {
-  ApiErrorResponse, ApiPagingResponse,
-} from '~/types/api/common'
+import type { ApiPagingResponse } from '~/types/api/common'
 import type {
   NotificationSettingsAccountDashboard,
   NotificationSettingsDashboardsTableRow,
@@ -16,16 +12,11 @@ import type {
 } from '~/types/api/notifications'
 import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import {
   NotificationsManagementModalDashboardsDelete,
   NotificationsManagementModalWebhook,
   NotificationsManagementSubscriptionDialog,
 } from '#components'
-import type { WebhookForm } from '~/components/notifications/management/modal/NotificationsManagementModalWebhook.vue'
-
-type AllOptions = NotificationSettingsAccountDashboard &
-  NotificationSettingsValidatorDashboard
 
 interface WrappedRow extends NotificationSettingsDashboardsTableRow {
   dashboard_name: string,
@@ -34,75 +25,23 @@ interface WrappedRow extends NotificationSettingsDashboardsTableRow {
   subscriptions: string[],
 }
 
-interface SettingsWithContext {
-  row: WrappedRow,
-  settings: Partial<AllOptions>,
-}
-
-// #### CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
-
-const KeysIndicatingASubscription: Array<keyof AllOptions> = [
-  'is_validator_offline_subscribed',
-  'group_offline_threshold',
-  'is_attestations_missed_subscribed',
-  'is_block_proposal_subscribed',
-  'is_upcoming_block_proposal_subscribed',
-  'is_sync_subscribed',
-  'is_withdrawal_processed_subscribed',
-  'is_slashed_subscribed',
-  'is_real_time_mode_enabled',
-  'is_incoming_transactions_subscribed',
-  'is_outgoing_transactions_subscribed',
-  'is_erc20_token_transfers_subscribed',
-  'is_erc721_token_transfers_subscribed',
-  'is_erc1155_token_transfers_subscribed',
-  'is_ignore_spam_transactions_enabled',
-]
-// ms. We cannot let the user close the dialog and later interrupt his/her
-// new activities with "we lost your preferences half a minute ago,
-// we hope you remember them and do not mind going back to that dialog"
-const TimeoutForSavingFailures = 2300
-// ms. Any change ends-up saved anyway, so we can prevent useless requests with a delay larger than usual.
-const MinimumTimeBetweenAPIcalls = 700
-
-// #### END OF CONFIGURATION RELATED TO THE SUBSCRIPTION DIALOGS ####
-
-const { fetch } = useCustomFetch()
 const toast = useBcToast()
 const { t: $t } = useTranslation()
 const dialog = useDialog()
 const {
   cursor,
-  dashboardGroups,
+  dashboards,
   deleteDashboardNotifications,
   isLoading,
   onSort,
   pageSize,
   query,
+  saveSubscriptions,
   setCursor,
   setPageSize,
   setSearch,
 } = useNotificationsManagementDashboards()
-const { getDashboardLabel } = useUserDashboardStore()
-const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
-
-const debouncer = useDebounceValue<SettingsWithContext>(
-  {} as SettingsWithContext,
-  MinimumTimeBetweenAPIcalls,
-)
-watch(debouncer.value as Ref<SettingsWithContext>, async (value) => {
-  try {
-    await saveUserSettings(value)
-  }
-  catch (error) {
-    toast.showError({
-      detail: $t('notifications.subscriptions.error_message'),
-      group: $t('notifications.subscriptions.error_group'),
-      summary: $t('notifications.subscriptions.error_title'),
-    })
-  }
-})
 
 const colsVisible = computed(() => {
   return {
@@ -112,28 +51,20 @@ const colsVisible = computed(() => {
   }
 })
 
-const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value, 'Σ')
-}
-
-const wrappedDashboardGroups: ComputedRef<
+const wrappedDashboards: ComputedRef<
   ApiPagingResponse<WrappedRow> | undefined
 > = computed(() => {
-  if (!dashboardGroups.value) {
+  if (!dashboards.value) {
     return
   }
   return {
-    data: dashboardGroups.value.data.map(d => ({
-      ...d,
-      dashboard_name: getDashboardLabel(
-        String(d.dashboard_id),
-        dashboardType(d),
-      ),
-      dashboard_type: dashboardType(d),
-      identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`,
-      subscriptions: subscriptionList(d),
+    data: dashboards.value.data.map(dashboard => ({
+      ...dashboard,
+      dashboard_type: dashboardType(dashboard),
+      identifier: `${dashboardType(dashboard)}-${dashboard.dashboard_id}-${dashboard.group_id}`,
+      subscriptions: getSubscriptions(dashboard),
     })),
-    paging: dashboardGroups.value.paging,
+    paging: dashboards.value.paging,
   }
 
   function dashboardType(
@@ -142,68 +73,128 @@ const wrappedDashboardGroups: ComputedRef<
     return row.is_account_dashboard ? 'account' : 'validator'
   }
 
-  function subscriptionList(
+  function getSubscriptions(
     row: NotificationSettingsDashboardsTableRow,
   ): string[] {
     const result: string[] = []
-    for (const key of KeysIndicatingASubscription) {
-      if ((row.settings as AllOptions)[key]) {
-        result.push(
-          $t(
-            'notifications.subscriptions.'
-            + dashboardType(row)
-            + 's.'
-            + key
-            + '.option',
-          ),
-        )
+    if (row.is_account_dashboard) {
+      const settingsAccountDashboard = row.settings as NotificationSettingsAccountDashboard
+      if (settingsAccountDashboard.is_incoming_transactions_subscribed) {
+        result.push($t('notifications.subscriptions.accounts.incoming_transactions.label'))
       }
+      if (settingsAccountDashboard.is_outgoing_transactions_subscribed) {
+        result.push($t('notifications.subscriptions.accounts.outgoing_transactions.label'))
+      }
+      if (settingsAccountDashboard.is_erc20_token_transfers_subscribed) {
+        result.push($t('notifications.subscriptions.accounts.erc20_token_transfers.label'))
+      }
+      if (settingsAccountDashboard.is_erc721_token_transfers_subscribed) {
+        result.push($t('notifications.subscriptions.accounts.erc721_token_transfers.label'))
+      }
+      if (settingsAccountDashboard.is_erc1155_token_transfers_subscribed) {
+        result.push($t('notifications.subscriptions.accounts.erc1155_token_transfers.label'))
+      }
+      if (settingsAccountDashboard.is_ignore_spam_transactions_enabled) {
+        result.push($t('notifications.subscriptions.accounts.ignore_spam_transactions.label'))
+      }
+      return result
+    }
+    const settingsValidatorDashboard = row.settings as NotificationSettingsValidatorDashboard
+    if (settingsValidatorDashboard.is_validator_offline_subscribed) {
+      result.push($t('notifications.subscriptions.validators.validator_is_offline.label'))
+    }
+    if (settingsValidatorDashboard.is_group_offline_subscribed) {
+      result.push($t('notifications.subscriptions.validators.group_is_offline.label'))
+    }
+    if (settingsValidatorDashboard.is_attestations_missed_subscribed) {
+      result.push($t('notifications.subscriptions.validators.attestation_missed.label'))
+    }
+    if (settingsValidatorDashboard.is_block_proposal_subscribed) {
+      result.push($t('notifications.subscriptions.validators.block_proposal.label'))
+    }
+    if (settingsValidatorDashboard.is_upcoming_block_proposal_subscribed) {
+      result.push($t('notifications.subscriptions.validators.upcoming_block_proposal.label'))
+    }
+    if (settingsValidatorDashboard.is_sync_subscribed) {
+      result.push($t('notifications.subscriptions.validators.sync_committee.label'))
+    }
+    if (settingsValidatorDashboard.is_withdrawal_processed_subscribed) {
+      result.push($t('notifications.subscriptions.validators.withdrawal_processed.label'))
+    }
+    if (settingsValidatorDashboard.is_slashed_subscribed) {
+      result.push($t('notifications.subscriptions.validators.validator_got_slashed.label'))
+    }
+    if (settingsValidatorDashboard.is_min_collateral_subscribed) {
+      result.push($t('notifications.subscriptions.validators.min_collateral_reached.label'))
+    }
+    if (settingsValidatorDashboard.is_max_collateral_subscribed) {
+      result.push($t('notifications.subscriptions.validators.max_collateral_reached.label'))
+    }
+    if (settingsValidatorDashboard.is_real_time_mode_enabled) {
+      result.push($t('notifications.subscriptions.validators.real_time_mode.label'))
     }
     return result
   }
 })
 
+const handleSubscriptionChange = (
+  settings: Omit<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>,
+  row: WrappedRow,
+) => {
+  saveSubscriptions({
+    dashboard_id: row.dashboard_id,
+    group_id: row.group_id,
+    settings: {
+      ...settings,
+      is_webhook_discord_enabled: row.settings.is_webhook_discord_enabled,
+      webhook_url: row.settings.webhook_url,
+    },
+  })
+}
+
 type Dialog = 'delete' | 'networks' | 'subscriptions' | 'webhook'
 const onEdit = (col: Dialog, row: WrappedRow) => {
-  const dialogProps = {
-    dashboardType: row.dashboard_type,
-    initialSettings: row.settings,
-    saveUserSettings: (settings: AllOptions) =>
-      debouncer.bounce({
-        row,
-        settings,
-      }, true, true),
-  }
   switch (col) {
     case 'delete':
-      dialog.open(NotificationsManagementModalDashboardsDelete, {
-        data: row,
-        emits: {
-          onDelete: handleDelete,
-        },
-      })
-      break
-    case 'networks':
-      alert('TODO: edit networks' + row.group_id)
+      if (row.dashboard_type === 'validator') {
+        return dialog.open(NotificationsManagementModalDashboardsDelete, {
+          data: row,
+          emits: {
+            onDelete: handleDelete,
+          },
+        })
+      }
+      alert('TODO: Subscription Dialog for Account Dashboards')
       break
     case 'subscriptions':
-      dialog.open(NotificationsManagementSubscriptionDialog, { data: dialogProps })
+      dialog.open(NotificationsManagementSubscriptionDialog, {
+        data: row.settings,
+        emits: {
+          onChangeSettings: (
+            settings: Omit<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>,
+          ) => handleSubscriptionChange(settings, row),
+        },
+      })
       break
     case 'webhook':
       dialog.open(NotificationsManagementModalWebhook, {
         data: {
-          is_discord_webhook_enabled: row.settings.is_webhook_discord_enabled,
+          is_webhook_discord_enabled: row.settings.is_webhook_discord_enabled,
           webhook_url: row.settings.webhook_url,
         },
         emits: {
           onSave: async (
-            webhookData: WebhookForm,
+            webhookData: Pick<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>,
             closeCallback: () => void,
           ) => {
             try {
-              await saveUserSettings({
-                row,
-                settings: webhookData,
+              await saveSubscriptions({
+                dashboard_id: row.dashboard_id,
+                group_id: row.group_id,
+                settings: {
+                  ...row.settings as NotificationSettingsValidatorDashboard,
+                  ...webhookData,
+                },
               })
               closeCallback()
             }
@@ -219,25 +210,6 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
       })
       break
   }
-}
-
-async function saveUserSettings(settingsAndContext: SettingsWithContext) {
-  await fetch<ApiErrorResponse>(
-    API_PATH.SAVE_DASHBOARDS_SETTINGS,
-    {
-      body: {
-        ...settingsAndContext.row.settings,
-        ...settingsAndContext.settings,
-      },
-      method: 'PUT',
-      signal: AbortSignal.timeout(TimeoutForSavingFailures),
-    },
-    {
-      dashboardKey: String(settingsAndContext.row.dashboard_id),
-      for: settingsAndContext.row.dashboard_type,
-      groupId: String(settingsAndContext.row.group_id),
-    },
-  )
 }
 
 function getTypeIcon(type: DashboardType) {
@@ -263,7 +235,7 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
 
     <ClientOnly fallback-tag="span">
       <BcTable
-        :data="wrappedDashboardGroups"
+        :data="wrappedDashboards"
         data-key="identifier"
         :expandable="!colsVisible.networks"
         class="notifications-management-dashboard-table"
@@ -300,9 +272,7 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           :header="$t('notifications.col.group')"
         >
           <template #body="slotProps">
-            <span>
-              {{ groupNameLabel(slotProps.data.group_id) }}
-            </span>
+            {{ slotProps.data.group_name }}
           </template>
         </Column>
         <Column
@@ -403,7 +373,6 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
               <BcTablePopoutEdit
                 class="value"
                 :no-icon="!slotProps.data.is_account_dashboard"
-                @on-edit="onEdit('networks', slotProps.data)"
               >
                 <template #content>
                   <div class="newtork-row">
