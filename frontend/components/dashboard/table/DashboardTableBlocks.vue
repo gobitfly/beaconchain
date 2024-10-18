@@ -52,7 +52,7 @@ const loadData = (query?: TableQueryParams) => {
   if (!query) {
     query = {
       limit: pageSize.value,
-      sort: 'block:desc',
+      sort: 'slot:desc',
     }
   }
   setQuery(query, true, true)

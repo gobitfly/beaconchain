@@ -22,21 +22,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type table string
-
-// Stringer interface
-func (t table) String() string {
-	return string(t)
-}
-
-//func (t table) C(column string) exp.IdentifierExpression {
-//	return goqu.I(string(t) + "." + column)
-//}
-
-func (t table) C(column string) string {
-	return string(t) + "." + column
-}
-
 func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
 
@@ -48,9 +33,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if err != nil {
 		return nil, nil, err
 	}
-	validators := table("validators")
-	blocks := table("blocks")
-	groups := table("goups")
+	validators := goqu.T("users_val_dashboards_validators").As("validators")
+	blocks := goqu.T("blocks")
+	groups := goqu.T("goups")
 
 	// TODO @LuccaBitfly move validation to handler?
 	if cursor != "" {
@@ -72,31 +57,24 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	var filteredValidators []validatorGroup
 	validatorsDs := goqu.Dialect("postgres").
 		Select(
-			validators.C("validator_index"),
+			"validator_index",
 		)
 	if dashboardId.Validators == nil {
 		validatorsDs = validatorsDs.
-			From(
-				goqu.T("users_val_dashboards_validators").As(validators),
-			).
-			/*Select(
-				// TODO mustn't be here, can be done further down
-				validators.C("group_id"),
-			).*/
-			Where(goqu.Ex{validators.C("dashboard_id"): dashboardId.Id})
-
+			From(validators).
+			Where(validators.Col("dashboard_id").Eq(dashboardId.Id))
 		// apply search filters
 		if searchIndex {
-			validatorsDs = validatorsDs.Where(goqu.Ex{validators.C("validator_index"): search})
+			validatorsDs = validatorsDs.Where(validators.Col("validator_index").Eq(search))
 		}
 		if searchGroup {
 			validatorsDs = validatorsDs.
 				InnerJoin(goqu.T("users_val_dashboards_groups").As(groups), goqu.On(
-					goqu.Ex{validators.C("dashboard_id"): groups.C("dashboard_id")},
-					goqu.Ex{validators.C("group_id"): groups.C("id")},
+					validators.Col("group_id").Eq(groups.Col("id")),
+					validators.Col("dashboard_id").Eq(groups.Col("dashboard_id")),
 				)).
 				Where(
-					goqu.L("LOWER(?)", groups.C("name")).Like(strings.Replace(search, "_", "\\_", -1) + "%"),
+					goqu.L("LOWER(?)", groups.Col("name")).Like(strings.Replace(search, "_", "\\_", -1) + "%"),
 				)
 		}
 		if searchPubkey {
@@ -107,7 +85,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			}
 
 			validatorsDs = validatorsDs.
-				Where(goqu.Ex{validators.C("validator_index"): index})
+				Where(validators.Col("validator_index").Eq(index))
 		}
 	} else {
 		for _, validator := range dashboardId.Validators {
@@ -126,7 +104,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		validatorsDs = validatorsDs.
 			From(
 				goqu.L("unnest(?)", pq.Array(filteredValidators)).As("validator_index"),
-			).As(string(validators))
+			).As("validators") // TODO ?
 	}
 
 	if dashboardId.Validators == nil {
@@ -180,51 +158,37 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 	// Sorting and pagination if cursor is present
 	defaultColumns := []t.SortColumn{
-		{Column: enums.VDBBlocksColumns.Slot.ToString(), Desc: true, Offset: currentCursor.Slot},
+		{Column: enums.VDBBlocksColumns.Slot.ToString(), Table: blocks.GetTable(), Desc: true, Offset: currentCursor.Slot},
 	}
 	var offset any
+	var table string
 	switch colSort.Column {
 	case enums.VDBBlocksColumns.Proposer:
 		offset = currentCursor.Proposer
 	case enums.VDBBlocksColumns.Block:
 		offset = currentCursor.Block
+		table = blocks.GetTable()
 	case enums.VDBBlocksColumns.Status:
 		offset = fmt.Sprintf("%d", currentCursor.Status) // type of 'status' column is text for some reason
 	case enums.VDBBlocksColumns.ProposerReward:
 		offset = currentCursor.Reward
 	}
 
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Table: table, Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
 	validatorsDs = validatorsDs.Order(order...)
 	if directions != nil {
 		validatorsDs = validatorsDs.Where(directions)
 	}
 
-	// group id
-	if dashboardId.Validators == nil {
-		validatorsDs = validatorsDs.Select(
-			validators.C("group_id"),
-		)
-	} else {
-		validatorsDs = validatorsDs.Select(
-			goqu.L("?", t.DefaultGroupId).As("group_id"),
-		)
-	}
-
 	validatorsDs = validatorsDs.
-		Select(
-			blocks.C("proposer"),
-			blocks.C("epoch"),
-			blocks.C("slot"),
-			blocks.C("status"),
-			blocks.C("exec_block_number"),
-			blocks.C("graffiti_text"),
-		).
+		InnerJoin(blocks, goqu.On(
+			blocks.Col("proposer").Eq(validators.Col("validator_index")),
+		)).
 		LeftJoin(goqu.T("consensus_payloads").As("cp"), goqu.On(
-			goqu.Ex{blocks.C("slot"): goqu.I("cp.slot")},
+			blocks.Col("slot").Eq(goqu.I("cp.slot")),
 		)).
 		LeftJoin(goqu.T("execution_payloads").As("ep"), goqu.On(
-			goqu.Ex{blocks.C("exec_block_hash"): goqu.I("ep.block_hash")},
+			blocks.Col("exec_block_hash").Eq(goqu.I("ep.block_hash")),
 		)).
 		LeftJoin(
 			// relay bribe deduplication; select most likely (=max) relay bribe value for each block
@@ -232,101 +196,85 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				From(goqu.T("relays_blocks")).
 				Select(
 					goqu.I("relays_blocks.exec_block_hash"),
+					goqu.I("relays_blocks.proposer_fee_recipient"),
 					goqu.MAX(goqu.I("relays_blocks.value")).As("value")).
-				// needed? TODO test
-				// Where(goqu.L("relays_blocks.exec_block_hash = blocks.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
+				GroupBy(
+					"exec_block_hash",
+					"proposer_fee_recipient",
+				)).As("rb"),
 			goqu.On(
-				goqu.Ex{"rb.exec_block_hash": blocks.C("exec_block_hash")},
+				goqu.I("rb.exec_block_hash").Eq(blocks.Col("exec_block_hash")),
 			),
 		).
-		Select(
-			goqu.COALESCE(goqu.I("rb.proposer_fee_recipient"), blocks.C("exec_fee_recipient")).As("fee_recipient"),
+		SelectAppend(
+			blocks.Col("epoch"),
+			blocks.Col("slot"),
+			blocks.Col("status"),
+			blocks.Col("exec_block_number"),
+			blocks.Col("graffiti_text"),
+			goqu.COALESCE(goqu.I("rb.proposer_fee_recipient"), blocks.Col("exec_fee_recipient")).As("fee_recipient"),
 			goqu.COALESCE(goqu.L("rb.value / 1e18"), goqu.I("ep.fee_recipient_reward")).As("el_reward"),
 			goqu.L("cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9").As("cl_reward"),
-		)
+		).
+		Limit(uint(limit + 1))
+
+	// Group id
+	groupId := validators.Col("group_id")
+	if dashboardId.Validators != nil {
+		groupId = goqu.V(t.DefaultGroupId).As("group_id").GetAs()
+	}
+	validatorsDs = validatorsDs.SelectAppend(groupId)
+
+	/*
+		if dashboardId.Validators == nil {
+			validatorsDs = validatorsDs.Select(
+				validators.Col("group_id"),
+			)
+		} else {
+			validatorsDs = validatorsDs.Select(
+				goqu.L("?", t.DefaultGroupId).As("group_id"),
+			)
+		}*/
 
 	// union scheduled blocks if present
 	// WIP
 
-	params := make([]any, 0)
-	selectFields, where, orderBy, groupIdCol, sortColName := "", "", "", "", ""
-	cte := fmt.Sprintf(`WITH past_blocks AS (SELECT
-			%s
-		FROM blocks
-		`, selectFields)
-
-	if dashboardId.Validators == nil {
-		//cte += fmt.Sprintf(`
-		//INNER JOIN (%s) validators ON validators.validator_index = proposer`, filteredValidatorsQuery)
-	} else {
-		if len(where) == 0 {
-			where += `WHERE `
-		} else {
-			where += `AND `
-		}
-		where += `proposer = ANY($1) `
-	}
-
-	params = append(params, limit+1)
-	limitStr := fmt.Sprintf(`
-		LIMIT $%d
-	`, len(params))
-
-	from := `past_blocks `
-	selectStr := `SELECT * FROM `
-
-	query := selectStr + from + where + orderBy + limitStr
-	// supply scheduled proposals, if any
+	finalDs := validatorsDs
 	if len(scheduledProposers) > 0 {
-		// distinct to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
+		scheduledDs := goqu.Dialect("postgres").
+			From(
+				goqu.L("unnest(?, ?, ?) AS prov(validator_index, epoch, slot)", pq.Array(scheduledProposers), pq.Array(scheduledEpochs), pq.Array(scheduledSlots)),
+			).
+			Select(
+				goqu.C("validator_index"),
+				goqu.C("epoch"),
+				goqu.C("slot"),
+				goqu.V("0").As("status"),
+				goqu.V(nil).As("exec_block_number"),
+				goqu.V(nil).As("fee_recipient"),
+				goqu.V(nil).As("el_reward"),
+				goqu.V(nil).As("cl_reward"),
+				goqu.V(nil).As("graffiti_text"),
+			).
+			As("scheduled_blocks")
+
+		// distinct + block number ordering to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
 		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
-		params = append(params, scheduledProposers)
-		params = append(params, scheduledEpochs)
-		params = append(params, scheduledSlots)
-		cte += fmt.Sprintf(`,
-		scheduled_blocks as (
-			SELECT
-			prov.proposer,
-			prov.epoch,
-			prov.slot,
-			%s,
-			'0'::text AS status,
-			NULL::int AS exec_block_number,
-			''::bytea AS fee_recipient,
-			NULL::float AS el_reward,
-			NULL::float AS cl_reward,
-			''::text AS graffiti_text
-		FROM unnest($%d::int[], $%d::int[], $%d::int[]) AS prov(proposer, epoch, slot)
-		`, groupIdCol, len(params)-2, len(params)-1, len(params))
-		if dashboardId.Validators == nil {
-			// add group id
-			cte += fmt.Sprintf(`INNER JOIN users_val_dashboards_validators validators 
-			ON validators.dashboard_id = $1 
-			AND validators.validator_index = ANY($%d::int[])
-			`, len(params)-2)
-		}
-		cte += `) `
-		distinct := "slot"
+		finalDs = validatorsDs.
+			Union(scheduledDs).
+			Where(directions).
+			Order(order...).
+			OrderAppend(goqu.C("exec_block_number").Desc().NullsLast()).
+			Limit(uint(limit + 1)).
+			Distinct(blocks.Col("slot"))
 		if !onlyPrimarySort {
-			distinct = sortColName + ", " + distinct
+			finalDs = finalDs.
+				Distinct(blocks.Col("slot"), blocks.Col("exec_block_number"))
 		}
-		// keep all ordering, sorting etc
-		selectStr = `SELECT DISTINCT ON (` + distinct + `) * FROM `
-		// encapsulate past blocks query to ensure performance
-		from = `(
-			( ` + query + ` )
-			UNION ALL
-			SELECT * FROM scheduled_blocks
-		) as combined
-		`
-		// make sure the distinct clause filters out the correct duplicated row (e.g. block=nil)
-		orderBy += `, exec_block_number NULLS LAST`
-		query = selectStr + from + where + orderBy + limitStr
 	}
 
 	var proposals []struct {
-		Proposer     t.VDBValidator      `db:"proposer"`
+		Proposer     t.VDBValidator      `db:"validator_index"`
 		Group        uint64              `db:"group_id"`
 		Epoch        uint64              `db:"epoch"`
 		Slot         uint64              `db:"slot"`
@@ -341,11 +289,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		Reward decimal.Decimal
 	}
 	startTime := time.Now()
-	_, _, err = validatorsDs.Prepared(true).ToSQL()
+	query, args, err := finalDs.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, nil, err
 	}
-	err = d.alloyReader.SelectContext(ctx, &proposals, cte+query, params...)
+	err = d.alloyReader.SelectContext(ctx, &proposals, query, args...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
@@ -389,11 +337,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		}
 		graffiti := proposal.GraffitiText
 		data[i].Graffiti = &graffiti
+		block := uint64(proposal.Block.Int64)
+		data[i].Block = &block
 		if proposal.Status == 3 {
 			continue
 		}
-		block := uint64(proposal.Block.Int64)
-		data[i].Block = &block
 		var reward t.ClElValue[decimal.Decimal]
 		if proposal.ElReward.Valid {
 			rewardRecp := t.Address{
