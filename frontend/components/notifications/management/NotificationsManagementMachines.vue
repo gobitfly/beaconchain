@@ -21,6 +21,8 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
   deep: true,
   maxWait: waitExtraLongForSliders,
 })
+
+const hasMachines = computed(() => notificationsManagementStore.settings.has_machines)
 </script>
 
 <template>
@@ -42,21 +44,27 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       </div>
       <div class="notifications-management-machines__content">
         <BcListSection>
-          <span class="grid-span-2">
+          <BcText
+            class="grid-span-2"
+            :is-dimmed="!hasMachines"
+          >
             {{ $t('notifications.machine.settings.machine_offline') }}
-          </span>
+          </BcText>
           <BcToggle
             v-model="notificationsManagementStore.settings.general_settings.is_machine_offline_subscribed"
             class="toggle"
+            :disabled="!hasMachines"
           />
         </BcListSection>
         <BcListSection
           has-border-top
           :class="{ 'is-text-disabled': !hasAbilityCustomMachineAlerts }"
         >
-          <span>
+          <BcText
+            :is-dimmed="!hasMachines"
+          >
             {{ $t('notifications.machine.settings.storage_usage') }}
-          </span>
+          </BcText>
           <span class="slider-container">
             <BcSlider
               v-model="notificationsManagementStore.settings.general_settings.machine_storage_usage_threshold"
@@ -64,7 +72,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
               :min="0.05"
               :max="0.99"
               :step="0.01"
-              :disabled="!hasAbilityCustomMachineAlerts"
+              :disabled="!hasMachines || !hasAbilityCustomMachineAlerts"
             />
             <span class="slider-value">
               <BcTextNumber prefix="≥ " suffix=" %" min-width="2ch">
@@ -88,10 +96,13 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
           <BcToggle
             v-model="notificationsManagementStore.settings.general_settings.is_machine_storage_usage_subscribed"
             class="toggle"
+            :disabled="!hasMachines"
           />
-          <span>
+          <BcText
+            :is-dimmed="!hasMachines"
+          >
             {{ $t('notifications.machine.settings.cpu_usage') }}
-          </span>
+          </BcText>
           <span class="slider-container">
             <BcSlider
               v-model="notificationsManagementStore.settings.general_settings.machine_cpu_usage_threshold"
@@ -99,7 +110,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
               :min="0.05"
               :max="0.99"
               :step="0.01"
-              :disabled="!hasAbilityCustomMachineAlerts"
+              :disabled="!hasMachines || !hasAbilityCustomMachineAlerts"
             />
             <span class="slider-value">
               <BcTextNumber prefix="≥ " suffix=" %" min-width="2ch">
@@ -122,10 +133,13 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
           <BcToggle
             v-model="notificationsManagementStore.settings.general_settings.is_machine_cpu_usage_subscribed"
             class="toggle"
+            :disabled="!hasMachines"
           />
-          <span>
+          <BcText
+            :is-dimmed="!hasMachines"
+          >
             {{ $t('notifications.machine.settings.memory_usage') }}
-          </span>
+          </BcText>
           <span class="slider-container">
             <BcSlider
               v-model="notificationsManagementStore.settings.general_settings.machine_memory_usage_threshold"
@@ -133,7 +147,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
               :min="0.1"
               :max="0.99"
               :step="0.01"
-              :disabled="!hasAbilityCustomMachineAlerts"
+              :disabled="!hasMachines || !hasAbilityCustomMachineAlerts"
             />
             <BcTextNumber prefix="≥ " suffix=" %" min-width="2ch">
               {{
@@ -151,11 +165,14 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
               :screenreader-text="$t('notifications.machine.settings.subscribe_to_premium_memory')"
             />
           </span>
-          <BcToggle v-model="notificationsManagementStore.settings.general_settings.is_machine_memory_usage_subscribed" class="toggle" />
+          <BcToggle
+            v-model="notificationsManagementStore.settings.general_settings.is_machine_memory_usage_subscribed" class="toggle"
+            :disabled="!hasMachines"
+          />
         </BcListSection>
       </div>
     </BcTabPanel>
-    <div v-if="!notificationsManagementStore.settings.has_machines" class="info">
+    <div v-if="!hasMachines" class="info">
       <BcText tag="p" variant="lg">
         {{ $t('notifications.machine.settings.info') }}
       </BcText>
