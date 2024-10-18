@@ -163,7 +163,7 @@ func (c VDBBlocksColumn) ToString() string {
 	case VDBBlockSlot:
 		return "slot"
 	case VDBBlockBlock:
-		return "block"
+		return "exec_block_number"
 	case VDBBlockStatus:
 		return "status"
 	case VDBBlockProposerReward:

@@ -1,8 +1,11 @@
 package types
 
 import (
+	"database/sql"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -24,9 +27,17 @@ type Sort[T enums.Enum] struct {
 
 type SortColumn struct {
 	Column string
+	Table  string // optional
 	Desc   bool
 	// represents value from cursor
 	Offset any
+}
+
+func (s SortColumn) Expr() exp.IdentifierExpression {
+	if s.Table != "" {
+		return goqu.T(s.Table).Col(s.Column)
+	}
+	return goqu.C(s.Column)
 }
 
 type VDBIdPrimary int
@@ -167,7 +178,7 @@ type BlocksCursor struct {
 
 	Proposer uint64
 	Slot     uint64 // same as Age
-	Block    uint64
+	Block    sql.NullInt64
 	Status   uint64
 	Reward   decimal.Decimal
 }
