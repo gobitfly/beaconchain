@@ -25,21 +25,25 @@ import (
 
 func (d *dashboardData) maintenanceTask() {
 	for {
-		// wait
-		time.Sleep(10 * time.Second)
 		// loop to complete incomplete epochs
 		err := d.handleIncompleteTransfers()
 		if err != nil {
 			d.log.Error(err, "failed to handle incomplete transfers", 0)
+			time.Sleep(10 * time.Second)
 			continue
 		}
 		err = d.handlePendingTransfers()
 		if err != nil {
 			d.log.Error(err, "failed to handle pending transfers", 0)
+			time.Sleep(10 * time.Second)
 			continue
 		}
+		time.Sleep(1 * time.Second)
 	}
 }
+
+var TransferAtOnce = 2
+var TransferInParallel = 3
 
 func (d *dashboardData) handleIncompleteTransfers() error {
 	incomplete, err := edb.GetIncompleteTransferEpochs()
@@ -47,6 +51,7 @@ func (d *dashboardData) handleIncompleteTransfers() error {
 		return errors.Wrap(err, "failed to get incomplete transfer epochs")
 	}
 	if len(incomplete) == 0 {
+		d.log.Infof("handleIncompleteTransfers, no incomplete transfer epochs")
 		return nil
 	}
 	d.log.Infof("handleIncompleteTransfers, found %d incomplete transfer epochs", len(incomplete))
@@ -59,24 +64,25 @@ func (d *dashboardData) handleIncompleteTransfers() error {
 }
 
 func (d *dashboardData) handlePendingTransfers() error {
-	batchSize := int64(3)       // how many epochs we want to transfer in a single query
-	bundleSize := 3 * batchSize // how many epochs we want to transfer in one overall attempt
-	pending, err := edb.GetPendingTransferEpochs(bundleSize)
+	pending, err := edb.GetPendingTransferEpochs(int64(TransferAtOnce * TransferInParallel))
 	if err != nil {
 		return errors.Wrap(err, "failed to get pending transfer epochs")
 	}
 	if len(pending) == 0 {
+		d.log.Infof("handlePendingTransfers, no pending transfer epochs")
+		time.Sleep(1 * time.Second)
 		return nil
 	}
 	d.log.Infof("handlePendingTransfers, found %d pending transfer epochs", len(pending))
 
 	// allocate transfer batch ids
-	var currentBatchId uuid.UUID
-	for i, e := range pending {
-		if i%int(batchSize) == 0 {
-			currentBatchId = uuid.New()
+	batchIds := make([]uuid.UUID, 0)
+	for i := range pending {
+		if i%TransferAtOnce == 0 {
+			id := uuid.New()
+			batchIds = append(batchIds, id)
 		}
-		e.TransferBatchId = &currentBatchId
+		pending[i].TransferBatchId = &batchIds[len(batchIds)-1]
 	}
 
 	err = edb.PushEpochMetadata(pending)
@@ -91,19 +97,20 @@ func (d *dashboardData) handlePendingTransfers() error {
 	return nil
 }
 
-func (d *dashboardData) transferEpochs(incomplete []edb.EpochMetadata) error {
+func (d *dashboardData) transferEpochs(epochs []edb.EpochMetadata) error {
 	transferBatchEpochs := make(map[uuid.UUID][]edb.EpochMetadata)
-	for _, e := range incomplete {
+	for _, e := range epochs {
 		if e.TransferBatchId == nil {
-			return fmt.Errorf("transfer batch id is nil for epoch %s", e)
+			return fmt.Errorf("transfer batch id is nil for epoch %v", e)
 		}
 		id := *e.TransferBatchId
 		transferBatchEpochs[id] = append(transferBatchEpochs[id], e)
 	}
 	eg := &errgroup.Group{}
-	eg.SetLimit(1)
+	eg.SetLimit(3)
 	for id, epochs := range transferBatchEpochs {
 		epochs := epochs
+		id := id
 		eg.Go(func() error {
 			d.log.Infof("doing transfer batch %s", id)
 			err := edb.TransferEpochs(epochs)
@@ -113,8 +120,8 @@ func (d *dashboardData) transferEpochs(incomplete []edb.EpochMetadata) error {
 			}
 
 			now := time.Now()
-			for _, e := range epochs {
-				e.SuccessfulTransfer = &now
+			for i := range epochs {
+				epochs[i].SuccessfulTransfer = &now
 			}
 			err = edb.PushEpochMetadata(epochs)
 			if err != nil {

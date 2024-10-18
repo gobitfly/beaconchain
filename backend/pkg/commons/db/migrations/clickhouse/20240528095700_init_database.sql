@@ -1,15 +1,16 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS _exporter_metadata (
-    `epoch` Int64 COMMENT 'epoch number' CODEC(DoubleDelta, ZSTD(8)),
-    `insert_batch_id` Int64 COMMENT 'id of the batch the epoch is part of during the insert process' CODEC(T64, ZSTD(8)),
-    `successful_insert` Bool COMMENT 'if the batch was successfully inserted. This is set after the exporter has received confirmation from the clickhouse server' CODEC(T64, ZSTD(8)),
-    `transfer_batch_id` Int64 COMMENT 'id of the batch the epoch is part of during the transfer to the final table' CODEC(T64, ZSTD(8)),
-    `successful_transfer` Bool COMMENT 'if the batch was successfully transferred to the final table. This is set after the exporter has received confirmation from the clickhouse server' CODEC(T64, ZSTD(8)),
+CREATE TABLE IF NOT EXISTS _exporter_metadata
+(
+    `epoch` UInt64 COMMENT 'epoch number',
+    `insert_batch_id` Nullable(UUID) COMMENT 'id of the batch the epoch is part of during the insert process',
+    `successful_insert` Nullable(DateTime) COMMENT 'if the batch was successfully inserted. This is set after the exporter has received confirmation from the clickhouse server',
+    `transfer_batch_id` Nullable(UUID) COMMENT 'id of the batch the epoch is part of during the transfer to the final table',
+    `successful_transfer` Nullable(DateTime) COMMENT 'if the batch was successfully transferred to the final table. This is set after the exporter has received confirmation from the clickhouse server'
 )
 ENGINE = ReplacingMergeTree
-ORDER BY (epoch)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
+ORDER BY epoch
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _exporter_tasks (

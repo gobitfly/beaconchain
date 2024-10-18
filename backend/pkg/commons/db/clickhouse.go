@@ -13,6 +13,7 @@ import (
 	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -50,7 +51,7 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 			log.Debugf("CH NATIVE WRITER: "+s, p...)
 		},
 		Settings: ch.Settings{
-			"parallel_view_processing": "true",
+			//"parallel_view_processing": "true",
 			//"send_logs_level":          "trace",
 			"max_insert_threads": "4",
 			"deduplicate_blocks_in_dependent_materialized_views":                "1",
@@ -161,7 +162,8 @@ func (f *ExecutionBreakdownHyperMap) Keys() <-chan any {
 
 type VDBDataEpochColumns struct {
 	// this should be the same as Epoch but only once, basically
-	EpochsContained                     []uint64 `custom_size:"1"`
+	EpochsContained                     []uint64    `custom_size:"1"`
+	InsertBatchID                       []uuid.UUID `custom_size:"1"`
 	ValidatorIndex                      []uint64
 	Epoch                               []int64
 	EpochTimestamp                      []*time.Time

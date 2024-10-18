@@ -44,7 +44,7 @@ func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
 	}
 }
 
-var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64
+var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64 // holy shit these should really be in the slotExporterData struct or some other module might accidentally corrupt them
 
 var processSlotMutex = &sync.Mutex{}
 

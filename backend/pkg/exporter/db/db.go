@@ -856,11 +856,11 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 }
 
 type EpochMetadata struct {
-	Epoch              uint64     `db:"epoch"`
-	InsertBatchID      *uuid.UUID `db:"insert_batch_id"`
-	SucesfulInsert     *time.Time `db:"successful_insert"`
-	TransferBatchId    *uuid.UUID `db:"transfer_batch_id"`
-	SuccessfulTransfer *time.Time `db:"successful_transfer"`
+	Epoch              uint64     `ch:"epoch" db:"epoch"`
+	InsertBatchID      *uuid.UUID `ch:"insert_batch_id" db:"insert_batch_id"`
+	SuccessfulInsert   *time.Time `ch:"successful_insert" db:"successful_insert"`
+	TransferBatchId    *uuid.UUID `ch:"transfer_batch_id" db:"transfer_batch_id"`
+	SuccessfulTransfer *time.Time `ch:"successful_transfer" db:"successful_transfer"`
 }
 
 //
@@ -951,7 +951,7 @@ func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error
 	// max epoch with assigned insert batch id
 	maxAssignedEpoch := int64(0)
 	err := db.ClickHouseReader.Get(&maxAssignedEpoch, fmt.Sprintf(`
-		SELECT ifNull(max(toNullable(epoch)), -1) as max_epoch
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as max_epoch
 		FROM %s
 		FINAL
 		WHERE (insert_batch_id IS NOT NULL)
@@ -1013,12 +1013,12 @@ func PushEpochMetadata(metdata []EpochMetadata) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO`+ExporterMetadataTableName)
+	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterMetadataTableName)
 	if err != nil {
 		return fmt.Errorf("error preparing batch: %w", err)
 	}
 	for _, m := range metdata {
-		if err := batch.AppendStruct(m); err != nil {
+		if err := batch.AppendStruct(&m); err != nil {
 			return fmt.Errorf("error appending struct to batch: %w", err)
 		}
 	}
