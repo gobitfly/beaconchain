@@ -421,6 +421,9 @@ func QueueEmailNotifications(epoch uint64, notificationsByUserID types.Notificat
 
 	// now batch insert the emails in one go
 	log.Infof("queueing %v email notifications", len(emails))
+	if len(emails) == 0 {
+		return nil
+	}
 	type insertData struct {
 		Content types.TransitEmailContent `db:"content"`
 	}
@@ -558,6 +561,9 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 
 	// now batch insert the push messages in one go
 	log.Infof("queueing %v push notifications", len(pushMessages))
+	if len(pushMessages) == 0 {
+		return nil
+	}
 	type insertData struct {
 		Content types.TransitPushContent `db:"content"`
 	}
