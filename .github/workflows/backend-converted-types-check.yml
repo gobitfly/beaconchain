@@ -35,7 +35,7 @@ jobs:
           cache-dependency-path: 'backend/go.sum'
       - name: Check if all backend-types have been converted to frontend-types
         working-directory: backend
-        run:
+        run: |
           currHash=$(find ../frontend/types/api -type f -print0 | sort -z | xargs -0 sha1sum | sha256sum | head -c 64)
           make frontend-types
           newHash=$(find ../frontend/types/api -type f -print0 | sort -z | xargs -0 sha1sum | sha256sum | head -c 64)
