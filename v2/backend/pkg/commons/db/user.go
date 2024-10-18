@@ -10,6 +10,7 @@ import (
 
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/jmoiron/sqlx"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -81,7 +82,7 @@ var adminPerks = t.PremiumPerks{
 	NotificationsValidatorDashboardGroupOffline: true,
 }
 
-func GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
+func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.UserInfo, error) {
 	// TODO @patrick post-beta improve and unmock
 	userInfo := &t.UserInfo{
 		Id:      userId,
@@ -108,7 +109,7 @@ func GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 		Email     string `db:"email"`
 		UserGroup string `db:"user_group"`
 	}{}
-	err = FrontendReaderDB.GetContext(ctx, &result, `SELECT email, COALESCE(user_group, '') as user_group FROM users WHERE id = $1`, userId)
+	err = userDbReader.GetContext(ctx, &result, `SELECT email, COALESCE(user_group, '') as user_group FROM users WHERE id = $1`, userId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("%w: user not found", ErrNotFound)
@@ -120,7 +121,7 @@ func GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 
 	userInfo.Email = utils.CensorEmail(userInfo.Email)
 
-	err = FrontendReaderDB.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
+	err = userDbReader.SelectContext(ctx, &userInfo.ApiKeys, `SELECT api_key FROM api_keys WHERE user_id = $1`, userId)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("error getting userApiKeys for user %v: %w", userId, err)
 	}
@@ -131,7 +132,7 @@ func GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 		Start     time.Time `db:"start"`
 		End       time.Time `db:"end"`
 	}{}
-	err = FrontendReaderDB.GetContext(ctx, &premiumProduct, `
+	err = userDbReader.GetContext(ctx, &premiumProduct, `
 		SELECT
 			COALESCE(uas.product_id, '') AS product_id,
 			COALESCE(uas.store, '') AS store,
@@ -215,7 +216,7 @@ func GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 		End      time.Time `db:"end"`
 		Quantity int       `db:"quantity"`
 	}{}
-	err = FrontendReaderDB.SelectContext(ctx, &premiumAddons, `
+	err = userDbReader.SelectContext(ctx, &premiumAddons, `
 		SELECT
 			price_id,
 			to_timestamp((uss.payload->>'current_period_start')::bigint) AS start,

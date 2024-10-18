@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -78,10 +79,10 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	}
 
 	log.Infof("found %d subscriptions for event %s", len(subs), eventName)
-	// zero := uint64(0)
+	zero := uint64(0)
 	for _, sub := range subs {
-		// sub.LastEpoch = &zero
-		// sub.LastSent = &time.Time{}
+		sub.LastEpoch = &zero
+		sub.LastSent = &time.Time{}
 		sub.EventName = types.EventName(strings.Replace(string(sub.EventName), utils.GetNetwork()+":", "", 1)) // remove the network name from the event name
 		if strings.HasPrefix(sub.EventFilter, "vdb:") {
 			dashboardData := strings.Split(sub.EventFilter, ":")
