@@ -837,7 +837,7 @@
           "label": "All events"
         },
         "attestation_missed": {
-          "info": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime.",
+          "info": "We will trigger a notification every epoch ({count} minute) during downtime. | We will trigger a notification every epoch ({count} minutes) during downtime.",
           "label": "Attestations missed"
         },
         "block_proposal": {
