@@ -75,7 +75,7 @@ func createTextMessage(msg types.Email) string {
 func SendMailRateLimited(content types.TransitEmailContent) error {
 	sendThresholdReachedMail := false
 	maxEmailsPerDay := int64(0)
-	userInfo, err := db.GetUserInfo(context.Background(), uint64(content.UserId))
+	userInfo, err := db.GetUserInfo(context.Background(), uint64(content.UserId), db.FrontendReaderDB)
 	if err != nil {
 		return err
 	}
