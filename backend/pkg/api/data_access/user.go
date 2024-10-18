@@ -259,7 +259,7 @@ func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash strin
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
-	return db.GetUserInfo(ctx, userId)
+	return db.GetUserInfo(ctx, userId, d.userReader)
 }
 
 func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
