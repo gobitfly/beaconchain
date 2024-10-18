@@ -930,6 +930,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 						DashboardName:      sub.DashboardName,
 						DashboardGroupId:   sub.DashboardGroupId,
 						DashboardGroupName: sub.DashboardGroupName,
+						Epoch:              epoch,
 					},
 					ValidatorIndex: event.ValidatorIndex,
 					Epoch:          epoch,
