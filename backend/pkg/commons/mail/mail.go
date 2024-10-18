@@ -74,22 +74,26 @@ func createTextMessage(msg types.Email) string {
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
 func SendMailRateLimited(content types.TransitEmailContent) error {
 	sendThresholdReachedMail := false
-	var timeLeft time.Duration
-	if utils.Config.Frontend.MaxMailsPerEmailPerDay > 0 {
-		now := time.Now()
-		count, err := db.CountSentMessage("n_mails", content.UserId)
-		if err != nil {
-			return err
-		}
-		timeLeft = now.Add(utils.Day).Truncate(utils.Day).Sub(now)
-		if count > int64(utils.Config.Frontend.MaxMailsPerEmailPerDay) {
-			return &types.RateLimitError{TimeLeft: timeLeft}
-		} else if count == int64(utils.Config.Frontend.MaxMailsPerEmailPerDay) {
-			sendThresholdReachedMail = true
-		}
+	maxEmailsPerDay := int64(0)
+	userInfo, err := db.GetUserInfo(context.Background(), uint64(content.UserId))
+	if err != nil {
+		return err
+	}
+	maxEmailsPerDay = int64(userInfo.PremiumPerks.EmailNotificationsPerDay)
+	count, err := db.CountSentMessage("n_mails", content.UserId)
+	if err != nil {
+		return err
+	}
+	timeLeft := time.Until(time.Now().Add(utils.Day).Truncate(utils.Day))
+
+	log.Debugf("user %d has sent %d of %d emails today, time left is %v", content.UserId, count, maxEmailsPerDay, timeLeft)
+	if count > maxEmailsPerDay {
+		return &types.RateLimitError{TimeLeft: timeLeft}
+	} else if count == maxEmailsPerDay {
+		sendThresholdReachedMail = true
 	}
 
-	err := SendHTMLMail(content.Address, content.Subject, content.Email, content.Attachments)
+	err = SendHTMLMail(content.Address, content.Subject, content.Email, content.Attachments)
 	if err != nil {
 		log.Error(err, "error sending email", 0)
 	}
@@ -102,7 +106,7 @@ func SendMailRateLimited(content types.TransitEmailContent) error {
 			types.Email{
 				Title: "Email notification threshold limit reached",
 				//nolint: gosec
-				Body: template.HTML(fmt.Sprintf("You have reached the email notification threshold limit of %d emails per day. Further notification emails will be suppressed for %.1f hours.", utils.Config.Frontend.MaxMailsPerEmailPerDay, timeLeft.Hours())),
+				Body: template.HTML(fmt.Sprintf("You have reached the email notification threshold limit of %d emails per day. Further notification emails will be suppressed for %.1f hours.", maxEmailsPerDay, timeLeft.Hours())),
 			},
 			[]types.EmailAttachment{})
 		if err != nil {
