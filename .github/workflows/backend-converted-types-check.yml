@@ -10,7 +10,7 @@ on:
   pull_request:
     paths:
       - 'backend/**'
-      - 'frontend/**'
+      - 'frontend/types/api/**'
     branches:
       - '*'
 
