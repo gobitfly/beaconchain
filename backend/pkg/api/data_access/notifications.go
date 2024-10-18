@@ -8,7 +8,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"maps"
 	"regexp"
 	"slices"
 	"sort"
@@ -1828,17 +1827,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 	// -------------------------------------
 	// Evaluate the data
-	type NotificationSettingsDashboardsInfo struct {
-		IsAccountDashboard bool // if false it's a validator dashboard
-		DashboardId        uint64
-		DashboardName      string
-		GroupId            uint64
-		GroupName          string
-		// if it's a validator dashboard, Settings is NotificationSettingsAccountDashboard, otherwise NotificationSettingsValidatorDashboard
-		Settings interface{}
-		ChainIds []uint64
-	}
-	settingsMap := make(map[string]*NotificationSettingsDashboardsInfo)
+	resultMap := make(map[string]*t.NotificationSettingsDashboardsTableRow)
 
 	for _, event := range events {
 		eventFilterSplit := strings.Split(event.Filter, ":")
@@ -1857,9 +1846,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			eventName = types.EventName(eventNameSplit[1])
 		}
 
-		if _, ok := settingsMap[event.Filter]; !ok {
+		if _, ok := resultMap[event.Filter]; !ok {
 			if dashboardType == ValidatorDashboardEventPrefix {
-				settingsMap[event.Filter] = &NotificationSettingsDashboardsInfo{
+				resultMap[event.Filter] = &t.NotificationSettingsDashboardsTableRow{
 					Settings: t.NotificationSettingsValidatorDashboard{
 						GroupOfflineThreshold:  GroupOfflineThresholdDefault,
 						MaxCollateralThreshold: MaxCollateralThresholdDefault,
@@ -1867,7 +1856,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 					},
 				}
 			} else if dashboardType == AccountDashboardEventPrefix {
-				settingsMap[event.Filter] = &NotificationSettingsDashboardsInfo{
+				resultMap[event.Filter] = &t.NotificationSettingsDashboardsTableRow{
 					Settings: t.NotificationSettingsAccountDashboard{
 						ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
 					},
@@ -1875,7 +1864,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			}
 		}
 
-		switch settings := settingsMap[event.Filter].Settings.(type) {
+		switch settings := resultMap[event.Filter].Settings.(type) {
 		case t.NotificationSettingsValidatorDashboard:
 			switch eventName {
 			case types.ValidatorIsOfflineEventName:
@@ -1902,7 +1891,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.IsMaxCollateralSubscribed = true
 				settings.MaxCollateralThreshold = event.Threshold
 			}
-			settingsMap[event.Filter].Settings = settings
+			resultMap[event.Filter].Settings = settings
 		case t.NotificationSettingsAccountDashboard:
 			switch eventName {
 			case types.IncomingTransactionEventName:
@@ -1917,7 +1906,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			case types.ERC1155TokenTransferEventName:
 				settings.IsERC1155TokenTransfersSubscribed = true
 			}
-			settingsMap[event.Filter].Settings = settings
+			resultMap[event.Filter].Settings = settings
 		}
 	}
 
@@ -1925,8 +1914,8 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	for _, valDashboard := range valDashboards {
 		key := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, valDashboard.DashboardId, valDashboard.GroupId)
 
-		if _, ok := settingsMap[key]; !ok {
-			settingsMap[key] = &NotificationSettingsDashboardsInfo{
+		if _, ok := resultMap[key]; !ok {
+			resultMap[key] = &t.NotificationSettingsDashboardsTableRow{
 				Settings: t.NotificationSettingsValidatorDashboard{
 					GroupOfflineThreshold:  GroupOfflineThresholdDefault,
 					MaxCollateralThreshold: MaxCollateralThresholdDefault,
@@ -1936,15 +1925,15 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		}
 
 		// Set general info
-		settingsMap[key].IsAccountDashboard = false
-		settingsMap[key].DashboardId = valDashboard.DashboardId
-		settingsMap[key].DashboardName = valDashboard.DashboardName
-		settingsMap[key].GroupId = valDashboard.GroupId
-		settingsMap[key].GroupName = valDashboard.GroupName
-		settingsMap[key].ChainIds = []uint64{valDashboard.Network}
+		resultMap[key].IsAccountDashboard = false
+		resultMap[key].DashboardId = valDashboard.DashboardId
+		resultMap[key].DashboardName = valDashboard.DashboardName
+		resultMap[key].GroupId = valDashboard.GroupId
+		resultMap[key].GroupName = valDashboard.GroupName
+		resultMap[key].ChainIds = []uint64{valDashboard.Network}
 
 		// Set the settings
-		if valSettings, ok := settingsMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
+		if valSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
 			valSettings.WebhookUrl = valDashboard.WebhookUrl.String
 			valSettings.IsWebhookDiscordEnabled = valDashboard.IsWebhookDiscordEnabled.Bool
 			valSettings.IsRealTimeModeEnabled = valDashboard.IsRealTimeModeEnabled.Bool
@@ -1955,8 +1944,8 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	for _, accDashboard := range accDashboards {
 		key := fmt.Sprintf("%s:%d:%d", AccountDashboardEventPrefix, accDashboard.DashboardId, accDashboard.GroupId)
 
-		if _, ok := settingsMap[key]; !ok {
-			settingsMap[key] = &NotificationSettingsDashboardsInfo{
+		if _, ok := resultMap[key]; !ok {
+			resultMap[key] = &t.NotificationSettingsDashboardsTableRow{
 				Settings: t.NotificationSettingsAccountDashboard{
 					ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
 				},
@@ -1964,15 +1953,15 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		}
 
 		// Set general info
-		settingsMap[key].IsAccountDashboard = true
-		settingsMap[key].DashboardId = accDashboard.DashboardId
-		settingsMap[key].DashboardName = accDashboard.DashboardName
-		settingsMap[key].GroupId = accDashboard.GroupId
-		settingsMap[key].GroupName = accDashboard.GroupName
-		settingsMap[key].ChainIds = accDashboard.SubscribedChainIds
+		resultMap[key].IsAccountDashboard = true
+		resultMap[key].DashboardId = accDashboard.DashboardId
+		resultMap[key].DashboardName = accDashboard.DashboardName
+		resultMap[key].GroupId = accDashboard.GroupId
+		resultMap[key].GroupName = accDashboard.GroupName
+		resultMap[key].ChainIds = accDashboard.SubscribedChainIds
 
 		// Set the settings
-		if accSettings, ok := settingsMap[key].Settings.(*t.NotificationSettingsAccountDashboard); ok {
+		if accSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsAccountDashboard); ok {
 			accSettings.WebhookUrl = accDashboard.WebhookUrl.String
 			accSettings.IsWebhookDiscordEnabled = accDashboard.IsWebhookDiscordEnabled.Bool
 			accSettings.IsIgnoreSpamTransactionsEnabled = accDashboard.IsIgnoreSpamTransactionsEnabled
@@ -1983,75 +1972,63 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// Apply filter
 	if search != "" {
 		lowerSearch := strings.ToLower(search)
-		for key, setting := range settingsMap {
-			if !strings.HasPrefix(strings.ToLower(setting.DashboardName), lowerSearch) &&
-				!strings.HasPrefix(strings.ToLower(setting.GroupName), lowerSearch) {
-				delete(settingsMap, key)
+		for key, resultEntry := range resultMap {
+			if !strings.HasPrefix(strings.ToLower(resultEntry.DashboardName), lowerSearch) &&
+				!strings.HasPrefix(strings.ToLower(resultEntry.GroupName), lowerSearch) {
+				delete(resultMap, key)
 			}
 		}
 	}
 
 	// Convert to a slice for sorting and paging
-	settings := slices.Collect(maps.Values(settingsMap))
+	for _, resultEntry := range resultMap {
+		result = append(result, *resultEntry)
+	}
 
 	// -------------------------------------
 	// Sort
 	// Each row is uniquely defined by the dashboardId, groupId, and isAccountDashboard so the sort order is DashboardName/GroupName => DashboardId => GroupId => IsAccountDashboard
-	var primarySortParam func(resultEntry *NotificationSettingsDashboardsInfo) string
+	var primarySortParam func(resultEntry t.NotificationSettingsDashboardsTableRow) string
 	switch colSort.Column {
 	case enums.NotificationSettingsDashboardColumns.DashboardName:
-		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string { return resultEntry.DashboardName }
+		primarySortParam = func(resultEntry t.NotificationSettingsDashboardsTableRow) string { return resultEntry.DashboardName }
 	case enums.NotificationSettingsDashboardColumns.GroupName:
-		primarySortParam = func(resultEntry *NotificationSettingsDashboardsInfo) string { return resultEntry.GroupName }
+		primarySortParam = func(resultEntry t.NotificationSettingsDashboardsTableRow) string { return resultEntry.GroupName }
 	default:
 		return nil, nil, fmt.Errorf("invalid sort column for notification subscriptions: %v", colSort.Column)
 	}
-	sort.Slice(settings, func(i, j int) bool {
+	sort.Slice(result, func(i, j int) bool {
 		if isReverseDirection {
-			if primarySortParam(settings[i]) == primarySortParam(settings[j]) {
-				if settings[i].DashboardId == settings[j].DashboardId {
-					if settings[i].GroupId == settings[j].GroupId {
-						return settings[i].IsAccountDashboard
+			if primarySortParam(result[i]) == primarySortParam(result[j]) {
+				if result[i].DashboardId == result[j].DashboardId {
+					if result[i].GroupId == result[j].GroupId {
+						return result[i].IsAccountDashboard
 					}
-					return settings[i].GroupId > settings[j].GroupId
+					return result[i].GroupId > result[j].GroupId
 				}
-				return settings[i].DashboardId > settings[j].DashboardId
+				return result[i].DashboardId > result[j].DashboardId
 			}
-			return primarySortParam(settings[i]) > primarySortParam(settings[j])
+			return primarySortParam(result[i]) > primarySortParam(result[j])
 		} else {
-			if primarySortParam(settings[i]) == primarySortParam(settings[j]) {
-				if settings[i].DashboardId == settings[j].DashboardId {
-					if settings[i].GroupId == settings[j].GroupId {
-						return settings[j].IsAccountDashboard
+			if primarySortParam(result[i]) == primarySortParam(result[j]) {
+				if result[i].DashboardId == result[j].DashboardId {
+					if result[i].GroupId == result[j].GroupId {
+						return result[j].IsAccountDashboard
 					}
-					return settings[i].GroupId < settings[j].GroupId
+					return result[i].GroupId < result[j].GroupId
 				}
-				return settings[i].DashboardId < settings[j].DashboardId
+				return result[i].DashboardId < result[j].DashboardId
 			}
-			return primarySortParam(settings[i]) < primarySortParam(settings[j])
+			return primarySortParam(result[i]) < primarySortParam(result[j])
 		}
 	})
-
-	// -------------------------------------
-	// Convert to the final result format
-	for _, setting := range settings {
-		result = append(result, t.NotificationSettingsDashboardsTableRow{
-			IsAccountDashboard: setting.IsAccountDashboard,
-			DashboardId:        setting.DashboardId,
-			DashboardName:      setting.DashboardName,
-			GroupId:            setting.GroupId,
-			GroupName:          setting.GroupName,
-			Settings:           setting.Settings,
-			ChainIds:           setting.ChainIds,
-		})
-	}
 
 	// -------------------------------------
 	// Paging
 
 	// Find the index for the cursor and limit the data
 	if currentCursor.IsValid() {
-		for idx, row := range settings {
+		for idx, row := range result {
 			if row.DashboardId == currentCursor.DashboardId &&
 				row.GroupId == currentCursor.GroupId &&
 				row.IsAccountDashboard == currentCursor.IsAccountDashboard {
