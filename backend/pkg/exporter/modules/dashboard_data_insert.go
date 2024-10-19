@@ -53,7 +53,7 @@ func (d *dashboardData) handleIncompleteInserts() error {
 		return errors.Wrap(err, "failed to get incomplete insert epochs")
 	}
 	if len(incomplete) == 0 {
-		d.log.Infof("handleIncompleteInserts, no incomplete insert epochs")
+		d.log.Debugf("handleIncompleteInserts, no incomplete insert epochs")
 		return nil
 	}
 	d.log.Infof("handleIncompleteInserts, found %d incomplete insert epochs", len(incomplete))
@@ -92,8 +92,7 @@ func (d *dashboardData) handlePendingInserts() error {
 		return errors.Wrap(err, "failed to get pending insert epochs")
 	}
 	if len(pending) == 0 {
-		d.log.Infof("handlePendingInserts, no pending insert epochs")
-		time.Sleep(10 * time.Second)
+		d.log.Debugf("handlePendingInserts, no pending insert epochs")
 		return nil
 	}
 	d.log.Infof("handlePendingInserts, found %d pending insert epochs", len(pending))

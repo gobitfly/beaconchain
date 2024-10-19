@@ -946,6 +946,307 @@ func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because 
 	return epochs, nil
 }
 
+func GetLatestFinishedEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_transfer IS NOT NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest finished epoch: %w", err)
+	}
+	return epoch, nil
+}
+
+// enum for rollings (hourly, daily, weekly, monthly, total)
+type Rollings string
+
+const (
+	Rolling1h    Rollings = `validator_dashboard_rolling_1h`
+	Rolling24h   Rollings = `validator_dashboard_rolling_24h`
+	Rolling7d    Rollings = `validator_dashboard_rolling_7d`
+	Rolling30d   Rollings = `validator_dashboard_rolling_30d`
+	Rolling90d   Rollings = `validator_dashboard_rolling_90d`
+	RollingTotal Rollings = `validator_dashboard_rolling_total`
+)
+
+func (r *Rollings) GetDuration() time.Duration {
+	switch *r {
+	case Rolling1h:
+		return time.Hour
+	case Rolling24h:
+		return 24 * time.Hour
+	case Rolling7d:
+		return 7 * 24 * time.Hour
+	case Rolling30d:
+		return 30 * 24 * time.Hour
+	case Rolling90d:
+		return 90 * 24 * time.Hour
+	case RollingTotal:
+		return 25 * 365 * 24 * time.Hour // 25 years
+	}
+	return 0
+}
+
+func NukeUnsafeRollingTable(rolling Rollings) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		TRUNCATE TABLE _unsafe_%s
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error truncating table %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func GetRollingLastEpoch(rolling Rollings) (int64, error) {
+	// following doesnt handle epoch 0 correctly. fixing is left as an exercise for the reader
+	var epoch int64
+	// -1 if empty table
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch_end::Int64)), -1) as epoch
+		FROM _final_%s
+		FINAL
+		SETTINGS select_sequential_consistency = 1
+	`, rolling))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest finished epoch for rolling %s: %w", rolling, err)
+	}
+	return epoch, nil
+}
+
+type RollingSources string
+
+const (
+	RollingSourceEpochly RollingSources = `_final_validator_dashboard_data_epoch`
+	RollingSourceHourly  RollingSources = `_final_validator_dashboard_data_hourly`
+	RollingSourceDaily   RollingSources = `_final_validator_dashboard_data_daily`
+	RollingSourceMonthly RollingSources = `_final_validator_dashboard_data_monthly`
+)
+
+type MinMax struct {
+	Min *time.Time
+	Max *time.Time
+}
+
+func GetMinMaxForRollingSource(table RollingSources, start time.Time, end *time.Time) (*MinMax, error) {
+	var result MinMax
+	column := "t"
+	if table == RollingSourceEpochly { // we were so close to greatness
+		column = "epoch_timestamp"
+	}
+	keys := []string{column + " >= ?"}
+	values := []interface{}{start}
+	if end != nil {
+		keys = append(keys, column+" < ?")
+		values = append(values, *end)
+	}
+	err := db.ClickHouseReader.Get(&result, fmt.Sprintf(`
+		SELECT min(toNullable(%[1]s)) as min, max(toNullable(%[1]s)) as max
+		FROM %[2]s
+		WHERE %[3]s
+		SETTINGS select_sequential_consistency = 1
+	`, column, table, strings.Join(keys, " and ")), values...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching min max for rolling source %s: %w", table, err)
+	}
+	if result.Min == nil || result.Max == nil {
+		return nil, nil
+	}
+	return &result, nil
+}
+
+func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, minMax MinMax) error {
+	// transfer the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		//"select_sequential_consistency": 1,
+	}))
+	column := "t"
+	selector := `
+		validator_index AS validator_index,
+		any(foo.t) AS t,
+		
+		groupArraySortedIfMergeState(2048)(epoch_map) AS epoch_map,
+		min(epoch_start) AS epoch_start,
+		max(epoch_end) AS epoch_end,
+		
+		argMinStateMerge(balance_start) AS balance_start,
+		argMaxStateMerge(balance_end) AS balance_end,
+		min(balance_min) AS balance_min,
+		max(balance_max) AS balance_max,
+		
+		sum(deposits_count) AS deposits_count,
+		sum(deposits_amount) AS deposits_amount,
+		sum(withdrawals_count) AS withdrawals_count,
+		sum(withdrawals_amount) AS withdrawals_amount,
+		
+		sum(attestations_scheduled) AS attestations_scheduled,
+		sum(attestations_observed) AS attestations_observed,
+		sum(attestations_head_matched) AS attestations_head_matched,
+		sum(attestations_target_matched) AS attestations_target_matched,
+		sum(attestations_source_matched) AS attestations_source_matched,
+		
+		sum(attestations_head_executed) AS attestations_head_executed,
+		sum(attestations_target_executed) AS attestations_target_executed,
+		sum(attestations_source_executed) AS attestations_source_executed,
+		
+		sum(attestations_reward) AS attestations_reward,
+		sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
+		sum(attestations_reward_penalties_only) AS attestations_reward_penalties_only,
+		
+		sum(attestations_head_reward) AS attestations_head_reward,
+		sum(attestations_target_reward) AS attestations_target_reward,
+		sum(attestations_source_reward) AS attestations_source_reward,
+
+		sum(attestations_inclusion_reward) AS attestations_inclusion_reward,
+		sum(attestations_inactivity_reward) AS attestations_inactivity_reward,
+
+		sum(attestations_ideal_reward) AS attestations_ideal_reward,
+		sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+		sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+		sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+		sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+		sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+		sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+		sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+		
+		sum(inclusion_delay_sum) AS inclusion_delay_sum,
+		sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+		
+		sum(blocks_scheduled) AS blocks_scheduled,
+		sum(blocks_proposed) AS blocks_proposed,
+		sum(blocks_cl_reward) AS blocks_cl_reward,
+		sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+		sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+		sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+		sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+		sum(blocks_slashing_count) AS blocks_slashing_count,
+		sum(blocks_expected) AS blocks_expected,
+		
+		sum(sync_scheduled) AS sync_scheduled,
+		sum(sync_executed) AS sync_executed,
+		sum(sync_reward) AS sync_reward,
+		sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+		sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+		sum(sync_localized_max_reward) AS sync_localized_max_reward,
+		sum(sync_committees_expected) AS sync_committees_expected,
+		max(slashed) AS slashed,
+		max(last_executed_duty_epoch) AS last_executed_duty_epoch,
+		max(last_scheduled_sync_epoch) AS last_scheduled_sync_epoch,
+		max(last_scheduled_block_epoch) AS last_scheduled_block_epoch
+	`
+	if source == RollingSourceEpochly {
+		column = "epoch_timestamp"
+		// this is gonna be uggly. but cant avoid sadly without code generation
+		selector = `
+			validator_index AS validator_index,
+			any(epoch_timestamp) AS t,
+			
+			groupArraySortedIfState(2048)(-foo.epoch, validator_index = 0) AS epoch_map,
+			min(foo.epoch) AS epoch_start,
+			max(foo.epoch) AS epoch_end,
+			
+			argMinState(foo.balance_start, foo.epoch) AS balance_start,
+			argMaxState(foo.balance_end, foo.epoch) AS balance_end,
+			least(min(foo.balance_start), min(foo.balance_end)) AS balance_min,
+			greatest(max(foo.balance_start), max(foo.balance_end)) AS balance_max,
+			
+			sum(deposits_count) AS deposits_count,
+			sum(deposits_amount) AS deposits_amount,
+			sum(withdrawals_count) AS withdrawals_count,
+			sum(withdrawals_amount) AS withdrawals_amount,
+			
+			sum(attestations_scheduled) AS attestations_scheduled,
+			sum(attestations_observed) AS attestations_observed,
+			sum(attestations_head_matched) AS attestations_head_matched,
+			sum(attestations_target_matched) AS attestations_target_matched,
+			sum(attestations_source_matched) AS attestations_source_matched,
+
+			sum(attestations_head_executed) AS attestations_head_executed,
+			sum(attestations_target_executed) AS attestations_target_executed,
+			sum(attestations_source_executed) AS attestations_source_executed,
+
+			sum(attestations_reward) AS attestations_reward,
+			sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
+			sum(attestations_reward_penalties_only) AS attestations_reward_penalties_only,
+
+			sum(attestations_head_reward) AS attestations_head_reward,
+			sum(attestations_target_reward) AS attestations_target_reward,
+			sum(attestations_source_reward) AS attestations_source_reward,
+
+			sum(attestations_inclusion_reward) AS attestations_inclusion_reward,
+			sum(attestations_inactivity_reward) AS attestations_inactivity_reward,
+
+			sum(attestations_ideal_reward) AS attestations_ideal_reward,
+			sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+			sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+			sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+			sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+			sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+			sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+			sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+
+			sum(inclusion_delay_sum) AS inclusion_delay_sum,
+			sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+
+			sum(blocks_scheduled) AS blocks_scheduled,
+			sum(blocks_proposed) AS blocks_proposed,
+			sum(blocks_cl_reward) AS blocks_cl_reward,
+			sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+			sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+			sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+			sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+
+			sum(blocks_slashing_count) AS blocks_slashing_count,
+			sum(blocks_expected) AS blocks_expected,
+			sum(sync_scheduled) AS sync_scheduled,
+			sum(sync_executed) AS sync_executed,
+			sum(sync_reward) AS sync_reward,
+			sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+			sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+			sum(sync_localized_max_reward) AS sync_localized_max_reward,
+			sum(sync_committees_expected) AS sync_committees_expected,
+			max(slashed) AS slashed,
+			maxIfOrNull(foo.epoch, (foo.blocks_proposed != 0) OR (foo.sync_executed != 0) OR (foo.attestations_observed != 0)) AS last_executed_duty_epoch,
+			maxIfOrNull(foo.epoch, foo.sync_scheduled != 0) AS last_scheduled_sync_epoch,
+			maxIfOrNull(foo.epoch, foo.blocks_proposed != 0) AS last_scheduled_block_epoch
+		`
+	}
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into _unsafe_%[1]s
+		select
+			%[2]s
+		from
+			%[3]s foo  -- we dont use final because the target table will do the merge anyways and the filter statement isnt affected by it
+		where
+			foo.%[4]s >= ? and foo.%[4]s <= ?
+		group by 
+			validator_index
+	`, rolling, selector, source, column), *minMax.Min, *minMax.Max)
+	if err != nil {
+		return fmt.Errorf("error transferring epochs: %w", err)
+	}
+	return nil
+}
+
+func SwapRollingTables(rolling Rollings) error {
+	// swaps _unsafe_rolling with _final_rolling
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		EXCHANGE TABLES _unsafe_%[1]s AND _final_%[1]s
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error swapping tables %s: %w", rolling, err)
+	}
+	return nil
+}
+
 func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error) { // done
 	var epochs []EpochMetadata
 	// max epoch with assigned insert batch id

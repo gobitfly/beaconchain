@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -243,7 +244,25 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 	responseCh := make(chan *types.EventResponse, 32)
 
 	go func() {
-		stream, err := eventsource.Subscribe(requestURL, "")
+		// create a client with compression disabled
+		// compression can cause delayed events due to chunked encoding
+		client := &http.Client{
+			Transport: &http.Transport{
+				DisableCompression: true,
+			},
+		}
+		url, err := url.Parse(requestURL)
+		if err != nil {
+			panic(err)
+		}
+		request := &http.Request{
+			Method: http.MethodGet,
+			URL:    url,
+			Header: http.Header{
+				"Accept": []string{"text/event-stream"},
+			},
+		}
+		stream, err := eventsource.SubscribeWith(requestURL, client, request)
 		stream.Logger = log.New(os.Stderr, "eventsource: ", log.LstdFlags)
 
 		if err != nil {

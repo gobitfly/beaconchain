@@ -78,8 +78,9 @@ func (d *dashboardData) Init() error {
 		}
 		break
 	}
-	go d.maintenanceTask() // does all the transferring of the data
 	go d.insertTask()      // does all the inserting of the data
+	go d.maintenanceTask() // does all the transferring of the data
+	go d.rollingTask()     // does all the rolling of the data
 
 	return nil
 }
@@ -88,16 +89,6 @@ var EpochsWritten int
 var FirstEpochWritten *time.Time
 
 func (d *dashboardData) OnFinalizedCheckpoint(t *constypes.StandardFinalizedCheckpointResponse) error {
-	d.log.Infof("=>finalized checkpoint %v", t)
-	if t == nil { // idk man you gave me a pointer it could be nil
-		return nil
-	}
-
-	err := updateSafeEpoch(d)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -127,6 +118,15 @@ func (d *dashboardData) GetName() string {
 }
 
 func (d *dashboardData) OnHead(event *constypes.StandardEventHeadResponse) error {
+	// you may ask, why here and not OnFinalizedCheckpoint?
+	// because due to our loadbalanced node architecture we often receive the finalized checkpoint event
+	// before the node we hit has updated its finalized checkpoint, causing us to be off by 1 epoch sometimes
+	// so we simply check more often. the request overhead is minimal anyways
+	err := updateSafeEpoch(d)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -51,7 +51,7 @@ func (d *dashboardData) handleIncompleteTransfers() error {
 		return errors.Wrap(err, "failed to get incomplete transfer epochs")
 	}
 	if len(incomplete) == 0 {
-		d.log.Infof("handleIncompleteTransfers, no incomplete transfer epochs")
+		d.log.Debugf("handleIncompleteTransfers, no incomplete transfer epochs")
 		return nil
 	}
 	d.log.Infof("handleIncompleteTransfers, found %d incomplete transfer epochs", len(incomplete))
@@ -69,8 +69,7 @@ func (d *dashboardData) handlePendingTransfers() error {
 		return errors.Wrap(err, "failed to get pending transfer epochs")
 	}
 	if len(pending) == 0 {
-		d.log.Infof("handlePendingTransfers, no pending transfer epochs")
-		time.Sleep(1 * time.Second)
+		d.log.Debugf("handlePendingTransfers, no pending transfer epochs")
 		return nil
 	}
 	d.log.Infof("handlePendingTransfers, found %d pending transfer epochs", len(pending))
