@@ -616,6 +616,7 @@
           },
         "entity": {
           "attestation_missed":"Attestation missed",
+          "group_efficiency": "Group efficiency ",
           "max_collateral":"Maximum collateral reached",
           "min_collateral":"Minimum collateral reached",
           "proposal_done": "Proposal done",

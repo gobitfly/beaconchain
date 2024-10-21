@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faAlarmSnooze,
   faArrowsRotate,
+  faChartLineUp,
   faCube,
   faFileSignature,
   faGlobe,
@@ -248,6 +249,25 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
           ({{ validator.epoch_count }} {{ $t('common.epoch', validator.epoch_count) }})<!--
             this will remove white space in html
           -->
+        </template>
+      </BcAccordion>
+      <BcAccordion :items="details?.group_offline">
+        <template #headingIcon>
+          <FontAwesomeIcon
+            :icon="faChartLineUp"
+            class="notifications-dashboard-dialog-entity__icon__red"
+          />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.group_efficiency') }} ({{ details?.validator_offline_reminder?.length ?? 0 }})
+        </template>
+        <template #item="{ item: validatorOfflineReminderIndex }">
+          <BcLink
+            :to="`/validator/${validatorOfflineReminderIndex}`"
+            class="link"
+          >
+            {{ validatorOfflineReminderIndex }}
+          </BcLink>
         </template>
       </BcAccordion>
       <BcAccordion
