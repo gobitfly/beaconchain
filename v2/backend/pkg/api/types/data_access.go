@@ -186,8 +186,9 @@ type NotificationsDashboardsCursor struct {
 }
 
 type NetworkInfo struct {
-	ChainId uint64
-	Name    string
+	ChainId           uint64
+	Name              string
+	NotificationsName string
 }
 
 type ClientInfo struct {
