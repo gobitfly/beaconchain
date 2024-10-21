@@ -21,7 +21,12 @@ const handleClick = () => {
 const { isLoggedIn } = useUserStore()
 const {
   dashboards,
+  refreshDashboards,
 } = useUserDashboardStore()
+
+if (!dashboards.value) {
+  refreshDashboards()
+}
 const hasDashboards = computed(() => {
   return (
     dashboards.value?.account_dashboards?.length
