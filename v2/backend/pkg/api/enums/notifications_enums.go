@@ -1,5 +1,7 @@
 package enums
 
+import "github.com/doug-martin/goqu/v9"
+
 // ------------------------------------------------------------
 // Notifications Dashboard Table Columns
 
@@ -34,22 +36,22 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 }
 
 // internal use, used to map to query column names
-func (c NotificationDashboardsColumn) ToString() string {
+func (c NotificationDashboardsColumn) ToExpr() OrderableSortable {
 	switch c {
 	case NotificationDashboardChainId:
-		return "chain_id"
+		return goqu.C("chain_id")
 	case NotificationDashboardEpoch:
-		return "epoch"
+		return goqu.C("epoch")
 	case NotificationDashboardDashboardName:
-		return "dashboard_name"
+		return goqu.C("dashboard_name")
 	case NotificationDashboardDashboardId:
-		return "dashboard_id"
+		return goqu.C("dashboard_id")
 	case NotificationDashboardGroupName:
-		return "group_name"
+		return goqu.C("group_name")
 	case NotificationDashboardGroupId:
-		return "group_id"
+		return goqu.C("group_id")
 	default:
-		return ""
+		return nil
 	}
 }
 
@@ -104,20 +106,20 @@ func (NotificationMachinesColumn) NewFromString(s string) NotificationMachinesCo
 }
 
 // internal use, used to map to query column names
-func (c NotificationMachinesColumn) ToString() string {
+func (c NotificationMachinesColumn) ToExpr() OrderableSortable {
 	switch c {
 	case NotificationMachineId:
-		return "machine_id"
+		return goqu.C("machine_id")
 	case NotificationMachineName:
-		return "machine_name"
+		return goqu.C("machine_name")
 	case NotificationMachineThreshold:
-		return "threshold"
+		return goqu.C("threshold")
 	case NotificationMachineEventType:
-		return "event_type"
+		return goqu.C("event_type")
 	case NotificationMachineTimestamp:
-		return "epoch"
+		return goqu.C("epoch")
 	default:
-		return ""
+		return nil
 	}
 }
 
@@ -163,14 +165,14 @@ func (NotificationClientsColumn) NewFromString(s string) NotificationClientsColu
 }
 
 // internal use, used to map to query column names
-func (c NotificationClientsColumn) ToString() string {
+func (c NotificationClientsColumn) ToExpr() OrderableSortable {
 	switch c {
 	case NotificationClientName:
-		return "client_name"
+		return goqu.C("client_name")
 	case NotificationClientTimestamp:
-		return "epoch"
+		return goqu.C("epoch")
 	default:
-		return ""
+		return nil
 	}
 }
 
@@ -251,16 +253,16 @@ func (NotificationNetworksColumn) NewFromString(s string) NotificationNetworksCo
 }
 
 // internal use, used to map to query column names
-func (c NotificationNetworksColumn) ToString() string {
+func (c NotificationNetworksColumn) ToExpr() OrderableSortable {
 	switch c {
 	case NotificationNetworkTimestamp:
-		return "epoch"
+		return goqu.C("epoch")
 	case NotificationNetworkNetwork:
-		return "network"
+		return goqu.C("network")
 	case NotificationNetworkEventType:
-		return "event_type"
+		return goqu.C("event_type")
 	default:
-		return ""
+		return nil
 	}
 }
 

@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/doug-martin/goqu/v9"
-	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -26,18 +24,10 @@ type Sort[T enums.Enum] struct {
 }
 
 type SortColumn struct {
-	Column string
-	Table  string // optional
+	// defaults
+	Column enums.OrderableSortable
 	Desc   bool
-	// represents value from cursor
-	Offset any
-}
-
-func (s SortColumn) Expr() exp.IdentifierExpression {
-	if s.Table != "" {
-		return goqu.T(s.Table).Col(s.Column)
-	}
-	return goqu.C(s.Column)
+	Offset any // nil to indicate null value
 }
 
 type VDBIdPrimary int
