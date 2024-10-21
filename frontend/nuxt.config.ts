@@ -89,6 +89,7 @@ export default defineNuxtConfig({
       deploymentType: process.env.PUBLIC_DEPLOYMENT_TYPE,
       domain: process.env.PUBLIC_DOMAIN,
       gitVersion,
+      isApiMocked: '',
       legacyApiClient: process.env.PUBLIC_LEGACY_API_CLIENT,
       logFile: '',
       logIp: '',
