@@ -269,7 +269,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
               </div>
             </template>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!notificationsDashboards?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
