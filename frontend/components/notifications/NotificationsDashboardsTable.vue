@@ -297,14 +297,18 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
 
                   }}
                 </div>
-                <div>
-                  {{
-                    $t(
-                      "notifications.dashboards.footer.subscriptions.accounts",
-                      { count: overview?.adb_subscriptions_count })
+                <BcFeatureFlag
+                  feature="feature-account_dashboards"
+                >
+                  <div>
+                    {{
+                      $t(
+                        "notifications.dashboards.footer.subscriptions.accounts",
+                        { count: overview?.adb_subscriptions_count })
 
-                  }}
-                </div>
+                    }}
+                  </div>
+                </BcFeatureFlag>
               </template>
             </template>
           </BcTable>
