@@ -223,7 +223,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			if len(whereNetwork) > 0 {
 				whereNetwork += " OR "
 			}
-			whereNetwork += "event_name like '" + network.Name + ":rocketpool_%' OR event_name like '" + network.Name + ":network_%'"
+			whereNetwork += "event_name like '" + network.NotificationsName + ":rocketpool_%' OR event_name like '" + network.NotificationsName + ":network_%'"
 		}
 
 		query := goqu.Dialect("postgres").
@@ -1231,7 +1231,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	}
 	networksSettings := make(map[string]*t.NotificationNetwork, len(networks))
 	for _, network := range networks {
-		networksSettings[network.Name] = &t.NotificationNetwork{
+		networksSettings[network.NotificationsName] = &t.NotificationNetwork{
 			ChainId: network.ChainId,
 			Settings: t.NotificationSettingsNetwork{
 				GasAboveThreshold:          decimal.NewFromFloat(GasAboveThresholdDefault).Mul(decimal.NewFromInt(params.GWei)),
@@ -1566,7 +1566,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	networkName := ""
 	for _, network := range networks {
 		if network.ChainId == chainId {
-			networkName = network.Name
+			networkName = network.NotificationsName
 			break
 		}
 	}
@@ -2083,7 +2083,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	networkName := ""
 	for _, network := range networks {
 		if network.ChainId == chainId {
-			networkName = network.Name
+			networkName = network.NotificationsName
 			break
 		}
 	}

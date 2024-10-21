@@ -395,16 +395,19 @@ func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Cont
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 	return []types.NetworkInfo{
 		{
-			ChainId: 1,
-			Name:    "ethereum",
+			ChainId:           1,
+			Name:              "ethereum",
+			NotificationsName: "mainnet",
 		},
 		{
-			ChainId: 100,
-			Name:    "gnosis",
+			ChainId:           100,
+			Name:              "gnosis",
+			NotificationsName: "gnosis",
 		},
 		{
-			ChainId: 17000,
-			Name:    "holesky",
+			ChainId:           17000,
+			Name:              "holesky",
+			NotificationsName: "holesky",
 		},
 	}, nil
 }
