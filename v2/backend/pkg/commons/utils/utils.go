@@ -396,3 +396,10 @@ func Deduplicate(slice []uint64) []uint64 {
 	}
 	return list
 }
+
+func FirstN(input string, n int) string {
+	if len(input) <= n {
+		return input
+	}
+	return input[:n]
+}

@@ -47,6 +47,7 @@ func notificationCollector() {
 		gob.Register(&ValidatorProposalNotification{})
 		gob.Register(&ValidatorAttestationNotification{})
 		gob.Register(&ValidatorIsOfflineNotification{})
+		gob.Register(&ValidatorIsOnlineNotification{})
 		gob.Register(&ValidatorGotSlashedNotification{})
 		gob.Register(&ValidatorWithdrawalNotification{})
 		gob.Register(&NetworkNotification{})
@@ -731,7 +732,6 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 					DashboardGroupName: sub.DashboardGroupName,
 				},
 				ValidatorIndex: validator.Index,
-				IsOffline:      true,
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -749,12 +749,12 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 
 			log.Infof("new event: validator %v detected as online again at epoch %v", validator.Index, epoch)
 
-			n := &ValidatorIsOfflineNotification{
+			n := &ValidatorIsOnlineNotification{
 				NotificationBaseImpl: types.NotificationBaseImpl{
 					SubscriptionID:     *sub.ID,
 					UserID:             *sub.UserID,
 					Epoch:              epoch,
-					EventName:          sub.EventName,
+					EventName:          types.ValidatorIsOnlineEventName,
 					EventFilter:        hex.EncodeToString(validator.Pubkey),
 					LatestState:        "-",
 					DashboardId:        sub.DashboardId,
@@ -763,7 +763,6 @@ func collectAttestationAndOfflineValidatorNotifications(notificationsByUserID ty
 					DashboardGroupName: sub.DashboardGroupName,
 				},
 				ValidatorIndex: validator.Index,
-				IsOffline:      false,
 			}
 
 			notificationsByUserID.AddNotification(n)
@@ -906,7 +905,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 		return fmt.Errorf("error getting withdrawals from database, err: %w", err)
 	}
 
-	// log.Infof("retrieved %v events", len(events))
+	log.Infof("retrieved %v events", len(events))
 	for _, event := range events {
 		subscribers, ok := subMap[hex.EncodeToString(event.Pubkey)]
 		if ok {
@@ -920,7 +919,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 						continue
 					}
 				}
-				// log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
+				log.Infof("creating %v notification for validator %v in epoch %v", types.ValidatorReceivedWithdrawalEventName, event.ValidatorIndex, epoch)
 				n := &ValidatorWithdrawalNotification{
 					NotificationBaseImpl: types.NotificationBaseImpl{
 						SubscriptionID:     *sub.ID,
@@ -931,6 +930,7 @@ func collectWithdrawalNotifications(notificationsByUserID types.NotificationsPer
 						DashboardName:      sub.DashboardName,
 						DashboardGroupId:   sub.DashboardGroupId,
 						DashboardGroupName: sub.DashboardGroupName,
+						Epoch:              epoch,
 					},
 					ValidatorIndex: event.ValidatorIndex,
 					Epoch:          epoch,

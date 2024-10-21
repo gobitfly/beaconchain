@@ -41,6 +41,8 @@ export enum API_PATH {
   LOGOUT = '/logout',
   NOTIFICATIONS_CLIENTS = '/notifications/clients',
   NOTIFICATIONS_DASHBOARDS = '/notifications/dashboards',
+  NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT = '/notifications/dashboards/details/account',
+  NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR = '/notifications/dashboards/details/validator',
   NOTIFICATIONS_MACHINE = '/notifications/machines',
   NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION = '/notifications/management/clients/set_notifications',
   NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION = '/notifications/management/account_dashboard/set_notifications',
@@ -52,7 +54,6 @@ export enum API_PATH {
   NOTIFICATIONS_MANAGEMENT_SAVE = '/notifications/management/save',
   NOTIFICATIONS_NETWORK = '/notifications/networks',
   NOTIFICATIONS_OVERVIEW = '/notifications',
-  NOTIFICATIONS_ROCKETPOOL = '/notifications/rocket_pool',
   NOTIFICATIONS_TEST_EMAIL = '/notifications/test_email',
   NOTIFICATIONS_TEST_PUSH = '/notifications/test_push',
   NOTIFICATIONS_TEST_WEBHOOK = '/users/me/notifications/test_webhook',
@@ -69,7 +70,7 @@ export enum API_PATH {
   USER_DELETE = '/user/delete',
 }
 
-export type PathValues = Record<string, number | string>
+export type PathValues = Record<string, boolean | number | string>
 
 interface MockFunction {
   (body?: any, param?: PathValues, query?: PathValues): any,
@@ -295,6 +296,18 @@ export const mapping: Record<string, MappingData> = {
   [API_PATH.NOTIFICATIONS_DASHBOARDS]: {
     path: '/users/me/notifications/dashboards',
   },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT]: {
+    getPath: pathValues =>
+      `/users/me/notifications/account-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}/epochs/${pathValues?.epoch}`,
+    path: '/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}',
+  },
+  [API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR]: {
+    getPath: pathValues =>
+      `/users/me/notifications/validator-dashboards/${pathValues?.dashboard_id}`
+      + `/groups/${pathValues?.group_id}/epochs/${pathValues?.epoch}`,
+    path: '/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}',
+  },
   [API_PATH.NOTIFICATIONS_MACHINE]: {
     path: '/users/me/notifications/machines',
   },
@@ -350,10 +363,6 @@ export const mapping: Record<string, MappingData> = {
     method: 'GET',
     mock: false,
     path: '/users/me/notifications',
-  },
-  [API_PATH.NOTIFICATIONS_ROCKETPOOL]: {
-    method: 'GET',
-    path: '/users/me/notifications/rocket-pool',
   },
   [API_PATH.NOTIFICATIONS_TEST_EMAIL]: {
     method: 'POST',
