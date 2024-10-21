@@ -168,7 +168,7 @@ func (NotificationClientsColumn) NewFromString(s string) NotificationClientsColu
 func (c NotificationClientsColumn) ToExpr() OrderableSortable {
 	switch c {
 	case NotificationClientName:
-		return goqu.C("client_name")
+		return goqu.C("client")
 	case NotificationClientTimestamp:
 		return goqu.C("epoch")
 	default:
