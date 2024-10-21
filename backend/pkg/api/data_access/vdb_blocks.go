@@ -33,9 +33,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if err != nil {
 		return nil, nil, err
 	}
-	validators := goqu.T("users_val_dashboards_validators").As("validators")
-	blocks := goqu.T("blocks")
-	groups := goqu.T("goups")
 
 	// TODO @LuccaBitfly move validation to handler?
 	if cursor != "" {
@@ -48,27 +45,34 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
-	// -------------------------------------
-	// Goqu Query: Determine validators filtered by search
+	validators := goqu.T("users_val_dashboards_validators").As("validators")
+	blocks := goqu.T("blocks")
+	groups := goqu.T("groups")
+
 	type validatorGroup struct {
 		Validator t.VDBValidator `db:"validator_index"`
 		Group     uint64         `db:"group_id"`
 	}
+
+	// -------------------------------------
+	// Goqu Query to determine validators filtered by search
+	var filteredValidatorsDs *goqu.SelectDataset
 	var filteredValidators []validatorGroup
-	validatorsDs := goqu.Dialect("postgres").
+
+	filteredValidatorsDs = goqu.Dialect("postgres").
 		Select(
 			"validator_index",
 		)
 	if dashboardId.Validators == nil {
-		validatorsDs = validatorsDs.
+		filteredValidatorsDs = filteredValidatorsDs.
 			From(validators).
 			Where(validators.Col("dashboard_id").Eq(dashboardId.Id))
 		// apply search filters
 		if searchIndex {
-			validatorsDs = validatorsDs.Where(validators.Col("validator_index").Eq(search))
+			filteredValidatorsDs = filteredValidatorsDs.Where(validators.Col("validator_index").Eq(search))
 		}
 		if searchGroup {
-			validatorsDs = validatorsDs.
+			filteredValidatorsDs = filteredValidatorsDs.
 				InnerJoin(goqu.T("users_val_dashboards_groups").As(groups), goqu.On(
 					validators.Col("group_id").Eq(groups.Col("id")),
 					validators.Col("dashboard_id").Eq(groups.Col("dashboard_id")),
@@ -84,7 +88,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 			}
 
-			validatorsDs = validatorsDs.
+			filteredValidatorsDs = filteredValidatorsDs.
 				Where(validators.Col("validator_index").Eq(index))
 		}
 	} else {
@@ -101,86 +105,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				break
 			}
 		}
-		validatorsDs = validatorsDs.
+		filteredValidatorsDs = filteredValidatorsDs.
 			From(
 				goqu.L("unnest(?)", pq.Array(filteredValidators)).As("validator_index"),
 			).As("validators") // TODO ?
 	}
 
-	if dashboardId.Validators == nil {
-		validatorsQuery, validatorsArgs, err := validatorsDs.Prepared(true).ToSQL()
-		if err != nil {
-			return nil, nil, err
-		}
-		if err = d.alloyReader.SelectContext(ctx, &filteredValidators, validatorsQuery, validatorsArgs...); err != nil {
-			return nil, nil, err
-		}
-	}
-	if len(filteredValidators) == 0 {
-		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
-	}
-
 	// -------------------------------------
-	// Gather scheduled blocks
-	// found in dutiesInfo; pass results to final query later and let db do the sorting etc
-	validatorSet := make(map[t.VDBValidator]bool)
-	for _, v := range filteredValidators {
-		validatorSet[v.Validator] = true
-	}
-	var scheduledProposers []t.VDBValidator
-	var scheduledEpochs []uint64
-	var scheduledSlots []uint64
-	// don't need if requested slots are in the past
-	latestSlot := cache.LatestSlot.Get()
-	onlyPrimarySort := colSort.Column == enums.VDBBlockSlot || colSort.Column == enums.VDBBlockBlock
-	if !onlyPrimarySort || !currentCursor.IsValid() ||
-		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
-		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
-		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
-		if err == nil {
-			for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
-				// only gather scheduled slots
-				if _, ok := dutiesInfo.SlotStatus[slot]; ok {
-					continue
-				}
-				// only gather slots scheduled for our validators
-				if _, ok := validatorSet[vali]; !ok {
-					continue
-				}
-				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
-				scheduledEpochs = append(scheduledEpochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
-				scheduledSlots = append(scheduledSlots, slot)
-			}
-		} else {
-			log.Debugf("duties info not available, skipping scheduled slots: %s", err)
-		}
-	}
+	// Constuct final query
+	var blocksDs *goqu.SelectDataset
 
-	// Sorting and pagination if cursor is present
-	defaultColumns := []t.SortColumn{
-		{Column: enums.VDBBlocksColumns.Slot.ToString(), Table: blocks.GetTable(), Desc: true, Offset: currentCursor.Slot},
-	}
-	var offset any
-	var table string
-	switch colSort.Column {
-	case enums.VDBBlocksColumns.Proposer:
-		offset = currentCursor.Proposer
-	case enums.VDBBlocksColumns.Block:
-		offset = currentCursor.Block
-		table = blocks.GetTable()
-	case enums.VDBBlocksColumns.Status:
-		offset = fmt.Sprintf("%d", currentCursor.Status) // type of 'status' column is text for some reason
-	case enums.VDBBlocksColumns.ProposerReward:
-		offset = currentCursor.Reward
-	}
-
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Table: table, Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
-	validatorsDs = validatorsDs.Order(order...)
-	if directions != nil {
-		validatorsDs = validatorsDs.Where(directions)
-	}
-
-	validatorsDs = validatorsDs.
+	// 1. Tables
+	blocksDs = filteredValidatorsDs.
 		InnerJoin(blocks, goqu.On(
 			blocks.Col("proposer").Eq(validators.Col("validator_index")),
 		)).
@@ -205,7 +141,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			goqu.On(
 				goqu.I("rb.exec_block_hash").Eq(blocks.Col("exec_block_hash")),
 			),
-		).
+		)
+
+	// 2. Selects
+	blocksDs = blocksDs.
 		SelectAppend(
 			blocks.Col("epoch"),
 			blocks.Col("slot"),
@@ -215,64 +154,128 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			goqu.COALESCE(goqu.I("rb.proposer_fee_recipient"), blocks.Col("exec_fee_recipient")).As("fee_recipient"),
 			goqu.COALESCE(goqu.L("rb.value / 1e18"), goqu.I("ep.fee_recipient_reward")).As("el_reward"),
 			goqu.L("cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9").As("cl_reward"),
-		).
-		Limit(uint(limit + 1))
+		)
 
-	// Group id
 	groupId := validators.Col("group_id")
 	if dashboardId.Validators != nil {
 		groupId = goqu.V(t.DefaultGroupId).As("group_id").GetAs()
 	}
-	validatorsDs = validatorsDs.SelectAppend(groupId)
+	blocksDs = blocksDs.SelectAppend(groupId)
 
-	/*
-		if dashboardId.Validators == nil {
-			validatorsDs = validatorsDs.Select(
-				validators.Col("group_id"),
-			)
+	// 3. Sorting and pagination
+	defaultColumns := []t.SortColumn{
+		{Column: enums.VDBBlocksColumns.Slot.ToExpr(), Desc: true, Offset: currentCursor.Slot},
+	}
+	var offset any
+	switch colSort.Column {
+	case enums.VDBBlocksColumns.Proposer:
+		offset = currentCursor.Proposer
+	case enums.VDBBlocksColumns.Block:
+		offset = currentCursor.Block
+		if !currentCursor.Block.Valid {
+			offset = nil
+		}
+	case enums.VDBBlocksColumns.Status:
+		offset = fmt.Sprintf("%d", currentCursor.Status) // type of 'status' column is text for some reason
+	case enums.VDBBlocksColumns.ProposerReward:
+		offset = currentCursor.Reward
+	}
+
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	blocksDs = goqu.From(blocksDs). // encapsulate so we can use selected fields
+					Order(order...)
+	if directions != nil {
+		blocksDs = blocksDs.Where(directions)
+	}
+
+	// 4. Limit
+	blocksDs = blocksDs.Limit(uint(limit + 1))
+
+	// 5. Gather and supply scheduled blocks to let db do the sorting etc
+	latestSlot := cache.LatestSlot.Get()
+	onlyPrimarySort := colSort.Column == enums.VDBBlockSlot
+	if !(onlyPrimarySort || colSort.Column == enums.VDBBlockBlock) || !currentCursor.IsValid() ||
+		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
+		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
+		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
+		if err == nil {
+			if dashboardId.Validators == nil {
+				// fetch filtered validators if not done yet
+				validatorsQuery, validatorsArgs, err := filteredValidatorsDs.Prepared(true).ToSQL()
+				if err != nil {
+					return nil, nil, err
+				}
+				if err = d.alloyReader.SelectContext(ctx, &filteredValidators, validatorsQuery, validatorsArgs...); err != nil {
+					return nil, nil, err
+				}
+			}
+			if len(filteredValidators) == 0 {
+				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
+			}
+
+			validatorSet := make(map[t.VDBValidator]bool)
+			for _, v := range filteredValidators {
+				validatorSet[v.Validator] = true
+			}
+			var scheduledProposers []t.VDBValidator
+			var scheduledEpochs []uint64
+			var scheduledSlots []uint64
+			// don't need if requested slots are in the past
+			for slot, vali := range dutiesInfo.PropAssignmentsForSlot {
+				// only gather scheduled slots
+				if _, ok := dutiesInfo.SlotStatus[slot]; ok {
+					continue
+				}
+				// only gather slots scheduled for our validators
+				if _, ok := validatorSet[vali]; !ok {
+					continue
+				}
+				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
+				scheduledEpochs = append(scheduledEpochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
+				scheduledSlots = append(scheduledSlots, slot)
+			}
+
+			scheduledDs := goqu.Dialect("postgres").
+				From(
+					goqu.L("unnest(?::int[], ?::int[], ?::int[]) AS prov(validator_index, epoch, slot)", pq.Array(scheduledProposers), pq.Array(scheduledEpochs), pq.Array(scheduledSlots)),
+				).
+				Select(
+					goqu.C("validator_index"),
+					goqu.C("epoch"),
+					goqu.C("slot"),
+					goqu.V("0").As("status"),
+					goqu.V(nil).As("exec_block_number"),
+					goqu.V(nil).As("fee_recipient"),
+					goqu.V(nil).As("el_reward"),
+					goqu.V(nil).As("cl_reward"),
+					goqu.V(nil).As("graffiti_text"),
+					goqu.V(t.DefaultGroupId).As("group_id"),
+				).
+				As("scheduled_blocks")
+
+			// Supply to result query
+			// distinct + block number ordering to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
+			// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
+			blocksDs = goqu.Dialect("Postgres").
+				From(blocksDs.Union(scheduledDs)). // wrap union to apply order
+				Order(order...).
+				OrderAppend(goqu.C("exec_block_number").Desc().NullsLast()).
+				Limit(uint(limit + 1)).
+				Distinct(enums.VDBBlocksColumns.Slot.ToExpr())
+			if directions != nil {
+				blocksDs = blocksDs.Where(directions)
+			}
+			if !onlyPrimarySort {
+				blocksDs = blocksDs.
+					Distinct(colSort.Column.ToExpr(), enums.VDBBlocksColumns.Slot.ToExpr())
+			}
 		} else {
-			validatorsDs = validatorsDs.Select(
-				goqu.L("?", t.DefaultGroupId).As("group_id"),
-			)
-		}*/
-
-	// union scheduled blocks if present
-	// WIP
-
-	finalDs := validatorsDs
-	if len(scheduledProposers) > 0 {
-		scheduledDs := goqu.Dialect("postgres").
-			From(
-				goqu.L("unnest(?, ?, ?) AS prov(validator_index, epoch, slot)", pq.Array(scheduledProposers), pq.Array(scheduledEpochs), pq.Array(scheduledSlots)),
-			).
-			Select(
-				goqu.C("validator_index"),
-				goqu.C("epoch"),
-				goqu.C("slot"),
-				goqu.V("0").As("status"),
-				goqu.V(nil).As("exec_block_number"),
-				goqu.V(nil).As("fee_recipient"),
-				goqu.V(nil).As("el_reward"),
-				goqu.V(nil).As("cl_reward"),
-				goqu.V(nil).As("graffiti_text"),
-			).
-			As("scheduled_blocks")
-
-		// distinct + block number ordering to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
-		// might be possible to remove this once the TODO in service_slot_viz.go:startSlotVizDataService is resolved
-		finalDs = validatorsDs.
-			Union(scheduledDs).
-			Where(directions).
-			Order(order...).
-			OrderAppend(goqu.C("exec_block_number").Desc().NullsLast()).
-			Limit(uint(limit + 1)).
-			Distinct(blocks.Col("slot"))
-		if !onlyPrimarySort {
-			finalDs = finalDs.
-				Distinct(blocks.Col("slot"), blocks.Col("exec_block_number"))
+			log.Warnf("Error getting scheduled proposals, DutiesInfo not available in Redis: %s", err)
 		}
 	}
 
+	// -------------------------------------
+	// Execute query
 	var proposals []struct {
 		Proposer     t.VDBValidator      `db:"validator_index"`
 		Group        uint64              `db:"group_id"`
@@ -283,13 +286,13 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		FeeRecipient []byte              `db:"fee_recipient"`
 		ElReward     decimal.NullDecimal `db:"el_reward"`
 		ClReward     decimal.NullDecimal `db:"cl_reward"`
-		GraffitiText string              `db:"graffiti_text"`
+		GraffitiText sql.NullString      `db:"graffiti_text"`
 
 		// for cursor only
 		Reward decimal.Decimal
 	}
 	startTime := time.Now()
-	query, args, err := finalDs.Prepared(true).ToSQL()
+	query, args, err := blocksDs.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -301,6 +304,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if len(proposals) == 0 {
 		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 	}
+
+	// -------------------------------------
+	// Prepare result
 	moreDataFlag := len(proposals) > int(limit)
 	if moreDataFlag {
 		proposals = proposals[:len(proposals)-1]
@@ -335,10 +341,14 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		if proposal.Status == 0 || proposal.Status == 2 {
 			continue
 		}
-		graffiti := proposal.GraffitiText
-		data[i].Graffiti = &graffiti
-		block := uint64(proposal.Block.Int64)
-		data[i].Block = &block
+		if proposal.GraffitiText.Valid {
+			graffiti := proposal.GraffitiText.String
+			data[i].Graffiti = &graffiti
+		}
+		if proposal.Block.Valid {
+			block := uint64(proposal.Block.Int64)
+			data[i].Block = &block
+		}
 		if proposal.Status == 3 {
 			continue
 		}
