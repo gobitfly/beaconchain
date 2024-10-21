@@ -245,7 +245,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			return err
 		}
 
-		err = d.alloyReader.GetContext(ctx, &response, querySql, args...)
+		err = d.userReader.GetContext(ctx, &response, querySql, args...)
 		return err
 	})
 
