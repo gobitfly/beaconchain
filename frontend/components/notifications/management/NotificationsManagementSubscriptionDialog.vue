@@ -17,8 +17,10 @@ function closeDialog(): void {
 const checkboxes = ref({
   is_attestations_missed_subscribed: props.value?.is_attestations_missed_subscribed ?? false,
   is_block_proposal_subscribed: props.value?.is_block_proposal_subscribed ?? false,
+  is_group_offline_subscribed: props.value?.is_group_offline_subscribed ?? false,
   is_max_collateral_subscribed: props.value?.is_max_collateral_subscribed ?? false,
   is_min_collateral_subscribed: props.value?.is_min_collateral_subscribed ?? false,
+  is_real_time_mode_enabled: props.value?.is_real_time_mode_enabled ?? false,
   is_slashed_subscribed: props.value?.is_slashed_subscribed ?? false,
   is_sync_subscribed: props.value?.is_sync_subscribed ?? false,
   is_upcoming_block_proposal_subscribed: props.value?.is_upcoming_block_proposal_subscribed ?? false,
@@ -26,14 +28,12 @@ const checkboxes = ref({
   is_withdrawal_processed_subscribed: props.value?.is_withdrawal_processed_subscribed ?? false,
 })
 const thresholds = ref({
+  group_offline_threshold: formatFraction(props.value?.group_offline_threshold ?? 0),
   max_collateral_threshold: formatFraction(props.value?.max_collateral_threshold ?? 0),
   min_collateral_threshold: formatFraction(props.value?.min_collateral_threshold ?? 0),
 })
 const emit = defineEmits<{
   (e: 'change-settings', settings: Omit<NotificationSettingsValidatorDashboard,
-  'group_offline_threshold'
-  | 'is_group_offline_subscribed'
-  | 'is_real_time_mode_enabled'
   | 'is_webhook_discord_enabled'
   | 'webhook_url'>): void,
 }>()
@@ -43,6 +43,7 @@ watchDebounced([
 ], () => {
   emit('change-settings', {
     ...checkboxes.value,
+    group_offline_threshold: Number(formatToFraction(thresholds.value.group_offline_threshold)),
     max_collateral_threshold: Number(formatToFraction(thresholds.value.max_collateral_threshold)),
     min_collateral_threshold: Number(formatToFraction(thresholds.value.min_collateral_threshold)),
   })
