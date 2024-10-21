@@ -162,7 +162,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	blocksDs = blocksDs.SelectAppend(groupId)
 
-	// 3. Sorting and pagination
+	// 3. Limit
+	blocksDs = blocksDs.Limit(uint(limit + 1))
+
+	// 4. Sorting and pagination
 	defaultColumns := []t.SortColumn{
 		{Column: enums.VDBBlocksColumns.Slot.ToExpr(), Desc: true, Offset: currentCursor.Slot},
 	}
@@ -187,9 +190,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if directions != nil {
 		blocksDs = blocksDs.Where(directions)
 	}
-
-	// 4. Limit
-	blocksDs = blocksDs.Limit(uint(limit + 1))
 
 	// 5. Gather and supply scheduled blocks to let db do the sorting etc
 	latestSlot := cache.LatestSlot.Get()
