@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -583,28 +584,86 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 }
 
 func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
-	for userID, userNotifications := range notificationsByUserID {
-		var webhooks []types.UserWebhook
-		err := db.FrontendWriterDB.Select(&webhooks, `
-			SELECT
-				id,
-				user_id,
-				url,
-				retries,
-				event_names,
-				last_sent,
-				destination
-			FROM
-				users_webhooks
-			WHERE
-				user_id = $1 AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)
-		`, userID, types.WebhookNotificationChannel)
-		// continue if the user does not have a webhook
-		if err == sql.ErrNoRows {
-			continue
+	var webhooks []types.UserWebhook
+	userIds := slices.Collect(maps.Keys(notificationsByUserID))
+	err := db.FrontendWriterDB.Select(&webhooks, `
+	SELECT
+		id,
+		user_id,
+		url,
+		retries,
+		event_names,
+		last_sent,
+		destination
+	FROM
+		users_webhooks
+	WHERE
+		user_id = $1 AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)
+	`, pq.Array(userIds), types.WebhookNotificationChannel)
+
+	if err != nil {
+		return fmt.Errorf("error quering users_webhooks, err: %w", err)
+	}
+	webhooksMap := make(map[uint64][]types.UserWebhook)
+	for _, w := range webhooks {
+		if _, exists := webhooksMap[w.UserID]; !exists {
+			webhooksMap[w.UserID] = make([]types.UserWebhook, 0)
 		}
-		if err != nil {
-			return fmt.Errorf("error quering users_webhooks, err: %w", err)
+		webhooksMap[w.UserID] = append(webhooksMap[w.UserID], w)
+	}
+
+	// now fetch the webhooks for each dashboard config
+	var dashboardWebhooks []struct {
+		UserId         types.UserId           `db:"user_id"`
+		DashboardID    types.DashboardId      `db:"dashboard_id"`
+		GroupId        types.DashboardGroupId `db:"id"`
+		WebhookTarget  string                 `db:"webhook_target"`
+		WebhookFormat  string                 `db:"webhook_format"`
+		WebhookRetries uint64                 `db:"webhook_retries"`
+	}
+
+	err = db.ReaderDb.Select(&dashboardWebhooks, `
+	SELECT
+		users_val_dashboards_groups.id,
+		dashboard_id,
+		webhook_target,
+		webhook_format,
+		webhook_retries
+	FROM users_val_dashboards_groups
+	LEFT JOIN users_val_dashboards ON users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
+	WHERE users_val_dashboards.user_id = ANY($1)
+	AND webhook_target IS NOT NULL
+	AND webhook_format IS NOT NULL;
+	`, pq.Array(userIds))
+	if err != nil {
+		return fmt.Errorf("error quering users_val_dashboards_groups, err: %w", err)
+	}
+	dashboardWebhookMap := make(map[types.UserId]map[types.DashboardId]map[types.DashboardGroupId]types.UserWebhook)
+	for _, w := range dashboardWebhooks {
+		if _, exists := dashboardWebhookMap[w.UserId]; !exists {
+			dashboardWebhookMap[w.UserId] = make(map[types.DashboardId]map[types.DashboardGroupId]types.UserWebhook)
+		}
+		if _, exists := dashboardWebhookMap[w.UserId][w.DashboardID]; !exists {
+			dashboardWebhookMap[w.UserId][w.DashboardID] = make(map[types.DashboardGroupId]types.UserWebhook)
+		}
+
+		uw := types.UserWebhook{
+			UserID:  uint64(w.UserId),
+			Url:     w.WebhookTarget,
+			Retries: w.WebhookRetries,
+		}
+		if w.WebhookFormat == "discord" {
+			uw.Destination = sql.NullString{String: "webhook_discord", Valid: true}
+		} else {
+			uw.Destination = sql.NullString{String: "webhook", Valid: true}
+		}
+		dashboardWebhookMap[w.UserId][w.DashboardID][w.GroupId] = uw
+	}
+
+	for userID, userNotifications := range notificationsByUserID {
+		webhooks, exists := webhooksMap[uint64(userID)]
+		if !exists {
+			continue
 		}
 		// webhook => [] notifications
 		discordNotifMap := make(map[uint64][]types.TransitDiscordContent)
