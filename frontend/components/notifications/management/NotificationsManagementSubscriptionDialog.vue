@@ -94,7 +94,7 @@ watch(hasAllEvents, () => {
         <BcSettingsRow
           v-model:checkbox="checkboxes.is_attestations_missed_subscribed"
           :label="$t('notifications.subscriptions.validators.attestation_missed.label')"
-          :info="$t('notifications.subscriptions.validators.attestation_missed.info', { count: formatSecondsTo(secondsPerEpoch, { minimumFractionDigits: 1 }).minutes })"
+          :info="$t('notifications.subscriptions.validators.attestation_missed.info', { count: Number(formatSecondsTo(secondsPerEpoch, { minimumFractionDigits: 1 }).minutes) })"
         />
         <BcSettingsRow
           v-model:checkbox="checkboxes.is_block_proposal_subscribed"
