@@ -591,7 +591,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				addressMapping[hexutil.Encode(curNotification.Address)] = &addr
 				notificationDetails.Withdrawal = append(notificationDetails.Withdrawal, t.NotificationEventWithdrawal{
 					Index:   curNotification.ValidatorIndex,
-					Amount:  decimal.NewFromUint64(curNotification.Amount),
+					Amount:  decimal.NewFromUint64(curNotification.Amount).Mul(decimal.NewFromFloat(params.GWei)), // Amounts have to be in WEI
 					Address: addr,
 				})
 			case types.NetworkLivenessIncreasedEventName,
