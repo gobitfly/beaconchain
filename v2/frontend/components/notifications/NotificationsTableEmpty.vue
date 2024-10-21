@@ -19,7 +19,9 @@ const handleClick = () => {
   emit('openDialog')
 }
 const { isLoggedIn } = useUserStore()
-const { dashboards } = useUserDashboardStore()
+const {
+  dashboards,
+} = useUserDashboardStore()
 const hasDashboards = computed(() => {
   return (
     dashboards.value?.account_dashboards?.length

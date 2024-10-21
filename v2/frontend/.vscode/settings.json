@@ -11,10 +11,12 @@
     "NotificationsDashboardDialogEntity",
     "NotificationsDashboardTable",
     "NotificationsManagementModalWebhook",
+    "NotificationsManagementNetwork",
     "NotificationsManagementSubscriptionDialog",
     "NotificationsManagmentMachines",
     "NotificationsNetworkTable",
     "NotificationsOverview",
+    "NotificationsTableEmpty",
     "a11y",
     "checkout",
     "ci",
@@ -33,8 +35,7 @@
     "qrCode",
     "useNotificationsOverviewStore",
     "useWindowSize",
-    "vscode",
-    "NotificationsManagementNetwork"
+    "vscode"
   ],
 "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "always"
