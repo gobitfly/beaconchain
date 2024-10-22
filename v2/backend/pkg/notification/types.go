@@ -245,7 +245,7 @@ func (n *ValidatorGroupEfficiencyNotification) GetEntitiyId() string {
 func (n *ValidatorGroupEfficiencyNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
 	epoch := formatEpochLink(format, n.Epoch)
-	return fmt.Sprintf(`%s%s efficiency of %.2f is below the threhold of %.2f in epoch %s.`, dashboardAndGroupInfo, n.Efficiency, n.Threshold epoch)
+	return fmt.Sprintf(`%s%s efficiency of %.2f is below the threhold of %.2f in epoch %s.`, dashboardAndGroupInfo, n.Efficiency, n.Threshold, epoch)
 }
 
 func (n *ValidatorGroupEfficiencyNotification) GetTitle() string {
