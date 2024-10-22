@@ -13,6 +13,9 @@ import (
 	"github.com/gorilla/csrf"
 )
 
+var day time.Duration = time.Hour * 24
+var sessionDuration time.Duration = day * 365
+
 func newSessionManager(cfg *types.Config) *scs.SessionManager {
 	// TODO: replace redis with user db down the line (or replace sessions with oauth2)
 	pool := &redis.Pool{
@@ -23,7 +26,7 @@ func newSessionManager(cfg *types.Config) *scs.SessionManager {
 	}
 
 	scs := scs.New()
-	scs.Lifetime = time.Hour * 24 * 7
+	scs.Lifetime = sessionDuration
 	scs.Cookie.Name = "session_id"
 	scs.Cookie.HttpOnly = true
 	scs.Cookie.Persist = true
@@ -40,6 +43,19 @@ func newSessionManager(cfg *types.Config) *scs.SessionManager {
 	scs.Store = redisstore.New(pool)
 
 	return scs
+}
+
+// returns a middleware that extends the session expiration if the session is older than 1 day
+func getSlidingSessionExpirationMiddleware(scs *scs.SessionManager) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			deadline := scs.Deadline(r.Context()) // unauthenticated requests have deadline set to now+sessionDuration
+			if time.Until(deadline) < sessionDuration-day {
+				scs.SetDeadline(r.Context(), time.Now().Add(sessionDuration).UTC()) // setting to utc because library also does that internally
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // returns goriila/csrf middleware with the given config settings
