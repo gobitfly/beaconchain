@@ -1940,11 +1940,13 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		resultMap[key].ChainIds = []uint64{valDashboard.Network}
 
 		// Set the settings
-		if valSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
+		if valSettings, ok := resultMap[key].Settings.(t.NotificationSettingsValidatorDashboard); ok {
 			valSettings.WebhookUrl = valDashboard.WebhookUrl.String
 			valSettings.IsWebhookDiscordEnabled = valDashboard.WebhookFormat.Valid &&
 				types.NotificationChannel(valDashboard.WebhookFormat.String) == types.WebhookDiscordNotificationChannel
 			valSettings.IsRealTimeModeEnabled = valDashboard.IsRealTimeModeEnabled.Bool
+
+			resultMap[key].Settings = valSettings
 		}
 	}
 
@@ -1969,12 +1971,14 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		resultMap[key].ChainIds = accDashboard.SubscribedChainIds
 
 		// Set the settings
-		if accSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsAccountDashboard); ok {
+		if accSettings, ok := resultMap[key].Settings.(t.NotificationSettingsAccountDashboard); ok {
 			accSettings.WebhookUrl = accDashboard.WebhookUrl.String
 			accSettings.IsWebhookDiscordEnabled = accDashboard.WebhookFormat.Valid &&
 				types.NotificationChannel(accDashboard.WebhookFormat.String) == types.WebhookDiscordNotificationChannel
 			accSettings.IsIgnoreSpamTransactionsEnabled = accDashboard.IsIgnoreSpamTransactionsEnabled
 			accSettings.SubscribedChainIds = accDashboard.SubscribedChainIds
+
+			resultMap[key].Settings = accSettings
 		}
 	}
 
