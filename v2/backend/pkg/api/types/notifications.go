@@ -40,7 +40,7 @@ type NotificationDashboardsTableRow struct {
 	GroupId            uint64         `db:"group_id" json:"group_id"`
 	GroupName          string         `db:"group_name" json:"group_name"`
 	EntityCount        uint64         `db:"entity_count" json:"entity_count"`
-	EventTypes         pq.StringArray `db:"event_types" json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_online, group_offline, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
+	EventTypes         pq.StringArray `db:"event_types" json:"event_types" tstype:"('validator_online' | 'validator_offline' | 'group_efficiency_below' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[]" faker:"slice_len=2, oneof: validator_online, validator_offline, group_efficiency_below, attestation_missed, proposal_success, proposal_missed, proposal_upcoming, max_collateral, min_collateral, sync, withdrawal, validator_got_slashed, validator_has_slashed, incoming_tx, outgoing_tx, transfer_erc20, transfer_erc721, transfer_erc1155"`
 }
 
 type InternalGetUserNotificationDashboardsResponse ApiPagingResponse[NotificationDashboardsTableRow]
@@ -62,8 +62,8 @@ type NotificationEventWithdrawal struct {
 type NotificationValidatorDashboardDetail struct {
 	DashboardName            string                                 `db:"dashboard_name" json:"dashboard_name"`
 	GroupName                string                                 `db:"group_name" json:"group_name"`
-	ValidatorOffline         []uint64                               `json:"validator_offline"` // validator indices
-	GroupOffline             bool                                   `json:"group_offline"`     // TODO not filled yet
+	ValidatorOffline         []uint64                               `json:"validator_offline"`                // validator indices
+	GroupEfficiencyBelow     float64                                `json:"group_efficiency_below,omitempty"` // fill with the `group_efficiency_below` threshold if event is present
 	ProposalMissed           []IndexSlots                           `json:"proposal_missed"`
 	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
 	UpcomingProposals        []IndexSlots                           `json:"upcoming_proposals"`
@@ -72,9 +72,7 @@ type NotificationValidatorDashboardDetail struct {
 	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
 	Withdrawal               []NotificationEventWithdrawal          `json:"withdrawal"`
 	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
-	GroupOfflineReminder     bool                                   `json:"group_offline_reminder"`     // TODO not filled yet
 	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
-	GroupBackOnline          uint64                                 `json:"group_back_online"`      // TODO not filled yet
 	MinimumCollateralReached []Address                              `json:"min_collateral_reached"` // node addresses
 	MaximumCollateralReached []Address                              `json:"max_collateral_reached"` // node addresses
 }
@@ -205,8 +203,8 @@ type NotificationSettingsValidatorDashboard struct {
 	IsRealTimeModeEnabled   bool   `json:"is_real_time_mode_enabled"`
 
 	IsValidatorOfflineSubscribed      bool    `json:"is_validator_offline_subscribed"`
-	IsGroupOfflineSubscribed          bool    `json:"is_group_offline_subscribed"`
-	GroupOfflineThreshold             float64 `json:"group_offline_threshold" faker:"boundary_start=0, boundary_end=1"`
+	IsGroupEfficiencyBelowSubscribed  bool    `json:"is_group_efficiency_below_subscribed"`
+	GroupEfficiencyBelowThreshold     float64 `json:"group_efficiency_below_threshold" faker:"boundary_start=0, boundary_end=1"`
 	IsAttestationsMissedSubscribed    bool    `json:"is_attestations_missed_subscribed"`
 	IsBlockProposalSubscribed         bool    `json:"is_block_proposal_subscribed"`
 	IsUpcomingBlockProposalSubscribed bool    `json:"is_upcoming_block_proposal_subscribed"`
