@@ -7,6 +7,7 @@
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
+    "NotificationMachinesTable",
     "NotificationsClientsTable",
     "NotificationsDashboardDialogEntity",
     "NotificationsDashboardTable",
