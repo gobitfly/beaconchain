@@ -200,7 +200,6 @@ type InternalGetUserNotificationSettingsResponse ApiDataResponse[NotificationSet
 type NotificationSettingsValidatorDashboard struct {
 	WebhookUrl              string `json:"webhook_url" faker:"url"`
 	IsWebhookDiscordEnabled bool   `json:"is_webhook_discord_enabled"`
-	IsRealTimeModeEnabled   bool   `json:"is_real_time_mode_enabled"`
 
 	IsValidatorOfflineSubscribed      bool    `json:"is_validator_offline_subscribed"`
 	IsGroupEfficiencyBelowSubscribed  bool    `json:"is_group_efficiency_below_subscribed"`

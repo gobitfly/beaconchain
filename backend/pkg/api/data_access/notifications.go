@@ -1759,7 +1759,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		Network                 uint64         `db:"network"`
 		WebhookUrl              sql.NullString `db:"webhook_target"`
 		IsWebhookDiscordEnabled sql.NullBool   `db:"discord_webhook"`
-		IsRealTimeModeEnabled   sql.NullBool   `db:"realtime_notifications"`
 	}{}
 	wg.Go(func() error {
 		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
@@ -1771,7 +1770,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				d.network,
 				g.webhook_target,
 				(g.webhook_format = $1) AS discord_webhook,
-				g.realtime_notifications
 			FROM users_val_dashboards d
 			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
 			WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
@@ -1932,7 +1930,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		if valSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
 			valSettings.WebhookUrl = valDashboard.WebhookUrl.String
 			valSettings.IsWebhookDiscordEnabled = valDashboard.IsWebhookDiscordEnabled.Bool
-			valSettings.IsRealTimeModeEnabled = valDashboard.IsRealTimeModeEnabled.Bool
 		}
 	}
 
@@ -2159,8 +2156,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 		SET 
 			webhook_target = NULLIF($1, ''),
 			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
-			realtime_notifications = CASE WHEN $4 THEN TRUE ELSE NULL END
-		WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsRealTimeModeEnabled, dashboardId, groupId)
+		WHERE dashboard_id = $4 AND id = $5`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, dashboardId, groupId)
 	if err != nil {
 		return err
 	}
