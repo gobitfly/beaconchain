@@ -83,7 +83,7 @@ const (
 
 	DiscordWebhookFormat string = "discord"
 
-	GroupOfflineThresholdDefault             float64 = 0.1
+	GroupEfficiencyBelowThresholdDefault     float64 = 0.95
 	MaxCollateralThresholdDefault            float64 = 1.0
 	MinCollateralThresholdDefault            float64 = 0.2
 	ERC20TokenTransfersValueThresholdDefault float64 = 0.1
@@ -1447,7 +1447,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 func (d *DataAccessService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
 	return &t.NotificationSettingsDefaultValues{
-		GroupOfflineThreshold:             GroupOfflineThresholdDefault,
+		GroupEfficiencyBelowThreshold:     GroupEfficiencyBelowThresholdDefault,
 		MaxCollateralThreshold:            MaxCollateralThresholdDefault,
 		MinCollateralThreshold:            MinCollateralThresholdDefault,
 		ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
@@ -1850,9 +1850,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			if dashboardType == ValidatorDashboardEventPrefix {
 				resultMap[event.Filter] = &t.NotificationSettingsDashboardsTableRow{
 					Settings: t.NotificationSettingsValidatorDashboard{
-						GroupOfflineThreshold:  GroupOfflineThresholdDefault,
-						MaxCollateralThreshold: MaxCollateralThresholdDefault,
-						MinCollateralThreshold: MinCollateralThresholdDefault,
+						GroupEfficiencyBelowThreshold: GroupEfficiencyBelowThresholdDefault,
+						MaxCollateralThreshold:        MaxCollateralThresholdDefault,
+						MinCollateralThreshold:        MinCollateralThresholdDefault,
 					},
 				}
 			} else if dashboardType == AccountDashboardEventPrefix {
@@ -1870,8 +1870,8 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			case types.ValidatorIsOfflineEventName:
 				settings.IsValidatorOfflineSubscribed = true
 			case types.GroupIsOfflineEventName:
-				settings.IsGroupOfflineSubscribed = true
-				settings.GroupOfflineThreshold = event.Threshold
+				settings.IsGroupEfficiencyBelowSubscribed = true
+				settings.GroupEfficiencyBelowThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
 				settings.IsAttestationsMissedSubscribed = true
 			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName:
@@ -1917,9 +1917,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		if _, ok := resultMap[key]; !ok {
 			resultMap[key] = &t.NotificationSettingsDashboardsTableRow{
 				Settings: t.NotificationSettingsValidatorDashboard{
-					GroupOfflineThreshold:  GroupOfflineThresholdDefault,
-					MaxCollateralThreshold: MaxCollateralThresholdDefault,
-					MinCollateralThreshold: MinCollateralThresholdDefault,
+					GroupEfficiencyBelowThreshold: GroupEfficiencyBelowThresholdDefault,
+					MaxCollateralThreshold:        MaxCollateralThresholdDefault,
+					MinCollateralThreshold:        MinCollateralThresholdDefault,
 				},
 			}
 		}
@@ -2101,7 +2101,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	eventFilter := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
 
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, types.ValidatorIsOfflineEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupOfflineSubscribed, userId, types.GroupIsOfflineEventName, networkName, eventFilter, epoch, settings.GroupOfflineThreshold)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupEfficiencyBelowSubscribed, userId, types.ValidatorGroupEfficiencyEventName, networkName, eventFilter, epoch, settings.GroupEfficiencyBelowThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, networkName, eventFilter, epoch, 0)

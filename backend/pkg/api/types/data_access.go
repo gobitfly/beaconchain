@@ -309,7 +309,7 @@ type MobileAppBundleStats struct {
 // Notification structs
 
 type NotificationSettingsDefaultValues struct {
-	GroupOfflineThreshold             float64
+	GroupEfficiencyBelowThreshold     float64
 	MaxCollateralThreshold            float64
 	MinCollateralThreshold            float64
 	ERC20TokenTransfersValueThreshold float64
