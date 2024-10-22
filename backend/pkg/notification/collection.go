@@ -470,6 +470,44 @@ func collectUserDbNotifications(epoch uint64) (types.NotificationsPerUserId, err
 }
 
 func collectGroupEfficiencyNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+	type dbResult struct {
+		ValidatorIndex         uint64          `db:"validator_index"`
+		AttestationReward      decimal.Decimal `db:"attestations_reward"`
+		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
+		BlocksProposed         uint64          `db:"blocks_proposed"`
+		BlocksScheduled        uint64          `db:"blocks_scheduled"`
+		SyncExecuted           uint64          `db:"sync_executed"`
+		SyncScheduled          uint64          `db:"sync_scheduled"`
+	}
+
+	var queryResult []*dbResult
+	clickhouseTable := "validator_dashboard_data_epoch"
+	// retrieve efficiency data for the epoch
+	ds := goqu.Dialect("postgres").
+		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable))).
+		Select(
+			goqu.L("validator_index"),
+			goqu.L("COALESCE(r.attestations_reward, 0) AS attestations_reward"),
+			goqu.L("COALESCE(r.attestations_ideal_reward, 0) AS attestations_ideal_reward"),
+			goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
+			goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
+			goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
+			goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled")).
+		Where(goqu.L("r.epoch = ?", epoch))
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %v", err)
+	}
+
+	err = db.ClickHouseReader.Select(&queryResult, query, args...)
+	if err != nil {
+		return fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
+	}
+
+	if len(queryResult) == 0 {
+		return fmt.Errorf("no efficiency data found for epoch %v", epoch)
+	}
+
 	subMap, err := GetSubsForEventFilter("group_efficiency", "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for (missed) block proposals %w", err)
@@ -516,40 +554,6 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		}
 	}
 
-	type dbResult struct {
-		ValidatorIndex         uint64          `db:"validator_index"`
-		AttestationReward      decimal.Decimal `db:"attestations_reward"`
-		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-		BlocksProposed         uint64          `db:"blocks_proposed"`
-		BlocksScheduled        uint64          `db:"blocks_scheduled"`
-		SyncExecuted           uint64          `db:"sync_executed"`
-		SyncScheduled          uint64          `db:"sync_scheduled"`
-	}
-
-	var queryResult []*dbResult
-	clickhouseTable := "validator_dashboard_data_epoch"
-	// retrieve efficiency data for the epoch
-	ds := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable))).
-		Select(
-			goqu.L("validator_index"),
-			goqu.L("COALESCE(r.attestations_reward, 0) AS attestations_reward"),
-			goqu.L("COALESCE(r.attestations_ideal_reward, 0) AS attestations_ideal_reward"),
-			goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
-			goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
-			goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
-			goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled")).
-		Where(goqu.L("r.epoch = ?", epoch))
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return fmt.Errorf("error preparing query: %v", err)
-	}
-
-	err = db.ClickHouseReader.Select(&queryResult, query, args...)
-	if err != nil {
-		return fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
-	}
-
 	efficiencyMap := make(map[types.ValidatorIndex]*dbResult)
 	for _, row := range queryResult {
 		efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)] = row
@@ -558,7 +562,6 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 	for userId, dashboards := range dashboardMap {
 		for dashboardId, groups := range dashboards {
 			for groupId, groupDetails := range groups {
-
 				attestationReward := decimal.Decimal{}
 				attestationIdealReward := decimal.Decimal{}
 				blocksProposed := uint64(0)
