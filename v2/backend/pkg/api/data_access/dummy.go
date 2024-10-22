@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/go-faker/faker/v4"
+	"github.com/go-faker/faker/v4/pkg/interfaces"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
-	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
@@ -55,7 +55,7 @@ func randomEthDecimal() decimal.Decimal {
 // must pass a pointer to the data
 func commonFakeData(a interface{}) error {
 	// TODO fake decimal.Decimal
-	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
+	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
 func (d *DummyService) StartDataAccessServices() {
@@ -393,7 +393,7 @@ func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Cont
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
-	return []types.NetworkInfo{
+	return []t.NetworkInfo{
 		{
 			ChainId:           1,
 			Name:              "ethereum",
@@ -412,8 +412,8 @@ func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 	}, nil
 }
 
-func (d *DummyService) GetAllClients() ([]types.ClientInfo, error) {
-	return []types.ClientInfo{
+func (d *DummyService) GetAllClients() ([]t.ClientInfo, error) {
+	return []t.ClientInfo{
 		// execution_layer
 		{
 			Id:       0,
@@ -756,8 +756,8 @@ func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, da
 	return getDummyStruct[t.MobileWidgetData]()
 }
 
-func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*types.MachineMetricsData, error) {
-	data, err := getDummyStruct[types.MachineMetricsData]()
+func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*t.MachineMetricsData, error) {
+	data, err := getDummyStruct[t.MachineMetricsData]()
 	if err != nil {
 		return nil, err
 	}
