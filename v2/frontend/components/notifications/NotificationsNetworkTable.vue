@@ -118,7 +118,7 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
               </template>
             </Column>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!networkNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />

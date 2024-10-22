@@ -131,7 +131,7 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
               </div>
             </template>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!machineNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />

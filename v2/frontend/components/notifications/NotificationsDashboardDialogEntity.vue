@@ -6,6 +6,7 @@ import {
   faCube,
   faFileSignature,
   faGlobe,
+  faMoneyBill,
   faPowerOff,
   faRocket,
   faUserSlash,
@@ -36,6 +37,11 @@ const {
     watch: [ search ],
   })
 defineEmits<{ (e: 'filter-changed', value: string): void }>()
+const { converter } = useValue()
+const formatValueWei = (value: string) => {
+  return converter.value.weiToValue(`${value}`, { fixedDecimalCount: 5 })
+    .label
+}
 </script>
 
 <template>
@@ -56,7 +62,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
       </h2>
       <div class="notifications-dashboard-dialog-entity__subheader">
         <h3>
-          {{ props?.group_name }}
+          {{ props?.group_name }} ({{ details?.dashboard_name }})
         </h3>
         <BcContentFilter
           :search-placeholder="$t('common.index')"
@@ -222,6 +228,30 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
             {{ $t('common.epoch') }}
             {{ attestation.epoch }}
           </BcLink>)
+        </template>
+      </BcAccordion>
+      <BcAccordion
+        v-if="details?.withdrawal?.length"
+        :items="details?.withdrawal"
+        :info-copy="$t('notifications.dashboards.dialog.entity.withdrawal')"
+      >
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.withdrawal') }} ({{ details?.withdrawal?.length ?? 0 }})
+        </template>
+        <template #headingIcon>
+          <FontAwesomeIcon
+            :icon="faMoneyBill"
+            class="notifications-dashboard-dialog-entity__icon__green"
+          />
+        </template>
+        <template #item="{ item: withdrawalItem }">
+          <BcLink
+            :to="`/validator/${withdrawalItem.index}`"
+            class="link"
+          >
+            {{ withdrawalItem.index }}
+          </BcLink>
+          ({{ formatValueWei(withdrawalItem.amount) }})
         </template>
       </BcAccordion>
       <BcAccordion

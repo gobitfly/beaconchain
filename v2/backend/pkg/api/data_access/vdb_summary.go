@@ -867,8 +867,8 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
-	elIncomeFloat, _ := elIncome.Float64()
-	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
+	elIncomeFloat, _ := elIncome.Float64() // EL income is in ETH
+	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
 	if math.IsNaN(elAPR) {
 		elAPR = 0
 	}
