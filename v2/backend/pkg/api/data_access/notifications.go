@@ -65,6 +65,7 @@ func (*DataAccessService) registerNotificationInterfaceTypes() {
 		gob.Register(&n.ValidatorUpcomingProposalNotification{})
 		gob.Register(&n.ValidatorAttestationNotification{})
 		gob.Register(&n.ValidatorIsOfflineNotification{})
+		gob.Register(&n.ValidatorIsOnlineNotification{})
 		gob.Register(&n.ValidatorGotSlashedNotification{})
 		gob.Register(&n.ValidatorWithdrawalNotification{})
 		gob.Register(&n.NetworkNotification{})
