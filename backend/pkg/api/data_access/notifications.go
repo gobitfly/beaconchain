@@ -63,6 +63,7 @@ func (*DataAccessService) registerNotificationInterfaceTypes() {
 	var once sync.Once
 	once.Do(func() {
 		gob.Register(&n.ValidatorProposalNotification{})
+		gob.Register(&n.ValidatorUpcomingProposalNotification{})
 		gob.Register(&n.ValidatorAttestationNotification{})
 		gob.Register(&n.ValidatorIsOfflineNotification{})
 		gob.Register(&n.ValidatorGotSlashedNotification{})
