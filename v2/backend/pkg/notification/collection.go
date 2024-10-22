@@ -12,7 +12,6 @@ import (
 	"time"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
-	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -22,6 +21,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	cTypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/lib/pq"
 	"github.com/rocket-pool/rocketpool-go/utils/eth"
@@ -49,6 +49,7 @@ func notificationCollector() {
 	once.Do(func() {
 		gob.Register(&ValidatorProposalNotification{})
 		gob.Register(&ValidatorUpcomingProposalNotification{})
+		gob.Register(&ValidatorGroupEfficiencyNotification{})
 		gob.Register(&ValidatorAttestationNotification{})
 		gob.Register(&ValidatorIsOfflineNotification{})
 		gob.Register(&ValidatorIsOnlineNotification{})
@@ -62,13 +63,13 @@ func notificationCollector() {
 		gob.Register(&SyncCommitteeSoonNotification{})
 	})
 
+	mc, err := modules.GetModuleContext()
+	if err != nil {
+		log.Fatal(err, "error getting module context", 0)
+	}
+
 	go func() {
 		log.Infof("starting head notification collector")
-		mc, err := modules.GetModuleContext()
-		if err != nil {
-			log.Fatal(err, "error getting module context", 0)
-		}
-
 		for ; ; time.Sleep(time.Second * 30) {
 			// get the head epoch
 			head, err := mc.ConsClient.GetChainHead()
@@ -160,7 +161,7 @@ func notificationCollector() {
 			log.Infof("collecting notifications for epoch %v", epoch)
 
 			// Network DB Notifications (network related)
-			notifications, err := collectNotifications(epoch)
+			notifications, err := collectNotifications(epoch, mc)
 
 			if err != nil {
 				log.Error(err, "error collection notifications", 0)
@@ -279,7 +280,7 @@ func collectUpcomingBlockProposalNotifications(notificationsByUserID types.Notif
 	return nil
 }
 
-func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
+func collectNotifications(epoch uint64, mc modules.ModuleContext) (types.NotificationsPerUserId, error) {
 	notificationsByUserID := types.NotificationsPerUserId{}
 	start := time.Now()
 	var err error
@@ -310,12 +311,12 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 	// The following functions will collect the notifications and add them to the
 	// notificationsByUserID map. The notifications will be queued and sent later
 	// by the notification sender process
-	err = collectGroupEfficiencyNotifications(notificationsByUserID, epoch)
+	err = collectGroupEfficiencyNotifications(notificationsByUserID, epoch, mc)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_group_efficiency").Inc()
 		return nil, fmt.Errorf("error collecting validator_group_efficiency notifications: %v", err)
 	}
-	log.Infof("collecting attestation & offline notifications took: %v", time.Since(start))
+	log.Infof("collecting group efficiency notifications took: %v", time.Since(start))
 
 	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch)
 	if err != nil {
@@ -469,7 +470,7 @@ func collectUserDbNotifications(epoch uint64) (types.NotificationsPerUserId, err
 	return notificationsByUserID, nil
 }
 
-func collectGroupEfficiencyNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+func collectGroupEfficiencyNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, mc modules.ModuleContext) error {
 	type dbResult struct {
 		ValidatorIndex         uint64          `db:"validator_index"`
 		AttestationReward      decimal.Decimal `db:"attestations_reward"`
@@ -480,32 +481,67 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		SyncScheduled          uint64          `db:"sync_scheduled"`
 	}
 
-	var queryResult []*dbResult
-	clickhouseTable := "validator_dashboard_data_epoch"
-	// retrieve efficiency data for the epoch
-	ds := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable))).
-		Select(
-			goqu.L("validator_index"),
-			goqu.L("COALESCE(r.attestations_reward, 0) AS attestations_reward"),
-			goqu.L("COALESCE(r.attestations_ideal_reward, 0) AS attestations_ideal_reward"),
-			goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
-			goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
-			goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
-			goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled")).
-		Where(goqu.L("r.epoch = ?", epoch))
-	query, args, err := ds.Prepared(true).ToSQL()
+	// retrieve rewards for the epoch
+	log.Info("retrieving validator metadata")
+	validators, err := mc.CL.GetValidators(epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch, nil, []cTypes.ValidatorStatus{cTypes.Active})
 	if err != nil {
-		return fmt.Errorf("error preparing query: %v", err)
+		return fmt.Errorf("error getting validators: %w", err)
+	}
+	effectiveBalanceMap := make(map[uint64]uint64)
+	activeValidatorsMap := make(map[uint64]struct{})
+	for _, validator := range validators.Data {
+		effectiveBalanceMap[validator.Index] = validator.Validator.EffectiveBalance
+		activeValidatorsMap[validator.Index] = struct{}{}
+	}
+	log.Info("retrieving attestation reward data")
+	attestationRewards, err := mc.CL.GetAttestationRewards(epoch)
+	if err != nil {
+		return fmt.Errorf("error getting attestation rewards: %w", err)
 	}
 
-	err = db.ClickHouseReader.Select(&queryResult, query, args...)
-	if err != nil {
-		return fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
+	efficiencyMap := make(map[types.ValidatorIndex]*dbResult, len(attestationRewards.Data.TotalRewards))
+
+	idealRewardsMap := make(map[uint64]decimal.Decimal)
+	for _, reward := range attestationRewards.Data.IdealRewards {
+		idealRewardsMap[uint64(reward.EffectiveBalance)] = decimal.NewFromInt(int64(reward.Head) + int64(reward.Target) + int64(reward.Source) + int64(reward.InclusionDelay) + int64(reward.Inactivity))
+	}
+	for _, reward := range attestationRewards.Data.TotalRewards {
+		efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)] = &dbResult{
+			ValidatorIndex:         reward.ValidatorIndex,
+			AttestationReward:      decimal.NewFromInt(int64(reward.Head) + int64(reward.Target) + int64(reward.Source) + int64(reward.InclusionDelay) + int64(reward.Inactivity)),
+			AttestationIdealReward: idealRewardsMap[effectiveBalanceMap[reward.ValidatorIndex]],
+		}
 	}
 
-	if len(queryResult) == 0 {
-		return fmt.Errorf("no efficiency data found for epoch %v", epoch)
+	log.Info("retrieving block proposal data")
+	proposalAssignments, err := mc.CL.GetPropoalAssignments(epoch)
+	if err != nil {
+		return fmt.Errorf("error getting proposal assignments: %w", err)
+	}
+	for _, assignment := range proposalAssignments.Data {
+		efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)].BlocksScheduled++
+	}
+
+	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
+		header, err := mc.CL.GetBlockHeader(slot)
+		log.Infof("retrieving data for slot %v", slot)
+		if err != nil && strings.Contains(err.Error(), "NOT_FOUND") {
+			continue
+		} else if err != nil {
+			return fmt.Errorf("error getting block header for slot %v: %w", slot, err)
+		}
+		efficiencyMap[types.ValidatorIndex(header.Data.Header.Message.ProposerIndex)].BlocksProposed++
+
+		syncRewards, err := mc.CL.GetSyncRewards(slot)
+		if err != nil {
+			return fmt.Errorf("error getting sync rewards for slot %v: %w", slot, err)
+		}
+		for _, reward := range syncRewards.Data {
+			efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)].SyncScheduled++
+			if reward.Reward > 0 {
+				efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)].SyncExecuted++
+			}
+		}
 	}
 
 	subMap, err := GetSubsForEventFilter(types.ValidatorGroupEfficiencyEventName, "", nil, nil)
@@ -554,10 +590,72 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		}
 	}
 
-	efficiencyMap := make(map[types.ValidatorIndex]*dbResult)
-	for _, row := range queryResult {
-		efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)] = row
-	}
+	// The commented code below can be used to validate data retrieved from the node against
+	// data in clickhouse
+	// var queryResult []*dbResult
+	// clickhouseTable := "validator_dashboard_data_epoch"
+	// // retrieve efficiency data for the epoch
+	// log.Infof("retrieving efficiency data for epoch %v", epoch)
+	// ds := goqu.Dialect("postgres").
+	// 	From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable))).
+	// 	Select(
+	// 		goqu.L("validator_index"),
+	// 		goqu.L("COALESCE(r.attestations_reward, 0) AS attestations_reward"),
+	// 		goqu.L("COALESCE(r.attestations_ideal_reward, 0) AS attestations_ideal_reward"),
+	// 		goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
+	// 		goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
+	// 		goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
+	// 		goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled")).
+	// 	Where(goqu.L("r.epoch_timestamp = ?", utils.EpochToTime(epoch)))
+	// query, args, err := ds.Prepared(true).ToSQL()
+	// if err != nil {
+	// 	return fmt.Errorf("error preparing query: %v", err)
+	// }
+
+	// err = db.ClickHouseReader.Select(&queryResult, query, args...)
+	// if err != nil {
+	// 	return fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
+	// }
+
+	// if len(queryResult) == 0 {
+	// 	return fmt.Errorf("no efficiency data found for epoch %v", epoch)
+	// }
+
+	// log.Infof("retrieved %v efficiency data rows", len(queryResult))
+
+	// for _, row := range queryResult {
+	// 	if _, ok := activeValidatorsMap[row.ValidatorIndex]; !ok {
+	// 		continue
+	// 	}
+	// 	existing := efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)]
+
+	// 	if existing == nil {
+	// 		existing = &dbResult{
+	// 			ValidatorIndex:         row.ValidatorIndex,
+	// 			AttestationReward:      decimal.Decimal{},
+	// 			AttestationIdealReward: decimal.Decimal{},
+	// 		}
+	// 	}
+	// 	if !existing.AttestationIdealReward.Equal(row.AttestationIdealReward) {
+	// 		log.Fatal(fmt.Errorf("ideal reward mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.AttestationIdealReward, row.AttestationIdealReward), "ideal reward mismatch", 0)
+	// 	}
+	// 	if !existing.AttestationReward.Equal(row.AttestationReward) {
+	// 		log.Fatal(fmt.Errorf("attestation reward mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.AttestationReward, row.AttestationReward), "attestation reward mismatch", 0)
+	// 	}
+	// 	if existing.BlocksProposed != row.BlocksProposed {
+	// 		log.Fatal(fmt.Errorf("blocks proposed mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.BlocksProposed, row.BlocksProposed), "blocks proposed mismatch", 0)
+	// 	}
+	// 	if existing.BlocksScheduled != row.BlocksScheduled {
+	// 		log.Fatal(fmt.Errorf("blocks scheduled mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.BlocksScheduled, row.BlocksScheduled), "blocks scheduled mismatch", 0)
+	// 	}
+	// 	if existing.SyncExecuted != row.SyncExecuted {
+	// 		log.Fatal(fmt.Errorf("sync executed mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.SyncExecuted, row.SyncExecuted), "sync executed mismatch", 0)
+	// 	}
+	// 	if existing.SyncScheduled != row.SyncScheduled {
+	// 		log.Fatal(fmt.Errorf("sync scheduled mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.SyncScheduled, row.SyncScheduled), "sync scheduled mismatch", 0)
+	// 	}
+	// 	efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)] = row
+	// }
 
 	for userId, dashboards := range dashboardMap {
 		for dashboardId, groups := range dashboards {
@@ -597,7 +695,9 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 
 				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
-				if efficiency < groupDetails.Subscription.EventThreshold {
+				log.Infof("efficiency: %v, threshold: %v", efficiency, groupDetails.Subscription.EventThreshold*100)
+
+				if efficiency < groupDetails.Subscription.EventThreshold*100 {
 					log.Infof("creating group efficiency notification for user %v, dashboard %v, group %v in epoch %v", userId, dashboardId, groupId, epoch)
 					n := &ValidatorGroupEfficiencyNotification{
 						NotificationBaseImpl: types.NotificationBaseImpl{
@@ -611,7 +711,7 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 							DashboardGroupId:   groupDetails.Subscription.DashboardGroupId,
 							DashboardGroupName: groupDetails.Subscription.DashboardGroupName,
 						},
-						Threshold:  groupDetails.Subscription.EventThreshold,
+						Threshold:  groupDetails.Subscription.EventThreshold * 100,
 						Efficiency: efficiency,
 					}
 					notificationsByUserID.AddNotification(n)
@@ -620,6 +720,8 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 			}
 		}
 	}
+
+	log.Info("done collecting group efficiency notifications")
 
 	return nil
 }
