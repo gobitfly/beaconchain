@@ -2345,7 +2345,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		return
 	}
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	name := v.checkNameNotEmpty(req.Name)
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -2386,7 +2386,7 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 		return
 	}
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -2495,12 +2495,9 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 			handleErr(w, r, errors.New("invalid settings type"))
 			return
 		}
-		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && settings.IsGroupOfflineSubscribed {
-			settings.IsGroupOfflineSubscribed = false
-			settings.GroupOfflineThreshold = defaultSettings.GroupOfflineThreshold
-		}
-		if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && settings.IsRealTimeModeEnabled {
-			settings.IsRealTimeModeEnabled = false
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupEfficiency && settings.IsGroupEfficiencyBelowSubscribed {
+			settings.IsGroupEfficiencyBelowSubscribed = false
+			settings.GroupEfficiencyBelowThreshold = defaultSettings.GroupEfficiencyBelowThreshold
 		}
 		data[i].Settings = settings
 	}
@@ -2537,7 +2534,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, err)
 		return
 	}
-	checkMinMax(&v, req.GroupOfflineThreshold, 0, 1, "group_offline_threshold")
+	checkMinMax(&v, req.GroupEfficiencyBelowThreshold, 0, 1, "group_offline_threshold")
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
@@ -2553,12 +2550,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, err)
 		return
 	}
-	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && req.IsGroupOfflineSubscribed {
-		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group offline"))
-		return
-	}
-	if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && req.IsRealTimeModeEnabled {
-		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe real time mode"))
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupEfficiency && req.IsGroupEfficiencyBelowSubscribed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group efficiency event"))
 		return
 	}
 

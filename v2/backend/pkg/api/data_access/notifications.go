@@ -50,8 +50,8 @@ type NotificationsRepository interface {
 	GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error)
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
 	UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error
-	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error
-	DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error
+	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error
+	DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error
 	UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error)
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
 	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
@@ -84,7 +84,7 @@ const (
 
 	DiscordWebhookFormat string = "discord"
 
-	GroupOfflineThresholdDefault             float64 = 0.1
+	GroupEfficiencyBelowThresholdDefault     float64 = 0.95
 	MaxCollateralThresholdDefault            float64 = 1.0
 	MinCollateralThresholdDefault            float64 = 0.2
 	ERC20TokenTransfersValueThresholdDefault float64 = 0.1
@@ -569,19 +569,6 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 					continue
 				}
 				notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
-			// case types.ValidatorGroupIsOfflineEventName:
-			// TODO type / collection not present yet, skipping
-			/*curNotification, ok := not.(*notification.validatorGroupIsOfflineNotification)
-			if !ok {
-				return nil, fmt.Errorf("failed to cast notification to validatorGroupIsOfflineNotification")
-			}
-			if curNotification.Status == 0 {
-				notificationDetails.GroupOffline = ...
-				notificationDetails.GroupOfflineReminder = ...
-			} else {
-				notificationDetails.GroupBackOnline = ...
-			}
-			*/
 			case types.ValidatorReceivedWithdrawalEventName:
 				curNotification, ok := notification.(*n.ValidatorWithdrawalNotification)
 				if !ok {
@@ -1326,20 +1313,20 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	// -------------------------------------
 	// Get the paired devices
 	pairedDevices := []struct {
-		DeviceIdentifier sql.NullString `db:"device_identifier"`
-		CreatedTs        time.Time      `db:"created_ts"`
-		DeviceName       string         `db:"device_name"`
-		NotifyEnabled    bool           `db:"notify_enabled"`
+		DeviceId      uint64    `db:"id"`
+		CreatedTs     time.Time `db:"created_ts"`
+		DeviceName    string    `db:"device_name"`
+		NotifyEnabled bool      `db:"notify_enabled"`
 	}{}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &pairedDevices, `
 		SELECT
-			device_identifier,
+			id,
 			created_ts,
 			device_name,
 			COALESCE(notify_enabled, false) AS notify_enabled
 		FROM users_devices
-		WHERE user_id = $1 AND device_identifier IS NOT NULL`, userId)
+		WHERE user_id = $1`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for notifications paired devices: %w`, err)
 		}
@@ -1430,7 +1417,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 	for _, device := range pairedDevices {
 		result.PairedDevices = append(result.PairedDevices, t.NotificationPairedDevice{
-			Id:                     device.DeviceIdentifier.String,
+			Id:                     device.DeviceId,
 			PairedTimestamp:        device.CreatedTs.Unix(),
 			Name:                   device.DeviceName,
 			IsNotificationsEnabled: device.NotifyEnabled,
@@ -1457,7 +1444,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 func (d *DataAccessService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
 	return &t.NotificationSettingsDefaultValues{
-		GroupOfflineThreshold:             GroupOfflineThresholdDefault,
+		GroupEfficiencyBelowThreshold:     GroupEfficiencyBelowThresholdDefault,
 		MaxCollateralThreshold:            MaxCollateralThresholdDefault,
 		MinCollateralThreshold:            MinCollateralThresholdDefault,
 		ERC20TokenTransfersValueThreshold: ERC20TokenTransfersValueThresholdDefault,
@@ -1643,13 +1630,13 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	}
 	return nil
 }
-func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
+func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	result, err := d.userWriter.ExecContext(ctx, `
 		UPDATE users_devices 
 		SET 
 			device_name = $1,
 			notify_enabled = $2
-		WHERE user_id = $3 AND device_identifier = $4`,
+		WHERE user_id = $3 AND id = $4`,
 		name, IsNotificationsEnabled, userId, pairedDeviceId)
 	if err != nil {
 		return err
@@ -1661,14 +1648,14 @@ func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.C
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("device with id %s to update notification settings not found", pairedDeviceId)
+		return fmt.Errorf("device with id %v to update notification settings not found", pairedDeviceId)
 	}
 	return nil
 }
-func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error {
+func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error {
 	result, err := d.userWriter.ExecContext(ctx, `
 		DELETE FROM users_devices 
-		WHERE user_id = $1 AND device_identifier = $2`,
+		WHERE user_id = $1 AND id = $2`,
 		userId, pairedDeviceId)
 	if err != nil {
 		return err
@@ -1680,7 +1667,7 @@ func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.C
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("device with id %s to delete not found", pairedDeviceId)
+		return fmt.Errorf("device with id %v to delete not found", pairedDeviceId)
 	}
 	return nil
 }
@@ -1773,7 +1760,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		Network                 uint64         `db:"network"`
 		WebhookUrl              sql.NullString `db:"webhook_target"`
 		IsWebhookDiscordEnabled sql.NullBool   `db:"discord_webhook"`
-		IsRealTimeModeEnabled   sql.NullBool   `db:"realtime_notifications"`
 	}{}
 	wg.Go(func() error {
 		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
@@ -1784,8 +1770,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				g.name AS group_name,
 				d.network,
 				g.webhook_target,
-				(g.webhook_format = $1) AS discord_webhook,
-				g.realtime_notifications
+				(g.webhook_format = $1) AS discord_webhook
 			FROM users_val_dashboards d
 			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
 			WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
@@ -1860,9 +1845,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			if dashboardType == ValidatorDashboardEventPrefix {
 				resultMap[event.Filter] = &t.NotificationSettingsDashboardsTableRow{
 					Settings: t.NotificationSettingsValidatorDashboard{
-						GroupOfflineThreshold:  GroupOfflineThresholdDefault,
-						MaxCollateralThreshold: MaxCollateralThresholdDefault,
-						MinCollateralThreshold: MinCollateralThresholdDefault,
+						GroupEfficiencyBelowThreshold: GroupEfficiencyBelowThresholdDefault,
+						MaxCollateralThreshold:        MaxCollateralThresholdDefault,
+						MinCollateralThreshold:        MinCollateralThresholdDefault,
 					},
 				}
 			} else if dashboardType == AccountDashboardEventPrefix {
@@ -1879,6 +1864,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			switch eventName {
 			case types.ValidatorIsOfflineEventName:
 				settings.IsValidatorOfflineSubscribed = true
+			case types.ValidatorGroupEfficiencyEventName:
+				settings.IsGroupEfficiencyBelowSubscribed = true
+				settings.GroupEfficiencyBelowThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
 				settings.IsAttestationsMissedSubscribed = true
 			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName:
@@ -1924,9 +1912,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		if _, ok := resultMap[key]; !ok {
 			resultMap[key] = &t.NotificationSettingsDashboardsTableRow{
 				Settings: t.NotificationSettingsValidatorDashboard{
-					GroupOfflineThreshold:  GroupOfflineThresholdDefault,
-					MaxCollateralThreshold: MaxCollateralThresholdDefault,
-					MinCollateralThreshold: MinCollateralThresholdDefault,
+					GroupEfficiencyBelowThreshold: GroupEfficiencyBelowThresholdDefault,
+					MaxCollateralThreshold:        MaxCollateralThresholdDefault,
+					MinCollateralThreshold:        MinCollateralThresholdDefault,
 				},
 			}
 		}
@@ -1943,7 +1931,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		if valSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
 			valSettings.WebhookUrl = valDashboard.WebhookUrl.String
 			valSettings.IsWebhookDiscordEnabled = valDashboard.IsWebhookDiscordEnabled.Bool
-			valSettings.IsRealTimeModeEnabled = valDashboard.IsRealTimeModeEnabled.Bool
 		}
 	}
 
@@ -2108,6 +2095,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	eventFilter := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
 
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, types.ValidatorIsOfflineEventName, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupEfficiencyBelowSubscribed, userId, types.ValidatorGroupEfficiencyEventName, networkName, eventFilter, epoch, settings.GroupEfficiencyBelowThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, networkName, eventFilter, epoch, 0)
@@ -2168,9 +2156,8 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 		UPDATE users_val_dashboards_groups 
 		SET 
 			webhook_target = NULLIF($1, ''),
-			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
-			realtime_notifications = CASE WHEN $4 THEN TRUE ELSE NULL END
-		WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsRealTimeModeEnabled, dashboardId, groupId)
+			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END
+		WHERE dashboard_id = $4 AND id = $5`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, dashboardId, groupId)
 	if err != nil {
 		return err
 	}

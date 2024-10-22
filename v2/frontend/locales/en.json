@@ -616,6 +616,8 @@
           },
         "entity": {
           "attestation_missed":"Attestation missed",
+          "group_efficiency": "Group efficiency ",
+          "group_efficiency_text": "efficiency below {percentage}",
           "max_collateral":"Maximum collateral reached",
           "min_collateral":"Minimum collateral reached",
           "proposal_done": "Proposal done",
@@ -650,8 +652,7 @@
       },
       "event_type": {
         "attestation_missed": "Attestation missed",
-        "group_offline": "Group offline",
-        "group_online": "Group online",
+        "group_efficiency_below": "Low group efficiency",
         "incoming_tx": "Incoming Tx.",
         "max_collateral": "Max. collateral",
         "min_collateral": "Min. collateral",
@@ -814,6 +815,10 @@
         "erc1155_token_transfers": {
           "label": "ERC1155 token transfers"
         },
+        "group_efficiency": {
+          "info": "efficiency below {percentage}",
+          "label": "Group efficiency"
+        },
         "ignore_spam_transactions": {
           "hint": [
             "Ignores",
@@ -844,6 +849,10 @@
           "label": "Block proposal (missed & success)"
         },
         "explanation": "All notifications are sent after network finality (~20min).",
+        "group_efficiency": {
+          "info": "Notifies you if your group's efficiency falls below {percentage}% in any given epoch",
+          "label": "Group efficiency below"
+        },
         "max_collateral_reached": {
           "label": "Max collateral reached"
         },
