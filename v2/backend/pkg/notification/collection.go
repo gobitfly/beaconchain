@@ -46,6 +46,7 @@ func notificationCollector() {
 	var once sync.Once
 	once.Do(func() {
 		gob.Register(&ValidatorProposalNotification{})
+		gob.Register(&ValidatorUpcomingProposalNotification{})
 		gob.Register(&ValidatorAttestationNotification{})
 		gob.Register(&ValidatorIsOfflineNotification{})
 		gob.Register(&ValidatorGotSlashedNotification{})
@@ -57,6 +58,56 @@ func notificationCollector() {
 		gob.Register(&EthClientNotification{})
 		gob.Register(&SyncCommitteeSoonNotification{})
 	})
+
+	go func() {
+		log.Infof("starting head notification collector")
+		mc, err := modules.GetModuleContext()
+		if err != nil {
+			log.Fatal(err, "error getting module context", 0)
+		}
+
+		for ; ; time.Sleep(time.Second * 30) {
+			// get the head epoch
+			head, err := mc.ConsClient.GetChainHead()
+			if err != nil {
+				log.Error(err, "error getting chain head", 0)
+				continue
+			}
+
+			headEpoch := head.HeadEpoch
+
+			var lastNotifiedEpoch uint64
+			err = db.WriterDb.Get(&lastNotifiedEpoch, "SELECT COUNT(*) FROM epochs_notified_head WHERE epoch = $1 AND event_name = $2", headEpoch, types.ValidatorUpcomingProposalEventName)
+
+			if err != nil {
+				log.Error(err, fmt.Sprintf("error checking if upcoming block proposal notifications for epoch %v have already been collected", headEpoch), 0)
+				continue
+			}
+
+			if lastNotifiedEpoch > 0 {
+				log.Warnf("head epoch notifications for epoch %v have already been collected", headEpoch)
+				continue
+			}
+
+			notifications, err := collectHeadNotifications(mc, headEpoch)
+			if err != nil {
+				log.Error(err, "error collecting head notifications", 0)
+			}
+
+			_, err = db.WriterDb.Exec("INSERT INTO epochs_notified_head (epoch, event_name, senton) VALUES ($1, $2, NOW())", headEpoch, types.ValidatorUpcomingProposalEventName)
+			if err != nil {
+				log.Error(err, "error marking head notification status for epoch in db", 0)
+				continue
+			}
+
+			if len(notifications) > 0 {
+				err = queueNotifications(headEpoch, notifications)
+				if err != nil {
+					log.Error(err, "error queuing head notifications", 0)
+				}
+			}
+		}
+	}()
 
 	for {
 		latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
@@ -158,6 +209,73 @@ func notificationCollector() {
 	}
 }
 
+func collectHeadNotifications(mc modules.ModuleContext, headEpoch uint64) (types.NotificationsPerUserId, error) {
+	notificationsByUserID := types.NotificationsPerUserId{}
+	start := time.Now()
+	err := collectUpcomingBlockProposalNotifications(notificationsByUserID, mc, headEpoch)
+	if err != nil {
+		metrics.Errors.WithLabelValues("notifications_collect_upcoming_block_proposal").Inc()
+		return nil, fmt.Errorf("error collecting upcoming block proposal notifications: %v", err)
+	}
+	log.Infof("collecting upcoming block proposal notifications took: %v", time.Since(start))
+
+	return notificationsByUserID, nil
+}
+
+func collectUpcomingBlockProposalNotifications(notificationsByUserID types.NotificationsPerUserId, mc modules.ModuleContext, headEpoch uint64) (err error) {
+	nextEpoch := headEpoch + 1
+	log.Infof("collecting upcoming block proposal notifications for epoch %v (head epoch is %d)", nextEpoch, headEpoch)
+
+	if utils.EpochToTime(nextEpoch).Before(time.Now()) {
+		log.Error(fmt.Errorf("error upcoming block proposal notifications for epoch %v are already in the past", nextEpoch), "", 0)
+		return nil
+	}
+
+	assignments, err := mc.CL.GetPropoalAssignments(nextEpoch)
+	if err != nil {
+		return fmt.Errorf("error getting proposal assignments: %w", err)
+	}
+
+	subs, err := GetSubsForEventFilter(types.ValidatorUpcomingProposalEventName, "", nil, nil)
+	if err != nil {
+		return fmt.Errorf("error getting subscriptions for upcoming block proposal notifications: %w", err)
+	}
+
+	log.Infof("retrieved %d subscriptions for upcoming block proposal notifications", len(subs))
+	if len(subs) == 0 {
+		return nil
+	}
+
+	for _, assignment := range assignments.Data {
+		log.Infof("upcoming block proposal for validator %d in slot %d", assignment.ValidatorIndex, assignment.Slot)
+		for _, sub := range subs[hex.EncodeToString(assignment.Pubkey)] {
+			if sub.UserID == nil || sub.ID == nil {
+				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
+			}
+
+			log.Infof("creating %v notification for validator %v in epoch %v (dashboard: %v)", sub.EventName, assignment.ValidatorIndex, nextEpoch, sub.DashboardId != nil)
+			n := &ValidatorUpcomingProposalNotification{
+				NotificationBaseImpl: types.NotificationBaseImpl{
+					SubscriptionID:     *sub.ID,
+					UserID:             *sub.UserID,
+					Epoch:              nextEpoch,
+					EventName:          sub.EventName,
+					EventFilter:        hex.EncodeToString(assignment.Pubkey),
+					DashboardId:        sub.DashboardId,
+					DashboardName:      sub.DashboardName,
+					DashboardGroupId:   sub.DashboardGroupId,
+					DashboardGroupName: sub.DashboardGroupName,
+				},
+				ValidatorIndex: assignment.ValidatorIndex,
+				Slot:           uint64(assignment.Slot),
+			}
+			notificationsByUserID.AddNotification(n)
+			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
+		}
+	}
+	return nil
+}
+
 func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 	notificationsByUserID := types.NotificationsPerUserId{}
 	start := time.Now()
@@ -189,13 +307,6 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 	// The following functions will collect the notifications and add them to the
 	// notificationsByUserID map. The notifications will be queued and sent later
 	// by the notification sender process
-	err = collectUpcomingBlockProposalNotifications(notificationsByUserID)
-	if err != nil {
-		metrics.Errors.WithLabelValues("notifications_collect_upcoming_block_proposal").Inc()
-		return nil, fmt.Errorf("error collecting upcoming block proposal notifications: %v", err)
-	}
-	log.Infof("collecting attestation & offline notifications took: %v", time.Since(start))
-
 	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_missed_attestation").Inc()
@@ -346,84 +457,6 @@ func collectUserDbNotifications(epoch uint64) (types.NotificationsPerUserId, err
 	}
 
 	return notificationsByUserID, nil
-}
-
-func collectUpcomingBlockProposalNotifications(notificationsByUserID types.NotificationsPerUserId) (err error) {
-	mc, err := modules.GetModuleContext()
-	if err != nil {
-		return fmt.Errorf("error getting module context: %w", err)
-	}
-
-	// get the head epoch
-	head, err := mc.ConsClient.GetChainHead()
-	if err != nil {
-		return fmt.Errorf("error getting chain head: %w", err)
-	}
-
-	headEpoch := head.HeadEpoch
-	nextEpoch := headEpoch + 1
-
-	var lastNotifiedEpoch uint64
-	err = db.WriterDb.Get(&lastNotifiedEpoch, "SELECT COUNT(*) FROM epochs_notified_head WHERE epoch = $1 AND event_name = $2", nextEpoch, types.ValidatorUpcomingProposalEventName)
-
-	if err != nil {
-		return fmt.Errorf("error checking if upcoming block proposal notifications for epoch %v have already been collected: %w", nextEpoch, err)
-	}
-
-	if lastNotifiedEpoch > 0 {
-		log.Error(fmt.Errorf("upcoming block proposal notifications for epoch %v have already been collected", nextEpoch), "", 0)
-		return nil
-	}
-
-	// todo: make sure not to collect notifications for the same epoch twice
-	assignments, err := mc.CL.GetPropoalAssignments(nextEpoch)
-	if err != nil {
-		return fmt.Errorf("error getting proposal assignments: %w", err)
-	}
-
-	subs, err := GetSubsForEventFilter(types.ValidatorUpcomingProposalEventName, "", nil, nil)
-	if err != nil {
-		return fmt.Errorf("error getting subscriptions for upcoming block proposal notifications: %w", err)
-	}
-
-	log.Infof("retrieved %d subscriptions for upcoming block proposal notifications", len(subs))
-	if len(subs) == 0 {
-		return nil
-	}
-
-	for _, assignment := range assignments.Data {
-		log.Infof("upcoming block proposal for validator %d in slot %d", assignment.ValidatorIndex, assignment.Slot)
-		for _, sub := range subs[hex.EncodeToString(assignment.Pubkey)] {
-			if sub.UserID == nil || sub.ID == nil {
-				return fmt.Errorf("error expected userId and subId to be defined but got user: %v, sub: %v", sub.UserID, sub.ID)
-			}
-
-			log.Infof("creating %v notification for validator %v in epoch %v (dashboard: %v)", sub.EventName, assignment.ValidatorIndex, nextEpoch, sub.DashboardId != nil)
-			n := &ValidatorUpcomingProposalNotification{
-				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID:     *sub.ID,
-					UserID:             *sub.UserID,
-					Epoch:              nextEpoch,
-					EventName:          sub.EventName,
-					EventFilter:        hex.EncodeToString(assignment.Pubkey),
-					DashboardId:        sub.DashboardId,
-					DashboardName:      sub.DashboardName,
-					DashboardGroupId:   sub.DashboardGroupId,
-					DashboardGroupName: sub.DashboardGroupName,
-				},
-				ValidatorIndex: assignment.ValidatorIndex,
-				Slot:           uint64(assignment.Slot),
-			}
-			notificationsByUserID.AddNotification(n)
-			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
-		}
-	}
-
-	_, err = db.WriterDb.Exec("INSERT INTO epochs_notified_head (epoch, event_name) VALUES ($1, $2)", nextEpoch, types.ValidatorUpcomingProposalEventName)
-	if err != nil {
-		return fmt.Errorf("error marking notification status for epoch %v in db: %w", nextEpoch, err)
-	}
-	return nil
 }
 
 func collectBlockProposalNotifications(notificationsByUserID types.NotificationsPerUserId, status uint64, eventName types.EventName, epoch uint64) error {

@@ -67,13 +67,10 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		ds = ds.Where(goqu.L("(event_filter = ANY(?))", pq.StringArray(eventFilters)))
 	}
 
-	query, args, err := ds.Prepared(false).ToSQL()
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
 	}
-
-	log.Info(query)
-	log.Info(args)
 
 	subMap := make(map[string][]*types.Subscription, 0)
 	err = db.FrontendWriterDB.Select(&subs, query, args...)
@@ -116,7 +113,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	}
 
 	if len(dashboardConfigsToFetch) > 0 {
-		log.Infof("fetching dashboard configurations for %d dashboards", len(dashboardConfigsToFetch))
+		log.Infof("fetching dashboard configurations for %d dashboards (%v)", len(dashboardConfigsToFetch), dashboardConfigsToFetch)
 		dashboardConfigRetrievalStartTs := time.Now()
 		type dashboardDefinitionRow struct {
 			DashboardId    types.DashboardId      `db:"dashboard_id"`
