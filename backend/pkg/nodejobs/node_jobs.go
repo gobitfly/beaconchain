@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/capella"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -367,7 +368,11 @@ func CreateVoluntaryExitNodeJob(nj *types.NodeJob) (*types.NodeJob, error) {
 	}
 
 	forkVersion := utils.ForkVersionAtEpoch(uint64(njd.Message.Epoch))
-	err = utils.VerifyVoluntaryExitSignature(njd, utils.MustParseHex(forkVersion.CurrentVersion), vali.Pubkey)
+	currentFork, err := hexutil.Decode(forkVersion.CurrentVersion)
+	if err != nil {
+		return nil, fmt.Errorf("internal: failed to parse fork version: %w", err)
+	}
+	err = utils.VerifyVoluntaryExitSignature(njd, currentFork, vali.Pubkey)
 	if err != nil {
 		return nil, err
 	}
