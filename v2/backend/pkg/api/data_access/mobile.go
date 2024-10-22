@@ -171,7 +171,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
-	data.NetworkEfficiency = d.calculateTotalEfficiency(
+	data.NetworkEfficiency = utils.CalculateTotalEfficiency(
 		efficiency.AttestationEfficiency[enums.AllTime], efficiency.ProposalEfficiency[enums.AllTime], efficiency.SyncEfficiency[enums.AllTime])
 
 	// Validator status
@@ -327,7 +327,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
 				syncEfficiency.Valid = true
 			}
-			*efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 			return nil
 		})
