@@ -187,7 +187,6 @@ export type InternalGetUserNotificationSettingsResponse = ApiDataResponse<Notifi
 export interface NotificationSettingsValidatorDashboard {
   webhook_url: string;
   is_webhook_discord_enabled: boolean;
-  is_real_time_mode_enabled: boolean;
   is_validator_offline_subscribed: boolean;
   is_group_efficiency_below_subscribed: boolean;
   group_efficiency_below_threshold: number /* float64 */;

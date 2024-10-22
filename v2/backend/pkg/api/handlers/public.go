@@ -2499,9 +2499,6 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 			settings.IsGroupEfficiencyBelowSubscribed = false
 			settings.GroupEfficiencyBelowThreshold = defaultSettings.GroupEfficiencyBelowThreshold
 		}
-		if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && settings.IsRealTimeModeEnabled {
-			settings.IsRealTimeModeEnabled = false
-		}
 		data[i].Settings = settings
 	}
 	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
@@ -2555,10 +2552,6 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 	}
 	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupEfficiency && req.IsGroupEfficiencyBelowSubscribed {
 		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group efficiency event"))
-		return
-	}
-	if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && req.IsRealTimeModeEnabled {
-		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe real time mode"))
 		return
 	}
 
