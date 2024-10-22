@@ -380,6 +380,9 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 			case types.ValidatorExecutedProposalEventName:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d validator%s, Reward: %.3f ETH", types.EventLabel[event], count, plural, totalBlockReward))
+			case types.ValidatorGroupEfficiencyEventName:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d Group%s", types.EventLabel[event], count, plural))
 			default:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
@@ -513,6 +516,8 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 						bodySummary += fmt.Sprintf("%s: %d machine%s", types.EventLabel[event], count, plural)
 					case types.ValidatorExecutedProposalEventName:
 						bodySummary += fmt.Sprintf("%s: %d validator%s, Reward: %.3f ETH", types.EventLabel[event], count, plural, totalBlockReward)
+					case types.ValidatorGroupEfficiencyEventName:
+						bodySummary += fmt.Sprintf("%s: %d group%s", types.EventLabel[event], count, plural)
 					default:
 						bodySummary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
 					}
