@@ -27,7 +27,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/notification"
 	n "github.com/gobitfly/beaconchain/pkg/notification"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -62,18 +61,19 @@ type NotificationsRepository interface {
 func (*DataAccessService) registerNotificationInterfaceTypes() {
 	var once sync.Once
 	once.Do(func() {
-		gob.Register(&notification.ValidatorProposalNotification{})
-		gob.Register(&notification.ValidatorAttestationNotification{})
-		gob.Register(&notification.ValidatorIsOfflineNotification{})
-		gob.Register(&notification.ValidatorIsOnlineNotification{})
-		gob.Register(&notification.ValidatorGotSlashedNotification{})
-		gob.Register(&notification.ValidatorWithdrawalNotification{})
-		gob.Register(&notification.NetworkNotification{})
-		gob.Register(&notification.RocketpoolNotification{})
-		gob.Register(&notification.MonitorMachineNotification{})
-		gob.Register(&notification.TaxReportNotification{})
-		gob.Register(&notification.EthClientNotification{})
-		gob.Register(&notification.SyncCommitteeSoonNotification{})
+		gob.Register(&n.ValidatorProposalNotification{})
+		gob.Register(&n.ValidatorUpcomingProposalNotification{})
+		gob.Register(&n.ValidatorAttestationNotification{})
+		gob.Register(&n.ValidatorIsOfflineNotification{})
+		gob.Register(&n.ValidatorIsOnlineNotification{})
+		gob.Register(&n.ValidatorGotSlashedNotification{})
+		gob.Register(&n.ValidatorWithdrawalNotification{})
+		gob.Register(&n.NetworkNotification{})
+		gob.Register(&n.RocketpoolNotification{})
+		gob.Register(&n.MonitorMachineNotification{})
+		gob.Register(&n.TaxReportNotification{})
+		gob.Register(&n.EthClientNotification{})
+		gob.Register(&n.SyncCommitteeSoonNotification{})
 	})
 }
 

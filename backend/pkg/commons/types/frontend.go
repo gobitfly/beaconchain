@@ -120,6 +120,7 @@ const (
 )
 
 var EventSortOrder = []EventName{
+	ValidatorUpcomingProposalEventName,
 	ValidatorGotSlashedEventName,
 	ValidatorDidSlashEventName,
 	ValidatorMissedProposalEventName,
@@ -173,6 +174,7 @@ var MachineEventsMap = map[EventName]struct{}{
 }
 
 var LegacyEventLabel map[EventName]string = map[EventName]string{
+	ValidatorUpcomingProposalEventName:       "Your validator(s) will soon propose a block",
 	ValidatorMissedProposalEventName:         "Your validator(s) missed a proposal",
 	ValidatorExecutedProposalEventName:       "Your validator(s) submitted a proposal",
 	ValidatorMissedAttestationEventName:      "Your validator(s) missed an attestation",
@@ -196,6 +198,7 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
+	ValidatorUpcomingProposalEventName:       "Upcoming block proposal",
 	ValidatorMissedProposalEventName:         "Block proposal missed",
 	ValidatorExecutedProposalEventName:       "Block proposal submitted",
 	ValidatorMissedAttestationEventName:      "Attestation missed",
