@@ -508,7 +508,7 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		return fmt.Errorf("no efficiency data found for epoch %v", epoch)
 	}
 
-	subMap, err := GetSubsForEventFilter("group_efficiency", "", nil, nil)
+	subMap, err := GetSubsForEventFilter(types.ValidatorGroupEfficiencyEventName, "", nil, nil)
 	if err != nil {
 		return fmt.Errorf("error getting subscriptions for (missed) block proposals %w", err)
 	}

@@ -568,19 +568,19 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 					continue
 				}
 				notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
-			case types.ValidatorGroupIsOfflineEventName:
-				// TODO type / collection not present yet, skipping
-				/*curNotification, ok := not.(*notification.validatorGroupIsOfflineNotification)
-				if !ok {
-					return nil, fmt.Errorf("failed to cast notification to validatorGroupIsOfflineNotification")
-				}
-				if curNotification.Status == 0 {
-					notificationDetails.GroupOffline = ...
-					notificationDetails.GroupOfflineReminder = ...
-				} else {
-					notificationDetails.GroupBackOnline = ...
-				}
-				*/
+			// case types.ValidatorGroupIsOfflineEventName:
+			// TODO type / collection not present yet, skipping
+			/*curNotification, ok := not.(*notification.validatorGroupIsOfflineNotification)
+			if !ok {
+				return nil, fmt.Errorf("failed to cast notification to validatorGroupIsOfflineNotification")
+			}
+			if curNotification.Status == 0 {
+				notificationDetails.GroupOffline = ...
+				notificationDetails.GroupOfflineReminder = ...
+			} else {
+				notificationDetails.GroupBackOnline = ...
+			}
+			*/
 			case types.ValidatorReceivedWithdrawalEventName:
 				curNotification, ok := notification.(*n.ValidatorWithdrawalNotification)
 				if !ok {
@@ -1878,9 +1878,6 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			switch eventName {
 			case types.ValidatorIsOfflineEventName:
 				settings.IsValidatorOfflineSubscribed = true
-			case types.GroupIsOfflineEventName:
-				settings.IsGroupOfflineSubscribed = true
-				settings.GroupOfflineThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
 				settings.IsAttestationsMissedSubscribed = true
 			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName:
@@ -2110,7 +2107,6 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	eventFilter := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
 
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsValidatorOfflineSubscribed, userId, types.ValidatorIsOfflineEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupOfflineSubscribed, userId, types.GroupIsOfflineEventName, networkName, eventFilter, epoch, settings.GroupOfflineThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, networkName, eventFilter, epoch, 0)

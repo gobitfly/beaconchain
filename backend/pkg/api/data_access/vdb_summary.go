@@ -1021,7 +1021,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		if err != nil {
 			return nil, err
 		}
-		averageNetworkEfficiency := d.calculateTotalEfficiency(
+		averageNetworkEfficiency := utils.CalculateTotalEfficiency(
 			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
 
 		for ts := range tsMap {
