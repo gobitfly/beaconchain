@@ -51,7 +51,7 @@ func formatSlotLink(format types.NotificationFormat, slot interface{}) string {
 	return ""
 }
 
-func formatDashboardAndGroupLink(format types.NotificationFormat, n types.Notification) string {
+func formatValidatorPrefixedDashboardAndGroupLink(format types.NotificationFormat, n types.Notification) string {
 	dashboardAndGroupInfo := ""
 	if n.GetDashboardId() != nil {
 		switch format {
@@ -61,6 +61,21 @@ func formatDashboardAndGroupLink(format types.NotificationFormat, n types.Notifi
 			dashboardAndGroupInfo = fmt.Sprintf(` of Group %[1]v in Dashboard %[2]v`, n.GetDashboardGroupName(), n.GetDashboardName())
 		case types.NotifciationFormatMarkdown:
 			dashboardAndGroupInfo = fmt.Sprintf(` of Group **%[1]v** in Dashboard [%[2]v](https://%[3]v/dashboard/%[4]v)`, n.GetDashboardGroupName(), n.GetDashboardName(), utils.Config.Frontend.SiteDomain, *n.GetDashboardId())
+		}
+	}
+	return dashboardAndGroupInfo
+}
+
+func formatPureDashboardAndGroupLink(format types.NotificationFormat, n types.Notification) string {
+	dashboardAndGroupInfo := ""
+	if n.GetDashboardId() != nil {
+		switch format {
+		case types.NotifciationFormatHtml:
+			dashboardAndGroupInfo = fmt.Sprintf(`Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomain, n.GetDashboardGroupName(), n.GetDashboardName(), *n.GetDashboardId())
+		case types.NotifciationFormatText:
+			dashboardAndGroupInfo = fmt.Sprintf(`Group %[1]v in Dashboard %[2]v`, n.GetDashboardGroupName(), n.GetDashboardName())
+		case types.NotifciationFormatMarkdown:
+			dashboardAndGroupInfo = fmt.Sprintf(`Group **%[1]v** in Dashboard [%[2]v](https://%[3]v/dashboard/%[4]v)`, n.GetDashboardGroupName(), n.GetDashboardName(), utils.Config.Frontend.SiteDomain, *n.GetDashboardId())
 		}
 	}
 	return dashboardAndGroupInfo
@@ -83,7 +98,7 @@ func (n *ValidatorProposalNotification) GetEntitiyId() string {
 func (n *ValidatorProposalNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	slot := formatSlotLink(format, n.Slot)
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatValidatorPrefixedDashboardAndGroupLink(format, n)
 
 	switch n.Status {
 	case 0:
@@ -149,7 +164,7 @@ func (n *ValidatorUpcomingProposalNotification) GetEntitiyId() string {
 func (n *ValidatorUpcomingProposalNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	slot := formatSlotLink(format, n.Slot)
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatValidatorPrefixedDashboardAndGroupLink(format, n)
 	return fmt.Sprintf(`New scheduled block proposal at slot %s for Validator %s%s.`, slot, vali, dashboardAndGroupInfo)
 }
 
@@ -184,7 +199,7 @@ func (n *ValidatorIsOfflineNotification) GetEntitiyId() string {
 func (n *ValidatorIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.LatestState)
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatValidatorPrefixedDashboardAndGroupLink(format, n)
 	return fmt.Sprintf(`Validator %v%v is offline since epoch %s.`, vali, dashboardAndGroupInfo, epoch)
 }
 
@@ -214,7 +229,7 @@ func (n *ValidatorIsOnlineNotification) GetEntitiyId() string {
 func (n *ValidatorIsOnlineNotification) GetInfo(format types.NotificationFormat) string {
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.Epoch)
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatValidatorPrefixedDashboardAndGroupLink(format, n)
 	return fmt.Sprintf(`Validator %v%v is back online since epoch %v.`, vali, dashboardAndGroupInfo, epoch)
 }
 
@@ -243,9 +258,9 @@ func (n *ValidatorGroupEfficiencyNotification) GetEntitiyId() string {
 
 // Overwrite specific methods
 func (n *ValidatorGroupEfficiencyNotification) GetInfo(format types.NotificationFormat) string {
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatPureDashboardAndGroupLink(format, n)
 	epoch := formatEpochLink(format, n.Epoch)
-	return fmt.Sprintf(`%s%s efficiency of %.2f is below the threhold of %.2f in epoch %s.`, dashboardAndGroupInfo, n.Efficiency, n.Threshold, epoch)
+	return fmt.Sprintf(`%s efficiency of %.2f%% is below the threhold of %.2f%% in epoch %s.`, dashboardAndGroupInfo, n.Efficiency, n.Threshold, epoch)
 }
 
 func (n *ValidatorGroupEfficiencyNotification) GetTitle() string {
@@ -273,7 +288,7 @@ func (n *ValidatorAttestationNotification) GetEntitiyId() string {
 }
 
 func (n *ValidatorAttestationNotification) GetInfo(format types.NotificationFormat) string {
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatValidatorPrefixedDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.Epoch)
 
@@ -347,7 +362,7 @@ func (n *ValidatorGotSlashedNotification) GetEntitiyId() string {
 }
 
 func (n *ValidatorGotSlashedNotification) GetInfo(format types.NotificationFormat) string {
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatValidatorPrefixedDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	epoch := formatEpochLink(format, n.Epoch)
 	slasher := formatValidatorLink(format, n.Slasher)
@@ -383,7 +398,7 @@ func (n *ValidatorWithdrawalNotification) GetEntitiyId() string {
 }
 
 func (n *ValidatorWithdrawalNotification) GetInfo(format types.NotificationFormat) string {
-	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	dashboardAndGroupInfo := formatValidatorPrefixedDashboardAndGroupLink(format, n)
 	vali := formatValidatorLink(format, n.ValidatorIndex)
 	amount := utils.FormatClCurrencyString(n.Amount, utils.Config.Frontend.MainCurrency, 6, true, false, false)
 	generalPart := fmt.Sprintf(`An automatic withdrawal of %s has been processed for validator %s%s.`, amount, vali, dashboardAndGroupInfo)
