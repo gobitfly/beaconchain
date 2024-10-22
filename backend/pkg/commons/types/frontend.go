@@ -131,6 +131,7 @@ var EventSortOrder = []EventName{
 	SyncCommitteeSoonEventName,
 	ValidatorIsOfflineEventName,
 	ValidatorIsOnlineEventName,
+	ValidatorGroupEfficiencyEventName,
 	ValidatorReceivedWithdrawalEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,
@@ -174,6 +175,7 @@ var MachineEventsMap = map[EventName]struct{}{
 
 var LegacyEventLabel map[EventName]string = map[EventName]string{
 	ValidatorUpcomingProposalEventName:       "Your validator(s) will soon propose a block",
+	ValidatorGroupEfficiencyEventName:        "Your validator group efficiency is low",
 	ValidatorMissedProposalEventName:         "Your validator(s) missed a proposal",
 	ValidatorExecutedProposalEventName:       "Your validator(s) submitted a proposal",
 	ValidatorMissedAttestationEventName:      "Your validator(s) missed an attestation",
@@ -198,6 +200,7 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 
 var EventLabel map[EventName]string = map[EventName]string{
 	ValidatorUpcomingProposalEventName:       "Upcoming block proposal",
+	ValidatorGroupEfficiencyEventName:        "Low validator group efficiency",
 	ValidatorMissedProposalEventName:         "Block proposal missed",
 	ValidatorExecutedProposalEventName:       "Block proposal submitted",
 	ValidatorMissedAttestationEventName:      "Attestation missed",
@@ -232,6 +235,7 @@ func IsMachineNotification(event EventName) bool {
 
 var EventNames = []EventName{
 	ValidatorExecutedProposalEventName,
+	ValidatorGroupEfficiencyEventName,
 	ValidatorMissedProposalEventName,
 	ValidatorMissedAttestationEventName,
 	ValidatorGotSlashedEventName,
