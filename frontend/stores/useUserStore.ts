@@ -36,7 +36,6 @@ export function useUserStore() {
         undefined,
         undefined,
         undefined,
-        true,
       )
       setUser(res.data)
       return res.data
