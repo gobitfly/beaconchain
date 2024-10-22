@@ -81,7 +81,7 @@ const (
 	ValidatorDashboardEventPrefix string = "vdb"
 	AccountDashboardEventPrefix   string = "adb"
 
-	DiscordWebhookFormat string = "discord"
+	DiscordWebhookFormat string = "webhook_discord"
 
 	GroupOfflineThresholdDefault             float64 = 0.1
 	MaxCollateralThresholdDefault            float64 = 1.0

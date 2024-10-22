@@ -3,7 +3,6 @@ package notification
 import (
 	"bytes"
 	"compress/gzip"
-	"database/sql"
 	"encoding/gob"
 	"fmt"
 	"html/template"
@@ -613,22 +612,14 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 	}
 
 	// now fetch the webhooks for each dashboard config
-	var dashboardWebhooks []struct {
-		UserId         types.UserId           `db:"user_id"`
-		DashboardID    types.DashboardId      `db:"dashboard_id"`
-		GroupId        types.DashboardGroupId `db:"id"`
-		WebhookTarget  string                 `db:"webhook_target"`
-		WebhookFormat  string                 `db:"webhook_format"`
-		WebhookRetries uint64                 `db:"webhook_retries"`
-	}
-
-	err = db.ReaderDb.Select(&dashboardWebhooks, `
+	err = db.ReaderDb.Select(&webhooks, `
 	SELECT
-		users_val_dashboards_groups.id,
-		dashboard_id,
-		webhook_target,
-		webhook_format,
-		webhook_retries
+		users_val_dashboards_groups.id AS dashboard_group_id,
+		dashboard_id AS dashboard_id,
+		webhook_target AS url,
+		COALESCE(webhook_format, "webhook") AS destination,
+		webhook_retries AS retries,
+		webhook_last_sent AS last_sent
 	FROM users_val_dashboards_groups
 	LEFT JOIN users_val_dashboards ON users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
 	WHERE users_val_dashboards.user_id = ANY($1)
@@ -639,25 +630,15 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 		return fmt.Errorf("error quering users_val_dashboards_groups, err: %w", err)
 	}
 	dashboardWebhookMap := make(map[types.UserId]map[types.DashboardId]map[types.DashboardGroupId]types.UserWebhook)
-	for _, w := range dashboardWebhooks {
-		if _, exists := dashboardWebhookMap[w.UserId]; !exists {
-			dashboardWebhookMap[w.UserId] = make(map[types.DashboardId]map[types.DashboardGroupId]types.UserWebhook)
+	for _, w := range webhooks {
+		if _, exists := dashboardWebhookMap[types.UserId(w.UserID)]; !exists {
+			dashboardWebhookMap[types.UserId(w.UserID)] = make(map[types.DashboardId]map[types.DashboardGroupId]types.UserWebhook)
 		}
-		if _, exists := dashboardWebhookMap[w.UserId][w.DashboardID]; !exists {
-			dashboardWebhookMap[w.UserId][w.DashboardID] = make(map[types.DashboardGroupId]types.UserWebhook)
+		if _, exists := dashboardWebhookMap[types.UserId(w.UserID)][types.DashboardId(w.DashboardId)]; !exists {
+			dashboardWebhookMap[types.UserId(w.UserID)][types.DashboardId(w.DashboardId)] = make(map[types.DashboardGroupId]types.UserWebhook)
 		}
 
-		uw := types.UserWebhook{
-			UserID:  uint64(w.UserId),
-			Url:     w.WebhookTarget,
-			Retries: w.WebhookRetries,
-		}
-		if w.WebhookFormat == "discord" {
-			uw.Destination = sql.NullString{String: "webhook_discord", Valid: true}
-		} else {
-			uw.Destination = sql.NullString{String: "webhook", Valid: true}
-		}
-		dashboardWebhookMap[w.UserId][w.DashboardID][w.GroupId] = uw
+		dashboardWebhookMap[types.UserId(w.UserID)][types.DashboardId(w.DashboardId)][types.DashboardGroupId(w.DashboardGroupId)] = w
 	}
 
 	for userID, userNotifications := range notificationsByUserID {
@@ -671,90 +652,101 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 		// send the notifications to each registered webhook
 		for _, w := range webhooks {
 			for dashboardId, notificationsPerDashboard := range userNotifications {
-				if dashboardId != 0 { // disable webhooks for dashboard notifications for now
-					continue
-				}
 				for _, notificationsPerGroup := range notificationsPerDashboard {
-					for event, notifications := range notificationsPerGroup {
-						// check if the webhook is subscribed to the type of event
-						eventSubscribed := slices.Contains(w.EventNames, string(event))
+					if dashboardId != 0 { // disable webhooks for dashboard notifications for now
+						// retrieve the associated webhook config from the map
+						if _, exists := dashboardWebhookMap[types.UserId(userID)]; !exists {
+							continue
+						}
+						if _, exists := dashboardWebhookMap[types.UserId(userID)][types.DashboardId(dashboardId)]; !exists {
+							continue
+						}
+						if _, exists := dashboardWebhookMap[types.UserId(userID)][types.DashboardId(dashboardId)][0]; !exists {
+							continue
+						}
+						w = dashboardWebhookMap[types.UserId(userID)][types.DashboardId(dashboardId)][0]
+					} else {
+						for event, notifications := range notificationsPerGroup {
+							// check if the webhook is subscribed to the type of event
+							eventSubscribed := slices.Contains(w.EventNames, string(event))
 
-						if eventSubscribed {
-							if len(notifications) > 0 {
-								// reset Retries
-								if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-									_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
-									if err != nil {
-										log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
+							if eventSubscribed {
+								if len(notifications) > 0 {
+									// reset Retries
+									if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
+										_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
+										if err != nil {
+											log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
+											continue
+										}
+									} else if w.Retries > 5 && !w.LastSent.Valid {
+										log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
 										continue
 									}
-								} else if w.Retries > 5 && !w.LastSent.Valid {
-									log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
-									continue
+
+									if w.Retries >= 5 {
+										// early return
+										continue
+									}
 								}
 
-								if w.Retries >= 5 {
-									// early return
-									continue
-								}
-							}
-
-							for _, n := range notifications {
-								if w.Destination.Valid && w.Destination.String == "webhook_discord" {
-									if _, exists := discordNotifMap[w.ID]; !exists {
-										discordNotifMap[w.ID] = make([]types.TransitDiscordContent, 0)
-									}
-									l_notifs := len(discordNotifMap[w.ID])
-									if l_notifs == 0 || len(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds) >= 10 {
-										discordNotifMap[w.ID] = append(discordNotifMap[w.ID], types.TransitDiscordContent{
-											Webhook: w,
-											DiscordRequest: types.DiscordReq{
-												Username: utils.Config.Frontend.SiteDomain,
-											},
-											UserId: userID,
-										})
-										l_notifs++
-									}
-
-									fields := []types.DiscordEmbedField{
-										{
-											Name:   "Epoch",
-											Value:  fmt.Sprintf("[%[1]v](https://%[2]s/%[1]v)", n.GetEpoch(), utils.Config.Frontend.SiteDomain+"/epoch"),
-											Inline: false,
-										},
-									}
-
-									if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReachedEventName || n.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
-										fields = append(fields,
-											types.DiscordEmbedField{
-												Name:   "Target",
-												Value:  fmt.Sprintf("%v", n.GetEventFilter()),
-												Inline: false,
+								for _, n := range notifications {
+									if w.Destination.Valid && w.Destination.String == "webhook_discord" {
+										if _, exists := discordNotifMap[w.ID]; !exists {
+											discordNotifMap[w.ID] = make([]types.TransitDiscordContent, 0)
+										}
+										l_notifs := len(discordNotifMap[w.ID])
+										if l_notifs == 0 || len(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds) >= 10 {
+											discordNotifMap[w.ID] = append(discordNotifMap[w.ID], types.TransitDiscordContent{
+												Webhook: w,
+												DiscordRequest: types.DiscordReq{
+													Username: utils.Config.Frontend.SiteDomain,
+												},
+												UserId: userID,
 											})
-									}
-									discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
-										Type:        "rich",
-										Color:       "16745472",
-										Description: n.GetLegacyInfo(),
-										Title:       n.GetLegacyTitle(),
-										Fields:      fields,
-									})
-								} else {
-									notifs = append(notifs, types.TransitWebhook{
-										Channel: w.Destination.String,
-										Content: types.TransitWebhookContent{
-											Webhook: w,
-											Event: types.WebhookEvent{
-												Network:     utils.GetNetwork(),
-												Name:        string(n.GetEventName()),
-												Title:       n.GetLegacyTitle(),
-												Description: n.GetLegacyInfo(),
-												Epoch:       n.GetEpoch(),
-												Target:      n.GetEventFilter(),
+											l_notifs++
+										}
+
+										fields := []types.DiscordEmbedField{
+											{
+												Name:   "Epoch",
+												Value:  fmt.Sprintf("[%[1]v](https://%[2]s/%[1]v)", n.GetEpoch(), utils.Config.Frontend.SiteDomain+"/epoch"),
+												Inline: false,
 											},
-											UserId: userID,
-										},
-									})
+										}
+
+										if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReachedEventName || n.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
+											fields = append(fields,
+												types.DiscordEmbedField{
+													Name:   "Target",
+													Value:  fmt.Sprintf("%v", n.GetEventFilter()),
+													Inline: false,
+												})
+										}
+										discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
+											Type:        "rich",
+											Color:       "16745472",
+											Description: n.GetLegacyInfo(),
+											Title:       n.GetLegacyTitle(),
+											Fields:      fields,
+										})
+									} else {
+										notifs = append(notifs, types.TransitWebhook{
+											Channel: w.Destination.String,
+											Content: types.TransitWebhookContent{
+												Webhook: w,
+												Event: types.WebhookEvent{
+													Network:     utils.GetNetwork(),
+													Name:        string(n.GetEventName()),
+													Title:       n.GetLegacyTitle(),
+													Description: n.GetLegacyInfo(),
+													Epoch:       n.GetEpoch(),
+													Target:      n.GetEventFilter(),
+												},
+												UserId: userID,
+											},
+										})
+									}
 								}
 							}
 						}
