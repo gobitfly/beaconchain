@@ -530,6 +530,15 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 					continue
 				}
 				notificationDetails.AttestationMissed = append(notificationDetails.AttestationMissed, t.IndexEpoch{Index: curNotification.ValidatorIndex, Epoch: curNotification.Epoch})
+			case types.ValidatorUpcomingProposalEventName:
+				curNotification, ok := notification.(*n.ValidatorUpcomingProposalNotification)
+				if !ok {
+					return nil, fmt.Errorf("failed to cast notification to ValidatorUpcomingProposalNotification")
+				}
+				if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
+					continue
+				}
+				notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexSlots{Index: curNotification.ValidatorIndex, Slots: []uint64{curNotification.Slot}})
 			case types.ValidatorGotSlashedEventName:
 				curNotification, ok := notification.(*n.ValidatorGotSlashedNotification)
 				if !ok {
