@@ -21,7 +21,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	cTypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/lib/pq"
 	"github.com/rocket-pool/rocketpool-go/utils/eth"
@@ -483,7 +483,7 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 
 	// retrieve rewards for the epoch
 	log.Info("retrieving validator metadata")
-	validators, err := mc.CL.GetValidators(epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch, nil, []cTypes.ValidatorStatus{cTypes.Active})
+	validators, err := mc.CL.GetValidators(epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch, nil, []constypes.ValidatorStatus{constypes.Active})
 	if err != nil {
 		return fmt.Errorf("error getting validators: %w", err)
 	}
@@ -522,24 +522,26 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)].BlocksScheduled++
 	}
 
+	syncAssignments, err := mc.CL.GetSyncCommitteesAssignments(nil, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	if err != nil {
+		return fmt.Errorf("error getting sync committee assignments: %w", err)
+	}
+
 	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-		header, err := mc.CL.GetBlockHeader(slot)
 		log.Infof("retrieving data for slot %v", slot)
+		s, err := mc.CL.GetSlot(slot)
 		if err != nil && strings.Contains(err.Error(), "NOT_FOUND") {
 			continue
 		} else if err != nil {
 			return fmt.Errorf("error getting block header for slot %v: %w", slot, err)
 		}
-		efficiencyMap[types.ValidatorIndex(header.Data.Header.Message.ProposerIndex)].BlocksProposed++
+		efficiencyMap[types.ValidatorIndex(s.Data.Message.ProposerIndex)].BlocksProposed++
 
-		syncRewards, err := mc.CL.GetSyncRewards(slot)
-		if err != nil {
-			return fmt.Errorf("error getting sync rewards for slot %v: %w", slot, err)
-		}
-		for _, reward := range syncRewards.Data {
-			efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)].SyncScheduled++
-			if reward.Reward > 0 {
-				efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)].SyncExecuted++
+		for i, validatorIndex := range syncAssignments.Data.Validators {
+			efficiencyMap[types.ValidatorIndex(validatorIndex)].SyncScheduled++
+
+			if utils.BitAtVector(s.Data.Message.Body.SyncAggregate.SyncCommitteeBits, i) {
+				efficiencyMap[types.ValidatorIndex(validatorIndex)].SyncExecuted++
 			}
 		}
 	}
