@@ -12,6 +12,7 @@ import (
 	"time"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -24,6 +25,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/lib/pq"
 	"github.com/rocket-pool/rocketpool-go/utils/eth"
+	"github.com/shopspring/decimal"
 )
 
 func InitNotificationCollector(pubkeyCachePath string) {
@@ -308,6 +310,13 @@ func collectNotifications(epoch uint64) (types.NotificationsPerUserId, error) {
 	// The following functions will collect the notifications and add them to the
 	// notificationsByUserID map. The notifications will be queued and sent later
 	// by the notification sender process
+	err = collectGroupEfficiencyNotifications(notificationsByUserID, epoch)
+	if err != nil {
+		metrics.Errors.WithLabelValues("notifications_collect_group_efficiency").Inc()
+		return nil, fmt.Errorf("error collecting validator_group_efficiency notifications: %v", err)
+	}
+	log.Infof("collecting attestation & offline notifications took: %v", time.Since(start))
+
 	err = collectAttestationAndOfflineValidatorNotifications(notificationsByUserID, epoch)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_missed_attestation").Inc()
@@ -460,6 +469,157 @@ func collectUserDbNotifications(epoch uint64) (types.NotificationsPerUserId, err
 	return notificationsByUserID, nil
 }
 
+func collectGroupEfficiencyNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+	subMap, err := GetSubsForEventFilter("group_efficiency", "", nil, nil)
+	if err != nil {
+		return fmt.Errorf("error getting subscriptions for (missed) block proposals %w", err)
+	}
+
+	// create a lookup map for the dashboard & groups
+	type groupDetails struct {
+		Validators   []types.ValidatorIndex
+		Subscription *types.Subscription
+	}
+	dashboardMap := make(map[types.UserId]map[types.DashboardId]map[types.DashboardGroupId]*groupDetails)
+
+	for _, subs := range subMap {
+		for _, sub := range subs {
+			if sub.DashboardId == nil || sub.DashboardGroupId == nil {
+				continue
+			}
+			userId := *sub.UserID
+			dashboardId := types.DashboardId(*sub.DashboardId)
+			groupId := types.DashboardGroupId(*sub.DashboardGroupId)
+			if _, ok := dashboardMap[userId]; !ok {
+				dashboardMap[userId] = make(map[types.DashboardId]map[types.DashboardGroupId]*groupDetails)
+			}
+			if _, ok := dashboardMap[userId][dashboardId]; !ok {
+				dashboardMap[userId][dashboardId] = make(map[types.DashboardGroupId]*groupDetails)
+			}
+			if _, ok := dashboardMap[userId][dashboardId][groupId]; !ok {
+				dashboardMap[userId][dashboardId][groupId] = &groupDetails{
+					Validators: []types.ValidatorIndex{},
+				}
+			}
+			if sub.EventFilter != "" {
+				pubkeyDecoded, err := hex.DecodeString(sub.EventFilter)
+				if err != nil {
+					return fmt.Errorf("error decoding pubkey %v: %w", sub.EventFilter, err)
+				}
+				validatorIndex, err := GetIndexForPubkey(pubkeyDecoded)
+				if err != nil {
+					return fmt.Errorf("error getting validator index for pubkey %v: %w", sub.EventFilter, err)
+				}
+				dashboardMap[userId][dashboardId][groupId].Validators = append(dashboardMap[*sub.UserID][dashboardId][groupId].Validators, types.ValidatorIndex(validatorIndex))
+			}
+			dashboardMap[userId][dashboardId][groupId].Subscription = sub
+		}
+	}
+
+	type dbResult struct {
+		ValidatorIndex         uint64          `db:"validator_index"`
+		AttestationReward      decimal.Decimal `db:"attestations_reward"`
+		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
+		BlocksProposed         uint64          `db:"blocks_proposed"`
+		BlocksScheduled        uint64          `db:"blocks_scheduled"`
+		SyncExecuted           uint64          `db:"sync_executed"`
+		SyncScheduled          uint64          `db:"sync_scheduled"`
+	}
+
+	var queryResult []*dbResult
+	clickhouseTable := "validator_dashboard_data_epoch"
+	// retrieve efficiency data for the epoch
+	ds := goqu.Dialect("postgres").
+		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable))).
+		Select(
+			goqu.L("validator_index"),
+			goqu.L("COALESCE(r.attestations_reward, 0) AS attestations_reward"),
+			goqu.L("COALESCE(r.attestations_ideal_reward, 0) AS attestations_ideal_reward"),
+			goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
+			goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
+			goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
+			goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled")).
+		Where(goqu.L("r.epoch = ?", epoch))
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %v", err)
+	}
+
+	err = db.ClickHouseReader.Select(&queryResult, query, args...)
+	if err != nil {
+		return fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
+	}
+
+	efficiencyMap := make(map[types.ValidatorIndex]*dbResult)
+	for _, row := range queryResult {
+		efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)] = row
+	}
+
+	for userId, dashboards := range dashboardMap {
+		for dashboardId, groups := range dashboards {
+			for groupId, groupDetails := range groups {
+
+				attestationReward := decimal.Decimal{}
+				attestationIdealReward := decimal.Decimal{}
+				blocksProposed := uint64(0)
+				blocksScheduled := uint64(0)
+				syncExecuted := uint64(0)
+				syncScheduled := uint64(0)
+
+				for _, validatorIndex := range groupDetails.Validators {
+					if row, ok := efficiencyMap[validatorIndex]; ok {
+						attestationReward = attestationReward.Add(row.AttestationReward)
+						attestationIdealReward = attestationIdealReward.Add(row.AttestationIdealReward)
+						blocksProposed += row.BlocksProposed
+						blocksScheduled += row.BlocksScheduled
+						syncExecuted += row.SyncExecuted
+						syncScheduled += row.SyncScheduled
+					}
+				}
+
+				var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
+
+				if !attestationIdealReward.IsZero() {
+					attestationEfficiency.Float64 = attestationReward.Div(attestationIdealReward).InexactFloat64()
+					attestationEfficiency.Valid = true
+				}
+				if blocksScheduled > 0 {
+					proposerEfficiency.Float64 = float64(blocksProposed) / float64(blocksScheduled)
+					proposerEfficiency.Valid = true
+				}
+				if syncScheduled > 0 {
+					syncEfficiency.Float64 = float64(syncExecuted) / float64(syncScheduled)
+					syncEfficiency.Valid = true
+				}
+
+				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+
+				if efficiency < groupDetails.Subscription.EventThreshold {
+					log.Infof("creating group efficiency notification for user %v, dashboard %v, group %v in epoch %v", userId, dashboardId, groupId, epoch)
+					n := &ValidatorGroupEfficiencyNotification{
+						NotificationBaseImpl: types.NotificationBaseImpl{
+							SubscriptionID:     *groupDetails.Subscription.ID,
+							UserID:             *groupDetails.Subscription.UserID,
+							Epoch:              epoch,
+							EventName:          groupDetails.Subscription.EventName,
+							EventFilter:        "-",
+							DashboardId:        groupDetails.Subscription.DashboardId,
+							DashboardName:      groupDetails.Subscription.DashboardName,
+							DashboardGroupId:   groupDetails.Subscription.DashboardGroupId,
+							DashboardGroupName: groupDetails.Subscription.DashboardGroupName,
+						},
+						Threshold:  groupDetails.Subscription.EventThreshold,
+						Efficiency: efficiency,
+					}
+					notificationsByUserID.AddNotification(n)
+					metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
+				}
+			}
+		}
+	}
+
+	return nil
+}
 func collectBlockProposalNotifications(notificationsByUserID types.NotificationsPerUserId, status uint64, eventName types.EventName, epoch uint64) error {
 	type dbResult struct {
 		Proposer      uint64 `db:"proposer"`

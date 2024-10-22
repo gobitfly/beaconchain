@@ -90,7 +90,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	if err != nil {
 		return nil, nil, err
 	}
-	averageNetworkEfficiency := d.calculateTotalEfficiency(
+	averageNetworkEfficiency := utils.CalculateTotalEfficiency(
 		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -366,7 +366,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			syncEfficiency.Float64 = float64(queryEntry.SyncExecuted) / float64(queryEntry.SyncScheduled)
 			syncEfficiency.Valid = true
 		}
-		resultEntry.Efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+		resultEntry.Efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 		// Add the duties info to the total
 		total.AttestationReward = total.AttestationReward.Add(queryEntry.AttestationReward)
@@ -486,7 +486,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			totalSyncEfficiency.Float64 = float64(total.SyncExecuted) / float64(total.SyncScheduled)
 			totalSyncEfficiency.Valid = true
 		}
-		totalEntry.Efficiency = d.calculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
+		totalEntry.Efficiency = utils.CalculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
 
 		result = append([]t.VDBSummaryTableRow{totalEntry}, result...)
 	}
