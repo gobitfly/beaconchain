@@ -59,7 +59,6 @@ func (e EventResponse) FinalizedCheckpoint() (*StandardFinalizedCheckpointRespon
 	return utils.UnmarshalOld[StandardFinalizedCheckpointResponse](e.Data, e.Error)
 }
 
-// easyjson:json
 type StandardEventHeadResponse struct {
 	Slot                      uint64        `json:"slot,string"`
 	Block                     string        `json:"block"`
@@ -70,14 +69,12 @@ type StandardEventHeadResponse struct {
 	ExecutionOptimistic       bool          `json:"execution_optimistic"`
 }
 
-// easyjson:json
 type StandardEventBlockResponse struct {
 	Slot                uint64        `json:"slot,string"`
 	Block               hexutil.Bytes `json:"block"`
 	ExecutionOptimistic bool          `json:"execution_optimistic"`
 }
 
-// easyjson:json
 type StandardEventChainReorg struct {
 	Slot                uint64        `json:"slot,string"`
 	Depth               uint64        `json:"depth,string"`
@@ -89,7 +86,6 @@ type StandardEventChainReorg struct {
 	ExecutionOptimistic bool          `json:"execution_optimistic"`
 }
 
-// easyjson:json
 type StandardFinalizedCheckpointResponse struct {
 	Block               hexutil.Bytes `json:"block"`
 	State               hexutil.Bytes `json:"state"`

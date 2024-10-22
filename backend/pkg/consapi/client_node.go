@@ -2,10 +2,8 @@ package consapi
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -24,8 +22,8 @@ func NewClientWithConfig(endpoint string, httpClient *http.Client) Client {
 	if httpClient == nil {
 		tr := &http.Transport{}
 		tr.ResponseHeaderTimeout = 60 * time.Second
-		//tr.TLSHandshakeTimeout = 30 * time.Second
-		tr.DisableCompression = false
+		tr.TLSHandshakeTimeout = 30 * time.Second
+		tr.DisableCompression = false // we want compression if we can get it. json is very compressible
 		gztr := gzhttp.Transport(tr, gzhttp.TransportEnableZstd(false))
 
 		httpClient = &http.Client{
@@ -104,48 +102,6 @@ func (r *NodeClient) GetValidators(state any, ids []string, status []types.Valid
 		statusStr := strings.Join(utils.ConvertToStringSlice(status), ",")
 		requestURL += fmt.Sprintf("status=%s", statusStr)
 	}
-	/*
-		// check if previously cached in tmp directory using gob
-		// generate sha256 hash of requestURL
-		hash := sha256.New()
-		hash.Write([]byte(requestURL))
-		// check if file exist
-		f, err := os.Open(fmt.Sprintf("/tmp/%x", hash.Sum(nil)))
-		resRaw := types.StandardValidatorsResponse{}
-		res := &resRaw
-		if err != nil {
-			// if file does not exist, make request
-			res, err = network.Get[types.StandardValidatorsResponse](r.httpClient, requestURL)
-			if err != nil {
-				return nil, err
-			}
-			// save response to file
-			// create file
-			f, err = os.Create(fmt.Sprintf("/tmp/%x", hash.Sum(nil)))
-			if err != nil {
-				return nil, err
-			}
-			// encode response
-			enc := gob.NewEncoder(f)
-			err = enc.Encode(res)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			// if file exist, decode response
-			dec := gob.NewDecoder(f)
-			err = dec.Decode(&res)
-			if err != nil {
-				return nil, err
-			}
-		}
-		// close file
-		err = f.Close()
-		if err != nil {
-			return nil, err
-		}
-		// return response
-	*/
 	return network.Get[types.StandardValidatorsResponse](r.httpClient, requestURL)
 }
 
@@ -171,48 +127,6 @@ func (r *NodeClient) GetSyncRewards(blockID any) (*types.StandardSyncCommitteeRe
 
 func (r *NodeClient) GetAttestationRewards(epoch uint64) (*types.StandardAttestationRewardsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/attestations/%v", r.Endpoint, epoch)
-	/*
-		// check if previously cached in tmp directory using gob
-		// generate sha256 hash of requestURL
-		hash := sha256.New()
-		hash.Write([]byte(requestURL))
-		// check if file exist
-		f, err := os.Open(fmt.Sprintf("/tmp/%x", hash.Sum(nil)))
-		resRaw := types.StandardAttestationRewardsResponse{}
-		res := &resRaw
-		if err != nil {
-			// if file does not exist, make request
-			res, err = network.Post[types.StandardAttestationRewardsResponse](r.httpClient, requestURL)
-			if err != nil {
-				return nil, err
-			}
-			// save response to file
-			// create file
-			f, err = os.Create(fmt.Sprintf("/tmp/%x", hash.Sum(nil)))
-			if err != nil {
-				return nil, err
-			}
-			// encode response
-			enc := gob.NewEncoder(f)
-			err = enc.Encode(res)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			// if file exist, decode response
-			dec := gob.NewDecoder(f)
-			err = dec.Decode(&res)
-			if err != nil {
-				return nil, err
-			}
-		}
-		// close file
-		err = f.Close()
-		if err != nil {
-			return nil, err
-		}
-		// return response
-	*/
 	return network.Post[types.StandardAttestationRewardsResponse](r.httpClient, requestURL)
 }
 
@@ -263,7 +177,7 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 			},
 		}
 		stream, err := eventsource.SubscribeWith(requestURL, client, request)
-		stream.Logger = log.New(os.Stderr, "eventsource: ", log.LstdFlags)
+		//stream.Logger = log.New(os.Stdout, "eventsource: ", log.LstdFlags)
 
 		if err != nil {
 			responseCh <- &types.EventResponse{Error: err}
@@ -275,10 +189,8 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 			select {
 			// It is important to register to Errors, otherwise the stream does not reconnect if the connection was lost
 			case err := <-stream.Errors:
-				stream.Logger.Println("EventSource error:", err)
 				responseCh <- &types.EventResponse{Error: err}
 			case e := <-stream.Events:
-				stream.Logger.Println("EventSource event:", e.Event(), e.Data())
 				var response types.EventResponse
 				response.Data = []byte(e.Data())
 				response.Event = types.EventTopic(e.Event())

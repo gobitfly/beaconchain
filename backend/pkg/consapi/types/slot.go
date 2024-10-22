@@ -14,29 +14,32 @@ type AnySignedBlock struct {
 	Message struct {
 		Slot          uint64        `json:"slot,string"`
 		ProposerIndex uint64        `json:"proposer_index,string"`
-		ParentRoot    hexutil.Bytes `json:"parent_root"` // drop, not used
-		StateRoot     hexutil.Bytes `json:"state_root"`  // drop, not used
+		ParentRoot    hexutil.Bytes `json:"parent_root"`
+		StateRoot     hexutil.Bytes `json:"state_root"`
 		Body          struct {
-			RandaoReveal      hexutil.Bytes      `json:"randao_reveal"` // drop, not used
-			Eth1Data          Eth1Data           `json:"eth1_data"`     // drop, not used
-			Graffiti          hexutil.Bytes      `json:"graffiti"`      // drop, not used
+			RandaoReveal      hexutil.Bytes      `json:"randao_reveal"`
+			Eth1Data          Eth1Data           `json:"eth1_data"`
+			Graffiti          hexutil.Bytes      `json:"graffiti"`
 			ProposerSlashings []ProposerSlashing `json:"proposer_slashings"`
 			AttesterSlashings []AttesterSlashing `json:"attester_slashings"`
 			Attestations      []Attestation      `json:"attestations"`
 			Deposits          []Deposit          `json:"deposits"`
-			VoluntaryExits    []VoluntaryExit    `json:"voluntary_exits"` // drop, not used
+			VoluntaryExits    []VoluntaryExit    `json:"voluntary_exits"`
 
-			SyncAggregate *SyncAggregate `json:"sync_aggregate,omitempty"` // drop, not used
+			// not present in phase0 blocks
+			SyncAggregate *SyncAggregate `json:"sync_aggregate,omitempty"`
 
+			// not present in phase0/altair blocks
 			ExecutionPayload *ExecutionPayload `json:"execution_payload"`
 
-			SignedBLSToExecutionChange []*SignedBLSToExecutionChange `json:"bls_to_execution_changes"` // drop, not used
+			// present only after capella
+			SignedBLSToExecutionChange []*SignedBLSToExecutionChange `json:"bls_to_execution_changes"`
 
 			// present only after deneb
-			BlobKZGCommitments []hexutil.Bytes `json:"blob_kzg_commitments"` // drop, not used
+			BlobKZGCommitments []hexutil.Bytes `json:"blob_kzg_commitments"`
 		} `json:"body"`
 	} `json:"message"`
-	Signature hexutil.Bytes `json:"signature"` // drop, not used
+	Signature hexutil.Bytes `json:"signature"`
 }
 
 type LightAnySignedBlock struct {
@@ -197,7 +200,7 @@ type ExecutionPayload struct {
 	BlockHash     hexutil.Bytes   `json:"block_hash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	// present only after capella
-	Withdrawals []WithdrawalPayload `json:"withdrawals"` // only thing used
+	Withdrawals []WithdrawalPayload `json:"withdrawals"`
 	// present only after deneb
 	BlobGasUsed   uint64 `json:"blob_gas_used,string"`
 	ExcessBlobGas uint64 `json:"excess_blob_gas,string"`

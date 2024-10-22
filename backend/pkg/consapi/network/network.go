@@ -96,11 +96,6 @@ func HTTPReq(method string, requestURL string, httpClient *http.Client) (*http.R
 			Body:       body,
 		}
 	}
-	/*
-		if !res.Uncompressed {
-			log.Warnf("HTTP response not compressed: %s", requestURL)
-		}
-	*/
 
 	return res, nil
 }

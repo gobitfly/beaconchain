@@ -4,8 +4,8 @@ import "github.com/shopspring/decimal"
 
 // /eth/v1/beacon/rewards/attestations/{epoch}
 type StandardAttestationRewardsResponse struct {
-	//ExecutionOptimistic bool `json:"execution_optimistic"`
-	//Finalized           bool `json:"finalized"`
+	ExecutionOptimistic bool `json:"execution_optimistic"`
+	Finalized           bool `json:"finalized"`
 	Data                struct {
 		IdealRewards []AttestationIdealReward `json:"ideal_rewards"`
 		TotalRewards []AttestationReward      `json:"total_rewards"`
