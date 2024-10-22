@@ -2345,7 +2345,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		return
 	}
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	name := v.checkNameNotEmpty(req.Name)
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -2386,7 +2386,7 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 		return
 	}
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
