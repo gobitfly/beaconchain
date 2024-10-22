@@ -91,6 +91,7 @@ const copyText = async () => {
   position: relative;
   summary {
     list-style: none;
+    cursor: pointer;
   }
   summary::-webkit-details-marker{
     display: none;

@@ -6,6 +6,7 @@ import {
   faCube,
   faFileSignature,
   faGlobe,
+  faMoneyBill,
   faPowerOff,
   faRocket,
   faUserSlash,
@@ -239,7 +240,7 @@ const formatValueWei = (value: string) => {
         </template>
         <template #headingIcon>
           <FontAwesomeIcon
-            :icon="faFileSignature"
+            :icon="faMoneyBill"
             class="notifications-dashboard-dialog-entity__icon__green"
           />
         </template>
