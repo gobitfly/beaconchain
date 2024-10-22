@@ -68,8 +68,7 @@ const (
 	ValidatorMissedProposalEventName   EventName = "validator_proposal_missed"
 	ValidatorExecutedProposalEventName EventName = "validator_proposal_submitted"
 
-	ValidatorDidSlashEventName       EventName = "validator_did_slash"
-	ValidatorGroupIsOfflineEventName EventName = "validator_group_is_offline"
+	ValidatorDidSlashEventName EventName = "validator_did_slash"
 
 	ValidatorReceivedDepositEventName               EventName = "validator_received_deposit"
 	NetworkSlashingEventName                        EventName = "network_slashing"
@@ -86,7 +85,6 @@ const (
 	// Validator dashboard events
 	ValidatorIsOfflineEventName             EventName = "validator_is_offline"
 	ValidatorIsOnlineEventName              EventName = "validator_is_online"
-	GroupIsOfflineEventName                 EventName = "group_is_offline" // TODO @BACKEND TEAM: probably remove this and all relevant code
 	ValidatorGroupEfficiencyEventName       EventName = "validator_group_efficiency"
 	ValidatorMissedAttestationEventName     EventName = "validator_attestation_missed"
 	ValidatorProposalEventName              EventName = "validator_proposal"

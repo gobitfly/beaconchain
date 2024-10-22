@@ -559,19 +559,6 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 					continue
 				}
 				notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
-			case types.ValidatorGroupIsOfflineEventName:
-				// TODO type / collection not present yet, skipping
-				/*curNotification, ok := not.(*notification.validatorGroupIsOfflineNotification)
-				if !ok {
-					return nil, fmt.Errorf("failed to cast notification to validatorGroupIsOfflineNotification")
-				}
-				if curNotification.Status == 0 {
-					notificationDetails.GroupOffline = ...
-					notificationDetails.GroupOfflineReminder = ...
-				} else {
-					notificationDetails.GroupBackOnline = ...
-				}
-				*/
 			case types.ValidatorReceivedWithdrawalEventName:
 				curNotification, ok := notification.(*n.ValidatorWithdrawalNotification)
 				if !ok {
@@ -1869,7 +1856,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 			switch eventName {
 			case types.ValidatorIsOfflineEventName:
 				settings.IsValidatorOfflineSubscribed = true
-			case types.GroupIsOfflineEventName:
+			case types.ValidatorGroupEfficiencyEventName:
 				settings.IsGroupEfficiencyBelowSubscribed = true
 				settings.GroupEfficiencyBelowThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
