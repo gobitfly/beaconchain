@@ -54,7 +54,9 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		goqu.C("event_name"),
 	).Join(goqu.T("users"), goqu.On(goqu.T("users").Col("id").Eq(goqu.T("users_subscriptions").Col("user_id")))).
 		Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery)).
-		Where(goqu.L("(users.notifications_do_not_disturb_ts IS NULL OR users.notifications_do_not_disturb_ts < NOW())"))
+		Where(goqu.L("(users.notifications_do_not_disturb_ts IS NULL OR users.notifications_do_not_disturb_ts < NOW())")).
+		// filter out users that have all notification channels disabled
+		Where(goqu.L("(select bool_or(active) from users_notification_channels where users_notification_channels.user_id = users_subscriptions.user_id)"))
 
 	if lastSentFilter != "" {
 		if len(lastSentFilterArgs) > 0 {
@@ -82,6 +84,8 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 
 	dashboardConfigsToFetch := make([]types.DashboardId, 0)
 	for _, sub := range subs {
+		// sub.LastEpoch = &zero
+		// sub.LastSent = &time.Time{}
 		sub.EventName = types.EventName(strings.Replace(string(sub.EventName), utils.GetNetwork()+":", "", 1)) // remove the network name from the event name
 		if strings.HasPrefix(sub.EventFilter, "vdb:") {
 			dashboardData := strings.Split(sub.EventFilter, ":")

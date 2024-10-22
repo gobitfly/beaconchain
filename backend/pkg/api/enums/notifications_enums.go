@@ -166,7 +166,7 @@ func (NotificationClientsColumn) NewFromString(s string) NotificationClientsColu
 func (c NotificationClientsColumn) ToString() string {
 	switch c {
 	case NotificationClientName:
-		return "client_name"
+		return "client"
 	case NotificationClientTimestamp:
 		return "epoch"
 	default:

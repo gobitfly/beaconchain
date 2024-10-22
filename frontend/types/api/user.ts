@@ -6,6 +6,7 @@ import type { ApiDataResponse, ChartHistorySeconds } from './common'
 // source: user.go
 
 export const UserGroupAdmin = "ADMIN";
+export const UserGroupDev = "DEV";
 export interface UserInfo {
   id: number /* uint64 */;
   email: string;

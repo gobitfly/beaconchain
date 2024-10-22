@@ -5,7 +5,6 @@ import IconValidator from '../icon/IconValidator.vue'
 import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import type { ChainIDs } from '~/types/network'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
 import { NotificationsDashboardDialogEntity } from '#components'
@@ -29,8 +28,6 @@ const {
   setPageSize,
   setSearch,
 } = useNotificationsDashboardStore(networkId)
-
-const { getDashboardLabel } = useUserDashboardStore()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -172,10 +169,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
                 <NotificationsDashboardsTableItemDashboard
                   :type="getDashboardType(slotProps.data.is_account_dashboard)"
                   :dashboard-id="slotProps.data.dashboard_id"
-                  :dashboard-name="getDashboardLabel(
-                    `${slotProps.data.dashboard_id}`,
-                    getDashboardType(slotProps.data.is_account_dashboard),
-                  )"
+                  :dashboard-name="slotProps.data.dashboard_name"
                 />
               </template>
             </Column>
@@ -256,10 +250,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
                 <NotificationsDashboardsTableItemDashboard
                   :type="getDashboardType(slotProps.data.is_account_dashboard)"
                   :dashboard-id="slotProps.data.dashboard_id"
-                  :dashboard-name="getDashboardLabel(
-                    `${slotProps.data.dashboard_id}`,
-                    getDashboardType(slotProps.data.is_account_dashboard),
-                  )"
+                  :dashboard-name="slotProps.data.dashboard_name"
                 />
                 <div class="label-group">
                   {{ $t("notifications.dashboards.expansion.label_group") }}
@@ -278,7 +269,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
               </div>
             </template>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!notificationsDashboards?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
@@ -306,14 +297,18 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
 
                   }}
                 </div>
-                <div>
-                  {{
-                    $t(
-                      "notifications.dashboards.footer.subscriptions.accounts",
-                      { count: overview?.adb_subscriptions_count })
+                <BcFeatureFlag
+                  feature="feature-account_dashboards"
+                >
+                  <div>
+                    {{
+                      $t(
+                        "notifications.dashboards.footer.subscriptions.accounts",
+                        { count: overview?.adb_subscriptions_count })
 
-                  }}
-                </div>
+                    }}
+                  </div>
+                </BcFeatureFlag>
               </template>
             </template>
           </BcTable>

@@ -4,7 +4,7 @@ export type SortOrder = -1 | 0 | 1 | null | undefined
 
 export type TableQueryParams = {
   cursor?: Cursor,
-  isMocked?: boolean,
+  is_mocked?: boolean,
   limit?: number,
   order?: ColumnOrder,
   search?: string,
