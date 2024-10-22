@@ -1760,7 +1760,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				g.name AS group_name,
 				d.network,
 				g.webhook_target,
-				(g.webhook_format = $1) AS discord_webhook,
+				(g.webhook_format = $1) AS discord_webhook
 			FROM users_val_dashboards d
 			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
 			WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
@@ -2146,7 +2146,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 		UPDATE users_val_dashboards_groups 
 		SET 
 			webhook_target = NULLIF($1, ''),
-			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
+			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END
 		WHERE dashboard_id = $4 AND id = $5`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, dashboardId, groupId)
 	if err != nil {
 		return err
