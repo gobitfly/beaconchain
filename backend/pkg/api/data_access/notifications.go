@@ -81,8 +81,6 @@ const (
 	ValidatorDashboardEventPrefix string = "vdb"
 	AccountDashboardEventPrefix   string = "adb"
 
-	DiscordWebhookFormat string = "discord"
-
 	GroupOfflineThresholdDefault             float64 = 0.1
 	MaxCollateralThresholdDefault            float64 = 1.0
 	MinCollateralThresholdDefault            float64 = 0.2
@@ -1765,14 +1763,14 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// -------------------------------------
 	// Get the validator dashboards
 	valDashboards := []struct {
-		DashboardId             uint64         `db:"dashboard_id"`
-		DashboardName           string         `db:"dashboard_name"`
-		GroupId                 uint64         `db:"group_id"`
-		GroupName               string         `db:"group_name"`
-		Network                 uint64         `db:"network"`
-		WebhookUrl              sql.NullString `db:"webhook_target"`
-		IsWebhookDiscordEnabled sql.NullBool   `db:"discord_webhook"`
-		IsRealTimeModeEnabled   sql.NullBool   `db:"realtime_notifications"`
+		DashboardId           uint64         `db:"dashboard_id"`
+		DashboardName         string         `db:"dashboard_name"`
+		GroupId               uint64         `db:"group_id"`
+		GroupName             string         `db:"group_name"`
+		Network               uint64         `db:"network"`
+		WebhookUrl            sql.NullString `db:"webhook_target"`
+		WebhookFormat         sql.NullString `db:"webhook_format"`
+		IsRealTimeModeEnabled sql.NullBool   `db:"realtime_notifications"`
 	}{}
 	wg.Go(func() error {
 		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
@@ -1783,11 +1781,11 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				g.name AS group_name,
 				d.network,
 				g.webhook_target,
-				(g.webhook_format = $1) AS discord_webhook,
+				g.webhook_format,
 				g.realtime_notifications
 			FROM users_val_dashboards d
 			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
-			WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
+			WHERE d.user_id = $1`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
 		}
@@ -1803,7 +1801,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		GroupId                         uint64         `db:"group_id"`
 		GroupName                       string         `db:"group_name"`
 		WebhookUrl                      sql.NullString `db:"webhook_target"`
-		IsWebhookDiscordEnabled         sql.NullBool   `db:"discord_webhook"`
+		WebhookFormat                   sql.NullString `db:"webhook_format"`
 		IsIgnoreSpamTransactionsEnabled bool           `db:"ignore_spam_transactions"`
 		SubscribedChainIds              []uint64       `db:"subscribed_chain_ids"`
 	}{}
@@ -1816,12 +1814,12 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// 			g.id AS group_id,
 	// 			g.name AS group_name,
 	// 			g.webhook_target,
-	// 			(g.webhook_format = $1) AS discord_webhook,
+	// 			g.webhook_format,
 	// 			g.ignore_spam_transactions,
 	// 			g.subscribed_chain_ids
 	// 		FROM users_acc_dashboards d
 	// 		INNER JOIN users_acc_dashboards_groups g ON d.id = g.dashboard_id
-	// 		WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
+	// 		WHERE d.user_id = $1`, userId)
 	// 	if err != nil {
 	// 		return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
 	// 	}
@@ -1944,7 +1942,8 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		// Set the settings
 		if valSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
 			valSettings.WebhookUrl = valDashboard.WebhookUrl.String
-			valSettings.IsWebhookDiscordEnabled = valDashboard.IsWebhookDiscordEnabled.Bool
+			valSettings.IsWebhookDiscordEnabled = valDashboard.WebhookFormat.Valid &&
+				types.NotificationChannel(valDashboard.WebhookFormat.String) == types.WebhookDiscordNotificationChannel
 			valSettings.IsRealTimeModeEnabled = valDashboard.IsRealTimeModeEnabled.Bool
 		}
 	}
@@ -1972,7 +1971,8 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		// Set the settings
 		if accSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsAccountDashboard); ok {
 			accSettings.WebhookUrl = accDashboard.WebhookUrl.String
-			accSettings.IsWebhookDiscordEnabled = accDashboard.IsWebhookDiscordEnabled.Bool
+			accSettings.IsWebhookDiscordEnabled = accDashboard.WebhookFormat.Valid &&
+				types.NotificationChannel(accDashboard.WebhookFormat.String) == types.WebhookDiscordNotificationChannel
 			accSettings.IsIgnoreSpamTransactionsEnabled = accDashboard.IsIgnoreSpamTransactionsEnabled
 			accSettings.SubscribedChainIds = accDashboard.SubscribedChainIds
 		}
@@ -2167,13 +2167,22 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	}
 
 	// Set non-event settings
+	var webhookFormat sql.NullString
+	if settings.WebhookUrl != "" {
+		webhookFormat.String = string(types.WebhookNotificationChannel)
+		webhookFormat.Valid = true
+		if settings.IsWebhookDiscordEnabled {
+			webhookFormat.String = string(types.WebhookDiscordNotificationChannel)
+		}
+	}
+
 	_, err = d.alloyWriter.ExecContext(ctx, `
 		UPDATE users_val_dashboards_groups 
 		SET 
 			webhook_target = NULLIF($1, ''),
-			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
-			realtime_notifications = CASE WHEN $4 THEN TRUE ELSE NULL END
-		WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsRealTimeModeEnabled, dashboardId, groupId)
+			webhook_format = $2,
+			realtime_notifications = CASE WHEN $3 THEN TRUE ELSE NULL END
+		WHERE dashboard_id = $4 AND id = $5`, settings.WebhookUrl, webhookFormat, settings.IsRealTimeModeEnabled, dashboardId, groupId)
 	if err != nil {
 		return err
 	}
@@ -2247,14 +2256,23 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 	// }
 
 	// // Set non-event settings
+	// var webhookFormat sql.NullString
+	// if settings.WebhookUrl != "" {
+	// 	webhookFormat.String = string(types.WebhookNotificationChannel)
+	// 	webhookFormat.Valid = true
+	// 	if settings.IsWebhookDiscordEnabled {
+	// 		webhookFormat.String = string(types.WebhookDiscordNotificationChannel)
+	// 	}
+	// }
+
 	// _, err = d.alloyWriter.ExecContext(ctx, `
 	// 	UPDATE users_acc_dashboards_groups
 	// 	SET
 	// 		webhook_target = NULLIF($1, ''),
-	// 		webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
-	// 		ignore_spam_transactions = $4,
-	// 		subscribed_chain_ids = $5
-	// 	WHERE dashboard_id = $6 AND id = $7`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
+	// 		webhook_format = $2,
+	// 		ignore_spam_transactions = $3,
+	// 		subscribed_chain_ids = $4
+	// 	WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, webhookFormat, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
 	// if err != nil {
 	// 	return err
 	// }
