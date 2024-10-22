@@ -230,55 +230,35 @@ func (n *ValidatorIsOnlineNotification) GetLegacyTitle() string {
 	return "Validator Back Online"
 }
 
-// type validatorGroupIsOfflineNotification struct {
-// 	types.NotificationBaseImpl
+type ValidatorGroupEfficiencyNotification struct {
+	types.NotificationBaseImpl
 
-// 	IsOffline bool
-// }
+	Threshold  float64
+	Efficiency float64
+}
 
-// func (n *validatorGroupIsOfflineNotification) GetEntitiyId() string {
-// 	return fmt.Sprintf("%s - %s", n.GetDashboardName(), n.GetDashboardGroupName())
-// }
+func (n *ValidatorGroupEfficiencyNotification) GetEntitiyId() string {
+	return fmt.Sprintf("%s - %s", n.GetDashboardName(), n.GetDashboardGroupName())
+}
 
-// // Overwrite specific methods
-// func (n *validatorGroupIsOfflineNotification) GetInfo(format types.NotificationFormat) string {
-// 	epoch := ""
-// 	if n.IsOffline {
-// 		epoch = formatEpochLink(format, n.LatestState)
-// 	} else {
-// 		epoch = formatEpochLink(format, n.Epoch)
-// 	}
+// Overwrite specific methods
+func (n *ValidatorGroupEfficiencyNotification) GetInfo(format types.NotificationFormat) string {
+	dashboardAndGroupInfo := formatDashboardAndGroupLink(format, n)
+	epoch := formatEpochLink(format, n.Epoch)
+	return fmt.Sprintf(`%s%s efficiency of %.2f is below the threhold of %.2f in epoch %s.`, dashboardAndGroupInfo, n.Efficiency, n.Threshold epoch)
+}
 
-// 	if n.IsOffline {
-// 		return fmt.Sprintf(`Group %s is offline since epoch %s.`, n.DashboardGroupName, epoch)
-// 	} else {
-// 		return fmt.Sprintf(`Group %s is back online since epoch %v.`, n.DashboardGroupName, epoch)
-// 	}
-// }
+func (n *ValidatorGroupEfficiencyNotification) GetTitle() string {
+	return "Low group efficiency"
+}
 
-// func (n *validatorGroupIsOfflineNotification) GetTitle() string {
-// 	if n.IsOffline {
-// 		return "Group is offline"
-// 	} else {
-// 		return "Group is back online"
-// 	}
-// }
+func (n *ValidatorGroupEfficiencyNotification) GetLegacyInfo() string {
+	return n.GetInfo(types.NotifciationFormatText)
+}
 
-// func (n *validatorGroupIsOfflineNotification) GetLegacyInfo() string {
-// 	if n.IsOffline {
-// 		return fmt.Sprintf(`Group %s is offline since epoch %s.`, n.DashboardGroupName, n.LatestState)
-// 	} else {
-// 		return fmt.Sprintf(`Group %s is back online since epoch %v.`, n.DashboardGroupName, n.Epoch)
-// 	}
-// }
-
-// func (n *validatorGroupIsOfflineNotification) GetLegacyTitle() string {
-// 	if n.IsOffline {
-// 		return "Group is offline"
-// 	} else {
-// 		return "Group is back online"
-// 	}
-// }
+func (n *ValidatorGroupEfficiencyNotification) GetLegacyTitle() string {
+	return n.GetTitle()
+}
 
 type ValidatorAttestationNotification struct {
 	types.NotificationBaseImpl
