@@ -134,8 +134,7 @@ type PremiumPerks struct {
 	MonitorMachines                                uint64              `json:"monitor_machines"`
 	MachineMonitoringHistorySeconds                uint64              `json:"machine_monitoring_history_seconds"`
 	NotificationsMachineCustomThreshold            bool                `json:"notifications_machine_custom_threshold"`
-	NotificationsValidatorDashboardRealTimeMode    bool                `json:"notifications_validator_dashboard_real_time_mode"`
-	NotificationsValidatorDashboardGroupEfficiency bool                `json:"notifications_validator_dashboard_group_offline"`
+	NotificationsValidatorDashboardGroupEfficiency bool                `json:"notifications_validator_dashboard_group_efficiency"`
 }
 
 // TODO @patrick post-beta StripeCreateCheckoutSession and StripeCustomerPortal are currently served from v1 (loadbalanced), Once V1 is not affected by this anymore, consider wrapping this with ApiDataResponse
