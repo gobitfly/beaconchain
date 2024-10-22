@@ -92,7 +92,6 @@ export default defineNuxtConfig({
       isApiMocked: '',
       legacyApiClient: process.env.PUBLIC_LEGACY_API_CLIENT,
       logFile: '',
-      logIp: '',
       maintenanceTS: '',
       showInDevelopment: '',
       stripeBaseUrl: process.env.PUBLIC_STRIPE_BASE_URL,
