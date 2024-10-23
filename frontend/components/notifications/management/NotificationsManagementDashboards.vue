@@ -103,9 +103,6 @@ const wrappedDashboards: ComputedRef<
     if (settingsValidatorDashboard.is_validator_offline_subscribed) {
       result.push($t('notifications.subscriptions.validators.validator_is_offline.label'))
     }
-    if (settingsValidatorDashboard.is_group_offline_subscribed) {
-      result.push($t('notifications.subscriptions.validators.group_is_offline.label'))
-    }
     if (settingsValidatorDashboard.is_attestations_missed_subscribed) {
       result.push($t('notifications.subscriptions.validators.attestation_missed.label'))
     }
@@ -127,11 +124,11 @@ const wrappedDashboards: ComputedRef<
     if (settingsValidatorDashboard.is_min_collateral_subscribed) {
       result.push($t('notifications.subscriptions.validators.min_collateral_reached.label'))
     }
+    if (settingsValidatorDashboard.is_group_efficiency_below_subscribed) {
+      result.push($t('notifications.subscriptions.accounts.group_efficiency.label'))
+    }
     if (settingsValidatorDashboard.is_max_collateral_subscribed) {
       result.push($t('notifications.subscriptions.validators.max_collateral_reached.label'))
-    }
-    if (settingsValidatorDashboard.is_real_time_mode_enabled) {
-      result.push($t('notifications.subscriptions.validators.real_time_mode.label'))
     }
     return result
   }

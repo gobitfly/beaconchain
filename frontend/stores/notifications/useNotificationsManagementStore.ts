@@ -44,7 +44,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
     )
   }
 
-  const removeDevice = async (id: string) => {
+  const removeDevice = async (id: number) => {
     await fetch(
       API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE,
       {},
@@ -61,7 +61,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
     id,
     value,
   }: {
-    id: string,
+    id: number,
     value: boolean,
   }) => {
     await fetch<InternalPutUserNotificationSettingsPairedDevicesResponse>(

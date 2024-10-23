@@ -2346,7 +2346,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		return
 	}
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	name := v.checkNameNotEmpty(req.Name)
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -2387,7 +2387,7 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 		return
 	}
 	// TODO use a better way to validate the paired device id
-	pairedDeviceId := v.checkRegex(reNonEmpty, mux.Vars(r)["paired_device_id"], "paired_device_id")
+	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -2496,12 +2496,9 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 			handleErr(w, r, errors.New("invalid settings type"))
 			return
 		}
-		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && settings.IsGroupOfflineSubscribed {
-			settings.IsGroupOfflineSubscribed = false
-			settings.GroupOfflineThreshold = defaultSettings.GroupOfflineThreshold
-		}
-		if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && settings.IsRealTimeModeEnabled {
-			settings.IsRealTimeModeEnabled = false
+		if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupEfficiency && settings.IsGroupEfficiencyBelowSubscribed {
+			settings.IsGroupEfficiencyBelowSubscribed = false
+			settings.GroupEfficiencyBelowThreshold = defaultSettings.GroupEfficiencyBelowThreshold
 		}
 		data[i].Settings = settings
 	}
@@ -2538,7 +2535,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, err)
 		return
 	}
-	checkMinMax(&v, req.GroupOfflineThreshold, 0, 1, "group_offline_threshold")
+	checkMinMax(&v, req.GroupEfficiencyBelowThreshold, 0, 1, "group_offline_threshold")
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
@@ -2554,12 +2551,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, err)
 		return
 	}
-	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupOffline && req.IsGroupOfflineSubscribed {
-		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group offline"))
-		return
-	}
-	if !userInfo.PremiumPerks.NotificationsValidatorDashboardRealTimeMode && req.IsRealTimeModeEnabled {
-		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe real time mode"))
+	if !userInfo.PremiumPerks.NotificationsValidatorDashboardGroupEfficiency && req.IsGroupEfficiencyBelowSubscribed {
+		returnForbidden(w, r, errors.New("user does not have premium perks to subscribe group efficiency event"))
 		return
 	}
 
@@ -2656,7 +2649,16 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 //	@Success		204
 //	@Router			/users/me/notifications/test-email [post]
 func (h *HandlerService) PublicPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	err = h.getDataAccessor(r).QueueTestEmailNotification(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 
@@ -2669,7 +2671,16 @@ func (h *HandlerService) PublicPostUserNotificationsTestEmail(w http.ResponseWri
 //	@Success		204
 //	@Router			/users/me/notifications/test-push [post]
 func (h *HandlerService) PublicPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	err = h.getDataAccessor(r).QueueTestPushNotification(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 
@@ -2686,6 +2697,11 @@ func (h *HandlerService) PublicPostUserNotificationsTestPush(w http.ResponseWrit
 //	@Router			/users/me/notifications/test-webhook [post]
 func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	type request struct {
 		WebhookUrl              string `json:"webhook_url"`
 		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
@@ -2699,7 +2715,11 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 		handleErr(w, r, v)
 		return
 	}
-	// TODO
+	err = h.getDataAccessor(r).QueueTestWebhookNotification(r.Context(), userId, req.WebhookUrl, req.IsDiscordWebhookEnabled)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 

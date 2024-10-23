@@ -72,7 +72,7 @@ func GetIndexForPubkey(pubkey []byte) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		log.Infof("serving index %d for validator %x from db", index, pubkey)
+		// log.Infof("serving index %d for validator %x from db", index, pubkey)
 		return index, nil
 	} else if err != nil {
 		return 0, err
