@@ -17,7 +17,6 @@ var day time.Duration = time.Hour * 24
 var sessionDuration time.Duration = day * 365
 
 func newSessionManager(cfg *types.Config) *scs.SessionManager {
-	// TODO: replace redis with user db down the line (or replace sessions with oauth2)
 	pool := &redis.Pool{
 		MaxIdle: 10,
 		Dial: func() (redis.Conn, error) {
