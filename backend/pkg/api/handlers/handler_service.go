@@ -315,11 +315,17 @@ func returnGone(w http.ResponseWriter, r *http.Request, err error) {
 const maxBodySize = 10 * 1024
 
 func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...log.Fields) {
-	body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
 	requestFields := log.Fields{
 		"request_endpoint": r.Method + " " + r.URL.Path,
-		"request_query":    r.URL.RawQuery,
-		"request_body":     string(body),
+	}
+	if len(r.URL.RawQuery) > 0 {
+		requestFields["request_query"] = r.URL.RawQuery
+	}
+	if body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize)); len(body) > 0 {
+		requestFields["request_body"] = string(body)
+	}
+	if userId, _ := GetUserIdByContext(r); userId != 0 {
+		requestFields["request_user_id"] = userId
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
 }
