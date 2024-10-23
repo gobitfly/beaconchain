@@ -43,22 +43,22 @@ var (
 )
 
 var searchEnumsRegexMapping = map[enums.SearchType]*regexp.Regexp{
-	enums.Name:                 reName,
-	enums.Integer:              reInteger,
-	enums.EthereumAddress:      reEthereumAddress,
-	enums.WithdrawalCredential: reWithdrawalCredential,
-	enums.EnsName:              reEnsName,
-	enums.NonEmpty:             reNonEmpty,
-	enums.Graffiti:             reGraffiti,
-	enums.Cursor:               reCursor,
-	enums.Email:                reEmail,
-	enums.Password:             rePassword,
-	enums.EmailUserToken:       reEmailUserToken,
-	enums.JsonContentType:      reJsonContentType,
+	enums.SearchTypeName:                 reName,
+	enums.SearchTypeInteger:              reInteger,
+	enums.SearchTypeEthereumAddress:      reEthereumAddress,
+	enums.SearchTypeWithdrawalCredential: reWithdrawalCredential,
+	enums.SearchTypeEnsName:              reEnsName,
+	enums.SearchTypeNonEmpty:             reNonEmpty,
+	enums.SearchTypeGraffiti:             reGraffiti,
+	enums.SearchTypeCursor:               reCursor,
+	enums.SearchTypeEmail:                reEmail,
+	enums.SearchTypePassword:             rePassword,
+	enums.SearchTypeEmailUserToken:       reEmailUserToken,
+	enums.SearchTypeJsonContentType:      reJsonContentType,
 	// Validator Dashboard
-	enums.ValidatorDashboardPublicId:   reValidatorDashboardPublicId,
-	enums.ValidatorPublicKeyWithPrefix: reValidatorPublicKeyWithPrefix,
-	enums.ValidatorPublicKey:           reValidatorPublicKey,
+	enums.SearchTypeValidatorDashboardPublicId:   reValidatorDashboardPublicId,
+	enums.SearchTypeValidatorPublicKeyWithPrefix: reValidatorPublicKeyWithPrefix,
+	enums.SearchTypeValidatorPublicKey:           reValidatorPublicKey,
 }
 
 const (
