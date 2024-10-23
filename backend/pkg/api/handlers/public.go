@@ -2353,7 +2353,16 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		handleErr(w, r, v)
 		return
 	}
-	err = h.getDataAccessor(r).UpdateNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId, name, req.IsNotificationsEnabled)
+	pairedDeviceUserId, err := h.getDataAccessor(r).GetPairedDeviceUserId(r.Context(), pairedDeviceId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if userId != pairedDeviceUserId {
+		returnNotFound(w, r, fmt.Errorf("not found: paired device with id %d not found", pairedDeviceId)) // return 404 to not leak information
+		return
+	}
+	err = h.getDataAccessor(r).UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, name, req.IsNotificationsEnabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2387,13 +2396,21 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 		handleErr(w, r, err)
 		return
 	}
-	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	err = h.getDataAccessor(r).DeleteNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId)
+	pairedDeviceUserId, err := h.getDataAccessor(r).GetPairedDeviceUserId(r.Context(), pairedDeviceId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if userId != pairedDeviceUserId {
+		returnNotFound(w, r, fmt.Errorf("not found: paired device with id %d not found", pairedDeviceId)) // return 404 to not leak information
+		return
+	}
+	err = h.getDataAccessor(r).DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
