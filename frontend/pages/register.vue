@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { object as yupObject } from 'yup'
-import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
 import { API_PATH } from '~/types/customFetch'

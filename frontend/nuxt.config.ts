@@ -56,14 +56,17 @@ export default defineNuxtConfig({
   eslint: { config: { stylistic: true } },
   i18n: { vueI18n: './i18n.config.ts' },
   modules: [
-    '@nuxtjs/i18n',
+    '@nuxt/eslint',
     '@nuxtjs/color-mode',
+    '@nuxtjs/i18n',
     [
       '@pinia/nuxt',
-      { storesDirs: [ './stores/**' ] },
+      {
+        storesDirs: [ './stores/**' ],
+      },
     ],
     '@primevue/nuxt-module',
-    '@nuxt/eslint',
+    '@vee-validate/nuxt',
     '@vueuse/nuxt',
   ],
   nitro: {
