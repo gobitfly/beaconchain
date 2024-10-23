@@ -2648,7 +2648,16 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 //	@Success		204
 //	@Router			/users/me/notifications/test-email [post]
 func (h *HandlerService) PublicPostUserNotificationsTestEmail(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	err = h.getDataAccessor(r).QueueTestEmailNotification(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 
@@ -2661,7 +2670,16 @@ func (h *HandlerService) PublicPostUserNotificationsTestEmail(w http.ResponseWri
 //	@Success		204
 //	@Router			/users/me/notifications/test-push [post]
 func (h *HandlerService) PublicPostUserNotificationsTestPush(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	err = h.getDataAccessor(r).QueueTestPushNotification(r.Context(), userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 
@@ -2678,6 +2696,11 @@ func (h *HandlerService) PublicPostUserNotificationsTestPush(w http.ResponseWrit
 //	@Router			/users/me/notifications/test-webhook [post]
 func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	userId, err := GetUserIdByContext(r)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	type request struct {
 		WebhookUrl              string `json:"webhook_url"`
 		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
@@ -2691,7 +2714,11 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 		handleErr(w, r, v)
 		return
 	}
-	// TODO
+	err = h.getDataAccessor(r).QueueTestWebhookNotification(r.Context(), userId, req.WebhookUrl, req.IsDiscordWebhookEnabled)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 

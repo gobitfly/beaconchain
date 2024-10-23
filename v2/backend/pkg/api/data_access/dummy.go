@@ -54,7 +54,6 @@ func randomEthDecimal() decimal.Decimal {
 
 // must pass a pointer to the data
 func commonFakeData(a interface{}) error {
-	// TODO fake decimal.Decimal
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
@@ -779,4 +778,14 @@ func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64
 
 func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow]()
+}
+
+func (d *DummyService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
+	return nil
+}
+func (d *DummyService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
+	return nil
+}
+func (d *DummyService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
+	return nil
 }

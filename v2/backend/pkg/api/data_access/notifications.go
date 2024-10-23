@@ -56,6 +56,10 @@ type NotificationsRepository interface {
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
 	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
 	UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
+
+	QueueTestEmailNotification(ctx context.Context, userId uint64) error
+	QueueTestPushNotification(ctx context.Context, userId uint64) error
+	QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error
 }
 
 func (*DataAccessService) registerNotificationInterfaceTypes() {
@@ -2258,4 +2262,17 @@ func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert *[]goqu.Record, even
 	} else {
 		*eventsToDelete = append(*eventsToDelete, goqu.Ex{"user_id": userId, "event_name": fullEventName, "event_filter": eventFilter})
 	}
+}
+
+func (d *DataAccessService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
+	// TODO: @Data Access
+	return nil
+}
+func (d *DataAccessService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
+	// TODO: @Data Access
+	return nil
+}
+func (d *DataAccessService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
+	// TODO: @Data Access
+	return nil
 }
