@@ -8,6 +8,7 @@ import (
 )
 
 func Unmarshal[T any](source io.ReadCloser, err error) (*T, error) {
+	defer source.Close()
 	var target T
 	if err != nil {
 		return &target, err

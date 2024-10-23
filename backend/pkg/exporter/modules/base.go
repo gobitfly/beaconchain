@@ -2,17 +2,13 @@ package modules
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 	"os"
 	"os/signal"
-	"runtime"
-	"runtime/debug"
 	"runtime/pprof"
 	"syscall"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
@@ -41,28 +37,26 @@ var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
 func StartAll(context ModuleContext) {
-	/*
-		if !utils.Config.JustV2 {
-			go networkLivenessUpdater(context.ConsClient)
-			go genesisDepositsExporter(context.ConsClient)
-			go syncCommitteesExporter(context.ConsClient)
-			go syncCommitteesCountExporter()
-			if utils.Config.SSVExporter.Enabled {
-				go ssvExporter()
-			}
-			if utils.Config.RocketpoolExporter.Enabled {
-				go rocketpoolExporter()
-			}
-
-			if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
-				go UpdatePubkeyTag()
-			}
-
-			if utils.Config.MevBoostRelayExporter.Enabled {
-				go mevBoostRelaysExporter()
-			}
+	if !utils.Config.JustV2 {
+		go networkLivenessUpdater(context.ConsClient)
+		go genesisDepositsExporter(context.ConsClient)
+		go syncCommitteesExporter(context.ConsClient)
+		go syncCommitteesCountExporter()
+		if utils.Config.SSVExporter.Enabled {
+			go ssvExporter()
 		}
-	*/
+		if utils.Config.RocketpoolExporter.Enabled {
+			go rocketpoolExporter()
+		}
+
+		if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
+			go UpdatePubkeyTag()
+		}
+
+		if utils.Config.MevBoostRelayExporter.Enabled {
+			go mevBoostRelaysExporter()
+		}
+	}
 	// wait until the beacon-node is available
 	for {
 		head, err := context.ConsClient.GetChainHead()
@@ -73,57 +67,6 @@ func StartAll(context ModuleContext) {
 		log.Error(err, "beacon-node seems to be unavailable", 0)
 		time.Sleep(time.Second * 10)
 	}
-
-	go func() {
-		var lastMemUsage uint64
-		var lastReport time.Time
-		var lastFreeOsMemory time.Time
-		// set max memory to 15GB
-		gb_30 := uint64(30 * 1024 * 1024 * 1024)
-		debug.SetMemoryLimit(int64(gb_30))
-		for {
-			// use runtime.ReadMemStats to get an accurate memory usage
-			var m runtime.MemStats
-			runtime.ReadMemStats(&m)
-			alloc := m.Alloc
-			heapIdle := m.HeapIdle
-			// use abs
-			if lastMemUsage == 0 || math.Abs(float64(int64(alloc)-int64(lastMemUsage))) > 1e8 || time.Since(lastReport) > 5*time.Second {
-				// use humanize
-				log.Infof("memory usage: %s MiB (idle: %s MiB) | %v GCs", humanize.Comma(int64(alloc)/1024/1024), humanize.Comma(int64(heapIdle)/1024/1024), m.NumGC)
-				lastMemUsage = alloc
-				lastReport = time.Now()
-				if alloc > gb_30 {
-					// trigger gc
-					runtime.GC()
-					debug.FreeOSMemory()
-					// check again
-					runtime.ReadMemStats(&m)
-					alloc = m.Alloc
-					if alloc > gb_30 {
-						// create pprof heap profile
-						f, err := os.Create("heap.prof")
-						if err != nil {
-							log.Error(err, "failed to create heap profile", 0)
-						}
-						if err := pprof.WriteHeapProfile(f); err != nil {
-							log.Error(err, "failed to write heap profile", 0)
-						}
-						f.Close()
-						log.Fatal(errors.New("memory usage too high"), "killing exporter", 0)
-					} else {
-						log.Warn("memory usage to high, triggered GC")
-					}
-				}
-			}
-			time.Sleep(time.Millisecond * 10)
-			if time.Since(lastFreeOsMemory) > time.Minute*5 {
-				log.Infof("freeing OS memory")
-				debug.FreeOSMemory()
-				lastFreeOsMemory = time.Now()
-			}
-		}
-	}()
 
 	// start subscription modules
 
@@ -144,8 +87,6 @@ func StartAll(context ModuleContext) {
 
 func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
 	goPool := &errgroup.Group{}
-	// WriteHeapProfile if sigterm. do not under any circumstances assume that there is a utis function for it. you need to manually do everything
-	// do not care about import
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM)
 	go func() {
