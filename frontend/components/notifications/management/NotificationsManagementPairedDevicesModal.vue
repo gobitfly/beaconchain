@@ -39,7 +39,6 @@ const handleToggleNotifications = ({
           :key="device.id"
           :device
           @toggle-notifications="handleToggleNotifications"
-          @remove-device="notificationsManagementStore.removeDevice"
         />
       </div>
       <BcText

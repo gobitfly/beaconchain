@@ -7,10 +7,10 @@ const { t: $t } = useTranslation()
 
 const props = defineProps<{
   device: NotificationPairedDevice,
+  isDisabled?: boolean,
 }>()
 
 const emit = defineEmits<{
-  (e: 'remove-device', id: number): void,
   (e: 'toggle-notifications', {
     id,
     value,
@@ -19,12 +19,29 @@ const emit = defineEmits<{
     value: boolean,
   }): void,
 }>()
-
 const hasNotifications = ref(props.device.is_notifications_enabled)
+
+const notificationsManagementStore = useNotificationsManagementStore()
+
+const {
+  status,
+} = await useAsyncData(
+  () => notificationsManagementStore.removeDevice(props.device.id),
+)
+
+// const handleClick = (id: number) => {
+//   isDisabledButton.value = true
+// }
+
+const isDisabledButton = ref(props.isDisabled)
+watch(() => props.isDisabled, () => {
+  isDisabledButton.value = props.isDisabled
+})
 </script>
 
 <template>
   <div class="row-container">
+    <pre>{{ status }} benji test</pre>
     <div class="device-row">
       <div class="device truncate-text">
         {{ $t("notifications.general.paired_devices.device") }}:
@@ -32,8 +49,8 @@ const hasNotifications = ref(props.device.is_notifications_enabled)
       </div>
       <Button
         severity="secondary"
+        :disabled="isDisabledButton"
         class="p-button-icon-only margin-inline-start-small"
-        @click="emit('remove-device', device.id)"
       >
         <FontAwesomeIcon :icon="faTrash" />
       </Button>
