@@ -20,6 +20,7 @@ linters:
     - importas
     - unparam
   disable:
+    - testpackage
     - dupword
     - gocognit
     - dupl
