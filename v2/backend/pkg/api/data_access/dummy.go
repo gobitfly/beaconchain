@@ -582,10 +582,10 @@ func (d *DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, us
 func (d *DummyService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
+func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	return nil
 }
-func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error {
+func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error {
 	return nil
 }
 
@@ -795,4 +795,8 @@ func (d *DummyService) QueueTestPushNotification(ctx context.Context, userId uin
 }
 func (d *DummyService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
 	return nil
+}
+
+func (d *DummyService) GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error) {
+	return getDummyData[uint64](ctx)
 }
