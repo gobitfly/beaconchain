@@ -1380,8 +1380,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			networkEvent := types.EventName(eventSplit[1])
 
 			if _, ok := networksSettings[networkName]; !ok {
-				log.Error(nil, fmt.Sprintf("network is not defined: %s", networkName), 0)
-				continue
+				return nil, fmt.Errorf("network is not defined: %s", networkName)
 			}
 
 			switch networkEvent {
