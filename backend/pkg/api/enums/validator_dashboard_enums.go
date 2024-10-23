@@ -171,21 +171,16 @@ var VDBBlocksColumns = struct {
 }
 
 type VDBBlocksSearches struct {
-	BasicSearch
+	*BasicSearch
 	Index     bool
 	PublicKey bool
 	Group     bool
 }
 
-func (s VDBBlocksSearches) GetSearches() []SearchType {
-	return []SearchType{
-		Integer,
-		ValidatorPublicKeyWithPrefix,
-		Name,
-	}
-}
-
 func (s VDBBlocksSearches) SetSearchType(st SearchType, b bool) Searchable {
+	if s.BasicSearch == nil {
+		s.BasicSearch = &BasicSearch{}
+	}
 	switch st {
 	case Integer:
 		s.Index = b
@@ -193,8 +188,6 @@ func (s VDBBlocksSearches) SetSearchType(st SearchType, b bool) Searchable {
 		s.PublicKey = b
 	case Name:
 		s.Group = b
-	default:
-		return InvalidSearch
 	}
 	return s
 }
