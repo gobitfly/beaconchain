@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/bigtable v1.21.0
 	cloud.google.com/go/secretmanager v1.11.5
 	firebase.google.com/go v3.13.0+incompatible
-	github.com/ClickHouse/clickhouse-go/v2 v2.17.1
+	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
 	github.com/Gurpartap/storekit-go v0.0.0-20201205024111-36b6cd5c6a21
 	github.com/alexedwards/scs/redisstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/v2 v2.8.0
@@ -18,7 +18,6 @@ require (
 	github.com/coocood/freecache v1.2.4
 	github.com/davecgh/go-spew v1.1.1
 	github.com/donovanhide/eventsource v0.0.0-20210830082556-c59027999da0
-	github.com/dustin/go-humanize v1.0.1
 	github.com/ethereum/go-ethereum v1.13.12
 	github.com/go-faker/faker/v4 v4.3.0
 	github.com/go-redis/redis/v8 v8.11.5
@@ -65,10 +64,10 @@ require (
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
 	github.com/wealdtech/go-eth2-util v1.8.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.26.0
+	golang.org/x/crypto v0.28.0
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/sync v0.8.0
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.19.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	google.golang.org/api v0.164.0
 	google.golang.org/protobuf v1.33.0
@@ -87,7 +86,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
-	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.0 // indirect
@@ -115,6 +114,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.12.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
 	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
@@ -229,17 +229,17 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.28.0 // indirect
+	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gonum.org/v1/gonum v0.12.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240125205218-1f4bbc51befe // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240205150955-31a09d347014 // indirect
-	google.golang.org/grpc v1.62.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
+	google.golang.org/grpc v1.62.1 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect

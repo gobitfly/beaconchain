@@ -29,7 +29,6 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 	dbWriter, err := ch.Open(&ch.Options{
 		MaxOpenConns: writer.MaxOpenConns,
 		MaxIdleConns: writer.MaxIdleConns,
-		// ConnMaxLifetime: time.Minute,
 		// the following lowers traffic between client and server
 		Compression: &ch.Compression{
 			Method: ch.CompressionLZ4,
@@ -47,9 +46,6 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 			log.Debugf("CH NATIVE WRITER: "+s, p...)
 		},
 		Settings: ch.Settings{
-			//"parallel_view_processing": "true",
-			//"send_logs_level":          "trace",
-			"max_insert_threads": "4",
 			"deduplicate_blocks_in_dependent_materialized_views":                "1",
 			"update_insert_deduplication_token_in_dependent_materialized_views": "1",
 		},
