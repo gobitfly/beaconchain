@@ -75,12 +75,10 @@ watchDebounced([
           <span>
             {{ $t('notifications.network.settings.alert_if_gas_below') }}
           </span>
-          <span class="">
-            <BcInputUnit
-              v-model="thresholdGasBelow"
-              :unit="$t('common.units.GWEI')"
-            />
-          </span>
+          <BcInputUnit
+            v-model="thresholdGasBelow"
+            :unit="$t('common.units.GWEI')"
+          />
           <BcToggle
             v-model="hasGasBelow"
             class="toggle"
@@ -88,12 +86,10 @@ watchDebounced([
           <span>
             {{ $t('notifications.network.settings.alert_if_gas_above') }}
           </span>
-          <span class="">
-            <BcInputUnit
-              v-model="thresholdGasAbove"
-              :unit="$t('common.units.GWEI')"
-            />
-          </span>
+          <BcInputUnit
+            v-model="thresholdGasAbove"
+            :unit="$t('common.units.GWEI')"
+          />
           <BcToggle
             v-model="hasGasAbove"
             class="toggle"

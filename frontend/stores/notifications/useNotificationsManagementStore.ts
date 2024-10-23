@@ -45,7 +45,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
   }
 
   const removeDevice = async (id: number) => {
-    await fetch(
+    return await fetch(
       API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE,
       {},
       {
