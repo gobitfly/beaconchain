@@ -127,7 +127,7 @@ watch(hasAllEvents, () => {
           has-unit
           :info="$t('notifications.subscriptions.validators.group_efficiency.info', { percentage: thresholds.group_efficiency_below_threshold })"
           :label="$t('notifications.subscriptions.validators.group_efficiency.label')"
-          :has-premium-gem="hasPremiumPerkGroupEfficiency"
+          :has-premium-gem="!hasPremiumPerkGroupEfficiency"
         />
         <BcSettingsRow
           v-model:checkbox="checkboxes.is_min_collateral_subscribed"
