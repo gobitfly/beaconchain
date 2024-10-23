@@ -2,6 +2,7 @@
     "dependencies": {
         "@pinia/nuxt": "^0.10.1",
         "@stripe/stripe-js": "^7.0.0",
+        "@vee-validate/nuxt": "^4.15.0",
         "@vueuse/core": "^13.0.0",
         "@vueuse/nuxt": "^13.0.0",
         "big.js": "^6.2.2",
