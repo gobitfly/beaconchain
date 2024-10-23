@@ -1379,6 +1379,11 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			networkName := eventSplit[0]
 			networkEvent := types.EventName(eventSplit[1])
 
+			if _, ok := networksSettings[networkName]; !ok {
+				log.Error(nil, fmt.Sprintf("network is not defined: %s", networkName), 0)
+				continue
+			}
+
 			switch networkEvent {
 			case types.RocketpoolNewClaimRoundStartedEventName:
 				networksSettings[networkName].Settings.IsNewRewardRoundSubscribed = true
