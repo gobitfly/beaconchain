@@ -9,17 +9,17 @@ import (
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/gobitfly/beaconchain/pkg/exporter/types"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/pkg/errors"
 )
 
-func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]db.VDBDataEpochColumns, epochs []edb.EpochMetadata) error {
+func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]types.VDBDataEpochColumns, epochs []edb.EpochMetadata) error {
 	d.log.Info("starting processRunner")
 	var err error
 	seenInsertIds := []uuid.UUID{*epochs[0].InsertBatchID}
@@ -40,7 +40,7 @@ func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]db.VDBDataEpo
 		d.log.Infof("epoch %d, insertId %s", epoch.Epoch, insertId)
 		if insertId != seenInsertIds[len(seenInsertIds)-1] {
 			d.log.Infof("allocating tar insert id %s with %d entries", seenInsertIds[len(seenInsertIds)-1], bulkValiCount)
-			(*tar)[currentTarIndex], err = db.NewVDBDataEpochColumns(bulkValiCount)
+			(*tar)[currentTarIndex], err = types.NewVDBDataEpochColumns(bulkValiCount)
 			if err != nil {
 				return errors.Wrap(err, "failed to allocate new VDBDataEpochColumns")
 			}
@@ -59,7 +59,7 @@ func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]db.VDBDataEpo
 	}
 	if bulkValiCount > 0 {
 		d.log.Infof("leftover valis, allocating tar index %d with %d entries", currentTarIndex, bulkValiCount)
-		(*tar)[currentTarIndex], err = db.NewVDBDataEpochColumns(bulkValiCount)
+		(*tar)[currentTarIndex], err = types.NewVDBDataEpochColumns(bulkValiCount)
 		if err != nil {
 			return errors.Wrap(err, "failed to allocate new VDBDataEpochColumns")
 		}
@@ -241,7 +241,7 @@ func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]db.VDBDataEpo
 	return nil
 }
 
-func (d *dashboardData) processValidatorStates(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processValidatorStates(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
@@ -276,7 +276,7 @@ func (d *dashboardData) processValidatorStates(data *MultiEpochData, tar *[]db.V
 	return g.Wait()
 }
 
-func (d *dashboardData) processScheduledAttestations(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processScheduledAttestations(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
@@ -316,7 +316,7 @@ func (d *dashboardData) processScheduledAttestations(data *MultiEpochData, tar *
 	return g.Wait()
 }
 
-func (d *dashboardData) processBlocks(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processBlocks(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
@@ -351,7 +351,7 @@ func (d *dashboardData) processBlocks(data *MultiEpochData, tar *[]db.VDBDataEpo
 	return g.Wait()
 }
 
-func (d *dashboardData) processDeposits(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processDeposits(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	if d.signingDomain == nil {
 		domain, err := utils.GetSigningDomain()
 		if err != nil {
@@ -430,7 +430,7 @@ func (d *dashboardData) processDeposits(data *MultiEpochData, tar *[]db.VDBDataE
 	return g.Wait()
 }
 
-func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	if data.epochBasedData.epochs[len(data.epochBasedData.epochs)-1] < utils.Config.Chain.ClConfig.AltairForkEpoch {
 		d.phase0HotfixMutex.Lock()
 		defer d.phase0HotfixMutex.Unlock()
@@ -557,7 +557,7 @@ func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]d
 }
 
 // withdrawals
-func (d *dashboardData) processWithdrawals(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processWithdrawals(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
@@ -615,7 +615,7 @@ func IntegerSquareRoot(n uint64) uint64 {
 }
 
 // attestations
-func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	blockRoots := make(map[uint64]hexutil.Bytes)
 	blockValidityMap := make(map[uint64]int64, len(data.slotBasedData.blocks))
@@ -796,7 +796,7 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]db.VDBD
 }
 
 // sync odds
-func (d *dashboardData) processExpectedSyncPeriods(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processExpectedSyncPeriods(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
@@ -835,7 +835,7 @@ func (d *dashboardData) processExpectedSyncPeriods(data *MultiEpochData, tar *[]
 }
 
 // blocks expected
-func (d *dashboardData) processBlocksExpected(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processBlocksExpected(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
@@ -869,7 +869,7 @@ func (d *dashboardData) processBlocksExpected(data *MultiEpochData, tar *[]db.VD
 	return g.Wait()
 }
 
-func (d *dashboardData) processSyncVotes(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processSyncVotes(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
@@ -923,7 +923,7 @@ func (d *dashboardData) processSyncVotes(data *MultiEpochData, tar *[]db.VDBData
 	return g.Wait()
 }
 
-func (d *dashboardData) processProposalRewards(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processProposalRewards(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	if data.epochBasedData.epochs[len(data.epochBasedData.epochs)-1] < utils.Config.Chain.ClConfig.AltairForkEpoch {
 		defer d.phase0HotfixMutex.Unlock()
 	}
@@ -997,7 +997,7 @@ func (d *dashboardData) processProposalRewards(data *MultiEpochData, tar *[]db.V
 }
 
 // sync rewards
-func (d *dashboardData) processSyncCommitteeRewards(data *MultiEpochData, tar *[]db.VDBDataEpochColumns) error {
+func (d *dashboardData) processSyncCommitteeRewards(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e

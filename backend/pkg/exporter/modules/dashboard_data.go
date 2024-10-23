@@ -28,7 +28,6 @@ type dashboardData struct {
 	ModuleContext
 	log               ModuleLog
 	signingDomain     []byte
-	epochWriter       *epochWriter
 	headEpochQueue    chan uint64
 	backFillCompleted bool
 	phase0HotfixMutex sync.Mutex
@@ -43,8 +42,6 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	if strings.ToLower(os.Getenv("LOG_LEVEL")) == "debug" {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-	// When a new epoch gets exported the very first step is to export it to the db via epochWriter
-	temp.epochWriter = newEpochWriter(temp)
 
 	// Then those aggregators below use the epoch data to aggregate it into the respective tables
 
@@ -93,11 +90,6 @@ func (d *dashboardData) OnFinalizedCheckpoint(t *constypes.StandardFinalizedChec
 }
 
 func updateSafeEpoch(d *dashboardData) error {
-	// the following is a bit meh because, as our nodes are load balanced,
-	// we can't really rely on the following request to be the correct respond,
-	// as the responding node might be slighly behind the node that sent us the
-	// finalized checkpoint event. but fixing this is left as an exercise to the reader
-	// can result in -2 or -1. need to make sure this is handled correctly everywhere
 	res, err := d.CL.GetFinalityCheckpoints("head")
 	if err != nil {
 		return err
@@ -119,8 +111,8 @@ func (d *dashboardData) GetName() string {
 
 func (d *dashboardData) OnHead(event *constypes.StandardEventHeadResponse) error {
 	// you may ask, why here and not OnFinalizedCheckpoint?
-	// because due to our loadbalanced node architecture we often receive the finalized checkpoint event
-	// before the node we hit has updated its finalized checkpoint, causing us to be off by 1 epoch sometimes
+	// because due to our loadbalanced node architecture we sometimes receive the finalized checkpoint event
+	// before the node we hit has updated its own finalized checkpoint, causing us to be off by 1 epoch sometimes
 	// so we simply check more often. the request overhead is minimal anyways
 	err := updateSafeEpoch(d)
 	if err != nil {

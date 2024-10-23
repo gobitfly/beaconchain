@@ -8,6 +8,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/gobitfly/beaconchain/pkg/exporter/types"
 	"github.com/google/uuid"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
@@ -150,7 +151,7 @@ func (d *dashboardData) fetchAndInsertEpochs(epochs []edb.EpochMetadata) error {
 	}
 
 	// process
-	processedData := make([]db.VDBDataEpochColumns, len(maps.Keys(insertBatchEpochs))) // grouped by insert batch id
+	processedData := make([]types.VDBDataEpochColumns, len(maps.Keys(insertBatchEpochs))) // grouped by insert batch id
 	err = d.processRunner(&rawData, &processedData, epochs)
 	if err != nil {
 		return errors.Wrap(err, "failed to process data")
