@@ -27,6 +27,7 @@ type AppRepository interface {
 	AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
 	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error)
 	IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error
+	GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error)
 }
 
 // GetUserIdByRefreshToken basically used to confirm the claimed user id with the refresh token. Returns the userId if successful
@@ -170,7 +171,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
-	data.NetworkEfficiency = d.calculateTotalEfficiency(
+	data.NetworkEfficiency = utils.CalculateTotalEfficiency(
 		efficiency.AttestationEfficiency[enums.AllTime], efficiency.ProposalEfficiency[enums.AllTime], efficiency.SyncEfficiency[enums.AllTime])
 
 	// Validator status
@@ -326,7 +327,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
 				syncEfficiency.Valid = true
 			}
-			*efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 			return nil
 		})
@@ -360,4 +361,8 @@ func (d *DataAccessService) internal_rp_network_stats() (*t.RPNetworkStats, erro
 			LIMIT 1
 		`)
 	return &networkStats, err
+}
+
+func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+	return d.dummy.GetValidatorDashboardMobileValidators(ctx, dashboardId, period, cursor, colSort, search, limit)
 }

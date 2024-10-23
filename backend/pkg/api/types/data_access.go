@@ -16,6 +16,7 @@ const DefaultGroupId = 0
 const AllGroups = -1
 const NetworkAverage = -2
 const DefaultGroupName = "default"
+const DefaultDashboardName = DefaultGroupName
 
 type Sort[T enums.Enum] struct {
 	Column T
@@ -185,8 +186,9 @@ type NotificationsDashboardsCursor struct {
 }
 
 type NetworkInfo struct {
-	ChainId uint64
-	Name    string
+	ChainId           uint64
+	Name              string
+	NotificationsName string
 }
 
 type ClientInfo struct {
@@ -307,7 +309,7 @@ type MobileAppBundleStats struct {
 // Notification structs
 
 type NotificationSettingsDefaultValues struct {
-	GroupOfflineThreshold             float64
+	GroupEfficiencyBelowThreshold     float64
 	MaxCollateralThreshold            float64
 	MinCollateralThreshold            float64
 	ERC20TokenTransfersValueThreshold float64

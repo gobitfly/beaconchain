@@ -247,27 +247,27 @@ func Run() {
 	}
 
 	// clickhouse
-	// db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
-	// 	Username:     cfg.ClickHouse.WriterDatabase.Username,
-	// 	Password:     cfg.ClickHouse.WriterDatabase.Password,
-	// 	Name:         cfg.ClickHouse.WriterDatabase.Name,
-	// 	Host:         cfg.ClickHouse.WriterDatabase.Host,
-	// 	Port:         cfg.ClickHouse.WriterDatabase.Port,
-	// 	MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
-	// 	SSL:          true,
-	// 	MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
-	// }, &types.DatabaseConfig{
-	// 	Username:     cfg.ClickHouse.ReaderDatabase.Username,
-	// 	Password:     cfg.ClickHouse.ReaderDatabase.Password,
-	// 	Name:         cfg.ClickHouse.ReaderDatabase.Name,
-	// 	Host:         cfg.ClickHouse.ReaderDatabase.Host,
-	// 	Port:         cfg.ClickHouse.ReaderDatabase.Port,
-	// 	MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-	// 	SSL:          true,
-	// 	MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	// }, "clickhouse", "clickhouse")
-	// defer db.ClickHouseReader.Close()
-	// defer db.ClickHouseWriter.Close()
+	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+		Username:     cfg.ClickHouse.WriterDatabase.Username,
+		Password:     cfg.ClickHouse.WriterDatabase.Password,
+		Name:         cfg.ClickHouse.WriterDatabase.Name,
+		Host:         cfg.ClickHouse.WriterDatabase.Host,
+		Port:         cfg.ClickHouse.WriterDatabase.Port,
+		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+		SSL:          true,
+		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+	}, &types.DatabaseConfig{
+		Username:     cfg.ClickHouse.ReaderDatabase.Username,
+		Password:     cfg.ClickHouse.ReaderDatabase.Password,
+		Name:         cfg.ClickHouse.ReaderDatabase.Name,
+		Host:         cfg.ClickHouse.ReaderDatabase.Host,
+		Port:         cfg.ClickHouse.ReaderDatabase.Port,
+		MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+		SSL:          true,
+		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+	}, "clickhouse", "clickhouse")
+	defer db.ClickHouseReader.Close()
+	defer db.ClickHouseWriter.Close()
 
 	// Initialize the persistent redis client
 	if requires.Redis {
@@ -564,6 +564,40 @@ func collectNotifications(startEpoch uint64) error {
 	if len(notifications[0]) > 0 {
 		spew.Dump(notifications[0])
 	}
+
+	emails, err := notification.RenderEmailsForUserEvents(0, notifications)
+	if err != nil {
+		return err
+	}
+
+	for _, email := range emails {
+		// if email.Address == "" {
+		log.Infof("to: %v", email.Address)
+		log.Infof("subject: %v", email.Subject)
+		log.Infof("body: %v", email.Email.Body)
+		log.Info("-----")
+		// }
+	}
+
+	// pushMessages, err := notification.RenderPushMessagesForUserEvents(0, notifications)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, pushMessage := range pushMessages {
+	// 	message := pushMessage.Messages[0]
+	// 	log.Infof("title: %v body: %v", message.Notification.Title, message.Notification.Body)
+
+	// 	if message.Token == "" {
+	// 		log.Info("sending test message")
+
+	// 		err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, false)
+	// 		if err != nil {
+	// 			log.Error(err, "error sending firebase batch job", 0)
+	// 		}
+	// 	}
+	// }
+
 	return nil
 }
 
@@ -606,7 +640,7 @@ func collectUserDbNotifications(startEpoch uint64) error {
 		if message.Token == "" {
 			log.Info("sending test message")
 
-			err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, false)
+			err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, true)
 			if err != nil {
 				log.Error(err, "error sending firebase batch job", 0)
 			}

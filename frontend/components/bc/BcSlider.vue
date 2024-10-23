@@ -15,7 +15,6 @@ defineProps<{
     :step
     class="bc-slider"
     type="range"
-    v-bind="$attrs"
   >
 </template>
 

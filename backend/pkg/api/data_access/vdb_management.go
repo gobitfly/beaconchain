@@ -520,7 +520,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
 				syncEfficiency.Valid = true
 			}
-			*efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 			return nil
 		})

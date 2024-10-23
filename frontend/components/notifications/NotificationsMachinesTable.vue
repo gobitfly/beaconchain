@@ -45,7 +45,7 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="machineNotifications"
-            data-key="notification_id"
+            data-key="machine_name"
             :cursor
             :page-size
             :selected-sort="query?.sort"
@@ -131,7 +131,7 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
               </div>
             </template>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!machineNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />

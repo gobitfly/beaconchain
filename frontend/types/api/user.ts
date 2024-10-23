@@ -6,6 +6,7 @@ import type { ApiDataResponse, ChartHistorySeconds } from './common'
 // source: user.go
 
 export const UserGroupAdmin = "ADMIN";
+export const UserGroupDev = "DEV";
 export interface UserInfo {
   id: number /* uint64 */;
   email: string;
@@ -119,8 +120,7 @@ export interface PremiumPerks {
   monitor_machines: number /* uint64 */;
   machine_monitoring_history_seconds: number /* uint64 */;
   notifications_machine_custom_threshold: boolean;
-  notifications_validator_dashboard_real_time_mode: boolean;
-  notifications_validator_dashboard_group_offline: boolean;
+  notifications_validator_dashboard_group_efficiency: boolean;
 }
 export interface StripeCreateCheckoutSession {
   sessionId?: string;

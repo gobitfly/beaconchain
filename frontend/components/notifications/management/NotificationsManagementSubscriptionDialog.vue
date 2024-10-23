@@ -9,14 +9,11 @@ const { t: $t } = useTranslation()
 const {
   secondsPerEpoch,
 } = useNetworkStore()
-const { user } = useUserStore()
-const hasPremiumPerkGroupOffline = computed(
-  () => user.value?.premium_perks.notifications_validator_dashboard_group_offline,
-)
-const hasPremiumPerkRealTimeMode = computed(
-  () => user.value?.premium_perks.notifications_validator_dashboard_real_time_mode,
-)
 
+const { user } = useUserStore()
+const hasPremiumPerkGroupEfficiency = computed(
+  () => user.value?.premium_perks.notifications_validator_dashboard_group_efficiency,
+)
 function closeDialog(): void {
   dialogRef?.value.close()
 }
@@ -24,10 +21,9 @@ function closeDialog(): void {
 const checkboxes = ref({
   is_attestations_missed_subscribed: props.value?.is_attestations_missed_subscribed ?? false,
   is_block_proposal_subscribed: props.value?.is_block_proposal_subscribed ?? false,
-  is_group_offline_subscribed: props.value?.is_group_offline_subscribed ?? false,
+  is_group_efficiency_below_subscribed: props.value?.is_group_efficiency_below_subscribed ?? false,
   is_max_collateral_subscribed: props.value?.is_max_collateral_subscribed ?? false,
   is_min_collateral_subscribed: props.value?.is_min_collateral_subscribed ?? false,
-  is_real_time_mode_enabled: props.value?.is_real_time_mode_enabled ?? false,
   is_slashed_subscribed: props.value?.is_slashed_subscribed ?? false,
   is_sync_subscribed: props.value?.is_sync_subscribed ?? false,
   is_upcoming_block_proposal_subscribed: props.value?.is_upcoming_block_proposal_subscribed ?? false,
@@ -35,12 +31,14 @@ const checkboxes = ref({
   is_withdrawal_processed_subscribed: props.value?.is_withdrawal_processed_subscribed ?? false,
 })
 const thresholds = ref({
-  group_offline_threshold: formatFraction(props.value?.group_offline_threshold ?? 0),
+  group_efficiency_below_threshold: formatFraction(props.value?.group_efficiency_below_threshold ?? 0),
   max_collateral_threshold: formatFraction(props.value?.max_collateral_threshold ?? 0),
   min_collateral_threshold: formatFraction(props.value?.min_collateral_threshold ?? 0),
 })
 const emit = defineEmits<{
-  (e: 'change-settings', settings: Omit<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>): void,
+  (e: 'change-settings', settings: Omit<NotificationSettingsValidatorDashboard,
+  | 'is_webhook_discord_enabled'
+  | 'webhook_url'>): void,
 }>()
 watchDebounced([
   checkboxes,
@@ -48,7 +46,7 @@ watchDebounced([
 ], () => {
   emit('change-settings', {
     ...checkboxes.value,
-    group_offline_threshold: Number(formatToFraction(thresholds.value.group_offline_threshold)),
+    group_efficiency_below_threshold: Number(formatToFraction(thresholds.value.group_efficiency_below_threshold)),
     max_collateral_threshold: Number(formatToFraction(thresholds.value.max_collateral_threshold)),
     min_collateral_threshold: Number(formatToFraction(thresholds.value.min_collateral_threshold)),
   })
@@ -98,36 +96,9 @@ watch(hasAllEvents, () => {
           </template>
         </BcSettingsRow>
         <BcSettingsRow
-          v-model:checkbox="checkboxes.is_group_offline_subscribed"
-          v-model:input="thresholds.group_offline_threshold"
-          :label="$t('notifications.subscriptions.validators.group_is_offline.label')"
-          has-unit
-          :has-premium-gem="!hasPremiumPerkGroupOffline"
-        >
-          <template #info>
-            <BcTranslation
-              keypath="notifications.subscriptions.validators.group_is_offline.info.template"
-              listpath="notifications.subscriptions.validators.group_is_offline.info._list"
-            >
-              <template #_list="{ listpath }">
-                <ul v-if="listpath">
-                  <li v-for="(item, index) in $t(listpath).split('\n')" :key="item">
-                    {{ item }}
-                    <template v-if="index ===3 ">
-                      <br>
-                      <span class="bold">{{ $t('notifications.subscriptions.validators.group_is_offline.info.note_bold') }}</span>
-                      <span>{{ $t('notifications.subscriptions.validators.group_is_offline.info.note') }}</span>
-                    </template>
-                  </li>
-                </ul>
-              </template>
-            </BcTranslation>
-          </template>
-        </BcSettingsRow>
-        <BcSettingsRow
           v-model:checkbox="checkboxes.is_attestations_missed_subscribed"
           :label="$t('notifications.subscriptions.validators.attestation_missed.label')"
-          :info="$t('notifications.subscriptions.validators.attestation_missed.info', { count: formatSecondsTo(secondsPerEpoch, { minimumFractionDigits: 1 }).minutes })"
+          :info="$t('notifications.subscriptions.validators.attestation_missed.info', { count: Number(formatSecondsTo(secondsPerEpoch, { minimumFractionDigits: 1 }).minutes) })"
         />
         <BcSettingsRow
           v-model:checkbox="checkboxes.is_block_proposal_subscribed"
@@ -151,6 +122,14 @@ watch(hasAllEvents, () => {
           :label="$t('notifications.subscriptions.validators.validator_got_slashed.label')"
         />
         <BcSettingsRow
+          v-model:checkbox="checkboxes.is_group_efficiency_below_subscribed"
+          v-model:input="thresholds.group_efficiency_below_threshold"
+          has-unit
+          :info="$t('notifications.subscriptions.validators.group_efficiency.info', { percentage: thresholds.group_efficiency_below_threshold })"
+          :label="$t('notifications.subscriptions.validators.group_efficiency.label')"
+          :has-premium-gem="!hasPremiumPerkGroupEfficiency"
+        />
+        <BcSettingsRow
           v-model:checkbox="checkboxes.is_min_collateral_subscribed"
           v-model:input="thresholds.min_collateral_threshold"
           has-unit
@@ -161,13 +140,6 @@ watch(hasAllEvents, () => {
           v-model:input="thresholds.max_collateral_threshold"
           has-unit
           :label="$t('notifications.subscriptions.validators.max_collateral_reached.label')"
-        />
-
-        <BcSettingsRow
-          v-model:checkbox="checkboxes.is_real_time_mode_enabled"
-          :label="$t('notifications.subscriptions.validators.real_time_mode.label')"
-          :info="$t('notifications.subscriptions.validators.real_time_mode.info')"
-          :has-premium-gem="!hasPremiumPerkRealTimeMode"
         />
         <BcSettingsRow
           v-model:checkbox="hasAllEvents"
