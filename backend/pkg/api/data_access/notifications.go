@@ -51,8 +51,9 @@ type NotificationsRepository interface {
 	GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error)
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
 	UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error
-	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error
-	DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error
+	GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error)
+	UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error
+	DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error
 	UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error)
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
 	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
@@ -1637,47 +1638,61 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	}
 	return nil
 }
-func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
+
+func (d *DataAccessService) GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error) {
+	var userId uint64
+	err := d.userReader.GetContext(context.Background(), &userId, `
+		SELECT user_id
+		FROM users_devices
+		WHERE id = $1`, pairedDeviceId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("%w, paired device with id %v not found", ErrNotFound, pairedDeviceId)
+		}
+		return 0, err
+	}
+	return userId, nil
+}
+
+func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	result, err := d.userWriter.ExecContext(ctx, `
 		UPDATE users_devices 
 		SET 
 			device_name = $1,
 			notify_enabled = $2
-		WHERE user_id = $3 AND id = $4`,
-		name, IsNotificationsEnabled, userId, pairedDeviceId)
+		WHERE id = $3`,
+		name, IsNotificationsEnabled, pairedDeviceId)
 	if err != nil {
 		return err
 	}
-
-	// TODO: This can be deleted when the API layer has an improved check for the device id
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("device with id %v to update notification settings not found", pairedDeviceId)
+		return fmt.Errorf("%w, paired device with id %v not found", ErrNotFound, pairedDeviceId)
 	}
 	return nil
 }
-func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error {
+
+func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error {
 	result, err := d.userWriter.ExecContext(ctx, `
-		DELETE FROM users_devices 
-		WHERE user_id = $1 AND id = $2`,
-		userId, pairedDeviceId)
+		DELETE FROM users_devices
+		WHERE id = $1`,
+		pairedDeviceId)
 	if err != nil {
 		return err
 	}
-
-	// TODO: This can be deleted when the API layer has an improved check for the device id
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("device with id %v to delete not found", pairedDeviceId)
+		return fmt.Errorf("%w, paired device with id %v not found", ErrNotFound, pairedDeviceId)
 	}
 	return nil
 }
+
 func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
 	result := &t.NotificationSettingsClient{Id: clientId, IsSubscribed: IsSubscribed}
 
