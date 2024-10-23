@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faPaperPlane } from '@fortawesome/pro-solid-svg-icons'
-import { useForm } from 'vee-validate'
 import { warn } from 'vue'
 import { API_PATH } from '~/types/customFetch'
 import type { NotificationSettingsValidatorDashboard } from '~/types/api/notifications'

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { object as yupObject } from 'yup'
-import { useForm } from 'vee-validate'
 import { useUserStore } from '~/stores/useUserStore'
 import { Target } from '~/types/links'
 import {
