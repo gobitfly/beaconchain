@@ -4,7 +4,6 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-import { getGroupLabel } from '~/utils/dashboard/group'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type {
   NotificationSettingsAccountDashboard,
@@ -13,7 +12,6 @@ import type {
 } from '~/types/api/notifications'
 import type { DashboardType } from '~/types/dashboard'
 import { useNotificationsManagementDashboards } from '~/composables/notifications/useNotificationsManagementDashboards'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import {
   NotificationsManagementModalDashboardsDelete,
   NotificationsManagementModalWebhook,
@@ -43,8 +41,6 @@ const {
   setPageSize,
   setSearch,
 } = useNotificationsManagementDashboards()
-const { getDashboardLabel } = useUserDashboardStore()
-const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
 
 const colsVisible = computed(() => {
@@ -55,10 +51,6 @@ const colsVisible = computed(() => {
   }
 })
 
-const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value, 'Σ')
-}
-
 const wrappedDashboards: ComputedRef<
   ApiPagingResponse<WrappedRow> | undefined
 > = computed(() => {
@@ -66,15 +58,11 @@ const wrappedDashboards: ComputedRef<
     return
   }
   return {
-    data: dashboards.value.data.map(d => ({
-      ...d,
-      dashboard_name: getDashboardLabel(
-        String(d.dashboard_id),
-        dashboardType(d),
-      ),
-      dashboard_type: dashboardType(d),
-      identifier: `${dashboardType(d)}-${d.dashboard_id}-${d.group_id}`,
-      subscriptions: getSubscriptions(d),
+    data: dashboards.value.data.map(dashboard => ({
+      ...dashboard,
+      dashboard_type: dashboardType(dashboard),
+      identifier: `${dashboardType(dashboard)}-${dashboard.dashboard_id}-${dashboard.group_id}`,
+      subscriptions: getSubscriptions(dashboard),
     })),
     paging: dashboards.value.paging,
   }
@@ -115,9 +103,6 @@ const wrappedDashboards: ComputedRef<
     if (settingsValidatorDashboard.is_validator_offline_subscribed) {
       result.push($t('notifications.subscriptions.validators.validator_is_offline.label'))
     }
-    if (settingsValidatorDashboard.is_group_offline_subscribed) {
-      result.push($t('notifications.subscriptions.validators.group_is_offline.label'))
-    }
     if (settingsValidatorDashboard.is_attestations_missed_subscribed) {
       result.push($t('notifications.subscriptions.validators.attestation_missed.label'))
     }
@@ -139,11 +124,11 @@ const wrappedDashboards: ComputedRef<
     if (settingsValidatorDashboard.is_min_collateral_subscribed) {
       result.push($t('notifications.subscriptions.validators.min_collateral_reached.label'))
     }
+    if (settingsValidatorDashboard.is_group_efficiency_below_subscribed) {
+      result.push($t('notifications.subscriptions.accounts.group_efficiency.label'))
+    }
     if (settingsValidatorDashboard.is_max_collateral_subscribed) {
       result.push($t('notifications.subscriptions.validators.max_collateral_reached.label'))
-    }
-    if (settingsValidatorDashboard.is_real_time_mode_enabled) {
-      result.push($t('notifications.subscriptions.validators.real_time_mode.label'))
     }
     return result
   }
@@ -284,9 +269,7 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           :header="$t('notifications.col.group')"
         >
           <template #body="slotProps">
-            <span>
-              {{ groupNameLabel(slotProps.data.group_id) }}
-            </span>
+            {{ slotProps.data.group_name }}
           </template>
         </Column>
         <Column

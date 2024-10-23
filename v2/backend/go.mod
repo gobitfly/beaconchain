@@ -64,7 +64,7 @@ require (
 	github.com/prysmaticlabs/go-ssz v0.0.0-20210121151755-f6208871c388
 	github.com/rocket-pool/rocketpool-go v1.8.3-0.20240618173422-783b8668f5b4
 	github.com/rocket-pool/smartnode v1.13.6
-	github.com/shopspring/decimal v1.3.1
+	github.com/shopspring/decimal v1.4.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d

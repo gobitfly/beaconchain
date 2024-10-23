@@ -271,6 +271,61 @@ var VDBManageValidatorsColumns = struct {
 }
 
 // ----------------
+// Validator Dashboard Manage Validators Table
+
+type VDBMobileValidatorsColumn int
+
+var _ EnumFactory[VDBMobileValidatorsColumn] = VDBMobileValidatorsColumn(0)
+
+const (
+	VDBMobileValidatorsIndex VDBMobileValidatorsColumn = iota
+	VDBMobileValidatorsPublicKey
+	VDBMobileValidatorsBalance
+	VDBMobileValidatorsStatus
+	VDBMobileValidatorsWithdrawalCredential
+	VDBMobileValidatorsEfficiency
+)
+
+func (c VDBMobileValidatorsColumn) Int() int {
+	return int(c)
+}
+
+func (VDBMobileValidatorsColumn) NewFromString(s string) VDBMobileValidatorsColumn {
+	switch s {
+	case "index":
+		return VDBMobileValidatorsIndex
+	case "public_key":
+		return VDBMobileValidatorsPublicKey
+	case "balance":
+		return VDBMobileValidatorsBalance
+	case "status":
+		return VDBMobileValidatorsStatus
+	case "withdrawal_credential":
+		return VDBMobileValidatorsWithdrawalCredential
+	case "efficiency":
+		return VDBMobileValidatorsEfficiency
+	default:
+		return VDBMobileValidatorsColumn(-1)
+	}
+}
+
+var VDBMobileValidatorsColumns = struct {
+	Index                VDBManageValidatorsColumn
+	PublicKey            VDBManageValidatorsColumn
+	Balance              VDBManageValidatorsColumn
+	Status               VDBManageValidatorsColumn
+	WithdrawalCredential VDBManageValidatorsColumn
+	Efficiency           VDBMobileValidatorsColumn
+}{
+	VDBManageValidatorsIndex,
+	VDBManageValidatorsPublicKey,
+	VDBManageValidatorsBalance,
+	VDBManageValidatorsStatus,
+	VDBManageValidatorsWithdrawalCredential,
+	VDBMobileValidatorsEfficiency,
+}
+
+// ----------------
 // Validator Dashboard Archived Reasons
 
 type VDBArchivedReason int

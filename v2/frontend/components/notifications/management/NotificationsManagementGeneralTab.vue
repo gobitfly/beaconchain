@@ -107,9 +107,14 @@ const textMutedUntil = computed(() => {
     ),
   })
 })
-
+const {
+  refreshOverview,
+} = useNotificationsDashboardOverviewStore()
 watchDebounced(() => notificationsManagementStore.settings.general_settings, async () => {
   await notificationsManagementStore.saveSettings()
+  // this is a quickfix and should not be needed,
+  // reactive data should be updated automatically and  `user actions` should be atomic -> error handling
+  await refreshOverview()
 }, {
   deep: true,
 })

@@ -271,10 +271,6 @@ export interface VDBRocketPoolTableRow {
     claimed: string /* decimal.Decimal */;
     unclaimed: string /* decimal.Decimal */;
   };
-}
-export type GetValidatorDashboardRocketPoolResponse = ApiPagingResponse<VDBRocketPoolTableRow>;
-export type GetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBRocketPoolTableRow>;
-export interface VDBNodeRocketPoolData {
   timezone: string;
   refund_balance: string /* decimal.Decimal */;
   deposit_credit: string /* decimal.Decimal */;
@@ -283,7 +279,8 @@ export interface VDBNodeRocketPoolData {
     max: string /* decimal.Decimal */;
   };
 }
-export type GetValidatorDashboardNodeRocketPoolResponse = ApiDataResponse<VDBNodeRocketPoolData>;
+export type GetValidatorDashboardRocketPoolResponse = ApiPagingResponse<VDBRocketPoolTableRow>;
+export type GetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBRocketPoolTableRow>;
 export interface VDBRocketPoolMinipoolsTableRow {
   node: Address;
   validator_index: number /* uint64 */;

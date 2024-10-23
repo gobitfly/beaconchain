@@ -90,7 +90,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	if err != nil {
 		return nil, nil, err
 	}
-	averageNetworkEfficiency := d.calculateTotalEfficiency(
+	averageNetworkEfficiency := utils.CalculateTotalEfficiency(
 		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -366,7 +366,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			syncEfficiency.Float64 = float64(queryEntry.SyncExecuted) / float64(queryEntry.SyncScheduled)
 			syncEfficiency.Valid = true
 		}
-		resultEntry.Efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+		resultEntry.Efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 		// Add the duties info to the total
 		total.AttestationReward = total.AttestationReward.Add(queryEntry.AttestationReward)
@@ -486,7 +486,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			totalSyncEfficiency.Float64 = float64(total.SyncExecuted) / float64(total.SyncScheduled)
 			totalSyncEfficiency.Valid = true
 		}
-		totalEntry.Efficiency = d.calculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
+		totalEntry.Efficiency = utils.CalculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
 
 		result = append([]t.VDBSummaryTableRow{totalEntry}, result...)
 	}
@@ -867,8 +867,8 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
-	elIncomeFloat, _ := elIncome.Float64()
-	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32e18) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
+	elIncomeFloat, _ := elIncome.Float64() // EL income is in ETH
+	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
 	if math.IsNaN(elAPR) {
 		elAPR = 0
 	}
@@ -1021,7 +1021,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		if err != nil {
 			return nil, err
 		}
-		averageNetworkEfficiency := d.calculateTotalEfficiency(
+		averageNetworkEfficiency := utils.CalculateTotalEfficiency(
 			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
 
 		for ts := range tsMap {
@@ -1093,17 +1093,17 @@ func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggreg
 	var dateColumn string
 	switch aggregation {
 	case enums.IntervalEpoch:
-		table = "validator_dashboard_data_epoch"
-		dateColumn = "epoch_timestamp"
+		table = "view_validator_dashboard_data_epoch_max_ts"
+		dateColumn = "t"
 	case enums.IntervalHourly:
-		table = "validator_dashboard_data_hourly"
-		dateColumn = "hour"
+		table = "view_validator_dashboard_data_hourly_max_ts"
+		dateColumn = "t"
 	case enums.IntervalDaily:
-		table = "validator_dashboard_data_daily"
-		dateColumn = "day"
+		table = "view_validator_dashboard_data_daily_max_ts"
+		dateColumn = "t"
 	case enums.IntervalWeekly:
-		table = "validator_dashboard_data_weekly"
-		dateColumn = "week"
+		table = "view_validator_dashboard_data_weekly_max_ts"
+		dateColumn = "t"
 	default:
 		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
 	}

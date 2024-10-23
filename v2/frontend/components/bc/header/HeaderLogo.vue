@@ -5,13 +5,13 @@ defineProps<{
 </script>
 
 <template>
-  <BcLink
+  <NuxtLink
     to="/"
     :class="`${layoutAdaptability}-adaptability`"
   >
     <IconBeaconchainLogo alt="Beaconcha.in logo" />
     <span class="name">beaconcha.in</span>
-  </BcLink>
+  </NuxtLink>
 </template>
 
 <style lang="scss" scoped>

@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/go-faker/faker/v4"
+	"github.com/go-faker/faker/v4/pkg/interfaces"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
-	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
 	"github.com/shopspring/decimal"
 )
@@ -53,8 +54,7 @@ func randomEthDecimal() decimal.Decimal {
 
 // must pass a pointer to the data
 func commonFakeData(a interface{}) error {
-	// TODO fake decimal.Decimal
-	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
+	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
 func (d *DummyService) StartDataAccessServices() {
@@ -387,33 +387,32 @@ func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context,
 	return getDummyStruct[t.VDBRocketPoolTableRow]()
 }
 
-func (d *DummyService) GetValidatorDashboardNodeRocketPool(ctx context.Context, dashboardId t.VDBId, node string) (*t.VDBNodeRocketPoolData, error) {
-	return getDummyStruct[t.VDBNodeRocketPoolData]()
-}
-
 func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolMinipoolsTableRow]()
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
-	return []types.NetworkInfo{
+	return []t.NetworkInfo{
 		{
-			ChainId: 1,
-			Name:    "ethereum",
+			ChainId:           1,
+			Name:              "ethereum",
+			NotificationsName: "mainnet",
 		},
 		{
-			ChainId: 100,
-			Name:    "gnosis",
+			ChainId:           100,
+			Name:              "gnosis",
+			NotificationsName: "gnosis",
 		},
 		{
-			ChainId: 17000,
-			Name:    "holesky",
+			ChainId:           17000,
+			Name:              "holesky",
+			NotificationsName: "holesky",
 		},
 	}, nil
 }
 
-func (d *DummyService) GetAllClients() ([]types.ClientInfo, error) {
-	return []types.ClientInfo{
+func (d *DummyService) GetAllClients() ([]t.ClientInfo, error) {
+	return []t.ClientInfo{
 		// execution_layer
 		{
 			Id:       0,
@@ -576,10 +575,10 @@ func (d *DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, us
 func (d *DummyService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
+func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	return nil
 }
-func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error {
+func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error {
 	return nil
 }
 
@@ -756,19 +755,37 @@ func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, da
 	return getDummyStruct[t.MobileWidgetData]()
 }
 
-func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit uint64, offset uint64) (*types.MachineMetricsData, error) {
-	data, err := getDummyStruct[types.MachineMetricsData]()
+func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*t.MachineMetricsData, error) {
+	data, err := getDummyStruct[t.MachineMetricsData]()
 	if err != nil {
 		return nil, err
 	}
-	data.SystemMetrics = slices.SortedFunc(slices.Values(data.SystemMetrics), func(i, j *t.MachineMetricSystem) int {
+	data.SystemMetrics = slices.SortedFunc(slices.Values(data.SystemMetrics), func(i, j *commontypes.MachineMetricSystem) int {
 		return int(i.Timestamp) - int(j.Timestamp)
 	})
-	data.ValidatorMetrics = slices.SortedFunc(slices.Values(data.ValidatorMetrics), func(i, j *t.MachineMetricValidator) int {
+	data.ValidatorMetrics = slices.SortedFunc(slices.Values(data.ValidatorMetrics), func(i, j *commontypes.MachineMetricValidator) int {
 		return int(i.Timestamp) - int(j.Timestamp)
 	})
-	data.NodeMetrics = slices.SortedFunc(slices.Values(data.NodeMetrics), func(i, j *t.MachineMetricNode) int {
+	data.NodeMetrics = slices.SortedFunc(slices.Values(data.NodeMetrics), func(i, j *commontypes.MachineMetricNode) int {
 		return int(i.Timestamp) - int(j.Timestamp)
 	})
 	return data, nil
+}
+
+func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64, machine, process string, data []byte) error {
+	return nil
+}
+
+func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow]()
+}
+
+func (d *DummyService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
+	return nil
+}
+func (d *DummyService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
+	return nil
+}
+func (d *DummyService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
+	return nil
 }
