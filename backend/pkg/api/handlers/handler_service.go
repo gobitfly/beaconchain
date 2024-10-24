@@ -138,6 +138,10 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 // it should be used as the last validation step for all internal dashboard GET-handlers.
 // Modifying handlers (POST, PUT, DELETE) should only accept primary dashboard ids and just use checkPrimaryDashboardId.
 func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
+	//check if dashboard id is stored in context
+	if dashboardId, ok := ctx.Value(types.CtxDashboardIdKey).(*types.VDBId); ok {
+		return dashboardId, nil
+	}
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
