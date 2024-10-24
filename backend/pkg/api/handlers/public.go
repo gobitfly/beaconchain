@@ -2215,6 +2215,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, v)
 		return
 	}
+	req.DoNotDisturbTimestamp = min(req.DoNotDisturbTimestamp, math.MaxInt32)
 
 	// check premium perks
 	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
