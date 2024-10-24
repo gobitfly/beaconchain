@@ -41,6 +41,24 @@ var (
 	reJsonContentType              = regexp.MustCompile(`^application\/json(;.*)?$`)
 )
 
+var searchEnumsRegexMapping = map[enums.SearchType]*regexp.Regexp{
+	enums.SearchTypeName:                 reName,
+	enums.SearchTypeInteger:              reInteger,
+	enums.SearchTypeEthereumAddress:      reEthereumAddress,
+	enums.SearchTypeWithdrawalCredential: reWithdrawalCredential,
+	enums.SearchTypeEnsName:              reEnsName,
+	enums.SearchTypeGraffiti:             reGraffiti,
+	enums.SearchTypeCursor:               reCursor,
+	enums.SearchTypeEmail:                reEmail,
+	enums.SearchTypePassword:             rePassword,
+	enums.SearchTypeEmailUserToken:       reEmailUserToken,
+	enums.SearchTypeJsonContentType:      reJsonContentType,
+	// Validator Dashboard
+	enums.SearchTypeValidatorDashboardPublicId:   reValidatorDashboardPublicId,
+	enums.SearchTypeValidatorPublicKeyWithPrefix: reValidatorPublicKeyWithPrefix,
+	enums.SearchTypeValidatorPublicKey:           reValidatorPublicKey,
+}
+
 const (
 	maxNameLength                     = 50
 	maxValidatorsInList               = 20
@@ -413,6 +431,18 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
 	return &types.Sort[T]{Column: sortCol, Desc: desc}
+}
+
+func checkSearch[T enums.Searchable](searchString string) T {
+	var search T
+	if searchString == "" {
+		return search
+	}
+	for _, acceptedSearchType := range search.GetSearches() {
+		search = search.SetSearchType(acceptedSearchType, searchEnumsRegexMapping[acceptedSearchType].MatchString(searchString)).(T)
+	}
+	search.SetSearchValue(searchString)
+	return search
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {

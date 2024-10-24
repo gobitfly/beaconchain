@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search enums.VDBBlocksSearches, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
 	var err error
 	var currentCursor t.BlocksCursor
@@ -31,11 +30,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			return nil, nil, fmt.Errorf("failed to parse passed cursor as BlocksCursor: %w", err)
 		}
 	}
-
-	// regexes taken from api handler common.go
-	searchPubkey := regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`).MatchString(search)
-	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
-	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
 	validatorMap := make(map[t.VDBValidator]bool)
 	params := []interface{}{}
@@ -66,18 +60,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		from := `FROM users_val_dashboards_validators validators `
 		where := `WHERE validators.dashboard_id = $1`
 		extraConds := make([]string, 0, 3)
-		if searchIndex {
-			params = append(params, search)
+		if search.Index {
+			params = append(params, search.Value)
 			extraConds = append(extraConds, fmt.Sprintf(`validator_index = $%d`, len(params)))
 		}
-		if searchGroup {
+		if search.Group {
 			from += `INNER JOIN users_val_dashboards_groups groups ON validators.dashboard_id = groups.dashboard_id AND validators.group_id = groups.id `
 			// escape the psql single character wildcard "_"; apply prefix-search
-			params = append(params, strings.Replace(search, "_", "\\_", -1)+"%")
+			params = append(params, strings.Replace(search.Value, "_", "\\_", -1)+"%")
 			extraConds = append(extraConds, fmt.Sprintf(`LOWER(name) LIKE LOWER($%d)`, len(params)))
 		}
-		if searchPubkey {
-			index, ok := validatorMapping.ValidatorIndices[search]
+		if search.PublicKey {
+			index, ok := validatorMapping.ValidatorIndices[search.Value]
 			if !ok && len(extraConds) == 0 {
 				// don't even need to query
 				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
@@ -93,13 +87,13 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	} else {
 		validators := make([]t.VDBValidator, 0, len(dashboardId.Validators))
 		for _, validator := range dashboardId.Validators {
-			if searchIndex && fmt.Sprint(validator) != search ||
-				searchPubkey && validator != validatorMapping.ValidatorIndices[search] {
+			if search.Index && fmt.Sprint(validator) != search.Value ||
+				search.PublicKey && validator != validatorMapping.ValidatorIndices[search.Value] {
 				continue
 			}
 			validatorMap[validator] = true
 			validators = append(validators, validator)
-			if searchIndex || searchPubkey {
+			if search.Index || search.PublicKey {
 				break
 			}
 		}

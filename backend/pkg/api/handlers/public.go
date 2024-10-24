@@ -1391,8 +1391,9 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
+	search := checkSearch[enums.VDBBlocksSearches](pagingParams.search)
 
-	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
