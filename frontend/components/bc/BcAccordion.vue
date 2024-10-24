@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const props = defineProps<{
   infoCopy?: string,
+  item?: T,
   items?: T[],
   open?: boolean,
 }>()
@@ -56,17 +57,22 @@ const copyText = async () => {
     </summary>
     <BcCard class="bc-accordion__content">
       <ul
+        v-if="items?.length"
         :id="idList"
         class="bc-accordion-list"
       >
         <li
-          v-for="(item, index) in items"
-          :key="`${index}-${item}`"
-          class="bc-accordion-list__item"
+          v-for="(element, index) in items"
+          :key="`${index}-${element}`"
+          class="bc-accordion-list__element"
         >
-          <slot name="item" :item />
+          <slot name="item" :item="element" />
         </li>
       </ul>
+      <slot
+        v-if="item"
+        name="item" :item
+      />
       <template #floating-action-button>
         <BcButtonIcon
           v-if="isSupported"
@@ -91,6 +97,7 @@ const copyText = async () => {
   position: relative;
   summary {
     list-style: none;
+    cursor: pointer;
   }
   summary::-webkit-details-marker{
     display: none;
@@ -117,10 +124,10 @@ const copyText = async () => {
   padding-inline-start: 0;
   display: inline;
 }
-.bc-accordion-list__item {
+.bc-accordion-list__element {
   display: inline;
 }
-.bc-accordion-list__item:not(:last-child)::after {
+.bc-accordion-list__element:not(:last-child)::after {
 content: ', ';
 }
 .bc-accordion__button {
@@ -135,6 +142,7 @@ content: ', ';
   position: absolute;
   bottom: 6px;
   right: 11px;
+  cursor: pointer
 }
 .bc-accordion__button-icon {
   width: .9375rem;
