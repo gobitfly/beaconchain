@@ -37,13 +37,19 @@ export function useCustomFetch() {
     }
 
     const url = useRequestURL()
-    const runtimeConfig = useRuntimeConfig()
     const {
-      private: pConfig,
+      private: {
+        apiServer,
+        legacyApiServer,
+        ssrSecret,
+      } = {},
       public: {
-        apiClient, apiKey, domain, legacyApiClient,
+        apiClient,
+        apiKey,
+        domain,
+        legacyApiClient,
       },
-    } = runtimeConfig
+    } = useRuntimeConfig()
     const path = map.mock
       ? `${pathName}.json`
       : map.getPath?.(pathValues) || map.path
@@ -52,14 +58,13 @@ export function useCustomFetch() {
       : map.legacy
         ? legacyApiClient
         : apiClient
-    const ssrSecret = pConfig?.ssrSecret
 
     if (isServerSide) {
       baseURL = map.mock
         ? `${domain || url.origin.replace('http:', 'https:')}/mock`
         : map.legacy
-          ? pConfig?.legacyApiServer
-          : pConfig?.apiServer
+          ? legacyApiServer ?? ''
+          : apiServer ?? ''
     }
 
     options.headers = new Headers({
@@ -100,19 +105,19 @@ export function useCustomFetch() {
       })
       return res as T
     }
-      const res = await $fetch.raw<T>(path, {
-        baseURL,
-        method,
-        ...options,
-      })
-      if (method === 'GET') {
-        // We get the csrf header from GET requests
-        const tokenCsrf = res.headers.get('x-csrf-token')
-        if (tokenCsrf) {
-          setTokenCsrf(tokenCsrf)
-        }
+    const res = await $fetch.raw<T>(path, {
+      baseURL,
+      method,
+      ...options,
+    })
+    if (method === 'GET') {
+      // We get the csrf header from GET requests
+      const tokenCsrf = res.headers.get('x-csrf-token')
+      if (tokenCsrf) {
+        setTokenCsrf(tokenCsrf)
       }
-      return res._data as T
+    }
+    return res._data as T
   }
 
   return {
