@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"sync/atomic"
@@ -24,6 +25,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -103,22 +105,32 @@ func init() {
 
 // main
 func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+
 	// read / set parameter
-	configPath := flag.String("config", "config/default.config.yml", "Path to the config file")
-	startBlockNumber := flag.Int64("start-block-number", -1, "trigger a REEXPORT, only working in combination with end-block-number, defined block is included, will be the first action done and will quite afterwards, ignore every other action")
-	endBlockNumber := flag.Int64("end-block-number", -1, "trigger a REEXPORT, only working in combination with start-block-number, defined block is included, will be the first action done and will quite afterwards, ignore every other action")
-	reorgDepth = flag.Int64("reorg.depth", 32, fmt.Sprintf("lookback to check and handle chain reorgs (MAX %s), you should NEVER reduce this after the first start, otherwise there will be unchecked areas", _formatInt64(MAX_REORG_DEPTH)))
-	concurrency := flag.Int64("concurrency", 8, "maximum threads used (running on maximum whenever possible)")
-	nodeRequestsAtOnce := flag.Int64("node-requests-at-once", 16, fmt.Sprintf("bulk size per node = bt = db request (MAX %s)", _formatInt64(MAX_NODE_REQUESTS_AT_ONCE)))
-	skipHoleCheck := flag.Bool("skip-hole-check", false, "skips the initial check for holes, doesn't go very well with only-hole-check")
-	onlyHoleCheck := flag.Bool("only-hole-check", false, "just check for holes and quit, can be used for a reexport running simulation to a normal setup, just remove entries in postgres and start with this flag, doesn't go very well with skip-hole-check")
-	noNewBlocks := flag.Bool("ignore-new-blocks", false, "there are no new blocks, at all")
-	noNewBlocksThresholdSeconds := flag.Int("fatal-if-no-new-block-for-x-seconds", 600, "will fatal if there is no new block for x seconds (MIN 30), will start throwing errors at 2/3 of the time, will start throwing warnings at 1/3 of the time, doesn't go very well with ignore-new-blocks")
-	discordWebhookBlockThreshold := flag.Int64("discord-block-threshold", 100000, "every x blocks an update is send to Discord")
-	discordWebhookReportUrl := flag.String("discord-url", "", "report progress to discord url")
-	discordWebhookUser := flag.String("discord-user", "", "report progress to discord user")
-	discordWebhookAddTextFatal := flag.String("discord-fatal-text", "", "this text will be added to the discord message in the case of an fatal")
-	flag.Parse()
+	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
+	versionFlag := fs.Bool("version", false, "print version and exit")
+	startBlockNumber := fs.Int64("start-block-number", -1, "trigger a REEXPORT, only working in combination with end-block-number, defined block is included, will be the first action done and will quite afterwards, ignore every other action")
+	endBlockNumber := fs.Int64("end-block-number", -1, "trigger a REEXPORT, only working in combination with start-block-number, defined block is included, will be the first action done and will quite afterwards, ignore every other action")
+	reorgDepth = fs.Int64("reorg.depth", 32, fmt.Sprintf("lookback to check and handle chain reorgs (MAX %s), you should NEVER reduce this after the first start, otherwise there will be unchecked areas", _formatInt64(MAX_REORG_DEPTH)))
+	concurrency := fs.Int64("concurrency", 8, "maximum threads used (running on maximum whenever possible)")
+	nodeRequestsAtOnce := fs.Int64("node-requests-at-once", 16, fmt.Sprintf("bulk size per node = bt = db request (MAX %s)", _formatInt64(MAX_NODE_REQUESTS_AT_ONCE)))
+	skipHoleCheck := fs.Bool("skip-hole-check", false, "skips the initial check for holes, doesn't go very well with only-hole-check")
+	onlyHoleCheck := fs.Bool("only-hole-check", false, "just check for holes and quit, can be used for a reexport running simulation to a normal setup, just remove entries in postgres and start with this flag, doesn't go very well with skip-hole-check")
+	noNewBlocks := fs.Bool("ignore-new-blocks", false, "there are no new blocks, at all")
+	noNewBlocksThresholdSeconds := fs.Int("fatal-if-no-new-block-for-x-seconds", 600, "will fatal if there is no new block for x seconds (MIN 30), will start throwing errors at 2/3 of the time, will start throwing warnings at 1/3 of the time, doesn't go very well with ignore-new-blocks")
+	discordWebhookBlockThreshold := fs.Int64("discord-block-threshold", 100000, "every x blocks an update is send to Discord")
+	discordWebhookReportUrl := fs.String("discord-url", "", "report progress to discord url")
+	discordWebhookUser := fs.String("discord-user", "", "report progress to discord user")
+	discordWebhookAddTextFatal := fs.String("discord-fatal-text", "", "this text will be added to the discord message in the case of an fatal")
+	err := fs.Parse(os.Args[2:])
+	if err != nil {
+		log.Fatal(err, "error parsing flags", 0)
+	}
+	if *versionFlag {
+		log.Info(version.Version)
+		return
+	}
 
 	// tell the user about all parameter
 	{
@@ -160,6 +172,15 @@ func Run() {
 			eth1RpcEndpoint = utils.Config.Eth1ErigonEndpoint
 		} else {
 			eth1RpcEndpoint = utils.Config.Eth1GethEndpoint
+		}
+
+		if utils.Config.Metrics.Enabled {
+			go func() {
+				log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+				if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
+					log.Fatal(err, "error serving metrics", 0)
+				}
+			}()
 		}
 	}
 
