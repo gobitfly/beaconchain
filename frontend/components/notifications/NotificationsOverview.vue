@@ -17,7 +17,7 @@ const hasEmail = computed(() => overview.value?.is_email_notifications_enabled)
 const hasPushNotifications = computed(() => overview.value?.is_push_notifications_enabled)
 const vdbMostNotifiedGroups = computed(() => overview.value?.vdb_most_notified_groups || [])
 const adbMostNotifiedGroups = computed(() => overview.value?.adb_most_notified_groups || [])
-const last24hEmailsCount = computed(() => overview.value?.last_24h_emails_count ?? 0)
+const last24hEmailsCount = computed(() => overview.value?.last_24h_email_count ?? 0)
 const last24hPushCount = computed(() => overview.value?.last_24h_push_count ?? 0)
 const last24hWebhookCount = computed(() => overview.value?.last_24h_webhook_count ?? 0)
 const notificationsTotal = computed(() => {

@@ -204,7 +204,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			}
 			return res.Uint64()
 		}
-		response.Last24hEmailsCount, err = getMessageCount("n_mails")
+		response.Last24hEmailCount, err = getMessageCount("n_mails")
 		if err != nil {
 			return err
 		}
@@ -253,6 +253,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		err = d.userReader.GetContext(ctx, &response, querySql, args...)
 		return err
 	})
+	response.NextEmailCountResetTimestamp = time.Now().Add(utils.Day).Truncate(utils.Day).Unix()
 
 	err = eg.Wait()
 	return &response, err
