@@ -74,9 +74,9 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 		if cursor.IsReverse() {
 			column.Desc = !column.Desc
 		}
-		colOrder := column.Column.Asc()
+		colOrder := column.Column.Asc().NullsFirst()
 		if column.Desc {
-			colOrder = column.Column.Desc()
+			colOrder = column.Column.Desc().NullsLast()
 		}
 		queryOrder = append(queryOrder, colOrder)
 	}
@@ -89,10 +89,10 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 			column := queryOrderColumns[i]
 			var colWhere exp.Expression
 
-			// current convention is the psql default (ASC: nulls last, DESC: nulls first)
-			colWhere = goqu.Or(column.Column.Gt(column.Offset), column.Column.IsNull())
-			if column.Desc {
-				colWhere = column.Column.Lt(column.Offset)
+			// current convention is opposite of the psql default (ASC: nulls first, DESC: nulls last)
+			colWhere = goqu.Or(column.Column.Lt(column.Offset), column.Column.IsNull())
+			if !column.Desc {
+				colWhere = column.Column.Gt(column.Offset)
 				if column.Offset == nil {
 					colWhere = goqu.Or(colWhere, column.Column.IsNull())
 				}
