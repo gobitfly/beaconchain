@@ -27,6 +27,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 	n "github.com/gobitfly/beaconchain/pkg/notification"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -2269,14 +2270,11 @@ func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert *[]goqu.Record, even
 }
 
 func (d *DataAccessService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
-	// TODO: @Data Access
-	return nil
+	return notification.SendTestEmail(ctx, types.UserId(userId), d.userReader)
 }
 func (d *DataAccessService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
-	// TODO: @Data Access
-	return nil
+	return notification.QueueTestPushNotification(ctx, types.UserId(userId), d.userReader, d.readerDb)
 }
 func (d *DataAccessService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
-	// TODO: @Data Access
-	return nil
+	return notification.SendTestWebhookNotification(ctx, types.UserId(userId), webhookUrl, isDiscordWebhook)
 }
