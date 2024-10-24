@@ -243,6 +243,14 @@ func (m ModuleLog) Debugf(format string, args ...interface{}) {
 	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
 }
 
+func (m ModuleLog) Trace(message string) {
+	log.TraceWithFields(log.Fields{"module": m.module.GetName()}, message)
+}
+
+func (m ModuleLog) Tracef(format string, args ...interface{}) {
+	log.TraceWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
 func (m ModuleLog) InfoWithFields(additionalInfos log.Fields, msg string) {
 	additionalInfos["module"] = m.module.GetName()
 	log.InfoWithFields(additionalInfos, msg)

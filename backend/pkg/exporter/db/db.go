@@ -961,6 +961,22 @@ func GetLatestFinishedEpoch() (int64, error) {
 	return epoch, nil
 }
 
+func GetLatestUnsafeEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_insert IS NOT NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest unsafe epoch: %w", err)
+	}
+	return epoch, nil
+}
+
+
 // enum for rollings (hourly, daily, weekly, monthly, total)
 type Rollings string
 
@@ -1057,6 +1073,7 @@ func GetMinMaxForRollingSource(table RollingSources, start time.Time, end *time.
 	}
 	return &result, nil
 }
+
 
 func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, minMax MinMax) error {
 	// transfer the epochs

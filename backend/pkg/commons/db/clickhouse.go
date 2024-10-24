@@ -9,6 +9,7 @@ import (
 
 	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -74,14 +75,19 @@ type UltraFastClickhouseStruct interface {
 
 func UltraFastDumpToClickhouse[T UltraFastClickhouseStruct](data T, target_table string, insert_uuid string) error {
 	start := time.Now()
+	// add metrics
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(fmt.Sprintf("clickhouse_dump_%s_overall", target_table)).Observe(time.Since(start).Seconds())
+	}()
+	now := time.Now()
 	// get column order & names from clickhouse
 	var columns []string
 	err := ClickHouseReader.Select(&columns, "SELECT name FROM system.columns where table=$1 and database=currentDatabase() order by position;", target_table)
 	if err != nil {
 		return err
 	}
-	log.Debugf("got columns in %s", time.Since(start))
-	start = time.Now()
+	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("clickhouse_dump_%s_get_columns", target_table)).Observe(time.Since(now).Seconds())
+	now = time.Now()
 	// prepare batch
 	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
@@ -96,8 +102,8 @@ func UltraFastDumpToClickhouse[T UltraFastClickhouseStruct](data T, target_table
 	if err != nil {
 		return err
 	}
-	log.Debugf("prepared batch in %s", time.Since(start))
-	start = time.Now()
+	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("clickhouse_dump_%s_prepare_batch", target_table)).Observe(time.Since(now).Seconds())
+	now = time.Now()
 	defer func() {
 		if batch.IsSent() {
 			return
@@ -126,19 +132,19 @@ func UltraFastDumpToClickhouse[T UltraFastClickhouseStruct](data T, target_table
 			}
 			// Perform the type assertion and append operation
 			err = batch.Column(col_index).Append(column)
-			log.Debugf("appended column %s in %s", col_name, time.Since(start))
+			log.Debugf("appended column %s in %s", col_name, time.Since(now))
 			return err
 		})
 	}
 	if err := g.Wait(); err != nil {
 		return err
 	}
-	log.Debugf("appended all columns to batch in %s", time.Since(start))
-	start = time.Now()
+	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("clickhouse_dump_%s_append_columns", target_table)).Observe(time.Since(now).Seconds())
+	now = time.Now()
 	err = batch.Send()
 	if err != nil {
 		return err
 	}
-	log.Debugf("sent batch in %s", time.Since(start))
+	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("clickhouse_dump_%s_send_batch", target_table)).Observe(time.Since(now).Seconds())
 	return nil
 }

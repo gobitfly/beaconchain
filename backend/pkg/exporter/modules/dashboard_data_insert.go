@@ -7,6 +7,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/types"
 	"github.com/google/uuid"
@@ -49,6 +50,25 @@ func (d *dashboardData) insertTask() {
 }
 
 func (d *dashboardData) handleIncompleteInserts() error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_handle_incomplete_inserts").Observe(time.Since(start).Seconds())
+	}()
+	// get latest unsafe epoch
+	latestUnsafeEpoch, err := edb.GetLatestUnsafeEpoch()
+	if err != nil {
+		return errors.Wrap(err, "failed to get latest unsafe epoch")
+	}
+	metrics.State.WithLabelValues("dashboard_data_exporter_latest_unsafe_epoch").Set(float64(latestUnsafeEpoch))
+	defer func() {
+		latestUnsafeEpoch, err := edb.GetLatestUnsafeEpoch()
+		if err != nil {
+			d.log.Error(err, "failed to get latest unsafe epoch", 0)
+			return
+		}
+		metrics.State.WithLabelValues("dashboard_data_exporter_latest_unsafe_epoch").Set(float64(latestUnsafeEpoch))
+	}()
+
 	incomplete, err := edb.GetIncompleteInsertEpochs()
 	if err != nil {
 		return errors.Wrap(err, "failed to get incomplete insert epochs")
@@ -82,11 +102,16 @@ func (d *dashboardData) handleIncompleteInserts() error {
 	return nil
 }
 
-var FetchAtOnceLimit int64 = 8
+var FetchAtOnceLimit int64 = 2
 var InsertAtOnceLimit int64 = 2
 var InsertInParallel int64 = 2 // up to 3 parallel inserts
 
 func (d *dashboardData) handlePendingInserts() error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_handle_pending_inserts").Observe(time.Since(start).Seconds())
+	}()
+
 	safeEpoch := d.latestSafeEpoch.Load()
 	pending, err := edb.GetPendingInsertEpochs(safeEpoch, FetchAtOnceLimit)
 	if err != nil {
@@ -169,15 +194,19 @@ func (d *dashboardData) fetchAndInsertEpochs(epochs []edb.EpochMetadata) error {
 		}
 		eg.Go(func() error {
 			d.log.Infof("doing insert batch %s", insertId)
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_insert_batch").Observe(time.Since(now).Seconds())
+			}()
 			err := db.UltraFastDumpToClickhouse(&data, edb.EpochWriterSink, insertId.String())
 			if err != nil {
 				d.log.Error(err, "failed to insert epochs", 0, log.Fields{"epochs": data})
 				return errors.Wrap(err, "failed to insert epochs")
 			}
 			// mark as successful
-			now := time.Now()
+			sfts := time.Now()
 			for i := range epochs {
-				epochs[i].SuccessfulInsert = &now
+				epochs[i].SuccessfulInsert = &sfts
 			}
 
 			err = edb.PushEpochMetadata(epochs)

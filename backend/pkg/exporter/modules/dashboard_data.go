@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,8 +41,6 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 	if strings.ToLower(os.Getenv("LOG_LEVEL")) == "debug" {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-
-	// Then those aggregators below use the epoch data to aggregate it into the respective tables
 
 	// This channel is used to queue up epochs from chain head that need to be exported
 	temp.headEpochQueue = make(chan uint64, 100)
@@ -98,8 +95,8 @@ func updateSafeEpoch(d *dashboardData) error {
 	finalized := res.Data.Finalized.Epoch
 	safe := int64(res.Data.Finalized.Epoch) - 2
 
-	metrics.State.WithLabelValues("exporter_v25dash_last_finalized_epoch").Set(float64(finalized))
-	metrics.State.WithLabelValues("exporter_v25dash_safe_to_export_epoch").Set(float64(safe))
+	metrics.State.WithLabelValues("dashboard_data_exporter_latest_safe_epoch").Set(float64(safe))
+	metrics.State.WithLabelValues("dashboard_data_exporter_latest_finalized_epoch").Set(float64(finalized))
 
 	d.latestSafeEpoch.Store(safe)
 	return nil
@@ -181,25 +178,20 @@ func NewMultiEpochData(epochCount int) MultiEpochData {
 }
 
 func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *MultiEpochData) error {
-	// data <=|
-	//		  |<= (epochBasedData) <=|
-	//		  |				 		 |<= sorted(states) <=|
-	//		  |<= (syncBasedData)  <=… 					  |<= state(n)
-	//		  | 				 	  					  |…
-	//		  |<= (slotBasedData)  <=|
-	//		  						 |<= sorted(blocks) <=|
-	//		  						 |
 	g1 := &errgroup.Group{}
-	// g1.SetLimit(epochFetchParallelism)
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_overall").Observe(time.Since(start).Seconds())
+	}()
 	// prefill epochBasedData.epochs
 	for i := epochStart; i <= epochEnd; i++ {
 		tar.epochBasedData.epochs = append(tar.epochBasedData.epochs, i)
 	}
 	heavyRequestsSemMap := sync.Map{}
 	weights := make(map[string]int64)
-	weights["heavy"] = 8   // 8 parallel requests
-	weights["medium"] = 18 // 12 parallel requests
-	weights["light"] = 128 // 32 parallel requests
+	weights["heavy"] = 8
+	weights["medium"] = 18
+	weights["light"] = 128
 	orderedKeyList := []string{"heavy", "medium", "light"}
 	for k, v := range weights {
 		a := semaphore.NewWeighted(v)
@@ -223,25 +215,22 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				size := v.Elem().FieldByName("size").Int()
 				// waiters is a struct that has a len field
 				waiters := v.Elem().FieldByName("waiters").FieldByName("len").Int()
-				d.log.Infof("%s: cur: %d, size: %d, waiters: %d", k, cur, size, waiters)
+				d.log.Debugf("%s: cur: %d, size: %d, waiters: %d", k, cur, size, waiters)
 			}
 		}
 	}()
 
-	debugTimes := sync.Map{}
 	// epoch based Data
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_epoch_based_data_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get states
 		g2 := &errgroup.Group{}
 		slots := make([]uint64, 0)
 		// first slot of the first epoch
 		firstEpochToFetch := epochStart
-		/*
-			if firstEpochToFetch > 0 {
-				firstEpochToFetch--
-			}
-		*/
 		for i := firstEpochToFetch; i <= epochEnd+1; i++ {
 			if i == 0 {
 				slots = append(slots, 0)
@@ -250,7 +239,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			slots = append(slots, uint64(i)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1)
 		}
 		writeMutex := &sync.Mutex{}
-		d.log.Infof("fetching states for epochs %d to %d using slots %v", epochStart, epochEnd, slots)
+		d.log.Debugf("fetching states for epochs %d to %d using slots %v", epochStart, epochEnd, slots)
 		tar.epochBasedData.validatorStates = make(map[int64]constypes.LightStandardValidatorsResponse, len(slots))
 		startEpoch := int64(epochStart) - 1
 		for i, s := range slots {
@@ -264,15 +253,16 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					return err
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
-				d.log.Infof("fetching validator state at slot %d", slot)
 				start := time.Now()
+				defer func() {
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_epoch_based_data_single").Observe(time.Since(start).Seconds())
+				}()
 				var valis *constypes.StandardValidatorsResponse
 				if slot == 0 {
 					valis, err = d.CL.GetValidators("genesis", nil, nil)
 				} else {
 					valis, err = d.CL.GetValidators(slot, nil, nil)
 				}
-				d.log.Infof("retrieved validator state at slot %d in %v", slot, time.Since(start))
 				if err != nil {
 					d.log.Error(err, "can not get validators state", 0, map[string]interface{}{"slot": slot})
 					return err
@@ -299,7 +289,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				writeMutex.Unlock()
 				// free up memory
 				valis = nil
-				d.log.Infof("fetched validator state at slot %d in %v", slot, time.Since(start))
 				return nil
 			})
 		}
@@ -307,22 +296,21 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in epochBasedData: %w", err)
 		}
-		d.log.Infof("fetched states for epochs %d to %d in %v", epochStart, epochEnd, time.Since(start))
-		// add to debug
-		debugTimes.Store("epochBasedData", time.Since(start))
 		return nil
 	})
 	// syncPeriodBasedData
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_sync_period_based_data_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get sync committee assignments
 		g2 := &errgroup.Group{}
 		syncPeriodAssignmentsToFetch := make([]uint64, 0)
 		snycPeriodStatesToFetch := make([]uint64, 0)
 		for i := epochStart; i <= epochEnd; i++ {
 			if i < utils.Config.Chain.ClConfig.AltairForkEpoch {
-				//d.log.Infof("skipping sync committee assignments for epoch %d (before altair)", i)
-				// no sync committee assignments before altair
+				d.log.Tracef("skipping sync committee assignments for epoch %d (before altair)", i)
 				continue
 			}
 			syncPeriod := utils.SyncPeriodOfEpoch(i)
@@ -350,6 +338,9 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
+				defer func() {
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_sync_period_based_data_assignments_single").Observe(time.Since(start).Seconds())
+				}()
 				relevantSlot := utils.FirstEpochOfSyncPeriod(syncPeriod) * utils.Config.Chain.ClConfig.SlotsPerEpoch
 				assignments, err := d.CL.GetSyncCommitteesAssignments(nil, relevantSlot)
 				if err != nil {
@@ -362,7 +353,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					tar.syncPeriodBasedData.SyncAssignments[syncPeriod][i] = uint64(a)
 				}
 				writeMutex.Unlock()
-				d.log.Infof("fetched sync committee assignments for sync period %d in %v", syncPeriod, time.Since(start))
 				return nil
 			})
 		}
@@ -379,6 +369,9 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
+				defer func() {
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_sync_period_based_data_states_single").Observe(time.Since(start).Seconds())
+				}()
 				valis, err := d.CL.GetValidators(slot, nil, nil)
 				if err != nil {
 					d.log.Error(err, "can not get sync committee state", 0, map[string]interface{}{"syncPeriod": syncPeriod})
@@ -394,7 +387,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				writeMutex.Lock()
 				tar.syncPeriodBasedData.SyncStateEffectiveBalances[syncPeriod] = dat
 				writeMutex.Unlock()
-				d.log.Infof("fetched sync committee state for sync period %d in %v", syncPeriod, time.Since(start))
 				return nil
 			})
 		}
@@ -402,15 +394,16 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in syncPeriodBasedData: %w", err)
 		}
-		d.log.Infof("fetched sync committee assignments and states for sync periods %v in %v", syncPeriodAssignmentsToFetch, time.Since(start))
-		// add to debug
-		debugTimes.Store("syncPeriodBasedData", time.Since(start))
 		return nil
 	})
 
 	// blocks
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "slotBasedData", "duration_type": "total"}).Observe(time.Since(start).Seconds())
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get blocks
 		g2 := &errgroup.Group{}
 		slots := make([]uint64, 0)
@@ -424,26 +417,29 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			slots = append(slots, uint64(i))
 		}
 		writeMutex := &sync.Mutex{}
-		d.log.Infof("fetching blocks for slots %d to %d", firstSlotToFetch, lastSlotToFetch)
 		tar.slotBasedData.blocks = make(map[uint64]constypes.LightAnySignedBlock, len(slots))
 		for _, s := range slots {
 			slot := uint64(s)
 			epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 			g2.Go(func() error {
-				// d.log.Infof("fetching block at slot %d", slot)
-				//start := time.Now()
+				d.log.Tracef("fetching block at slot %d", slot)
 				heavyRequestsSem, _ := heavyRequestsSemMap.Load("light")
 				err := heavyRequestsSem.(*semaphore.Weighted).Acquire(context.Background(), 1)
 				if err != nil {
 					return err
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
+				start := time.Now()
+				defer func() {
+					//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "slotBasedData", "duration_type": "single"}).Observe(time.Since(start).Seconds())
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_single").Observe(time.Since(start).Seconds())
+				}()
 
 				block, err := d.CL.GetSlot(slot)
 				if err != nil {
 					httpErr := network.SpecificError(err)
 					if httpErr != nil && httpErr.StatusCode == 404 {
-						//d.log.Infof("no block at slot %d", slot)
+						d.log.Tracef("no block at slot %d", slot)
 						return nil
 					}
 					d.log.Error(err, "can not get block", 0, map[string]interface{}{"slot": slot})
@@ -490,7 +486,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				writeMutex.Lock()
 				tar.slotBasedData.blocks[slot] = lightBlock
 				writeMutex.Unlock()
-				//d.log.Infof("fetched block at slot %d in %v", slot, time.Since(start))
 				return nil
 			})
 		}
@@ -498,13 +493,15 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in slotBasedData: %w", err)
 		}
-		// add to debug
-		debugTimes.Store("slotBasedData", time.Since(start))
 		return nil
 	})
 	// block rewards
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			// metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "blockRewards", "duration_type": "total"}).Observe(time.Since(start).Seconds())
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_block_rewards_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get block rewards
 		g2 := &errgroup.Group{}
 		writeMutex := &sync.Mutex{}
@@ -526,7 +523,11 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					return err
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
-				//start := time.Now()
+				start := time.Now()
+				defer func() {
+					//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "blockRewards", "duration_type": "single"}).Observe(time.Since(start).Seconds())
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_block_rewards_single").Observe(time.Since(start).Seconds())
+				}()
 				data, err := d.CL.GetPropoalRewards(slot)
 				if err != nil {
 					httpErr := network.SpecificError(err)
@@ -540,7 +541,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				writeMutex.Lock()
 				tar.slotBasedData.rewards.blockRewards[slot] = *data
 				writeMutex.Unlock()
-				// d.log.Infof("fetched block rewards for slot %d in %v", slot, time.Since(start))
 				return nil
 			})
 		}
@@ -548,13 +548,14 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in block rewards: %w", err)
 		}
-		// add to debug
-		debugTimes.Store("blockRewards", time.Since(start))
 		return nil
 	})
 	// GetSyncRewards
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_sync_rewards_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get sync rewards
 		g2 := &errgroup.Group{}
 		writeMutex := &sync.Mutex{}
@@ -565,7 +566,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 			epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 			// check if slot is post hardfork
 			if epoch < utils.Config.Chain.ClConfig.AltairForkEpoch {
-				//d.log.Infof("skipping sync rewards for slot %d (before altair)", slot)
+				d.log.Tracef("skipping sync rewards for slot %d (before altair)", slot)
 				continue
 			}
 			g2.Go(func() error {
@@ -576,12 +577,15 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					return err
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
-				//start := time.Now()
+				start := time.Now()
+				defer func() {
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_sync_rewards_single").Observe(time.Since(start).Seconds())
+				}()
 				data, err := d.CL.GetSyncRewards(slot)
 				if err != nil {
 					httpErr := network.SpecificError(err)
 					if httpErr != nil && httpErr.StatusCode == 404 {
-						d.log.Infof("no sync rewards for slot %d", slot)
+						d.log.Tracef("no sync rewards for slot %d", slot)
 						return nil
 					}
 					d.log.Error(err, "can not get sync rewards", 0, map[string]interface{}{"slot": slot})
@@ -590,7 +594,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				writeMutex.Lock()
 				tar.slotBasedData.rewards.syncCommitteeRewards[slot] = *data
 				writeMutex.Unlock()
-				// d.log.Infof("fetched sync rewards for slot %d in %v", slot, time.Since(start))
 				return nil
 			})
 		}
@@ -598,13 +601,15 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in sync rewards: %w", err)
 		}
-		// add to debug
-		debugTimes.Store("syncRewards", time.Since(start))
 		return nil
 	})
 	// block assignments
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "blockAssignments", "duration_type": "total"}).Observe(time.Since(start).Seconds())
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_block_assignments_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get block assignments
 		g2 := &errgroup.Group{}
 		writeMutex := &sync.Mutex{}
@@ -617,8 +622,11 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					return err
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
-				//start := time.Now()
 				start := time.Now()
+				defer func() {
+					//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "blockAssignments", "duration_type": "single"}).Observe(time.Since(start).Seconds())
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_block_assignments_single").Observe(time.Since(start).Seconds())
+				}()
 				data, err := d.CL.GetPropoalAssignments(epoch)
 				if err != nil {
 					d.log.Error(err, "can not get block assignments", 0, map[string]interface{}{"epoch": epoch})
@@ -629,7 +637,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					tar.slotBasedData.assignments.blockAssignments[uint64(p.Slot)] = p.ValidatorIndex
 				}
 				writeMutex.Unlock()
-				d.log.Infof("fetched block assignments for epoch %d in %v", epoch, time.Since(start))
 				return nil
 			})
 		}
@@ -637,14 +644,16 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in block assignments: %w", err)
 		}
-		// add to debug
-		debugTimes.Store("blockAssignments", time.Since(start))
 		return nil
 	})
 
 	// attestation rewards
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "attestationRewards", "duration_type": "total"}).Observe(time.Since(start).Seconds())
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_epoch_based_data_attestation_rewards_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get attestation rewards
 		g2 := &errgroup.Group{}
 		writeMutex := &sync.Mutex{}
@@ -660,6 +669,10 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
+				defer func() {
+					//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "attestationRewards", "duration_type": "single"}).Observe(time.Since(start).Seconds())
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_epoch_based_data_attestation_rewards_single").Observe(time.Since(start).Seconds())
+				}()
 				data, err := d.CL.GetAttestationRewards(epoch)
 				if err != nil {
 					d.log.Error(err, "can not get attestation rewards", 0, map[string]interface{}{"epoch": epoch})
@@ -674,7 +687,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				tar.epochBasedData.rewards.attestationRewards[epoch] = data.Data.TotalRewards
 				tar.epochBasedData.rewards.attestationIdealRewards[epoch] = ideal
 				writeMutex.Unlock()
-				d.log.Infof("fetched attestation rewards for epoch %d in %v", epoch, time.Since(start))
 				return nil
 			})
 
@@ -683,12 +695,15 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in attestation rewards: %w", err)
 		}
-		debugTimes.Store("attestationRewards", time.Since(start))
 		return nil
 	})
 	// attestation assignments
 	g1.Go(func() error {
 		start := time.Now()
+		defer func() {
+			//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "attestationAssignments", "duration_type": "total"}).Observe(time.Since(start).Seconds())
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_attestation_assignments_overall").Observe(time.Since(start).Seconds())
+		}()
 		// get attestation assignments
 		g2 := &errgroup.Group{}
 		writeMutex := &sync.Mutex{}
@@ -704,16 +719,18 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 				}
 				defer heavyRequestsSem.(*semaphore.Weighted).Release(1)
 				start := time.Now()
+				defer func() {
+					//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "attestationAssignments", "duration_type": "single"}).Observe(time.Since(start).Seconds())
+					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_attestation_assignments_single").Observe(time.Since(start).Seconds())
+				}()
 				data, err := d.CL.GetCommittees(fetchSlot, nil, nil, nil)
 				if err != nil {
 					d.log.Error(err, "can not get attestation assignments", 0, map[string]interface{}{"slot": fetchSlot})
 					return err
 				}
-				d.log.Infof("retrieved attestation assignments for epoch %d in %v", epoch, time.Since(start))
 				writeMutex.Lock()
 				for _, committee := range data.Data {
 					// todo replace with single alloc variant that uses config values (config has 0 when the code hits here)
-					// preallocate
 					if _, ok := tar.slotBasedData.assignments.attestationAssignments[committee.Slot]; !ok {
 						tar.slotBasedData.assignments.attestationAssignments[committee.Slot] = make([][]uint64, committee.Index+1)
 					}
@@ -734,7 +751,6 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					}
 				}
 				writeMutex.Unlock()
-				d.log.Infof("fetched attestation assignments for epoch %d in %v", epoch, time.Since(start))
 				return nil
 			})
 		}
@@ -742,42 +758,12 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 		if err != nil {
 			return fmt.Errorf("error in attestation assignments: %w", err)
 		}
-		debugTimes.Store("attestationAssignments", time.Since(start))
 		return nil
 	})
-	// d.log.Infof("[time] epoch data fetcher, fetched %v epochs %v in %v. Remaining: %v (%v)", len(processed), gapGroup.Epochs, time.Since(start), remaining, remainingTimeEst)
-	//metrics.TaskDuration.WithLabelValues("exporter_v2dash_fetch_epochs").Observe(time.Since(start).Seconds())
-	//metrics.TaskDuration.WithLabelValues("exporter_v2dash_fetch_epochs_per_epochs").Observe(time.Since(start).Seconds() / float64(len(processed)))
 
-	// lets finish for now
 	err := g1.Wait()
 	if err != nil {
 		return fmt.Errorf("error in getDataForEpochRange: %w", err)
 	}
-	// debug message to discord
-	var msg string
-	// sort by debug time seen
-	sortedKeys := make([]string, 0)
-	debugTimes.Range(
-		func(key, value any) bool {
-			sortedKeys = append(sortedKeys, key.(string))
-			return true
-		})
-	slices.SortFunc(sortedKeys,
-		func(a, b string) int {
-			av, _ := debugTimes.Load(a)
-			bv, _ := debugTimes.Load(b)
-			return int((av.(time.Duration) - bv.(time.Duration)).Nanoseconds())
-		})
-	for _, k := range sortedKeys {
-		v, _ := debugTimes.Load(k)
-		msg += fmt.Sprintf("%s: %v\n", k,
-			v)
-		// also expose over metrics
-		metrics.TaskDuration.WithLabelValues("exporter_v25dash_fetch_" + k).Observe(v.(time.Duration).Seconds())
-	}
-	d.log.Infof("debug times:\n%s", msg)
-	// send message
-	utils.SendMessage(fmt.Sprintf("Debug Times getDataForEpochRange %d to %d\n```\n%s```", epochStart, epochEnd, msg), &utils.Config.InternalAlerts)
 	return nil
 }

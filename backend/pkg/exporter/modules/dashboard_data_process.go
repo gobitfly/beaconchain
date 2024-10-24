@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -21,6 +20,10 @@ import (
 
 func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]types.VDBDataEpochColumns, epochs []edb.EpochMetadata) error {
 	d.log.Info("starting processRunner")
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_overall").Observe(time.Since(start).Seconds())
+	}()
 	var err error
 	seenInsertIds := []uuid.UUID{*epochs[0].InsertBatchID}
 	currentTarIndex := 0
@@ -70,48 +73,50 @@ func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]types.VDBData
 		d.log.Warnf("tar %d, insertId %s, epochs %v, seendInsertIds %v", i, (*tar)[i].InsertBatchID, (*tar)[i].EpochsContained, seenInsertIds)
 	}
 	d.log.Infof("prepared tar with %d entries", len(*tar))
-	start := time.Now()
-	debugTimes := sync.Map{}
 	// errgroup
 	g := &errgroup.Group{}
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_validator_states_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processValidatorStates(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processValidatorStates: %w", err)
 		}
-		d.log.Infof("processed validator states in %v", time.Since(start))
-		debugTimes.Store("validatorStates", time.Since(start))
 		return nil
 	})
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_scheduled_attestations_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processScheduledAttestations(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processScheduledAttestations: %w", err)
 		}
-		d.log.Infof("processed scheduled attestations in %v", time.Since(start))
-		debugTimes.Store("scheduledAttestations", time.Since(start))
 		return nil
 	})
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_blocks_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processBlocks(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processBlocks: %w", err)
 		}
-		d.log.Infof("processed blocks in %v", time.Since(start))
-		debugTimes.Store("blocks", time.Since(start))
 		return nil
 	})
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_deposits_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processDeposits(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processDeposits: %w", err)
 		}
-		d.log.Infof("processed deposits in %v", time.Since(start))
-		debugTimes.Store("deposits", time.Since(start))
 		return nil
 	})
 	// force sequential operation of attestation rewards and proposal rewards
@@ -120,123 +125,103 @@ func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]types.VDBData
 	}
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_attestation_rewards_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processAttestationRewards(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processAttestationRewards: %w", err)
 		}
-		d.log.Infof("processed attestation rewards in %v", time.Since(start))
-		debugTimes.Store("attestationRewards", time.Since(start))
 		return nil
 	})
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_proposal_rewards_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processWithdrawals(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processWithdrawals: %w", err)
 		}
-		d.log.Infof("processed withdrawals in %v", time.Since(start))
-		debugTimes.Store("withdrawals", time.Since(start))
 		return nil
 	})
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_attestations_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processAttestations(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processAttestations: %w", err)
 		}
-		d.log.Infof("processed attestations in %v", time.Since(start))
-		debugTimes.Store("attestations", time.Since(start))
 		return nil
 	})
 	// processExpectedSyncPeriods
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_expected_sync_periods_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processExpectedSyncPeriods(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processExpectedSyncPeriods: %w", err)
 		}
-		d.log.Infof("processed expected sync periods in %v", time.Since(start))
-		debugTimes.Store("expectedSyncPeriods", time.Since(start))
 		return nil
 	})
 	// processSyncVotes
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_sync_votes_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processSyncVotes(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processSyncVotes: %w", err)
 		}
 		d.log.Infof("processed sync votes in %v", time.Since(start))
-		debugTimes.Store("syncVotes", time.Since(start))
 		return nil
 	})
 	// processProposalRewards
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_proposal_rewards_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processProposalRewards(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processProposalRewards: %w", err)
 		}
-		d.log.Infof("processed proposal rewards in %v", time.Since(start))
-		debugTimes.Store("proposalRewards", time.Since(start))
 		return nil
 	})
 	// processSyncCommitteeRewards
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_sync_committee_rewards_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processSyncCommitteeRewards(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processSyncCommitteeRewards: %w", err)
 		}
-		d.log.Infof("processed sync committee rewards in %v", time.Since(start))
-		debugTimes.Store("syncCommitteeRewards", time.Since(start))
 		return nil
 	})
 	// processBlocksExpected
 	g.Go(func() error {
 		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_blocks_expected_overall").Observe(time.Since(start).Seconds())
+		}()
 		err := d.processBlocksExpected(data, tar)
 		if err != nil {
 			return fmt.Errorf("error in processBlocksExpected: %w", err)
 		}
-		d.log.Infof("processed blocks expected in %v", time.Since(start))
-		debugTimes.Store("blocksExpected", time.Since(start))
 		return nil
 	})
 
-	d.log.Info("waiting for all processes to finish")
 	err = g.Wait()
 	if err != nil {
 		return fmt.Errorf("error in processRunner: %w", err)
 	}
-	d.log.Infof("all processes finished in %v (that's %v per epoch)", time.Since(start), time.Since(start)/time.Duration(len(data.epochBasedData.epochs)))
-	metrics.TaskDuration.WithLabelValues("exporter_v25dash_process_runner").Observe(time.Since(start).Seconds())
-	metrics.TaskDuration.WithLabelValues("exporter_v25dash_process_runner_per_epoch").Observe((time.Since(start) / time.Duration(len(data.epochBasedData.epochs))).Seconds())
-	// debug message to discord
-	var msg string
-	// sort by debug time seen
-	sortedKeys := make([]string, 0)
-	debugTimes.Range(
-		func(key, value any) bool {
-			sortedKeys = append(sortedKeys, key.(string))
-			return true
-		})
-	slices.SortFunc(sortedKeys,
-		func(a, b string) int {
-			av, _ := debugTimes.Load(a)
-			bv, _ := debugTimes.Load(b)
-			return int((av.(time.Duration) - bv.(time.Duration)).Nanoseconds())
-		})
-	for _, k := range sortedKeys {
-		v, _ := debugTimes.Load(k)
-		msg += fmt.Sprintf("%s: %v\n", k,
-			v)
-		// also expose over metrics
-		metrics.TaskDuration.WithLabelValues("exporter_v25dash_processing_" + k).Observe(v.(time.Duration).Seconds())
-	}
-	d.log.Infof("debug times:\n%s", msg)
-	// send message
-	utils.SendMessage(fmt.Sprintf("Debug Times processRunner\n```\n%s```", msg), &utils.Config.InternalAlerts)
 
 	return nil
 }
@@ -252,6 +237,10 @@ func (d *dashboardData) processValidatorStates(data *MultiEpochData, tar *[]type
 		endState := data.epochBasedData.validatorStates[iEpoch]
 		ts := utils.EpochToTime(uint64(epoch))
 		g.Go(func() error {
+			start := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_validator_states_single").Observe(time.Since(start).Seconds())
+			}()
 			for j := range endState.Data {
 				(*tar)[tI].ValidatorIndex[tO+j] = uint64(j)
 				(*tar)[tI].Epoch[tO+j] = iEpoch
@@ -285,6 +274,10 @@ func (d *dashboardData) processScheduledAttestations(data *MultiEpochData, tar *
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_scheduled_attestations_single").Observe(time.Since(now).Seconds())
+			}()
 			// pre-init should not be required, is pointer and defaults to null
 			for slot := startSlot; slot < endSlot; slot++ {
 				// fetch from attestati	on assignments
@@ -325,6 +318,10 @@ func (d *dashboardData) processBlocks(data *MultiEpochData, tar *[]types.VDBData
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_blocks_single").Observe(time.Since(now).Seconds())
+			}()
 			for slot := startSlot; slot < endSlot; slot++ {
 				// skip slot 0, as nobody proposed it
 				if slot == 0 {
@@ -364,18 +361,20 @@ func (d *dashboardData) processDeposits(data *MultiEpochData, tar *[]types.VDBDa
 		epoch := e
 		tI := data.epochBasedData.tarIndices[i]
 		tO := data.epochBasedData.tarOffsets[i]
-		// genesis deposits
-		if epoch == 0 {
-			start := time.Now()
-			for j := range data.epochBasedData.validatorStates[0].Data {
-				(*tar)[tI].DepositsCount[tO+j] = 1
-				(*tar)[tI].DepositsAmount[tO+j] = int64(data.epochBasedData.validatorStates[0].Data[j].Balance)
-			}
-			d.log.Infof("processed genesis deposits in %v", time.Since(start))
-		}
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_deposits_single").Observe(time.Since(now).Seconds())
+			}()
+			// genesis deposits
+			if epoch == 0 {
+				for j := range data.epochBasedData.validatorStates[0].Data {
+					(*tar)[tI].DepositsCount[tO+j] = 1
+					(*tar)[tI].DepositsAmount[tO+j] = int64(data.epochBasedData.validatorStates[0].Data[j].Balance)
+				}
+			}
 			for jj := startSlot; jj < endSlot; jj++ {
 				slot := jj
 				if _, ok := data.slotBasedData.blocks[slot]; !ok {
@@ -444,6 +443,10 @@ func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]t
 			return fmt.Errorf("no rewards for epoch %d", epoch)
 		}
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_attestation_rewards_single").Observe(time.Since(now).Seconds())
+			}()
 			// calculate max per committee x attestation slot
 			// array of slotsperepoch length, then array of committee per slot length. no maps because maps are slow
 			hyperlocalizedMax := make([][]int64, int(utils.Config.Chain.ClConfig.SlotsPerEpoch))
@@ -483,7 +486,7 @@ func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]t
 				// that have been deposited but arent active yet for some reason
 				// we can safely ignore these
 				if ar.ValidatorIndex >= uint64(len(validatorSlotMap)) {
-					//d.log.Infof("skipping reward for validator %d in epoch %d", ar.ValidatorIndex, epoch)
+					d.log.Tracef("skipping reward for validator %d in epoch %d", ar.ValidatorIndex, epoch)
 					continue
 				}
 				valiIndextO := uint64(tO) + ar.ValidatorIndex
@@ -571,6 +574,10 @@ func (d *dashboardData) processWithdrawals(data *MultiEpochData, tar *[]types.VD
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_withdrawals_single").Observe(time.Since(now).Seconds())
+			}()
 			for j := startSlot; j < endSlot; j++ {
 				if _, ok := data.slotBasedData.blocks[j]; !ok {
 					// nothing to do
@@ -677,6 +684,9 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 		//debugCounters := make(map[string]int)
 		g.Go(func() error {
 			start := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_attestations_single").Observe(time.Since(start).Seconds())
+			}()
 			for j := startSlot; j < startSlot+(utils.Config.Chain.ClConfig.SlotsPerEpoch*2); j++ {
 				if _, ok := data.slotBasedData.blocks[j]; !ok {
 					// nothing to do
@@ -782,13 +792,6 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 					}
 				}
 			}
-			d.log.Infof("processed attestations in epoch %d in %v", epoch, time.Since(start))
-			/*
-				fmt.Println("debug counters:")
-				for k, v := range debugCounters {
-					fmt.Printf("%s: %d (%.2f%%)\n", k, v, float64(v)/float64(debugCounters["executed"])*100)
-				}
-			*/
 			return nil
 		})
 	}
@@ -807,6 +810,10 @@ func (d *dashboardData) processExpectedSyncPeriods(data *MultiEpochData, tar *[]
 		tI := data.epochBasedData.tarIndices[i]
 		tO := uint64(data.epochBasedData.tarOffsets[i])
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_expected_sync_periods_single").Observe(time.Since(now).Seconds())
+			}()
 			iEpoch := int64(epoch)
 
 			totalEffective := int64(0)
@@ -842,6 +849,10 @@ func (d *dashboardData) processBlocksExpected(data *MultiEpochData, tar *[]types
 		tI := data.epochBasedData.tarIndices[i]
 		tO := uint64(data.epochBasedData.tarOffsets[i])
 		g.Go(func() error {
+			defe := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_blocks_expected_single").Observe(time.Since(defe).Seconds())
+			}()
 			iEpoch := int64(epoch)
 			totalEffective := int64(0)
 			for _, valData := range data.epochBasedData.validatorStates[iEpoch].Data {
@@ -885,6 +896,10 @@ func (d *dashboardData) processSyncVotes(data *MultiEpochData, tar *[]types.VDBD
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_sync_votes_single").Observe(time.Since(now).Seconds())
+			}()
 			// safety check, check if we have the sync period data
 			if _, ok := data.syncPeriodBasedData.SyncAssignments[syncPeriod]; !ok {
 				return fmt.Errorf("no sync assignments for sync period %d", syncPeriod)
@@ -936,6 +951,10 @@ func (d *dashboardData) processProposalRewards(data *MultiEpochData, tar *[]type
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_proposal_rewards_single").Observe(time.Since(now).Seconds())
+			}()
 			for j := startSlot; j < endSlot; j++ {
 				// calculate median reward
 				medianStartSlot := uint64(0)
@@ -1011,6 +1030,10 @@ func (d *dashboardData) processSyncCommitteeRewards(data *MultiEpochData, tar *[
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_sync_rewards_single").Observe(time.Since(now).Seconds())
+			}()
 			maxRewards := int64(0)
 			for j := startSlot; j < endSlot; j++ {
 				if _, ok := data.slotBasedData.blocks[j]; !ok {
