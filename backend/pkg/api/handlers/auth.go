@@ -34,11 +34,6 @@ const authConfirmEmailRateLimit = time.Minute * 2
 const authResetEmailRateLimit = time.Minute * 2
 const authEmailExpireTime = time.Minute * 30
 
-type ctxKey string
-
-const ctxUserIdKey ctxKey = "user_id"
-const ctxIsMockedKey ctxKey = "is_mocked"
-
 var errBadCredentials = newUnauthorizedErr("invalid email or password")
 
 func (h *HandlerService) getUserBySession(r *http.Request) (types.UserCredentialInfo, error) {
@@ -203,7 +198,7 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 
 // if this is used, user ID should've been stored in context (by GetUserIdStoreMiddleware)
 func GetUserIdByContext(r *http.Request) (uint64, error) {
-	userId, ok := r.Context().Value(ctxUserIdKey).(uint64)
+	userId, ok := r.Context().Value(types.CtxUserIdKey).(uint64)
 	if !ok {
 		return 0, newUnauthorizedErr("user not authenticated")
 	}
