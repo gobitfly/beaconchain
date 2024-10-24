@@ -329,4 +329,5 @@ type CtxKey string
 
 const CtxUserIdKey CtxKey = "user_id"
 const CtxIsMockedKey CtxKey = "is_mocked"
+const CtxMockSeedKey CtxKey = "mock_seed"
 const CtxDashboardIdKey CtxKey = "dashboard_id"

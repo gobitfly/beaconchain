@@ -7,7 +7,10 @@ import (
 	"math/rand/v2"
 	"reflect"
 	"slices"
+	"sync"
 	"time"
+
+	mathrand "math/rand"
 
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/interfaces"
@@ -52,8 +55,16 @@ func randomEthDecimal() decimal.Decimal {
 	return decimal
 }
 
+var mockLock sync.Mutex = sync.Mutex{}
+
 // must pass a pointer to the data
 func populateWithFakeData(ctx context.Context, a interface{}) error {
+	if seed, ok := ctx.Value(t.CtxMockSeedKey).(int64); ok {
+		mockLock.Lock()
+		defer mockLock.Unlock()
+		faker.SetRandomSource(mathrand.NewSource(seed))
+	}
+
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(10), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
