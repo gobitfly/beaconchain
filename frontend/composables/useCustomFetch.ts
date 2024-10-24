@@ -1,6 +1,5 @@
 import type { NitroFetchOptions } from 'nitropack'
 import { useCsrfStore } from '~/stores/useCsrfStore'
-import type { LoginResponse } from '~/types/user'
 import {
   API_PATH, mapping, type PathValues,
 } from '~/types/customFetch'
@@ -97,17 +96,19 @@ export function useCustomFetch() {
       }
     }
 
-    if (pathName === API_PATH.LOGIN) {
-      const res = await $fetch<LoginResponse>(path, {
-        baseURL,
-        method,
-        ...options,
-      })
-      return res as T
-    }
     const res = await $fetch.raw<T>(path, {
       baseURL,
       method,
+      onResponseError({
+        response,
+      }) {
+        const { private: { ssrSecret } = {} } = useRuntimeConfig()
+        if (!ssrSecret) {
+          return logError('👉 set `PRIVATE_SSR_SECRET` in your `./.env` file ')
+        }
+        const isUnauthorized = response.status === 401
+        if (isUnauthorized) navigateTo('/login')
+      },
       ...options,
     })
     if (method === 'GET') {

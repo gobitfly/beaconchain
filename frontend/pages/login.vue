@@ -33,6 +33,7 @@ const [
   passwordAttrs,
 ] = defineField('password')
 
+const lastUrl = useCookie('currentUrl')
 const onSubmit = handleSubmit(async (values) => {
   try {
     await doLogin(values.email, values.password)
@@ -47,7 +48,7 @@ const onSubmit = handleSubmit(async (values) => {
       })
     }
     else {
-      await navigateTo('/')
+      await navigateTo(lastUrl.value)
     }
   }
   catch (error) {
@@ -89,6 +90,7 @@ const registerLink = computed(() => {
               type="text"
               :class="{ 'p-invalid': errors?.email }"
               aria-describedby="text-error"
+              autofocus
             />
             <div class="p-error">
               {{ errors?.email }}
