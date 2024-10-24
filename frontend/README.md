@@ -34,7 +34,7 @@ Then type:
 cp .env-example .env
 ```
 
-In file `.env`, set `PRIVATE_SSR_SECRET=<secret>` (replace `<secret>` with the actual secret).
+In file `.env`, set `NUXT_PRIVATE_SSR_SECRET=<secret>` (replace `<secret>` with the actual secret).
 
 In file `.env`, write the URLs of the API servers and the secret key to access to them.
 The variable evoking the development is used to show/hide features and components that are not ready for production.
