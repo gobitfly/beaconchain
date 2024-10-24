@@ -1,5 +1,5 @@
 import {
-  type AnySchema, boolean, object, string,
+  type AnySchema, boolean, number, object, string,
 } from 'yup'
 
 export const createSchemaObject = (schema: Record<string, AnySchema>) => {
@@ -9,5 +9,6 @@ export const createSchemaObject = (schema: Record<string, AnySchema>) => {
 export const validation = {
   // expose thirdparty validation here, when needed
   boolean,
+  number,
   url: (message: string) => string().url(message),
 }

@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
 
 const props = defineProps<{
-  error?: BcInputError,
+  error?: string,
   infoText?: string,
   label?: string,
 }>()

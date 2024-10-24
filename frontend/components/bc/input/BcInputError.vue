@@ -1,13 +1,11 @@
 <script lang="ts" setup>
 const idError = useId()
-/**
- * Spacing of error message will be removed by explicitly passing `false`.
- * This should encourage to always think about the error message.
- */
-export type BcInputError = false | string
-defineProps<{
-  error?: BcInputError,
-}>()
+
+withDefaults(defineProps<{
+  error?: string,
+}>(), {
+  error: '',
+})
 </script>
 
 <template>
@@ -17,7 +15,6 @@ defineProps<{
     :aria-describedby="idError"
   />
   <div
-    v-if="error !== false"
     :id="idError"
     class="bc-input-error"
   >
