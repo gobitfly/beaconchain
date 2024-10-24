@@ -3,6 +3,7 @@ package notification
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"database/sql"
 	"encoding/gob"
 	"fmt"
@@ -450,7 +451,7 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 
 	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
 
-	tokensByUserID, err := GetUserPushTokenByIds(userIDs)
+	tokensByUserID, err := GetUserPushTokenByIds(userIDs, db.FrontendReaderDB)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_send_push_notifications").Inc()
 		return nil, fmt.Errorf("error when sending push-notifications: could not get tokens: %w", err)
@@ -585,6 +586,47 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 		return fmt.Errorf("error writing transit push to db: %w", err)
 	}
 	return nil
+}
+
+func QueueTestPushNotification(ctx context.Context, userId types.UserId, userDbConn *sqlx.DB, networkDbConn *sqlx.DB) error {
+	count, err := db.CountSentMessage("n_test_push", userId)
+	if err != nil {
+		return err
+	}
+	if count > 10 {
+		return fmt.Errorf("rate limit has been exceeded")
+	}
+	tokens, err := GetUserPushTokenByIds([]types.UserId{userId}, userDbConn)
+	if err != nil {
+		return err
+	}
+
+	messages := []*messaging.Message{}
+	for _, tokensOfUser := range tokens {
+		for _, token := range tokensOfUser {
+			log.Infof("sending test push to user %d with token %v", userId, token)
+			messages = append(messages, &messaging.Message{
+				Notification: &messaging.Notification{
+					Title: "Test Push",
+					Body:  "This is a test push from beaconcha.in",
+				},
+				Token: token,
+			})
+		}
+	}
+
+	if len(messages) == 0 {
+		return fmt.Errorf("no push tokens found for user %v", userId)
+	}
+
+	transit := types.TransitPushContent{
+		Messages: messages,
+		UserId:   userId,
+	}
+
+	_, err = networkDbConn.ExecContext(ctx, `INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'push', $1)`, transit)
+
+	return err
 }
 
 func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {

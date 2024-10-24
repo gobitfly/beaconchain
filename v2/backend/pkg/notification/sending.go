@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
 
@@ -154,7 +155,11 @@ func sendEmailNotifications() error {
 	log.Infof("processing %v email notifications", len(notificationQueueItem))
 
 	for _, n := range notificationQueueItem {
-		err = mail.SendMailRateLimited(n.Content)
+		userInfo, err := db.GetUserInfo(context.Background(), uint64(n.Content.UserId), db.FrontendReaderDB)
+		if err != nil {
+			return err
+		}
+		err = mail.SendMailRateLimited(n.Content, int64(userInfo.PremiumPerks.EmailNotificationsPerDay), "n_emails")
 		if err != nil {
 			if !strings.Contains(err.Error(), "rate limit has been exceeded") {
 				metrics.Errors.WithLabelValues("notifications_send_email").Inc()
@@ -431,5 +436,77 @@ func sendDiscordNotifications() error {
 		}(webhook, notifMap[webhook.ID])
 	}
 
+	return nil
+}
+
+func SendTestEmail(ctx context.Context, userId types.UserId, dbConn *sqlx.DB) error {
+	var email string
+	err := dbConn.GetContext(ctx, &email, `SELECT email FROM users WHERE id = $1`, userId)
+	if err != nil {
+		return err
+	}
+	content := types.TransitEmailContent{
+		UserId:  userId,
+		Address: email,
+		Subject: "Test Email",
+		Email: types.Email{
+			Title: "beaconcha.in - Test Email",
+			Body:  "This is a test email from beaconcha.in",
+		},
+		Attachments: []types.EmailAttachment{},
+		CreatedTs:   time.Now(),
+	}
+	err = mail.SendMailRateLimited(content, 10, "n_test_emails")
+	if err != nil {
+		return fmt.Errorf("error sending test email, err: %w", err)
+	}
+
+	return nil
+}
+
+func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webhookUrl string, isDiscordWebhook bool) error {
+	count, err := db.CountSentMessage("n_test_push", userId)
+	if err != nil {
+		return err
+	}
+	if count > 10 {
+		return fmt.Errorf("rate limit has been exceeded")
+	}
+
+	client := http.Client{Timeout: time.Second * 5}
+
+	if isDiscordWebhook {
+		req := types.DiscordReq{
+			Content: "This is a test notification from beaconcha.in",
+		}
+		reqBody := new(bytes.Buffer)
+		err := json.NewEncoder(reqBody).Encode(req)
+		if err != nil {
+			return fmt.Errorf("error marshalling discord webhook event: %w", err)
+		}
+		resp, err := client.Post(webhookUrl, "application/json", reqBody)
+		if err != nil {
+			return fmt.Errorf("error sending discord webhook request: %w", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error sending discord webhook request: %v", resp.Status)
+		}
+	} else {
+		// send a test webhook notification with the text "TEST" in the post body
+		reqBody := new(bytes.Buffer)
+		err := json.NewEncoder(reqBody).Encode(`{data: "TEST"}`)
+		if err != nil {
+			return fmt.Errorf("error marshalling webhook event: %w", err)
+		}
+		resp, err := client.Post(webhookUrl, "application/json", reqBody)
+		if err != nil {
+			return fmt.Errorf("error sending webhook request: %w", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error sending webhook request: %v", resp.Status)
+		}
+	}
 	return nil
 }
