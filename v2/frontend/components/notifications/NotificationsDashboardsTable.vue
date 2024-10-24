@@ -44,10 +44,8 @@ const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_typ
   switch (eventType) {
     case 'attestation_missed':
       return $t('notifications.dashboards.event_type.attestation_missed')
-    case 'group_offline':
-      return $t('notifications.dashboards.event_type.group_offline')
-    case 'group_online':
-      return $t('notifications.dashboards.event_type.group_online')
+    case 'group_efficiency_below':
+      return $t('notifications.dashboards.event_type.group_efficiency_below')
     case 'incoming_tx':
       return $t('notifications.dashboards.event_type.incoming_tx')
     case 'max_collateral':
@@ -269,7 +267,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
               </div>
             </template>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!notificationsDashboards?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
@@ -297,14 +295,18 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
 
                   }}
                 </div>
-                <div>
-                  {{
-                    $t(
-                      "notifications.dashboards.footer.subscriptions.accounts",
-                      { count: overview?.adb_subscriptions_count })
+                <BcFeatureFlag
+                  feature="feature-account_dashboards"
+                >
+                  <div>
+                    {{
+                      $t(
+                        "notifications.dashboards.footer.subscriptions.accounts",
+                        { count: overview?.adb_subscriptions_count })
 
-                  }}
-                </div>
+                    }}
+                  </div>
+                </BcFeatureFlag>
               </template>
             </template>
           </BcTable>

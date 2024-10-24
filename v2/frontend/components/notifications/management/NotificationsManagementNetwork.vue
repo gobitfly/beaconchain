@@ -30,9 +30,9 @@ watchDebounced([
 ], async () => {
   if (!currentNetworkSettings.value) return
   currentNetworkSettings.value.is_gas_above_subscribed = hasGasAbove.value
-  currentNetworkSettings.value.gas_above_threshold = thresholdGasAbove.value
   currentNetworkSettings.value.is_gas_below_subscribed = hasGasBelow.value
   currentNetworkSettings.value.is_new_reward_round_subscribed = hasNewRewardRound.value
+  currentNetworkSettings.value.is_participation_rate_subscribed = hasParticipationRate.value
 
   currentNetworkSettings.value.gas_above_threshold = formatToWei(thresholdGasAbove.value, { from: 'gwei' })
   currentNetworkSettings.value.gas_below_threshold = formatToWei(thresholdGasBelow.value, { from: 'gwei' })

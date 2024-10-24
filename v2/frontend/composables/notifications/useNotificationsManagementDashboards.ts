@@ -83,13 +83,12 @@ export function useNotificationsManagementDashboards() {
       return
     }
     const accountDashboarSettings = settings as NotificationSettingsValidatorDashboard
-    accountDashboarSettings.group_offline_threshold = 0
+    accountDashboarSettings.group_efficiency_below_threshold = 0
     accountDashboarSettings.is_attestations_missed_subscribed = false
     accountDashboarSettings.is_block_proposal_subscribed = false
-    accountDashboarSettings.is_group_offline_subscribed = false
+    accountDashboarSettings.is_group_efficiency_below_subscribed = false
     accountDashboarSettings.is_max_collateral_subscribed = false
     accountDashboarSettings.is_min_collateral_subscribed = false
-    accountDashboarSettings.is_real_time_mode_enabled = false
     accountDashboarSettings.is_slashed_subscribed = false
     accountDashboarSettings.is_sync_subscribed = false
     accountDashboarSettings.is_upcoming_block_proposal_subscribed = false

@@ -3,9 +3,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faAlarmSnooze,
   faArrowsRotate,
+  faChartLineUp,
   faCube,
   faFileSignature,
   faGlobe,
+  faMoneyBill,
   faPowerOff,
   faRocket,
   faUserSlash,
@@ -36,6 +38,11 @@ const {
     watch: [ search ],
   })
 defineEmits<{ (e: 'filter-changed', value: string): void }>()
+const { converter } = useValue()
+const formatValueWei = (value: string) => {
+  return converter.value.weiToValue(`${value}`, { fixedDecimalCount: 5 })
+    .label
+}
 </script>
 
 <template>
@@ -225,6 +232,30 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
       </BcAccordion>
       <BcAccordion
+        v-if="details?.withdrawal?.length"
+        :items="details?.withdrawal"
+        :info-copy="$t('notifications.dashboards.dialog.entity.withdrawal')"
+      >
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.withdrawal') }} ({{ details?.withdrawal?.length ?? 0 }})
+        </template>
+        <template #headingIcon>
+          <FontAwesomeIcon
+            :icon="faMoneyBill"
+            class="notifications-dashboard-dialog-entity__icon__green"
+          />
+        </template>
+        <template #item="{ item: withdrawalItem }">
+          <BcLink
+            :to="`/validator/${withdrawalItem.index}`"
+            class="link"
+          >
+            {{ withdrawalItem.index }}
+          </BcLink>
+          ({{ formatValueWei(withdrawalItem.amount) }})
+        </template>
+      </BcAccordion>
+      <BcAccordion
         v-if="details?.validator_back_online?.length"
         :items="details?.validator_back_online"
         :info-copy="$t('notifications.dashboards.dialog.entity.validator_back_online')"
@@ -248,6 +279,29 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
           ({{ validator.epoch_count }} {{ $t('common.epoch', validator.epoch_count) }})<!--
             this will remove white space in html
           -->
+        </template>
+      </BcAccordion>
+      <BcAccordion
+        v-if="details?.group_efficiency_below"
+        :item="details?.group_efficiency_below"
+      >
+        <template #headingIcon>
+          <FontAwesomeIcon
+            :icon="faChartLineUp"
+            class="notifications-dashboard-dialog-entity__icon__red"
+          />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.group_efficiency.heading') }}
+        </template>
+        <template #item="{ item: groupEfficiencyBelow }">
+          {{ details?.group_name }}
+          (<BcLink :to="`/dashboard/${props?.dashboard_id}`">
+            {{ details?.dashboard_name }}
+          </BcLink>)
+          {{ $t('notifications.dashboards.dialog.entity.group_efficiency_text', {
+            percentage: formatFractionToPercent(groupEfficiencyBelow),
+          }) }}
         </template>
       </BcAccordion>
       <BcAccordion

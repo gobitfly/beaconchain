@@ -43,7 +43,7 @@ export interface NotificationDashboardsTableRow {
   group_id: number /* uint64 */;
   group_name: string;
   entity_count: number /* uint64 */;
-  event_types: ('validator_online' | 'validator_offline' | 'group_online' | 'group_offline' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
+  event_types: ('validator_online' | 'validator_offline' | 'group_efficiency_below' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
 }
 export type InternalGetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
 export interface NotificationEventValidatorBackOnline {
@@ -59,7 +59,7 @@ export interface NotificationValidatorDashboardDetail {
   dashboard_name: string;
   group_name: string;
   validator_offline: number /* uint64 */[]; // validator indices
-  group_offline: boolean; // TODO not filled yet
+  group_efficiency_below?: number /* float64 */; // fill with the `group_efficiency_below` threshold if event is present
   proposal_missed: IndexSlots[];
   proposal_done: IndexBlocks[];
   upcoming_proposals: IndexSlots[];
@@ -68,9 +68,7 @@ export interface NotificationValidatorDashboardDetail {
   attestation_missed: IndexEpoch[]; // index (epoch)
   withdrawal: NotificationEventWithdrawal[];
   validator_offline_reminder: number /* uint64 */[]; // validator indices; TODO not filled yet
-  group_offline_reminder: boolean; // TODO not filled yet
   validator_back_online: NotificationEventValidatorBackOnline[];
-  group_back_online: number /* uint64 */; // TODO not filled yet
   min_collateral_reached: Address[]; // node addresses
   max_collateral_reached: Address[]; // node addresses
 }
@@ -152,7 +150,7 @@ export interface NotificationNetwork {
 }
 export type InternalPutUserNotificationSettingsNetworksResponse = ApiDataResponse<NotificationNetwork>;
 export interface NotificationPairedDevice {
-  id: string;
+  id: number /* uint64 */;
   paired_timestamp: number /* int64 */;
   name?: string;
   is_notifications_enabled: boolean;
@@ -189,10 +187,9 @@ export type InternalGetUserNotificationSettingsResponse = ApiDataResponse<Notifi
 export interface NotificationSettingsValidatorDashboard {
   webhook_url: string;
   is_webhook_discord_enabled: boolean;
-  is_real_time_mode_enabled: boolean;
   is_validator_offline_subscribed: boolean;
-  is_group_offline_subscribed: boolean;
-  group_offline_threshold: number /* float64 */;
+  is_group_efficiency_below_subscribed: boolean;
+  group_efficiency_below_threshold: number /* float64 */;
   is_attestations_missed_subscribed: boolean;
   is_block_proposal_subscribed: boolean;
   is_upcoming_block_proposal_subscribed: boolean;

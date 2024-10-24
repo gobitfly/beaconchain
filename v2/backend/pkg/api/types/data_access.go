@@ -186,8 +186,9 @@ type NotificationsDashboardsCursor struct {
 }
 
 type NetworkInfo struct {
-	ChainId uint64
-	Name    string
+	ChainId           uint64
+	Name              string
+	NotificationsName string
 }
 
 type ClientInfo struct {
@@ -308,7 +309,7 @@ type MobileAppBundleStats struct {
 // Notification structs
 
 type NotificationSettingsDefaultValues struct {
-	GroupOfflineThreshold             float64
+	GroupEfficiencyBelowThreshold     float64
 	MaxCollateralThreshold            float64
 	MinCollateralThreshold            float64
 	ERC20TokenTransfersValueThreshold float64

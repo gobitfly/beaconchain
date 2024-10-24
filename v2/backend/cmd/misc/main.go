@@ -247,27 +247,27 @@ func Run() {
 	}
 
 	// clickhouse
-	// db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
-	// 	Username:     cfg.ClickHouse.WriterDatabase.Username,
-	// 	Password:     cfg.ClickHouse.WriterDatabase.Password,
-	// 	Name:         cfg.ClickHouse.WriterDatabase.Name,
-	// 	Host:         cfg.ClickHouse.WriterDatabase.Host,
-	// 	Port:         cfg.ClickHouse.WriterDatabase.Port,
-	// 	MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
-	// 	SSL:          true,
-	// 	MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
-	// }, &types.DatabaseConfig{
-	// 	Username:     cfg.ClickHouse.ReaderDatabase.Username,
-	// 	Password:     cfg.ClickHouse.ReaderDatabase.Password,
-	// 	Name:         cfg.ClickHouse.ReaderDatabase.Name,
-	// 	Host:         cfg.ClickHouse.ReaderDatabase.Host,
-	// 	Port:         cfg.ClickHouse.ReaderDatabase.Port,
-	// 	MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-	// 	SSL:          true,
-	// 	MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	// }, "clickhouse", "clickhouse")
-	// defer db.ClickHouseReader.Close()
-	// defer db.ClickHouseWriter.Close()
+	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+		Username:     cfg.ClickHouse.WriterDatabase.Username,
+		Password:     cfg.ClickHouse.WriterDatabase.Password,
+		Name:         cfg.ClickHouse.WriterDatabase.Name,
+		Host:         cfg.ClickHouse.WriterDatabase.Host,
+		Port:         cfg.ClickHouse.WriterDatabase.Port,
+		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+		SSL:          true,
+		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+	}, &types.DatabaseConfig{
+		Username:     cfg.ClickHouse.ReaderDatabase.Username,
+		Password:     cfg.ClickHouse.ReaderDatabase.Password,
+		Name:         cfg.ClickHouse.ReaderDatabase.Name,
+		Host:         cfg.ClickHouse.ReaderDatabase.Host,
+		Port:         cfg.ClickHouse.ReaderDatabase.Port,
+		MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+		SSL:          true,
+		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+	}, "clickhouse", "clickhouse")
+	defer db.ClickHouseReader.Close()
+	defer db.ClickHouseWriter.Close()
 
 	// Initialize the persistent redis client
 	if requires.Redis {

@@ -3,6 +3,7 @@ package notification
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/gob"
 	"fmt"
 	"html/template"
@@ -380,6 +381,9 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 			case types.ValidatorExecutedProposalEventName:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d validator%s, Reward: %.3f ETH", types.EventLabel[event], count, plural, totalBlockReward))
+			case types.ValidatorGroupEfficiencyEventName:
+				//nolint:gosec // this is a static string
+				bodySummary += template.HTML(fmt.Sprintf("%s: %d Group%s", types.EventLabel[event], count, plural))
 			default:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d Validator%s", types.EventLabel[event], count, plural))
@@ -447,7 +451,7 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 
 	userIDs := slices.Collect(maps.Keys(notificationsByUserID))
 
-	tokensByUserID, err := GetUserPushTokenByIds(userIDs)
+	tokensByUserID, err := GetUserPushTokenByIds(userIDs, db.FrontendReaderDB)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_send_push_notifications").Inc()
 		return nil, fmt.Errorf("error when sending push-notifications: could not get tokens: %w", err)
@@ -513,6 +517,8 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 						bodySummary += fmt.Sprintf("%s: %d machine%s", types.EventLabel[event], count, plural)
 					case types.ValidatorExecutedProposalEventName:
 						bodySummary += fmt.Sprintf("%s: %d validator%s, Reward: %.3f ETH", types.EventLabel[event], count, plural, totalBlockReward)
+					case types.ValidatorGroupEfficiencyEventName:
+						bodySummary += fmt.Sprintf("%s: %d group%s", types.EventLabel[event], count, plural)
 					default:
 						bodySummary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
 					}
@@ -580,6 +586,47 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 		return fmt.Errorf("error writing transit push to db: %w", err)
 	}
 	return nil
+}
+
+func QueueTestPushNotification(ctx context.Context, userId types.UserId, userDbConn *sqlx.DB, networkDbConn *sqlx.DB) error {
+	count, err := db.CountSentMessage("n_test_push", userId)
+	if err != nil {
+		return err
+	}
+	if count > 10 {
+		return fmt.Errorf("rate limit has been exceeded")
+	}
+	tokens, err := GetUserPushTokenByIds([]types.UserId{userId}, userDbConn)
+	if err != nil {
+		return err
+	}
+
+	messages := []*messaging.Message{}
+	for _, tokensOfUser := range tokens {
+		for _, token := range tokensOfUser {
+			log.Infof("sending test push to user %d with token %v", userId, token)
+			messages = append(messages, &messaging.Message{
+				Notification: &messaging.Notification{
+					Title: "Test Push",
+					Body:  "This is a test push from beaconcha.in",
+				},
+				Token: token,
+			})
+		}
+	}
+
+	if len(messages) == 0 {
+		return fmt.Errorf("no push tokens found for user %v", userId)
+	}
+
+	transit := types.TransitPushContent{
+		Messages: messages,
+		UserId:   userId,
+	}
+
+	_, err = networkDbConn.ExecContext(ctx, `INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'push', $1)`, transit)
+
+	return err
 }
 
 func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
