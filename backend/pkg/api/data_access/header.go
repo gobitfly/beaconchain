@@ -12,24 +12,24 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-func (d *DataAccessService) GetLatestSlot() (uint64, error) {
+func (d *DataAccessService) GetLatestSlot(ctx context.Context) (uint64, error) {
 	latestSlot := cache.LatestSlot.Get()
 	return latestSlot, nil
 }
 
-func (d *DataAccessService) GetLatestFinalizedEpoch() (uint64, error) {
+func (d *DataAccessService) GetLatestFinalizedEpoch(ctx context.Context) (uint64, error) {
 	finalizedEpoch := cache.LatestFinalizedEpoch.Get()
 	return finalizedEpoch, nil
 }
 
-func (d *DataAccessService) GetLatestBlock() (uint64, error) {
+func (d *DataAccessService) GetLatestBlock(ctx context.Context) (uint64, error) {
 	// @DATA-ACCESS implement
-	return d.dummy.GetLatestBlock()
+	return d.dummy.GetLatestBlock(ctx)
 }
 
-func (d *DataAccessService) GetBlockHeightAt(slot uint64) (uint64, error) {
+func (d *DataAccessService) GetBlockHeightAt(ctx context.Context, slot uint64) (uint64, error) {
 	// @DATA-ACCESS implement; return error if no block at slot
-	return d.dummy.GetBlockHeightAt(slot)
+	return getDummyData[uint64](ctx)
 }
 
 // returns the block number of the latest existing block at or before the given slot
@@ -69,7 +69,7 @@ func (d *DataAccessService) GetLatestBlockHeightsForEpoch(ctx context.Context, e
 	return res, nil
 }
 
-func (d *DataAccessService) GetLatestExchangeRates() ([]t.EthConversionRate, error) {
+func (d *DataAccessService) GetLatestExchangeRates(ctx context.Context) ([]t.EthConversionRate, error) {
 	result := []t.EthConversionRate{}
 
 	availableCurrencies := price.GetAvailableCurrencies()

@@ -129,7 +129,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 	})
 
 	// most notified groups
-	latestSlot, err := d.GetLatestSlot()
+	latestSlot, err := d.GetLatestSlot(ctx)
 	if err != nil {
 		return nil, err
 	}
