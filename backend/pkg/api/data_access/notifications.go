@@ -204,7 +204,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			}
 			return res.Uint64()
 		}
-		response.Last24hEmailsCount, err = getMessageCount("n_mails")
+		response.Last24hEmailCount, err = getMessageCount("n_mails")
 		if err != nil {
 			return err
 		}
