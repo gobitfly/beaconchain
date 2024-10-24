@@ -362,7 +362,11 @@ func sendDiscordNotifications() error {
 		go func(webhook types.UserWebhook, reqs []types.TransitDiscord) {
 			defer func() {
 				// update retries counters in db based on end result
-				_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, webhook.Retries, webhook.ID)
+				if webhook.DashboardId == 0 && webhook.DashboardGroupId == 0 {
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, webhook.Retries, webhook.ID)
+				} else {
+					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = $1, webhook_last_sent = now() WHERE id = $2 AND dashboard_id = $3;`, webhook.Retries, webhook.DashboardGroupId, webhook.DashboardId)
+				}
 				if err != nil {
 					log.Warnf("failed to update retries counter to %v for webhook %v: %v", webhook.Retries, webhook.ID, err)
 				}
@@ -398,6 +402,7 @@ func sendDiscordNotifications() error {
 					continue // skip
 				}
 
+				log.Infof("sending discord webhook request to %s with: %v", webhook.Url, reqs[i].Content.DiscordRequest)
 				resp, err := client.Post(webhook.Url, "application/json", reqBody)
 				if err != nil {
 					log.Warnf("failed sending discord webhook request %v: %v", webhook.ID, err)
@@ -424,7 +429,9 @@ func sendDiscordNotifications() error {
 						if resp.StatusCode != http.StatusOK {
 							log.WarnWithFields(map[string]interface{}{"errResp.Body": utils.FirstN(errResp.Body, 1000), "webhook.Url": webhook.Url}, "error pushing discord webhook")
 						}
-						_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, reqs[i].Content.DiscordRequest, errResp)
+						if webhook.DashboardId == 0 && webhook.DashboardGroupId == 0 {
+							_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, reqs[i].Content.DiscordRequest, errResp)
+						}
 						if err != nil {
 							log.Error(err, "error storing failure data in users_webhooks table", 0)
 						}
