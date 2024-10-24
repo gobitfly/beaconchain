@@ -528,7 +528,7 @@ func (h *HandlerService) InternalPostMobileAuthorize(w http.ResponseWriter, r *h
 	}
 
 	// check if oauth app exists to validate whether redirect uri is valid
-	appInfo, err := h.daService.GetAppDataFromRedirectUri(req.RedirectURI)
+	appInfo, err := h.daService.GetAppDataFromRedirectUri(r.Context(), req.RedirectURI)
 	if err != nil {
 		callback := req.RedirectURI + "?error=invalid_request&error_description=missing_redirect_uri" + state
 		http.Redirect(w, r, callback, http.StatusSeeOther)
@@ -545,7 +545,7 @@ func (h *HandlerService) InternalPostMobileAuthorize(w http.ResponseWriter, r *h
 	session := h.scs.Token(r.Context())
 
 	sanitizedDeviceName := html.EscapeString(clientName)
-	err = h.daService.AddUserDevice(userInfo.Id, utils.HashAndEncode(session+session), clientID, sanitizedDeviceName, appInfo.ID)
+	err = h.daService.AddUserDevice(r.Context(), userInfo.Id, utils.HashAndEncode(session+session), clientID, sanitizedDeviceName, appInfo.ID)
 	if err != nil {
 		log.Warnf("Error adding user device: %v", err)
 		callback := req.RedirectURI + "?error=invalid_request&error_description=server_error" + state
@@ -608,7 +608,7 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 
 	// invalidate old refresh token and replace with hashed session id
 	sanitizedDeviceName := html.EscapeString(req.DeviceName)
-	err = h.daService.MigrateMobileSession(refreshTokenHashed, utils.HashAndEncode(session+session), req.DeviceID, sanitizedDeviceName) // salted with session
+	err = h.daService.MigrateMobileSession(r.Context(), refreshTokenHashed, utils.HashAndEncode(session+session), req.DeviceID, sanitizedDeviceName) // salted with session
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -649,7 +649,7 @@ func (h *HandlerService) InternalPostUsersMeNotificationSettingsPairedDevicesTok
 		return
 	}
 
-	err = h.daService.AddMobileNotificationToken(user.Id, deviceID, req.Token)
+	err = h.daService.AddMobileNotificationToken(r.Context(), user.Id, deviceID, req.Token)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -689,7 +689,7 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 		return
 	}
 
-	subscriptionCount, err := h.daService.GetAppSubscriptionCount(user.Id)
+	subscriptionCount, err := h.daService.GetAppSubscriptionCount(r.Context(), user.Id)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -720,7 +720,7 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 		}
 	}
 
-	err = h.daService.AddMobilePurchase(nil, user.Id, req, validationResult, "")
+	err = h.daService.AddMobilePurchase(r.Context(), nil, user.Id, req, validationResult, "")
 	if err != nil {
 		handleErr(w, r, err)
 		return

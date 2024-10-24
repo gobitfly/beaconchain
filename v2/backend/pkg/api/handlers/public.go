@@ -589,7 +589,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, v)
 			return
 		}
-		validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(indices, pubkeys)
+		validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(ctx, indices, pubkeys)
 		if err != nil {
 			handleErr(w, r, err)
 			return
@@ -637,7 +637,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 
 // PublicGetValidatorDashboardValidators godoc
 //
-//	@Description	Get a list of groups in a specified validator dashboard.
+//	@Description	Get a list of validators in a specified validator dashboard.
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
@@ -647,7 +647,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 //	@Param			search			query		string	false	"Search for Address, ENS."
 //	@Success		200				{object}	types.GetValidatorDashboardValidatorsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/groups [get]
+//	@Router			/validator-dashboards/{dashboard_id}/validators [get]
 func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -703,12 +703,13 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, r, v)
 		return
 	}
-	validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(indices, publicKeys)
+	ctx := r.Context()
+	validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(ctx, indices, publicKeys)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	err = h.getDataAccessor(r).RemoveValidatorDashboardValidators(r.Context(), dashboardId, validators)
+	err = h.getDataAccessor(r).RemoveValidatorDashboardValidators(ctx, dashboardId, validators)
 	if err != nil {
 		handleErr(w, r, err)
 		return

@@ -27,7 +27,7 @@ func (d *DataAccessService) GetValidatorDashboardsCountInfo(ctx context.Context)
 	}
 
 	var dbReturn []DashboardInfo
-	err := d.readerDb.Select(&dbReturn, `
+	err := d.readerDb.SelectContext(ctx, &dbReturn, `
 		WITH dashboards_groups AS
 			(SELECT
 				dashboard_id,

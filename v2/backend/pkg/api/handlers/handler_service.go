@@ -119,7 +119,7 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		}
 		return &types.VDBId{Id: types.VDBIdPrimary(dashboardInfo.DashboardId), Validators: nil, AggregateGroups: !dashboardInfo.ShareSettings.ShareGroups}, nil
 	case validatorSet:
-		validators, err := h.daService.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
+		validators, err := h.daService.GetValidatorsFromSlices(ctx, dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
 			return nil, err
 		}
