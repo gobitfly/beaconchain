@@ -100,31 +100,41 @@ const emit = defineEmits<{
           {{ $t('notifications.overview.headers.most_notifications_30d') }}
         </h3>
         <div class="lists-container">
-          <BcScreenreaderOnly tag="h4">
-            {{ $t('notifications.overview.headers.validator_groups') }}
-          </BcScreenreaderOnly>
-          <ol class="icon-list">
-            <li v-for="group in vdbMostNotifiedGroups" :key="group" class="small_text list-item">
-              <FontAwesomeIcon :icon="faDesktop" />
-              <span class="list-text">
-                {{ group }}
-              </span>
-            </li>
-          </ol>
-          <BcFeatureFlag feature="feature-account_dashboards">
+          <div class="lists-container-column">
             <BcScreenreaderOnly tag="h4">
-              {{ $t('notifications.overview.headers.account_groups') }}
+              {{ $t('notifications.overview.headers.validator_groups') }}
             </BcScreenreaderOnly>
-            <ol
-              class="icon-list"
-            >
-              <li v-for="group in adbMostNotifiedGroups" :key="group" class="small_text list-item">
-                <FontAwesomeIcon :icon="faUser" />
+            <ol class="icon-list">
+              <li
+                v-for="(group, index) in vdbMostNotifiedGroups"
+                :key="group"
+                class="small_text list-item"
+              >
+                <FontAwesomeIcon :icon="faDesktop" />
                 <span class="list-text">
-                  {{ group }}
+                  {{ index + 1 }}. {{ group || '-' }}
                 </span>
               </li>
             </ol>
+          </div>
+          <BcFeatureFlag feature="feature-account_dashboards">
+            <div class="lists-container-column">
+              <BcScreenreaderOnly tag="h4">
+                {{ $t('notifications.overview.headers.account_groups') }}
+              </BcScreenreaderOnly>
+              <ol class="icon-list">
+                <li
+                  v-for="(group, index) in adbMostNotifiedGroups"
+                  :key="group"
+                  class="small_text list-item"
+                >
+                  <FontAwesomeIcon :icon="faUser" />
+                  <span class="list-text">
+                    {{ index + 1 }}. {{ group || '-' }}
+                  </span>
+                </li>
+              </ol>
+            </div>
           </BcFeatureFlag>
         </div>
       </section>
@@ -203,7 +213,11 @@ a:hover {
 }
 .lists-container {
   display: flex;
-  gap: 20px;
+  gap: 1.25rem;
+}
+.lists-container-column {
+  flex: 1;
+  min-width: 0;
 }
 .icon-list {
   min-width: 0;
