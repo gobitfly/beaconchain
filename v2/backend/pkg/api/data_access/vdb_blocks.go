@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -45,7 +46,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
-	validators := goqu.T("users_val_dashboards_validators").As("validators")
+	validators := goqu.T("validators")
 	blocks := goqu.T("blocks")
 	groups := goqu.T("groups")
 
@@ -65,21 +66,22 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		)
 	if dashboardId.Validators == nil {
 		filteredValidatorsDs = filteredValidatorsDs.
-			From(validators).
+			From(goqu.T("users_val_dashboards_validators").As(validators.GetTable())).
 			Where(validators.Col("dashboard_id").Eq(dashboardId.Id))
 		// apply search filters
+		searches := []exp.Expression{}
 		if searchIndex {
-			filteredValidatorsDs = filteredValidatorsDs.Where(validators.Col("validator_index").Eq(search))
+			searches = append(searches, validators.Col("validator_index").Eq(search))
 		}
 		if searchGroup {
 			filteredValidatorsDs = filteredValidatorsDs.
 				InnerJoin(goqu.T("users_val_dashboards_groups").As(groups), goqu.On(
 					validators.Col("group_id").Eq(groups.Col("id")),
 					validators.Col("dashboard_id").Eq(groups.Col("dashboard_id")),
-				)).
-				Where(
-					goqu.L("LOWER(?)", groups.Col("name")).Like(strings.Replace(search, "_", "\\_", -1) + "%"),
-				)
+				))
+			searches = append(searches,
+				goqu.L("LOWER(?)", groups.Col("name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1)+"%"),
+			)
 		}
 		if searchPubkey {
 			index, ok := validatorMapping.ValidatorIndices[search]
@@ -87,11 +89,15 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				// searched pubkey doesn't exist, don't even need to query anything
 				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 			}
-
-			filteredValidatorsDs = filteredValidatorsDs.
-				Where(validators.Col("validator_index").Eq(index))
+			searches = append(searches,
+				validators.Col("validator_index").Eq(index),
+			)
+		}
+		if len(searches) > 0 {
+			filteredValidatorsDs = filteredValidatorsDs.Where(goqu.Or(searches...))
 		}
 	} else {
+		validatorList := make([]t.VDBValidator, 0, len(dashboardId.Validators))
 		for _, validator := range dashboardId.Validators {
 			if searchIndex && fmt.Sprint(validator) != search ||
 				searchPubkey && validator != validatorMapping.ValidatorIndices[search] {
@@ -101,14 +107,19 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				Validator: validator,
 				Group:     t.DefaultGroupId,
 			})
+			validatorList = append(validatorList, validator)
 			if searchIndex || searchPubkey {
 				break
 			}
 		}
 		filteredValidatorsDs = filteredValidatorsDs.
 			From(
-				goqu.L("unnest(?)", pq.Array(filteredValidators)).As("validator_index"),
-			).As("validators") // TODO ?
+				goqu.Dialect("postgres").
+					From(
+						goqu.L("unnest(?::int[])", pq.Array(validatorList)).As("validator_index"),
+					).
+					As(validators.GetTable()),
+			)
 	}
 
 	// -------------------------------------
@@ -144,10 +155,17 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		)
 
 	// 2. Selects
+	groupIdQ := goqu.C("group_id").(exp.Aliaseable)
+	if dashboardId.Validators != nil {
+		groupIdQ = exp.NewLiteralExpression("?::int", t.DefaultGroupId)
+	}
+	groupId := groupIdQ.As("group_id")
+
 	blocksDs = blocksDs.
 		SelectAppend(
 			blocks.Col("epoch"),
 			blocks.Col("slot"),
+			groupId,
 			blocks.Col("status"),
 			blocks.Col("exec_block_number"),
 			blocks.Col("graffiti_text"),
@@ -156,16 +174,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			goqu.L("cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9").As("cl_reward"),
 		)
 
-	groupId := validators.Col("group_id")
-	if dashboardId.Validators != nil {
-		groupId = goqu.V(t.DefaultGroupId).As("group_id").GetAs()
-	}
-	blocksDs = blocksDs.SelectAppend(groupId)
-
-	// 3. Limit
-	blocksDs = blocksDs.Limit(uint(limit + 1))
-
-	// 4. Sorting and pagination
+	// 3. Sorting and pagination
 	defaultColumns := []t.SortColumn{
 		{Column: enums.VDBBlocksColumns.Slot.ToExpr(), Desc: true, Offset: currentCursor.Slot},
 	}
@@ -185,18 +194,23 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
-	blocksDs = goqu.From(blocksDs). // encapsulate so we can use selected fields
-					Order(order...)
+	blocksDs = goqu.Dialect("postgres").From(goqu.T("past_blocks_cte")).
+		With("past_blocks_cte", blocksDs). // encapsulate so we can use selected fields
+		Order(order...)
 	if directions != nil {
 		blocksDs = blocksDs.Where(directions)
 	}
 
+	// 4. Limit
+	blocksDs = blocksDs.Limit(uint(limit + 1))
+
 	// 5. Gather and supply scheduled blocks to let db do the sorting etc
 	latestSlot := cache.LatestSlot.Get()
 	onlyPrimarySort := colSort.Column == enums.VDBBlockSlot
-	if !(onlyPrimarySort || colSort.Column == enums.VDBBlockBlock) || !currentCursor.IsValid() ||
-		currentCursor.Slot > latestSlot+1 && currentCursor.Reverse != colSort.Desc ||
-		currentCursor.Slot < latestSlot+1 && currentCursor.Reverse == colSort.Desc {
+	if !(onlyPrimarySort || colSort.Column == enums.VDBBlockBlock) ||
+		!currentCursor.IsValid() ||
+		currentCursor.Slot > latestSlot+1 ||
+		colSort.Desc == currentCursor.Reverse {
 		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
 		if err == nil {
 			if dashboardId.Validators == nil {
@@ -213,11 +227,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 			}
 
-			validatorSet := make(map[t.VDBValidator]bool)
+			validatorSet := make(map[t.VDBValidator]uint64)
 			for _, v := range filteredValidators {
-				validatorSet[v.Validator] = true
+				validatorSet[v.Validator] = v.Group
 			}
 			var scheduledProposers []t.VDBValidator
+			var scheduledGroups []uint64
 			var scheduledEpochs []uint64
 			var scheduledSlots []uint64
 			// don't need if requested slots are in the past
@@ -231,25 +246,26 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					continue
 				}
 				scheduledProposers = append(scheduledProposers, dutiesInfo.PropAssignmentsForSlot[slot])
+				scheduledGroups = append(scheduledGroups, validatorSet[vali])
 				scheduledEpochs = append(scheduledEpochs, slot/utils.Config.Chain.ClConfig.SlotsPerEpoch)
 				scheduledSlots = append(scheduledSlots, slot)
 			}
 
 			scheduledDs := goqu.Dialect("postgres").
 				From(
-					goqu.L("unnest(?::int[], ?::int[], ?::int[]) AS prov(validator_index, epoch, slot)", pq.Array(scheduledProposers), pq.Array(scheduledEpochs), pq.Array(scheduledSlots)),
+					goqu.L("unnest(?::int[], ?::int[], ?::int[], ?::int[]) AS prov(validator_index, group_id, epoch, slot)", pq.Array(scheduledProposers), pq.Array(scheduledGroups), pq.Array(scheduledEpochs), pq.Array(scheduledSlots)),
 				).
 				Select(
 					goqu.C("validator_index"),
 					goqu.C("epoch"),
 					goqu.C("slot"),
+					groupId,
 					goqu.V("0").As("status"),
 					goqu.V(nil).As("exec_block_number"),
+					goqu.V(nil).As("graffiti_text"),
 					goqu.V(nil).As("fee_recipient"),
 					goqu.V(nil).As("el_reward"),
 					goqu.V(nil).As("cl_reward"),
-					goqu.V(nil).As("graffiti_text"),
-					goqu.V(t.DefaultGroupId).As("group_id"),
 				).
 				As("scheduled_blocks")
 
