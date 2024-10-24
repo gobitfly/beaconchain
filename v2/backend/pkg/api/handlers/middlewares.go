@@ -141,7 +141,12 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 			handleErr(w, r, err)
 			return
 		}
-		if len(dashboardId.Validators) > 0 {
+		// store dashboard id in context
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, types.CtxDashboardIdKey, dashboardId)
+		r = r.WithContext(ctx)
+
+		if len(dashboardId.Validators) > 0 { // don't check guest dashboards
 			next.ServeHTTP(w, r)
 			return
 		}
