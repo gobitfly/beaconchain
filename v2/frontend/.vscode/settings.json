@@ -1,6 +1,7 @@
 {
   "conventionalCommits.scopes": [
     "BcButton",
+    "BcInputUnit",
     "BcLink",
     "BcTablePager",
     "BcToggle",
