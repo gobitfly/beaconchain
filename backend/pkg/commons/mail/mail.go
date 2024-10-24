@@ -72,15 +72,9 @@ func createTextMessage(msg types.Email) string {
 
 // SendMailRateLimited sends an email to a given address with the given message.
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
-func SendMailRateLimited(content types.TransitEmailContent) error {
+func SendMailRateLimited(content types.TransitEmailContent, maxEmailsPerDay int64, bucket string) error {
 	sendThresholdReachedMail := false
-	maxEmailsPerDay := int64(0)
-	userInfo, err := db.GetUserInfo(context.Background(), uint64(content.UserId), db.FrontendReaderDB)
-	if err != nil {
-		return err
-	}
-	maxEmailsPerDay = int64(userInfo.PremiumPerks.EmailNotificationsPerDay)
-	count, err := db.CountSentMessage("n_mails", content.UserId)
+	count, err := db.CountSentMessage(bucket, content.UserId)
 	if err != nil {
 		return err
 	}
