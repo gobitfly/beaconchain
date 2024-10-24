@@ -29,7 +29,7 @@ func StoreUserIdMiddleware(next http.Handler, userIdFunc func(r *http.Request) (
 
 		// store user id in context
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
+		ctx = context.WithValue(ctx, types.CtxUserIdKey, userId)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
@@ -53,7 +53,7 @@ func (h *HandlerService) StoreUserIdByApiKeyMiddleware(next http.Handler) http.H
 func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// if mock data is used, no need to check access
-		if isMockEnabled, ok := r.Context().Value(ctxIsMockedKey).(bool); ok && isMockEnabled {
+		if isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool); ok && isMocked {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -71,12 +71,6 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 			handleErr(w, r, err)
 			return
 		}
-
-		// store user id in context
-		ctx := r.Context()
-		ctx = context.WithValue(ctx, ctxUserIdKey, userId)
-		r = r.WithContext(ctx)
-
 		dashboardUser, err := h.daService.GetValidatorDashboardUser(r.Context(), types.VDBIdPrimary(dashboardId))
 		if err != nil {
 			handleErr(w, r, err)
@@ -138,7 +132,7 @@ func (h *HandlerService) ManageNotificationsViaApiCheckMiddleware(next http.Hand
 // middleware check to return if specified dashboard is not archived (and accessible)
 func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if isMockEnabled, ok := r.Context().Value(ctxIsMockedKey).(bool); ok && isMockEnabled {
+		if isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool); ok && isMocked {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -193,7 +187,7 @@ func (h *HandlerService) StoreIsMockedFlagMiddleware(next http.Handler) http.Han
 		}
 		// store isMocked flag in context
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, ctxIsMockedKey, true)
+		ctx = context.WithValue(ctx, types.CtxIsMockedKey, true)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})

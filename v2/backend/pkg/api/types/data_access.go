@@ -322,3 +322,11 @@ type NotificationSettingsDefaultValues struct {
 	GasBelowThreshold                 decimal.Decimal
 	NetworkParticipationRateThreshold float64
 }
+
+// ------------------------------
+
+type CtxKey string
+
+const CtxUserIdKey CtxKey = "user_id"
+const CtxIsMockedKey CtxKey = "is_mocked"
+const CtxDashboardIdKey CtxKey = "dashboard_id"

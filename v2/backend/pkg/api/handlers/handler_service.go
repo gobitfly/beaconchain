@@ -225,7 +225,7 @@ func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartH
 }
 
 func isUserAdmin(user *types.UserInfo) bool {
-	if user == nil {
+	if user == nil { // can happen for guest or shared dashboards
 		return false
 	}
 	return user.UserGroup == types.UserGroupAdmin
@@ -542,6 +542,6 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 }
 
 func isMocked(r *http.Request) bool {
-	isMocked, ok := r.Context().Value(ctxIsMockedKey).(bool)
+	isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool)
 	return ok && isMocked
 }
