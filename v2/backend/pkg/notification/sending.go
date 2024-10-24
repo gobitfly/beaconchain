@@ -489,9 +489,6 @@ func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webho
 			return fmt.Errorf("error sending discord webhook request: %w", err)
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("error sending discord webhook request: %v", resp.Status)
-		}
 	} else {
 		// send a test webhook notification with the text "TEST" in the post body
 		reqBody := new(bytes.Buffer)
@@ -504,9 +501,6 @@ func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webho
 			return fmt.Errorf("error sending webhook request: %w", err)
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("error sending webhook request: %v", resp.Status)
-		}
 	}
 	return nil
 }
