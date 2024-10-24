@@ -2703,7 +2703,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 	}
 	type request struct {
 		WebhookUrl              string `json:"webhook_url"`
-		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
+		IsWebhookDiscordEnabled bool   `json:"is_webhook_discord_enabled,omitempty"`
 	}
 	var req request
 	if err := v.checkBody(&req, r); err != nil {
@@ -2714,7 +2714,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 		handleErr(w, r, v)
 		return
 	}
-	err = h.getDataAccessor(r).QueueTestWebhookNotification(r.Context(), userId, req.WebhookUrl, req.IsDiscordWebhookEnabled)
+	err = h.getDataAccessor(r).QueueTestWebhookNotification(r.Context(), userId, req.WebhookUrl, req.IsWebhookDiscordEnabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return
