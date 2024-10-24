@@ -10,12 +10,12 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'remove-device', id: string): void,
+  (e: 'remove-device', id: number): void,
   (e: 'toggle-notifications', {
     id,
     value,
   }: {
-    id: string,
+    id: number,
     value: boolean,
   }): void,
 }>()

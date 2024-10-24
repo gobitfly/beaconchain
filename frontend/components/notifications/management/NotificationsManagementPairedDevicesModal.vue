@@ -11,7 +11,7 @@ const handleToggleNotifications = ({
   id,
   value,
 }: {
-  id: string,
+  id: number,
   value: boolean,
 }) => {
   notificationsManagementStore.setNotificationForPairedDevice({

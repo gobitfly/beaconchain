@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/go-faker/faker/v4"
+	"github.com/go-faker/faker/v4/pkg/interfaces"
 	"github.com/go-faker/faker/v4/pkg/options"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
-	"github.com/gobitfly/beaconchain/pkg/api/types"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
@@ -54,8 +54,7 @@ func randomEthDecimal() decimal.Decimal {
 
 // must pass a pointer to the data
 func commonFakeData(a interface{}) error {
-	// TODO fake decimal.Decimal
-	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5))
+	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(5), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
 func (d *DummyService) StartDataAccessServices() {
@@ -393,7 +392,7 @@ func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Cont
 }
 
 func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
-	return []types.NetworkInfo{
+	return []t.NetworkInfo{
 		{
 			ChainId:           1,
 			Name:              "ethereum",
@@ -412,8 +411,8 @@ func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 	}, nil
 }
 
-func (d *DummyService) GetAllClients() ([]types.ClientInfo, error) {
-	return []types.ClientInfo{
+func (d *DummyService) GetAllClients() ([]t.ClientInfo, error) {
+	return []t.ClientInfo{
 		// execution_layer
 		{
 			Id:       0,
@@ -576,10 +575,10 @@ func (d *DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, us
 func (d *DummyService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string, name string, IsNotificationsEnabled bool) error {
+func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	return nil
 }
-func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId string) error {
+func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error {
 	return nil
 }
 
@@ -756,8 +755,8 @@ func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, da
 	return getDummyStruct[t.MobileWidgetData]()
 }
 
-func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*types.MachineMetricsData, error) {
-	data, err := getDummyStruct[types.MachineMetricsData]()
+func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*t.MachineMetricsData, error) {
+	data, err := getDummyStruct[t.MachineMetricsData]()
 	if err != nil {
 		return nil, err
 	}
@@ -779,4 +778,14 @@ func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64
 
 func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow]()
+}
+
+func (d *DummyService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
+	return nil
+}
+func (d *DummyService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
+	return nil
+}
+func (d *DummyService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
+	return nil
 }

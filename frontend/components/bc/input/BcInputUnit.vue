@@ -12,6 +12,7 @@ const input = defineModel<string>()
       class="bc-input-unit__input"
       label-position="right"
       input-width="44px"
+      inputmode="decimal"
       :label="unit"
       type="number"
       v-bind="$attrs"
