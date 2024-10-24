@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faAlarmSnooze,
   faArrowsRotate,
+  faChartLineUp,
   faCube,
   faFileSignature,
   faGlobe,
@@ -278,6 +279,29 @@ const formatValueWei = (value: string) => {
           ({{ validator.epoch_count }} {{ $t('common.epoch', validator.epoch_count) }})<!--
             this will remove white space in html
           -->
+        </template>
+      </BcAccordion>
+      <BcAccordion
+        v-if="details?.group_efficiency_below"
+        :item="details?.group_efficiency_below"
+      >
+        <template #headingIcon>
+          <FontAwesomeIcon
+            :icon="faChartLineUp"
+            class="notifications-dashboard-dialog-entity__icon__red"
+          />
+        </template>
+        <template #heading>
+          {{ $t('notifications.dashboards.dialog.entity.group_efficiency.heading') }}
+        </template>
+        <template #item="{ item: groupEfficiencyBelow }">
+          {{ details?.group_name }}
+          (<BcLink :to="`/dashboard/${props?.dashboard_id}`">
+            {{ details?.dashboard_name }}
+          </BcLink>)
+          {{ $t('notifications.dashboards.dialog.entity.group_efficiency_text', {
+            percentage: formatFractionToPercent(groupEfficiencyBelow),
+          }) }}
         </template>
       </BcAccordion>
       <BcAccordion

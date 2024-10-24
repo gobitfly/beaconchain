@@ -1,12 +1,14 @@
 {
   "conventionalCommits.scopes": [
     "BcButton",
+    "BcInputUnit",
     "BcLink",
     "BcTablePager",
     "BcToggle",
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardValidatorManagmentModal",
+    "NotificationMachinesTable",
     "NotificationsClientsTable",
     "NotificationsDashboardDialogEntity",
     "NotificationsDashboardTable",

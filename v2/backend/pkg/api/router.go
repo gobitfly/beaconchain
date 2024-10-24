@@ -28,7 +28,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	legacyRouter := apiRouter.PathPrefix("/v1").Subrouter()
 	internalRouter := apiRouter.PathPrefix("/i").Subrouter()
 	sessionManager := newSessionManager(cfg)
-	internalRouter.Use(sessionManager.LoadAndSave)
+	internalRouter.Use(sessionManager.LoadAndSave, getSlidingSessionExpirationMiddleware(sessionManager))
 
 	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)

@@ -153,6 +153,31 @@ func Run() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		// clickhouse
+		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.ClickHouse.WriterDatabase.Username,
+			Password:     cfg.ClickHouse.WriterDatabase.Password,
+			Name:         cfg.ClickHouse.WriterDatabase.Name,
+			Host:         cfg.ClickHouse.WriterDatabase.Host,
+			Port:         cfg.ClickHouse.WriterDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.ClickHouse.ReaderDatabase.Username,
+			Password:     cfg.ClickHouse.ReaderDatabase.Password,
+			Name:         cfg.ClickHouse.ReaderDatabase.Name,
+			Host:         cfg.ClickHouse.ReaderDatabase.Host,
+			Port:         cfg.ClickHouse.ReaderDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+		}, "clickhouse", "clickhouse")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
 		if err != nil {
 			log.Fatal(err, "error connecting to bigtable", 0)
@@ -184,6 +209,8 @@ func Run() {
 	defer db.FrontendWriterDB.Close()
 	defer db.AlloyReader.Close()
 	defer db.AlloyWriter.Close()
+	defer db.ClickHouseReader.Close()
+	defer db.ClickHouseWriter.Close()
 	defer db.BigtableClient.Close()
 
 	log.Infof("database connection established")
