@@ -41,7 +41,6 @@ jobs:
           newHash=$(find ../frontend/types/api -type f -print0 | sort -z | xargs -0 sha1sum | sha256sum | head -c 64)
           if [ "$currHash" != "$newHash" ]; then
             echo "frontend-types have changed, please commit the changes"
-            git diff --stat
             exit 1
           fi
 
