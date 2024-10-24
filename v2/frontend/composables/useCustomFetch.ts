@@ -1,6 +1,5 @@
 import type { NitroFetchOptions } from 'nitropack'
-import { useCsrfStore } from '~/stores/useCsrfStore'
-import type { LoginResponse } from '~/types/user'
+import type { RuntimeConfig } from 'nuxt/schema'
 import {
   API_PATH, mapping, type PathValues,
 } from '~/types/customFetch'
@@ -11,6 +10,10 @@ const pathNames = Object.values(API_PATH)
 type PathName = (typeof pathNames)[number]
 
 export function useCustomFetch() {
+  const runtimeConfig = useRuntimeConfig()
+  const getRuntimeConfigOnServerSide = (key: keyof RuntimeConfig['private']) => isServerSide
+    ? runtimeConfig.private[key]
+    : undefined
   const headers = useRequestHeaders([ 'cookie' ])
   const {
     setTokenCsrf,
@@ -37,11 +40,12 @@ export function useCustomFetch() {
     }
 
     const url = useRequestURL()
-    const runtimeConfig = useRuntimeConfig()
     const {
-      private: pConfig,
       public: {
-        apiClient, apiKey, domain, legacyApiClient,
+        apiClient,
+        apiKey,
+        domain,
+        legacyApiClient,
       },
     } = runtimeConfig
     const path = map.mock
@@ -52,14 +56,14 @@ export function useCustomFetch() {
       : map.legacy
         ? legacyApiClient
         : apiClient
-    const ssrSecret = pConfig?.ssrSecret
-
+    const legacyApiServer = getRuntimeConfigOnServerSide('legacyApiServer')
+    const apiServer = getRuntimeConfigOnServerSide('apiServer')
     if (isServerSide) {
       baseURL = map.mock
         ? `${domain || url.origin.replace('http:', 'https:')}/mock`
         : map.legacy
-          ? pConfig?.legacyApiServer
-          : pConfig?.apiServer
+          ? legacyApiServer ?? ''
+          : apiServer ?? ''
     }
 
     options.headers = new Headers({
@@ -70,6 +74,7 @@ export function useCustomFetch() {
       options.headers.append('Authorization', `Bearer ${apiKey}`)
     }
 
+    const ssrSecret = getRuntimeConfigOnServerSide('ssrSecret')
     if (isServerSide && ssrSecret) {
       options.headers.append('x-ssr-secret', ssrSecret)
     }
@@ -77,7 +82,7 @@ export function useCustomFetch() {
     options.query = {
       ...options.query,
       ...query,
-      is_mocked: useRuntimeConfig().public.isApiMocked ? true : undefined,
+      is_mocked: runtimeConfig.public.isApiMocked ? true : undefined,
     }
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
@@ -92,27 +97,19 @@ export function useCustomFetch() {
       }
     }
 
-    if (pathName === API_PATH.LOGIN) {
-      const res = await $fetch<LoginResponse>(path, {
-        baseURL,
-        method,
-        ...options,
-      })
-      return res as T
-    }
-      const res = await $fetch.raw<T>(path, {
-        baseURL,
-        method,
-        ...options,
-      })
-      if (method === 'GET') {
-        // We get the csrf header from GET requests
-        const tokenCsrf = res.headers.get('x-csrf-token')
-        if (tokenCsrf) {
-          setTokenCsrf(tokenCsrf)
-        }
+    const res = await $fetch.raw<T>(path, {
+      baseURL,
+      method,
+      ...options,
+    })
+    if (method === 'GET') {
+      // We get the csrf header from GET requests
+      const tokenCsrf = res.headers.get('x-csrf-token')
+      if (tokenCsrf) {
+        setTokenCsrf(tokenCsrf)
       }
-      return res._data as T
+    }
+    return res._data as T
   }
 
   return {
