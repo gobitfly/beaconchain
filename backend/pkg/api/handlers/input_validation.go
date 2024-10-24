@@ -269,10 +269,11 @@ func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string)
 	switch paramValue := mux.Vars(r)[paramName]; paramValue {
 	// possibly add other values like "genesis", "finalized", hardforks etc. later
 	case "latest":
+		ctx := r.Context()
 		if paramName == "block" {
-			value, err = h.daService.GetLatestBlock()
+			value, err = h.daService.GetLatestBlock(ctx)
 		} else if paramName == "slot" {
-			value, err = h.daService.GetLatestSlot()
+			value, err = h.daService.GetLatestSlot(ctx)
 		}
 		if err != nil {
 			return 0, 0, err

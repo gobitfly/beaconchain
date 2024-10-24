@@ -43,7 +43,7 @@ func (h *HandlerService) getTokenByRefresh(r *http.Request, refreshToken string)
 	log.Infof("refresh token: %v, claims: %v, hashed refresh: %v", refreshToken, unsafeClaims, refreshTokenHashed)
 
 	// confirm all claims via db lookup and refreshtoken check
-	userID, err := h.daService.GetUserIdByRefreshToken(unsafeClaims.UserID, unsafeClaims.AppID, unsafeClaims.DeviceID, refreshTokenHashed)
+	userID, err := h.daService.GetUserIdByRefreshToken(r.Context(), unsafeClaims.UserID, unsafeClaims.AppID, unsafeClaims.DeviceID, refreshTokenHashed)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, "", dataaccess.ErrNotFound
