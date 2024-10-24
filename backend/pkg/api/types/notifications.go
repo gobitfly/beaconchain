@@ -15,7 +15,7 @@ type NotificationOverviewData struct {
 	VDBMostNotifiedGroups [3]string `json:"vdb_most_notified_groups"`
 	ADBMostNotifiedGroups [3]string `json:"adb_most_notified_groups"`
 
-	Last24hEmailsCount  uint64 `json:"last_24h_emails_count"` // daily limit should be available in user info
+	Last24hEmailCount   uint64 `json:"last_24h_email_count"` // daily limit should be available in user info
 	Last24hPushCount    uint64 `json:"last_24h_push_count"`
 	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
 
