@@ -35,16 +35,15 @@ type DataAccessor interface {
 
 	Close()
 
-	GetLatestFinalizedEpoch() (uint64, error)
-	GetLatestSlot() (uint64, error)
-	GetLatestBlock() (uint64, error)
-	GetBlockHeightAt(slot uint64) (uint64, error)
-	GetLatestExchangeRates() ([]t.EthConversionRate, error)
+	GetLatestFinalizedEpoch(ctx context.Context) (uint64, error)
+	GetLatestSlot(ctx context.Context) (uint64, error)
+	GetLatestBlock(ctx context.Context) (uint64, error)
+	GetLatestExchangeRates(ctx context.Context) ([]t.EthConversionRate, error)
 
 	GetProductSummary(ctx context.Context) (*t.ProductSummary, error)
 	GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error)
 
-	GetValidatorsFromSlices(indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
+	GetValidatorsFromSlices(ctx context.Context, indices []uint64, publicKeys []string) ([]t.VDBValidator, error)
 }
 
 type DataAccessService struct {

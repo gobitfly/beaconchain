@@ -100,31 +100,41 @@ const emit = defineEmits<{
           {{ $t('notifications.overview.headers.most_notifications_30d') }}
         </h3>
         <div class="lists-container">
-          <BcScreenreaderOnly tag="h4">
-            {{ $t('notifications.overview.headers.validator_groups') }}
-          </BcScreenreaderOnly>
-          <ol class="icon-list">
-            <li v-for="group in vdbMostNotifiedGroups" :key="group" class="small_text list-item">
-              <FontAwesomeIcon :icon="faDesktop" />
-              <span class="list-text">
-                {{ group }}
-              </span>
-            </li>
-          </ol>
-          <BcFeatureFlag feature="feature-account_dashboards">
+          <div class="lists-container-column">
             <BcScreenreaderOnly tag="h4">
-              {{ $t('notifications.overview.headers.account_groups') }}
+              {{ $t('notifications.overview.headers.validator_groups') }}
             </BcScreenreaderOnly>
-            <ol
-              class="icon-list"
-            >
-              <li v-for="group in adbMostNotifiedGroups" :key="group" class="small_text list-item">
-                <FontAwesomeIcon :icon="faUser" />
+            <ol class="icon-list">
+              <li
+                v-for="(group, index) in vdbMostNotifiedGroups"
+                :key="group"
+                class="small_text list-item"
+              >
+                <FontAwesomeIcon :icon="faDesktop" />
                 <span class="list-text">
-                  {{ group }}
+                  {{ index + 1 }}. {{ group || '-' }}
                 </span>
               </li>
             </ol>
+          </div>
+          <BcFeatureFlag feature="feature-account_dashboards">
+            <div class="lists-container-column">
+              <BcScreenreaderOnly tag="h4">
+                {{ $t('notifications.overview.headers.account_groups') }}
+              </BcScreenreaderOnly>
+              <ol class="icon-list">
+                <li
+                  v-for="(group, index) in adbMostNotifiedGroups"
+                  :key="group"
+                  class="small_text list-item"
+                >
+                  <FontAwesomeIcon :icon="faUser" />
+                  <span class="list-text">
+                    {{ index + 1 }}. {{ group || '-' }}
+                  </span>
+                </li>
+              </ol>
+            </div>
           </BcFeatureFlag>
         </div>
       </section>
@@ -149,25 +159,25 @@ const emit = defineEmits<{
 
 .container {
   @include main.container;
-  padding: 17px 20px;
+  padding: 1.0625rem 1.25rem;
   position: relative;
 }
 .info-section, .action-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: .625rem;
 }
 .icon {
-  font-size: 24px;
+  font-size: 1.5rem;
 }
 .text {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 500;
 }
 .list-item {
   display: flex;
-  gap: 10px;
+  gap: .625rem;
   .list-text {
     @include utils.truncate-text;
   }
@@ -191,31 +201,34 @@ const emit = defineEmits<{
 .box-item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: .625rem;
 }
 .inline-items {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: .625rem;
 }
 a:hover {
   color: var(--light-blue);
 }
 .lists-container {
   display: flex;
-  gap: 20px;
+  gap: 1.25rem;
+}
+.lists-container-column {
+  flex: 1;
+  min-width: 0;
 }
 .icon-list {
   min-width: 0;
-  list-style-type: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: .625rem;
 }
 .icon {
-  font-size: 16px;
+  font-size: 1rem;
 }
 .inline-link,
 .gem {
@@ -224,21 +237,21 @@ a:hover {
 .premium-invitation {
   display: flex;
   align-items: center;
-  gap: 5px; /* Adjust the gap as needed */
+  gap: .3125rem;
 }
 .push-invitation {
   display: flex;
   align-items: center;
-  gap: 5px; /* Adjust the gap as needed */
+  gap: .3125rem;
   flex-wrap: wrap;
 }
 @media (max-width: 600px) {
   .box {
     flex-direction: row;
-    gap: 20px;
+    gap: 1.25rem;
   }
   .box-item {
-    min-width: 250px; /* Adjust based on content width */
+    min-width: 15.625rem;
   }
 }
 </style>

@@ -119,7 +119,7 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		}
 		return &types.VDBId{Id: types.VDBIdPrimary(dashboardInfo.DashboardId), Validators: nil, AggregateGroups: !dashboardInfo.ShareSettings.ShareGroups}, nil
 	case validatorSet:
-		validators, err := h.daService.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
+		validators, err := h.daService.GetValidatorsFromSlices(ctx, dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -138,6 +138,10 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 // it should be used as the last validation step for all internal dashboard GET-handlers.
 // Modifying handlers (POST, PUT, DELETE) should only accept primary dashboard ids and just use checkPrimaryDashboardId.
 func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
+	//check if dashboard id is stored in context
+	if dashboardId, ok := ctx.Value(types.CtxDashboardIdKey).(*types.VDBId); ok {
+		return dashboardId, nil
+	}
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
@@ -225,7 +229,7 @@ func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartH
 }
 
 func isUserAdmin(user *types.UserInfo) bool {
-	if user == nil {
+	if user == nil { // can happen for guest or shared dashboards
 		return false
 	}
 	return user.UserGroup == types.UserGroupAdmin
@@ -542,6 +546,6 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 }
 
 func isMocked(r *http.Request) bool {
-	isMocked, ok := r.Context().Value(ctxIsMockedKey).(bool)
+	isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool)
 	return ok && isMocked
 }

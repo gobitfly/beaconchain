@@ -74,7 +74,7 @@ func (d *DataAccessService) GetBlockBlobs(ctx context.Context, chainId, block ui
 }
 
 func (d *DataAccessService) GetSlot(ctx context.Context, chainId, slot uint64) (*t.BlockSummary, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (d *DataAccessService) GetSlot(ctx context.Context, chainId, slot uint64) (
 }
 
 func (d *DataAccessService) GetSlotOverview(ctx context.Context, chainId, slot uint64) (*t.BlockOverview, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (d *DataAccessService) GetSlotOverview(ctx context.Context, chainId, slot u
 }
 
 func (d *DataAccessService) GetSlotTransactions(ctx context.Context, chainId, slot uint64) ([]t.BlockTransactionTableRow, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (d *DataAccessService) GetSlotTransactions(ctx context.Context, chainId, sl
 }
 
 func (d *DataAccessService) GetSlotVotes(ctx context.Context, chainId, slot uint64) ([]t.BlockVoteTableRow, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (d *DataAccessService) GetSlotVotes(ctx context.Context, chainId, slot uint
 }
 
 func (d *DataAccessService) GetSlotAttestations(ctx context.Context, chainId, slot uint64) ([]t.BlockAttestationTableRow, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (d *DataAccessService) GetSlotAttestations(ctx context.Context, chainId, sl
 }
 
 func (d *DataAccessService) GetSlotWithdrawals(ctx context.Context, chainId, slot uint64) ([]t.BlockWithdrawalTableRow, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (d *DataAccessService) GetSlotWithdrawals(ctx context.Context, chainId, slo
 }
 
 func (d *DataAccessService) GetSlotBlsChanges(ctx context.Context, chainId, slot uint64) ([]t.BlockBlsChangeTableRow, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (d *DataAccessService) GetSlotBlsChanges(ctx context.Context, chainId, slot
 }
 
 func (d *DataAccessService) GetSlotVoluntaryExits(ctx context.Context, chainId, slot uint64) ([]t.BlockVoluntaryExitTableRow, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (d *DataAccessService) GetSlotVoluntaryExits(ctx context.Context, chainId, 
 }
 
 func (d *DataAccessService) GetSlotBlobs(ctx context.Context, chainId, slot uint64) ([]t.BlockBlobTableRow, error) {
-	block, err := d.GetBlockHeightAt(slot)
+	block, err := d.GetBlockHeightAt(ctx, slot)
 	if err != nil {
 		return nil, err
 	}

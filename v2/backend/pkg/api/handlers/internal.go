@@ -44,19 +44,20 @@ func (h *HandlerService) InternalGetRatelimitWeights(w http.ResponseWriter, r *h
 // Latest State
 
 func (h *HandlerService) InternalGetLatestState(w http.ResponseWriter, r *http.Request) {
-	latestSlot, err := h.daService.GetLatestSlot()
+	ctx := r.Context()
+	latestSlot, err := h.daService.GetLatestSlot(ctx)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	finalizedEpoch, err := h.daService.GetLatestFinalizedEpoch()
+	finalizedEpoch, err := h.daService.GetLatestFinalizedEpoch(ctx)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	exchangeRates, err := h.daService.GetLatestExchangeRates()
+	exchangeRates, err := h.daService.GetLatestExchangeRates(ctx)
 	if err != nil {
 		handleErr(w, r, err)
 		return
