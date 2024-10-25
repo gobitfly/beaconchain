@@ -18,25 +18,25 @@ import (
 )
 
 type AppRepository interface {
-	GetUserIdByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error)
-	MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error
-	AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error
-	GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error)
-	AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error
-	GetAppSubscriptionCount(userID uint64) (uint64, error)
-	AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
+	GetUserIdByRefreshToken(ctx context.Context, claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error)
+	MigrateMobileSession(ctx context.Context, oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error
+	AddUserDevice(ctx context.Context, userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error
+	GetAppDataFromRedirectUri(ctx context.Context, callback string) (*t.OAuthAppData, error)
+	AddMobileNotificationToken(ctx context.Context, userID uint64, deviceID, notifyToken string) error
+	GetAppSubscriptionCount(ctx context.Context, userID uint64) (uint64, error)
+	AddMobilePurchase(ctx context.Context, tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
 	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error)
 	IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error
 	GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error)
 }
 
 // GetUserIdByRefreshToken basically used to confirm the claimed user id with the refresh token. Returns the userId if successful
-func (d *DataAccessService) GetUserIdByRefreshToken(claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+func (d *DataAccessService) GetUserIdByRefreshToken(ctx context.Context, claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
 	if hashedRefreshToken == "" { // sanity
 		return 0, errors.New("empty refresh token")
 	}
 	var userID uint64
-	err := d.userWriter.Get(&userID,
+	err := d.userWriter.GetContext(ctx, &userID,
 		`SELECT user_id FROM users_devices WHERE user_id = $1 AND 
 			refresh_token = $2 AND app_id = $3 AND id = $4 AND active = true`, claimUserID, hashedRefreshToken, claimAppID, claimDeviceID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -45,8 +45,8 @@ func (d *DataAccessService) GetUserIdByRefreshToken(claimUserID, claimAppID, cla
 	return userID, err
 }
 
-func (d *DataAccessService) MigrateMobileSession(oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
-	result, err := d.userWriter.Exec("UPDATE users_devices SET refresh_token = $2, device_identifier = $3, device_name = $4 WHERE refresh_token = $1", oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName)
+func (d *DataAccessService) MigrateMobileSession(ctx context.Context, oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+	result, err := d.userWriter.ExecContext(ctx, "UPDATE users_devices SET refresh_token = $2, device_identifier = $3, device_name = $4 WHERE refresh_token = $1", oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName)
 	if err != nil {
 		return errors.Wrap(err, "Error updating refresh token")
 	}
@@ -63,21 +63,21 @@ func (d *DataAccessService) MigrateMobileSession(oldHashedRefreshToken, newHashe
 	return err
 }
 
-func (d *DataAccessService) GetAppDataFromRedirectUri(callback string) (*t.OAuthAppData, error) {
+func (d *DataAccessService) GetAppDataFromRedirectUri(ctx context.Context, callback string) (*t.OAuthAppData, error) {
 	data := t.OAuthAppData{}
-	err := d.userWriter.Get(&data, "SELECT id, app_name, redirect_uri, active, owner_id FROM oauth_apps WHERE active = true AND redirect_uri = $1", callback)
+	err := d.userWriter.GetContext(ctx, &data, "SELECT id, app_name, redirect_uri, active, owner_id FROM oauth_apps WHERE active = true AND redirect_uri = $1", callback)
 	return &data, err
 }
 
-func (d *DataAccessService) AddUserDevice(userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
-	_, err := d.userWriter.Exec("INSERT INTO users_devices (user_id, refresh_token, device_identifier, device_name, app_id, created_ts) VALUES($1, $2, $3, $4, $5, 'NOW()') ON CONFLICT DO NOTHING",
+func (d *DataAccessService) AddUserDevice(ctx context.Context, userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+	_, err := d.userWriter.ExecContext(ctx, "INSERT INTO users_devices (user_id, refresh_token, device_identifier, device_name, app_id, created_ts) VALUES($1, $2, $3, $4, $5, 'NOW()') ON CONFLICT DO NOTHING",
 		userID, hashedRefreshToken, deviceID, deviceName, appID,
 	)
 	return err
 }
 
-func (d *DataAccessService) AddMobileNotificationToken(userID uint64, deviceID, notifyToken string) error {
-	_, err := d.userWriter.Exec("UPDATE users_devices SET notification_token = $1 WHERE user_id = $2 AND device_identifier = $3;",
+func (d *DataAccessService) AddMobileNotificationToken(ctx context.Context, userID uint64, deviceID, notifyToken string) error {
+	_, err := d.userWriter.ExecContext(ctx, "UPDATE users_devices SET notification_token = $1 WHERE user_id = $2 AND device_identifier = $3;",
 		notifyToken, userID, deviceID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -86,13 +86,13 @@ func (d *DataAccessService) AddMobileNotificationToken(userID uint64, deviceID, 
 	return err
 }
 
-func (d *DataAccessService) GetAppSubscriptionCount(userID uint64) (uint64, error) {
+func (d *DataAccessService) GetAppSubscriptionCount(ctx context.Context, userID uint64) (uint64, error) {
 	var count uint64
-	err := d.userReader.Get(&count, "SELECT COUNT(receipt) FROM users_app_subscriptions WHERE user_id = $1", userID)
+	err := d.userReader.GetContext(ctx, &count, "SELECT COUNT(receipt) FROM users_app_subscriptions WHERE user_id = $1", userID)
 	return count, err
 }
 
-func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
+func (d *DataAccessService) AddMobilePurchase(ctx context.Context, tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
 	now := time.Now()
 	nowTs := now.Unix()
 	receiptHash := utils.HashAndEncode(verifyResponse.Receipt)
@@ -103,11 +103,11 @@ func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, payment
 			  ON CONFLICT(receipt_hash) DO UPDATE SET product_id = $2, active = $7, updated_at = TO_TIMESTAMP($5);`
 	var err error
 	if tx == nil {
-		_, err = d.userWriter.Exec(query,
+		_, err = d.userWriter.ExecContext(ctx, query,
 			userID, verifyResponse.ProductID, paymentDetails.PriceMicros, paymentDetails.Currency, nowTs, nowTs, verifyResponse.Valid, verifyResponse.Valid, paymentDetails.Transaction.Type, verifyResponse.Receipt, verifyResponse.ExpirationDate, verifyResponse.RejectReason, receiptHash, extSubscriptionId,
 		)
 	} else {
-		_, err = tx.Exec(query,
+		_, err = tx.ExecContext(ctx, query,
 			userID, verifyResponse.ProductID, paymentDetails.PriceMicros, paymentDetails.Currency, nowTs, nowTs, verifyResponse.Valid, verifyResponse.Valid, paymentDetails.Transaction.Type, verifyResponse.Receipt, verifyResponse.ExpirationDate, verifyResponse.RejectReason, receiptHash, extSubscriptionId,
 		)
 	}
@@ -117,7 +117,7 @@ func (d *DataAccessService) AddMobilePurchase(tx *sql.Tx, userID uint64, payment
 
 func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
 	var bundle t.MobileAppBundleStats
-	err := d.userReader.Get(&bundle, `
+	err := d.userReader.GetContext(ctx, &bundle, `
 		WITH 
 			latest_native AS (
 				SELECT max(min_native_version) as max_native_version 
@@ -152,7 +152,7 @@ func (d *DataAccessService) GetLatestBundleForNativeVersion(ctx context.Context,
 }
 
 func (d *DataAccessService) IncrementBundleDeliveryCount(ctx context.Context, bundleVersion uint64) error {
-	_, err := d.userWriter.Exec("UPDATE mobile_app_bundles SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE bundle_version = $1", bundleVersion)
+	_, err := d.userWriter.ExecContext(ctx, "UPDATE mobile_app_bundles SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE bundle_version = $1", bundleVersion)
 	return err
 }
 
@@ -209,7 +209,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 	// RPL
 	eg.Go(func() error {
-		rpNetworkStats, err := d.internal_rp_network_stats()
+		rpNetworkStats, err := d.getInternalRpNetworkStats(ctx)
 		if err != nil {
 			return fmt.Errorf("error retrieving rocketpool network stats: %w", err)
 		}
@@ -347,9 +347,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	return &data, nil
 }
 
-func (d *DataAccessService) internal_rp_network_stats() (*t.RPNetworkStats, error) {
+func (d *DataAccessService) getInternalRpNetworkStats(ctx context.Context) (*t.RPNetworkStats, error) {
 	var networkStats t.RPNetworkStats
-	err := d.alloyReader.Get(&networkStats, `
+	err := d.alloyReader.GetContext(ctx, &networkStats, `
 			SELECT 
 				EXTRACT(EPOCH FROM claim_interval_time) / 3600 AS claim_interval_hours,
 				node_operator_rewards,
