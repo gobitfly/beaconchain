@@ -693,9 +693,10 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 		dashboardWebhookMap[types.UserId(w.UserID)][types.DashboardId(w.DashboardId)][types.DashboardGroupId(w.DashboardGroupId)] = w
 	}
 
+	discordNotifMap := make(map[uint64][]types.TransitDiscordContent)
+	notifs := make([]types.TransitWebhook, 0)
+
 	for userID, userNotifications := range notificationsByUserID {
-		discordNotifMap := make(map[uint64][]types.TransitDiscordContent)
-		notifs := make([]types.TransitWebhook, 0)
 		webhooks, exists := webhooksMap[uint64(userID)]
 		if exists {
 			// webhook => [] notifications
@@ -932,41 +933,57 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 				}
 			}
 		}
+	}
 
-		// process notifs
-		if len(notifs) > 0 {
-			log.Infof("queueing %v webhooks notifications", len(notifs))
-			for _, n := range notifs {
-				_, err = tx.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), $1, $2);`, n.Channel, n.Content)
-				if err != nil {
-					log.Error(err, "error inserting into webhooks_queue", 0)
-				} else {
-					if n.Content.Event != nil {
-						metrics.NotificationsQueued.WithLabelValues(n.Channel, n.Content.Event.Name).Inc()
-					} else {
-						for _, e := range n.Content.Events {
-							metrics.NotificationsQueued.WithLabelValues(n.Channel, e.Name).Inc()
-						}
-					}
-				}
-			}
+	// process notifs
+	log.Infof("queueing %v webhooks notifications", len(notifs))
+	if len(notifs) > 0 {
+		type insertData struct {
+			Content types.TransitWebhookContent `db:"content"`
 		}
-		// process discord notifs
-		if len(discordNotifMap) > 0 {
-			log.Infof("queueing %v discord notifications", len(discordNotifMap))
-			for _, dNotifs := range discordNotifMap {
-				for _, n := range dNotifs {
-					_, err = tx.Exec(`INSERT INTO notification_queue (created, channel, content) VALUES (now(), 'webhook_discord', $1);`, n)
-					if err != nil {
-						log.Error(err, "error inserting into webhooks_queue (discord)", 0)
-						continue
-					} else {
-						metrics.NotificationsQueued.WithLabelValues("webhook_discord", "multi").Inc()
-					}
+		insertRows := make([]insertData, 0, len(notifs))
+		for _, n := range notifs {
+			if n.Content.Event != nil {
+				metrics.NotificationsQueued.WithLabelValues(n.Channel, n.Content.Event.Name).Inc()
+			} else {
+				for _, e := range n.Content.Events {
+					metrics.NotificationsQueued.WithLabelValues(n.Channel, e.Name).Inc()
 				}
 			}
+
+			insertRows = append(insertRows, insertData{
+				Content: n.Content,
+			})
+		}
+		_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'webhook', :content)`, insertRows)
+		if err != nil {
+			return fmt.Errorf("error writing transit push to db: %w", err)
 		}
 	}
+
+	// process discord notifs
+	log.Infof("queueing %v discord notifications", len(discordNotifMap))
+	if len(discordNotifMap) > 0 {
+		type insertData struct {
+			Content types.TransitDiscordContent `db:"content"`
+		}
+		insertRows := make([]insertData, 0, len(discordNotifMap))
+
+		for _, dNotifs := range discordNotifMap {
+			for _, n := range dNotifs {
+				insertRows = append(insertRows, insertData{
+					Content: n,
+				})
+				metrics.NotificationsQueued.WithLabelValues("webhook_discord", "multi").Inc()
+			}
+		}
+
+		_, err = tx.NamedExec(`INSERT INTO notification_queue (created, channel, content) VALUES (NOW(), 'webhook_discord', :content)`, insertRows)
+		if err != nil {
+			return fmt.Errorf("error writing transit push to db: %w", err)
+		}
+	}
+
 	return nil
 }
 
