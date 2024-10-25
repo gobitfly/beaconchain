@@ -549,8 +549,9 @@ type TransitWebhook struct {
 
 type TransitWebhookContent struct {
 	Webhook UserWebhook
-	Event   WebhookEvent `json:"event"`
-	UserId  UserId       `json:"userId"`
+	Event   *WebhookEvent   `json:"event,omitempty"`
+	Events  []*WebhookEvent `json:"events,omitempty"`
+	UserId  UserId          `json:"userId"`
 }
 
 type WebhookEvent struct {
