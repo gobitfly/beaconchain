@@ -775,7 +775,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 												Channel: w.Destination.String,
 												Content: types.TransitWebhookContent{
 													Webhook: w,
-													Event: types.WebhookEvent{
+													Event: &types.WebhookEvent{
 														Network:     utils.GetNetwork(),
 														Name:        string(n.GetEventName()),
 														Title:       n.GetLegacyTitle(),
@@ -908,8 +908,26 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 						log.Infof("adding discord notification for user %d, dashboard %d, group %d and type %s", userID, dashboardId, dashboardGroupId, event)
 
 						discordNotifMap[w.ID] = append(discordNotifMap[w.ID], content)
-					} else {
-						// TODO: implement
+					} else if w.Destination.Valid && w.Destination.String == "webhook" {
+						events := []*types.WebhookEvent{}
+						for _, n := range notifications {
+							events = append(events, &types.WebhookEvent{
+								Network:     utils.GetNetwork(),
+								Name:        string(n.GetEventName()),
+								Title:       n.GetTitle(),
+								Description: n.GetInfo(types.NotifciationFormatText),
+								Epoch:       n.GetEpoch(),
+								Target:      n.GetEventFilter(),
+							})
+						}
+						notifs = append(notifs, types.TransitWebhook{
+							Channel: w.Destination.String,
+							Content: types.TransitWebhookContent{
+								Webhook: w,
+								Events:  events,
+								UserId:  userID,
+							},
+						})
 					}
 				}
 			}
@@ -923,7 +941,13 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 				if err != nil {
 					log.Error(err, "error inserting into webhooks_queue", 0)
 				} else {
-					metrics.NotificationsQueued.WithLabelValues(n.Channel, n.Content.Event.Name).Inc()
+					if n.Content.Event != nil {
+						metrics.NotificationsQueued.WithLabelValues(n.Channel, n.Content.Event.Name).Inc()
+					} else {
+						for _, e := range n.Content.Events {
+							metrics.NotificationsQueued.WithLabelValues(n.Channel, e.Name).Inc()
+						}
+					}
 				}
 			}
 		}

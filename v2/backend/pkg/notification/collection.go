@@ -230,10 +230,10 @@ func collectUpcomingBlockProposalNotifications(notificationsByUserID types.Notif
 	nextEpoch := headEpoch + 1
 	log.Infof("collecting upcoming block proposal notifications for epoch %v (head epoch is %d)", nextEpoch, headEpoch)
 
-	if utils.EpochToTime(nextEpoch).Before(time.Now()) {
-		log.Error(fmt.Errorf("error upcoming block proposal notifications for epoch %v are already in the past", nextEpoch), "", 0)
-		return nil
-	}
+	// if utils.EpochToTime(nextEpoch).Before(time.Now()) {
+	// 	log.Error(fmt.Errorf("error upcoming block proposal notifications for epoch %v are already in the past", nextEpoch), "", 0)
+	// 	return nil
+	// }
 
 	assignments, err := mc.CL.GetPropoalAssignments(nextEpoch)
 	if err != nil {
