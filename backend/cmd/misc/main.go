@@ -555,7 +555,7 @@ func Run() {
 func collectNotifications(startEpoch uint64) error {
 	epoch := startEpoch
 
-	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
+	notifications, err := notification.GetHeadNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
 	if err != nil {
 		return err
 	}
@@ -565,19 +565,34 @@ func collectNotifications(startEpoch uint64) error {
 		spew.Dump(notifications[0])
 	}
 
-	emails, err := notification.RenderEmailsForUserEvents(0, notifications)
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	err = notification.QueueWebhookNotifications(notifications, tx)
+	if err != nil {
+		return err
+	}
+	err = tx.Commit()
 	if err != nil {
 		return err
 	}
 
-	for _, email := range emails {
-		// if email.Address == "" {
-		log.Infof("to: %v", email.Address)
-		log.Infof("subject: %v", email.Subject)
-		log.Infof("body: %v", email.Email.Body)
-		log.Info("-----")
-		// }
-	}
+	// emails, err := notification.RenderEmailsForUserEvents(0, notifications)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, email := range emails {
+	// 	// if email.Address == "" {
+	// 	log.Infof("to: %v", email.Address)
+	// 	log.Infof("subject: %v", email.Subject)
+	// 	log.Infof("body: %v", email.Email.Body)
+	// 	log.Info("-----")
+	// 	// }
+	// }
 
 	// pushMessages, err := notification.RenderPushMessagesForUserEvents(0, notifications)
 	// if err != nil {

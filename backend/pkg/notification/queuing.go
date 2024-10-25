@@ -661,6 +661,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 	// now fetch the webhooks for each dashboard config
 	err = db.ReaderDb.Select(&webhooks, `
 	SELECT
+		users_val_dashboards.user_id AS user_id,
 		users_val_dashboards_groups.id AS dashboard_group_id,
 		dashboard_id AS dashboard_id,
 		webhook_target AS url,
@@ -840,17 +841,28 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 						}
 
 						totalBlockReward := float64(0)
+						epoch := uint64(0)
 						details := ""
-						if event == types.ValidatorExecutedProposalEventName {
-							for _, n := range notifications {
+						i := 0
+						for _, n := range notifications {
+							if event == types.ValidatorExecutedProposalEventName {
 								proposalNotification, ok := n.(*ValidatorProposalNotification)
 								if !ok {
 									log.Error(fmt.Errorf("error casting proposal notification"), "", 0)
 									continue
 								}
 								totalBlockReward += proposalNotification.Reward
-
+							}
+							if i <= 10 {
 								details += fmt.Sprintf("%s\n", n.GetInfo(types.NotifciationFormatMarkdown))
+							}
+							i++
+							if i == 11 {
+								details += fmt.Sprintf("... and %d more notifications\n", len(notifications)-i)
+								continue
+							}
+							if epoch == 0 {
+								epoch = n.GetEpoch()
 							}
 						}
 
@@ -876,7 +888,20 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 						default:
 							summary += fmt.Sprintf("%s: %d validator%s", types.EventLabel[event], count, plural)
 						}
-						content.DiscordRequest.Content = summary + "\n" + details
+						content.DiscordRequest.Embeds = append(content.DiscordRequest.Embeds, types.DiscordEmbed{
+							Type:        "rich",
+							Color:       "16745472",
+							Description: details,
+							Title:       summary,
+							Fields: []types.DiscordEmbedField{
+								{
+									Name:   "Epoch",
+									Value:  fmt.Sprintf("[%[1]v](https://%[2]s/epoch/%[1]v)", epoch, utils.Config.Frontend.SiteDomain),
+									Inline: false,
+								},
+							},
+						})
+
 						if _, exists := discordNotifMap[w.ID]; !exists {
 							discordNotifMap[w.ID] = make([]types.TransitDiscordContent, 0)
 						}

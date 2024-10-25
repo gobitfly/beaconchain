@@ -161,7 +161,7 @@ func notificationCollector() {
 			log.Infof("collecting notifications for epoch %v", epoch)
 
 			// Network DB Notifications (network related)
-			notifications, err := collectNotifications(epoch, mc)
+			notifications, err := collectNotifications(mc, epoch)
 
 			if err != nil {
 				log.Error(err, "error collection notifications", 0)
@@ -280,7 +280,7 @@ func collectUpcomingBlockProposalNotifications(notificationsByUserID types.Notif
 	return nil
 }
 
-func collectNotifications(epoch uint64, mc modules.ModuleContext) (types.NotificationsPerUserId, error) {
+func collectNotifications(mc modules.ModuleContext, epoch uint64) (types.NotificationsPerUserId, error) {
 	notificationsByUserID := types.NotificationsPerUserId{}
 	start := time.Now()
 	var err error
