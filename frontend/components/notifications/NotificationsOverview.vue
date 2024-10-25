@@ -53,14 +53,25 @@ const emit = defineEmits<{
           {{ hasEmail ? $t('common.active') : $t('common.inactive') }}
         </div>
         <div v-if="hasEmail" class="inline-items">
-          <span class="small_text">{{ last24hEmailsCount }}/{{ mailLimit }} {{ $t('common.units.per_day') }}</span>
-          <BcTooltip
-            tooltip-width="220px"
-            :text="tooltipEmail"
-          >
-            <FontAwesomeIcon :icon="faInfoCircle" />
-          </BcTooltip>
-          <BcPremiumGem class="gem" />
+          <span v-if="last24hEmailsCount >= mailLimit" class="small_text benji">{{ last24hEmailsCount }}/{{ mailLimit }} {{ $t('common.units.per_day') }}
+            <BcTooltip
+              tooltip-width="220px"
+              :text="tooltipEmail"
+              tooltip-class="custom-tooltip-class"
+            >
+              <FontAwesomeIcon :icon="faInfoCircle" />
+            </BcTooltip>
+            <BcPremiumGem class="gem" />
+          </span><span v-else class="small_text">{{ last24hEmailsCount }}/{{ mailLimit }} {{ $t('common.units.per_day') }}
+            <BcTooltip
+              tooltip-width="220px"
+              text="Other Option"
+              tooltip-class="custom-tooltip-class"
+            >
+              <FontAwesomeIcon :icon="faInfoCircle" />
+            </BcTooltip>
+            <BcPremiumGem class="gem" />
+          </span>
         </div>
         <div v-else class="premium-invitation small_text">
           <BcTranslation
@@ -156,6 +167,10 @@ const emit = defineEmits<{
 <style lang="scss" scoped>
 @use '~/assets/css/main.scss';
 @use "~/assets/css/utils.scss";
+
+.custom-tooltip-class > span {
+  background-color: red;
+}
 
 .container {
   @include main.container;
