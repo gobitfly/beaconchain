@@ -331,16 +331,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	}
 
-	validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validators from dashboard id: %w", err)
-	}
-
-	if dashboardId.Validators != nil || dashboardId.AggregateGroups {
-		data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
-	}
-
-	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, validators)
+	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
 	}
@@ -350,6 +341,15 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		validatorMapping, err := d.services.GetCurrentValidatorMapping()
 		if err != nil {
 			return err
+		}
+
+		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
+		if err != nil {
+			return fmt.Errorf("error retrieving validators from dashboard id: %w", err)
+		}
+
+		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
+			data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
 		}
 
 		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators

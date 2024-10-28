@@ -336,12 +336,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	// Get the rocketpool minipool infos
 	rpValidators := make(map[uint64]t.RpMinipoolInfo)
 	if protocolModes.RocketPool {
-		var proposers []uint64
-		for _, row := range proposals {
-			proposers = append(proposers, row.Proposer)
-		}
-
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, proposers)
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, nil, err
 		}

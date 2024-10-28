@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -133,45 +132,52 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	return timeToWithdrawal
 }
 
-func (d *DataAccessService) getRocketPoolMinipoolInfos(ctx context.Context, validatorIndices []t.VDBValidator) (map[t.VDBValidator]t.RpMinipoolInfo, error) {
-	validatorMapping, err := d.services.GetCurrentValidatorMapping()
-	if err != nil {
-		return nil, err
-	}
-
-	pubKeyList := make([][]byte, 0, len(validatorIndices))
-	pubKeyToIndex := make(map[string]t.VDBValidator, len(validatorIndices))
-	for _, validator := range validatorIndices {
-		publicKey := validatorMapping.ValidatorMetadata[validator].PublicKey
-		pubKeyList = append(pubKeyList, publicKey)
-		pubKeyToIndex[hexutil.Encode(publicKey)] = validator
-	}
-
+func (d *DataAccessService) getRocketPoolMinipoolInfos(ctx context.Context, dashboardId t.VDBId, groupId int64) (map[t.VDBValidator]t.RpMinipoolInfo, error) {
 	queryResult := []struct {
-		Pubkey             []byte          `db:"pubkey"`
+		ValidatorIndex     uint64          `db:"validatorindex"`
 		NodeFee            float64         `db:"node_fee"`
 		NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
 		UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
 	}{}
 
-	query := `
-		SELECT 
-			pubkey,
-			node_fee,
-			node_deposit_balance,
-			user_deposit_balance
-		FROM rocketpool_minipools
-		WHERE pubkey = ANY($1) AND node_deposit_balance IS NOT NULL AND user_deposit_balance IS NOT NULL`
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("v.validatorindex"),
+			goqu.L("rplm.node_fee"),
+			goqu.L("rplm.node_deposit_balance"),
+			goqu.L("rplm.user_deposit_balance")).
+		From(goqu.L("rocketpool_minipools AS rplm")).
+		LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
+		Where(goqu.L("node_deposit_balance IS NOT NULL")).
+		Where(goqu.L("user_deposit_balance IS NOT NULL"))
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
+	if len(dashboardId.Validators) == 0 {
+		ds = ds.
+			LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
+			Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
+
+		if groupId != t.AllGroups {
+			ds = ds.
+				Where(goqu.L("uvdv.group_id = ?", groupId))
+		}
+	} else {
+		ds = ds.
+			Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving rocketpool validators data: %w", err)
 	}
 
 	rpValidators := make(map[t.VDBValidator]t.RpMinipoolInfo)
 	for _, res := range queryResult {
-		publicKey := hexutil.Encode(res.Pubkey)
-		rpValidators[pubKeyToIndex[publicKey]] = t.RpMinipoolInfo{
+		rpValidators[res.ValidatorIndex] = t.RpMinipoolInfo{
 			NodeFee:            res.NodeFee,
 			NodeDepositBalance: res.NodeDepositBalance,
 			UserDepositBalance: res.UserDepositBalance,

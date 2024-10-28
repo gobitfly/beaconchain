@@ -292,12 +292,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	// Get rocketpool minipool infos if needed
 	rpValidators := make(map[uint64]t.RpMinipoolInfo)
 	if protocolModes.RocketPool {
-		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-		}
-
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -739,12 +734,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	// Create the result
 	rpValidators := make(map[uint64]t.RpMinipoolInfo)
 	if protocolModes.RocketPool {
-		validators := make([]uint64, 0, len(queryResult))
-		for _, row := range queryResult {
-			validators = append(validators, row.ValidatorIndex)
-		}
-
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, groupId)
 		if err != nil {
 			return nil, err
 		}
@@ -806,6 +796,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	// series id is group id, series property is 'cl' or 'el'
 
 	wg := errgroup.Group{}
+	var err error
 
 	latestFinalizedEpoch := cache.LatestFinalizedEpoch.Get()
 	const epochLookBack = 224
@@ -884,12 +875,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	// Get rocketpool minipool infos if needed
 	rpValidators := make(map[uint64]t.RpMinipoolInfo)
 	if protocolModes.RocketPool {
-		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-		}
-
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, err
 		}
@@ -979,7 +965,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		return nil
 	})
 
-	err := wg.Wait()
+	err = wg.Wait()
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %v", err)
 	}
@@ -1183,12 +1169,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	// Get rocketpool minipool infos if needed
 	rpValidators := make(map[uint64]t.RpMinipoolInfo)
 	if protocolModes.RocketPool {
-		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error retrieving validators from dashboard id: %v", err)
-		}
-
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, groupId)
 		if err != nil {
 			return nil, nil, err
 		}

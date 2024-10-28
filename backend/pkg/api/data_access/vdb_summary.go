@@ -173,12 +173,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	rpValidators := make(map[uint64]t.RpMinipoolInfo)
 	if protocolModes.RocketPool {
-		validators := make([]uint64, 0, len(queryResult))
-		for _, row := range queryResult {
-			validators = append(validators, row.ValidatorIndex)
-		}
-
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, validators)
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -739,7 +734,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		validatorArr = validators
 	}
 
-	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, validatorArr)
+	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, dashboardId, groupId)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
 	}
@@ -870,7 +865,6 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	epochStartTotal := uint64(math.MaxInt32)
 	epochEndTotal := uint64(0)
 
-	aprRewards := decimal.Zero
 	rewards := decimal.Zero
 	deposits := decimal.Zero
 
@@ -883,17 +877,10 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		}
 
 		reward := utils.GWeiToWei(big.NewInt(row.Reward))
-		if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok {
-			rpReward := reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
-			aprRewards = aprRewards.Add(rpReward)
-			if protocolModes.RocketPool {
-				rewards = rewards.Add(rpReward)
-			} else {
-				rewards = rewards.Add(reward)
-			}
+		if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+			rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 			deposits = deposits.Add(rpValidator.NodeDepositBalance)
 		} else {
-			aprRewards = aprRewards.Add(reward)
 			rewards = rewards.Add(reward)
 			deposits = deposits.Add(decimal.New(32, 18))
 		}
@@ -904,7 +891,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		aprDivisor = 90 * 24
 	}
 	if !deposits.IsZero() {
-		clAPR = aprRewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(deposits).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
+		clAPR = rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(deposits).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
 	}
 
 	if hours == -1 {
@@ -932,8 +919,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 
 			reward := utils.GWeiToWei(big.NewInt(row.Reward))
 			if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
-				rpReward := reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
-				rewards = rewards.Add(rpReward)
+				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 			} else {
 				rewards = rewards.Add(reward)
 			}
@@ -987,26 +973,18 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
-	aprRewards = decimal.Zero
 	rewards = decimal.Zero
 	for _, row := range elRewardsResult {
 		reward := row.Reward
-		if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok {
-			rpReward := reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
-			aprRewards = aprRewards.Add(rpReward)
-			if protocolModes.RocketPool {
-				rewards = rewards.Add(rpReward)
-			} else {
-				rewards = rewards.Add(reward)
-			}
+		if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+			rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 		} else {
-			aprRewards = aprRewards.Add(reward)
 			rewards = rewards.Add(reward)
 		}
 	}
 
 	if !deposits.IsZero() {
-		elAPR = aprRewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(deposits).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
+		elAPR = rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(deposits).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
 	}
 
 	if hours == -1 {
@@ -1027,8 +1005,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		for _, row := range elRewardsResult {
 			reward := row.Reward
 			if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
-				rpReward := reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
-				rewards = rewards.Add(rpReward)
+				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 			} else {
 				rewards = rewards.Add(reward)
 			}
