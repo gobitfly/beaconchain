@@ -734,9 +734,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		validatorArr = validators
 	}
 
-	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, dashboardId, groupId)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
+	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	if protocolModes.RocketPool {
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
+		}
 	}
 
 	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, protocolModes, groupId, rpValidators, hours)
