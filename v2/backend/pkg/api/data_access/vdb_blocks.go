@@ -46,7 +46,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
 
-	validators := goqu.T("validators")
+	validators := goqu.T("validators") // could adapt data type to make handling as table/alias less confusing
 	blocks := goqu.T("blocks")
 	groups := goqu.T("groups")
 
@@ -215,6 +215,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		if err == nil {
 			if dashboardId.Validators == nil {
 				// fetch filtered validators if not done yet
+				filteredValidatorsDs = filteredValidatorsDs.
+					SelectAppend(groupIdQ)
 				validatorsQuery, validatorsArgs, err := filteredValidatorsDs.Prepared(true).ToSQL()
 				if err != nil {
 					return nil, nil, err
