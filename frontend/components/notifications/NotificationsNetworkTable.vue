@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { NotificationNetworksTableRow } from '~/types/api/notifications'
 import type { Cursor } from '~/types/datatable'
 
 defineEmits<{ (e: 'openDialog'): void }>()
@@ -17,13 +18,38 @@ const {
   setPageSize,
   setSearch,
 } = useNotificationsNetworkStore()
+const { overview } = useNotificationsDashboardOverviewStore()
+
+const textNotifications = (eventType: NotificationNetworksTableRow['event_type']) => {
+  if (eventType === 'gas_above') return $t('notifications.network.event_type.gas_above')
+  if (eventType === 'gas_below') return $t('notifications.network.event_type.gas_below')
+  if (eventType === 'new_reward_round') return $t('notifications.network.event_type.new_reward_round')
+  if (eventType === 'participation_rate') return $t('notifications.network.event_type.participation_rate')
+  logError(`Unknown network notification event_type: ${eventType}`)
+  return eventType
+}
+const textThreshold = (row: NotificationNetworksTableRow) => {
+  const {
+    event_type,
+    threshold,
+  } = row
+  if (
+    event_type === 'gas_above' || event_type === 'gas_below'
+  ) {
+    return `${formatWeiTo(threshold ?? '0', { unit: 'gwei' })} ${$t('common.units.GWEI')}`
+  }
+  if (event_type === 'participation_rate') {
+    return `${formatToFraction(threshold ?? 0)} %`
+  }
+  logError(`Unknown network notification event-type: ${row.event_type}`)
+  return threshold
+}
 </script>
 
 <template>
   <div>
     <BcTableControl
-      :title="$t('notifications.dashboards.title')"
-      :search-placeholder="$t('notifications.dashboards.search_placeholder')"
+      :title="$t('notifications.network.title')"
       @set-search="setSearch"
     >
       <template #table>
@@ -79,34 +105,27 @@ const {
               :header="$t('notifications.col.notification')"
             >
               <template #body="slotProps">
-                <I18nT
-                  :keypath="`notifications.network.event_type.${slotProps.data.event_type}`"
-                  scope="global"
-                  tag="span"
-                >
-                  <template #_value>
-                    <BcFormatValue
-                      v-if="slotProps.data.event_type.includes('gas')"
-                      :value="slotProps.data.alert_value"
-                    />
-                    <BcFormatPercent
-                      v-else
-                      :percent="Number(slotProps.data.alert_value) * 100"
-                    />
-                  </template>
-                </I18nT>
+                {{ textNotifications(slotProps.data.event_type) }}
+              </template>
+            </Column>
+            <Column
+              field="threshold"
+              sortable
+              :header="$t('notifications.col.threshold')"
+            >
+              <template #body="slotProps">
+                {{ textThreshold(slotProps.data) }}
               </template>
             </Column>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!networkNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
             </template>
-            <!-- TODO: implement number of subscriptions -->
             <template #bc-table-footer-right>
               <template v-if="width > 1024">
-                {{ $t('notifications.network.footer.subscriptions', { count: 1 }) }}
+                {{ $t('notifications.network.footer.subscriptions', { count: overview?.networks_subscription_count }) }}
               </template>
             </template>
           </BcTable>

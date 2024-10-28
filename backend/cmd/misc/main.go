@@ -17,10 +17,14 @@ import (
 	"sync"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/coocood/freecache"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/cmd/misc/commands"
+	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -32,11 +36,13 @@ import (
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/gobitfly/beaconchain/pkg/exporter/services"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
 	go_ens "github.com/wealdtech/go-ens/v3"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/api/option"
 
 	"flag"
 
@@ -67,6 +73,14 @@ var opts = struct {
 	DryRun              bool
 }{}
 
+/**
+ * If your command does not require Bigtable, Redis, Node, or DBs, you can remove that requirement for that command here.
+ * By default, all commands that are not in the REQUIRES_LIST will automatically require everything.
+ */
+var REQUIRES_LIST = map[string]misctypes.Requires{
+	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+}
+
 func Run() {
 	fs := flag.NewFlagSet("fs", flag.ExitOnError)
 
@@ -74,8 +88,12 @@ func Run() {
 		FlagSet: fs,
 	}
 
+	appBundleCommand := commands.AppBundleCommand{
+		FlagSet: fs,
+	}
+
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -99,6 +117,7 @@ func Run() {
 	versionFlag := fs.Bool("version", false, "Show version and exit")
 
 	statsPartitionCommand.ParseCommandOptions()
+	appBundleCommand.ParseCommandOptions()
 	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
@@ -116,69 +135,116 @@ func Run() {
 	}
 	utils.Config = cfg
 
+	requires, ok := REQUIRES_LIST[opts.Command]
+	if !ok {
+		requires = misctypes.Requires{
+			Bigtable:   true,
+			Redis:      true,
+			ClNode:     true,
+			ElNode:     true,
+			UserDBs:    true,
+			NetworkDBs: true,
+		}
+	}
+
 	chainIdString := strconv.FormatUint(utils.Config.Chain.ClConfig.DepositChainID, 10)
 
-	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainIdString, utils.Config.RedisCacheEndpoint)
-	if err != nil {
-		log.Fatal(err, "error initializing bigtable", 0)
+	var bt *db.Bigtable
+	if requires.Bigtable {
+		bt, err = db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainIdString, utils.Config.RedisCacheEndpoint)
+		if err != nil {
+			log.Fatal(err, "error initializing bigtable", 0)
+		}
 	}
 
-	cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-	if !ok {
-		log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
-	}
-	chainIDBig := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-	rpcClient, err := rpc.NewLighthouseClient(nodeImpl, chainIDBig)
-	if err != nil {
-		log.Fatal(err, "lighthouse client error", 0)
-	}
-
-	erigonClient, err := rpc.NewErigonClient(utils.Config.Eth1ErigonEndpoint)
-	if err != nil {
-		log.Fatal(err, "error initializing erigon client", 0)
+	var rpcClient *rpc.LighthouseClient
+	if requires.ClNode {
+		cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
+		nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
+		if !ok {
+			log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
+		}
+		chainIDBig := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
+		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainIDBig)
+		if err != nil {
+			log.Fatal(err, "lighthouse client error", 0)
+		}
 	}
 
-	db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
-		Username:     cfg.WriterDatabase.Username,
-		Password:     cfg.WriterDatabase.Password,
-		Name:         cfg.WriterDatabase.Name,
-		Host:         cfg.WriterDatabase.Host,
-		Port:         cfg.WriterDatabase.Port,
-		MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
-		SSL:          cfg.WriterDatabase.SSL,
-	}, &types.DatabaseConfig{
-		Username:     cfg.ReaderDatabase.Username,
-		Password:     cfg.ReaderDatabase.Password,
-		Name:         cfg.ReaderDatabase.Name,
-		Host:         cfg.ReaderDatabase.Host,
-		Port:         cfg.ReaderDatabase.Port,
-		MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-		SSL:          cfg.ReaderDatabase.SSL,
-	}, "pgx", "postgres")
-	defer db.ReaderDb.Close()
-	defer db.WriterDb.Close()
-	db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
-		Username:     cfg.Frontend.WriterDatabase.Username,
-		Password:     cfg.Frontend.WriterDatabase.Password,
-		Name:         cfg.Frontend.WriterDatabase.Name,
-		Host:         cfg.Frontend.WriterDatabase.Host,
-		Port:         cfg.Frontend.WriterDatabase.Port,
-		MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
-	}, &types.DatabaseConfig{
-		Username:     cfg.Frontend.ReaderDatabase.Username,
-		Password:     cfg.Frontend.ReaderDatabase.Password,
-		Name:         cfg.Frontend.ReaderDatabase.Name,
-		Host:         cfg.Frontend.ReaderDatabase.Host,
-		Port:         cfg.Frontend.ReaderDatabase.Port,
-		MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
-		MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-	}, "pgx", "postgres")
-	defer db.FrontendReaderDB.Close()
-	defer db.FrontendWriterDB.Close()
+	var erigonClient *rpc.ErigonClient
+	if requires.ElNode {
+		erigonClient, err = rpc.NewErigonClient(utils.Config.Eth1ErigonEndpoint)
+		if err != nil {
+			log.Fatal(err, "error initializing erigon client", 0)
+		}
+	}
+
+	if requires.NetworkDBs {
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.WriterDatabase.Username,
+			Password:     cfg.WriterDatabase.Password,
+			Name:         cfg.WriterDatabase.Name,
+			Host:         cfg.WriterDatabase.Host,
+			Port:         cfg.WriterDatabase.Port,
+			MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
+			SSL:          cfg.WriterDatabase.SSL,
+		}, &types.DatabaseConfig{
+			Username:     cfg.ReaderDatabase.Username,
+			Password:     cfg.ReaderDatabase.Password,
+			Name:         cfg.ReaderDatabase.Name,
+			Host:         cfg.ReaderDatabase.Host,
+			Port:         cfg.ReaderDatabase.Port,
+			MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
+			SSL:          cfg.ReaderDatabase.SSL,
+		}, "pgx", "postgres")
+		defer db.ReaderDb.Close()
+		defer db.WriterDb.Close()
+
+		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.AlloyWriter.Username,
+			Password:     cfg.AlloyWriter.Password,
+			Name:         cfg.AlloyWriter.Name,
+			Host:         cfg.AlloyWriter.Host,
+			Port:         cfg.AlloyWriter.Port,
+			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
+			SSL:          cfg.AlloyWriter.SSL,
+		}, &types.DatabaseConfig{
+			Username:     cfg.AlloyReader.Username,
+			Password:     cfg.AlloyReader.Password,
+			Name:         cfg.AlloyReader.Name,
+			Host:         cfg.AlloyReader.Host,
+			Port:         cfg.AlloyReader.Port,
+			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
+			SSL:          cfg.AlloyReader.SSL,
+		}, "pgx", "postgres")
+		defer db.AlloyReader.Close()
+		defer db.AlloyWriter.Close()
+	}
+	if requires.UserDBs {
+		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.Frontend.WriterDatabase.Username,
+			Password:     cfg.Frontend.WriterDatabase.Password,
+			Name:         cfg.Frontend.WriterDatabase.Name,
+			Host:         cfg.Frontend.WriterDatabase.Host,
+			Port:         cfg.Frontend.WriterDatabase.Port,
+			MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.Frontend.ReaderDatabase.Username,
+			Password:     cfg.Frontend.ReaderDatabase.Password,
+			Name:         cfg.Frontend.ReaderDatabase.Name,
+			Host:         cfg.Frontend.ReaderDatabase.Host,
+			Port:         cfg.Frontend.ReaderDatabase.Port,
+			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
+		}, "pgx", "postgres")
+		defer db.FrontendReaderDB.Close()
+		defer db.FrontendWriterDB.Close()
+	}
 
 	// clickhouse
 	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
@@ -204,17 +270,27 @@ func Run() {
 	defer db.ClickHouseWriter.Close()
 
 	// Initialize the persistent redis client
-	rdc := redis.NewClient(&redis.Options{
-		Addr:        utils.Config.RedisSessionStoreEndpoint,
-		ReadTimeout: time.Second * 20,
-	})
+	if requires.Redis {
+		rdc := redis.NewClient(&redis.Options{
+			Addr:        utils.Config.RedisSessionStoreEndpoint,
+			ReadTimeout: time.Second * 20,
+		})
 
-	if err := rdc.Ping(context.Background()).Err(); err != nil {
-		log.Fatal(err, "error connecting to persistent redis store", 0)
+		if err := rdc.Ping(context.Background()).Err(); err != nil {
+			log.Fatal(err, "error connecting to persistent redis store", 0)
+		}
+
+		db.PersistentRedisDbClient = rdc
+		defer db.PersistentRedisDbClient.Close()
+
+		if utils.Config.TieredCacheProvider != "redis" {
+			log.Fatal(nil, "no cache provider set, please set TierdCacheProvider (redis)", 0)
+		}
+		if utils.Config.TieredCacheProvider == "redis" || len(utils.Config.RedisCacheEndpoint) != 0 {
+			cache.MustInitTieredCache(utils.Config.RedisCacheEndpoint)
+			log.Infof("tiered Cache initialized, latest finalized epoch: %v", cache.LatestFinalizedEpoch.Get())
+		}
 	}
-
-	db.PersistentRedisDbClient = rdc
-	defer db.PersistentRedisDbClient.Close()
 
 	switch opts.Command {
 	case "nameValidatorsByRanges":
@@ -451,11 +527,20 @@ func Run() {
 		err = fixExecTransactionsCount()
 	case "partition-validator-stats":
 		statsPartitionCommand.Config.DryRun = opts.DryRun
-		err = statsPartitionCommand.StartStatsPartitionCommand()
+		err = statsPartitionCommand.Run()
+	case "app-bundle":
+		appBundleCommand.Config.DryRun = opts.DryRun
+		err = appBundleCommand.Run()
 	case "fix-ens":
 		err = fixEns(erigonClient)
 	case "fix-ens-addresses":
 		err = fixEnsAddresses(erigonClient)
+	case "collect-notifications":
+		err = collectNotifications(opts.StartEpoch)
+	case "collect-user-db-notifications":
+		err = collectUserDbNotifications(opts.StartEpoch)
+	case "verify-fcm-tokens":
+		err = verifyFCMTokens()
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -465,6 +550,103 @@ func Run() {
 	} else {
 		log.Infof("command executed successfully")
 	}
+}
+
+func collectNotifications(startEpoch uint64) error {
+	epoch := startEpoch
+
+	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("found %v notifications for epoch %v with %v notifications for user 0", len(notifications), epoch, len(notifications[0]))
+	if len(notifications[0]) > 0 {
+		spew.Dump(notifications[0])
+	}
+
+	emails, err := notification.RenderEmailsForUserEvents(0, notifications)
+	if err != nil {
+		return err
+	}
+
+	for _, email := range emails {
+		// if email.Address == "" {
+		log.Infof("to: %v", email.Address)
+		log.Infof("subject: %v", email.Subject)
+		log.Infof("body: %v", email.Email.Body)
+		log.Info("-----")
+		// }
+	}
+
+	// pushMessages, err := notification.RenderPushMessagesForUserEvents(0, notifications)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, pushMessage := range pushMessages {
+	// 	message := pushMessage.Messages[0]
+	// 	log.Infof("title: %v body: %v", message.Notification.Title, message.Notification.Body)
+
+	// 	if message.Token == "" {
+	// 		log.Info("sending test message")
+
+	// 		err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, false)
+	// 		if err != nil {
+	// 			log.Error(err, "error sending firebase batch job", 0)
+	// 		}
+	// 	}
+	// }
+
+	return nil
+}
+
+func collectUserDbNotifications(startEpoch uint64) error {
+	epoch := startEpoch
+
+	log.Infof("collecting notifications for epoch %v", epoch)
+	notifications, err := notification.GetUserNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("found %v notifications for epoch %v", len(notifications), epoch)
+
+	log.Infof("found %v dashboard notifications for user", len(notifications[3]))
+
+	emails, err := notification.RenderEmailsForUserEvents(0, notifications)
+	if err != nil {
+		return err
+	}
+
+	for _, email := range emails {
+		// if email.Address == "" {
+		log.Infof("to: %v", email.Address)
+		log.Infof("subject: %v", email.Subject)
+		log.Infof("body: %v", email.Email.Body)
+		log.Info("-----")
+		// }
+	}
+
+	pushMessages, err := notification.RenderPushMessagesForUserEvents(0, notifications)
+	if err != nil {
+		return err
+	}
+
+	for _, pushMessage := range pushMessages {
+		message := pushMessage.Messages[0]
+		log.Infof("title: %v body: %v", message.Notification.Title, message.Notification.Body)
+
+		if message.Token == "" {
+			log.Info("sending test message")
+
+			err = notification.SendPushBatch(pushMessage.UserId, []*messaging.Message{message}, true)
+			if err != nil {
+				log.Error(err, "error sending firebase batch job", 0)
+			}
+		}
+	}
+	return nil
 }
 
 func fixEns(erigonClient *rpc.ErigonClient) error {
@@ -1994,4 +2176,57 @@ func reExportSyncCommittee(rpcClient rpc.Client, p uint64, dryRun bool) error {
 
 		return tx.Commit()
 	}
+}
+
+func verifyFCMTokens() error {
+	type row struct {
+		RefreshToken      string `db:"refresh_token"`
+		UserId            int    `db:"user_id"`
+		NotificationToken string `db:"notification_token"`
+	}
+
+	var rows []row
+	err := db.FrontendWriterDB.Select(&rows, `SELECT refresh_token, user_id, COALESCE(notification_token, '') AS notification_token FROM users_devices where length(notification_token) > 20 and id >= 0 order by id`)
+
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	opt := option.WithCredentialsJSON([]byte(utils.Config.Notifications.FirebaseCredentialsPath))
+
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		log.Error(err, "error initializing app", 0)
+		return err
+	}
+
+	client, err := app.Messaging(ctx)
+	if err != nil {
+		log.Error(err, "error initializing messaging", 0)
+		return err
+	}
+
+	for _, r := range rows {
+		log.Infof("checking token %s for user %v", r.NotificationToken, r.UserId)
+
+		_, err := client.SendDryRun(ctx, &messaging.Message{
+			Token: r.NotificationToken,
+		})
+		if err != nil {
+			if err.Error() == "Requested entity was not found." {
+				log.Infof("token %s for user %v is invalid", r.NotificationToken, r.UserId)
+				res, err := db.FrontendWriterDB.Exec(`UPDATE users_devices SET notification_token = NULL WHERE notification_token = $1 AND user_id = $2 AND refresh_token = $3`, r.NotificationToken, r.UserId, r.RefreshToken)
+				if err != nil {
+					log.Error(err, "error updating token", 0)
+				}
+				rowsAffected, _ := res.RowsAffected()
+				log.Infof("updated %d rows", rowsAffected)
+			} else {
+				log.Error(err, "error sending message", 0)
+			}
+		}
+		time.Sleep(time.Millisecond * 250)
+	}
+	return nil
 }

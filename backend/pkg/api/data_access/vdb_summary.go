@@ -92,7 +92,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	if err != nil {
 		return nil, nil, err
 	}
-	averageNetworkEfficiency := d.calculateTotalEfficiency(
+	averageNetworkEfficiency := utils.CalculateTotalEfficiency(
 		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -248,12 +248,13 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		From(goqu.L("blocks b")).
 		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
 		LeftJoin(
-			goqu.Dialect("postgres").
+			goqu.Lateral(goqu.Dialect("postgres").
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
 					goqu.MAX("value").As("value")).
-				GroupBy("exec_block_hash").As("rb"),
+				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
+				GroupBy("exec_block_hash")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochStart, epochEnd)).
@@ -427,7 +428,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			syncEfficiency.Float64 = float64(queryEntry.SyncExecuted) / float64(queryEntry.SyncScheduled)
 			syncEfficiency.Valid = true
 		}
-		resultEntry.Efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+		resultEntry.Efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 		// Add the duties info to the total
 		total.AttestationReward = total.AttestationReward.Add(queryEntry.AttestationReward)
@@ -547,7 +548,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			totalSyncEfficiency.Float64 = float64(total.SyncExecuted) / float64(total.SyncScheduled)
 			totalSyncEfficiency.Valid = true
 		}
-		totalEntry.Efficiency = d.calculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
+		totalEntry.Efficiency = utils.CalculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
 
 		result = append([]t.VDBSummaryTableRow{totalEntry}, result...)
 	}
@@ -947,12 +948,13 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		From(goqu.L("blocks AS b")).
 		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("b.exec_block_hash = ep.block_hash"))).
 		LeftJoin(
-			goqu.Dialect("postgres").
+			goqu.Lateral(goqu.Dialect("postgres").
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
 					goqu.MAX("value").As("value")).
-				GroupBy("exec_block_hash").As("rb"),
+				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
+				GroupBy("exec_block_hash")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.status = '1'")).
@@ -1166,7 +1168,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		if err != nil {
 			return nil, err
 		}
-		averageNetworkEfficiency := d.calculateTotalEfficiency(
+		averageNetworkEfficiency := utils.CalculateTotalEfficiency(
 			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
 
 		for ts := range tsMap {
@@ -1238,17 +1240,17 @@ func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggreg
 	var dateColumn string
 	switch aggregation {
 	case enums.IntervalEpoch:
-		table = "validator_dashboard_data_epoch"
-		dateColumn = "epoch_timestamp"
+		table = "view_validator_dashboard_data_epoch_max_ts"
+		dateColumn = "t"
 	case enums.IntervalHourly:
-		table = "validator_dashboard_data_hourly"
-		dateColumn = "hour"
+		table = "view_validator_dashboard_data_hourly_max_ts"
+		dateColumn = "t"
 	case enums.IntervalDaily:
-		table = "validator_dashboard_data_daily"
-		dateColumn = "day"
+		table = "view_validator_dashboard_data_daily_max_ts"
+		dateColumn = "t"
 	case enums.IntervalWeekly:
-		table = "validator_dashboard_data_weekly"
-		dateColumn = "week"
+		table = "view_validator_dashboard_data_weekly_max_ts"
+		dateColumn = "t"
 	default:
 		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
 	}

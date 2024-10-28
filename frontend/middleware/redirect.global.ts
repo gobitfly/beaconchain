@@ -5,20 +5,20 @@ export default function ({
   params,
   query,
 }: RouteLocationNormalizedLoaded) {
+  const { has } = useFeatureFlag()
   const config = useRuntimeConfig()
-  const showInDevelopment = Boolean(config.public.showInDevelopment)
   const v1Domain = config.public.v1Domain || 'https://beaconcha.in'
   if (name === 'slug') {
     name = params.slug?.[0]
   }
+  function redirectToV1(path: `/${string}`) {
+    return navigateTo(`${v1Domain}${path}`, { external: true })
+  }
   switch (name) {
     case 'address':
-      return navigateTo(
-        `${v1Domain}/address/${params.id || params.slug?.[1]}`,
-        { external: true },
-      )
+      return redirectToV1(`/address/${params.id || params.slug?.[1]}`)
     case 'block':
-      return navigateTo(`${v1Domain}/block/${params.id || params.slug?.[1]}`, { external: true })
+      return redirectToV1(`/block/${params.id || params.slug?.[1]}`)
     case 'dashboard':
     case 'dashboard-id':
       if (query.validators && typeof query.validators === 'string') {
@@ -36,31 +36,29 @@ export default function ({
       }
       break
     case 'epoch':
-      return navigateTo(`${v1Domain}/epoch/${params.id || params.slug?.[1]}`, { external: true })
+      return redirectToV1(`/epoch/${params.id || params.slug?.[1]}`)
     case 'mobile':
-      return navigateTo(`${v1Domain}/mobile`, { external: true })
+      return redirectToV1('/mobile')
     case 'notifications':
-      if (!showInDevelopment) {
-        return navigateTo(`${v1Domain}/user/notifications`, { external: true })
+      if (!has('feature-notifications')) {
+        return redirectToV1('/user/notifications')
       }
       break
+    case 'register':
+      return redirectToV1('/register')
     case 'requestReset':
-      return navigateTo(`${v1Domain}/requestReset`, { external: true })
+      return redirectToV1('/requestReset')
     case 'slot':
-      return navigateTo(`${v1Domain}/slot/${params.id || params.slug?.[1]}`, { external: true })
+      return redirectToV1(`/slot/${params.id || params.slug?.[1]}`)
     case 'tx':
-      return navigateTo(`${v1Domain}/tx/${params.id || params.slug?.[1]}`, { external: true })
+      return redirectToV1(`/tx/${params.id || params.slug?.[1]}`)
     case 'user-settings':
-      // TODO: Remove once backend for this page is ready
-      if (!showInDevelopment) {
-        return navigateTo(`${v1Domain}/user/settings`, { external: true })
+      if (!has('feature-user_settings')) {
+        return redirectToV1('/user/settings')
       }
       break
     case 'validator':
     case 'validator-id':
-      return navigateTo(
-        `${v1Domain}/validator/${params.id || params.slug?.[1]}`,
-        { external: true },
-      )
+      return redirectToV1(`/validator/${params.id || params.slug?.[1]}`)
   }
 }

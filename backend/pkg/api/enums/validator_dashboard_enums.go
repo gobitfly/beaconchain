@@ -1,5 +1,10 @@
 package enums
 
+import (
+	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
+)
+
 // ----------------
 // Validator Dashboard Summary Table
 
@@ -156,6 +161,29 @@ func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 	}
 }
 
+type OrderableSortable interface {
+	exp.Orderable
+	exp.Comparable
+	exp.Isable
+}
+
+func (c VDBBlocksColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBBlockProposer:
+		return goqu.C("validator_index")
+	case VDBBlockSlot:
+		return goqu.C("slot")
+	case VDBBlockBlock:
+		return goqu.C("exec_block_number")
+	case VDBBlockStatus:
+		return goqu.C("status")
+	case VDBBlockProposerReward:
+		return goqu.L("el_reward + cl_reward")
+	default:
+		return nil
+	}
+}
+
 var VDBBlocksColumns = struct {
 	Proposer       VDBBlocksColumn
 	Slot           VDBBlocksColumn
@@ -268,6 +296,61 @@ var VDBManageValidatorsColumns = struct {
 	VDBManageValidatorsBalance,
 	VDBManageValidatorsStatus,
 	VDBManageValidatorsWithdrawalCredential,
+}
+
+// ----------------
+// Validator Dashboard Manage Validators Table
+
+type VDBMobileValidatorsColumn int
+
+var _ EnumFactory[VDBMobileValidatorsColumn] = VDBMobileValidatorsColumn(0)
+
+const (
+	VDBMobileValidatorsIndex VDBMobileValidatorsColumn = iota
+	VDBMobileValidatorsPublicKey
+	VDBMobileValidatorsBalance
+	VDBMobileValidatorsStatus
+	VDBMobileValidatorsWithdrawalCredential
+	VDBMobileValidatorsEfficiency
+)
+
+func (c VDBMobileValidatorsColumn) Int() int {
+	return int(c)
+}
+
+func (VDBMobileValidatorsColumn) NewFromString(s string) VDBMobileValidatorsColumn {
+	switch s {
+	case "index":
+		return VDBMobileValidatorsIndex
+	case "public_key":
+		return VDBMobileValidatorsPublicKey
+	case "balance":
+		return VDBMobileValidatorsBalance
+	case "status":
+		return VDBMobileValidatorsStatus
+	case "withdrawal_credential":
+		return VDBMobileValidatorsWithdrawalCredential
+	case "efficiency":
+		return VDBMobileValidatorsEfficiency
+	default:
+		return VDBMobileValidatorsColumn(-1)
+	}
+}
+
+var VDBMobileValidatorsColumns = struct {
+	Index                VDBManageValidatorsColumn
+	PublicKey            VDBManageValidatorsColumn
+	Balance              VDBManageValidatorsColumn
+	Status               VDBManageValidatorsColumn
+	WithdrawalCredential VDBManageValidatorsColumn
+	Efficiency           VDBMobileValidatorsColumn
+}{
+	VDBManageValidatorsIndex,
+	VDBManageValidatorsPublicKey,
+	VDBManageValidatorsBalance,
+	VDBManageValidatorsStatus,
+	VDBManageValidatorsWithdrawalCredential,
+	VDBMobileValidatorsEfficiency,
 }
 
 // ----------------
@@ -437,7 +520,7 @@ func (c VDBRocketPoolMinipoolsColumn) Int() int {
 
 func (VDBRocketPoolMinipoolsColumn) NewFromString(s string) VDBRocketPoolMinipoolsColumn {
 	switch s {
-	case "group":
+	case "group_id":
 		return VDBRocketPoolMinipoolsGroup
 	default:
 		return VDBRocketPoolMinipoolsColumn(-1)

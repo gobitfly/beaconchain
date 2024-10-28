@@ -6,6 +6,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -30,6 +31,15 @@ func Run() {
 		log.Fatal(err, "error reading config file", 0)
 	}
 	utils.Config = cfg
+
+	if utils.Config.Metrics.Enabled {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}()
+	}
 
 	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
 		Username:     cfg.ClickHouse.WriterDatabase.Username,

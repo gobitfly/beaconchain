@@ -1,6 +1,7 @@
 package types
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -16,10 +17,18 @@ const DefaultGroupId = 0
 const AllGroups = -1
 const NetworkAverage = -2
 const DefaultGroupName = "default"
+const DefaultDashboardName = DefaultGroupName
 
 type Sort[T enums.Enum] struct {
 	Column T
 	Desc   bool
+}
+
+type SortColumn struct {
+	// defaults
+	Column enums.OrderableSortable
+	Desc   bool
+	Offset any // nil to indicate null value
 }
 
 type VDBIdPrimary int
@@ -105,6 +114,47 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type NotificationSettingsCursor struct {
+	GenericCursor
+
+	IsAccountDashboard bool // if false it's a validator dashboard
+	DashboardId        uint64
+	GroupId            uint64
+}
+
+type NotificationMachinesCursor struct {
+	GenericCursor
+
+	MachineId      uint64
+	MachineName    string
+	EventType      string
+	EventThreshold float64
+	Epoch          uint64
+}
+
+type NotificationClientsCursor struct {
+	GenericCursor
+
+	Client string
+	Epoch  uint64
+}
+
+type NotificationRocketPoolsCursor struct {
+	GenericCursor
+
+	NodeAddress []byte
+	EventType   string
+	Epoch       uint64
+}
+
+type NotificationNetworksCursor struct {
+	GenericCursor
+
+	Network   uint64
+	Epoch     uint64
+	EventType string
+}
+
 type UserCredentialInfo struct {
 	Id             uint64 `db:"id"`
 	Email          string `db:"email"`
@@ -116,18 +166,36 @@ type UserCredentialInfo struct {
 
 type BlocksCursor struct {
 	GenericCursor
-	Slot uint64 // basically the same as Block, Epoch, Age; mandatory, used to index
 
-	// optional, max one of those (for now)
 	Proposer uint64
-	Group    uint64
+	Slot     uint64 // same as Age
+	Block    sql.NullInt64
 	Status   uint64
 	Reward   decimal.Decimal
 }
 
+type NotificationsDashboardsCursor struct {
+	GenericCursor
+
+	Epoch         uint64
+	ChainId       uint64
+	DashboardName string
+	DashboardId   uint64
+	GroupName     string
+	GroupId       uint64
+}
+
 type NetworkInfo struct {
-	ChainId uint64
-	Name    string
+	ChainId           uint64
+	Name              string
+	NotificationsName string
+}
+
+type ClientInfo struct {
+	Id       uint64
+	Name     string
+	DbName   string
+	Category string
 }
 
 // -------------------------
@@ -212,7 +280,6 @@ type VDBValidatorSummaryChartRow struct {
 	SyncScheduled          float64   `db:"sync_scheduled"`
 }
 
-// -------------------------
 // healthz structs
 
 type HealthzResult struct {
@@ -232,9 +299,35 @@ type HealthzData struct {
 // Mobile structs
 
 type MobileAppBundleStats struct {
-	LatestBundleVersion uint64
-	BundleUrl           string
-	TargetCount         uint64 // coalesce to 0 if column is null
-	DeliveryCount       uint64
-	MaxNativeVersion    uint64 // the max native version of the whole table for the given environment
+	LatestBundleVersion uint64 `db:"bundle_version"`
+	BundleUrl           string `db:"bundle_url"`
+	TargetCount         int64  `db:"target_count"` // coalesce to -1 if column is null
+	DeliveryCount       int64  `db:"delivered_count"`
+	MaxNativeVersion    uint64 `db:"max_native_version"` // the max native version of the whole table for the given environment
 }
+
+// Notification structs
+
+type NotificationSettingsDefaultValues struct {
+	GroupEfficiencyBelowThreshold     float64
+	MaxCollateralThreshold            float64
+	MinCollateralThreshold            float64
+	ERC20TokenTransfersValueThreshold float64
+
+	MachineStorageUsageThreshold float64
+	MachineCpuUsageThreshold     float64
+	MachineMemoryUsageThreshold  float64
+
+	GasAboveThreshold                 decimal.Decimal
+	GasBelowThreshold                 decimal.Decimal
+	NetworkParticipationRateThreshold float64
+}
+
+// ------------------------------
+
+type CtxKey string
+
+const CtxUserIdKey CtxKey = "user_id"
+const CtxIsMockedKey CtxKey = "is_mocked"
+const CtxMockSeedKey CtxKey = "mock_seed"
+const CtxDashboardIdKey CtxKey = "dashboard_id"

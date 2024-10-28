@@ -16,10 +16,12 @@
   },
   "clipboard": {
     "copied": "Copied!",
+    "copied_to_clipboard": "Copied to clipboard!",
     "copy": "Copy to clipboard"
   },
   "common": {
     "account": "Account | Accounts",
+    "active": "Active",
     "address": "Address | Addresses",
     "age": "Age",
     "and_more": "and {count} more",
@@ -32,8 +34,11 @@
     "contract": "Contract | Contracts",
     "current": "Current",
     "deselected": "Not selected",
+    "download_app_google": "Get our app on the app on the Google Play Store",
+    "download_app_ios": "Download our app on the App store",
     "earned": "Earned",
     "edit": "Edit",
+    "email": "Email",
     "ens_address": "ENS address | ENS addresses",
     "epoch": "Epoch | Epochs",
     "erc20token": "ERC-20 Token | ERC-20 Tokens",
@@ -45,6 +50,7 @@
     "graffiti": "Graffiti | Graffitis",
     "id": "ID",
     "in_day": "In one day | In {count} days",
+    "inactive": "Inactive",
     "index": "Index",
     "last_x": "Last {duration}",
     "live": "Live",
@@ -68,8 +74,13 @@
     "true": "True",
     "tx_batch": "Tx Batch | Tx Batches",
     "unavailable": "Unavailable",
+    "units": {
+      "GWEI": "GWei",
+      "per_day": "per day"
+    },
     "upcoming": "Upcoming",
-    "validator": "Validator | Validators"
+    "validator": "Validator | Validators",
+    "webhook": "Webhook"
   },
   "cookies": {
     "accept_all": "Accept All",
@@ -561,12 +572,35 @@
     "yes": "Yes"
   },
   "notifications": {
+    "clients": {
+      "col": {
+        "client_name": "Client ",
+        "version": "Version"
+      },
+      "footer":{
+        "subscriptions": "Clients ({count} Subscriptions)"
+      },
+      "search_placeholder":"Client",
+      "settings": {
+        "clients": "Clients ({0})",
+        "consensus_clients": "Consensus Clients",
+        "execution_clients": "Execution Clients",
+        "other_clients": "Others Clients",
+        "screenreader": {
+          "delete_notifications_for_dashboard_id": "Delete all notifications for {dashboard_id}",
+          "edit_notifications": "Edit Notifications for {0} {1}",
+          "empty_clients": "0 clients to edit."
+        }
+      },
+      "title": "Clients"
+    },
     "col": {
       "dashboard": "Dashboard",
       "group": "Group",
       "networks": "Networks",
       "notification": "Notification",
       "subscriptions": "Subscriptions",
+      "threshold": "Threshold",
       "webhook": "Webhook"
     },
     "dashboards": {
@@ -576,6 +610,28 @@
       },
       "dialog": {
         "button_webhook_test": "Send Test Notification",
+        "delete_all_notifications":{
+          "heading":"Delete all notifications",
+          "paragraph": "Do you really want to delete all notifications for this dashboard?"
+          },
+        "entity": {
+          "attestation_missed":"Attestation missed",
+          "group_efficiency": "Group efficiency ",
+          "group_efficiency_text": "efficiency below {percentage}",
+          "max_collateral":"Maximum collateral reached",
+          "min_collateral":"Minimum collateral reached",
+          "proposal_done": "Proposal done",
+          "proposal_missed": "Proposal missed",
+          "slashed": "Slashed",
+          "sync_committee": "Sync committee",
+          "title": "Notifications",
+          "upcoming_proposal": "Upcoming proposal",
+          "validator_back_online": "Validator back online",
+          "validator_offline": "Validator offline",
+          "validator_offline_reminder": "Validator offline reminder",
+          "withdrawal": "Withdrawal"
+
+        },
         "heading_webhook": "Edit Webhook",
         "info_send_via_discord": {
           "_link": "Discord webhook",
@@ -593,6 +649,26 @@
       "entity": {
         "accounts": "account | accounts",
         "validators": "validator | validators"
+      },
+      "event_type": {
+        "attestation_missed": "Attestation missed",
+        "group_efficiency_below": "Low group efficiency",
+        "incoming_tx": "Incoming Tx.",
+        "max_collateral": "Max. collateral",
+        "min_collateral": "Min. collateral",
+        "outgoing_tx": "Outgoing Tx.",
+        "proposal_missed": "Proposal missed",
+        "proposal_success": "Proposal success",
+        "proposal_upcoming": "Proposal upcoming",
+        "sync": "Sync",
+        "transfer_erc20": "Transfer ERC-20",
+        "transfer_erc721": "Transfer ERC-721",
+        "transfer_erc1155": "Transfer ERC-1155",
+        "validator_got_slashed": "Got slashed",
+        "validator_has_slashed": "Slashing",
+        "validator_offline": "Validator offline",
+        "validator_online": "Validator online",
+        "withdrawal": "Withdrawal"
       },
       "expansion": {
         "label_dashboard": "Dashboard:",
@@ -635,7 +711,10 @@
       },
       "paired_devices": {
         "device": "Device",
-        "grant_account_access": "Grant account access (required)",
+        "info_empty":{
+          "_link": "Click here to pair a device",
+          "template": "Currently there are no devices paired."
+        },
         "mobile_notifications": "Mobile notifications",
         "paired_date": "Paired: {date}",
         "title": "Paired Devices",
@@ -658,14 +737,28 @@
         "threshold": "Threshold"
       },
       "event_type": {
-        "is_machine_offline": "Machine is offline",
-        "machine_cpu_usage": "CPU overheated",
-        "machine_memory_usage": "High memory usage",
-        "machine_storage_usage": "No storage left"
+        "cpu_overheated": "CPU overheated",
+        "high_memory_usage": "High memory usage",
+        "machine_offline": "Machine is offline",
+        "no_storage": "No storage left"
       },
       "footer": {
         "subscriptions": "Machines (1 Subscription) |Machines ({count} Subscriptions)"
-      }
+      },
+      "search_placeholder": "Machine",
+      "settings": {
+        "check_out_knowlege_base": "Check out our Knowledge Base for a step by step tutorial:",
+        "cpu_usage": "CPU usage",
+        "info": "Currently there are no machines configured.",
+        "machine_offline": "Machine offline",
+        "memory_usage": "Memory usage",
+        "mobile_app_node_monitoring": "Mobile App Node Monitoring",
+        "storage_usage": "Storage usage",
+        "subscribe_to_premium_cpu": "Subscribe to premium to set a custom CPU threshold.",
+        "subscribe_to_premium_memory": "Subscribe to premium to set a custom memory threshold.",
+        "subscribe_to_premium_storage": "Subscribe to premium to set a custom storage threshold."
+      },
+      "title": "Machines"
     },
     "manage": "Manage Notifications",
     "management": {
@@ -673,34 +766,60 @@
     },
     "network": {
       "event_type": {
-        "gas_above": "Gas price > {_value}",
-        "gas_below": "Gas price < {_value}",
-        "participation_rate": "Participation rate < {_value}"
+        "gas_above": "Gas price maximum reached",
+        "gas_below": "Gas price minimum reached",
+        "new_reward_round": "New reward round",
+        "participation_rate": "Participation rate minimum reached"
       },
       "footer": {
-        "subscriptions": "Network ({count} Subscription) | Validators ({count} Subscriptions)"
-      }
+        "subscriptions": "Network ({count} Subscriptions)"
+      },
+      "settings": {
+        "alert_if_gas_above": "Alert if gas is above",
+        "alert_if_gas_below": "Alert if gas is below",
+        "alert_if_participation_rate_below": "Alert if participation rate is below",
+        "new_reward_round": "New reward round"
+      },
+      "title": "Networks"
+    },
+    "overview": {
+      "email_activate": "Click here to activate Email notifications",
+      "email_tooltip": "Your current limit is { limit } emails per day. Your email limit resets in { hours } hours. Upgrade to premium for more.",
+      "headers": {
+        "account_groups": "Most notified account groups",
+        "email_notifications": "Email Notifications",
+        "most_notifications_30d": "Most Notifications in 30d",
+        "notifications_24h": "Notifications in 24h",
+        "push_notifications": "Push Notifications",
+        "validator_groups": "Most notified validator groups"
+      },
+      "notifications_activate_premium": {
+        "_link": "here",
+        "template": "Click {_link} to activate"
+      },
+      "notifications_download_app": {
+        "_link": "mobile app",
+        "template": "Download the {_link} to activate"
+      },
+      "push": "Push"
     },
     "subscriptions": {
       "accounts": {
-        "all": {
-          "option": "All events"
+         "erc20_token_transfers": {
+          "label": "ERC20 token transfers"
         },
-        "erc20_token_transfers_value_threshold": {
-          "option": "ERC20 token transfers",
-          "placeholder": "value ≥ $0"
+
+        "erc721_token_transfers": {
+          "label": "ERC721 token transfers"
         },
-        "explanation": "",
-        "is_erc20_token_transfers_subscribed": {
-          "option": "ERC20 token transfers"
+        "erc1155_token_transfers": {
+          "label": "ERC1155 token transfers"
         },
-        "is_erc721_token_transfers_subscribed": {
-          "option": "ERC721 token transfers"
+        "group_efficiency": {
+          "info": "efficiency below {percentage}",
+          "label": "Group efficiency"
         },
-        "is_erc1155_token_transfers_subscribed": {
-          "option": "ERC1155 token transfers"
-        },
-        "is_ignore_spam_transactions_enabled": {
+        "ignore_spam_transactions": {
           "hint": [
             "Ignores",
             "zero value transfer tx's",
@@ -708,73 +827,57 @@
             "\"hidden\" token label",
             "."
           ],
-          "option": "Ignore spam transactions"
+          "label": "Ignore spam transactions"
         },
-        "is_incoming_transactions_subscribed": {
-          "option": "Incoming transactions"
+        "incoming_transactions": {
+          "label": "Incoming transactions"
         },
-        "is_outgoing_transactions_subscribed": {
-          "option": "Outgoing transactions"
-        },
-        "subscribed_chain_ids": {
-          "option": "Networks"
+        "outgoing_transactions": {
+          "label": "Outgoing transactions"
         }
       },
-      "button": "Close",
-      "dialog_title": "Edit Subscriptions",
-      "error_group": "Notification subscriptions",
-      "error_message": "We could not save your preferences.",
-      "error_title": "Error",
+      "title": "Edit Subscriptions",
       "validators": {
-        "all": {
-          "option": "All events"
+        "all_events": {
+          "label": "All events"
         },
-        "explanation": "All notifications are sent after network finality (~{count} min).",
-        "group_offline_threshold": {
-          "hint": [
-            "We will trigger a notification:",
-            "Once validators in your group are offline. | Once {count}% of your group is offline. | Once {count}% of your group is offline.",
-            "Once you have been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online.",
-            "Note:",
-            "Notification resets if you do not meet the threshold given in the input field. | Notification resets if you do not meet the threshold of {count}%. | Notification resets if you do not meet the threshold of {count}%."
-          ],
-          "option": "Group is offline",
-          "placeholder": ""
+        "attestation_missed": {
+          "info": "We will trigger a notification every epoch ({count} minute) during downtime. | We will trigger a notification every epoch ({count} minutes) during downtime.",
+          "label": "Attestations missed"
         },
-        "is_attestations_missed_subscribed": {
-          "hint": "We will trigger every epoch ({count} minute) during downtime. | We will trigger every epoch ({count} minutes) during downtime.",
-          "option": "Attestations missed"
+        "block_proposal": {
+          "label": "Block proposal (missed & success)"
         },
-        "is_block_proposal_subscribed": {
-          "option": "Block proposal (missed & success)"
+        "explanation": "All notifications are sent after network finality (~20min).",
+        "group_efficiency": {
+          "info": "Notifies you if your group's efficiency falls below {percentage}% in any given epoch",
+          "label": "Group efficiency below"
         },
-        "is_real_time_mode_enabled": {
-          "hint": "Sends notifications after the first epoch and does not wait for finality to send notifications, which might cause false positive notifications.",
-          "option": "Realtime mode"
+        "max_collateral_reached": {
+          "label": "Max collateral reached"
         },
-        "is_slashed_subscribed": {
-          "option": "Validator got slashed"
+        "min_collateral_reached": {
+          "label": "Min collateral reached"
         },
-        "is_sync_subscribed": {
-          "option": "Sync committee"
+        "sync_committee": {
+          "label": "Sync committee"
         },
-        "is_upcoming_block_proposal_subscribed": {
-          "hint": "May trigger false positive notifications during reorgs.",
-          "option": "Upcoming block proposal"
+        "upcoming_block_proposal": {
+          "info": "May trigger false positive notifications during reorgs.",
+          "label": "Upcoming block proposal"
         },
-        "is_validator_offline_subscribed": {
-          "hint": [
-            "We will trigger a notification:",
-            "Once the validator has been offline for 3 epochs.",
-            "Every 32 Epochs (~3 hours) during your downtime.",
-            "Once you are back online again."
-          ],
-          "option": "Validator is offline"
+        "validator_got_slashed": {
+          "label": "Validator got slashed"
         },
-        "is_withdrawal_processed_subscribed": {
-          "option": "Withdrawal processed"
+        "validator_is_offline": {
+          "info": {
+            "_list": "Once the validator has been offline for 3 epochs\nOnce you are back online again",
+            "template": "We will trigger a notification: {_list}"
+          },
+          "label": "Validator is offline"
+        },
+        "withdrawal_processed": {
+          "label": "Withdrawal processed"
         }
       }
     },
@@ -783,8 +886,7 @@
       "dashboards": "Dashboards",
       "general": "General",
       "machines": "Machines",
-      "network": "Network",
-      "rocketpool": "Rocket Pool"
+      "networks": "Networks"
     },
     "title": "Notifications"
   },

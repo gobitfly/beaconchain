@@ -107,6 +107,30 @@ func Run() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.AlloyWriter.Username,
+			Password:     cfg.AlloyWriter.Password,
+			Name:         cfg.AlloyWriter.Name,
+			Host:         cfg.AlloyWriter.Host,
+			Port:         cfg.AlloyWriter.Port,
+			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
+			SSL:          cfg.AlloyWriter.SSL,
+		}, &types.DatabaseConfig{
+			Username:     cfg.AlloyReader.Username,
+			Password:     cfg.AlloyReader.Password,
+			Name:         cfg.AlloyReader.Name,
+			Host:         cfg.AlloyReader.Host,
+			Port:         cfg.AlloyReader.Port,
+			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
+			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
+			SSL:          cfg.AlloyReader.SSL,
+		}, "pgx", "postgres")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
 			Username:     cfg.Frontend.WriterDatabase.Username,
 			Password:     cfg.Frontend.WriterDatabase.Password,
@@ -124,6 +148,31 @@ func Run() {
 			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
 			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
 		}, "pgx", "postgres")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// clickhouse
+		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.ClickHouse.WriterDatabase.Username,
+			Password:     cfg.ClickHouse.WriterDatabase.Password,
+			Name:         cfg.ClickHouse.WriterDatabase.Name,
+			Host:         cfg.ClickHouse.WriterDatabase.Host,
+			Port:         cfg.ClickHouse.WriterDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.ClickHouse.ReaderDatabase.Username,
+			Password:     cfg.ClickHouse.ReaderDatabase.Password,
+			Name:         cfg.ClickHouse.ReaderDatabase.Name,
+			Host:         cfg.ClickHouse.ReaderDatabase.Host,
+			Port:         cfg.ClickHouse.ReaderDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+		}, "clickhouse", "clickhouse")
 	}()
 
 	wg.Add(1)
@@ -158,6 +207,10 @@ func Run() {
 	defer db.WriterDb.Close()
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
+	defer db.AlloyReader.Close()
+	defer db.AlloyWriter.Close()
+	defer db.ClickHouseReader.Close()
+	defer db.ClickHouseWriter.Close()
 	defer db.BigtableClient.Close()
 
 	log.Infof("database connection established")
