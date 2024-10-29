@@ -713,7 +713,7 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 							DashboardGroupId:   groupDetails.Subscription.DashboardGroupId,
 							DashboardGroupName: groupDetails.Subscription.DashboardGroupName,
 						},
-						Threshold:  groupDetails.Subscription.EventThreshold * 100,
+						Threshold:  groupDetails.Subscription.EventThreshold,
 						Efficiency: efficiency,
 					}
 					notificationsByUserID.AddNotification(n)
