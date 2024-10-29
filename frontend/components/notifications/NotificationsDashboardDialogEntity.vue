@@ -292,7 +292,7 @@ const formatValueWei = (value: string) => {
           />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.group_efficiency.heading') }}
+          {{ $t('notifications.dashboards.dialog.entity.group_efficiency') }}
         </template>
         <template #item="{ item: groupEfficiencyBelow }">
           {{ details?.group_name }}
