@@ -5,7 +5,6 @@ import IconValidator from '../icon/IconValidator.vue'
 import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import type { ChainIDs } from '~/types/network'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
 import { NotificationsDashboardDialogEntity } from '#components'
@@ -30,8 +29,6 @@ const {
   setSearch,
 } = useNotificationsDashboardStore(networkId)
 
-const { getDashboardLabel } = useUserDashboardStore()
-
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
@@ -47,10 +44,8 @@ const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_typ
   switch (eventType) {
     case 'attestation_missed':
       return $t('notifications.dashboards.event_type.attestation_missed')
-    case 'group_offline':
-      return $t('notifications.dashboards.event_type.group_offline')
-    case 'group_online':
-      return $t('notifications.dashboards.event_type.group_online')
+    case 'group_efficiency_below':
+      return $t('notifications.dashboards.event_type.group_efficiency_below')
     case 'incoming_tx':
       return $t('notifications.dashboards.event_type.incoming_tx')
     case 'max_collateral':
@@ -172,10 +167,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
                 <NotificationsDashboardsTableItemDashboard
                   :type="getDashboardType(slotProps.data.is_account_dashboard)"
                   :dashboard-id="slotProps.data.dashboard_id"
-                  :dashboard-name="getDashboardLabel(
-                    `${slotProps.data.dashboard_id}`,
-                    getDashboardType(slotProps.data.is_account_dashboard),
-                  )"
+                  :dashboard-name="slotProps.data.dashboard_name"
                 />
               </template>
             </Column>
@@ -256,10 +248,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
                 <NotificationsDashboardsTableItemDashboard
                   :type="getDashboardType(slotProps.data.is_account_dashboard)"
                   :dashboard-id="slotProps.data.dashboard_id"
-                  :dashboard-name="getDashboardLabel(
-                    `${slotProps.data.dashboard_id}`,
-                    getDashboardType(slotProps.data.is_account_dashboard),
-                  )"
+                  :dashboard-name="slotProps.data.dashboard_name"
                 />
                 <div class="label-group">
                   {{ $t("notifications.dashboards.expansion.label_group") }}
@@ -278,7 +267,7 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
               </div>
             </template>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!notificationsDashboards?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
@@ -306,14 +295,18 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
 
                   }}
                 </div>
-                <div>
-                  {{
-                    $t(
-                      "notifications.dashboards.footer.subscriptions.accounts",
-                      { count: overview?.adb_subscriptions_count })
+                <BcFeatureFlag
+                  feature="feature-account_dashboards"
+                >
+                  <div>
+                    {{
+                      $t(
+                        "notifications.dashboards.footer.subscriptions.accounts",
+                        { count: overview?.adb_subscriptions_count })
 
-                  }}
-                </div>
+                    }}
+                  </div>
+                </BcFeatureFlag>
               </template>
             </template>
           </BcTable>

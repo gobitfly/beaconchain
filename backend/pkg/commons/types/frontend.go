@@ -65,12 +65,7 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 }
 
 const (
-	ValidatorMissedProposalEventName   EventName = "validator_proposal_missed"
-	ValidatorExecutedProposalEventName EventName = "validator_proposal_submitted"
-
-	ValidatorDidSlashEventName         EventName = "validator_did_slash"
-	ValidatorGroupIsOfflineEventName   EventName = "validator_group_is_offline"
-	ValidatorBalanceDecreasedEventName EventName = "validator_balance_decreased"
+	ValidatorDidSlashEventName EventName = "validator_did_slash"
 
 	ValidatorReceivedDepositEventName               EventName = "validator_received_deposit"
 	NetworkSlashingEventName                        EventName = "network_slashing"
@@ -81,24 +76,21 @@ const (
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
 	TaxReportEventName                              EventName = "user_tax_report"
 	//nolint:misspell
-	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min"
-	//nolint:misspell
-	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max"
-	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
-	//nolint:misspell
 	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
 	// Validator dashboard events
-	ValidatorIsOfflineEventName          EventName = "validator_is_offline"
-	GroupIsOfflineEventName              EventName = "group_is_offline"
-	ValidatorMissedAttestationEventName  EventName = "validator_attestation_missed"
-	ValidatorProposalEventName           EventName = "validator_proposal"
-	ValidatorUpcomingProposalEventName   EventName = "validator_proposal_upcoming"
-	SyncCommitteeSoon                    EventName = "validator_synccommittee_soon"
-	ValidatorReceivedWithdrawalEventName EventName = "validator_withdrawal"
-	ValidatorGotSlashedEventName         EventName = "validator_got_slashed"
-	RocketpoolCollateralMinReached       EventName = "rocketpool_colleteral_min" //nolint:misspell
-	RocketpoolCollateralMaxReached       EventName = "rocketpool_colleteral_max" //nolint:misspell
+	ValidatorIsOfflineEventName             EventName = "validator_is_offline"
+	ValidatorIsOnlineEventName              EventName = "validator_is_online"
+	ValidatorMissedAttestationEventName     EventName = "validator_attestation_missed"
+	ValidatorMissedProposalEventName        EventName = "validator_proposal_missed"
+	ValidatorExecutedProposalEventName      EventName = "validator_proposal_submitted"
+	ValidatorUpcomingProposalEventName      EventName = "validator_proposal_upcoming"
+	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
+	ValidatorReceivedWithdrawalEventName    EventName = "validator_withdrawal"
+	ValidatorGotSlashedEventName            EventName = "validator_got_slashed"
+	ValidatorGroupEfficiencyEventName       EventName = "validator_group_efficiency"
+	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min" //nolint:misspell
+	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max" //nolint:misspell
 
 	// Account dashboard events
 	IncomingTransactionEventName  EventName = "incoming_transaction"
@@ -118,12 +110,13 @@ const (
 
 	// Network events
 	RocketpoolNewClaimRoundStartedEventName    EventName = "rocketpool_new_claimround"
-	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
 	NetworkGasBelowThresholdEventName          EventName = "network_gas_below_threshold"
+	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
 	NetworkParticipationRateThresholdEventName EventName = "network_participation_rate_threshold"
 )
 
 var EventSortOrder = []EventName{
+	ValidatorUpcomingProposalEventName,
 	ValidatorGotSlashedEventName,
 	ValidatorDidSlashEventName,
 	ValidatorMissedProposalEventName,
@@ -134,6 +127,8 @@ var EventSortOrder = []EventName{
 	MonitoringMachineMemoryUsageEventName,
 	SyncCommitteeSoonEventName,
 	ValidatorIsOfflineEventName,
+	ValidatorIsOnlineEventName,
+	ValidatorGroupEfficiencyEventName,
 	ValidatorReceivedWithdrawalEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,
@@ -176,12 +171,15 @@ var MachineEventsMap = map[EventName]struct{}{
 }
 
 var LegacyEventLabel map[EventName]string = map[EventName]string{
+	ValidatorUpcomingProposalEventName:       "Your validator(s) will soon propose a block",
+	ValidatorGroupEfficiencyEventName:        "Your validator group efficiency is low",
 	ValidatorMissedProposalEventName:         "Your validator(s) missed a proposal",
 	ValidatorExecutedProposalEventName:       "Your validator(s) submitted a proposal",
 	ValidatorMissedAttestationEventName:      "Your validator(s) missed an attestation",
 	ValidatorGotSlashedEventName:             "Your validator(s) got slashed",
 	ValidatorDidSlashEventName:               "Your validator(s) slashed another validator",
-	ValidatorIsOfflineEventName:              "Your validator(s) state changed",
+	ValidatorIsOfflineEventName:              "Your validator(s) went offline",
+	ValidatorIsOnlineEventName:               "Your validator(s) came back online",
 	ValidatorReceivedWithdrawalEventName:     "A withdrawal was initiated for your validators",
 	NetworkLivenessIncreasedEventName:        "The network is experiencing liveness issues",
 	EthClientUpdateEventName:                 "An Ethereum client has a new update available",
@@ -198,13 +196,16 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
+	ValidatorUpcomingProposalEventName:       "Upcoming block proposal",
+	ValidatorGroupEfficiencyEventName:        "Low validator group efficiency",
 	ValidatorMissedProposalEventName:         "Block proposal missed",
 	ValidatorExecutedProposalEventName:       "Block proposal submitted",
 	ValidatorMissedAttestationEventName:      "Attestation missed",
 	ValidatorGotSlashedEventName:             "Validator slashed",
 	ValidatorDidSlashEventName:               "Validator has slashed",
-	ValidatorIsOfflineEventName:              "Validator online / offline",
-	ValidatorReceivedWithdrawalEventName:     "Validator withdrawal initiated",
+	ValidatorIsOfflineEventName:              "Validator offline",
+	ValidatorIsOnlineEventName:               "Validator back online",
+	ValidatorReceivedWithdrawalEventName:     "Withdrawal processed",
 	NetworkLivenessIncreasedEventName:        "The network is experiencing liveness issues",
 	EthClientUpdateEventName:                 "An Ethereum client has a new update available",
 	MonitoringMachineOfflineEventName:        "Machine offline",
@@ -231,11 +232,13 @@ func IsMachineNotification(event EventName) bool {
 
 var EventNames = []EventName{
 	ValidatorExecutedProposalEventName,
+	ValidatorGroupEfficiencyEventName,
 	ValidatorMissedProposalEventName,
 	ValidatorMissedAttestationEventName,
 	ValidatorGotSlashedEventName,
 	ValidatorDidSlashEventName,
 	ValidatorIsOfflineEventName,
+	ValidatorIsOnlineEventName,
 	ValidatorReceivedWithdrawalEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,

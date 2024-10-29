@@ -52,7 +52,8 @@ const data = computed(() => {
   }
   label = formatPercent(percent, config)
   if (props.comparePercent !== undefined) {
-    if (Math.abs(props.comparePercent - percent) <= 0.5) {
+    const thresholdToDifferenciateUnderperformerAndOverperformer = 0.25
+    if (Math.abs(props.comparePercent - percent) <= thresholdToDifferenciateUnderperformerAndOverperformer) {
       className = 'text-equal'
       leadingIcon = faArrowsLeftRight
       compareResult = 'equal'

@@ -89,7 +89,7 @@ const { overview } = useNotificationsDashboardOverviewStore()
               </template>
             </Column>
             <template #empty>
-              <NotificationsDashboardsTableEmpty
+              <NotificationsTableEmpty
                 v-if="!clientsNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -24,10 +25,10 @@ type Sort[T enums.Enum] struct {
 }
 
 type SortColumn struct {
-	Column string
+	// defaults
+	Column enums.OrderableSortable
 	Desc   bool
-	// represents value from cursor
-	Offset any
+	Offset any // nil to indicate null value
 }
 
 type VDBIdPrimary int
@@ -165,11 +166,10 @@ type UserCredentialInfo struct {
 
 type BlocksCursor struct {
 	GenericCursor
-	Slot uint64 // basically the same as Block, Epoch, Age; mandatory, used to index
 
-	// optional, max one of those (for now)
 	Proposer uint64
-	Group    uint64
+	Slot     uint64 // same as Age
+	Block    sql.NullInt64
 	Status   uint64
 	Reward   decimal.Decimal
 }
@@ -186,8 +186,9 @@ type NotificationsDashboardsCursor struct {
 }
 
 type NetworkInfo struct {
-	ChainId uint64
-	Name    string
+	ChainId           uint64
+	Name              string
+	NotificationsName string
 }
 
 type ClientInfo struct {
@@ -308,7 +309,7 @@ type MobileAppBundleStats struct {
 // Notification structs
 
 type NotificationSettingsDefaultValues struct {
-	GroupOfflineThreshold             float64
+	GroupEfficiencyBelowThreshold     float64
 	MaxCollateralThreshold            float64
 	MinCollateralThreshold            float64
 	ERC20TokenTransfersValueThreshold float64
@@ -321,3 +322,12 @@ type NotificationSettingsDefaultValues struct {
 	GasBelowThreshold                 decimal.Decimal
 	NetworkParticipationRateThreshold float64
 }
+
+// ------------------------------
+
+type CtxKey string
+
+const CtxUserIdKey CtxKey = "user_id"
+const CtxIsMockedKey CtxKey = "is_mocked"
+const CtxMockSeedKey CtxKey = "mock_seed"
+const CtxDashboardIdKey CtxKey = "dashboard_id"

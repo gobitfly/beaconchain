@@ -28,7 +28,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	legacyRouter := apiRouter.PathPrefix("/v1").Subrouter()
 	internalRouter := apiRouter.PathPrefix("/i").Subrouter()
 	sessionManager := newSessionManager(cfg)
-	internalRouter.Use(sessionManager.LoadAndSave)
+	internalRouter.Use(sessionManager.LoadAndSave, getSlidingSessionExpirationMiddleware(sessionManager))
 
 	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
@@ -38,6 +38,11 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	// store user id in context, if available
 	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware)
 	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware)
+
+	if cfg.DeploymentType != "production" {
+		publicRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
+		internalRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
+	}
 
 	addRoutes(handlerService, publicRouter, internalRouter, cfg)
 	addLegacyRoutes(handlerService, legacyRouter)

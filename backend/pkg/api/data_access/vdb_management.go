@@ -168,7 +168,7 @@ func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashb
 }
 
 // param validators: slice of validator public keys or indices
-func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, publicKeys []string) ([]t.VDBValidator, error) {
+func (d *DataAccessService) GetValidatorsFromSlices(ctx context.Context, indices []t.VDBValidator, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
 		return []t.VDBValidator{}, nil
 	}
@@ -520,7 +520,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
 				syncEfficiency.Valid = true
 			}
-			*efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 			return nil
 		})
