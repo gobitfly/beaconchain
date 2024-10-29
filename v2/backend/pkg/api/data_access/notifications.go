@@ -503,6 +503,12 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 
 		for _, notification := range notifications {
 			switch notification.GetEventName() {
+			case types.ValidatorGroupEfficiencyEventName:
+				curNotification, ok := notification.(*n.ValidatorGroupEfficiencyNotification)
+				if !ok {
+					return nil, fmt.Errorf("failed to cast notification to ValidatorGroupEfficiencyNotification")
+				}
+				notificationDetails.GroupEfficiencyBelow = curNotification.Threshold
 			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName /*, types.ValidatorScheduledProposalEventName*/ :
 				// aggregate proposals
 				curNotification, ok := notification.(*n.ValidatorProposalNotification)
@@ -613,8 +619,12 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				if !ok {
 					return nil, fmt.Errorf("failed to cast notification to RocketpoolNotification")
 				}
-				addr := t.Address{Hash: t.Hash(notification.GetEventFilter()), IsContract: true}
-				addressMapping[notification.GetEventFilter()] = &addr
+				nodeAddress := notification.GetEventFilter()
+				if nodeAddress == "" {
+					return nil, fmt.Errorf("empty node address in Rocket Pool collateral notification: dashboardId '%d', epoch '%d'", dashboardId, epoch)
+				}
+				addr := t.Address{Hash: t.Hash(nodeAddress), IsContract: true}
+				addressMapping[nodeAddress] = &addr
 				if notification.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
 					notificationDetails.MinimumCollateralReached = append(notificationDetails.MinimumCollateralReached, addr)
 				} else {
