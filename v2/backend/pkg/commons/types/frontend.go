@@ -65,9 +65,6 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 }
 
 const (
-	ValidatorMissedProposalEventName   EventName = "validator_proposal_missed"
-	ValidatorExecutedProposalEventName EventName = "validator_proposal_submitted"
-
 	ValidatorDidSlashEventName EventName = "validator_did_slash"
 
 	ValidatorReceivedDepositEventName               EventName = "validator_received_deposit"
@@ -78,20 +75,20 @@ const (
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
 	TaxReportEventName                              EventName = "user_tax_report"
-	SyncCommitteeSoonEventName                      EventName = "validator_synccommittee_soon"
 	//nolint:misspell
 	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
 	// Validator dashboard events
 	ValidatorIsOfflineEventName             EventName = "validator_is_offline"
 	ValidatorIsOnlineEventName              EventName = "validator_is_online"
-	ValidatorGroupEfficiencyEventName       EventName = "validator_group_efficiency"
 	ValidatorMissedAttestationEventName     EventName = "validator_attestation_missed"
-	ValidatorProposalEventName              EventName = "validator_proposal"
+	ValidatorMissedProposalEventName        EventName = "validator_proposal_missed"
+	ValidatorExecutedProposalEventName      EventName = "validator_proposal_submitted"
 	ValidatorUpcomingProposalEventName      EventName = "validator_proposal_upcoming"
-	SyncCommitteeSoon                       EventName = "validator_synccommittee_soon"
+	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
 	ValidatorReceivedWithdrawalEventName    EventName = "validator_withdrawal"
 	ValidatorGotSlashedEventName            EventName = "validator_got_slashed"
+	ValidatorGroupEfficiencyEventName       EventName = "validator_group_efficiency"
 	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min" //nolint:misspell
 	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max" //nolint:misspell
 
@@ -113,8 +110,8 @@ const (
 
 	// Network events
 	RocketpoolNewClaimRoundStartedEventName    EventName = "rocketpool_new_claimround"
-	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
 	NetworkGasBelowThresholdEventName          EventName = "network_gas_below_threshold"
+	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
 	NetworkParticipationRateThresholdEventName EventName = "network_participation_rate_threshold"
 )
 
