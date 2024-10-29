@@ -529,6 +529,50 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		validators = dashboardId.Validators
 	}
 
+	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
+		// we need to go to the all time table for last scheduled block/sync committee epoch
+		clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
+				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
+			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTotalTable)))
+
+		if dashboardId.Validators == nil {
+			ds = ds.
+				With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
+				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
+		} else {
+			ds = ds.
+				Where(goqu.L("validator_index IN ?", validators))
+		}
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		var row struct {
+			LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
+			LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
+		}
+		err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
+			return time.Time{}, time.Time{}, nil
+		}
+
+		return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)), utils.EpochToTime(uint64(*row.LastSyncEpoch)), nil
+	}
+
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("validator_index"),
@@ -588,15 +632,33 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, err
-	}
+	errGroup := errgroup.Group{}
 
 	var rows []*QueryResult
-	err = d.clickhouseReader.SelectContext(ctx, &rows, query, args...)
+	errGroup.Go(func() error {
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return err
+		}
+
+		err = d.clickhouseReader.SelectContext(ctx, &rows, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
+		}
+
+		return nil
+	})
+
+	var lastBlockTs, lastSyncTs time.Time
+	errGroup.Go(func() error {
+		var err error
+		lastBlockTs, lastSyncTs, err = getLastScheduledBlockAndSyncDate()
+		return err
+	})
+
+	err = errGroup.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
+		return nil, err
 	}
 
 	if len(rows) == 0 {
@@ -707,6 +769,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
 		ret.Luck.Proposal.Average = time.Duration((luckHours / totalBlockChance) * float64(time.Hour))
+
+		ret.Luck.Proposal.Expected = lastBlockTs.Add(ret.Luck.Proposal.Average)
 	} else {
 		ret.Luck.Proposal.Percent = 0
 	}
@@ -721,6 +785,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
 		ret.Luck.Sync.Average = time.Duration((luckHours / totalSyncExpected) * float64(time.Hour))
+
+		ret.Luck.Sync.Expected = lastSyncTs.Add(ret.Luck.Sync.Average)
 	}
 
 	if totalInclusionDelayDivisor > 0 {
