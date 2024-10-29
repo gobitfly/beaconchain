@@ -695,11 +695,11 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 					syncEfficiency.Valid = true
 				}
 
-				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency) / 100
 
-				log.Infof("efficiency: %v, threshold: %v", efficiency, groupDetails.Subscription.EventThreshold*100)
+				log.Infof("efficiency: %v, threshold: %v", efficiency*100, groupDetails.Subscription.EventThreshold*100)
 
-				if efficiency < groupDetails.Subscription.EventThreshold*100 {
+				if efficiency < groupDetails.Subscription.EventThreshold {
 					log.Infof("creating group efficiency notification for user %v, dashboard %v, group %v in epoch %v", userId, dashboardId, groupId, epoch)
 					n := &ValidatorGroupEfficiencyNotification{
 						NotificationBaseImpl: types.NotificationBaseImpl{
