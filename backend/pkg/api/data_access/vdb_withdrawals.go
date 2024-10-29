@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -458,43 +459,36 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		Amount         int64          `db:"acc_withdrawals_amount"`
 	}{}
 
-	withdrawalsQuery := `
-			WITH validators AS (
-				SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = $1)
-			)
-			SELECT
-				validator_index,
-				SUM(withdrawals_amount) AS acc_withdrawals_amount,
-				MAX(epoch_end) AS epoch_end
-			FROM validator_dashboard_data_rolling_total FINAL
-			INNER JOIN validators v ON validator_dashboard_data_rolling_total.validator_index = v.validator_index
-			WHERE validator_index IN (select validator_index FROM validators)
-			GROUP BY validator_index
-		`
-
-	if dashboardId.Validators != nil {
-		withdrawalsQuery = `
-			SELECT
-				validator_index,
-				SUM(withdrawals_amount) AS acc_withdrawals_amount,
-				MAX(epoch_end) AS epoch_end
-			from validator_dashboard_data_rolling_total FINAL
-			where validator_index IN ($1)
-			group by validator_index
-		`
-	}
-
 	dashboardValidators := make([]t.VDBValidator, 0)
 	if dashboardId.Validators != nil {
 		dashboardValidators = dashboardId.Validators
 	}
 
-	if len(dashboardValidators) > 0 {
-		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardValidators)
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("validator_index"),
+			goqu.L("SUM(withdrawals_amount) AS acc_withdrawals_amount"),
+			goqu.L("MAX(epoch_end) AS epoch_end"),
+		).
+		From(goqu.L("validator_dashboard_data_rolling_total AS t FINAL")).
+		GroupBy("validator_index")
+
+	if dashboardId.Validators == nil {
+		ds = ds.
+			With("validators", goqu.L("(SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = ?))", dashboardId.Id)).
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("t.validator_index = v.validator_index"))).
+			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
 	} else {
-		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardId.Id)
+		ds = ds.
+			Where(goqu.L("validator_index IN ?", dashboardValidators))
 	}
 
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing total withdrawals query: %w", err)
+	}
+
+	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}
