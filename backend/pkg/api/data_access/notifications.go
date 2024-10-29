@@ -1896,7 +1896,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.IsBlockProposalSubscribed = true
 			case types.ValidatorUpcomingProposalEventName:
 				settings.IsUpcomingBlockProposalSubscribed = true
-			case types.SyncCommitteeSoon:
+			case types.SyncCommitteeSoonEventName:
 				settings.IsSyncSubscribed = true
 			case types.ValidatorReceivedWithdrawalEventName:
 				settings.IsWithdrawalProcessedSubscribed = true
@@ -2127,7 +2127,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupEfficiencyBelowSubscribed, userId, types.ValidatorGroupEfficiencyEventName, networkName, eventFilter, epoch, settings.GroupEfficiencyBelowThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoonEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, types.ValidatorReceivedWithdrawalEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, types.RocketpoolCollateralMaxReachedEventName, networkName, eventFilter, epoch, settings.MaxCollateralThreshold)
