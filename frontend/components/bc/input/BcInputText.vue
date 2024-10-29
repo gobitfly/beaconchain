@@ -1,11 +1,9 @@
 <script lang="ts" setup>
-import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
-
 const idInput = useId()
 const input = defineModel<string>()
 
 const props = withDefaults(defineProps<{
-  error?: BcInputError,
+  error?: string,
   inputWidth?: `${number}px`,
   label: string,
   labelPosition?: 'left' | 'right',

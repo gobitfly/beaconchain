@@ -11,6 +11,7 @@
     "@pinia/nuxt": "^0.5.1",
     "@stripe/stripe-js": "^3.5.0",
     "@vee-validate/nuxt": "^4.14.3",
+    "@vee-validate/valibot": "^4.14.6",
     "@vueuse/core": "^11.1.0",
     "@vueuse/nuxt": "^11.1.0",
     "echarts": "^5.5.1",

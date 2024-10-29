@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { NotificationSettingsNetwork } from '~/types/api/notifications'
+
 const { t: $t } = useTranslation()
 
 const notificationsManagementStore = useNotificationsManagementStore()
@@ -13,11 +15,27 @@ const currentNetworkSettings = computed(() => currentNetwork.value?.settings)
 
 const thresholdGasAbove = ref(formatWeiTo(currentNetworkSettings.value?.gas_above_threshold ?? '0', { unit: 'gwei' }))
 const thresholdGasBelow = ref(formatWeiTo(currentNetworkSettings.value?.gas_below_threshold ?? '0', { unit: 'gwei' }))
-const thresholdParticipationRate = ref(formatFraction(currentNetworkSettings.value?.participation_rate_threshold ?? 0))
+// const thresholdParticipationRate = ref(formatFraction(currentNetworkSettings.value?.participation_rate_threshold ?? 0))
 const hasGasAbove = ref(currentNetworkSettings.value?.is_gas_above_subscribed ?? false)
 const hasGasBelow = ref(currentNetworkSettings.value?.is_gas_below_subscribed ?? false)
 const hasParticipationRate = ref(currentNetworkSettings.value?.is_participation_rate_subscribed ?? false)
 const hasNewRewardRound = ref(currentNetworkSettings.value?.is_new_reward_round_subscribed ?? false)
+
+// const validationSchema = createSchemaObject({
+//   is_webhook_discord_enabled: validation.boolean(),
+//   webhook_url: validation.url($t('validation.url.invalid')),
+// })
+
+const {
+  errorMessage,
+  value: thresholdParticipationRate,
+} = useField<NotificationSettingsNetwork['participation_rate_threshold']>(
+  'thresholdParticipationRate',
+  validation.numberRange({
+    max: 100,
+    min: 0,
+  }),
+)
 
 watchDebounced([
   hasGasAbove,
@@ -49,6 +67,9 @@ watchDebounced([
 
 <template>
   <div>
+    <pre>
+      {{ errorMessage }}
+    </pre>
     <div v-if="!networks.length" class="error-container">
       Upps something went wrong. Please try again.
     </div>
@@ -75,12 +96,10 @@ watchDebounced([
           <span>
             {{ $t('notifications.network.settings.alert_if_gas_below') }}
           </span>
-          <span class="">
-            <BcInputUnit
-              v-model="thresholdGasBelow"
-              :unit="$t('common.units.GWEI')"
-            />
-          </span>
+          <BcInputUnit
+            v-model="thresholdGasBelow"
+            :unit="$t('common.units.GWEI')"
+          />
           <BcToggle
             v-model="hasGasBelow"
             class="toggle"
@@ -88,15 +107,16 @@ watchDebounced([
           <span>
             {{ $t('notifications.network.settings.alert_if_gas_above') }}
           </span>
-          <span class="">
-            <BcInputUnit
-              v-model="thresholdGasAbove"
-              :unit="$t('common.units.GWEI')"
-            />
-          </span>
+          <BcInputUnit
+            v-model="thresholdGasAbove"
+            :unit="$t('common.units.GWEI')"
+          />
           <BcToggle
             v-model="hasGasAbove"
             class="toggle"
+          />
+          <BcInputError
+            error="Invalid input"
           />
         </BcListSection>
         <BcListSection
@@ -115,6 +135,9 @@ watchDebounced([
           <BcToggle
             v-model="hasParticipationRate"
             class="toggle"
+          />
+          <BcInputError
+            :error="``"
           />
         </BcListSection>
       </div>
