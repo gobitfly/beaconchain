@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
+	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 type HandlerService struct {
@@ -494,6 +495,92 @@ func mapIndexBlocksSlice(category string, validators []types.IndexBlocks) types.
 	return mapSlice(category, validators,
 		func(v types.IndexBlocks) (uint64, []uint64) { return v.Index, v.Blocks },
 	)
+}
+
+// --------------------------------------
+// notification event mapping
+
+func mapNotificationEventName(event string) string {
+	switch event {
+	case string(commontypes.ValidatorIsOfflineEventName):
+		return "validator_offline"
+	case string(commontypes.ValidatorIsOnlineEventName):
+		return "validator_online"
+	case string(commontypes.ValidatorMissedAttestationEventName):
+		return "attestation_missed"
+	case string(commontypes.ValidatorMissedProposalEventName):
+		return "proposal_missed"
+	case string(commontypes.ValidatorExecutedProposalEventName):
+		return "proposal_success"
+	case string(commontypes.ValidatorUpcomingProposalEventName):
+		return "proposal_upcoming"
+	case string(commontypes.SyncCommitteeSoonEventName):
+		return "sync"
+	case string(commontypes.ValidatorReceivedWithdrawalEventName):
+		return "withdrawal"
+	case string(commontypes.ValidatorGotSlashedEventName):
+		return "validator_got_slashed"
+	case string(commontypes.ValidatorDidSlashEventName):
+		return "validator_has_slashed"
+	case string(commontypes.ValidatorGroupEfficiencyEventName):
+		return "group_efficiency_below"
+	case string(commontypes.RocketpoolCollateralMinReachedEventName):
+		return "min_collateral"
+	case string(commontypes.RocketpoolCollateralMaxReachedEventName):
+		return "max_collateral"
+	case string(commontypes.IncomingTransactionEventName):
+		return "incoming_tx"
+	case string(commontypes.OutgoingTransactionEventName):
+		return "outgoing_tx"
+	case string(commontypes.ERC20TokenTransferEventName):
+		return "transfer_erc20"
+	case string(commontypes.ERC721TokenTransferEventName):
+		return "transfer_erc721"
+	case string(commontypes.ERC1155TokenTransferEventName):
+		return "transfer_erc1155"
+	case string(commontypes.MonitoringMachineOfflineEventName):
+		return "offline"
+	case string(commontypes.MonitoringMachineDiskAlmostFullEventName):
+		return "storage"
+	case string(commontypes.MonitoringMachineCpuLoadEventName):
+		return "cpu"
+	case string(commontypes.MonitoringMachineMemoryUsageEventName):
+		return "memory"
+	case string(commontypes.RocketpoolNewClaimRoundStartedEventName):
+		return "new_reward_round"
+	case string(commontypes.NetworkGasBelowThresholdEventName):
+		return "gas_below"
+	case string(commontypes.NetworkGasAboveThresholdEventName):
+		return "gas_above"
+	case string(commontypes.NetworkParticipationRateThresholdEventName):
+		return "participation_rate"
+	default:
+		log.Warn("unknown event type", log.Fields{"event": event}) // if this happens, add the event type to the switch
+		return event
+	}
+}
+
+func mapDashboardNotificationEvents(data []types.NotificationDashboardsTableRow) []types.NotificationDashboardsTableRow {
+	for _, row := range data {
+		for eventIndex := range row.EventTypes {
+			row.EventTypes[eventIndex] = mapNotificationEventName(row.EventTypes[eventIndex])
+		}
+	}
+	return data
+}
+
+func mapMachineNotificationEventNames(data []types.NotificationMachinesTableRow) []types.NotificationMachinesTableRow {
+	for rowIndex, row := range data {
+		data[rowIndex].EventType = mapNotificationEventName(row.EventType)
+	}
+	return data
+}
+
+func mapNetworkNotificationEventNames(data []types.NotificationNetworksTableRow) []types.NotificationNetworksTableRow {
+	for rowIndex, row := range data {
+		data[rowIndex].EventType = mapNotificationEventName(row.EventType)
+	}
+	return data
 }
 
 // --------------------------------------
