@@ -260,7 +260,7 @@ func (n *ValidatorGroupEfficiencyNotification) GetEntitiyId() string {
 func (n *ValidatorGroupEfficiencyNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatPureDashboardAndGroupLink(format, n)
 	epoch := formatEpochLink(format, n.Epoch)
-	return fmt.Sprintf(`%s efficiency of %.2f%% was below the threshold of %.2f%% in epoch %s.`, dashboardAndGroupInfo, n.Efficiency, n.Threshold, epoch)
+	return fmt.Sprintf(`%s efficiency of %.2f%% was below the threshold of %.2f%% in epoch %s.`, dashboardAndGroupInfo, n.Efficiency*100, n.Threshold*100, epoch)
 }
 
 func (n *ValidatorGroupEfficiencyNotification) GetTitle() string {
