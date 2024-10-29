@@ -1894,9 +1894,10 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		handleErr(w, r, err)
 		return
 	}
+	mapDashboardNotificationEvents(data)
 	response := types.InternalGetUserNotificationDashboardsResponse{
 		Data:   data,
-		Paging: *paging, //	@Param			epoch			path		strings
+		Paging: *paging,
 	}
 	returnOk(w, r, response)
 }
@@ -2003,6 +2004,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+	mapMachineNotificationEventNames(data)
 	response := types.InternalGetUserNotificationMachinesResponse{
 		Data:   data,
 		Paging: *paging,
@@ -2119,6 +2121,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+	mapNetworkNotificationEventNames(data)
 	response := types.InternalGetUserNotificationNetworksResponse{
 		Data:   data,
 		Paging: *paging,
