@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 
-CREATE MATERIALIZED VIEW rocketpool_rewards_summary AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS rocketpool_rewards_summary AS
 SELECT
     (data->>'index')::INT AS index,
     (data->>'startTime')::TIMESTAMP WITHOUT TIME ZONE AS start_time,  
@@ -19,9 +19,11 @@ SELECT
 FROM
     rocketpool_reward_tree,
     LATERAL jsonb_each(data->'nodeRewards') AS node_rewards
-WITH NO DATA;
+WITH DATA;
 
-CREATE INDEX idx_node_address ON rocketpool_rewards_summary (node_address);
+CREATE INDEX IF NOT EXISTS idx_node_address ON rocketpool_rewards_summary (node_address);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique ON rocketpool_rewards_summary (index, node_address);
+
 
 -- +goose StatementEnd
 
