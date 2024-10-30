@@ -28,6 +28,7 @@ interface WrappedRow extends NotificationSettingsDashboardsTableRow {
 const toast = useBcToast()
 const { t: $t } = useTranslation()
 const dialog = useDialog()
+const { refreshOverview } = useNotificationsDashboardOverviewStore()
 const {
   cursor,
   dashboards,
@@ -216,7 +217,7 @@ function getTypeIcon(type: DashboardType) {
   return faUser
 }
 const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0]) => {
-  deleteDashboardNotifications(payload)
+  deleteDashboardNotifications(payload).then(() => refreshOverview())
 }
 </script>
 
