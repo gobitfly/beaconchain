@@ -563,9 +563,6 @@ func (d *DummyService) GetMachineNotifications(ctx context.Context, userId uint6
 func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationClientsTableRow](ctx)
 }
-func (d *DummyService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
-	return getDummyWithPaging[t.NotificationRocketPoolTableRow](ctx)
-}
 func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationNetworksTableRow](ctx)
 }

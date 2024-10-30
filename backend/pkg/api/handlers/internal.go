@@ -606,10 +606,6 @@ func (h *HandlerService) InternalGetUserNotificationClients(w http.ResponseWrite
 	h.PublicGetUserNotificationClients(w, r)
 }
 
-func (h *HandlerService) InternalGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetUserNotificationRocketPool(w, r)
-}
-
 func (h *HandlerService) InternalGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetUserNotificationNetworks(w, r)
 }
