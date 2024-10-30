@@ -158,12 +158,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing query: %v", err)
+		return nil, nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
 	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
+		return nil, nil, fmt.Errorf("error retrieving data from table %s: %w", clickhouseTable, err)
 	}
 
 	if len(queryResult) == 0 {
@@ -228,12 +228,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	query, args, err = ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing query: %v", err)
+		return nil, nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
 	err = d.alloyReader.SelectContext(ctx, &elRewardsQueryResult, query, args...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving data from table blocks: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving data from table blocks: %w", err)
 	}
 
 	for _, entry := range elRewardsQueryResult {
@@ -253,7 +253,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	err = wg.Wait()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving validator dashboard summary data: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard summary data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -643,7 +643,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		err = d.clickhouseReader.SelectContext(ctx, &rows, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving validator dashboard group summary data: %v", err)
+			return fmt.Errorf("error retrieving validator dashboard group summary data: %w", err)
 		}
 
 		return nil
@@ -748,7 +748,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
 	err = d.readerDb.GetContext(ctx, &ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validatorArr)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving past sync committee count: %v", err)
+		return nil, fmt.Errorf("error retrieving past sync committee count: %w", err)
 	}
 
 	ret.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
@@ -851,7 +851,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 
 	query, args, err := rewardsDs.Prepared(true).ToSQL()
 	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
 	}
 
 	err = d.clickhouseReader.GetContext(ctx, &rewardsResultTable, query, args...)
@@ -880,7 +880,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 
 		query, args, err = rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.GetContext(ctx, &rewardsResultTotal, query, args...)
@@ -926,7 +926,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 
 	query, args, err = elTableDs.Prepared(true).ToSQL()
 	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
 	}
 
 	err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
@@ -945,7 +945,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 
 		query, args, err = elTotalDs.Prepared(true).ToSQL()
 		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %v", err)
+			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
@@ -1018,7 +1018,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		`, dataTable, dateColumn)
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Validators)
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving data from table %s: %v", dataTable, err)
+			return nil, fmt.Errorf("error retrieving data from table %s: %w", dataTable, err)
 		}
 	} else {
 		query := fmt.Sprintf(`
@@ -1041,7 +1041,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 
 		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving data from table %s: %v", dataTable, err)
+			return nil, fmt.Errorf("error retrieving data from table %s: %w", dataTable, err)
 		}
 	}
 
@@ -1178,7 +1178,7 @@ func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggreg
 	var ts time.Time
 	err := d.clickhouseReader.GetContext(ctx, &ts, query)
 	if err != nil {
-		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %v", err)
+		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %w", err)
 	}
 
 	return uint64(ts.Unix()), nil
@@ -1518,12 +1518,12 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving data from table blocks_proposerslashings: %v", err)
+			return fmt.Errorf("error retrieving data from table blocks_proposerslashings: %w", err)
 		}
 
 		for _, queryEntry := range queryResult {
@@ -1565,12 +1565,12 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving data from table blocks_attesterslashings: %v", err)
+			return fmt.Errorf("error retrieving data from table blocks_attesterslashings: %w", err)
 		}
 
 		for _, queryEntry := range queryResult {
@@ -1707,12 +1707,12 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 
 	query, args, err = ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %v", err)
+		return nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
 	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving data from table blocks: %v", err)
+		return nil, fmt.Errorf("error retrieving data from table blocks: %w", err)
 	}
 
 	// Process the data
