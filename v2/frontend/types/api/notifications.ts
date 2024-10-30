@@ -112,17 +112,6 @@ export interface NotificationClientsTableRow {
 export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
 /**
  * ------------------------------------------------------------
- * Rocket Pool Table
- */
-export interface NotificationRocketPoolTableRow {
-  timestamp: number /* int64 */;
-  event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
-  threshold?: number /* float64 */; // only for some notification types, e.g. max collateral
-  node: Address;
-}
-export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<NotificationRocketPoolTableRow>;
-/**
- * ------------------------------------------------------------
  * Networks Table
  */
 export interface NotificationNetworksTableRow {

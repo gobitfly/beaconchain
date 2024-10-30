@@ -120,17 +120,6 @@ type NotificationClientsTableRow struct {
 type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationClientsTableRow]
 
 // ------------------------------------------------------------
-// Rocket Pool Table
-type NotificationRocketPoolTableRow struct {
-	Timestamp int64   `json:"timestamp"`
-	EventType string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	Threshold float64 `json:"threshold,omitempty"` // only for some notification types, e.g. max collateral
-	Node      Address `json:"node"`
-}
-
-type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
-
-// ------------------------------------------------------------
 // Networks Table
 type NotificationNetworksTableRow struct {
 	ChainId   uint64          `json:"chain_id"`
