@@ -858,6 +858,12 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 		}
 	}
 
+	// refreshing materialized view
+	_, err = tx.Exec(`REFRESH MATERIALIZED VIEW rocketpool_rewards_summary`)
+	if err != nil {
+		return fmt.Errorf("can not refresh materialized view rocketpool_rewards_summary. Error %w", err)
+	}
+
 	err = tx.Commit()
 	if err != nil {
 		return err
