@@ -2051,45 +2051,6 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 	returnOk(w, r, response)
 }
 
-// PublicGetUserNotificationRocketPool godoc
-//
-//	@Description	Get a list of triggered notifications related to Rocket Pool.
-//	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Notifications
-//	@Produce		json
-//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
-//	@Param			search	query		string	false	"Search for Node Address"
-//	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
-//	@Failure		400		{object}	types.ApiErrorResponse
-//	@Router			/users/me/notifications/rocket-pool [get]
-func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationRocketPoolColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.getDataAccessor(r).GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationRocketPoolResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetUserNotificationNetworks godoc
 //
 //	@Description	Get a list of triggered notifications related to networks.
