@@ -341,8 +341,8 @@ const openValidatorModal = () => {
           <b> {{ $t("common.average") }}: </b>
           {{
             $t("common.every_x", {
-              duration: formatNanoSecondDuration(
-                data.luck.proposal.average,
+              duration: formatTimeDuration(
+                data.luck.proposal.average_interval_seconds,
                 $t,
               ),
             })
@@ -362,7 +362,7 @@ const openValidatorModal = () => {
           <b> {{ $t("common.average") }}: </b>
           {{
             $t("common.every_x", {
-              duration: formatNanoSecondDuration(data.luck.sync.average, $t),
+              duration: formatTimeDuration(data.luck.sync.average_interval_seconds, $t),
             })
           }}
         </div>
