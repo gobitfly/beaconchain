@@ -82,7 +82,6 @@ const loadData = async () => {
         dashboardKey: props.value.dashboardKey,
         epoch: props.value.epoch,
       },
-      query.value,
     )
 
     // Make sure that during loading the query did not change

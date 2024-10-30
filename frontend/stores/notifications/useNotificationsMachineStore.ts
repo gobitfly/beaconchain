@@ -26,9 +26,7 @@ export function useNotificationsMachineStore() {
     try {
       const result = await fetch<InternalGetUserNotificationMachinesResponse>(
         API_PATH.NOTIFICATIONS_MACHINE,
-        undefined,
-        undefined,
-        q,
+        { query },
       )
 
       isLoading.value = false

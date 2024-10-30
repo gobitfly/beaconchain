@@ -43,9 +43,8 @@ export function useValidatorDashboardBlocksStore() {
     storedQuery.value = query
     const res = await fetch<GetValidatorDashboardBlocksResponse>(
       API_PATH.DASHBOARD_VALIDATOR_BLOCKS,
-      undefined,
+      { query },
       { dashboardKey },
-      query,
     )
     isLoading.value = false
 

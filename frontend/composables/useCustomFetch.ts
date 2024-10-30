@@ -27,7 +27,6 @@ export function useCustomFetch() {
     // eslint-disable-next-line @typescript-eslint/ban-types
     options: NitroFetchOptions<{} & string> = {},
     pathValues?: PathValues,
-    query?: PathValues,
     dontShowError = false,
   ): Promise<T> {
     const map = mapping[pathName]
@@ -40,7 +39,7 @@ export function useCustomFetch() {
     }
 
     if (map.mockFunction !== undefined && map.mock) {
-      return map.mockFunction(options.body, pathValues, query) as T
+      return map.mockFunction(options.body, pathValues, options.query) as T
     }
 
     const url = useRequestURL()
@@ -84,7 +83,6 @@ export function useCustomFetch() {
 
     options.query = {
       ...options.query,
-      ...query,
       is_mocked: useRuntimeConfig().public.isApiMocked ? true : undefined,
     }
     options.credentials = 'include'

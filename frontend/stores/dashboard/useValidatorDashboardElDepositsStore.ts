@@ -52,9 +52,8 @@ export function useValidatorDashboardElDepositsStore() {
     const res
       = await fetch<GetValidatorDashboardExecutionLayerDepositsResponse>(
         API_PATH.DASHBOARD_EL_DEPOSITS,
-        undefined,
+        { query },
         { dashboardKey },
-        query,
       )
 
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {

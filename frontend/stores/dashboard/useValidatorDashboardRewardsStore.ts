@@ -44,11 +44,10 @@ export function useValidatorDashboardRewardsStore() {
     }
     isLoading.value = true
     storedQuery.value = query
-    const res = await fetch<GetValidatorDashboardRewardsResponse>(
+    const response = await fetch<GetValidatorDashboardRewardsResponse>(
       API_PATH.DASHBOARD_VALIDATOR_REWARDS,
-      undefined,
+      { query },
       { dashboardKey },
-      query,
     )
 
     isLoading.value = false
@@ -57,12 +56,12 @@ export function useValidatorDashboardRewardsStore() {
     }
 
     // If we are on the first page we get the next Epoch slot viz data and create a future entry
-    if (!query?.cursor && slotViz.value && res.data?.length) {
-      const searchEpoch = res.data[0].epoch
+    if (!query?.cursor && slotViz.value && response.data?.length) {
+      const searchEpoch = response.data[0].epoch
       const nextEpoch = slotViz.value?.findLast(e => e.epoch > searchEpoch)
 
       if (nextEpoch) {
-        res.data = [
+        response.data = [
           {
             duty: {
               attestation: 0,
@@ -77,13 +76,13 @@ export function useValidatorDashboardRewardsStore() {
               el: '0',
             },
           },
-          ...res.data,
+          ...response.data,
         ]
       }
     }
 
-    data.value = res
-    return res
+    data.value = response
+    return response
   }
 
   return {

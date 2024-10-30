@@ -32,19 +32,19 @@ export function useNotificationsManagementDashboards() {
 
   const dashboards = computed(() => data.value)
 
-  async function getDashboards(q?: TableQueryParams) {
+  async function getDashboards(query?: TableQueryParams) {
     isLoading.value = true
-    setStoredQuery(q)
+    setStoredQuery(query)
     const res
       = await fetch<InternalGetUserNotificationSettingsDashboardsResponse>(
         API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD,
+        { query },
         undefined,
-        undefined,
-        q,
+
       )
 
     isLoading.value = false
-    if (!isStoredQuery(q)) {
+    if (!isStoredQuery(query)) {
       return // in case some query params change while loading
     }
 
@@ -54,8 +54,8 @@ export function useNotificationsManagementDashboards() {
 
   watch(
     query,
-    (q) => {
-      getDashboards(q)
+    (query) => {
+      getDashboards(query)
     },
     { immediate: true },
   )

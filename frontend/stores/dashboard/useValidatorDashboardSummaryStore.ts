@@ -49,7 +49,6 @@ export function useValidatorDashboardSummaryStore() {
       API_PATH.DASHBOARD_SUMMARY,
       { query: { period: timeFrame } },
       { dashboardKey },
-      query,
     )
     isLoading.value = false
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {

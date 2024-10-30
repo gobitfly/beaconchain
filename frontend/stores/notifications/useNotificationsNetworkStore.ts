@@ -26,9 +26,7 @@ export function useNotificationsNetworkStore() {
     try {
       const result = await fetch<InternalGetUserNotificationNetworksResponse>(
         API_PATH.NOTIFICATIONS_NETWORK,
-        undefined,
-        undefined,
-        q,
+        { query },
       )
 
       isLoading.value = false

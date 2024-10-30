@@ -34,19 +34,17 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
   }, 10)
   const isLoading = ref(false)
 
-  async function loadNotificationsDashboards(q: TableQueryParams) {
+  async function loadNotificationsDashboards(query: TableQueryParams) {
     isLoading.value = true
-    setStoredQuery(q)
+    setStoredQuery(query)
     try {
       const result = await fetch<InternalGetUserNotificationDashboardsResponse>(
         API_PATH.NOTIFICATIONS_DASHBOARDS,
         { query: { networks: networkId.value } },
-        undefined,
-        q,
       )
 
       isLoading.value = false
-      if (!isStoredQuery(q)) {
+      if (!isStoredQuery(query)) {
         return // in case some query params change while loading
       }
 
@@ -66,9 +64,9 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
   watch([
     query,
     networkId,
-  ], ([ q ]) => {
-    if (q) {
-      isLoggedIn.value && loadNotificationsDashboards(q)
+  ], ([ query ]) => {
+    if (query) {
+      isLoggedIn.value && loadNotificationsDashboards(query)
     }
   },
   { immediate: true },

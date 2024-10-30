@@ -51,9 +51,8 @@ export function useValidatorDashboardWithdrawalsStore() {
     isLoadingWithdrawals.value = true
     const res = await fetch<GetValidatorDashboardWithdrawalsResponse>(
       API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS,
-      undefined,
+      { query },
       { dashboardKey },
-      query,
     )
 
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {

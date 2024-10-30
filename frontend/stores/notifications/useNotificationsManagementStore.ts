@@ -10,6 +10,7 @@ import { API_PATH } from '~/types/customFetch'
 
 export const useNotificationsManagementStore = defineStore('notifications-management-store', () => {
   const { fetch } = useCustomFetch()
+  const { refreshOverview } = useNotificationsDashboardOverviewStore()
   const settings = ref<NotificationSettings>(
     {
       clients: [],
@@ -75,7 +76,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       {
         paired_device_id: id,
       },
-    )
+    ).then(() => refreshOverview())
   }
   const setNotificationForNetwork = async ({
     chain_id,

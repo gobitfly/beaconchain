@@ -35,7 +35,6 @@ export function useUserStore() {
         API_PATH.USER,
         undefined,
         undefined,
-        undefined,
         true,
       )
       setUser(res.data)
@@ -48,7 +47,7 @@ export function useUserStore() {
   }
 
   const doLogout = async () => {
-    await fetch(API_PATH.LOGOUT, undefined, undefined, undefined, true)
+    await fetch(API_PATH.LOGOUT, undefined, undefined, true)
     setUser(undefined)
     router.replace('/')
   }

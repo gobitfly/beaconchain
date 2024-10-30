@@ -37,11 +37,11 @@ export function useValidatorDashboardOverviewStore() {
 
       return overview.value
     }
-    catch (e) {
+    catch (error) {
       data.value = undefined
       clearOverviewDependentCaches()
 
-      throw e
+      throw error
     }
   }
 

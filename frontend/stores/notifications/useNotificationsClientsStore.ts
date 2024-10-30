@@ -14,8 +14,18 @@ export function useNotificationsClientStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(notificationsClientStore())
   const {
-    cursor, isStoredQuery, onSort, pageSize, pendingQuery, query, setCursor, setPageSize, setSearch, setStoredQuery,
-  } = useTableQuery({
+    cursor,
+    isStoredQuery,
+    onSort,
+    pageSize,
+    pendingQuery,
+    query,
+    setCursor,
+    setPageSize,
+    setSearch,
+    setStoredQuery,
+  }
+  = useTableQuery({
     limit: 10, sort: 'timestamp:desc',
   }, 10)
   const isLoading = ref(false)
@@ -26,12 +36,10 @@ export function useNotificationsClientStore() {
     try {
       const result = await fetch<InternalGetUserNotificationClientsResponse>(
         API_PATH.NOTIFICATIONS_CLIENTS,
-        undefined,
-        undefined,
-        q,
+        {
+          query,
+        },
       )
-
-      isLoading.value = false
       if (!isStoredQuery(q)) {
         return // in case some query params change while loading
       }
@@ -40,11 +48,12 @@ export function useNotificationsClientStore() {
     }
     catch (e) {
       data.value = undefined
+    }
+    finally {
       isLoading.value = false
     }
     return data.value
   }
-
   const clientsNotifications = computed(() => {
     return data.value
   })

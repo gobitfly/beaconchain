@@ -52,9 +52,8 @@ export function useValidatorDashboardClDepositsStore() {
     const res
       = await fetch<GetValidatorDashboardConsensusLayerDepositsResponse>(
         API_PATH.DASHBOARD_CL_DEPOSITS,
-        undefined,
+        { query },
         { dashboardKey },
-        query,
       )
 
     if (JSON.stringify(storedQuery.value) !== JSON.stringify(query)) {

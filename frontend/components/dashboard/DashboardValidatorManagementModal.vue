@@ -265,9 +265,8 @@ const loadData = async () => {
     const testQ = JSON.stringify(query.value)
     const result = await fetch<GetValidatorDashboardValidatorsResponse>(
       API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
-      undefined,
+      { query },
       { dashboardKey: dashboardKey.value },
-      query.value,
     )
 
     // Make sure that during loading the query did not change
