@@ -1539,7 +1539,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1556,7 +1556,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1617,7 +1617,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1634,7 +1634,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -2159,7 +2159,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -2176,7 +2176,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -2247,7 +2247,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 
 	// 	query, args, err := insertDs.Prepared(true).ToSQL()
 	// 	if err != nil {
-	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 		return fmt.Errorf("error preparing query: %w", err)
 	// 	}
 
 	// 	_, err = tx.ExecContext(ctx, query, args...)
@@ -2264,7 +2264,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 
 	// 	query, args, err := deleteDs.Prepared(true).ToSQL()
 	// 	if err != nil {
-	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 		return fmt.Errorf("error preparing query: %w", err)
 	// 	}
 
 	// 	_, err = tx.ExecContext(ctx, query, args...)
