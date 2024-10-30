@@ -62,7 +62,8 @@ const text = computed(() => {
     @click="handleClick"
   >
     <span class="big_text">
-      {{ text }}</span>
+      {{ text }}
+    </span>
     <FontAwesomeIcon
       v-if="isLoggedIn"
       :icon="faCirclePlus"
