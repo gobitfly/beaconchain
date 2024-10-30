@@ -768,9 +768,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		ret.Luck.Proposal.Percent = (float64(totalProposals)) / totalBlockChance * 100
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
-		ret.Luck.Proposal.Average = time.Duration((luckHours / totalBlockChance) * float64(time.Hour))
+		ret.Luck.Proposal.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalBlockChance) * float64(time.Hour)).Seconds())
 
-		ret.Luck.Proposal.Expected = lastBlockTs.Add(ret.Luck.Proposal.Average)
+		ret.Luck.Proposal.ExpectedTimestamp = uint64(lastBlockTs.Unix()) + ret.Luck.Proposal.AverageIntervalSeconds
 	} else {
 		ret.Luck.Proposal.Percent = 0
 	}
@@ -784,9 +784,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
 
 		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
-		ret.Luck.Sync.Average = time.Duration((luckHours / totalSyncExpected) * float64(time.Hour))
+		ret.Luck.Sync.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalSyncExpected) * float64(time.Hour)).Seconds())
 
-		ret.Luck.Sync.Expected = lastSyncTs.Add(ret.Luck.Sync.Average)
+		ret.Luck.Sync.ExpectedTimestamp = uint64(lastSyncTs.Unix()) + ret.Luck.Sync.AverageIntervalSeconds
 	}
 
 	if totalInclusionDelayDivisor > 0 {
