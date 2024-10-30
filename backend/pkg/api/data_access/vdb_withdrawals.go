@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -40,11 +41,17 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	// Prepare the sorting
+	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
 	sortSearchDirection := ">"
-	sortSearchOrder := " ASC"
-	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
+	if isReverseDirection {
 		sortSearchDirection = "<"
-		sortSearchOrder = " DESC"
+	}
+
+	orderFunc := func(col string) exp.OrderedExpression {
+		if isReverseDirection {
+			return goqu.I(col).Desc()
+		}
+		return goqu.I(col).Asc()
 	}
 
 	// Analyze the search term
@@ -120,28 +127,20 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		Amount          uint64 `db:"amount"`
 	}{}
 
-	queryParams := []interface{}{}
-	withdrawalsQuery := `
-		SELECT
-		    w.block_slot,
-		    b.exec_block_number,
-			w.withdrawalindex,
-			w.validatorindex,
-			w.address,
-			w.amount
-		FROM
-		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
-		`
-
-	// Limit the query to relevant validators
-	queryParams = append(queryParams, pq.Array(validators))
-	whereQuery := fmt.Sprintf(`
-		WHERE
-		    validatorindex = ANY ($%d)`, len(queryParams))
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("w.block_slot"),
+			goqu.L("b.exec_block_number"),
+			goqu.L("w.withdrawalindex"),
+			goqu.L("w.validatorindex"),
+			goqu.L("w.address"),
+			goqu.L("w.amount"),
+		).
+		From(goqu.L("blocks_withdrawals AS w")).
+		InnerJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'"))).
+		Where(goqu.L("validatorindex = ANY(?)", validators))
 
 	// Limit the query using sorting and the cursor
-	orderQuery := ""
 	sortColName := ""
 	sortColCursor := interface{}(nil)
 	switch colSort.Column {
@@ -161,35 +160,38 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		colSort.Column == enums.VDBWithdrawalsColumns.Slot {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, currentCursor.Slot, currentCursor.WithdrawalIndex)
-			whereQuery += fmt.Sprintf(" AND (w.block_slot%[1]s$%[2]d OR (w.block_slot=$%[2]d AND w.withdrawalindex%[1]s$%[3]d))",
-				sortSearchDirection, len(queryParams)-1, len(queryParams))
+			ds = ds.
+				Where(goqu.L(fmt.Sprintf("(w.block_slot%[1]s? OR (w.block_slot=? AND w.withdrawalindex%[1]s?))",
+					sortSearchDirection), currentCursor.Slot, currentCursor.Slot, currentCursor.WithdrawalIndex))
 		}
-		orderQuery = fmt.Sprintf(" ORDER BY w.block_slot %[1]s, w.withdrawalindex %[1]s", sortSearchOrder)
+		ds = ds.
+			Order(orderFunc("w.block_slot"), orderFunc("w.withdrawalindex"))
 	} else {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
 
 			// The additional WHERE requirement is
 			// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
 			// with the > flipped if the sort is descending
-			whereQuery += fmt.Sprintf(" AND (%[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND (w.block_slot%[2]s$%[4]d OR (w.block_slot=$%[4]d AND w.withdrawalindex%[2]s$%[5]d))))",
-				sortColName, sortSearchDirection, len(queryParams)-2, len(queryParams)-1, len(queryParams))
+			ds = ds.
+				Where(goqu.L(fmt.Sprintf("(%[1]s%[2]s? OR (%[1]s=? AND (w.block_slot%[2]s? OR (w.block_slot=? AND w.withdrawalindex%[2]s?))))", sortColName, sortSearchDirection), sortColCursor, sortColCursor, currentCursor.Slot, currentCursor.Slot, currentCursor.WithdrawalIndex))
 		}
 		// The ordering is
 		// ORDER BY sortColName ASC, block_slot ASC, withdrawalindex ASC
 		// with the ASC flipped if the sort is descending
-		orderQuery = fmt.Sprintf(" ORDER BY %[1]s %[2]s, w.block_slot %[2]s, w.withdrawalindex %[2]s",
-			sortColName, sortSearchOrder)
+		ds = ds.
+			Order(orderFunc(sortColName), orderFunc("w.block_slot"), orderFunc("w.withdrawalindex"))
 	}
 
-	queryParams = append(queryParams, limit+1)
-	limitQuery := fmt.Sprintf(" LIMIT $%d", len(queryParams))
+	ds = ds.
+		Limit(uint(limit) + 1)
 
-	withdrawalsQuery += whereQuery + orderQuery + limitQuery
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error preparing withdrawals query: %w", err)
+	}
 
-	err = d.readerDb.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting withdrawals for dashboardId: %d (%d validators): %w", dashboardId.Id, len(validators), err)
 	}
