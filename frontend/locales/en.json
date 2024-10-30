@@ -644,7 +644,8 @@
       "empty": {
         "login": "Login to set notifications",
         "no_dashboards": "Create a dashboard to set notifications",
-        "with_dashboards": "Click here to set notifications"
+        "no_notifications": "No notifications received",
+        "no_subscriptions": "Click here to set notifications"
       },
       "entity": {
         "accounts": "account | accounts",
