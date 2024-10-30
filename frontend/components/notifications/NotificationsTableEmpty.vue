@@ -9,6 +9,9 @@ const { t: $t } = useTranslation()
 
 const emit = defineEmits<{ (e: 'openDialog'): void }>()
 
+const { isLoggedIn } = useUserStore()
+const { overview } = useNotificationsDashboardOverviewStore()
+
 const handleClick = () => {
   if (!isLoggedIn.value) {
     return navigateTo('/login')
@@ -18,7 +21,6 @@ const handleClick = () => {
   }
   emit('openDialog')
 }
-const { isLoggedIn } = useUserStore()
 const {
   dashboards,
   refreshDashboards,
@@ -33,6 +35,12 @@ const hasDashboards = computed(() => {
     || dashboards.value?.validator_dashboards?.length
   )
 })
+const hasSubscriptions = computed(() => {
+  return (
+    overview.value?.vdb_subscriptions_count
+    || overview.value?.adb_subscriptions_count
+  )
+})
 
 const text = computed(() => {
   if (!isLoggedIn.value) {
@@ -41,7 +49,10 @@ const text = computed(() => {
   if (!hasDashboards.value) {
     return $t('notifications.dashboards.empty.no_dashboards')
   }
-  return $t('notifications.dashboards.empty.with_dashboards')
+  if (!hasSubscriptions.value) {
+    return $t('notifications.dashboards.empty.no_subscriptions')
+  }
+  return $t('notifications.dashboards.empty.no_notifications')
 })
 </script>
 
@@ -50,7 +61,8 @@ const text = computed(() => {
     class="empty delayed-fadein-animation"
     @click="handleClick"
   >
-    <span class="big_text">{{ text }}</span>
+    <span class="big_text">
+      {{ text }}</span>
     <FontAwesomeIcon
       v-if="isLoggedIn"
       :icon="faCirclePlus"
