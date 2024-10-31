@@ -222,6 +222,8 @@ func main() {
 	defer db.ClickHouseWriter.Close()
 	defer db.ClickHouseNativeWriter.Close()
 
+	wg.Wait()
+
 	context, err := modules.GetModuleContext()
 	if err != nil {
 		log.Fatal(err, "error getting module context", 0)

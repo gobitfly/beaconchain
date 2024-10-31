@@ -874,6 +874,10 @@ type EpochMetadata struct {
 // | - PushEpochMetadata (successful_transfer)
 
 func TransferEpochs(epochs []EpochMetadata) error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_batch").Observe(time.Since(start).Seconds())
+	}()
 	// sanity check, verify that the transfer batch id is set and identical for all epochs
 	transferBatchID := epochs[0].TransferBatchId
 	for _, e := range epochs {
@@ -890,8 +894,10 @@ func TransferEpochs(epochs []EpochMetadata) error {
 	defer cancel()
 	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
 		"insert_deduplication_token":    transferBatchID.String(),
+		"insert_deduplicate":            true,
 		"select_sequential_consistency": 1,
 	}))
+	now := time.Now()
 	// sanity check, check that there are more than a thousand entries for each epoch
 	const minEpochEntries = 1000
 	for _, e := range epochs {
@@ -900,7 +906,7 @@ func TransferEpochs(epochs []EpochMetadata) error {
 			SELECT count() as count
 			FROM %s
 			FINAL
-			WHERE epoch_timestamp = $1
+			WHERE epoch_timestamp = $1 and toStartOfInterval(epoch_timestamp, Interval 3 Hours) = toStartOfInterval($1, Interval 3 Hours)
 			SETTINGS select_sequential_consistency = 1
 		`, UnsafeEpochsTableName), utils.EpochToTime(e.Epoch))
 		if err != nil {
@@ -910,6 +916,12 @@ func TransferEpochs(epochs []EpochMetadata) error {
 			return fmt.Errorf("epoch %v has less than 1000 entries in the unsafe table", e.Epoch)
 		}
 	}
+	metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_sanity_check").Observe(time.Since(now).Seconds())
+	now = time.Now()
+	var epoch_timestamp []time.Time
+	for _, e := range epochs {
+		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
+	}
 	err := db.ClickHouseNativeWriter.Exec(ctx,
 		fmt.Sprintf(`
 		insert into %s
@@ -918,11 +930,13 @@ func TransferEpochs(epochs []EpochMetadata) error {
 		from
 			%s FINAL
 		where
-			epoch_timestamp >= $1 and epoch_timestamp <= $2 
+			epoch_timestamp in $1 and
+			toStartOfInterval(epoch_timestamp, Interval 3 Hours) >= toStartOfInterval(arrayMin($1), Interval 3 Hours) and
+			toStartOfInterval(epoch_timestamp, Interval 3 Hours) <= toStartOfInterval(arrayMax($1), Interval 3 Hours)
 	`, FinalEpochsTableName, UnsafeEpochsTableName),
-		utils.EpochToTime(epochs[0].Epoch),
-		utils.EpochToTime(epochs[len(epochs)-1].Epoch),
+		epoch_timestamp,
 	)
+	metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_insert").Observe(time.Since(now).Seconds())
 	if err != nil {
 		return fmt.Errorf("error transferring epochs: %w", err)
 	}
@@ -975,7 +989,6 @@ func GetLatestUnsafeEpoch() (int64, error) {
 	}
 	return epoch, nil
 }
-
 
 // enum for rollings (hourly, daily, weekly, monthly, total)
 type Rollings string
@@ -1073,7 +1086,6 @@ func GetMinMaxForRollingSource(table RollingSources, start time.Time, end *time.
 	}
 	return &result, nil
 }
-
 
 func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, minMax MinMax) error {
 	// transfer the epochs

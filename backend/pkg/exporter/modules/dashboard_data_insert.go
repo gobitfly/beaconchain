@@ -8,6 +8,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/types"
 	"github.com/google/uuid"
@@ -102,10 +103,6 @@ func (d *dashboardData) handleIncompleteInserts() error {
 	return nil
 }
 
-var FetchAtOnceLimit int64 = 2
-var InsertAtOnceLimit int64 = 2
-var InsertInParallel int64 = 2 // up to 3 parallel inserts
-
 func (d *dashboardData) handlePendingInserts() error {
 	start := time.Now()
 	defer func() {
@@ -113,7 +110,7 @@ func (d *dashboardData) handlePendingInserts() error {
 	}()
 
 	safeEpoch := d.latestSafeEpoch.Load()
-	pending, err := edb.GetPendingInsertEpochs(safeEpoch, FetchAtOnceLimit)
+	pending, err := edb.GetPendingInsertEpochs(safeEpoch, utils.Config.DashboardExporter.FetchAtOnceLimit)
 	if err != nil {
 		return errors.Wrap(err, "failed to get pending insert epochs")
 	}
@@ -126,7 +123,7 @@ func (d *dashboardData) handlePendingInserts() error {
 	// allocate insert batch ids
 	batchIDS := make([]uuid.UUID, 0)
 	for i := range pending {
-		if int64(i)%InsertAtOnceLimit == 0 {
+		if int64(i)%utils.Config.DashboardExporter.InsertAtOnceLimit == 0 {
 			id := uuid.New()
 			batchIDS = append(batchIDS, id)
 		}
@@ -183,7 +180,11 @@ func (d *dashboardData) fetchAndInsertEpochs(epochs []edb.EpochMetadata) error {
 	}
 	// insert step wooho
 	eg := &errgroup.Group{}
-	eg.SetLimit(int(InsertInParallel))
+	eg.SetLimit(int(utils.Config.DashboardExporter.InsertInParallel))
+	now := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_insert_overall").Observe(time.Since(now).Seconds())
+	}()
 	// loop processed data, its grouped by insert batch id already and ready to be inserted
 	for i := range processedData {
 		data := processedData[i]

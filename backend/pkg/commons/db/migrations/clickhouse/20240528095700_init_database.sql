@@ -166,16 +166,16 @@ CREATE TABLE IF NOT EXISTS _unsafe_validator_dashboard_data_epoch
     `slashed` Bool COMMENT 'if the validator was slashed in the epoch'
 )
 ENGINE = ReplacingMergeTree(_inserted_at)
-ORDER BY (validator_index, epoch_timestamp, epoch)
-PARTITION BY toStartOfHour(epoch_timestamp) --- this should be fine as the table will be cleaned up by the TTL
-TTL _inserted_at + INTERVAL 1 DAY
+ORDER BY (toStartOfInterval(epoch_timestamp, INTERVAL 3 HOURS), validator_index, epoch_timestamp, epoch) -- 3 hours is around 30 entries per validator
+-- PARTITION BY toStartOfHour(epoch_timestamp) --- this should be fine as the table will be cleaned up by the TTL -- aggressive partitioning not needed anymore due to the order by trick
+PARTITION BY toMonday(epoch_timestamp)
 SETTINGS index_granularity = 8192;
 -- +goose StatementEnd
 -- +goose StatementBegin
 -- create safe non replacing version
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_data_epoch as _unsafe_validator_dashboard_data_epoch
 ENGINE = MergeTree
-ORDER BY (validator_index, epoch_timestamp, epoch)
+ORDER BY (toStartOfInterval(epoch_timestamp, INTERVAL 3 HOURS), validator_index, epoch_timestamp, epoch)
 PARTITION BY toMonday(epoch_timestamp)
 SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
@@ -255,7 +255,7 @@ CREATE TABLE IF NOT EXISTS validator_attestation_assignments_slot (
     `committee_index` Int64 CODEC(T64, ZSTD(8)),
 )
 ENGINE = ReplacingMergeTree
-ORDER BY (validator_index, epoch_timestamp, epoch)
+ORDER BY (toStartOfInterval(epoch_timestamp, INTERVAL 3 HOURS), validator_index, epoch_timestamp, epoch, slot)
 PARTITION BY toMonday(epoch_timestamp)
 SETTINGS index_granularity = 8192;
 -- +goose StatementEnd
@@ -281,7 +281,7 @@ CREATE TABLE IF NOT EXISTS validator_proposal_assignments_slot (
 )
 ENGINE = ReplacingMergeTree
 PARTITION BY toStartOfQuarter(epoch_timestamp)
-ORDER BY (validator_index, epoch_timestamp, epoch, slot)
+ORDER BY (toMonday(epoch_timestamp), validator_index, epoch_timestamp, epoch, slot)
 SETTINGS index_granularity = 8192;
 -- +goose StatementEnd
 -- +goose StatementBegin
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS validator_sync_committee_assignments_epoch (
     `period_index` Int64 CODEC(Delta, ZSTD(8))
 )
 ENGINE = ReplacingMergeTree
-PARTITION BY toStartOfQuarter(epoch_timestamp)
+PARTITION BY toStartOfMonth(epoch_timestamp)
 ORDER BY (validator_index, epoch_timestamp, epoch, period)
 SETTINGS index_granularity = 8192;
 -- +goose StatementEnd
@@ -331,8 +331,8 @@ CREATE TABLE IF NOT EXISTS validator_proposal_rewards_slot (
     `slasher_reward` Int64 COMMENT 'reward for including slasher in the proposal' CODEC(T64, ZSTD(8)),
 )
 ENGINE = ReplacingMergeTree
-ORDER BY (validator_index, epoch_timestamp, epoch, slot)
-PARTITION BY toMonday(epoch_timestamp)
+ORDER BY (toMonday(epoch_timestamp), validator_index, epoch_timestamp, epoch, slot)
+PARTITION BY toStartOfQuarter(epoch_timestamp)
 SETTINGS index_granularity = 8192;
 -- +goose StatementEnd
 -- +goose StatementBegin
@@ -358,7 +358,7 @@ CREATE TABLE IF NOT EXISTS validator_sync_committee_votes_epoch (
     `executed` Bool COMMENT 'if the sync was executed'
 )
 ENGINE = ReplacingMergeTree
-ORDER BY (validator_index, epoch_timestamp, epoch, slot)
+ORDER BY (toStartOfDay(epoch_timestamp), validator_index, epoch_timestamp, epoch, slot)
 PARTITION BY toMonday(epoch_timestamp)
 SETTINGS index_granularity = 8192;
 -- +goose StatementEnd
@@ -436,31 +436,31 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_data_hourly (
     `last_scheduled_block_epoch` SimpleAggregateFunction(max, Nullable(Int64))
 )
 ENGINE = AggregatingMergeTree
-PARTITION BY toYYYYMM(t)
-ORDER BY (validator_index, t)
+PARTITION BY toStartOfMonth(t)
+ORDER BY (toStartOfDay(t), validator_index, t)
 SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 -- daily
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_data_daily as _final_validator_dashboard_data_hourly
 ENGINE = AggregatingMergeTree
-PARTITION BY toStartOfQuarter(t)
-ORDER BY (validator_index, t)
+PARTITION BY toStartOfYear(t)
+ORDER BY (toStartOfMonth(t), validator_index, t)
 SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 -- weekly
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_data_weekly as _final_validator_dashboard_data_hourly
 ENGINE = AggregatingMergeTree
-PARTITION BY toStartOfYear(t)
-ORDER BY (validator_index, t)
+PARTITION BY toStartOfInterval(t, INTERVAL 3 YEARS)
+ORDER BY (toStartOfInterval(t, INTERVAL 6 MONTHS), validator_index, t)
 SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 -- monthly
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_data_monthly as _final_validator_dashboard_data_hourly
 ENGINE = AggregatingMergeTree
-ORDER BY (validator_index, t)
+ORDER BY (toStartOfYear(t), validator_index, t)
 SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose Down

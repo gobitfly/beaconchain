@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/google/uuid"
 
@@ -41,10 +43,6 @@ func (d *dashboardData) maintenanceTask() {
 		time.Sleep(1 * time.Second)
 	}
 }
-
-var TransferAtOnce = 2
-var TransferInParallel = 3
-
 func (d *dashboardData) handleIncompleteTransfers() error {
 	incomplete, err := edb.GetIncompleteTransferEpochs()
 	if err != nil {
@@ -64,7 +62,7 @@ func (d *dashboardData) handleIncompleteTransfers() error {
 }
 
 func (d *dashboardData) handlePendingTransfers() error {
-	pending, err := edb.GetPendingTransferEpochs(int64(TransferAtOnce * TransferInParallel))
+	pending, err := edb.GetPendingTransferEpochs(utils.Config.DashboardExporter.TransferAtOnce * utils.Config.DashboardExporter.TransferInParallel)
 	if err != nil {
 		return errors.Wrap(err, "failed to get pending transfer epochs")
 	}
@@ -77,7 +75,7 @@ func (d *dashboardData) handlePendingTransfers() error {
 	// allocate transfer batch ids
 	batchIds := make([]uuid.UUID, 0)
 	for i := range pending {
-		if i%TransferAtOnce == 0 {
+		if i%int(utils.Config.DashboardExporter.TransferAtOnce) == 0 {
 			id := uuid.New()
 			batchIds = append(batchIds, id)
 		}
@@ -97,6 +95,10 @@ func (d *dashboardData) handlePendingTransfers() error {
 }
 
 func (d *dashboardData) transferEpochs(epochs []edb.EpochMetadata) error {
+	now := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_overall").Observe(time.Since(now).Seconds())
+	}()
 	transferBatchEpochs := make(map[uuid.UUID][]edb.EpochMetadata)
 	for _, e := range epochs {
 		if e.TransferBatchId == nil {
@@ -106,7 +108,7 @@ func (d *dashboardData) transferEpochs(epochs []edb.EpochMetadata) error {
 		transferBatchEpochs[id] = append(transferBatchEpochs[id], e)
 	}
 	eg := &errgroup.Group{}
-	eg.SetLimit(3)
+	eg.SetLimit(int(utils.Config.DashboardExporter.TransferInParallel))
 	for id, epochs := range transferBatchEpochs {
 		epochs := epochs
 		id := id
