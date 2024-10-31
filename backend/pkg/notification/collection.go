@@ -161,7 +161,7 @@ func notificationCollector() {
 			log.Infof("collecting notifications for epoch %v", epoch)
 
 			// Network DB Notifications (network related)
-			notifications, err := collectNotifications(epoch, mc)
+			notifications, err := collectNotifications(mc, epoch)
 
 			if err != nil {
 				log.Error(err, "error collection notifications", 0)
@@ -280,7 +280,7 @@ func collectUpcomingBlockProposalNotifications(notificationsByUserID types.Notif
 	return nil
 }
 
-func collectNotifications(epoch uint64, mc modules.ModuleContext) (types.NotificationsPerUserId, error) {
+func collectNotifications(mc modules.ModuleContext, epoch uint64) (types.NotificationsPerUserId, error) {
 	notificationsByUserID := types.NotificationsPerUserId{}
 	start := time.Now()
 	var err error
@@ -519,6 +519,13 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		return fmt.Errorf("error getting proposal assignments: %w", err)
 	}
 	for _, assignment := range proposalAssignments.Data {
+		if _, ok := efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)]; !ok {
+			efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)] = &dbResult{
+				ValidatorIndex:         assignment.ValidatorIndex,
+				AttestationReward:      decimal.Decimal{},
+				AttestationIdealReward: decimal.Decimal{},
+			}
+		}
 		efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)].BlocksScheduled++
 	}
 
@@ -538,6 +545,13 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		efficiencyMap[types.ValidatorIndex(s.Data.Message.ProposerIndex)].BlocksProposed++
 
 		for i, validatorIndex := range syncAssignments.Data.Validators {
+			if _, ok := efficiencyMap[types.ValidatorIndex(validatorIndex)]; !ok {
+				efficiencyMap[types.ValidatorIndex(validatorIndex)] = &dbResult{
+					ValidatorIndex:         uint64(validatorIndex),
+					AttestationReward:      decimal.Decimal{},
+					AttestationIdealReward: decimal.Decimal{},
+				}
+			}
 			efficiencyMap[types.ValidatorIndex(validatorIndex)].SyncScheduled++
 
 			if utils.BitAtVector(s.Data.Message.Body.SyncAggregate.SyncCommitteeBits, i) {

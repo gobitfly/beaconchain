@@ -20,6 +20,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"golang.org/x/sync/errgroup"
 )
 
 func InitNotificationSender() {
@@ -233,11 +234,17 @@ func sendWebhookNotifications() error {
 	if err != nil {
 		return fmt.Errorf("error querying notification queue, err: %w", err)
 	}
-	client := &http.Client{Timeout: time.Second * 30}
+
+	// webhooks have 5 seconds to respond
+	client := &http.Client{Timeout: time.Second * 5}
 
 	log.Infof("processing %v webhook notifications", len(notificationQueueItem))
 
+	// use an error group to throttle webhook requests
+	g := &errgroup.Group{}
+	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
+		n := n
 		_, err := db.CountSentMessage("n_webhooks", n.Content.UserId)
 		if err != nil {
 			log.Error(err, "error counting sent webhook", 0)
@@ -268,7 +275,7 @@ func sendWebhookNotifications() error {
 			continue
 		}
 
-		go func(n types.TransitWebhook) {
+		g.Go(func() error {
 			if n.Content.Webhook.Retries > 0 {
 				time.Sleep(time.Duration(n.Content.Webhook.Retries) * time.Second)
 			}
@@ -276,7 +283,7 @@ func sendWebhookNotifications() error {
 			if err != nil {
 				log.Warnf("error sending webhook request: %v", err)
 				metrics.NotificationsSent.WithLabelValues("webhook", "error").Inc()
-				return
+				return nil
 			} else {
 				metrics.NotificationsSent.WithLabelValues("webhook", resp.Status).Inc()
 			}
@@ -285,14 +292,18 @@ func sendWebhookNotifications() error {
 			_, err = db.WriterDb.Exec(`UPDATE notification_queue SET sent = now() WHERE id = $1`, n.Id)
 			if err != nil {
 				log.Error(err, "error updating notification_queue table", 0)
-				return
+				return nil
 			}
 
 			if resp != nil && resp.StatusCode < 400 {
-				_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0, last_sent = now() WHERE id = $1;`, n.Content.Webhook.ID)
+				// update retries counters in db based on end result
+				if n.Content.Webhook.DashboardId == 0 && n.Content.Webhook.DashboardGroupId == 0 {
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, n.Content.Webhook.Retries, n.Content.Webhook.ID)
+				} else {
+					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = $1, webhook_last_sent = now() WHERE id = $2 AND dashboard_id = $3;`, n.Content.Webhook.Retries, n.Content.Webhook.DashboardGroupId, n.Content.Webhook.DashboardId)
+				}
 				if err != nil {
-					log.Error(err, "error updating users_webhooks table", 0)
-					return
+					log.Warnf("failed to update retries counter to %v for webhook %v: %v", n.Content.Webhook.Retries, n.Content.Webhook.ID, err)
 				}
 			} else {
 				var errResp types.ErrorResponse
@@ -307,13 +318,23 @@ func sendWebhookNotifications() error {
 					errResp.Body = string(b)
 				}
 
-				_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = retries + 1, last_sent = now(), request = $2, response = $3 WHERE id = $1;`, n.Content.Webhook.ID, n.Content, errResp)
+				if n.Content.Webhook.DashboardId == 0 && n.Content.Webhook.DashboardGroupId == 0 {
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = retries + 1, webhook_last_sent = now() WHERE id = $1 AND dashboard_id = $2;`, n.Content.Webhook.DashboardGroupId, n.Content.Webhook.DashboardId)
+				} else {
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = retries + 1, last_sent = now(), request = $2, response = $3 WHERE id = $1;`, n.Content.Webhook.ID, n.Content, errResp)
+				}
 				if err != nil {
 					log.Error(err, "error updating users_webhooks table", 0)
-					return
+					return nil
 				}
 			}
-		}(n)
+			return nil
+		})
+	}
+
+	err = g.Wait()
+	if err != nil {
+		log.Error(err, "error waiting for errgroup", 0)
 	}
 	return nil
 }
@@ -356,20 +377,27 @@ func sendDiscordNotifications() error {
 		}
 		notifMap[n.Content.Webhook.ID] = append(notifMap[n.Content.Webhook.ID], n)
 	}
+	// use an error group to throttle webhook requests
+	g := &errgroup.Group{}
+	g.SetLimit(50) // issue at most 50 requests at a time
+
 	for _, webhook := range webhookMap {
-		// todo: this has the potential to spin up thousands of go routines
-		// should use an errgroup instead if we decide to keep the aproach
-		go func(webhook types.UserWebhook, reqs []types.TransitDiscord) {
+		webhook := webhook
+		g.Go(func() error {
 			defer func() {
 				// update retries counters in db based on end result
-				_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, webhook.Retries, webhook.ID)
+				if webhook.DashboardId == 0 && webhook.DashboardGroupId == 0 {
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, webhook.Retries, webhook.ID)
+				} else {
+					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = $1, webhook_last_sent = now() WHERE id = $2 AND dashboard_id = $3;`, webhook.Retries, webhook.DashboardGroupId, webhook.DashboardId)
+				}
 				if err != nil {
 					log.Warnf("failed to update retries counter to %v for webhook %v: %v", webhook.Retries, webhook.ID, err)
 				}
 
 				// mark notifcations as sent in db
 				ids := make([]uint64, 0)
-				for _, req := range reqs {
+				for _, req := range notifMap[webhook.ID] {
 					ids = append(ids, req.Id)
 				}
 				_, err = db.WriterDb.Exec(`UPDATE notification_queue SET sent = now() where id = ANY($1)`, pq.Array(ids))
@@ -381,10 +409,10 @@ func sendDiscordNotifications() error {
 			_, err = url.Parse(webhook.Url)
 			if err != nil {
 				log.Error(err, "error parsing url", 0, log.Fields{"webhook_id": webhook.ID})
-				return
+				return nil
 			}
 
-			for i := 0; i < len(reqs); i++ {
+			for i := 0; i < len(notifMap[webhook.ID]); i++ {
 				if webhook.Retries > 5 {
 					break // stop
 				}
@@ -392,7 +420,7 @@ func sendDiscordNotifications() error {
 				time.Sleep(time.Duration(webhook.Retries) * time.Second)
 
 				reqBody := new(bytes.Buffer)
-				err := json.NewEncoder(reqBody).Encode(reqs[i].Content.DiscordRequest)
+				err := json.NewEncoder(reqBody).Encode(notifMap[webhook.ID][i].Content.DiscordRequest)
 				if err != nil {
 					log.Error(err, "error marshalling discord webhook event", 0)
 					continue // skip
@@ -424,7 +452,9 @@ func sendDiscordNotifications() error {
 						if resp.StatusCode != http.StatusOK {
 							log.WarnWithFields(map[string]interface{}{"errResp.Body": utils.FirstN(errResp.Body, 1000), "webhook.Url": webhook.Url}, "error pushing discord webhook")
 						}
-						_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, reqs[i].Content.DiscordRequest, errResp)
+						if webhook.DashboardId == 0 && webhook.DashboardGroupId == 0 {
+							_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, notifMap[webhook.ID][i].Content.DiscordRequest, errResp)
+						}
 						if err != nil {
 							log.Error(err, "error storing failure data in users_webhooks table", 0)
 						}
@@ -433,7 +463,13 @@ func sendDiscordNotifications() error {
 					i-- // retry, IMPORTANT to be at the END of the ELSE, otherwise the wrong index will be used in the commands above!
 				}
 			}
-		}(webhook, notifMap[webhook.ID])
+			return nil
+		})
+	}
+
+	err = g.Wait()
+	if err != nil {
+		log.Error(err, "error waiting for errgroup", 0)
 	}
 
 	return nil
