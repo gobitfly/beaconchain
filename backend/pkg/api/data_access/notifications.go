@@ -203,15 +203,15 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			}
 			return res.Uint64()
 		}
-		response.Last24hEmailCount, err = getMessageCount("n_mails")
+		response.Last24hEmailCount, err = getMessageCount(notification.NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET)
 		if err != nil {
 			return err
 		}
-		response.Last24hPushCount, err = getMessageCount("n_push")
+		response.Last24hPushCount, err = getMessageCount(notification.NOTIFICAION_PUSH_RATE_LIMIT_BUCKET)
 		if err != nil {
 			return err
 		}
-		response.Last24hWebhookCount, err = getMessageCount("n_webhook")
+		response.Last24hWebhookCount, err = getMessageCount(notification.NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET)
 		return err
 	})
 
