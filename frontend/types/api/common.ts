@@ -33,8 +33,8 @@ export interface Address {
 }
 export interface LuckItem {
   percent: number /* float64 */;
-  expected: string /* time.Time */;
-  average: any /* time.Duration */;
+  expected_timestamp: number /* uint64 */;
+  average_interval_seconds: number /* uint64 */;
 }
 export interface Luck {
   proposal: LuckItem;

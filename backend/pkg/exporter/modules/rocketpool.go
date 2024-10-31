@@ -858,6 +858,27 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 		}
 	}
 
+	// refreshing materialized view
+	var exists bool
+	err = tx.Get(&exists, `SELECT EXISTS (
+		SELECT 1 
+		FROM pg_catalog.pg_matviews 
+		WHERE matviewname = 'rocketpool_rewards_summary'
+	)`)
+	if err != nil {
+		return fmt.Errorf("failed to check if materialized view exists: %w", err)
+	}
+
+	// If the view exists, refresh it concurrently
+	if exists {
+		_, err = tx.Exec(`REFRESH MATERIALIZED VIEW CONCURRENTLY rocketpool_rewards_summary`)
+		if err != nil {
+			return fmt.Errorf("cannot refresh materialized view rocketpool_rewards_summary. Error %w", err)
+		}
+	} else {
+		log.Infof("Materialized view rocketpool_rewards_summary does not exist, skipping refresh.")
+	}
+
 	err = tx.Commit()
 	if err != nil {
 		return err

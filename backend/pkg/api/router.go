@@ -336,7 +336,6 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 		{http.MethodGet, "/dashboards", hs.PublicGetUserNotificationDashboards, hs.InternalGetUserNotificationDashboards},
 		{http.MethodGet, "/machines", hs.PublicGetUserNotificationMachines, hs.InternalGetUserNotificationMachines},
 		{http.MethodGet, "/clients", hs.PublicGetUserNotificationClients, hs.InternalGetUserNotificationClients},
-		{http.MethodGet, "/rocket-pool", hs.PublicGetUserNotificationRocketPool, hs.InternalGetUserNotificationRocketPool},
 		{http.MethodGet, "/networks", hs.PublicGetUserNotificationNetworks, hs.InternalGetUserNotificationNetworks},
 		{http.MethodGet, "/settings", hs.PublicGetUserNotificationSettings, hs.InternalGetUserNotificationSettings},
 		{http.MethodPut, "/settings/general", hs.PublicPutUserNotificationSettingsGeneral, hs.InternalPutUserNotificationSettingsGeneral},
