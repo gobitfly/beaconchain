@@ -8,7 +8,7 @@ const { chainIdByDefault } = useRuntimeConfig().public
 const networks = computed(() => notificationsManagementStore.settings.networks ?? [])
 const currentNetworkId = computed(
   () => notificationsManagementStore.settings.networks
-    .find(network => network.chain_id === Number(chainIdByDefault)) ?? 1,
+    .find(network => network.chain_id === Number(chainIdByDefault))?.chain_id ?? 1,
 )
 
 const currentNetwork = computed(
@@ -54,6 +54,9 @@ watchDebounced([
 
 <template>
   <div>
+    <pre>
+      {{ currentNetworkId }}
+    <pre>
     <div v-if="!networks.length" class="error-container">
       Upps something went wrong. Please try again.
     </div>
@@ -124,6 +127,7 @@ watchDebounced([
         </BcListSection>
       </div>
     </BcTabPanel>
+  </pre></pre>
   </div>
 </template>
 
