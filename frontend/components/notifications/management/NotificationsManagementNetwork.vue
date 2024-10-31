@@ -54,9 +54,6 @@ watchDebounced([
 
 <template>
   <div>
-    <pre>
-      {{ currentNetworkId }}
-    <pre>
     <div v-if="!networks.length" class="error-container">
       Upps something went wrong. Please try again.
     </div>
@@ -127,7 +124,6 @@ watchDebounced([
         </BcListSection>
       </div>
     </BcTabPanel>
-  </pre></pre>
   </div>
 </template>
 
