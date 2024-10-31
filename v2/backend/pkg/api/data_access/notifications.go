@@ -711,7 +711,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	// -------------------------------------
 	// Get the machine notification history
 	notificationHistory := []struct {
-		Epoch          uint64          `db:"epoch"`
+		Ts             time.Time       `db:"ts"`
 		MachineId      uint64          `db:"machine_id"`
 		MachineName    string          `db:"machine_name"`
 		EventType      types.EventName `db:"event_type"`
@@ -720,7 +720,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 
 	ds := goqu.Dialect("postgres").
 		Select(
-			goqu.L("epoch"),
+			goqu.L("ts"),
 			goqu.L("machine_id"),
 			goqu.L("machine_name"),
 			goqu.L("event_type"),
@@ -735,8 +735,9 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	}
 
 	// Sorting and limiting if cursor is present
+	// Rows can be uniquely identified by (ts, machine_id, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
 		{Column: enums.NotificationsMachinesColumns.MachineId.ToExpr(), Desc: false, Offset: currentCursor.MachineId},
 		{Column: enums.NotificationsMachinesColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
@@ -771,7 +772,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		resultEntry := t.NotificationMachinesTableRow{
 			MachineName: notification.MachineName,
 			Threshold:   notification.EventThreshold,
-			Timestamp:   utils.EpochToTime(notification.Epoch).Unix(),
+			Timestamp:   notification.Ts.Unix(),
 		}
 		switch notification.EventType {
 		case types.MonitoringMachineOfflineEventName:
@@ -833,15 +834,15 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	// -------------------------------------
 	// Get the client notification history
 	notificationHistory := []struct {
-		Epoch   uint64 `db:"epoch"`
-		Client  string `db:"client"`
-		Version string `db:"client_version"`
-		Url     string `db:"client_url"`
+		Ts      time.Time `db:"ts"`
+		Client  string    `db:"client"`
+		Version string    `db:"client_version"`
+		Url     string    `db:"client_url"`
 	}{}
 
 	ds := goqu.Dialect("postgres").
 		Select(
-			goqu.L("epoch"),
+			goqu.L("ts"),
 			goqu.L("client"),
 			goqu.L("client_version"),
 			goqu.L("client_url")).
@@ -855,9 +856,9 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	}
 
 	// Sorting and limiting if cursor is present
-	// Rows can be uniquely identified by (epoch, client)
+	// Rows can be uniquely identified by (ts, client)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
 		{Column: enums.NotificationsClientsColumns.ClientName.ToExpr(), Desc: false, Offset: currentCursor.Client},
 	}
 	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
@@ -884,7 +885,7 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 			ClientName: notification.Client,
 			Version:    notification.Version,
 			Url:        notification.Url,
-			Timestamp:  utils.EpochToTime(notification.Epoch).Unix(),
+			Timestamp:  notification.Ts.Unix(),
 		}
 		result = append(result, resultEntry)
 	}
@@ -935,7 +936,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	// -------------------------------------
 	// Get the network notification history
 	notificationHistory := []struct {
-		Epoch          uint64          `db:"epoch"`
+		Ts             time.Time       `db:"ts"`
 		Network        uint64          `db:"network"`
 		EventType      types.EventName `db:"event_type"`
 		EventThreshold float64         `db:"event_threshold"`
@@ -943,7 +944,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 
 	ds := goqu.Dialect("postgres").
 		Select(
-			goqu.L("epoch"),
+			goqu.L("ts"),
 			goqu.L("network"),
 			goqu.L("event_type"),
 			goqu.L("event_threshold")).
@@ -952,9 +953,9 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		Limit(uint(limit + 1))
 
 	// Sorting and limiting if cursor is present
-	// Rows can be uniquely identified by (epoch, network, event_type)
+	// Rows can be uniquely identified by (ts, network, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
 		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: currentCursor.Network},
 		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
@@ -980,7 +981,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	for _, notification := range notificationHistory {
 		resultEntry := t.NotificationNetworksTableRow{
 			ChainId:   notification.Network,
-			Timestamp: utils.EpochToTime(notification.Epoch).Unix(),
+			Timestamp: notification.Ts.Unix(),
 		}
 		switch notification.EventType {
 		case types.NetworkGasAboveThresholdEventName:

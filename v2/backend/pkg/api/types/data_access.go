@@ -129,14 +129,14 @@ type NotificationMachinesCursor struct {
 	MachineName    string
 	EventType      string
 	EventThreshold float64
-	Epoch          uint64
+	Ts             time.Time
 }
 
 type NotificationClientsCursor struct {
 	GenericCursor
 
 	Client string
-	Epoch  uint64
+	Ts     time.Time
 }
 
 type NotificationRocketPoolsCursor struct {
@@ -151,7 +151,7 @@ type NotificationNetworksCursor struct {
 	GenericCursor
 
 	Network   uint64
-	Epoch     uint64
+	Ts        time.Time
 	EventType string
 }
 
