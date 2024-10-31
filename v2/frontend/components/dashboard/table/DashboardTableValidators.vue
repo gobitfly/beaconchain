@@ -58,21 +58,24 @@ const cappedValidators = computed(() =>
 
 <template>
   <div class="validator_column">
-    <div class="validators">
+    <span v-if="cappedValidators.length <= 3" class="validators">
       <template
-        v-for="v in cappedValidators"
-        :key="v"
+        v-for="validator in cappedValidators"
+        :key="validator"
       >
         <BcLink
-          :to="`/validator/${v}`"
+          :to="`/validator/${validator}`"
           target="_blank"
           class="link validator_link"
         >
-          {{ v }}
+          {{ validator }}
         </BcLink>
         <span>, </span>
       </template>
-    </div>
+    </span>
+    <span v-else>
+      {{ cappedValidators.length }} {{ $t('common.validator', cappedValidators.length) }}
+    </span>
     <FontAwesomeIcon
       v-if="validators?.length"
       class="link popout"

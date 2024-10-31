@@ -44,7 +44,6 @@ type NotificationsRepository interface {
 
 	GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error)
 	GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error)
-	GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error)
 	GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
 
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
@@ -204,7 +203,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			}
 			return res.Uint64()
 		}
-		response.Last24hEmailsCount, err = getMessageCount("n_mails")
+		response.Last24hEmailCount, err = getMessageCount("n_mails")
 		if err != nil {
 			return err
 		}
@@ -253,6 +252,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		err = d.userReader.GetContext(ctx, &response, querySql, args...)
 		return err
 	})
+	response.NextEmailCountResetTimestamp = time.Now().Add(utils.Day).Truncate(utils.Day).Unix()
 
 	err = eg.Wait()
 	return &response, err
@@ -344,14 +344,14 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 
 	// sorting
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsDashboardsColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationsDashboardsColumns.DashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
-		{Column: enums.NotificationsDashboardsColumns.DashboardId.ToString(), Desc: false, Offset: currentCursor.DashboardId},
-		{Column: enums.NotificationsDashboardsColumns.GroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
-		{Column: enums.NotificationsDashboardsColumns.GroupId.ToString(), Desc: false, Offset: currentCursor.GroupId},
-		{Column: enums.NotificationsDashboardsColumns.ChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
+		{Column: enums.NotificationsDashboardsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsDashboardsColumns.DashboardName.ToExpr(), Desc: false, Offset: currentCursor.DashboardName},
+		{Column: enums.NotificationsDashboardsColumns.DashboardId.ToExpr(), Desc: false, Offset: currentCursor.DashboardId},
+		{Column: enums.NotificationsDashboardsColumns.GroupName.ToExpr(), Desc: false, Offset: currentCursor.GroupName},
+		{Column: enums.NotificationsDashboardsColumns.GroupId.ToExpr(), Desc: false, Offset: currentCursor.GroupId},
+		{Column: enums.NotificationsDashboardsColumns.ChainId.ToExpr(), Desc: true, Offset: currentCursor.ChainId},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	unionQuery = unionQuery.Order(order...)
 	if directions != nil {
 		unionQuery = unionQuery.Where(directions)
@@ -502,6 +502,12 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 
 		for _, notification := range notifications {
 			switch notification.GetEventName() {
+			case types.ValidatorGroupEfficiencyEventName:
+				curNotification, ok := notification.(*n.ValidatorGroupEfficiencyNotification)
+				if !ok {
+					return nil, fmt.Errorf("failed to cast notification to ValidatorGroupEfficiencyNotification")
+				}
+				notificationDetails.GroupEfficiencyBelow = curNotification.Threshold
 			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName /*, types.ValidatorScheduledProposalEventName*/ :
 				// aggregate proposals
 				curNotification, ok := notification.(*n.ValidatorProposalNotification)
@@ -612,8 +618,12 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				if !ok {
 					return nil, fmt.Errorf("failed to cast notification to RocketpoolNotification")
 				}
-				addr := t.Address{Hash: t.Hash(notification.GetEventFilter()), IsContract: true}
-				addressMapping[notification.GetEventFilter()] = &addr
+				nodeAddress := notification.GetEventFilter()
+				if nodeAddress == "" {
+					return nil, fmt.Errorf("empty node address in Rocket Pool collateral notification: dashboardId '%d', epoch '%d'", dashboardId, epoch)
+				}
+				addr := t.Address{Hash: t.Hash(nodeAddress), IsContract: true}
+				addressMapping[nodeAddress] = &addr
 				if notification.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
 					notificationDetails.MinimumCollateralReached = append(notificationDetails.MinimumCollateralReached, addr)
 				} else {
@@ -726,9 +736,9 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 
 	// Sorting and limiting if cursor is present
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsMachinesColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationsMachinesColumns.MachineId.ToString(), Desc: false, Offset: currentCursor.MachineId},
-		{Column: enums.NotificationsMachinesColumns.EventType.ToString(), Desc: false, Offset: currentCursor.EventType},
+		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsMachinesColumns.MachineId.ToExpr(), Desc: false, Offset: currentCursor.MachineId},
+		{Column: enums.NotificationsMachinesColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
 	var offset interface{}
 	switch colSort.Column {
@@ -738,7 +748,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		offset = currentCursor.EventThreshold
 	}
 
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -847,10 +857,10 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (epoch, client)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsClientsColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationsClientsColumns.ClientName.ToString(), Desc: false, Offset: currentCursor.Client},
+		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsClientsColumns.ClientName.ToExpr(), Desc: false, Offset: currentCursor.Client},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -907,201 +917,7 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 
 	return result, p, nil
 }
-func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
-	return d.dummy.GetRocketPoolNotifications(ctx, userId, cursor, colSort, search, limit)
 
-	// TODO: Adjust after db structure has been clarified
-	// result := make([]t.NotificationRocketPoolTableRow, 0)
-	// var paging t.Paging
-
-	// // Initialize the cursor
-	// var currentCursor t.NotificationRocketPoolsCursor
-	// var err error
-	// if cursor != "" {
-	// 	currentCursor, err = utils.StringToCursor[t.NotificationRocketPoolsCursor](cursor)
-	// 	if err != nil {
-	// 		return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationRocketPoolsCursor: %w", err)
-	// 	}
-	// }
-
-	// isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
-	// sortSearchDirection := ">"
-	// if isReverseDirection {
-	// 	sortSearchDirection = "<"
-	// }
-
-	// // -------------------------------------
-	// // Get the machine notification history
-	// notificationHistory := []struct {
-	// 	Epoch          uint64          `db:"epoch"`
-	// 	LastBlock      int64           `db:"last_block"`
-	// 	EventType      types.EventName `db:"event_type"`
-	// 	EventThreshold float64         `db:"event_threshold"`
-	// 	NodeAddress    []byte          `db:"node_address"`
-	// }{}
-
-	// ds := goqu.Dialect("postgres").
-	// 	Select(
-	// 		goqu.L("epoch"),
-	// 		goqu.L("last_block"),
-	// 		goqu.L("event_type"),
-	// 		goqu.L("event_threshold"),
-	// 		goqu.L("node_address")).
-	// 	From("rocketpool_notifications_history").
-	// 	Where(goqu.L("user_id = ?", userId)).
-	// 	Limit(uint(limit + 1))
-
-	// // Search
-	// if search != "" {
-	// 	if !utils.IsEth1Address(search) {
-	// 		// If search is not a valid address, return empty result
-	// 		return result, &paging, nil
-	// 	}
-	// 	nodeAddress, err := hexutil.Decode(search)
-	// 	if err != nil {
-	// 		return nil, nil, fmt.Errorf("failed to decode node address: %w", err)
-	// 	}
-	// 	ds = ds.Where(goqu.L("node_address = ?", nodeAddress))
-	// }
-
-	// // Sorting and limiting if cursor is present
-	// // Rows can be uniquely identified by (epoch, event_type, node_address)
-	// sortDirFunc := func(column string) exp.OrderedExpression {
-	// 	return goqu.I(column).Asc()
-	// }
-	// if isReverseDirection {
-	// 	sortDirFunc = func(column string) exp.OrderedExpression {
-	// 		return goqu.I(column).Desc()
-	// 	}
-	// }
-	// switch colSort.Column {
-	// case enums.NotificationRocketPoolColumns.Timestamp:
-	// 	if currentCursor.IsValid() {
-	// 		ds = ds.Where(goqu.Or(
-	// 			goqu.L(fmt.Sprintf("(epoch %s ?)", sortSearchDirection), currentCursor.Epoch),
-	// 			goqu.L(fmt.Sprintf("(epoch = ? AND event_type %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.EventType),
-	// 			goqu.L(fmt.Sprintf("(epoch = ? AND event_type = ? AND node_address %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.EventType, currentCursor.NodeAddress),
-	// 		))
-	// 	}
-	// 	ds = ds.Order(
-	// 		sortDirFunc("epoch"),
-	// 		sortDirFunc("event_type"),
-	// 		sortDirFunc("node_address"))
-	// case enums.NotificationRocketPoolColumns.EventType:
-	// 	if currentCursor.IsValid() {
-	// 		ds = ds.Where(goqu.Or(
-	// 			goqu.L(fmt.Sprintf("(event_type %s ?)", sortSearchDirection), currentCursor.EventType),
-	// 			goqu.L(fmt.Sprintf("(event_type = ? AND epoch %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch),
-	// 			goqu.L(fmt.Sprintf("(event_type = ? AND epoch = ? AND node_address %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch, currentCursor.NodeAddress),
-	// 		))
-	// 	}
-	// 	ds = ds.Order(
-	// 		sortDirFunc("event_type"),
-	// 		sortDirFunc("epoch"),
-	// 		sortDirFunc("node_address"))
-	// case enums.NotificationRocketPoolColumns.NodeAddress:
-	// 	if currentCursor.IsValid() {
-	// 		ds = ds.Where(goqu.Or(
-	// 			goqu.L(fmt.Sprintf("(node_address %s ?)", sortSearchDirection), currentCursor.NodeAddress),
-	// 			goqu.L(fmt.Sprintf("(node_address = ? AND epoch %s ?)", sortSearchDirection), currentCursor.NodeAddress, currentCursor.Epoch),
-	// 			goqu.L(fmt.Sprintf("(node_address = ? AND epoch = ? AND event_type %s ?)", sortSearchDirection), currentCursor.NodeAddress, currentCursor.Epoch, currentCursor.EventType),
-	// 		))
-	// 	}
-	// 	ds = ds.Order(
-	// 		sortDirFunc("node_address"),
-	// 		sortDirFunc("epoch"),
-	// 		sortDirFunc("event_type"))
-	// default:
-	// 	return nil, nil, fmt.Errorf("invalid column for sorting of rocketpool notification history: %v", colSort.Column)
-	// }
-
-	// query, args, err := ds.Prepared(true).ToSQL()
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf("error preparing rocketpool notifications query: %w", err)
-	// }
-
-	// err = d.userReader.SelectContext(ctx, &notificationHistory, query, args...)
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf(`error retrieving data for rocketpool notifications: %w`, err)
-	// }
-
-	// // -------------------------------------
-	// // Get the node address info
-	// addressMapping := make(map[string]*t.Address)
-	// contractStatusRequests := make([]db.ContractInteractionAtRequest, 0)
-
-	// for _, notification := range notificationHistory {
-	// 	addressMapping[hexutil.Encode(notification.NodeAddress)] = nil
-	// 	contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
-	// 		Address:  fmt.Sprintf("%x", notification.NodeAddress),
-	// 		Block:    notification.LastBlock,
-	// 		TxIdx:    -1,
-	// 		TraceIdx: -1,
-	// 	})
-	// }
-
-	// err = d.GetNamesAndEnsForAddresses(ctx, addressMapping)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// // -------------------------------------
-	// // Calculate the result
-	// cursorData := notificationHistory
-	// for idx, notification := range notificationHistory {
-	// 	resultEntry := t.NotificationRocketPoolTableRow{
-	// 		Timestamp: utils.EpochToTime(notification.Epoch).Unix(),
-	// 		Threshold: notification.EventThreshold,
-	// 		Node:      *addressMapping[hexutil.Encode(notification.NodeAddress)],
-	// 	}
-	// 	resultEntry.Node.IsContract = contractStatuses[idx] == types.CONTRACT_CREATION || contractStatuses[idx] == types.CONTRACT_PRESENT
-
-	// 	switch notification.EventType {
-	// 	case types.RocketpoolNewClaimRoundStartedEventName:
-	// 		resultEntry.EventType = "reward_round"
-	// 	case types.RocketpoolCollateralMinReachedEventName:
-	// 		resultEntry.EventType = "collateral_min"
-	// 	case types.RocketpoolCollateralMaxReachedEventName:
-	// 		resultEntry.EventType = "collateral_max"
-	// 	default:
-	// 		return nil, nil, fmt.Errorf("invalid event name for rocketpool notification: %v", notification.EventType)
-	// 	}
-	// 	result = append(result, resultEntry)
-	// }
-
-	// // -------------------------------------
-	// // Paging
-
-	// // Flag if above limit
-	// moreDataFlag := len(result) > int(limit)
-	// if !moreDataFlag && !currentCursor.IsValid() {
-	// 	// No paging required
-	// 	return result, &paging, nil
-	// }
-
-	// // Remove the last entries from data
-	// if moreDataFlag {
-	// 	result = result[:limit]
-	// 	cursorData = cursorData[:limit]
-	// }
-
-	// if currentCursor.IsReverse() {
-	// 	slices.Reverse(result)
-	// 	slices.Reverse(cursorData)
-	// }
-
-	// p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf("failed to get paging: %w", err)
-	// }
-
-	// return result, p, nil
-}
 func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	result := make([]t.NotificationNetworksTableRow, 0)
 	var paging t.Paging
@@ -1138,11 +954,11 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (epoch, network, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationNetworksColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationNetworksColumns.Network.ToString(), Desc: false, Offset: currentCursor.Network},
-		{Column: enums.NotificationNetworksColumns.EventType.ToString(), Desc: false, Offset: currentCursor.EventType},
+		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: currentCursor.Network},
+		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -1528,7 +1344,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1545,7 +1361,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1606,7 +1422,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1623,7 +1439,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1895,7 +1711,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.IsBlockProposalSubscribed = true
 			case types.ValidatorUpcomingProposalEventName:
 				settings.IsUpcomingBlockProposalSubscribed = true
-			case types.SyncCommitteeSoon:
+			case types.SyncCommitteeSoonEventName:
 				settings.IsSyncSubscribed = true
 			case types.ValidatorReceivedWithdrawalEventName:
 				settings.IsWithdrawalProcessedSubscribed = true
@@ -2126,7 +1942,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupEfficiencyBelowSubscribed, userId, types.ValidatorGroupEfficiencyEventName, networkName, eventFilter, epoch, settings.GroupEfficiencyBelowThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoonEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, types.ValidatorReceivedWithdrawalEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, types.RocketpoolCollateralMaxReachedEventName, networkName, eventFilter, epoch, settings.MaxCollateralThreshold)
@@ -2148,7 +1964,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -2165,7 +1981,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -2236,7 +2052,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 
 	// 	query, args, err := insertDs.Prepared(true).ToSQL()
 	// 	if err != nil {
-	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 		return fmt.Errorf("error preparing query: %w", err)
 	// 	}
 
 	// 	_, err = tx.ExecContext(ctx, query, args...)
@@ -2253,7 +2069,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 
 	// 	query, args, err := deleteDs.Prepared(true).ToSQL()
 	// 	if err != nil {
-	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 		return fmt.Errorf("error preparing query: %w", err)
 	// 	}
 
 	// 	_, err = tx.ExecContext(ctx, query, args...)

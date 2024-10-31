@@ -312,12 +312,12 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	wg.Go(func() error {
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving rewards data: %v", err)
+			return fmt.Errorf("error retrieving rewards data: %w", err)
 		}
 		return nil
 	})
@@ -334,12 +334,12 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving el rewards data for rewards: %v", err)
+			return fmt.Errorf("error retrieving el rewards data for rewards: %w", err)
 		}
 
 		for _, entry := range elQueryResult {
@@ -353,7 +353,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 	err = wg.Wait()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -625,12 +625,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	wg.Go(func() error {
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving group rewards data: %v", err)
+			return fmt.Errorf("error retrieving group rewards data: %w", err)
 		}
 		return nil
 	})
@@ -641,19 +641,19 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	wg.Go(func() error {
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.GetContext(ctx, &elRewards, query, args...)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("error retrieving el rewards data for group rewards: %v", err)
+			return fmt.Errorf("error retrieving el rewards data for group rewards: %w", err)
 		}
 		return nil
 	})
 
 	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard group rewards data: %v", err)
+		return nil, fmt.Errorf("error retrieving validator dashboard group rewards data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -800,12 +800,12 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	wg.Go(func() error {
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving rewards chart data: %v", err)
+			return fmt.Errorf("error retrieving rewards chart data: %w", err)
 		}
 		return nil
 	})
@@ -822,12 +822,12 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving el rewards data for rewards chart: %v", err)
+			return fmt.Errorf("error retrieving el rewards data for rewards chart: %w", err)
 		}
 
 		for _, entry := range elQueryResult {
@@ -841,7 +841,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %v", err)
+		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -1065,12 +1065,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	wg.Go(func() error {
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving validator rewards data: %v", err)
+			return fmt.Errorf("error retrieving validator rewards data: %w", err)
 		}
 		return nil
 	})
@@ -1086,12 +1086,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving validator el rewards data for rewards: %v", err)
+			return fmt.Errorf("error retrieving validator el rewards data for rewards: %w", err)
 		}
 
 		for _, entry := range elQueryResult {
@@ -1102,7 +1102,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 	err = wg.Wait()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

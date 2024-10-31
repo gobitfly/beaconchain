@@ -91,7 +91,7 @@ func (d *DataAccessService) UpdateValidatorDashboardsArchiving(ctx context.Conte
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("error preparing query: %v", err)
+		return fmt.Errorf("error preparing query: %w", err)
 	}
 
 	_, err = d.writerDb.ExecContext(ctx, query, args...)
