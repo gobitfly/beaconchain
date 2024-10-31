@@ -546,8 +546,9 @@ type TransitWebhook struct {
 
 type TransitWebhookContent struct {
 	Webhook UserWebhook
-	Event   WebhookEvent `json:"event"`
-	UserId  UserId       `json:"userId"`
+	Event   *WebhookEvent   `json:"event,omitempty"`
+	Events  []*WebhookEvent `json:"events,omitempty"`
+	UserId  UserId          `json:"userId"`
 }
 
 type WebhookEvent struct {
@@ -639,15 +640,17 @@ type Email struct {
 }
 
 type UserWebhook struct {
-	ID          uint64         `db:"id" json:"id"`
-	UserID      uint64         `db:"user_id" json:"-"`
-	Url         string         `db:"url" json:"url"`
-	Retries     uint64         `db:"retries" json:"retries"`
-	LastSent    sql.NullTime   `db:"last_sent" json:"lastRetry"`
-	Response    sql.NullString `db:"response" json:"response"`
-	Request     sql.NullString `db:"request" json:"request"`
-	Destination sql.NullString `db:"destination" json:"destination"`
-	EventNames  pq.StringArray `db:"event_names" json:"-"`
+	ID               uint64         `db:"id" json:"id"`
+	UserID           uint64         `db:"user_id" json:"-"`
+	Url              string         `db:"url" json:"url"`
+	Retries          uint64         `db:"retries" json:"retries"`
+	LastSent         sql.NullTime   `db:"last_sent" json:"lastRetry"`
+	Response         sql.NullString `db:"response" json:"response"`
+	Request          sql.NullString `db:"request" json:"request"`
+	Destination      sql.NullString `db:"destination" json:"destination"`
+	EventNames       pq.StringArray `db:"event_names" json:"-"`
+	DashboardId      uint64         `db:"dashboard_id" json:"dashboardId"`
+	DashboardGroupId uint64         `db:"dashboard_group_id" json:"dashboardGroupId"`
 }
 
 type UserWebhookSubscriptions struct {
