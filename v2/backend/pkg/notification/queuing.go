@@ -709,85 +709,92 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 						} else {
 							for event, notifications := range notificationsPerGroup {
 								// check if the webhook is subscribed to the type of event
+
+								// if the user has enabled webhooks for validator offline also send the notifications for validator online
+								if slices.Contains(w.EventNames, string(types.ValidatorIsOfflineEventName)) {
+									w.EventNames = append(w.EventNames, string(types.ValidatorIsOnlineEventName))
+								}
+
 								eventSubscribed := slices.Contains(w.EventNames, string(event))
 
-								if eventSubscribed {
-									if len(notifications) > 0 {
-										// reset Retries
-										if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-											_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
-											if err != nil {
-												log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
-												continue
-											}
-										} else if w.Retries > 5 && !w.LastSent.Valid {
-											log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
+								if !eventSubscribed {
+									continue
+								}
+								if len(notifications) > 0 {
+									// reset Retries
+									if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
+										_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
+										if err != nil {
+											log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
 											continue
 										}
-
-										if w.Retries >= 5 {
-											// early return
-											continue
-										}
+									} else if w.Retries > 5 && !w.LastSent.Valid {
+										log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
+										continue
 									}
 
-									for _, n := range notifications {
-										if w.Destination.Valid && w.Destination.String == "webhook_discord" {
-											if _, exists := discordNotifMap[w.ID]; !exists {
-												discordNotifMap[w.ID] = make([]types.TransitDiscordContent, 0)
-											}
-											l_notifs := len(discordNotifMap[w.ID])
-											if l_notifs == 0 || len(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds) >= 10 {
-												discordNotifMap[w.ID] = append(discordNotifMap[w.ID], types.TransitDiscordContent{
-													Webhook: w,
-													DiscordRequest: types.DiscordReq{
-														Username: utils.Config.Frontend.SiteDomain,
-													},
-													UserId: userID,
-												})
-												l_notifs++
-											}
+									if w.Retries >= 5 {
+										// early return
+										continue
+									}
+								}
 
-											fields := []types.DiscordEmbedField{
-												{
-													Name:   "Epoch",
-													Value:  fmt.Sprintf("[%[1]v](https://%[2]s/%[1]v)", n.GetEpoch(), utils.Config.Frontend.SiteDomain+"/epoch"),
-													Inline: false,
-												},
-											}
-
-											if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReachedEventName || n.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
-												fields = append(fields,
-													types.DiscordEmbedField{
-														Name:   "Target",
-														Value:  fmt.Sprintf("%v", n.GetEventFilter()),
-														Inline: false,
-													})
-											}
-											discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
-												Type:        "rich",
-												Color:       "16745472",
-												Description: n.GetLegacyInfo(),
-												Title:       n.GetLegacyTitle(),
-												Fields:      fields,
-											})
-										} else {
-											notifs = append(notifs, types.TransitWebhook{
-												Channel: w.Destination.String,
-												Content: types.TransitWebhookContent{
-													Webhook: w,
-													Event: &types.WebhookEvent{
-														Network:     utils.GetNetwork(),
-														Name:        string(n.GetEventName()),
-														Title:       n.GetLegacyTitle(),
-														Description: n.GetLegacyInfo(),
-														Epoch:       n.GetEpoch(),
-														Target:      n.GetEventFilter(),
-													},
-													UserId: userID,
-												},
-											})
+								for _, n := range notifications {
+									if w.Destination.Valid && w.Destination.String == "webhook_discord" {
+										if _, exists := discordNotifMap[w.ID]; !exists {
+											discordNotifMap[w.ID] = make([]types.TransitDiscordContent, 0)
 										}
+										l_notifs := len(discordNotifMap[w.ID])
+										if l_notifs == 0 || len(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds) >= 10 {
+											discordNotifMap[w.ID] = append(discordNotifMap[w.ID], types.TransitDiscordContent{
+												Webhook: w,
+												DiscordRequest: types.DiscordReq{
+													Username: utils.Config.Frontend.SiteDomain,
+												},
+												UserId: userID,
+											})
+											l_notifs++
+										}
+
+										fields := []types.DiscordEmbedField{
+											{
+												Name:   "Epoch",
+												Value:  fmt.Sprintf("[%[1]v](https://%[2]s/%[1]v)", n.GetEpoch(), utils.Config.Frontend.SiteDomain+"/epoch"),
+												Inline: false,
+											},
+										}
+
+										if strings.HasPrefix(string(n.GetEventName()), "monitoring") || n.GetEventName() == types.EthClientUpdateEventName || n.GetEventName() == types.RocketpoolCollateralMaxReachedEventName || n.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
+											fields = append(fields,
+												types.DiscordEmbedField{
+													Name:   "Target",
+													Value:  fmt.Sprintf("%v", n.GetEventFilter()),
+													Inline: false,
+												})
+										}
+										discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds = append(discordNotifMap[w.ID][l_notifs-1].DiscordRequest.Embeds, types.DiscordEmbed{
+											Type:        "rich",
+											Color:       "16745472",
+											Description: n.GetLegacyInfo(),
+											Title:       n.GetLegacyTitle(),
+											Fields:      fields,
+										})
+									} else {
+										notifs = append(notifs, types.TransitWebhook{
+											Channel: w.Destination.String,
+											Content: types.TransitWebhookContent{
+												Webhook: w,
+												Event: &types.WebhookEvent{
+													Network:     utils.GetNetwork(),
+													Name:        string(n.GetEventName()),
+													Title:       n.GetLegacyTitle(),
+													Description: n.GetLegacyInfo(),
+													Epoch:       n.GetEpoch(),
+													Target:      n.GetEventFilter(),
+												},
+												UserId: userID,
+											},
+										})
 									}
 								}
 							}

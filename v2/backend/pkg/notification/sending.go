@@ -23,6 +23,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET = "n_mails"
+const NOTIFICAION_PUSH_RATE_LIMIT_BUCKET = "n_push"
+const NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET = "n_webhooks"
+
+const NOTIFICATION_TEST_EMAIL_RATE_LIMIT_BUCKET = "n_test_mails"
+
 func InitNotificationSender() {
 	log.Infof("starting notifications-sender")
 	go notificationSender()
@@ -160,7 +166,7 @@ func sendEmailNotifications() error {
 		if err != nil {
 			return err
 		}
-		err = mail.SendMailRateLimited(n.Content, int64(userInfo.PremiumPerks.EmailNotificationsPerDay), "n_emails")
+		err = mail.SendMailRateLimited(n.Content, int64(userInfo.PremiumPerks.EmailNotificationsPerDay), NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET)
 		if err != nil {
 			if !strings.Contains(err.Error(), "rate limit has been exceeded") {
 				metrics.Errors.WithLabelValues("notifications_send_email").Inc()
@@ -245,7 +251,7 @@ func sendWebhookNotifications() error {
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
 		n := n
-		_, err := db.CountSentMessage("n_webhooks", n.Content.UserId)
+		_, err := db.CountSentMessage(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
 		if err != nil {
 			log.Error(err, "error counting sent webhook", 0)
 		}
@@ -492,7 +498,7 @@ func SendTestEmail(ctx context.Context, userId types.UserId, dbConn *sqlx.DB) er
 		Attachments: []types.EmailAttachment{},
 		CreatedTs:   time.Now(),
 	}
-	err = mail.SendMailRateLimited(content, 10, "n_test_emails")
+	err = mail.SendMailRateLimited(content, 10, NOTIFICATION_TEST_EMAIL_RATE_LIMIT_BUCKET)
 	if err != nil {
 		return fmt.Errorf("error sending test email, err: %w", err)
 	}
