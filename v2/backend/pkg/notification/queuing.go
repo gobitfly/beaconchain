@@ -118,10 +118,12 @@ func queueNotifications(epoch uint64, notificationsByUserID types.NotificationsP
 }
 
 func ExportNotificationHistory(epoch uint64, notificationsByUserID types.NotificationsPerUserId) error {
+	epochTs := utils.EpochToTime(epoch)
+
 	dashboardNotificationHistoryInsertStmt, err := db.WriterDb.Preparex(`
 		INSERT INTO users_val_dashboards_notifications_history 
-		(user_id, dashboard_id, group_id, epoch, event_type, event_count, details)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		(user_id, dashboard_id, group_id, epoch, event_type, event_count, details, ts)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`)
 	if err != nil {
 		return fmt.Errorf("error preparing insert statement for dashboard notifications history: %w", err)
@@ -130,8 +132,8 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 
 	machineNotificationHistoryInsertStmt, err := db.FrontendWriterDB.Preparex(`
 		INSERT INTO machine_notifications_history 
-		(user_id, epoch, machine_id, machine_name, event_type, event_threshold)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		(user_id, epoch, machine_id, machine_name, event_type, event_threshold, ts)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`)
 	if err != nil {
 		return fmt.Errorf("error preparing insert statement for machine notifications history: %w", err)
@@ -140,8 +142,8 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 
 	clientNotificationHistoryInsertStmt, err := db.FrontendWriterDB.Preparex(`
 		INSERT INTO client_notifications_history 
-		(user_id, epoch, client, client_version, client_url)
-		VALUES ($1, $2, $3, $4, $5)
+		(user_id, epoch, client, client_version, client_url, ts)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`)
 	if err != nil {
 		return fmt.Errorf("error preparing insert statement for client notifications history: %w", err)
@@ -150,11 +152,11 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 
 	networktNotificationHistoryInsertStmt, err := db.FrontendWriterDB.Preparex(`
 		INSERT INTO network_notifications_history 
-		(user_id, epoch, network, event_type, event_threshold)
-		VALUES ($1, $2, $3, $4, $5)
+		(user_id, epoch, network, event_type, event_threshold, ts)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`)
 	if err != nil {
-		return fmt.Errorf("error preparing insert statement for client notifications history: %w", err)
+		return fmt.Errorf("error preparing insert statement for network notifications history: %w", err)
 	}
 	defer utils.ClosePreparedStatement(networktNotificationHistoryInsertStmt)
 
@@ -177,6 +179,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 							eventName,
 							len(notifications),
 							details,
+							epochTs,
 						)
 						if err != nil {
 							log.Error(err, "error inserting into dashboard notifications history", 0)
@@ -195,6 +198,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 								nTyped.MachineName,
 								eventName,
 								nTyped.EventThreshold,
+								epochTs,
 							)
 							if err != nil {
 								log.Error(err, "error inserting into machine notifications history", 0)
@@ -213,6 +217,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 								nTyped.EthClient,
 								"",
 								"",
+								epochTs,
 							)
 							if err != nil {
 								log.Error(err, "error inserting into client notifications history", 0)
@@ -226,6 +231,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 								utils.Config.Chain.Name,
 								eventName,
 								0,
+								epochTs,
 							)
 							if err != nil {
 								log.Error(err, "error inserting into network notifications history", 0)
