@@ -3,8 +3,13 @@ const { t: $t } = useTranslation()
 
 const notificationsManagementStore = useNotificationsManagementStore()
 
+const { chainIdByDefault } = useRuntimeConfig().public
+
 const networks = computed(() => notificationsManagementStore.settings.networks ?? [])
-const currentNetworkId = computed(() => notificationsManagementStore.settings.networks[0]?.chain_id ?? 0)
+const currentNetworkId = computed(
+  () => notificationsManagementStore.settings.networks
+    .find(network => network.chain_id === Number(chainIdByDefault)) ?? 1,
+)
 
 const currentNetwork = computed(
   () => (networks.value.find(network => network.chain_id === currentNetworkId.value)),
