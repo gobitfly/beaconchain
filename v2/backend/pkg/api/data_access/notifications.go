@@ -735,8 +735,9 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	}
 
 	// Sorting and limiting if cursor is present
+	// Rows can be uniquely identified by (ts, machine_id, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
 		{Column: enums.NotificationsMachinesColumns.MachineId.ToExpr(), Desc: false, Offset: currentCursor.MachineId},
 		{Column: enums.NotificationsMachinesColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
@@ -855,9 +856,9 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	}
 
 	// Sorting and limiting if cursor is present
-	// Rows can be uniquely identified by (epoch, client)
+	// Rows can be uniquely identified by (ts, client)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
 		{Column: enums.NotificationsClientsColumns.ClientName.ToExpr(), Desc: false, Offset: currentCursor.Client},
 	}
 	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
@@ -952,9 +953,9 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		Limit(uint(limit + 1))
 
 	// Sorting and limiting if cursor is present
-	// Rows can be uniquely identified by (epoch, network, event_type)
+	// Rows can be uniquely identified by (ts, network, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
 		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: currentCursor.Network},
 		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
