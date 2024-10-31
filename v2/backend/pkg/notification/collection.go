@@ -519,6 +519,13 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		return fmt.Errorf("error getting proposal assignments: %w", err)
 	}
 	for _, assignment := range proposalAssignments.Data {
+		if _, ok := efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)]; !ok {
+			efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)] = &dbResult{
+				ValidatorIndex:         assignment.ValidatorIndex,
+				AttestationReward:      decimal.Decimal{},
+				AttestationIdealReward: decimal.Decimal{},
+			}
+		}
 		efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)].BlocksScheduled++
 	}
 
@@ -538,6 +545,13 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		efficiencyMap[types.ValidatorIndex(s.Data.Message.ProposerIndex)].BlocksProposed++
 
 		for i, validatorIndex := range syncAssignments.Data.Validators {
+			if _, ok := efficiencyMap[types.ValidatorIndex(validatorIndex)]; !ok {
+				efficiencyMap[types.ValidatorIndex(validatorIndex)] = &dbResult{
+					ValidatorIndex:         uint64(validatorIndex),
+					AttestationReward:      decimal.Decimal{},
+					AttestationIdealReward: decimal.Decimal{},
+				}
+			}
 			efficiencyMap[types.ValidatorIndex(validatorIndex)].SyncScheduled++
 
 			if utils.BitAtVector(s.Data.Message.Body.SyncAggregate.SyncCommitteeBits, i) {

@@ -569,7 +569,7 @@ func collectNotifications(startEpoch uint64) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer utils.Rollback(tx)
 
 	err = notification.QueueWebhookNotifications(notifications, tx)
 	if err != nil {
