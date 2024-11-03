@@ -80,6 +80,8 @@ func (*DataAccessService) registerNotificationInterfaceTypes() {
 		gob.Register(&n.TaxReportNotification{})
 		gob.Register(&n.EthClientNotification{})
 		gob.Register(&n.SyncCommitteeSoonNotification{})
+		gob.Register(&n.GasAboveThresholdNotification{})
+		gob.Register(&n.GasBelowThresholdNotification{})
 	})
 }
 
