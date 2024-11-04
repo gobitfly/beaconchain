@@ -378,7 +378,7 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 			case types.RocketpoolCollateralMaxReachedEventName, types.RocketpoolCollateralMinReachedEventName:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural))
-			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+			case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName, types.NetworkGasAboveThresholdEventName, types.NetworkGasBelowThresholdEventName:
 				//nolint:gosec // this is a static string
 				bodySummary += template.HTML(fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural))
 			case types.EthClientUpdateEventName:
@@ -515,7 +515,7 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					switch event {
 					case types.RocketpoolCollateralMaxReachedEventName, types.RocketpoolCollateralMinReachedEventName:
 						bodySummary += fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural)
-					case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+					case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName, types.NetworkGasAboveThresholdEventName, types.NetworkGasBelowThresholdEventName:
 						bodySummary += fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural)
 					case types.EthClientUpdateEventName:
 						bodySummary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)
@@ -889,7 +889,7 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 						switch event {
 						case types.RocketpoolCollateralMaxReachedEventName, types.RocketpoolCollateralMinReachedEventName:
 							summary += fmt.Sprintf("%s: %d node%s", types.EventLabel[event], count, plural)
-						case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName:
+						case types.TaxReportEventName, types.NetworkLivenessIncreasedEventName, types.NetworkGasAboveThresholdEventName, types.NetworkGasBelowThresholdEventName:
 							summary += fmt.Sprintf("%s: %d event%s", types.EventLabel[event], count, plural)
 						case types.EthClientUpdateEventName:
 							summary += fmt.Sprintf("%s: %d client%s", types.EventLabel[event], count, plural)

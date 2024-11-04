@@ -555,7 +555,7 @@ func Run() {
 func collectNotifications(startEpoch uint64) error {
 	epoch := startEpoch
 
-	notifications, err := notification.GetHeadNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
+	notifications, err := notification.GetNotificationsForEpoch(utils.Config.Notifications.PubkeyCachePath, epoch)
 	if err != nil {
 		return err
 	}
@@ -563,21 +563,6 @@ func collectNotifications(startEpoch uint64) error {
 	log.Infof("found %v notifications for epoch %v with %v notifications for user 0", len(notifications), epoch, len(notifications[0]))
 	if len(notifications[0]) > 0 {
 		spew.Dump(notifications[0])
-	}
-
-	tx, err := db.WriterDb.Beginx()
-	if err != nil {
-		return err
-	}
-	defer utils.Rollback(tx)
-
-	err = notification.QueueWebhookNotifications(notifications, tx)
-	if err != nil {
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		return err
 	}
 
 	// emails, err := notification.RenderEmailsForUserEvents(0, notifications)
