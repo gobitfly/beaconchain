@@ -223,7 +223,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 								log.Error(err, "error inserting into client notifications history", 0)
 							}
 						}
-					} else if eventName == types.NetworkLivenessIncreasedEventName { // handle network liveness increased events
+					} else if eventName == types.NetworkLivenessIncreasedEventName || eventName == types.NetworkGasAboveThresholdEventName || eventName == types.NetworkGasBelowThresholdEventName { // handle network liveness increased events
 						for range notifications {
 							_, err := networktNotificationHistoryInsertStmt.Exec(
 								userID,
