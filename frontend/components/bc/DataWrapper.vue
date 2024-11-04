@@ -8,7 +8,10 @@ const {
   loadAvailableNetworks, setCurrentNetwork,
 } = useNetworkStore()
 
-await useAsyncData('latest_state', () => refreshLatestState(), { watch: [ tick ] })
+await useAsyncData('latest_state', () => refreshLatestState(), {
+  immediate: true,
+  watch: [ tick ],
+})
 await useAsyncData('get_user', () => getUser())
 await useAsyncData('get-supported-networks', () => loadAvailableNetworks())
 
