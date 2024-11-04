@@ -55,17 +55,24 @@ watchDebounced([
 })
 
 const hasAllEvents = ref(Object.values(checkboxes.value).every(value => value === true))
-
 watch(hasAllEvents, () => {
   if (hasAllEvents.value) {
-    (Object.keys(checkboxes.value) as Array<keyof typeof checkboxes.value>).forEach((key) => {
-      checkboxes.value[key] = true
-    })
+    (Object.keys(checkboxes.value) as Array<keyof typeof checkboxes.value>)
+      .forEach((key) => {
+        if (
+          key === 'is_group_efficiency_below_subscribed'
+          && !hasPremiumPerkGroupEfficiency.value
+        ) {
+          return
+        }
+        checkboxes.value[key] = true
+      })
     return
   }
-  (Object.keys(checkboxes.value) as Array<keyof typeof checkboxes.value>).forEach((key) => {
-    checkboxes.value[key] = false
-  })
+  (Object.keys(checkboxes.value) as Array<keyof typeof checkboxes.value>)
+    .forEach((key) => {
+      checkboxes.value[key] = false
+    })
 })
 </script>
 
