@@ -138,6 +138,8 @@ var EventSortOrder = []EventName{
 	RocketpoolCollateralMinReachedEventName,
 	RocketpoolCollateralMaxReachedEventName,
 	ValidatorMissedAttestationEventName,
+	NetworkGasAboveThresholdEventName,
+	NetworkGasBelowThresholdEventName,
 }
 
 var MachineEvents = []EventName{
@@ -193,6 +195,8 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 	RocketpoolCollateralMinReachedEventName:  "You reached the Rocket Pool min RPL collateral",
 	RocketpoolCollateralMaxReachedEventName:  "You reached the Rocket Pool max RPL collateral",
 	SyncCommitteeSoonEventName:               "Your validator(s) will soon be part of the sync committee",
+	NetworkGasAboveThresholdEventName:        "Gas price is above threshold",
+	NetworkGasBelowThresholdEventName:        "Gas price is below threshold",
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
@@ -218,6 +222,8 @@ var EventLabel map[EventName]string = map[EventName]string{
 	RocketpoolCollateralMinReachedEventName:  "Rocket pool node min RPL collateral reached",
 	RocketpoolCollateralMaxReachedEventName:  "Rocket pool node max RPL collateral reached",
 	SyncCommitteeSoonEventName:               "Upcoming sync committee",
+	NetworkGasAboveThresholdEventName:        "Gas price is above threshold",
+	NetworkGasBelowThresholdEventName:        "Gas price is below threshold",
 }
 
 func IsUserIndexed(event EventName) bool {
@@ -252,6 +258,8 @@ var EventNames = []EventName{
 	RocketpoolCollateralMinReachedEventName,
 	RocketpoolCollateralMaxReachedEventName,
 	SyncCommitteeSoonEventName,
+	NetworkGasAboveThresholdEventName,
+	NetworkGasBelowThresholdEventName,
 }
 
 type EventNameDesc struct {
