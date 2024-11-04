@@ -170,7 +170,7 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 							_, err := networktNotificationHistoryInsertStmt.Exec(
 								userID,
 								epoch,
-								utils.Config.Chain.Name,
+								utils.Config.Chain.ClConfig.DepositChainID,
 								eventName,
 								0,
 								epochTs,
