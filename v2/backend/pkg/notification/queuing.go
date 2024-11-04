@@ -165,7 +165,21 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 			for group, notifications := range notificationsPerGroup {
 				for eventName, notifications := range notifications {
 					// handle all dashboard related notifications
-					if eventName != types.NetworkLivenessIncreasedEventName && !types.IsUserIndexed(eventName) && !types.IsMachineNotification(eventName) {
+					if eventName == types.NetworkLivenessIncreasedEventName || eventName == types.NetworkGasAboveThresholdEventName || eventName == types.NetworkGasBelowThresholdEventName { // handle network liveness increased events
+						for range notifications {
+							_, err := networktNotificationHistoryInsertStmt.Exec(
+								userID,
+								epoch,
+								utils.Config.Chain.ClConfig.DepositChainID,
+								eventName,
+								0,
+								epochTs,
+							)
+							if err != nil {
+								log.Error(err, "error inserting into network notifications history", 0)
+							}
+						}
+					} else if eventName != types.NetworkLivenessIncreasedEventName && !types.IsUserIndexed(eventName) && !types.IsMachineNotification(eventName) {
 						details, err := GetNotificationDetails(notifications)
 						if err != nil {
 							log.Error(err, "error getting notification details", 0)
@@ -221,20 +235,6 @@ func ExportNotificationHistory(epoch uint64, notificationsByUserID types.Notific
 							)
 							if err != nil {
 								log.Error(err, "error inserting into client notifications history", 0)
-							}
-						}
-					} else if eventName == types.NetworkLivenessIncreasedEventName || eventName == types.NetworkGasAboveThresholdEventName || eventName == types.NetworkGasBelowThresholdEventName { // handle network liveness increased events
-						for range notifications {
-							_, err := networktNotificationHistoryInsertStmt.Exec(
-								userID,
-								epoch,
-								utils.Config.Chain.Name,
-								eventName,
-								0,
-								epochTs,
-							)
-							if err != nil {
-								log.Error(err, "error inserting into network notifications history", 0)
 							}
 						}
 					}
