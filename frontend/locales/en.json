@@ -362,7 +362,7 @@
           "attestations_target": "Target",
           "efficiency": "Efficiency",
           "luck": "Luck",
-          "missed_rewards": "Missed rewards",
+          "missed_rewards": " ",
           "proposals": "Proposals",
           "reward": "Reward",
           "slashings": "Slashings",
