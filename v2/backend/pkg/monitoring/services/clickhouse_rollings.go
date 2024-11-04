@@ -70,8 +70,8 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			var tsEpochTable time.Time
 			err := db.ClickHouseReader.GetContext(ctx, &tsEpochTable, `
 					SELECT
-						max(epoch_timestamp)
-					FROM validator_dashboard_data_epoch`,
+						max(t)
+					FROM view_validator_dashboard_data_epoch_max_ts`,
 			)
 			if err != nil {
 				r(constants.Failure, map[string]string{"error": err.Error()})

@@ -49,7 +49,7 @@ func (s *ServiceClickhouseEpoch) runChecks() {
 	ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 	defer cancel()
 	var t time.Time
-	err := db.ClickHouseReader.GetContext(ctx, &t, "SELECT MAX(epoch_timestamp) FROM validator_dashboard_data_epoch")
+	err := db.ClickHouseReader.GetContext(ctx, &t, "SELECT MAX(t) FROM view_validator_dashboard_data_epoch_max_ts")
 	if err != nil {
 		r(constants.Failure, map[string]string{"error": err.Error()})
 		return
