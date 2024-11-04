@@ -226,17 +226,29 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		return nil, nil, err
 	}
 
+	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	if protocolModes.RocketPool {
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	// Create the result
 	cursorData := make([]t.WithdrawalsCursor, 0)
 	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
+		amount := utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount)))
+		if rpValidator, ok := rpValidators[withdrawal.ValidatorIndex]; ok && protocolModes.RocketPool {
+			amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		}
 		result = append(result, t.VDBWithdrawalsTableRow{
 			Epoch:     withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
 			Slot:      withdrawal.BlockSlot,
 			Index:     withdrawal.ValidatorIndex,
 			Recipient: *addressMapping[address],
 			GroupId:   validatorGroupMap[withdrawal.ValidatorIndex],
-			Amount:    utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
+			Amount:    amount,
 		})
 		result[i].Recipient.IsContract = contractStatuses[i] == types.CONTRACT_CREATION || contractStatuses[i] == types.CONTRACT_PRESENT
 		cursorData = append(cursorData, t.WithdrawalsCursor{
@@ -275,6 +287,10 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			nextData.GroupId = validatorGroupMap[nextData.Index]
 			// TODO integrate label/ens data for "next" row
 			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
+
+			if rpValidator, ok := rpValidators[nextData.Index]; ok && protocolModes.RocketPool {
+				nextData.Amount = nextData.Amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		} else {
 			// If there is no next data, add a missing estimate row
 			nextData = &t.VDBWithdrawalsTableRow{
@@ -500,34 +516,50 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		return result, nil
 	}
 
-	var totalAmount int64
+	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	if protocolModes.RocketPool {
+		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var validators []t.VDBValidator
 	lastEpoch := queryResult[0].Epoch
 	lastSlot := (lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
 
 	for _, res := range queryResult {
-		// Calculate the total amount of withdrawals
-		totalAmount += res.Amount
+		amount := utils.GWeiToWei(big.NewInt(res.Amount))
+		if rpValidator, ok := rpValidators[res.ValidatorIndex]; ok && protocolModes.RocketPool {
+			amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		}
+		result.TotalAmount = result.TotalAmount.Add(amount)
 
 		// Calculate the current validators
 		validators = append(validators, res.ValidatorIndex)
 	}
 
-	var latestWithdrawalsAmount int64
-	err = d.readerDb.GetContext(ctx, &latestWithdrawalsAmount, `
+	err = d.readerDb.SelectContext(ctx, &queryResult, `
 		SELECT
-			COALESCE(SUM(w.amount), 0)
+			w.validatorindex AS validator_index,
+			SUM(w.amount) AS acc_withdrawals_amount
 		FROM
 		    blocks_withdrawals w
 		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
 		WHERE w.block_slot > $1 AND w.validatorindex = ANY ($2)
+		GROUP BY w.validatorindex
 		`, lastSlot, validators)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("error getting latest withdrawals for validators: %+v: %w", dashboardId, err)
 	}
 
-	totalAmount += latestWithdrawalsAmount
-	result.TotalAmount = utils.GWeiToWei(big.NewInt(totalAmount))
+	for _, res := range queryResult {
+		amount := utils.GWeiToWei(big.NewInt(res.Amount))
+		if rpValidator, ok := rpValidators[res.ValidatorIndex]; ok && protocolModes.RocketPool {
+			amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		}
+		result.TotalAmount = result.TotalAmount.Add(amount)
+	}
 
 	return result, nil
 }
