@@ -82,21 +82,26 @@ const data = computed(() => {
     )
   ) {
     let validators: number[] = []
+    let validatorCount: number = 0
     let context: DashboardValidatorContext = 'attestation'
     if (props.property === 'validators_proposal') {
-      validators = col.proposal_validators
+      validators = col.proposal_validators ?? []
+      validatorCount = col.proposal_validator_count ?? 0
       context = 'proposal'
     }
     else if (props.property === 'validators_sync') {
       validators = col.sync.validators ?? []
+      validatorCount = col.sync.validator_count ?? 0
       context = 'sync'
     }
     else if (props.property === 'validators_slashings') {
       validators = col.slashings?.validators ?? []
+      validatorCount = col.slashings.validator_count ?? 0
       context = 'slashings'
     }
     return {
       context,
+      validatorCount,
       validators,
     }
   }
@@ -252,6 +257,7 @@ const openValidatorModal = () => {
   <DashboardTableValidators
     v-else-if="data?.validators"
     :validators="data.validators"
+    :validator-count="data?.validatorCount"
     :time-frame="props.timeFrame"
     :context="data.context"
     :dashboard-key
