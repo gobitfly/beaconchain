@@ -84,6 +84,7 @@ const { overview } = useNotificationsDashboardOverviewStore()
               </template>
               <template #body="slotProps">
                 <BcFormatTimePassed
+                  type="go-timestamp"
                   :value="slotProps.data.timestamp"
                 />
               </template>

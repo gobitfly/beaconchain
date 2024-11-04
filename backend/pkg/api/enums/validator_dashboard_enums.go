@@ -1,5 +1,10 @@
 package enums
 
+import (
+	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
+)
+
 // ----------------
 // Validator Dashboard Summary Table
 
@@ -153,6 +158,29 @@ func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 		return VDBBlockProposerReward
 	default:
 		return VDBBlocksColumn(-1)
+	}
+}
+
+type OrderableSortable interface {
+	exp.Orderable
+	exp.Comparable
+	exp.Isable
+}
+
+func (c VDBBlocksColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBBlockProposer:
+		return goqu.C("validator_index")
+	case VDBBlockSlot:
+		return goqu.C("slot")
+	case VDBBlockBlock:
+		return goqu.C("exec_block_number")
+	case VDBBlockStatus:
+		return goqu.C("status")
+	case VDBBlockProposerReward:
+		return goqu.L("el_reward + cl_reward")
+	default:
+		return nil
 	}
 }
 

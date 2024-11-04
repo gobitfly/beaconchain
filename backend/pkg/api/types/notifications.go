@@ -15,9 +15,10 @@ type NotificationOverviewData struct {
 	VDBMostNotifiedGroups [3]string `json:"vdb_most_notified_groups"`
 	ADBMostNotifiedGroups [3]string `json:"adb_most_notified_groups"`
 
-	Last24hEmailsCount  uint64 `json:"last_24h_emails_count"` // daily limit should be available in user info
-	Last24hPushCount    uint64 `json:"last_24h_push_count"`
-	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
+	NextEmailCountResetTimestamp int64  `json:"next_email_count_reset_timestamp"`
+	Last24hEmailCount            uint64 `json:"last_24h_email_count"` // daily limit should be available in user info
+	Last24hPushCount             uint64 `json:"last_24h_push_count"`
+	Last24hWebhookCount          uint64 `json:"last_24h_webhook_count"`
 
 	// counts are shown in their respective tables
 	VDBSubscriptionsCount     uint64 `db:"vdb_subscriptions_count" json:"vdb_subscriptions_count"`
@@ -117,17 +118,6 @@ type NotificationClientsTableRow struct {
 }
 
 type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationClientsTableRow]
-
-// ------------------------------------------------------------
-// Rocket Pool Table
-type NotificationRocketPoolTableRow struct {
-	Timestamp int64   `json:"timestamp"`
-	EventType string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	Threshold float64 `json:"threshold,omitempty"` // only for some notification types, e.g. max collateral
-	Node      Address `json:"node"`
-}
-
-type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
 
 // ------------------------------------------------------------
 // Networks Table

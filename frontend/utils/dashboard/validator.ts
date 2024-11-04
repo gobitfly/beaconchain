@@ -26,13 +26,6 @@ export function totalDutyRewards(duties?: ValidatorHistoryDuties) {
   }
 }
 
-export function sortValidatorIds(list?: number[]): number[] {
-  if (!list) {
-    return []
-  }
-  return [ ...list ].sort((a, b) => a - b)
-}
-
 export function sortSummaryValidators(
   list?: VDBSummaryValidator[],
 ): VDBSummaryValidator[] {

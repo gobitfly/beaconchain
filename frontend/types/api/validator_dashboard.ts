@@ -54,7 +54,8 @@ export interface VDBSummaryTableRow {
 export type GetValidatorDashboardSummaryResponse = ApiPagingResponse<VDBSummaryTableRow>;
 export interface VDBGroupSummaryColumnItem {
   status_count: StatusCount;
-  validators?: number /* uint64 */[];
+  validators?: number /* uint64 */[]; // fill with up to 3 validator indexes
+  validator_count: number /* uint64 */; // number of distinct validators
 }
 export interface VDBGroupSummarySyncCount {
   current_validators: number /* uint64 */;
@@ -75,7 +76,8 @@ export interface VDBGroupSummaryData {
   sync: VDBGroupSummaryColumnItem;
   sync_count: VDBGroupSummarySyncCount;
   slashings: VDBGroupSummaryColumnItem; // Failed slashings are count of validators in the group that were slashed
-  proposal_validators: number /* uint64 */[];
+  proposal_validators: number /* uint64 */[]; // fill with up to 3 validator indexes
+  proposal_validator_count: number /* uint64 */; // number of distinct validators
   missed_rewards: VDBGroupSummaryMissedRewards;
   apr: ClElValue<number /* float64 */>;
   luck: Luck;

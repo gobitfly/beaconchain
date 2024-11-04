@@ -74,9 +74,9 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 		if cursor.IsReverse() {
 			column.Desc = !column.Desc
 		}
-		colOrder := goqu.C(column.Column).Asc()
+		colOrder := column.Column.Asc().NullsFirst()
 		if column.Desc {
-			colOrder = goqu.C(column.Column).Desc()
+			colOrder = column.Column.Desc().NullsLast()
 		}
 		queryOrder = append(queryOrder, colOrder)
 	}
@@ -87,15 +87,21 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 		// reverse order to nest conditions
 		for i := len(queryOrderColumns) - 1; i >= 0; i-- {
 			column := queryOrderColumns[i]
-			colWhere := goqu.C(column.Column).Gt(column.Offset)
-			if column.Desc {
-				colWhere = goqu.C(column.Column).Lt(column.Offset)
+			var colWhere exp.Expression
+
+			// current convention is opposite of the psql default (ASC: nulls first, DESC: nulls last)
+			colWhere = goqu.Or(column.Column.Lt(column.Offset), column.Column.IsNull())
+			if !column.Desc {
+				colWhere = column.Column.Gt(column.Offset)
+				if column.Offset == nil {
+					colWhere = goqu.Or(colWhere, column.Column.IsNull())
+				}
 			}
 
 			if queryWhere == nil {
 				queryWhere = colWhere
 			} else {
-				queryWhere = goqu.And(goqu.C(column.Column).Eq(column.Offset), queryWhere)
+				queryWhere = goqu.And(column.Column.Eq(column.Offset), queryWhere)
 				queryWhere = goqu.Or(colWhere, queryWhere)
 			}
 		}

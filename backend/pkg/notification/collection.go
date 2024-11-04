@@ -13,6 +13,7 @@ import (
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/ethclients"
@@ -61,6 +62,8 @@ func notificationCollector() {
 		gob.Register(&TaxReportNotification{})
 		gob.Register(&EthClientNotification{})
 		gob.Register(&SyncCommitteeSoonNotification{})
+		gob.Register(&GasAboveThresholdNotification{})
+		gob.Register(&GasBelowThresholdNotification{})
 	})
 
 	mc, err := modules.GetModuleContext()
@@ -161,7 +164,7 @@ func notificationCollector() {
 			log.Infof("collecting notifications for epoch %v", epoch)
 
 			// Network DB Notifications (network related)
-			notifications, err := collectNotifications(epoch, mc)
+			notifications, err := collectNotifications(mc, epoch)
 
 			if err != nil {
 				log.Error(err, "error collection notifications", 0)
@@ -280,7 +283,7 @@ func collectUpcomingBlockProposalNotifications(notificationsByUserID types.Notif
 	return nil
 }
 
-func collectNotifications(epoch uint64, mc modules.ModuleContext) (types.NotificationsPerUserId, error) {
+func collectNotifications(mc modules.ModuleContext, epoch uint64) (types.NotificationsPerUserId, error) {
 	notificationsByUserID := types.NotificationsPerUserId{}
 	start := time.Now()
 	var err error
@@ -311,6 +314,13 @@ func collectNotifications(epoch uint64, mc modules.ModuleContext) (types.Notific
 	// The following functions will collect the notifications and add them to the
 	// notificationsByUserID map. The notifications will be queued and sent later
 	// by the notification sender process
+	err = collectGasPriceNotifications(notificationsByUserID, epoch)
+	if err != nil {
+		metrics.Errors.WithLabelValues("network_gas_threshold").Inc()
+		return nil, fmt.Errorf("error collecting network_gas_threshold notifications: %v", err)
+	}
+	log.Infof("collecting network gas threshold notifications took: %v", time.Since(start))
+
 	err = collectGroupEfficiencyNotifications(notificationsByUserID, epoch, mc)
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_group_efficiency").Inc()
@@ -470,6 +480,94 @@ func collectUserDbNotifications(epoch uint64) (types.NotificationsPerUserId, err
 	return notificationsByUserID, nil
 }
 
+func collectGasPriceNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64) error {
+	// retrieve gas price history
+	ts := time.Now()
+	duration := time.Minute * 10
+	gasPrices, err := db.BigtableClient.GetGasNowHistory(ts, ts.Add(duration*-1))
+	if err != nil {
+		return fmt.Errorf("error getting gas price history: %w", err)
+	}
+
+	if len(gasPrices) == 0 {
+		log.Warnf("no gas price data found for epoch %v", epoch)
+		return nil
+	}
+
+	averageGasPrice := decimal.NewFromInt(0)
+	for _, gasPrice := range gasPrices {
+		log.Infof("gas price for %v: %v", gasPrice.Ts, gasPrice.Rapid)
+		averageGasPrice = averageGasPrice.Add(decimal.NewFromBigInt(gasPrice.Rapid, 0))
+	}
+	averageGasPrice = averageGasPrice.Div(decimal.NewFromInt(int64(len(gasPrices)))).Div(decimal.NewFromInt(params.GWei))
+
+	log.Infof("average gas price is %f GWei", averageGasPrice.InexactFloat64())
+
+	// retrieve subscriptions
+	subMapAboveThreshold, err := GetSubsForEventFilter(types.NetworkGasAboveThresholdEventName, "", nil, nil)
+	if err != nil {
+		return fmt.Errorf("error getting subscriptions for gas price above threshold: %w", err)
+	}
+
+	for _, subs := range subMapAboveThreshold {
+		for _, sub := range subs {
+			if averageGasPrice.GreaterThan(decimal.NewFromFloat(sub.EventThreshold)) {
+				n := &GasAboveThresholdNotification{
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID:     *sub.ID,
+						UserID:             *sub.UserID,
+						Epoch:              sub.CreatedEpoch,
+						EventFilter:        sub.EventFilter,
+						EventName:          sub.EventName,
+						DashboardId:        sub.DashboardId,
+						DashboardName:      sub.DashboardName,
+						DashboardGroupId:   sub.DashboardGroupId,
+						DashboardGroupName: sub.DashboardGroupName,
+					},
+					AverageGasPrice:   averageGasPrice.InexactFloat64(),
+					ThresholdGasPrice: sub.EventThreshold,
+				}
+
+				notificationsByUserID.AddNotification(n)
+				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
+
+				log.Infof("created %s notification for user %d", n.GetInfo(types.NotifciationFormatText), n.GetUserId())
+			}
+		}
+	}
+
+	subMapBelowThreshold, err := GetSubsForEventFilter(types.NetworkGasBelowThresholdEventName, "", nil, nil)
+	if err != nil {
+		return fmt.Errorf("error getting subscriptions for gas price below threshold: %w", err)
+	}
+	for _, subs := range subMapBelowThreshold {
+		for _, sub := range subs {
+			if averageGasPrice.LessThan(decimal.NewFromFloat(sub.EventThreshold)) {
+				n := &GasBelowThresholdNotification{
+					NotificationBaseImpl: types.NotificationBaseImpl{
+						SubscriptionID:     *sub.ID,
+						UserID:             *sub.UserID,
+						Epoch:              sub.CreatedEpoch,
+						EventFilter:        sub.EventFilter,
+						EventName:          sub.EventName,
+						DashboardId:        sub.DashboardId,
+						DashboardName:      sub.DashboardName,
+						DashboardGroupId:   sub.DashboardGroupId,
+						DashboardGroupName: sub.DashboardGroupName,
+					},
+					AverageGasPrice:   averageGasPrice.InexactFloat64(),
+					ThresholdGasPrice: sub.EventThreshold,
+				}
+
+				notificationsByUserID.AddNotification(n)
+				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
+				log.Infof("created %s notification for user %d", n.GetInfo(types.NotifciationFormatText), n.GetUserId())
+			}
+		}
+	}
+	return nil
+}
+
 func collectGroupEfficiencyNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, mc modules.ModuleContext) error {
 	type dbResult struct {
 		ValidatorIndex         uint64          `db:"validator_index"`
@@ -519,6 +617,13 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		return fmt.Errorf("error getting proposal assignments: %w", err)
 	}
 	for _, assignment := range proposalAssignments.Data {
+		if _, ok := efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)]; !ok {
+			efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)] = &dbResult{
+				ValidatorIndex:         assignment.ValidatorIndex,
+				AttestationReward:      decimal.Decimal{},
+				AttestationIdealReward: decimal.Decimal{},
+			}
+		}
 		efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)].BlocksScheduled++
 	}
 
@@ -538,6 +643,13 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		efficiencyMap[types.ValidatorIndex(s.Data.Message.ProposerIndex)].BlocksProposed++
 
 		for i, validatorIndex := range syncAssignments.Data.Validators {
+			if _, ok := efficiencyMap[types.ValidatorIndex(validatorIndex)]; !ok {
+				efficiencyMap[types.ValidatorIndex(validatorIndex)] = &dbResult{
+					ValidatorIndex:         uint64(validatorIndex),
+					AttestationReward:      decimal.Decimal{},
+					AttestationIdealReward: decimal.Decimal{},
+				}
+			}
 			efficiencyMap[types.ValidatorIndex(validatorIndex)].SyncScheduled++
 
 			if utils.BitAtVector(s.Data.Message.Body.SyncAggregate.SyncCommitteeBits, i) {
@@ -695,11 +807,11 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 					syncEfficiency.Valid = true
 				}
 
-				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency) / 100
 
-				log.Infof("efficiency: %v, threshold: %v", efficiency, groupDetails.Subscription.EventThreshold*100)
+				log.Infof("efficiency: %v, threshold: %v", efficiency*100, groupDetails.Subscription.EventThreshold*100)
 
-				if efficiency < groupDetails.Subscription.EventThreshold*100 {
+				if efficiency < groupDetails.Subscription.EventThreshold {
 					log.Infof("creating group efficiency notification for user %v, dashboard %v, group %v in epoch %v", userId, dashboardId, groupId, epoch)
 					n := &ValidatorGroupEfficiencyNotification{
 						NotificationBaseImpl: types.NotificationBaseImpl{
@@ -713,7 +825,7 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 							DashboardGroupId:   groupDetails.Subscription.DashboardGroupId,
 							DashboardGroupName: groupDetails.Subscription.DashboardGroupName,
 						},
-						Threshold:  groupDetails.Subscription.EventThreshold * 100,
+						Threshold:  groupDetails.Subscription.EventThreshold,
 						Efficiency: efficiency,
 					}
 					notificationsByUserID.AddNotification(n)

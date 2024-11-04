@@ -17,7 +17,8 @@ export interface NotificationOverviewData {
    */
   vdb_most_notified_groups: string[];
   adb_most_notified_groups: string[];
-  last_24h_emails_count: number /* uint64 */; // daily limit should be available in user info
+  next_email_count_reset_timestamp: number /* int64 */;
+  last_24h_email_count: number /* uint64 */; // daily limit should be available in user info
   last_24h_push_count: number /* uint64 */;
   last_24h_webhook_count: number /* uint64 */;
   /**
@@ -109,17 +110,6 @@ export interface NotificationClientsTableRow {
   timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
-/**
- * ------------------------------------------------------------
- * Rocket Pool Table
- */
-export interface NotificationRocketPoolTableRow {
-  timestamp: number /* int64 */;
-  event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
-  threshold?: number /* float64 */; // only for some notification types, e.g. max collateral
-  node: Address;
-}
-export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<NotificationRocketPoolTableRow>;
 /**
  * ------------------------------------------------------------
  * Networks Table
