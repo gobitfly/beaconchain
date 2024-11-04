@@ -4,6 +4,7 @@
     "BcDataWrapper",
     "BcInputUnit",
     "BcLink",
+    "BcPageWrapper",
     "BcTablePager",
     "BcToggle",
     "DashboardChartSummaryChartFilter",
