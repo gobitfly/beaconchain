@@ -797,19 +797,19 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 	uniqueProposalValidators := make(map[uint64]struct{})
 	for _, validator := range ret.ProposalValidators {
-		uniqueProposalValidators[uint64(validator)] = struct{}{}
+		uniqueProposalValidators[validator] = struct{}{}
 	}
 	ret.ProposalValidatorCount = uint64(len(uniqueProposalValidators))
 
 	uniqueSlashedValidators := make(map[uint64]struct{})
 	for _, validator := range ret.Slashings.Validators {
-		uniqueSlashedValidators[uint64(validator)] = struct{}{}
+		uniqueSlashedValidators[validator] = struct{}{}
 	}
 	ret.Slashings.ValidatorCount = uint64(len(uniqueSlashedValidators))
 
 	uniqueSyncValidators := make(map[uint64]struct{})
 	for _, validator := range ret.SyncCommittee.Validators {
-		uniqueSyncValidators[uint64(validator)] = struct{}{}
+		uniqueSyncValidators[validator] = struct{}{}
 	}
 	ret.SyncCommittee.ValidatorCount = uint64(len(uniqueSyncValidators))
 
