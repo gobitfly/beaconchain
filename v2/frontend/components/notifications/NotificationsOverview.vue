@@ -5,13 +5,16 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 
+const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
 const {
   overview,
   refreshOverview,
 } = useNotificationsDashboardOverviewStore()
 
-refreshOverview()
+if (isLoggedIn.value) {
+  refreshOverview()
+}
 
 const hasEmail = computed(() => overview.value?.is_email_notifications_enabled)
 const hasPushNotifications = computed(() => overview.value?.is_push_notifications_enabled)
