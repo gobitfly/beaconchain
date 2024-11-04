@@ -565,19 +565,19 @@ func collectNotifications(startEpoch uint64) error {
 		spew.Dump(notifications[0])
 	}
 
-	emails, err := notification.RenderEmailsForUserEvents(0, notifications)
-	if err != nil {
-		return err
-	}
+	// emails, err := notification.RenderEmailsForUserEvents(0, notifications)
+	// if err != nil {
+	// 	return err
+	// }
 
-	for _, email := range emails {
-		// if email.Address == "" {
-		log.Infof("to: %v", email.Address)
-		log.Infof("subject: %v", email.Subject)
-		log.Infof("body: %v", email.Email.Body)
-		log.Info("-----")
-		// }
-	}
+	// for _, email := range emails {
+	// 	// if email.Address == "" {
+	// 	log.Infof("to: %v", email.Address)
+	// 	log.Infof("subject: %v", email.Subject)
+	// 	log.Infof("body: %v", email.Email.Body)
+	// 	log.Info("-----")
+	// 	// }
+	// }
 
 	// pushMessages, err := notification.RenderPushMessagesForUserEvents(0, notifications)
 	// if err != nil {

@@ -27,6 +27,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 	n "github.com/gobitfly/beaconchain/pkg/notification"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -43,15 +44,15 @@ type NotificationsRepository interface {
 
 	GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error)
 	GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error)
-	GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error)
 	GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
 
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
 	GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error)
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
 	UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error
-	UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error
-	DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error
+	GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error)
+	UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error
+	DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error
 	UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error)
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
 	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
@@ -79,14 +80,14 @@ func (*DataAccessService) registerNotificationInterfaceTypes() {
 		gob.Register(&n.TaxReportNotification{})
 		gob.Register(&n.EthClientNotification{})
 		gob.Register(&n.SyncCommitteeSoonNotification{})
+		gob.Register(&n.GasAboveThresholdNotification{})
+		gob.Register(&n.GasBelowThresholdNotification{})
 	})
 }
 
 const (
 	ValidatorDashboardEventPrefix string = "vdb"
 	AccountDashboardEventPrefix   string = "adb"
-
-	DiscordWebhookFormat string = "discord"
 
 	GroupEfficiencyBelowThresholdDefault     float64 = 0.95
 	MaxCollateralThresholdDefault            float64 = 1.0
@@ -130,7 +131,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 	})
 
 	// most notified groups
-	latestSlot, err := d.GetLatestSlot()
+	latestSlot, err := d.GetLatestSlot(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -204,15 +205,15 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			}
 			return res.Uint64()
 		}
-		response.Last24hEmailsCount, err = getMessageCount("n_mails")
+		response.Last24hEmailCount, err = getMessageCount(notification.NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET)
 		if err != nil {
 			return err
 		}
-		response.Last24hPushCount, err = getMessageCount("n_push")
+		response.Last24hPushCount, err = getMessageCount(notification.NOTIFICAION_PUSH_RATE_LIMIT_BUCKET)
 		if err != nil {
 			return err
 		}
-		response.Last24hWebhookCount, err = getMessageCount("n_webhook")
+		response.Last24hWebhookCount, err = getMessageCount(notification.NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET)
 		return err
 	})
 
@@ -253,6 +254,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 		err = d.userReader.GetContext(ctx, &response, querySql, args...)
 		return err
 	})
+	response.NextEmailCountResetTimestamp = time.Now().Add(utils.Day).Truncate(utils.Day).Unix()
 
 	err = eg.Wait()
 	return &response, err
@@ -344,14 +346,14 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 
 	// sorting
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsDashboardsColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationsDashboardsColumns.DashboardName.ToString(), Desc: false, Offset: currentCursor.DashboardName},
-		{Column: enums.NotificationsDashboardsColumns.DashboardId.ToString(), Desc: false, Offset: currentCursor.DashboardId},
-		{Column: enums.NotificationsDashboardsColumns.GroupName.ToString(), Desc: false, Offset: currentCursor.GroupName},
-		{Column: enums.NotificationsDashboardsColumns.GroupId.ToString(), Desc: false, Offset: currentCursor.GroupId},
-		{Column: enums.NotificationsDashboardsColumns.ChainId.ToString(), Desc: true, Offset: currentCursor.ChainId},
+		{Column: enums.NotificationsDashboardsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
+		{Column: enums.NotificationsDashboardsColumns.DashboardName.ToExpr(), Desc: false, Offset: currentCursor.DashboardName},
+		{Column: enums.NotificationsDashboardsColumns.DashboardId.ToExpr(), Desc: false, Offset: currentCursor.DashboardId},
+		{Column: enums.NotificationsDashboardsColumns.GroupName.ToExpr(), Desc: false, Offset: currentCursor.GroupName},
+		{Column: enums.NotificationsDashboardsColumns.GroupId.ToExpr(), Desc: false, Offset: currentCursor.GroupId},
+		{Column: enums.NotificationsDashboardsColumns.ChainId.ToExpr(), Desc: true, Offset: currentCursor.ChainId},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	unionQuery = unionQuery.Order(order...)
 	if directions != nil {
 		unionQuery = unionQuery.Where(directions)
@@ -502,6 +504,12 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 
 		for _, notification := range notifications {
 			switch notification.GetEventName() {
+			case types.ValidatorGroupEfficiencyEventName:
+				curNotification, ok := notification.(*n.ValidatorGroupEfficiencyNotification)
+				if !ok {
+					return nil, fmt.Errorf("failed to cast notification to ValidatorGroupEfficiencyNotification")
+				}
+				notificationDetails.GroupEfficiencyBelow = curNotification.Threshold
 			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName /*, types.ValidatorScheduledProposalEventName*/ :
 				// aggregate proposals
 				curNotification, ok := notification.(*n.ValidatorProposalNotification)
@@ -612,8 +620,12 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				if !ok {
 					return nil, fmt.Errorf("failed to cast notification to RocketpoolNotification")
 				}
-				addr := t.Address{Hash: t.Hash(notification.GetEventFilter()), IsContract: true}
-				addressMapping[notification.GetEventFilter()] = &addr
+				nodeAddress := notification.GetEventFilter()
+				if nodeAddress == "" {
+					return nil, fmt.Errorf("empty node address in Rocket Pool collateral notification: dashboardId '%d', epoch '%d'", dashboardId, epoch)
+				}
+				addr := t.Address{Hash: t.Hash(nodeAddress), IsContract: true}
+				addressMapping[nodeAddress] = &addr
 				if notification.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
 					notificationDetails.MinimumCollateralReached = append(notificationDetails.MinimumCollateralReached, addr)
 				} else {
@@ -701,7 +713,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	// -------------------------------------
 	// Get the machine notification history
 	notificationHistory := []struct {
-		Epoch          uint64          `db:"epoch"`
+		Ts             time.Time       `db:"ts"`
 		MachineId      uint64          `db:"machine_id"`
 		MachineName    string          `db:"machine_name"`
 		EventType      types.EventName `db:"event_type"`
@@ -710,7 +722,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 
 	ds := goqu.Dialect("postgres").
 		Select(
-			goqu.L("epoch"),
+			goqu.L("ts"),
 			goqu.L("machine_id"),
 			goqu.L("machine_name"),
 			goqu.L("event_type"),
@@ -725,10 +737,11 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	}
 
 	// Sorting and limiting if cursor is present
+	// Rows can be uniquely identified by (ts, machine_id, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsMachinesColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationsMachinesColumns.MachineId.ToString(), Desc: false, Offset: currentCursor.MachineId},
-		{Column: enums.NotificationsMachinesColumns.EventType.ToString(), Desc: false, Offset: currentCursor.EventType},
+		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
+		{Column: enums.NotificationsMachinesColumns.MachineId.ToExpr(), Desc: false, Offset: currentCursor.MachineId},
+		{Column: enums.NotificationsMachinesColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
 	var offset interface{}
 	switch colSort.Column {
@@ -738,7 +751,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		offset = currentCursor.EventThreshold
 	}
 
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -761,7 +774,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		resultEntry := t.NotificationMachinesTableRow{
 			MachineName: notification.MachineName,
 			Threshold:   notification.EventThreshold,
-			Timestamp:   utils.EpochToTime(notification.Epoch).Unix(),
+			Timestamp:   notification.Ts.Unix(),
 		}
 		switch notification.EventType {
 		case types.MonitoringMachineOfflineEventName:
@@ -823,15 +836,15 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	// -------------------------------------
 	// Get the client notification history
 	notificationHistory := []struct {
-		Epoch   uint64 `db:"epoch"`
-		Client  string `db:"client"`
-		Version string `db:"client_version"`
-		Url     string `db:"client_url"`
+		Ts      time.Time `db:"ts"`
+		Client  string    `db:"client"`
+		Version string    `db:"client_version"`
+		Url     string    `db:"client_url"`
 	}{}
 
 	ds := goqu.Dialect("postgres").
 		Select(
-			goqu.L("epoch"),
+			goqu.L("ts"),
 			goqu.L("client"),
 			goqu.L("client_version"),
 			goqu.L("client_url")).
@@ -845,12 +858,12 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	}
 
 	// Sorting and limiting if cursor is present
-	// Rows can be uniquely identified by (epoch, client)
+	// Rows can be uniquely identified by (ts, client)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsClientsColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationsClientsColumns.ClientName.ToString(), Desc: false, Offset: currentCursor.Client},
+		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
+		{Column: enums.NotificationsClientsColumns.ClientName.ToExpr(), Desc: false, Offset: currentCursor.Client},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -874,7 +887,7 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 			ClientName: notification.Client,
 			Version:    notification.Version,
 			Url:        notification.Url,
-			Timestamp:  utils.EpochToTime(notification.Epoch).Unix(),
+			Timestamp:  notification.Ts.Unix(),
 		}
 		result = append(result, resultEntry)
 	}
@@ -907,201 +920,7 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 
 	return result, p, nil
 }
-func (d *DataAccessService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
-	return d.dummy.GetRocketPoolNotifications(ctx, userId, cursor, colSort, search, limit)
 
-	// TODO: Adjust after db structure has been clarified
-	// result := make([]t.NotificationRocketPoolTableRow, 0)
-	// var paging t.Paging
-
-	// // Initialize the cursor
-	// var currentCursor t.NotificationRocketPoolsCursor
-	// var err error
-	// if cursor != "" {
-	// 	currentCursor, err = utils.StringToCursor[t.NotificationRocketPoolsCursor](cursor)
-	// 	if err != nil {
-	// 		return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationRocketPoolsCursor: %w", err)
-	// 	}
-	// }
-
-	// isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
-	// sortSearchDirection := ">"
-	// if isReverseDirection {
-	// 	sortSearchDirection = "<"
-	// }
-
-	// // -------------------------------------
-	// // Get the machine notification history
-	// notificationHistory := []struct {
-	// 	Epoch          uint64          `db:"epoch"`
-	// 	LastBlock      int64           `db:"last_block"`
-	// 	EventType      types.EventName `db:"event_type"`
-	// 	EventThreshold float64         `db:"event_threshold"`
-	// 	NodeAddress    []byte          `db:"node_address"`
-	// }{}
-
-	// ds := goqu.Dialect("postgres").
-	// 	Select(
-	// 		goqu.L("epoch"),
-	// 		goqu.L("last_block"),
-	// 		goqu.L("event_type"),
-	// 		goqu.L("event_threshold"),
-	// 		goqu.L("node_address")).
-	// 	From("rocketpool_notifications_history").
-	// 	Where(goqu.L("user_id = ?", userId)).
-	// 	Limit(uint(limit + 1))
-
-	// // Search
-	// if search != "" {
-	// 	if !utils.IsEth1Address(search) {
-	// 		// If search is not a valid address, return empty result
-	// 		return result, &paging, nil
-	// 	}
-	// 	nodeAddress, err := hexutil.Decode(search)
-	// 	if err != nil {
-	// 		return nil, nil, fmt.Errorf("failed to decode node address: %w", err)
-	// 	}
-	// 	ds = ds.Where(goqu.L("node_address = ?", nodeAddress))
-	// }
-
-	// // Sorting and limiting if cursor is present
-	// // Rows can be uniquely identified by (epoch, event_type, node_address)
-	// sortDirFunc := func(column string) exp.OrderedExpression {
-	// 	return goqu.I(column).Asc()
-	// }
-	// if isReverseDirection {
-	// 	sortDirFunc = func(column string) exp.OrderedExpression {
-	// 		return goqu.I(column).Desc()
-	// 	}
-	// }
-	// switch colSort.Column {
-	// case enums.NotificationRocketPoolColumns.Timestamp:
-	// 	if currentCursor.IsValid() {
-	// 		ds = ds.Where(goqu.Or(
-	// 			goqu.L(fmt.Sprintf("(epoch %s ?)", sortSearchDirection), currentCursor.Epoch),
-	// 			goqu.L(fmt.Sprintf("(epoch = ? AND event_type %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.EventType),
-	// 			goqu.L(fmt.Sprintf("(epoch = ? AND event_type = ? AND node_address %s ?)", sortSearchDirection), currentCursor.Epoch, currentCursor.EventType, currentCursor.NodeAddress),
-	// 		))
-	// 	}
-	// 	ds = ds.Order(
-	// 		sortDirFunc("epoch"),
-	// 		sortDirFunc("event_type"),
-	// 		sortDirFunc("node_address"))
-	// case enums.NotificationRocketPoolColumns.EventType:
-	// 	if currentCursor.IsValid() {
-	// 		ds = ds.Where(goqu.Or(
-	// 			goqu.L(fmt.Sprintf("(event_type %s ?)", sortSearchDirection), currentCursor.EventType),
-	// 			goqu.L(fmt.Sprintf("(event_type = ? AND epoch %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch),
-	// 			goqu.L(fmt.Sprintf("(event_type = ? AND epoch = ? AND node_address %s ?)", sortSearchDirection), currentCursor.EventType, currentCursor.Epoch, currentCursor.NodeAddress),
-	// 		))
-	// 	}
-	// 	ds = ds.Order(
-	// 		sortDirFunc("event_type"),
-	// 		sortDirFunc("epoch"),
-	// 		sortDirFunc("node_address"))
-	// case enums.NotificationRocketPoolColumns.NodeAddress:
-	// 	if currentCursor.IsValid() {
-	// 		ds = ds.Where(goqu.Or(
-	// 			goqu.L(fmt.Sprintf("(node_address %s ?)", sortSearchDirection), currentCursor.NodeAddress),
-	// 			goqu.L(fmt.Sprintf("(node_address = ? AND epoch %s ?)", sortSearchDirection), currentCursor.NodeAddress, currentCursor.Epoch),
-	// 			goqu.L(fmt.Sprintf("(node_address = ? AND epoch = ? AND event_type %s ?)", sortSearchDirection), currentCursor.NodeAddress, currentCursor.Epoch, currentCursor.EventType),
-	// 		))
-	// 	}
-	// 	ds = ds.Order(
-	// 		sortDirFunc("node_address"),
-	// 		sortDirFunc("epoch"),
-	// 		sortDirFunc("event_type"))
-	// default:
-	// 	return nil, nil, fmt.Errorf("invalid column for sorting of rocketpool notification history: %v", colSort.Column)
-	// }
-
-	// query, args, err := ds.Prepared(true).ToSQL()
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf("error preparing rocketpool notifications query: %w", err)
-	// }
-
-	// err = d.userReader.SelectContext(ctx, &notificationHistory, query, args...)
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf(`error retrieving data for rocketpool notifications: %w`, err)
-	// }
-
-	// // -------------------------------------
-	// // Get the node address info
-	// addressMapping := make(map[string]*t.Address)
-	// contractStatusRequests := make([]db.ContractInteractionAtRequest, 0)
-
-	// for _, notification := range notificationHistory {
-	// 	addressMapping[hexutil.Encode(notification.NodeAddress)] = nil
-	// 	contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
-	// 		Address:  fmt.Sprintf("%x", notification.NodeAddress),
-	// 		Block:    notification.LastBlock,
-	// 		TxIdx:    -1,
-	// 		TraceIdx: -1,
-	// 	})
-	// }
-
-	// err = d.GetNamesAndEnsForAddresses(ctx, addressMapping)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// // -------------------------------------
-	// // Calculate the result
-	// cursorData := notificationHistory
-	// for idx, notification := range notificationHistory {
-	// 	resultEntry := t.NotificationRocketPoolTableRow{
-	// 		Timestamp: utils.EpochToTime(notification.Epoch).Unix(),
-	// 		Threshold: notification.EventThreshold,
-	// 		Node:      *addressMapping[hexutil.Encode(notification.NodeAddress)],
-	// 	}
-	// 	resultEntry.Node.IsContract = contractStatuses[idx] == types.CONTRACT_CREATION || contractStatuses[idx] == types.CONTRACT_PRESENT
-
-	// 	switch notification.EventType {
-	// 	case types.RocketpoolNewClaimRoundStartedEventName:
-	// 		resultEntry.EventType = "reward_round"
-	// 	case types.RocketpoolCollateralMinReachedEventName:
-	// 		resultEntry.EventType = "collateral_min"
-	// 	case types.RocketpoolCollateralMaxReachedEventName:
-	// 		resultEntry.EventType = "collateral_max"
-	// 	default:
-	// 		return nil, nil, fmt.Errorf("invalid event name for rocketpool notification: %v", notification.EventType)
-	// 	}
-	// 	result = append(result, resultEntry)
-	// }
-
-	// // -------------------------------------
-	// // Paging
-
-	// // Flag if above limit
-	// moreDataFlag := len(result) > int(limit)
-	// if !moreDataFlag && !currentCursor.IsValid() {
-	// 	// No paging required
-	// 	return result, &paging, nil
-	// }
-
-	// // Remove the last entries from data
-	// if moreDataFlag {
-	// 	result = result[:limit]
-	// 	cursorData = cursorData[:limit]
-	// }
-
-	// if currentCursor.IsReverse() {
-	// 	slices.Reverse(result)
-	// 	slices.Reverse(cursorData)
-	// }
-
-	// p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf("failed to get paging: %w", err)
-	// }
-
-	// return result, p, nil
-}
 func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	result := make([]t.NotificationNetworksTableRow, 0)
 	var paging t.Paging
@@ -1119,7 +938,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	// -------------------------------------
 	// Get the network notification history
 	notificationHistory := []struct {
-		Epoch          uint64          `db:"epoch"`
+		Ts             time.Time       `db:"ts"`
 		Network        uint64          `db:"network"`
 		EventType      types.EventName `db:"event_type"`
 		EventThreshold float64         `db:"event_threshold"`
@@ -1127,7 +946,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 
 	ds := goqu.Dialect("postgres").
 		Select(
-			goqu.L("epoch"),
+			goqu.L("ts"),
 			goqu.L("network"),
 			goqu.L("event_type"),
 			goqu.L("event_threshold")).
@@ -1136,13 +955,13 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		Limit(uint(limit + 1))
 
 	// Sorting and limiting if cursor is present
-	// Rows can be uniquely identified by (epoch, network, event_type)
+	// Rows can be uniquely identified by (ts, network, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationNetworksColumns.Timestamp.ToString(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationNetworksColumns.Network.ToString(), Desc: false, Offset: currentCursor.Network},
-		{Column: enums.NotificationNetworksColumns.EventType.ToString(), Desc: false, Offset: currentCursor.EventType},
+		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
+		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: currentCursor.Network},
+		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToString(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -1164,7 +983,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	for _, notification := range notificationHistory {
 		resultEntry := t.NotificationNetworksTableRow{
 			ChainId:   notification.Network,
-			Timestamp: utils.EpochToTime(notification.Epoch).Unix(),
+			Timestamp: notification.Ts.Unix(),
 		}
 		switch notification.EventType {
 		case types.NetworkGasAboveThresholdEventName:
@@ -1380,7 +1199,8 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			networkEvent := types.EventName(eventSplit[1])
 
 			if _, ok := networksSettings[networkName]; !ok {
-				return nil, fmt.Errorf("network is not defined: %s", networkName)
+				log.Warnf("network is not defined: %s (user_id: %d)", networkName, userId)
+				continue
 			}
 
 			switch networkEvent {
@@ -1528,7 +1348,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1545,7 +1365,7 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1606,7 +1426,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1623,7 +1443,7 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -1638,47 +1458,61 @@ func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Conte
 	}
 	return nil
 }
-func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
+
+func (d *DataAccessService) GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error) {
+	var userId uint64
+	err := d.userReader.GetContext(context.Background(), &userId, `
+		SELECT user_id
+		FROM users_devices
+		WHERE id = $1`, pairedDeviceId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("%w, paired device with id %v not found", ErrNotFound, pairedDeviceId)
+		}
+		return 0, err
+	}
+	return userId, nil
+}
+
+func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	result, err := d.userWriter.ExecContext(ctx, `
 		UPDATE users_devices 
 		SET 
 			device_name = $1,
 			notify_enabled = $2
-		WHERE user_id = $3 AND id = $4`,
-		name, IsNotificationsEnabled, userId, pairedDeviceId)
+		WHERE id = $3`,
+		name, IsNotificationsEnabled, pairedDeviceId)
 	if err != nil {
 		return err
 	}
-
-	// TODO: This can be deleted when the API layer has an improved check for the device id
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("device with id %v to update notification settings not found", pairedDeviceId)
+		return fmt.Errorf("%w, paired device with id %v not found", ErrNotFound, pairedDeviceId)
 	}
 	return nil
 }
-func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, userId uint64, pairedDeviceId uint64) error {
+
+func (d *DataAccessService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error {
 	result, err := d.userWriter.ExecContext(ctx, `
-		DELETE FROM users_devices 
-		WHERE user_id = $1 AND id = $2`,
-		userId, pairedDeviceId)
+		DELETE FROM users_devices
+		WHERE id = $1`,
+		pairedDeviceId)
 	if err != nil {
 		return err
 	}
-
-	// TODO: This can be deleted when the API layer has an improved check for the device id
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("device with id %v to delete not found", pairedDeviceId)
+		return fmt.Errorf("%w, paired device with id %v not found", ErrNotFound, pairedDeviceId)
 	}
 	return nil
 }
+
 func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
 	result := &t.NotificationSettingsClient{Id: clientId, IsSubscribed: IsSubscribed}
 
@@ -1743,6 +1577,11 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		Filter    string          `db:"event_filter"`
 		Threshold float64         `db:"event_threshold"`
 	}{}
+
+	networkName := "mainnet"
+	if utils.Config.Chain.ClConfig.DepositChainID == 17000 {
+		networkName = "holesky"
+	}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &events, `
 			SELECT
@@ -1750,7 +1589,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				event_filter,
 				event_threshold
 			FROM users_subscriptions
-			WHERE user_id = $1`, userId)
+			WHERE user_id = $1 AND event_name LIKE $2`, userId, networkName+"%")
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for account dashboard notifications: %w`, err)
 		}
@@ -1761,13 +1600,13 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// -------------------------------------
 	// Get the validator dashboards
 	valDashboards := []struct {
-		DashboardId             uint64         `db:"dashboard_id"`
-		DashboardName           string         `db:"dashboard_name"`
-		GroupId                 uint64         `db:"group_id"`
-		GroupName               string         `db:"group_name"`
-		Network                 uint64         `db:"network"`
-		WebhookUrl              sql.NullString `db:"webhook_target"`
-		IsWebhookDiscordEnabled sql.NullBool   `db:"discord_webhook"`
+		DashboardId   uint64         `db:"dashboard_id"`
+		DashboardName string         `db:"dashboard_name"`
+		GroupId       uint64         `db:"group_id"`
+		GroupName     string         `db:"group_name"`
+		Network       uint64         `db:"network"`
+		WebhookUrl    sql.NullString `db:"webhook_target"`
+		WebhookFormat sql.NullString `db:"webhook_format"`
 	}{}
 	wg.Go(func() error {
 		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
@@ -1778,10 +1617,10 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				g.name AS group_name,
 				d.network,
 				g.webhook_target,
-				(g.webhook_format = $1) AS discord_webhook
+				g.webhook_format
 			FROM users_val_dashboards d
 			INNER JOIN users_val_dashboards_groups g ON d.id = g.dashboard_id
-			WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
+			WHERE d.user_id = $1`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
 		}
@@ -1797,7 +1636,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		GroupId                         uint64         `db:"group_id"`
 		GroupName                       string         `db:"group_name"`
 		WebhookUrl                      sql.NullString `db:"webhook_target"`
-		IsWebhookDiscordEnabled         sql.NullBool   `db:"discord_webhook"`
+		WebhookFormat                   sql.NullString `db:"webhook_format"`
 		IsIgnoreSpamTransactionsEnabled bool           `db:"ignore_spam_transactions"`
 		SubscribedChainIds              []uint64       `db:"subscribed_chain_ids"`
 	}{}
@@ -1810,12 +1649,12 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// 			g.id AS group_id,
 	// 			g.name AS group_name,
 	// 			g.webhook_target,
-	// 			(g.webhook_format = $1) AS discord_webhook,
+	// 			g.webhook_format,
 	// 			g.ignore_spam_transactions,
 	// 			g.subscribed_chain_ids
 	// 		FROM users_acc_dashboards d
 	// 		INNER JOIN users_acc_dashboards_groups g ON d.id = g.dashboard_id
-	// 		WHERE d.user_id = $2`, DiscordWebhookFormat, userId)
+	// 		WHERE d.user_id = $1`, userId)
 	// 	if err != nil {
 	// 		return fmt.Errorf(`error retrieving data for validator dashboard notifications: %w`, err)
 	// 	}
@@ -1881,7 +1720,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.IsBlockProposalSubscribed = true
 			case types.ValidatorUpcomingProposalEventName:
 				settings.IsUpcomingBlockProposalSubscribed = true
-			case types.SyncCommitteeSoon:
+			case types.SyncCommitteeSoonEventName:
 				settings.IsSyncSubscribed = true
 			case types.ValidatorReceivedWithdrawalEventName:
 				settings.IsWithdrawalProcessedSubscribed = true
@@ -1936,9 +1775,12 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		resultMap[key].ChainIds = []uint64{valDashboard.Network}
 
 		// Set the settings
-		if valSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsValidatorDashboard); ok {
+		if valSettings, ok := resultMap[key].Settings.(t.NotificationSettingsValidatorDashboard); ok {
 			valSettings.WebhookUrl = valDashboard.WebhookUrl.String
-			valSettings.IsWebhookDiscordEnabled = valDashboard.IsWebhookDiscordEnabled.Bool
+			valSettings.IsWebhookDiscordEnabled = valDashboard.WebhookFormat.Valid &&
+				types.NotificationChannel(valDashboard.WebhookFormat.String) == types.WebhookDiscordNotificationChannel
+
+			resultMap[key].Settings = valSettings
 		}
 	}
 
@@ -1963,11 +1805,14 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		resultMap[key].ChainIds = accDashboard.SubscribedChainIds
 
 		// Set the settings
-		if accSettings, ok := resultMap[key].Settings.(*t.NotificationSettingsAccountDashboard); ok {
+		if accSettings, ok := resultMap[key].Settings.(t.NotificationSettingsAccountDashboard); ok {
 			accSettings.WebhookUrl = accDashboard.WebhookUrl.String
-			accSettings.IsWebhookDiscordEnabled = accDashboard.IsWebhookDiscordEnabled.Bool
+			accSettings.IsWebhookDiscordEnabled = accDashboard.WebhookFormat.Valid &&
+				types.NotificationChannel(accDashboard.WebhookFormat.String) == types.WebhookDiscordNotificationChannel
 			accSettings.IsIgnoreSpamTransactionsEnabled = accDashboard.IsIgnoreSpamTransactionsEnabled
 			accSettings.SubscribedChainIds = accDashboard.SubscribedChainIds
+
+			resultMap[key].Settings = accSettings
 		}
 	}
 
@@ -2106,7 +1951,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsGroupEfficiencyBelowSubscribed, userId, types.ValidatorGroupEfficiencyEventName, networkName, eventFilter, epoch, settings.GroupEfficiencyBelowThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsAttestationsMissedSubscribed, userId, types.ValidatorMissedAttestationEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsUpcomingBlockProposalSubscribed, userId, types.ValidatorUpcomingProposalEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoon, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSyncSubscribed, userId, types.SyncCommitteeSoonEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsWithdrawalProcessedSubscribed, userId, types.ValidatorReceivedWithdrawalEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, types.RocketpoolCollateralMaxReachedEventName, networkName, eventFilter, epoch, settings.MaxCollateralThreshold)
@@ -2128,7 +1973,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 		query, args, err := insertDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -2145,7 +1990,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 		query, args, err := deleteDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, query, args...)
@@ -2160,12 +2005,21 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	}
 
 	// Set non-event settings
+	var webhookFormat sql.NullString
+	if settings.WebhookUrl != "" {
+		webhookFormat.String = string(types.WebhookNotificationChannel)
+		webhookFormat.Valid = true
+		if settings.IsWebhookDiscordEnabled {
+			webhookFormat.String = string(types.WebhookDiscordNotificationChannel)
+		}
+	}
+
 	_, err = d.alloyWriter.ExecContext(ctx, `
 		UPDATE users_val_dashboards_groups 
 		SET 
 			webhook_target = NULLIF($1, ''),
-			webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END
-		WHERE dashboard_id = $4 AND id = $5`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, dashboardId, groupId)
+			webhook_format = $2
+		WHERE dashboard_id = $3 AND id = $4`, settings.WebhookUrl, webhookFormat, dashboardId, groupId)
 	if err != nil {
 		return err
 	}
@@ -2207,7 +2061,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 
 	// 	query, args, err := insertDs.Prepared(true).ToSQL()
 	// 	if err != nil {
-	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 		return fmt.Errorf("error preparing query: %w", err)
 	// 	}
 
 	// 	_, err = tx.ExecContext(ctx, query, args...)
@@ -2224,7 +2078,7 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 
 	// 	query, args, err := deleteDs.Prepared(true).ToSQL()
 	// 	if err != nil {
-	// 		return fmt.Errorf("error preparing query: %v", err)
+	// 		return fmt.Errorf("error preparing query: %w", err)
 	// 	}
 
 	// 	_, err = tx.ExecContext(ctx, query, args...)
@@ -2239,14 +2093,23 @@ func (d *DataAccessService) UpdateNotificationSettingsAccountDashboard(ctx conte
 	// }
 
 	// // Set non-event settings
+	// var webhookFormat sql.NullString
+	// if settings.WebhookUrl != "" {
+	// 	webhookFormat.String = string(types.WebhookNotificationChannel)
+	// 	webhookFormat.Valid = true
+	// 	if settings.IsWebhookDiscordEnabled {
+	// 		webhookFormat.String = string(types.WebhookDiscordNotificationChannel)
+	// 	}
+	// }
+
 	// _, err = d.alloyWriter.ExecContext(ctx, `
 	// 	UPDATE users_acc_dashboards_groups
 	// 	SET
 	// 		webhook_target = NULLIF($1, ''),
-	// 		webhook_format = CASE WHEN $2 THEN $3 ELSE NULL END,
-	// 		ignore_spam_transactions = $4,
-	// 		subscribed_chain_ids = $5
-	// 	WHERE dashboard_id = $6 AND id = $7`, settings.WebhookUrl, settings.IsWebhookDiscordEnabled, DiscordWebhookFormat, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
+	// 		webhook_format = $2,
+	// 		ignore_spam_transactions = $3,
+	// 		subscribed_chain_ids = $4
+	// 	WHERE dashboard_id = $5 AND id = $6`, settings.WebhookUrl, webhookFormat, settings.IsIgnoreSpamTransactionsEnabled, settings.SubscribedChainIds, dashboardId, groupId)
 	// if err != nil {
 	// 	return err
 	// }
@@ -2269,14 +2132,11 @@ func (d *DataAccessService) AddOrRemoveEvent(eventsToInsert *[]goqu.Record, even
 }
 
 func (d *DataAccessService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
-	// TODO: @Data Access
-	return nil
+	return notification.SendTestEmail(ctx, types.UserId(userId), d.userReader)
 }
 func (d *DataAccessService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
-	// TODO: @Data Access
-	return nil
+	return notification.QueueTestPushNotification(ctx, types.UserId(userId), d.userReader, d.readerDb)
 }
 func (d *DataAccessService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
-	// TODO: @Data Access
-	return nil
+	return notification.SendTestWebhookNotification(ctx, types.UserId(userId), webhookUrl, isDiscordWebhook)
 }

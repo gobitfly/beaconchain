@@ -12,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
 
@@ -282,7 +283,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	return subMap, nil
 }
 
-func GetUserPushTokenByIds(ids []types.UserId) (map[types.UserId][]string, error) {
+func GetUserPushTokenByIds(ids []types.UserId, userDbConn *sqlx.DB) (map[types.UserId][]string, error) {
 	pushByID := map[types.UserId][]string{}
 	if len(ids) == 0 {
 		return pushByID, nil
@@ -292,7 +293,7 @@ func GetUserPushTokenByIds(ids []types.UserId) (map[types.UserId][]string, error
 		Token string       `db:"notification_token"`
 	}
 
-	err := db.FrontendWriterDB.Select(&rows, "SELECT DISTINCT ON (user_id, notification_token) user_id, notification_token FROM users_devices WHERE (user_id = ANY($1) AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)) AND notify_enabled = true AND active = true AND notification_token IS NOT NULL AND LENGTH(notification_token) > 20 ORDER BY user_id, notification_token, id DESC", pq.Array(ids), types.PushNotificationChannel)
+	err := userDbConn.Select(&rows, "SELECT DISTINCT ON (user_id, notification_token) user_id, notification_token FROM users_devices WHERE (user_id = ANY($1) AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)) AND notify_enabled = true AND active = true AND notification_token IS NOT NULL AND LENGTH(notification_token) > 20 ORDER BY user_id, notification_token, id DESC", pq.Array(ids), types.PushNotificationChannel)
 	if err != nil {
 		return nil, err
 	}

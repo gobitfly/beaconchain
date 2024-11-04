@@ -331,17 +331,6 @@ export function formatTimeDuration(
   return t(translationId, { amount }, amount === 1 ? 1 : 2)
 }
 
-export function formatNanoSecondDuration(
-  nano: number | undefined,
-  t: ComposerTranslation,
-): string | undefined {
-  if (nano === undefined) {
-    return undefined
-  }
-  const seconds = Math.floor(nano / 1000000000)
-  return formatTimeDuration(seconds, t)
-}
-
 export function formatFiat(
   value: number,
   currency: string,

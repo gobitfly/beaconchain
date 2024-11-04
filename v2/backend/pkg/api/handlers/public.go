@@ -589,7 +589,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, v)
 			return
 		}
-		validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(indices, pubkeys)
+		validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(ctx, indices, pubkeys)
 		if err != nil {
 			handleErr(w, r, err)
 			return
@@ -637,7 +637,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 
 // PublicGetValidatorDashboardValidators godoc
 //
-//	@Description	Get a list of groups in a specified validator dashboard.
+//	@Description	Get a list of validators in a specified validator dashboard.
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
@@ -647,7 +647,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 //	@Param			search			query		string	false	"Search for Address, ENS."
 //	@Success		200				{object}	types.GetValidatorDashboardValidatorsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/groups [get]
+//	@Router			/validator-dashboards/{dashboard_id}/validators [get]
 func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
@@ -703,12 +703,13 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 		handleErr(w, r, v)
 		return
 	}
-	validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(indices, publicKeys)
+	ctx := r.Context()
+	validators, err := h.getDataAccessor(r).GetValidatorsFromSlices(ctx, indices, publicKeys)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	err = h.getDataAccessor(r).RemoveValidatorDashboardValidators(r.Context(), dashboardId, validators)
+	err = h.getDataAccessor(r).RemoveValidatorDashboardValidators(ctx, dashboardId, validators)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1893,9 +1894,10 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		handleErr(w, r, err)
 		return
 	}
+	mapDashboardNotificationEvents(data)
 	response := types.InternalGetUserNotificationDashboardsResponse{
 		Data:   data,
-		Paging: *paging, //	@Param			epoch			path		strings
+		Paging: *paging,
 	}
 	returnOk(w, r, response)
 }
@@ -2002,6 +2004,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+	mapMachineNotificationEventNames(data)
 	response := types.InternalGetUserNotificationMachinesResponse{
 		Data:   data,
 		Paging: *paging,
@@ -2048,45 +2051,6 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 	returnOk(w, r, response)
 }
 
-// PublicGetUserNotificationRocketPool godoc
-//
-//	@Description	Get a list of triggered notifications related to Rocket Pool.
-//	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Notifications
-//	@Produce		json
-//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
-//	@Param			search	query		string	false	"Search for Node Address"
-//	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
-//	@Failure		400		{object}	types.ApiErrorResponse
-//	@Router			/users/me/notifications/rocket-pool [get]
-func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationRocketPoolColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.getDataAccessor(r).GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationRocketPoolResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetUserNotificationNetworks godoc
 //
 //	@Description	Get a list of triggered notifications related to networks.
@@ -2118,6 +2082,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+	mapNetworkNotificationEventNames(data)
 	response := types.InternalGetUserNotificationNetworksResponse{
 		Data:   data,
 		Paging: *paging,
@@ -2214,6 +2179,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, v)
 		return
 	}
+	req.DoNotDisturbTimestamp = min(req.DoNotDisturbTimestamp, math.MaxInt32)
 
 	// check premium perks
 	userInfo, err := h.getDataAccessor(r).GetUserInfo(r.Context(), userId)
@@ -2351,7 +2317,16 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		handleErr(w, r, v)
 		return
 	}
-	err = h.getDataAccessor(r).UpdateNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId, name, req.IsNotificationsEnabled)
+	pairedDeviceUserId, err := h.getDataAccessor(r).GetPairedDeviceUserId(r.Context(), pairedDeviceId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if userId != pairedDeviceUserId {
+		returnNotFound(w, r, fmt.Errorf("not found: paired device with id %d not found", pairedDeviceId)) // return 404 to not leak information
+		return
+	}
+	err = h.getDataAccessor(r).UpdateNotificationSettingsPairedDevice(r.Context(), pairedDeviceId, name, req.IsNotificationsEnabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2385,13 +2360,21 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 		handleErr(w, r, err)
 		return
 	}
-	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	err = h.getDataAccessor(r).DeleteNotificationSettingsPairedDevice(r.Context(), userId, pairedDeviceId)
+	pairedDeviceUserId, err := h.getDataAccessor(r).GetPairedDeviceUserId(r.Context(), pairedDeviceId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if userId != pairedDeviceUserId {
+		returnNotFound(w, r, fmt.Errorf("not found: paired device with id %d not found", pairedDeviceId)) // return 404 to not leak information
+		return
+	}
+	err = h.getDataAccessor(r).DeleteNotificationSettingsPairedDevice(r.Context(), pairedDeviceId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2703,7 +2686,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 	}
 	type request struct {
 		WebhookUrl              string `json:"webhook_url"`
-		IsDiscordWebhookEnabled bool   `json:"is_discord_webhook_enabled,omitempty"`
+		IsWebhookDiscordEnabled bool   `json:"is_webhook_discord_enabled,omitempty"`
 	}
 	var req request
 	if err := v.checkBody(&req, r); err != nil {
@@ -2714,7 +2697,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 		handleErr(w, r, v)
 		return
 	}
-	err = h.getDataAccessor(r).QueueTestWebhookNotification(r.Context(), userId, req.WebhookUrl, req.IsDiscordWebhookEnabled)
+	err = h.getDataAccessor(r).QueueTestWebhookNotification(r.Context(), userId, req.WebhookUrl, req.IsWebhookDiscordEnabled)
 	if err != nil {
 		handleErr(w, r, err)
 		return

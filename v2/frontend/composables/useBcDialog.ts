@@ -7,7 +7,7 @@ export function useBcDialog<T>(dialogProps?: DialogProps) {
 
   const props = ref<T>()
   const dialogRef = inject<Ref<DynamicDialogInstance>>('dialogRef')
-  const uuid = ref(generateUUID())
+  const uuid = ref(useId())
 
   const position = computed(() => (width.value <= 430 ? 'bottom' : 'center'))
 

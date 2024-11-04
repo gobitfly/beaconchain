@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
+	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 type HandlerService struct {
@@ -119,7 +120,7 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		}
 		return &types.VDBId{Id: types.VDBIdPrimary(dashboardInfo.DashboardId), Validators: nil, AggregateGroups: !dashboardInfo.ShareSettings.ShareGroups}, nil
 	case validatorSet:
-		validators, err := h.daService.GetValidatorsFromSlices(dashboardId.Indexes, dashboardId.PublicKeys)
+		validators, err := h.daService.GetValidatorsFromSlices(ctx, dashboardId.Indexes, dashboardId.PublicKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -138,6 +139,10 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 // it should be used as the last validation step for all internal dashboard GET-handlers.
 // Modifying handlers (POST, PUT, DELETE) should only accept primary dashboard ids and just use checkPrimaryDashboardId.
 func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*types.VDBId, error) {
+	//check if dashboard id is stored in context
+	if dashboardId, ok := ctx.Value(types.CtxDashboardIdKey).(*types.VDBId); ok {
+		return dashboardId, nil
+	}
 	// validate dashboard id param
 	dashboardIdParam, err := parseDashboardId(param)
 	if err != nil {
@@ -225,7 +230,7 @@ func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartH
 }
 
 func isUserAdmin(user *types.UserInfo) bool {
-	if user == nil {
+	if user == nil { // can happen for guest or shared dashboards
 		return false
 	}
 	return user.UserGroup == types.UserGroupAdmin
@@ -493,6 +498,69 @@ func mapIndexBlocksSlice(category string, validators []types.IndexBlocks) types.
 }
 
 // --------------------------------------
+// notification event mapping
+
+var dbEventToResponse = map[string]string{
+	string(commontypes.ValidatorIsOfflineEventName):                "validator_offline",
+	string(commontypes.ValidatorIsOnlineEventName):                 "validator_online",
+	string(commontypes.ValidatorMissedAttestationEventName):        "attestation_missed",
+	string(commontypes.ValidatorMissedProposalEventName):           "proposal_missed",
+	string(commontypes.ValidatorExecutedProposalEventName):         "proposal_success",
+	string(commontypes.ValidatorUpcomingProposalEventName):         "proposal_upcoming",
+	string(commontypes.SyncCommitteeSoonEventName):                 "sync",
+	string(commontypes.ValidatorReceivedWithdrawalEventName):       "withdrawal",
+	string(commontypes.ValidatorGotSlashedEventName):               "validator_got_slashed",
+	string(commontypes.ValidatorDidSlashEventName):                 "validator_has_slashed",
+	string(commontypes.ValidatorGroupEfficiencyEventName):          "group_efficiency_below",
+	string(commontypes.RocketpoolCollateralMinReachedEventName):    "min_collateral",
+	string(commontypes.RocketpoolCollateralMaxReachedEventName):    "max_collateral",
+	string(commontypes.IncomingTransactionEventName):               "incoming_tx",
+	string(commontypes.OutgoingTransactionEventName):               "outgoing_tx",
+	string(commontypes.ERC20TokenTransferEventName):                "transfer_erc20",
+	string(commontypes.ERC721TokenTransferEventName):               "transfer_erc721",
+	string(commontypes.ERC1155TokenTransferEventName):              "transfer_erc1155",
+	string(commontypes.MonitoringMachineOfflineEventName):          "offline",
+	string(commontypes.MonitoringMachineDiskAlmostFullEventName):   "storage",
+	string(commontypes.MonitoringMachineCpuLoadEventName):          "cpu",
+	string(commontypes.MonitoringMachineMemoryUsageEventName):      "memory",
+	string(commontypes.RocketpoolNewClaimRoundStartedEventName):    "new_reward_round",
+	string(commontypes.NetworkGasBelowThresholdEventName):          "gas_below",
+	string(commontypes.NetworkGasAboveThresholdEventName):          "gas_above",
+	string(commontypes.NetworkParticipationRateThresholdEventName): "participation_rate",
+}
+
+func mapNotificationEventName(event string) string {
+	if name, ok := dbEventToResponse[event]; ok {
+		return name
+	}
+	log.Warn("unknown notification event", log.Fields{"event": event})
+	return event
+}
+
+func mapDashboardNotificationEvents(data []types.NotificationDashboardsTableRow) []types.NotificationDashboardsTableRow {
+	for _, row := range data {
+		for eventIndex := range row.EventTypes {
+			row.EventTypes[eventIndex] = mapNotificationEventName(row.EventTypes[eventIndex])
+		}
+	}
+	return data
+}
+
+func mapMachineNotificationEventNames(data []types.NotificationMachinesTableRow) []types.NotificationMachinesTableRow {
+	for rowIndex, row := range data {
+		data[rowIndex].EventType = mapNotificationEventName(row.EventType)
+	}
+	return data
+}
+
+func mapNetworkNotificationEventNames(data []types.NotificationNetworksTableRow) []types.NotificationNetworksTableRow {
+	for rowIndex, row := range data {
+		data[rowIndex].EventType = mapNotificationEventName(row.EventType)
+	}
+	return data
+}
+
+// --------------------------------------
 // intOrString is a custom type that can be unmarshalled from either an int or a string (strings will also be parsed to int if possible).
 // if unmarshaling throws no errors one of the two fields will be set, the other will be nil.
 type intOrString struct {
@@ -542,6 +610,6 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 }
 
 func isMocked(r *http.Request) bool {
-	isMocked, ok := r.Context().Value(ctxIsMockedKey).(bool)
+	isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool)
 	return ok && isMocked
 }
