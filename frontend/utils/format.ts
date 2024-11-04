@@ -377,14 +377,22 @@ export function formatToPercent(value: NumberOrString, option?: { locale?: strin
 /**
  * This should convert 0.2069 to 20%
  */
-export function formatFractionToPercent(value: NumberOrString, option?: { locale?: string }) {
+export function formatFractionToPercent(
+  value: NumberOrString,
+  option?: {
+    locale?: string,
+    maximumFractionDigits?: number,
+    minimumFractionDigits?: number,
+  }) {
   const {
     locale = 'en-US',
+    maximumFractionDigits = 0,
+    minimumFractionDigits = 0,
   } = option ?? {}
   const number = Number(value)
   return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
+    maximumFractionDigits,
+    minimumFractionDigits,
     style: 'unit',
     unit: 'percent',
   }).format(number * 100)
@@ -392,14 +400,22 @@ export function formatFractionToPercent(value: NumberOrString, option?: { locale
 /**
  * This should convert 0.2069 to 20
  */
-export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
+export function formatFraction(
+  value: NumberOrString,
+  option?: {
+    locale?: string,
+    maximumFractionDigits?: number,
+    minimumFractionDigits?: number,
+  }) {
   const {
     locale = 'en-US',
+    maximumFractionDigits = 0,
+    minimumFractionDigits = 0,
   } = option ?? {}
   const number = Number(value)
   return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
+    maximumFractionDigits,
+    minimumFractionDigits,
   }).format(number * 100)
 }
 /**

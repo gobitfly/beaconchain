@@ -53,7 +53,7 @@ const data = computed(() => {
       class="percent"
       :base="data.sum"
       :value="props.success"
-      :fixed="undefined"
+      :precision="1"
       :color-break-point="80"
       :full-on-empty-base="true"
     />

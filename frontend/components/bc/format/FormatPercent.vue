@@ -44,13 +44,19 @@ const data = computed(() => {
       label,
     }
   }
-  const percent = props.percent ?? calculatePercent(props.value, props.base)
+  const percent = props.percent ?? formatFraction((props.value / (props.value + props.base)), {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+  })
   const config = {
     addPositiveSign: props.addPositiveSign,
     fixed: props.fixed ?? 2,
     precision: props.precision ?? 2,
   }
+  console.log('😀', props.percent)
   label = formatPercent(percent, config)
+  // console.log('💥', label)#aa
+
   if (props.comparePercent !== undefined) {
     const thresholdToDifferenciateUnderperformerAndOverperformer = 0.25
     if (Math.abs(props.comparePercent - percent) <= thresholdToDifferenciateUnderperformerAndOverperformer) {
