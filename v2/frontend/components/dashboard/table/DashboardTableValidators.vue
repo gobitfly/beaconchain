@@ -7,7 +7,6 @@ import type {
 } from '~/types/dashboard/summary'
 import { DashboardValidatorSubsetModal } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { sortValidatorIds } from '~/utils/dashboard/validator'
 import type { DashboardKey } from '~/types/dashboard'
 import type {
   VDBGroupSummaryData,
@@ -21,6 +20,7 @@ interface Props {
   groupId?: number,
   row: VDBSummaryTableRow,
   timeFrame?: SummaryTimeFrame,
+  validatorCount: number,
   validators: number[],
 }
 const props = defineProps<Props>()
@@ -50,17 +50,16 @@ const openValidatorModal = () => {
 const groupName = computed(() => {
   return getGroupLabel($t, props.groupId, groups.value, $t('common.total'))
 })
-
-const cappedValidators = computed(() =>
-  sortValidatorIds(props.validators).slice(0, 10),
-)
 </script>
 
 <template>
   <div class="validator_column">
-    <span v-if="cappedValidators.length <= 3" class="validators">
+    <span
+      v-if="validators.length && validatorCount <= 3"
+      class="validators"
+    >
       <template
-        v-for="validator in cappedValidators"
+        v-for="validator in validators"
         :key="validator"
       >
         <BcLink
@@ -74,7 +73,7 @@ const cappedValidators = computed(() =>
       </template>
     </span>
     <span v-else>
-      {{ cappedValidators.length }} {{ $t('common.validator', cappedValidators.length) }}
+      {{ validatorCount }} {{ $t('common.validator', validatorCount) }}
     </span>
     <FontAwesomeIcon
       v-if="validators?.length"
