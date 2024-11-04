@@ -81,7 +81,7 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			err = db.ClickHouseReader.GetContext(ctx, &epochRollingTable, fmt.Sprintf(`
 					SELECT
 						max(epoch_end)
-					FROM view_validator_dashboard_data_%s_max_ts`,
+					FROM validator_dashboard_data_rolling_%s`,
 				rolling,
 			),
 			)
