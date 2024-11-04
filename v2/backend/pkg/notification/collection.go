@@ -531,7 +531,7 @@ func collectGasPriceNotifications(notificationsByUserID types.NotificationsPerUs
 				notificationsByUserID.AddNotification(n)
 				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
 
-				log.Infof("created %s notification", n.GetInfo(types.NotifciationFormatText))
+				log.Infof("created %s notification for user %d", n.GetInfo(types.NotifciationFormatText), n.GetUserId())
 			}
 		}
 	}
@@ -561,7 +561,7 @@ func collectGasPriceNotifications(notificationsByUserID types.NotificationsPerUs
 
 				notificationsByUserID.AddNotification(n)
 				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
-				log.Infof("created %s notification", n.GetInfo(types.NotifciationFormatText))
+				log.Infof("created %s notification for user %d", n.GetInfo(types.NotifciationFormatText), n.GetUserId())
 			}
 		}
 	}
