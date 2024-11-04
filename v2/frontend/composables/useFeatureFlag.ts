@@ -17,7 +17,7 @@ export const useFeatureFlag = () => {
   ]
   const featureCatalog: Record<Environment, FeatureFlag[]> = {
     development,
-    production: [],
+    production: [ 'feature-notifications' ],
     staging,
   }
 
