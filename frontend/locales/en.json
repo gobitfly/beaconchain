@@ -469,8 +469,8 @@
     "terms": "Terms"
   },
   "header": {
-    "current_epoch": "Current Epoch",
-    "current_slot": "Current Slot",
+    "current_epoch": "Epoch",
+    "current_slot": "Slot",
     "login": "Log in",
     "logout": "Log out",
     "megamenu": {
