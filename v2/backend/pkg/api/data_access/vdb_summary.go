@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -795,23 +796,28 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		ret.AttestationAvgInclDist = 0
 	}
 
-	uniqueProposalValidators := make(map[uint64]struct{})
-	for _, validator := range ret.ProposalValidators {
-		uniqueProposalValidators[validator] = struct{}{}
-	}
-	ret.ProposalValidatorCount = uint64(len(uniqueProposalValidators))
+	ret.ProposalValidatorCount = uint64(len(ret.ProposalValidators))
+	ret.Slashings.ValidatorCount = uint64(len(ret.Slashings.Validators))
+	ret.SyncCommittee.ValidatorCount = uint64(len(ret.SyncCommittee.Validators))
 
-	uniqueSlashedValidators := make(map[uint64]struct{})
-	for _, validator := range ret.Slashings.Validators {
-		uniqueSlashedValidators[validator] = struct{}{}
+	if len(ret.ProposalValidators) > 0 {
+		slices.Sort(ret.ProposalValidators)
+		if len(ret.ProposalValidators) > 3 {
+			ret.ProposalValidators = ret.ProposalValidators[:3]
+		}
 	}
-	ret.Slashings.ValidatorCount = uint64(len(uniqueSlashedValidators))
-
-	uniqueSyncValidators := make(map[uint64]struct{})
-	for _, validator := range ret.SyncCommittee.Validators {
-		uniqueSyncValidators[validator] = struct{}{}
+	if len(ret.Slashings.Validators) > 0 {
+		slices.Sort(ret.Slashings.Validators)
+		if len(ret.Slashings.Validators) > 3 {
+			ret.Slashings.Validators = ret.Slashings.Validators[:3]
+		}
 	}
-	ret.SyncCommittee.ValidatorCount = uint64(len(uniqueSyncValidators))
+	if len(ret.SyncCommittee.Validators) > 0 {
+		slices.Sort(ret.SyncCommittee.Validators)
+		if len(ret.SyncCommittee.Validators) > 3 {
+			ret.SyncCommittee.Validators = ret.SyncCommittee.Validators[:3]
+		}
+	}
 
 	return ret, nil
 }
