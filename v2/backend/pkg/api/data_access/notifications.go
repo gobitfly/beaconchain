@@ -1589,7 +1589,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				event_filter,
 				event_threshold
 			FROM users_subscriptions
-			WHERE user_id = $1 AND event_name LIKE $2 + '%'`, userId, networkName)
+			WHERE user_id = $1 AND event_name LIKE $2`, userId, networkName+"%")
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for account dashboard notifications: %w`, err)
 		}
