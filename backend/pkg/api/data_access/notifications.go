@@ -1197,14 +1197,9 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		if len(eventSplit) == 2 {
 			networkName := eventSplit[0]
 			networkEvent := types.EventName(eventSplit[1])
-			nn, ok := networksSettings[networkName]
-			if !ok {
-				log.Warnf("network is not defined: %s (user_id: %d)", networkName, userId)
-				continue
-			}
 
-			// for dashboard notification, only show the ones belonging to the network the api is running against
-			if nn.ChainId != utils.Config.Chain.ClConfig.DepositChainID {
+			if _, ok := networksSettings[networkName]; !ok {
+				log.Warnf("network is not defined: %s (user_id: %d)", networkName, userId)
 				continue
 			}
 
@@ -1582,6 +1577,11 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		Filter    string          `db:"event_filter"`
 		Threshold float64         `db:"event_threshold"`
 	}{}
+
+	networkName := "mainnet"
+	if utils.Config.Chain.ClConfig.DepositChainID == 17000 {
+		networkName = "holesky"
+	}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &events, `
 			SELECT
@@ -1589,7 +1589,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				event_filter,
 				event_threshold
 			FROM users_subscriptions
-			WHERE user_id = $1`, userId)
+			WHERE user_id = $1 AND event_name LIKE $2`, userId, networkName+"%")
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for account dashboard notifications: %w`, err)
 		}
