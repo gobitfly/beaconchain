@@ -163,10 +163,13 @@ func sendEmailNotifications() error {
 
 	for _, n := range notificationQueueItem {
 		userInfo, err := db.GetUserInfo(context.Background(), uint64(n.Content.UserId), db.FrontendReaderDB)
+		emailNotificationsPerDay := uint64(10)
 		if err != nil {
-			return err
+			log.Error(err, "error getting user info", 0)
+		} else {
+			emailNotificationsPerDay = userInfo.PremiumPerks.EmailNotificationsPerDay
 		}
-		err = mail.SendMailRateLimited(n.Content, int64(userInfo.PremiumPerks.EmailNotificationsPerDay), NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET)
+		err = mail.SendMailRateLimited(n.Content, int64(emailNotificationsPerDay), NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET)
 		if err != nil {
 			if !strings.Contains(err.Error(), "rate limit has been exceeded") {
 				metrics.Errors.WithLabelValues("notifications_send_email").Inc()
