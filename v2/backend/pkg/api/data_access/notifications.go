@@ -1197,9 +1197,14 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		if len(eventSplit) == 2 {
 			networkName := eventSplit[0]
 			networkEvent := types.EventName(eventSplit[1])
-
-			if _, ok := networksSettings[networkName]; !ok {
+			nn, ok := networksSettings[networkName]
+			if !ok {
 				log.Warnf("network is not defined: %s (user_id: %d)", networkName, userId)
+				continue
+			}
+
+			// for dashboard notification, only show the ones belonging to the network the api is running against
+			if nn.ChainId != utils.Config.Chain.ClConfig.DepositChainID {
 				continue
 			}
 
