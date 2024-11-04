@@ -15,8 +15,9 @@ await useAsyncData('latest_state', () => refreshLatestState(), {
 await useAsyncData('get_user', () => getUser())
 await useAsyncData('get-supported-networks', () => loadAvailableNetworks())
 
-if (useRuntimeConfig().public.chainIdByDefault) {
-  setCurrentNetwork(Number(useRuntimeConfig().public.chainIdByDefault))
+const { chainIdByDefault } = useRuntimeConfig().public
+if (chainIdByDefault) {
+  setCurrentNetwork(Number(chainIdByDefault))
 }
 </script>
 
