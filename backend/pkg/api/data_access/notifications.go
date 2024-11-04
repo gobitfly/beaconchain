@@ -1161,7 +1161,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			device_name,
 			COALESCE(notify_enabled, false) AS notify_enabled
 		FROM users_devices
-		WHERE user_id = $1`, userId)
+		WHERE user_id = $1 AND notification_token IS NOT NULL AND LENGTH(notification_token) > 0`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for notifications paired devices: %w`, err)
 		}
