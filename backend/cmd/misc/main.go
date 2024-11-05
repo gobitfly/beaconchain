@@ -323,7 +323,7 @@ func Run() {
 		}
 		log.Infof("db schema applied successfully")
 	case "initBigtableSchema":
-		log.Infof("initializing bigtable schema")
+		log.Infof("initializing bigtable schema for project: %v, instance: %v", utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance)
 		err := db.InitBigtableSchema()
 		if err != nil {
 			log.Fatal(err, "error initializing bigtable schema", 0)
