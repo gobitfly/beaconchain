@@ -779,7 +779,7 @@
         "alert_if_gas_above": "Alert if gas is above",
         "alert_if_gas_below": "Alert if gas is below",
         "alert_if_participation_rate_below": "Alert if participation rate is below",
-        "new_reward_round": "New reward round"
+        "new_reward_round": "New RPL reward round"
       },
       "title": "Networks"
     },
@@ -855,10 +855,10 @@
           "label": "Group efficiency below"
         },
         "max_collateral_reached": {
-          "label": "Max collateral reached"
+          "label": "Max RPL collateral reached"
         },
         "min_collateral_reached": {
-          "label": "Min collateral reached"
+          "label": "Min RPL collateral reached"
         },
         "sync_committee": {
           "label": "Sync committee"
