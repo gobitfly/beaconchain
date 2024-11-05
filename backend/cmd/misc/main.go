@@ -78,7 +78,9 @@ var opts = struct {
  * By default, all commands that are not in the REQUIRES_LIST will automatically require everything.
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
-	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+	"app-bundle":         (&commands.AppBundleCommand{}).Requires(),
+	"initBigtableSchema": {Bigtable: true},
+	"applyDbSchema":      {NetworkDBs: true},
 }
 
 func Run() {
