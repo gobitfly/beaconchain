@@ -56,8 +56,8 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 	).Join(goqu.T("users"), goqu.On(goqu.T("users").Col("id").Eq(goqu.T("users_subscriptions").Col("user_id")))).
 		Where(goqu.L("(event_name = ? AND user_id <> 0)", eventNameForQuery)).
 		Where(goqu.L("(users.notifications_do_not_disturb_ts IS NULL OR users.notifications_do_not_disturb_ts < NOW())")).
-		// filter out users that have all notification channels disabled
-		Where(goqu.L("(select bool_or(active) from users_notification_channels where users_notification_channels.user_id = users_subscriptions.user_id)"))
+		// filter out users that have all notification channels disabled (but have an entry in the table)
+		Where(goqu.L("(select coalesce(bool_or(active), true) from users_notification_channels where users_notification_channels.user_id = users_subscriptions.user_id)"))
 
 	if lastSentFilter != "" {
 		if len(lastSentFilterArgs) > 0 {
