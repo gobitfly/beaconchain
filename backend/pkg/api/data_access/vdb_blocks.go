@@ -311,12 +311,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		Reward decimal.Decimal
 	}
 	startTime := time.Now()
-	query, args, err := blocksDs.Prepared(false).ToSQL()
+	query, args, err := blocksDs.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	log.Info(query)
 	err = d.alloyReader.SelectContext(ctx, &proposals, query, args...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
