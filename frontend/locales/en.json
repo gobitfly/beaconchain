@@ -469,8 +469,7 @@
     "terms": "Terms"
   },
   "header": {
-    "current_epoch": "Current Epoch",
-    "current_slot": "Current Slot",
+    "epoch": "Epoch",
     "login": "Log in",
     "logout": "Log out",
     "megamenu": {
@@ -525,7 +524,8 @@
       "withdrawals": "Withdrawals"
     },
     "register": "Sign up",
-    "settings": "Account Settings"
+    "settings": "Account Settings",
+    "slot": "Slot"
   },
   "locales": {
     "currency": "en-US",
