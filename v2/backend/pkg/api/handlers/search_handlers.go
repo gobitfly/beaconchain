@@ -22,6 +22,7 @@ type searchTypeKey string
 const (
 	validatorByIndex           searchTypeKey = "validator_by_index"
 	validatorByPublicKey       searchTypeKey = "validator_by_public_key"
+	validatorList              searchTypeKey = "validator_list"
 	validatorsByDepositAddress searchTypeKey = "validators_by_deposit_address"
 	validatorsByDepositEnsName searchTypeKey = "validators_by_deposit_ens_name"
 	//nolint:gosec
@@ -35,6 +36,7 @@ const (
 var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
 	validatorByIndex:                 reInteger,
 	validatorByPublicKey:             reValidatorPublicKey,
+	validatorList:                    reValidatorList,
 	validatorsByDepositAddress:       reEthereumAddress,
 	validatorsByDepositEnsName:       reEnsName,
 	validatorsByWithdrawalCredential: reWithdrawalCredential,
@@ -79,7 +81,7 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 			chainId := chainId
 			searchType := searchType
 			g.Go(func() error {
-				searchResult, err := h.handleSearch(ctx, req.Input, searchType, chainId)
+				searchResult, err := h.handleSearchType(ctx, req.Input, searchType, chainId)
 				if err != nil {
 					if errors.Is(err, dataaccess.ErrNotFound) {
 						return nil
@@ -119,12 +121,14 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 // --------------------------------------
 //	 Search Helper Functions
 
-func (h *HandlerService) handleSearch(ctx context.Context, input string, searchType searchTypeKey, chainId uint64) (*types.SearchResult, error) {
+func (h *HandlerService) handleSearchType(ctx context.Context, input string, searchType searchTypeKey, chainId uint64) (*types.SearchResult, error) {
 	switch searchType {
 	case validatorByIndex:
 		return h.handleSearchValidatorByIndex(ctx, input, chainId)
 	case validatorByPublicKey:
 		return h.handleSearchValidatorByPublicKey(ctx, input, chainId)
+	case validatorList:
+		return h.handleSearchValidatorList(ctx, input, chainId)
 	case validatorsByDepositAddress:
 		return h.handleSearchValidatorsByDepositAddress(ctx, input, chainId)
 	case validatorsByDepositEnsName:
@@ -177,6 +181,29 @@ func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, i
 		ChainId:   chainId,
 		HashValue: "0x" + hex.EncodeToString(result.PublicKey),
 		NumValue:  &result.Index,
+	}, nil
+}
+
+func (h *HandlerService) handleSearchValidatorList(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
+	var v validationError
+	// split the input string into a slice of strings
+	indices, pubkeys := v.checkValidatorList(input, forbidEmpty)
+	if v.hasErrors() {
+		return nil, nil // return no error as to not disturb the other search types
+	}
+	validators, err := h.daService.GetValidatorsFromSlices(ctx, indices, pubkeys)
+	if err != nil {
+		return nil, err
+	}
+	if len(validators) == 0 {
+		return nil, nil
+	}
+
+	var resultLength uint64 = uint64(len(validators))
+	return &types.SearchResult{
+		Type:     string(validatorList),
+		ChainId:  chainId,
+		NumValue: &resultLength,
 	}, nil
 }
 
