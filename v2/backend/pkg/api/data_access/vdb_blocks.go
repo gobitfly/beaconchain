@@ -131,9 +131,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		InnerJoin(blocks, goqu.On(
 			blocks.Col("proposer").Eq(validators.Col("validator_index")),
 		)).
-		LeftJoin(goqu.T("consensus_payloads").As("cp"), goqu.On(
-			blocks.Col("slot").Eq(goqu.I("cp.slot")),
-		)).
 		LeftJoin(goqu.T("execution_payloads").As("ep"), goqu.On(
 			blocks.Col("exec_block_hash").Eq(goqu.I("ep.block_hash")),
 		)).
@@ -172,7 +169,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			blocks.Col("graffiti_text"),
 			goqu.COALESCE(goqu.I("rb.proposer_fee_recipient"), blocks.Col("exec_fee_recipient")).As("fee_recipient"),
 			goqu.COALESCE(goqu.L("rb.value / 1e18"), goqu.I("ep.fee_recipient_reward")).As("el_reward"),
-			goqu.L("cp.cl_attestations_reward / 1e9 + cp.cl_sync_aggregate_reward / 1e9 + cp.cl_slashing_inclusion_reward / 1e9").As("cl_reward"),
 		)
 
 	// 3. Sorting and pagination
@@ -268,7 +264,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					goqu.V(nil).As("graffiti_text"),
 					goqu.V(nil).As("fee_recipient"),
 					goqu.V(nil).As("el_reward"),
-					goqu.V(nil).As("cl_reward"),
 				).
 				As("scheduled_blocks")
 
@@ -335,6 +330,53 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		slices.Reverse(proposals)
 	}
 
+	slots := make([]uint64, len(proposals))
+	for i, proposal := range proposals {
+		slots[i] = proposal.Slot
+	}
+
+	// retrieve the cl rewards, source it from clickhouse for mainnet and from postgres for holsky
+	// TODO: harmonize this @invis
+	clRewardsData := []struct {
+		Slot     uint64              `db:"slot"`
+		ClReward decimal.NullDecimal `db:"cl_reward"`
+	}{}
+	if utils.Config.Chain.ClConfig.DepositChainID == 17000 {
+		clRewardsQuery := goqu.Dialect("postgres").
+			From(goqu.T("consensus_payloads")).
+			Select(
+				goqu.C("slot"),
+				goqu.L("cl_attestations_reward / 1e9 + cl_sync_aggregate_reward / 1e9 + cl_slashing_inclusion_reward / 1e9 AS cl_reward"),
+			).Where(goqu.C("slot").In(slots))
+		clRewardsQuerySql, args, err := clRewardsQuery.Prepared(true).ToSQL()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = d.alloyReader.SelectContext(ctx, &clRewardsData, clRewardsQuerySql, args...)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		clRewardsQuery := goqu.Dialect("postgres").
+			From(goqu.L("mainnet.validator_proposal_rewards_slot")).
+			Select(
+				goqu.C("slot"),
+				goqu.L("attestations_reward / 1e9 + sync_aggregate_reward / 1e9 + slasher_reward / 1e9 AS cl_reward"),
+			).Where(goqu.C("slot").In(slots))
+		clRewardsQuerySql, args, err := clRewardsQuery.Prepared(true).ToSQL()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = d.clickhouseReader.SelectContext(ctx, &clRewardsData, clRewardsQuerySql, args...)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	clRewards := make(map[uint64]decimal.NullDecimal)
+	for _, reward := range clRewardsData {
+		clRewards[reward.Slot] = reward.ClReward
+	}
+
 	data := make([]t.VDBBlocksTableRow, len(proposals))
 	addressMapping := make(map[string]*t.Address)
 	contractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(proposals))
@@ -387,8 +429,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
-		if proposal.ClReward.Valid {
-			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
+		if clReward, ok := clRewards[proposal.Slot]; ok && clReward.Valid {
+			reward.Cl = clReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
 		proposals[i].Reward = proposal.ElReward.Decimal.Add(proposal.ClReward.Decimal)
 		data[i].Reward = &reward
