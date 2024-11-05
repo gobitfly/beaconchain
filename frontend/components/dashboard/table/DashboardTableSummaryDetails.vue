@@ -68,10 +68,9 @@ const data = computed<SummaryRow[][]>(() => {
     props.forEach(p => addToList(index, p))
   }
 
-  const rewardCols: CombinedPropOrUndefined[] = [
-    (!props.tableVisibility.reward ? 'reward' : undefined),
-    'missed_rewards',
-  ]
+  const rewardCols: CombinedPropOrUndefined[]
+  = [ (!props.tableVisibility.reward ? 'reward' : undefined) ]
+
   let addCols: CombinedPropOrUndefined[] = props.tableVisibility
     .attestations
     ? []
