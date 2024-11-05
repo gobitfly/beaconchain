@@ -14,6 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/templates"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/k3a/html2text"
 	"github.com/mailgun/mailgun-go/v4"
 )
 
@@ -133,6 +134,10 @@ func SendMailMailgun(to, subject, msgHtml, msgText string, attachment []types.Em
 		utils.Config.Frontend.Mail.Mailgun.Domain,
 		utils.Config.Frontend.Mail.Mailgun.PrivateKey,
 	)
+
+	// if the text part still contains html tags / entities, remove / convert them
+	msgText = html2text.HTML2Text(msgText)
+
 	message := mg.NewMessage(utils.Config.Frontend.Mail.Mailgun.Sender, subject, msgText, to)
 	message.SetHtml(msgHtml)
 
