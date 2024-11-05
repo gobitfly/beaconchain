@@ -79,7 +79,7 @@ var opts = struct {
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
 	"app-bundle":         (&commands.AppBundleCommand{}).Requires(),
-	"initBigtableSchema": {Bigtable: true},
+	"initBigtableSchema": {},
 	"applyDbSchema":      {NetworkDBs: true},
 }
 
