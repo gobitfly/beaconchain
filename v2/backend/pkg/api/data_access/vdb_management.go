@@ -970,7 +970,7 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(c
 		SELECT DISTINCT uvdv.validator_index
 		FROM validators v
 		JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-		WHERE uvdv.dashboard_id = $1 AND v.withdrawalcredentials = $2 AND uvdv.dashboard_id = $2;
+		WHERE uvdv.dashboard_id = $1 AND v.withdrawalcredentials = $2;
 		`, dashboardId, addressParsed)
 	})
 
