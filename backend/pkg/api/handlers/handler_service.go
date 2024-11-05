@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/invopop/jsonschema"
@@ -579,6 +580,7 @@ func (v *intOrString) UnmarshalJSON(data []byte) error {
 	// If unmarshalling as uint64 fails, try to unmarshal as string
 	var strValue string
 	if err := json.Unmarshal(data, &strValue); err == nil {
+		strValue = strings.TrimSpace(strValue)
 		if parsedInt, err := strconv.ParseUint(strValue, 10, 64); err == nil {
 			v.intValue = &parsedInt
 		} else {
