@@ -258,6 +258,10 @@ func (d *DummyService) RemoveValidatorDashboardGroup(ctx context.Context, dashbo
 	return nil
 }
 
+func (d *DummyService) RemoveValidatorDashboardGroupValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
+	return nil
+}
+
 func (d *DummyService) GetValidatorDashboardGroupExists(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
 	return true, nil
 }

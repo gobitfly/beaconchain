@@ -445,7 +445,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
-// PublicDeleteValidatorDashboardGroups godoc
+// PublicDeleteValidatorDashboardGroup godoc
 //
 //	@Description	Delete a group in a specified validator dashboard.
 //	@Tags			Validator Dashboard Management
@@ -485,6 +485,43 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 		return
 	}
 
+	returnNoContent(w, r)
+}
+
+// PublicDeleteValidatorDashboardGroupValidators godoc
+// @Description	Delete all validators from a specified group in a specified validator dashboard.
+// @Tags			Validator Dashboard Management
+// @Security		ApiKeyInHeader || ApiKeyInQuery
+// @Accept		json
+// @Produce		json
+// @Param			dashboard_id	path	integer	true	"The ID of the dashboard."
+// @Param			group_id		path	integer	true	"The ID of the group."
+// @Success		204				"Validators removed successfully."
+// @Failure		400				{object}	types.ApiErrorResponse
+// @Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/validators [delete]
+func (h *HandlerService) PublicDeleteValidatorDashboardGroupValidators(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	groupExists, err := h.getDataAccessor(r).GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if !groupExists {
+		returnNotFound(w, r, errors.New("group not found"))
+		return
+	}
+	err = h.getDataAccessor(r).RemoveValidatorDashboardGroupValidators(r.Context(), dashboardId, groupId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 
