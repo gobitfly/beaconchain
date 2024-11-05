@@ -2,7 +2,7 @@
 import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
 
 const props = defineProps<{
-  error?: BcInputError,
+  error?: string,
   infoText?: string,
   label?: string,
 }>()

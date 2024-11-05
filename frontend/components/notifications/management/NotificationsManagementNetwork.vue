@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+// import type { NotificationSettingsNetwork } from '~/types/api/notifications'
+
 const { t: $t } = useTranslation()
 
 const notificationsManagementStore = useNotificationsManagementStore()
@@ -27,6 +29,23 @@ const hasGasAbove = ref(currentNetworkSettings.value?.is_gas_above_subscribed ??
 const hasGasBelow = ref(currentNetworkSettings.value?.is_gas_below_subscribed ?? false)
 const hasParticipationRate = ref(currentNetworkSettings.value?.is_participation_rate_subscribed ?? false)
 const hasNewRewardRound = ref(currentNetworkSettings.value?.is_new_reward_round_subscribed ?? false)
+
+// const validationSchema = createSchemaObject({
+//   is_webhook_discord_enabled: validation.boolean(),
+//   webhook_url: validation.url($t('validation.url.invalid')),
+// })
+
+const {
+  errorMessage,
+  value: thresholdParticipationRate,
+} = useField<string>(
+  'thresholdParticipationRate',
+  validation.numberRange({
+    isInteger: true,
+    max: 100,
+    min: 0,
+  }),
+)
 
 watchDebounced([
   hasGasAbove,
@@ -120,6 +139,9 @@ const { hasRocketPool } = useNetworkStore()
             v-model="hasGasAbove"
             class="toggle"
           />
+          <BcInputError
+            error="Invalid input"
+          />
         </BcListSection>
         <BcListSection
           class="grid-overwrite"
@@ -137,6 +159,9 @@ const { hasRocketPool } = useNetworkStore()
           <BcToggle
             v-model="hasParticipationRate"
             class="toggle"
+          />
+          <BcInputError
+            :error="``"
           />
         </BcListSection>
       </div>
