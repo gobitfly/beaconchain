@@ -145,6 +145,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					goqu.I("relays_blocks.exec_block_hash"),
 					goqu.I("relays_blocks.proposer_fee_recipient"),
 					goqu.MAX(goqu.I("relays_blocks.value")).As("value")).
+				Where(goqu.I("relays_blocks.exec_block_hash").Eq(blocks.Col("exec_block_hash"))).
 				GroupBy(
 					"exec_block_hash",
 					"proposer_fee_recipient",
@@ -310,10 +311,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		Reward decimal.Decimal
 	}
 	startTime := time.Now()
-	query, args, err := blocksDs.Prepared(true).ToSQL()
+	query, args, err := blocksDs.Prepared(false).ToSQL()
 	if err != nil {
 		return nil, nil, err
 	}
+
+	log.Info(query)
 	err = d.alloyReader.SelectContext(ctx, &proposals, query, args...)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
