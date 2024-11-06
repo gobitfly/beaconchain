@@ -113,16 +113,6 @@ type ChainConfig struct {
 	// TODO: add more fields, depending on what frontend needs
 }
 
-type SearchResult struct {
-	Type      string  `json:"type"`
-	ChainId   uint64  `json:"chain_id"`
-	HashValue string  `json:"hash_value,omitempty"`
-	StrValue  string  `json:"str_value,omitempty"`
-	NumValue  *uint64 `json:"num_value,omitempty"`
-}
-
-type InternalPostSearchResponse ApiDataResponse[[]SearchResult]
-
 type VDBPublicId struct {
 	PublicId      string `json:"public_id"`
 	DashboardId   int    `json:"-"`
