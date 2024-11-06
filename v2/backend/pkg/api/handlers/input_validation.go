@@ -30,6 +30,7 @@ var (
 	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
+	reValidatorList                = regexp.MustCompile(`^(0x[0-9a-fA-F]{96}|[0-9]+)(,\s*(0x[0-9a-fA-F]{96}|[0-9]+)\s*)+$`)
 	reEthereumAddress              = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{40}$`)
 	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[01])?[0-9a-fA-F]{62}$`)
 	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
@@ -442,12 +443,14 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 	var indexes []types.VDBValidator
 	var publicKeys []string
 	for _, validator := range validatorsSlice {
+		validator = strings.TrimSpace(validator)
 		if reInteger.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
 		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
 			_, err := hexutil.Decode(validator)
 			if err != nil {
 				v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))
+				continue
 			}
 			publicKeys = append(publicKeys, validator)
 		} else {

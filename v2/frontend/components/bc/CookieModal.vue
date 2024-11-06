@@ -6,7 +6,10 @@ import { Target } from '~/types/links'
 
 const cookiePreference = useCookie<CookiesPreference>(
   COOKIE_KEY.COOKIES_PREFERENCE,
-  { default: () => undefined },
+  {
+    default: () => undefined,
+    maxAge: 60 * 60 * 24 * 365,
+  },
 )
 const { t: $t } = useTranslation()
 

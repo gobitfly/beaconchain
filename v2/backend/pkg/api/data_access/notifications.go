@@ -353,7 +353,10 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 		{Column: enums.NotificationsDashboardsColumns.GroupId.ToExpr(), Desc: false, Offset: currentCursor.GroupId},
 		{Column: enums.NotificationsDashboardsColumns.ChainId.ToExpr(), Desc: true, Offset: currentCursor.ChainId},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
+	}
 	unionQuery = unionQuery.Order(order...)
 	if directions != nil {
 		unionQuery = unionQuery.Where(directions)
@@ -751,7 +754,10 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		offset = currentCursor.EventThreshold
 	}
 
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
+	}
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -863,7 +869,10 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
 		{Column: enums.NotificationsClientsColumns.ClientName.ToExpr(), Desc: false, Offset: currentCursor.Client},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
+	}
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -961,7 +970,10 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: currentCursor.Network},
 		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
 	}
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
+	}
 	ds = ds.Order(order...)
 	if directions != nil {
 		ds = ds.Where(directions)
@@ -1149,7 +1161,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 			device_name,
 			COALESCE(notify_enabled, false) AS notify_enabled
 		FROM users_devices
-		WHERE user_id = $1`, userId)
+		WHERE user_id = $1 AND notification_token IS NOT NULL AND LENGTH(notification_token) > 0`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for notifications paired devices: %w`, err)
 		}

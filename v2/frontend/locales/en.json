@@ -469,8 +469,7 @@
     "terms": "Terms"
   },
   "header": {
-    "current_epoch": "Current Epoch",
-    "current_slot": "Current Slot",
+    "epoch": "Epoch",
     "login": "Log in",
     "logout": "Log out",
     "megamenu": {
@@ -525,7 +524,8 @@
       "withdrawals": "Withdrawals"
     },
     "register": "Sign up",
-    "settings": "Account Settings"
+    "settings": "Account Settings",
+    "slot": "Slot"
   },
   "locales": {
     "currency": "en-US",
@@ -644,7 +644,8 @@
       "empty": {
         "login": "Login to set notifications",
         "no_dashboards": "Create a dashboard to set notifications",
-        "with_dashboards": "Click here to set notifications"
+        "no_notifications": "No notifications received",
+        "no_subscriptions": "Click here to set notifications"
       },
       "entity": {
         "accounts": "account | accounts",
@@ -778,7 +779,7 @@
         "alert_if_gas_above": "Alert if gas is above",
         "alert_if_gas_below": "Alert if gas is below",
         "alert_if_participation_rate_below": "Alert if participation rate is below",
-        "new_reward_round": "New reward round"
+        "new_reward_round": "New RPL reward round"
       },
       "title": "Networks"
     },
@@ -854,10 +855,10 @@
           "label": "Group efficiency below"
         },
         "max_collateral_reached": {
-          "label": "Max collateral reached"
+          "label": "Max RPL collateral reached"
         },
         "min_collateral_reached": {
-          "label": "Min collateral reached"
+          "label": "Min RPL collateral reached"
         },
         "sync_committee": {
           "label": "Sync committee"

@@ -11,7 +11,7 @@ import type {
 
 export function useNotificationsManagementDashboards() {
   const { fetch } = useCustomFetch()
-
+  const { refreshOverview } = useNotificationsDashboardOverviewStore()
   const data = ref<InternalGetUserNotificationSettingsDashboardsResponse>()
   const {
     cursor,
@@ -191,7 +191,7 @@ export function useNotificationsManagementDashboards() {
         group_id,
         settings,
       })
-    })
+    }).then(() => refreshOverview())
   }
 
   return {

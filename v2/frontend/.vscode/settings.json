@@ -9,6 +9,7 @@
     "BcToggle",
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
+    "DashboardTableSummaryDetails",
     "DashboardTableValidators",
     "DashboardValidatorManagmentModal",
     "NotificationMachinesTable",

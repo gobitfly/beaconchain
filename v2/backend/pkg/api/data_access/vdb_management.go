@@ -606,6 +606,19 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, d
 	return err
 }
 
+func (d *DataAccessService) RemoveValidatorDashboardGroupValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
+	//Create the query to delete validators
+	deleteValidatorsQuery := `
+		DELETE FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1 AND group_id = $2
+	`
+
+	// Delete the validators
+	_, err := d.alloyWriter.ExecContext(ctx, deleteValidatorsQuery, dashboardId, groupId)
+
+	return err
+}
+
 func (d *DataAccessService) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
 	var count uint64
 	err := d.alloyReader.GetContext(ctx, &count, `
@@ -970,7 +983,7 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(c
 		SELECT DISTINCT uvdv.validator_index
 		FROM validators v
 		JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-		WHERE uvdv.dashboard_id = $1 AND v.withdrawalcredentials = $2 AND uvdv.dashboard_id = $2;
+		WHERE uvdv.dashboard_id = $1 AND v.withdrawalcredentials = $2;
 		`, dashboardId, addressParsed)
 	})
 

@@ -46,10 +46,12 @@ const input = defineModel<string>('input')
         v-if="hasUnit"
         v-model="input"
         unit=" %"
+        :disabled="hasPremiumGem"
       />
       <BcInputCheckbox
         v-model="checkbox"
         :input-id="idCheckbox"
+        :disabled="hasPremiumGem"
       />
     </span>
   </div>
