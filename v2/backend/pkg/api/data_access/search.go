@@ -12,9 +12,9 @@ type SearchRepository interface {
 	GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error)
 	GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error)
 	GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error)
-	GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error)
+	GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositAddress, error)
 	GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error)
-	GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error)
+	GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrwalCredential, error)
 	GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error)
 }
 
@@ -28,7 +28,7 @@ func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chain
 	if int(index) < len(validatorMapping.ValidatorPubkeys) {
 		return &t.SearchValidator{
 			Index:     index,
-			PublicKey: hexutil.MustDecode(validatorMapping.ValidatorPubkeys[index]),
+			PublicKey: validatorMapping.ValidatorPubkeys[index],
 		}, nil
 	}
 
@@ -46,7 +46,7 @@ func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, c
 	if index, found := validatorMapping.ValidatorIndices[b]; found {
 		return &t.SearchValidator{
 			Index:     index,
-			PublicKey: publicKey,
+			PublicKey: b,
 		}, nil
 	}
 
@@ -56,9 +56,10 @@ func (d *DataAccessService) GetSearchValidatorByPublicKey(ctx context.Context, c
 func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
 	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByDepositAddress{
-		Address: address,
+		DepositAddress: hexutil.Encode(address),
 	}
-	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(validatorindex) from validators where pubkey in (select publickey from eth1_deposits where from_address = $1);", address)
+	err := db.ReaderDb.GetContext(ctx, &ret.Count, `
+		select count(validatorindex) from validators where pubkey in (select publickey from eth1_deposits where from_address = $1);`, address)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func (d *DataAccessService) GetSearchValidatorsByDepositAddress(ctx context.Cont
 	return ret, nil
 }
 
-func (d *DataAccessService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositEnsName, error) {
+func (d *DataAccessService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositAddress, error) {
 	// TODO: implement handling of chainid
 	// TODO: finalize ens implementation first
 	return nil, ErrNotFound
@@ -77,7 +78,7 @@ func (d *DataAccessService) GetSearchValidatorsByDepositEnsName(ctx context.Cont
 func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
 	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByWithdrwalCredential{
-		WithdrawalCredential: credential,
+		WithdrawalCredential: hexutil.Encode(credential),
 	}
 	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(validatorindex) from validators where withdrawalcredentials = $1;", credential)
 	if err != nil {
@@ -89,7 +90,7 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx contex
 	return ret, nil
 }
 
-func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithrawalEnsName, error) {
+func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrwalCredential, error) {
 	// TODO: implement handling of chainid
 	// TODO: finalize ens implementation first
 	return nil, ErrNotFound
