@@ -777,24 +777,12 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	// Calculate the result
 	cursorData := notificationHistory
 	for _, notification := range notificationHistory {
-		resultEntry := t.NotificationMachinesTableRow{
+		result = append(result, t.NotificationMachinesTableRow{
 			MachineName: notification.MachineName,
 			Threshold:   notification.EventThreshold,
+			EventType:   string(notification.EventType),
 			Timestamp:   notification.Ts.Unix(),
-		}
-		switch notification.EventType {
-		case types.MonitoringMachineOfflineEventName:
-			resultEntry.EventType = "offline"
-		case types.MonitoringMachineDiskAlmostFullEventName:
-			resultEntry.EventType = "storage"
-		case types.MonitoringMachineCpuLoadEventName:
-			resultEntry.EventType = "cpu"
-		case types.MonitoringMachineMemoryUsageEventName:
-			resultEntry.EventType = "memory"
-		default:
-			return nil, nil, fmt.Errorf("invalid event name for machine notification: %v", notification.EventType)
-		}
-		result = append(result, resultEntry)
+		})
 	}
 
 	// -------------------------------------
@@ -996,19 +984,16 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		resultEntry := t.NotificationNetworksTableRow{
 			ChainId:   notification.Network,
 			Timestamp: notification.Ts.Unix(),
+			EventType: string(notification.EventType),
 		}
 		switch notification.EventType {
 		case types.NetworkGasAboveThresholdEventName:
-			resultEntry.EventType = "gas_above"
 			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
 		case types.NetworkGasBelowThresholdEventName:
-			resultEntry.EventType = "gas_below"
 			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
 		case types.NetworkParticipationRateThresholdEventName:
-			resultEntry.EventType = "participation_rate"
 			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold)
 		case types.RocketpoolNewClaimRoundStartedEventName:
-			resultEntry.EventType = "new_reward_round"
 		default:
 			return nil, nil, fmt.Errorf("invalid event name for network notification: %v", notification.EventType)
 		}
