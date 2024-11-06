@@ -190,7 +190,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		offset = currentCursor.Reward
 	}
 
-	order, directions := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
+	}
 	blocksDs = goqu.Dialect("postgres").From(goqu.T("past_blocks_cte")).
 		With("past_blocks_cte", blocksDs). // encapsulate so we can use selected fields
 		Order(order...)

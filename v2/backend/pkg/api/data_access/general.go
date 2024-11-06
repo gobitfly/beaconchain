@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
@@ -52,7 +53,7 @@ func (d *DataAccessService) GetNamesAndEnsForAddresses(ctx context.Context, addr
 // helper function to sort and apply pagination to a query
 // 1st param is the list of all columns necessary to sort the table deterministically; it defines their precedence and sort direction
 // 2nd param is the requested sort column; it may or may not be part of the default columns (if it is, you don't have to specify the cursor limit again)
-func applySortAndPagination(defaultColumns []types.SortColumn, primary types.SortColumn, cursor types.GenericCursor) ([]exp.OrderedExpression, exp.Expression) {
+func applySortAndPagination(defaultColumns []types.SortColumn, primary types.SortColumn, cursor types.GenericCursor) ([]exp.OrderedExpression, exp.Expression, error) {
 	// prepare ordering columns; always need all columns to ensure consistent ordering
 	queryOrderColumns := make([]types.SortColumn, 0, len(defaultColumns))
 	queryOrderColumns = append(queryOrderColumns, primary)
@@ -90,22 +91,43 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 			var colWhere exp.Expression
 
 			// current convention is opposite of the psql default (ASC: nulls first, DESC: nulls last)
-			colWhere = goqu.Or(column.Column.Lt(column.Offset), column.Column.IsNull())
-			if !column.Desc {
-				colWhere = column.Column.Gt(column.Offset)
+			if column.Desc {
+				if column.Offset == nil && queryWhere == nil {
+					continue
+				}
+
+				colWhere = goqu.Or(column.Column.Lt(column.Offset), column.Column.IsNull())
+
+				if queryWhere == nil {
+					queryWhere = colWhere
+				} else {
+					if column.Offset == nil {
+						queryWhere = goqu.And(column.Column.IsNull(), queryWhere)
+					} else {
+						queryWhere = goqu.And(column.Column.Eq(column.Offset), queryWhere)
+						queryWhere = goqu.Or(colWhere, queryWhere)
+					}
+				}
+			} else {
 				if column.Offset == nil {
-					colWhere = goqu.Or(colWhere, column.Column.IsNull())
+					colWhere = column.Column.IsNotNull()
+				} else {
+					colWhere = column.Column.Gt(column.Offset)
+				}
+
+				if queryWhere == nil {
+					queryWhere = colWhere
+				} else {
+					queryWhere = goqu.And(column.Column.Eq(column.Offset), queryWhere)
+					queryWhere = goqu.Or(colWhere, queryWhere)
 				}
 			}
+		}
 
-			if queryWhere == nil {
-				queryWhere = colWhere
-			} else {
-				queryWhere = goqu.And(column.Column.Eq(column.Offset), queryWhere)
-				queryWhere = goqu.Or(colWhere, queryWhere)
-			}
+		if queryWhere == nil {
+			return nil, nil, fmt.Errorf("cursor given for descending order but all offset are nil meaning no data after it")
 		}
 	}
 
-	return queryOrder, queryWhere
+	return queryOrder, queryWhere, nil
 }
