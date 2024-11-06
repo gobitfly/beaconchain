@@ -298,8 +298,9 @@ func TestInternalSearchHandler(t *testing.T) {
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
-	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
+	validatorByIndex, ok := resp.Data[0].Value.(api_types.SearchValidator)
+	assert.True(t, ok, "response data should be of type SearchValidator")
+	assert.Equal(t, uint64(5), validatorByIndex.Index, "validator index should be 5")
 
 	// search for validator by pubkey
 	resp = api_types.InternalPostSearchResponse{}
@@ -324,8 +325,9 @@ func TestInternalSearchHandler(t *testing.T) {
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
-	assert.Equal(t, uint64(5), *resp.Data[0].NumValue, "validator index should be 5")
+	validatorByPublicKey, ok := resp.Data[0].Value.(api_types.SearchValidator)
+	assert.True(t, ok, "response data should be of type SearchValidator")
+	assert.Equal(t, uint64(5), validatorByPublicKey.Index, "validator index should be 5")
 
 	// search for validator by withdawal address
 	resp = api_types.InternalPostSearchResponse{}
@@ -349,8 +351,9 @@ func TestInternalSearchHandler(t *testing.T) {
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	assert.NotNil(t, resp.Data[0].NumValue, "validator index should not be nil")
-	assert.Greater(t, *resp.Data[0].NumValue, uint64(0), "returned number of validators should be greater than 0")
+	validatorsByWithdrawalAddress, ok := resp.Data[0].Value.(api_types.SearchValidatorsByWithdrwalCredential)
+	assert.True(t, ok, "response data should be of type SearchValidator")
+	assert.Greater(t, validatorsByWithdrawalAddress.Count, uint64(0), "returned number of validators should be greater than 0")
 }
 
 func TestPublicAndSharedDashboards(t *testing.T) {
