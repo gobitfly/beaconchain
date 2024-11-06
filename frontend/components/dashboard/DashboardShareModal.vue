@@ -18,10 +18,10 @@ const dashboardName = ref('')
 const shareGroups = ref(true)
 const isUpdating = ref(false)
 const isNew = ref(true)
-const { user } = useUserStore()
+const { userPremiumPerks } = useUserStore()
 
 const isPremiumUser = computed(
-  () => !!user.value?.premium_perks?.share_custom_dashboards,
+  () => !!userPremiumPerks.value?.share_custom_dashboards,
 )
 
 watch(

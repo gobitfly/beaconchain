@@ -13,7 +13,8 @@ const {
   = useUserDashboardStore()
 const { dashboards } = useUserDashboardStore()
 const {
-  isLoggedIn, user,
+  isLoggedIn,
+  userPremiumPerks,
 } = useUserStore()
 const { currentNetwork } = useNetworkStore()
 
@@ -41,7 +42,7 @@ const route = useRoute()
 const maxDashboards = computed(() => {
   // TODO: currently there is no value for "amount of account dashboards", using
   //  "amount of validator dashboards" instead for now
-  return user.value?.premium_perks.validator_dashboards ?? 1
+  return userPremiumPerks.value?.validator_dashboards ?? 1
 })
 const accountsDisabled = computed(() => {
   // TODO: Once account dashboards are being tackled, use something like

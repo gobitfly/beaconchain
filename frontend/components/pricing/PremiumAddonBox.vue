@@ -14,7 +14,9 @@ import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
 const {
-  isLoggedIn, user,
+  isLoggedIn,
+  user,
+  userPremiumPerks,
 } = useUserStore()
 const {
   isStripeDisabled, stripeCustomerPortal, stripePurchase,
@@ -125,7 +127,7 @@ const addonButton = computed(() => {
 const maximumQuantity = computed(() => {
   return Math.floor(
     ((props.maximumValidatorLimit || 10000)
-    - (user.value?.premium_perks.validators_per_dashboard || 0))
+    - (userPremiumPerks.value?.validators_per_dashboard || 0))
     / props.addon.extra_dashboard_validators,
   )
 })

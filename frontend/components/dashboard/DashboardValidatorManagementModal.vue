@@ -56,7 +56,8 @@ const {
   = useDashboardKey()
 const { updateHash } = useUserDashboardStore()
 const {
-  isLoggedIn, user,
+  isLoggedIn,
+  userPremiumPerks,
 } = useUserStore()
 
 const initialQuery = {
@@ -211,7 +212,7 @@ function isSearchResultRestricted(result: ResultSuggestion): boolean {
     case ResultType.ValidatorsByPubkey:
       return false
     default:
-      return isPublic.value || !user.value?.premium_perks?.ad_free
+      return isPublic.value || !userPremiumPerks.value?.bulk_adding
   }
 }
 
@@ -334,9 +335,9 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const total = computed(() => addUpValues(overview.value?.validators))
 
 const maxValidatorsPerDashboard = computed(() =>
-  isPublic.value || !user.value?.premium_perks?.validators_per_dashboard
+  isPublic.value || !userPremiumPerks.value?.validators_per_dashboard
     ? 20
-    : user.value.premium_perks.validators_per_dashboard,
+    : userPremiumPerks.value?.validators_per_dashboard,
 )
 
 const premiumLimit = computed(

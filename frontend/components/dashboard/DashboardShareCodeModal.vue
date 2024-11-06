@@ -17,7 +17,7 @@ const router = useRouter()
 const url = useRequestURL()
 const { refreshDashboards } = useUserDashboardStore()
 const { fetch } = useCustomFetch()
-const { user } = useUserStore()
+const { userPremiumPerks } = useUserStore()
 
 const isUpdating = ref(false)
 
@@ -100,7 +100,7 @@ const unpublish = async () => {
         $t("dashboard.share_dialog.share_public_disclaimer")
       }}</label>
       <label
-        v-if="!user?.premium_perks?.share_custom_dashboards"
+        v-if="!userPremiumPerks?.share_custom_dashboards"
         class="disclaimer"
       >{{ $t("dashboard.share_dialog.upgrade") }}<BcPremiumGem class="gem" /></label>
       <div

@@ -34,7 +34,7 @@ const visible = defineModel<boolean>()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
 const { dashboards } = useUserDashboardStore()
-const { user } = useUserStore()
+const { userPremiumPerks } = useUserStore()
 
 const cursor = ref<Cursor>(0)
 const pageSize = ref<number>(25)
@@ -186,9 +186,9 @@ const dashboardName = computed(() => {
 })
 
 const maxGroupsPerDashboard = computed(() =>
-  isPublic.value || !user.value?.premium_perks?.validator_groups_per_dashboard
+  isPublic.value || !userPremiumPerks.value?.validator_groups_per_dashboard
     ? 1
-    : user.value.premium_perks.validator_groups_per_dashboard,
+    : userPremiumPerks.value?.validator_groups_per_dashboard,
 )
 const premiumLimit = computed(
   () => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value,

@@ -27,8 +27,8 @@ const notificationsTotal = computed(() => {
   return last24hEmailsCount.value + last24hWebhookCount.value + last24hPushCount.value
 })
 
-const { user } = useUserStore()
-const mailLimit = computed(() => user.value?.premium_perks.email_notifications_per_day ?? 0)
+const { userPremiumPerks } = useUserStore()
+const mailLimit = computed(() => userPremiumPerks.value?.email_notifications_per_day ?? 0)
 
 const resetHours = computed(() => overview.value?.next_email_count_reset_timestamp ?? 0)
 const tooltipEmail = computed(() => {

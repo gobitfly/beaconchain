@@ -55,11 +55,16 @@ export function useUserStore() {
     return !!user.value
   })
 
+  const userPremiumPerks = computed(() => {
+    return user.value?.premium_perks
+  })
+
   return {
     doLogin,
     doLogout,
     getUser,
     isLoggedIn,
     user,
+    userPremiumPerks,
   }
 }
