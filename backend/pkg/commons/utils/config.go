@@ -130,7 +130,7 @@ func ReadConfig(cfg *types.Config, path string) error {
 		case "holesky":
 			cfg.Chain.GenesisTimestamp = 1695902400
 		case "mekong":
-			cfg.Chain.GenesisTimestamp = 1 // // TODO: mekong check if this is still correct https://github.com/ethpandaops/mekong-devnets/blob/master/network-configs/devnet-0/metadata/genesis_validators_root.txt
+			cfg.Chain.GenesisTimestamp = 1730822400
 		default:
 			return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
 		}
