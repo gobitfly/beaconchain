@@ -10,9 +10,9 @@ const {
   secondsPerEpoch,
 } = useNetworkStore()
 
-const { user } = useUserStore()
+const { userPremiumPerks } = useUserStore()
 const hasPremiumPerkGroupEfficiency = computed(
-  () => user.value?.premium_perks.notifications_validator_dashboard_group_efficiency,
+  () => userPremiumPerks.value?.notifications_validator_dashboard_group_efficiency,
 )
 function closeDialog(): void {
   dialogRef?.value.close()

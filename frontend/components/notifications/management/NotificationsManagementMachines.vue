@@ -2,8 +2,8 @@
 import { useNotificationsManagementStore } from '~/stores/notifications/useNotificationsManagementStore'
 
 const { t: $t } = useTranslation()
-const { user } = useUserStore()
-const hasAbilityCustomMachineAlerts = computed(() => user.value?.premium_perks.notifications_machine_custom_threshold)
+const { userPremiumPerks } = useUserStore()
+const hasAbilityCustomMachineAlerts = computed(() => userPremiumPerks.value?.notifications_machine_custom_threshold)
 
 const notificationsManagementStore = useNotificationsManagementStore()
 const {
