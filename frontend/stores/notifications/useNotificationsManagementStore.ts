@@ -10,6 +10,7 @@ import { API_PATH } from '~/types/customFetch'
 
 export const useNotificationsManagementStore = defineStore('notifications-management-store', () => {
   const { fetch } = useCustomFetch()
+  const { refreshOverview } = useNotificationsDashboardOverviewStore()
   const settings = ref<NotificationSettings>(
     {
       clients: [],
@@ -55,7 +56,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       // using optimistic ui here to avoid calling the api after delete
       settings.value.paired_devices
       = [ ...settings.value.paired_devices.filter(device => device.id !== id) ]
-    })
+    }).then(() => refreshOverview())
   }
   const setNotificationForPairedDevice = async ({
     id,
@@ -75,7 +76,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       {
         paired_device_id: id,
       },
-    )
+    ).then(() => refreshOverview())
   }
   const setNotificationForNetwork = async ({
     chain_id,
@@ -95,7 +96,9 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         network: chain_id,
       },
     )
+      .then(() => refreshOverview())
   }
+
   const setNotificationForClient = async ({
     client_id,
     is_subscribed,
@@ -113,7 +116,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       {
         client_id,
       },
-    )
+    ).then(() => refreshOverview())
   }
 
   return {
