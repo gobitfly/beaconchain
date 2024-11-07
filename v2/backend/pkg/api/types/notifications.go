@@ -165,9 +165,10 @@ type NotificationSettingsClient struct {
 type InternalPutUserNotificationSettingsClientResponse ApiDataResponse[NotificationSettingsClient]
 
 type NotificationSettingsGeneral struct {
-	DoNotDisturbTimestamp       int64 `json:"do_not_disturb_timestamp"` // notifications are disabled until this timestamp
-	IsEmailNotificationsEnabled bool  `json:"is_email_notifications_enabled"`
-	IsPushNotificationsEnabled  bool  `json:"is_push_notifications_enabled"`
+	DoNotDisturbTimestamp         int64 `json:"do_not_disturb_timestamp"` // notifications are disabled until this timestamp
+	IsEmailNotificationsEnabled   bool  `json:"is_email_notifications_enabled"`
+	IsPushNotificationsEnabled    bool  `json:"is_push_notifications_enabled"`
+	IsWebhookNotificationsEnabled bool  `json:"is_webhook_notifications_enabled"`
 
 	IsMachineOfflineSubscribed      bool    `json:"is_machine_offline_subscribed"`
 	IsMachineStorageUsageSubscribed bool    `json:"is_machine_storage_usage_subscribed"`

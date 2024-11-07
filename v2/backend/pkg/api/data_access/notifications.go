@@ -1181,10 +1181,15 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 	}
 
 	for _, channel := range notificationChannels {
-		if channel.Channel == types.EmailNotificationChannel {
+		switch channel.Channel {
+		case types.EmailNotificationChannel:
 			result.GeneralSettings.IsEmailNotificationsEnabled = channel.Active
-		} else if channel.Channel == types.PushNotificationChannel {
+		case types.PushNotificationChannel:
 			result.GeneralSettings.IsPushNotificationsEnabled = channel.Active
+		case types.WebhookNotificationChannel:
+			result.GeneralSettings.IsWebhookNotificationsEnabled = channel.Active
+		default:
+			log.Warnf("notification channel is not defined: %s (user_id: %d)", channel.Channel, userId)
 		}
 	}
 
@@ -1315,10 +1320,13 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 	// Set the notification channels
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO users_notification_channels (user_id, channel, active)
-    		VALUES ($1, $2, $3), ($1, $4, $5)
+    		VALUES ($1, $2, $3), ($1, $4, $5), ($1, $6, $7)
     	ON CONFLICT (user_id, channel) 
     		DO UPDATE SET active = EXCLUDED.active`,
-		userId, types.EmailNotificationChannel, settings.IsEmailNotificationsEnabled, types.PushNotificationChannel, settings.IsPushNotificationsEnabled)
+		userId,
+		types.EmailNotificationChannel, settings.IsEmailNotificationsEnabled,
+		types.PushNotificationChannel, settings.IsPushNotificationsEnabled,
+		types.WebhookNotificationChannel, settings.IsWebhookNotificationsEnabled)
 	if err != nil {
 		return err
 	}
