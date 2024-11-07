@@ -117,7 +117,7 @@ func (c NotificationMachinesColumn) ToExpr() OrderableSortable {
 	case NotificationMachineEventType:
 		return goqu.C("event_type")
 	case NotificationMachineTimestamp:
-		return goqu.C("epoch")
+		return goqu.C("ts")
 	default:
 		return nil
 	}
@@ -170,7 +170,7 @@ func (c NotificationClientsColumn) ToExpr() OrderableSortable {
 	case NotificationClientName:
 		return goqu.C("client")
 	case NotificationClientTimestamp:
-		return goqu.C("epoch")
+		return goqu.C("ts")
 	default:
 		return nil
 	}
@@ -256,7 +256,7 @@ func (NotificationNetworksColumn) NewFromString(s string) NotificationNetworksCo
 func (c NotificationNetworksColumn) ToExpr() OrderableSortable {
 	switch c {
 	case NotificationNetworkTimestamp:
-		return goqu.C("epoch")
+		return goqu.C("ts")
 	case NotificationNetworkNetwork:
 		return goqu.C("network")
 	case NotificationNetworkEventType:
