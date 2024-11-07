@@ -22,6 +22,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
         is_machine_offline_subscribed: false,
         is_machine_storage_usage_subscribed: false,
         is_push_notifications_enabled: false,
+        is_webhook_notifications_enabled: false,
         machine_cpu_usage_threshold: 0.0,
         machine_memory_usage_threshold: 0.0,
         machine_storage_usage_threshold: 0.0,
