@@ -741,7 +741,8 @@
         "toast_group": "An error occurred while sending the test notification",
         "toast_message": "Please try again.",
         "toast_title": "Error"
-      }
+      },
+      "webhook_notifications": "Webhook Notifications"
     },
     "login_question": "Do you want to login to set notifications?",
     "machine": {

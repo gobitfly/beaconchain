@@ -104,6 +104,7 @@ const isMuted = computed(() => {
   }
   return false
 })
+
 const textMutedUntil = computed(() => {
   if (store.settings.general_settings.do_not_disturb_timestamp === Number.MAX_SAFE_INTEGER) {
     return $t('notifications.general.mute.until_turned_on')
@@ -190,7 +191,6 @@ watchDebounced(() => store.settings.general_settings, async () => {
     </div>
     <div
       class="row"
-      :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
     >
       <div>
         {{ $t("notifications.general.push_notifications") }}
@@ -218,6 +218,16 @@ watchDebounced(() => store.settings.general_settings, async () => {
         </BcLink>
         {{ tOf($t, "notifications.general.download_app", 2) }}
       </div>
+    </div>
+    <div
+      v-if="store.settings.general_settings.is_email_notifications_enabled"
+      class="row"
+      :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
+    >
+      <div>
+        {{ $t("notifications.general.webhook_notifications") }}
+      </div>
+      <BcToggle v-model="store.settings.general_settings.is_webhook_notifications_enabled" />
     </div>
     <div
       v-if="store.settings.general_settings.is_email_notifications_enabled"
