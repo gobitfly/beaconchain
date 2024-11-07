@@ -331,7 +331,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	}
 
-	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+	rpInfos, err := d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
 	}
@@ -376,7 +376,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
 
-			if rpValidator, ok := rpValidators[validator]; ok {
+			if rpValidator, ok := rpInfos.Minipool[validator]; ok {
 				if protocolModes.RocketPool {
 					// Calculate the balance of the operator
 					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
@@ -417,7 +417,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		eg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, protocolModes, -1, rpValidators, hours)
+			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, t.AllGroups, protocolModes, rpInfos, hours)
 			if err != nil {
 				return err
 			}

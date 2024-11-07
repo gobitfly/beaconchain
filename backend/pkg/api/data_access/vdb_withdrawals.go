@@ -226,9 +226,9 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		return nil, nil, err
 	}
 
-	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	var rpInfos *t.RPInfo
 	if protocolModes.RocketPool {
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -239,8 +239,10 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
 		amount := utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount)))
-		if rpValidator, ok := rpValidators[withdrawal.ValidatorIndex]; ok && protocolModes.RocketPool {
-			amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		if rpInfos != nil {
+			if rpValidator, ok := rpInfos.Minipool[withdrawal.ValidatorIndex]; ok && protocolModes.RocketPool {
+				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		}
 		result = append(result, t.VDBWithdrawalsTableRow{
 			Epoch:     withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
@@ -288,8 +290,10 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			// TODO integrate label/ens data for "next" row
 			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
 
-			if rpValidator, ok := rpValidators[nextData.Index]; ok && protocolModes.RocketPool {
-				nextData.Amount = nextData.Amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			if rpInfos != nil {
+				if rpValidator, ok := rpInfos.Minipool[nextData.Index]; ok && protocolModes.RocketPool {
+					nextData.Amount = nextData.Amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+				}
 			}
 		} else {
 			// If there is no next data, add a missing estimate row
@@ -516,9 +520,9 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		return result, nil
 	}
 
-	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	var rpInfos *t.RPInfo
 	if protocolModes.RocketPool {
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, err
 		}
@@ -530,8 +534,10 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 
 	for _, res := range queryResult {
 		amount := utils.GWeiToWei(big.NewInt(res.Amount))
-		if rpValidator, ok := rpValidators[res.ValidatorIndex]; ok && protocolModes.RocketPool {
-			amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		if rpInfos != nil {
+			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok && protocolModes.RocketPool {
+				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		}
 		result.TotalAmount = result.TotalAmount.Add(amount)
 
@@ -555,8 +561,10 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 
 	for _, res := range queryResult {
 		amount := utils.GWeiToWei(big.NewInt(res.Amount))
-		if rpValidator, ok := rpValidators[res.ValidatorIndex]; ok && protocolModes.RocketPool {
-			amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		if rpInfos != nil {
+			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok && protocolModes.RocketPool {
+				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		}
 		result.TotalAmount = result.TotalAmount.Add(amount)
 	}

@@ -171,9 +171,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		return result, &paging, nil
 	}
 
-	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	var rpInfos *t.RPInfo
 	if protocolModes.RocketPool {
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -226,8 +226,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		groupSum.SyncScheduled += row.SyncScheduled
 
 		clRewardWei := utils.GWeiToWei(big.NewInt(row.ClRewards))
-		if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
-			clRewardWei = clRewardWei.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		if rpInfos != nil {
+			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+				clRewardWei = clRewardWei.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		}
 		groupSum.ClRewards = groupSum.ClRewards.Add(clRewardWei)
 	}
@@ -291,8 +293,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	for _, entry := range elRewardsQueryResult {
 		elReward := entry.ElRewards
-		if rpValidator, ok := rpValidators[entry.Proposer]; ok && protocolModes.RocketPool {
-			elReward = elReward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+		if rpInfos != nil {
+			if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok && protocolModes.RocketPool {
+				elReward = elReward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
 		}
 		elRewards[entry.GroupId] = elRewards[entry.GroupId].Add(elReward)
 	}
@@ -734,15 +738,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		validatorArr = validators
 	}
 
-	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	var rpInfos *t.RPInfo
 	if protocolModes.RocketPool {
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, groupId)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
 		}
 	}
 
-	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, protocolModes, groupId, rpValidators, hours)
+	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, groupId, protocolModes, rpInfos, hours)
 	if err != nil {
 		return nil, err
 	}
@@ -797,7 +801,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	return ret, nil
 }
 
-func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, groupId int64, rpValidators map[t.VDBValidator]t.RpMinipoolInfo, hours int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
+func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, protocolModes t.VDBProtocolModes, rpInfos *t.RPInfo, hours int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
 	table := ""
 
 	switch hours {
@@ -880,13 +884,15 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		}
 
 		reward := utils.GWeiToWei(big.NewInt(row.Reward))
-		if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
-			rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
-			deposits = deposits.Add(rpValidator.NodeDepositBalance)
-		} else {
-			rewards = rewards.Add(reward)
-			deposits = deposits.Add(decimal.New(32, 18))
+		if rpInfos != nil {
+			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
+				deposits = deposits.Add(rpValidator.NodeDepositBalance)
+				continue
+			}
 		}
+		rewards = rewards.Add(reward)
+		deposits = deposits.Add(decimal.New(32, 18))
 	}
 
 	aprDivisor := hours
@@ -921,11 +927,13 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 			}
 
 			reward := utils.GWeiToWei(big.NewInt(row.Reward))
-			if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
-				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
-			} else {
-				rewards = rewards.Add(reward)
+			if rpInfos != nil {
+				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+					rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
+					continue
+				}
 			}
+			rewards = rewards.Add(reward)
 		}
 	}
 	clIncome = rewards
@@ -979,11 +987,13 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	rewards = decimal.Zero
 	for _, row := range elRewardsResult {
 		reward := row.Reward
-		if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
-			rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
-		} else {
-			rewards = rewards.Add(reward)
+		if rpInfos != nil {
+			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
+				continue
+			}
 		}
+		rewards = rewards.Add(reward)
 	}
 
 	if !deposits.IsZero() {
@@ -1007,11 +1017,13 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		rewards = decimal.Zero
 		for _, row := range elRewardsResult {
 			reward := row.Reward
-			if rpValidator, ok := rpValidators[row.ValidatorIndex]; ok && protocolModes.RocketPool {
-				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
-			} else {
-				rewards = rewards.Add(reward)
+			if rpInfos != nil {
+				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+					rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
+					continue
+				}
 			}
+			rewards = rewards.Add(reward)
 		}
 	}
 	elIncome = rewards

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -132,24 +133,32 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	return timeToWithdrawal
 }
 
-func (d *DataAccessService) getRocketPoolMinipoolInfos(ctx context.Context, dashboardId t.VDBId, groupId int64) (map[t.VDBValidator]t.RpMinipoolInfo, error) {
+func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.RPInfo, error) {
 	queryResult := []struct {
-		ValidatorIndex     uint64          `db:"validatorindex"`
-		NodeFee            float64         `db:"node_fee"`
-		NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
-		UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
+		ValidatorIndex     uint64           `db:"validatorindex"`
+		NodeAddress        []byte           `db:"node_address"`
+		NodeFee            float64          `db:"node_fee"`
+		NodeDepositBalance decimal.Decimal  `db:"node_deposit_balance"`
+		UserDepositBalance decimal.Decimal  `db:"user_deposit_balance"`
+		EndTime            sql.NullTime     `db:"end_time"`
+		SmoothingPoolEth   *decimal.Decimal `db:"smoothing_pool_eth"`
 	}{}
 
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("v.validatorindex"),
+			goqu.L("rplm.node_address"),
 			goqu.L("rplm.node_fee"),
 			goqu.L("rplm.node_deposit_balance"),
-			goqu.L("rplm.user_deposit_balance")).
+			goqu.L("rplm.user_deposit_balance"),
+			goqu.L("rplrs.end_time"),
+			goqu.L("rplrs.smoothing_pool_eth"),
+		).
 		From(goqu.L("rocketpool_minipools AS rplm")).
 		LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
-		Where(goqu.L("node_deposit_balance IS NOT NULL")).
-		Where(goqu.L("user_deposit_balance IS NOT NULL"))
+		LeftJoin(goqu.L("rocketpool_rewards_summary AS rplrs"), goqu.On(goqu.L("rplm.node_address = rplrs.node_address"))).
+		Where(goqu.L("rplm.node_deposit_balance IS NOT NULL")).
+		Where(goqu.L("rplm.user_deposit_balance IS NOT NULL"))
 
 	if len(dashboardId.Validators) == 0 {
 		ds = ds.
@@ -175,19 +184,34 @@ func (d *DataAccessService) getRocketPoolMinipoolInfos(ctx context.Context, dash
 		return nil, fmt.Errorf("error retrieving rocketpool validators data: %w", err)
 	}
 
-	rpValidators := make(map[t.VDBValidator]t.RpMinipoolInfo)
+	rpInfo := t.RPInfo{
+		Node:     make(map[string]t.RPNodeInfo),
+		Minipool: make(map[uint64]t.RPMinipoolInfo),
+	}
 	for _, res := range queryResult {
-		rpValidators[res.ValidatorIndex] = t.RpMinipoolInfo{
-			NodeFee:            res.NodeFee,
-			NodeDepositBalance: res.NodeDepositBalance,
-			UserDepositBalance: res.UserDepositBalance,
+		if _, ok := rpInfo.Minipool[res.ValidatorIndex]; !ok {
+			rpInfo.Minipool[res.ValidatorIndex] = t.RPMinipoolInfo{
+				NodeFee:            res.NodeFee,
+				NodeDepositBalance: res.NodeDepositBalance,
+				UserDepositBalance: res.UserDepositBalance,
+			}
+		}
+
+		node := hexutil.Encode(res.NodeAddress)
+		if _, ok := rpInfo.Node[node]; !ok && res.EndTime.Valid && res.SmoothingPoolEth != nil {
+			epoch := utils.TimeToEpoch(res.EndTime.Time)
+
+			rpInfo.Node[node] = t.RPNodeInfo{
+				SmoothingPoolReward: make(map[uint64]decimal.Decimal),
+			}
+			rpInfo.Node[node].SmoothingPoolReward[uint64(epoch)] = *res.SmoothingPoolEth
 		}
 	}
 
-	return rpValidators, nil
+	return &rpInfo, nil
 }
 
-func (d *DataAccessService) getRocketPoolOperatorFactor(minipool t.RpMinipoolInfo) decimal.Decimal {
+func (d *DataAccessService) getRocketPoolOperatorFactor(minipool t.RPMinipoolInfo) decimal.Decimal {
 	fullDeposit := minipool.UserDepositBalance.Add(minipool.NodeDepositBalance)
 	operatorShare := minipool.NodeDepositBalance.Div(fullDeposit)
 	invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)

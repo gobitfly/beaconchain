@@ -175,9 +175,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		efficiency.AttestationEfficiency[enums.AllTime], efficiency.ProposalEfficiency[enums.AllTime], efficiency.SyncEfficiency[enums.AllTime])
 
 	protocolModes := t.VDBProtocolModes{RocketPool: true}
-	rpValidators, err := d.getRocketPoolMinipoolInfos(ctx, wrappedDashboardId, t.AllGroups)
+	rpInfos, err := d.getRocketPoolInfos(ctx, wrappedDashboardId, t.AllGroups)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
+		return nil, fmt.Errorf("error retrieving rocketpool infos: %w", err)
 	}
 
 	// Validator status
@@ -265,7 +265,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 	retrieveApr := func(hours int, apr *float64) {
 		eg.Go(func() error {
-			_, elApr, _, clApr, err := d.internal_getElClAPR(ctx, wrappedDashboardId, protocolModes, -1, rpValidators, hours)
+			_, elApr, _, clApr, err := d.internal_getElClAPR(ctx, wrappedDashboardId, t.AllGroups, protocolModes, rpInfos, hours)
 			if err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 	retrieveRewards := func(hours int, rewards *decimal.Decimal) {
 		eg.Go(func() error {
-			clRewards, _, elRewards, _, err := d.internal_getElClAPR(ctx, wrappedDashboardId, protocolModes, -1, rpValidators, hours)
+			clRewards, _, elRewards, _, err := d.internal_getElClAPR(ctx, wrappedDashboardId, t.AllGroups, protocolModes, rpInfos, hours)
 			if err != nil {
 				return err
 			}

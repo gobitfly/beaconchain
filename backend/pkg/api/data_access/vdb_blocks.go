@@ -334,9 +334,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	// Get the rocketpool minipool infos
-	rpValidators := make(map[uint64]t.RpMinipoolInfo)
+	var rpInfos *t.RPInfo
 	if protocolModes.RocketPool {
-		rpValidators, err = d.getRocketPoolMinipoolInfos(ctx, dashboardId, t.AllGroups)
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -393,14 +393,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				TraceIdx: -1,
 			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
-			if rpValidator, ok := rpValidators[proposal.Proposer]; ok && protocolModes.RocketPool {
-				reward.El = reward.El.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			if rpInfos != nil {
+				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok && protocolModes.RocketPool {
+					reward.El = reward.El.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+				}
 			}
 		}
 		if proposal.ClReward.Valid {
 			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
-			if rpValidator, ok := rpValidators[proposal.Proposer]; ok && protocolModes.RocketPool {
-				reward.Cl = reward.Cl.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			if rpInfos != nil {
+				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok && protocolModes.RocketPool {
+					reward.Cl = reward.Cl.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+				}
 			}
 		}
 		proposals[i].Reward = proposal.ElReward.Decimal.Add(proposal.ClReward.Decimal)
