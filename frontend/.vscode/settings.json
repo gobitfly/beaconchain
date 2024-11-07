@@ -16,6 +16,7 @@
     "NotificationsClientsTable",
     "NotificationsDashboardDialogEntity",
     "NotificationsDashboardTable",
+    "NotificationsManagementGeneralTab",
     "NotificationsManagementModalWebhook",
     "NotificationsManagementNetwork",
     "NotificationsManagementSubscriptionDialog",
