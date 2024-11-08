@@ -23,7 +23,7 @@ import (
 // or a machine name for machine notifications or a eth client name for ethereum client update notifications
 // optionally it is possible to set a filter on the last sent ts and the event filter
 // fields
-func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string) (map[string][]*types.Subscription, error) {
+func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, lastSentFilterArgs []interface{}, eventFilters []string) (map[string]map[types.UserId]*types.Subscription, error) {
 	var subs []*types.Subscription
 
 	// subQuery := `
@@ -75,7 +75,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		return nil, err
 	}
 
-	subMap := make(map[string][]*types.Subscription, 0)
+	subMap := make(map[string]map[types.UserId]*types.Subscription, 0)
 	err = db.FrontendWriterDB.Select(&subs, query, args...)
 	if err != nil {
 		return nil, err
@@ -111,9 +111,9 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 			dashboardConfigsToFetch = append(dashboardConfigsToFetch, types.DashboardId(dashboardId))
 		} else {
 			if _, ok := subMap[sub.EventFilter]; !ok {
-				subMap[sub.EventFilter] = make([]*types.Subscription, 0)
+				subMap[sub.EventFilter] = make(map[types.UserId]*types.Subscription)
 			}
-			subMap[sub.EventFilter] = append(subMap[sub.EventFilter], sub)
+			subMap[sub.EventFilter][*sub.UserID] = sub
 		}
 	}
 
@@ -229,7 +229,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 								}
 								if _, ok := uniqueRPLNodes[nodeAddress]; !ok {
 									if _, ok := subMap[nodeAddress]; !ok {
-										subMap[nodeAddress] = make([]*types.Subscription, 0)
+										subMap[nodeAddress] = make(map[types.UserId]*types.Subscription)
 									}
 									hydratedSub := &types.Subscription{
 										ID:                 sub.ID,
@@ -246,13 +246,13 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 										DashboardGroupId:   sub.DashboardGroupId,
 										DashboardGroupName: group.Name,
 									}
-									subMap[nodeAddress] = append(subMap[nodeAddress], hydratedSub)
+									subMap[nodeAddress][*sub.UserID] = hydratedSub
 									//log.Infof("hydrated subscription for validator %v of dashboard %d and group %d for user %d", hydratedSub.EventFilter, *hydratedSub.DashboardId, *hydratedSub.DashboardGroupId, *hydratedSub.UserID)
 								}
 								uniqueRPLNodes[nodeAddress] = struct{}{}
 							} else {
 								if _, ok := subMap[validatorEventFilter]; !ok {
-									subMap[validatorEventFilter] = make([]*types.Subscription, 0)
+									subMap[validatorEventFilter] = make(map[types.UserId]*types.Subscription)
 								}
 								hydratedSub := &types.Subscription{
 									ID:                 sub.ID,
@@ -269,7 +269,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 									DashboardGroupId:   sub.DashboardGroupId,
 									DashboardGroupName: group.Name,
 								}
-								subMap[validatorEventFilter] = append(subMap[validatorEventFilter], hydratedSub)
+								subMap[validatorEventFilter][*sub.UserID] = hydratedSub
 								//log.Infof("hydrated subscription for validator %v of dashboard %d and group %d for user %d", hydratedSub.EventFilter, *hydratedSub.DashboardId, *hydratedSub.DashboardGroupId, *hydratedSub.UserID)
 							}
 						}
