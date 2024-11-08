@@ -152,6 +152,10 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			),
 		)
 
+	if dashboardId.Validators == nil {
+		blocksDs = blocksDs.Where(goqu.L("(blocks.proposer IN (SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?))", dashboardId.Id))
+	}
+
 	// 2. Selects
 	groupIdQ := goqu.C("group_id").(exp.Aliaseable)
 	if dashboardId.Validators != nil {
