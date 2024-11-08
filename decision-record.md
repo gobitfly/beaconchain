@@ -1,5 +1,27 @@
 # Decision Record
 
+## D-002: use squash and rebase for merging
+
+### Status
+
+accepted by @peter_bitfly
+
+### Context
+
+At the moment we have an inconsistent merging policy, mixing merge commits and rebases. In order to maintain a clear commit history, only squash and rebase should be used in the future.
+
+### Decision
+
+Before merging pull requests, please ensure all commits are rebased and squashed. This helps keep our main branch history clean and focused, with only meaningful commits. All other merging options will be disabled on the project level in GitHub.
+
+### Consequences
+
+All other merging options except squash and rebase are disabled on project level.
+
+### References
+
+
+
 ## D-001: conventinal commits for `commit message formatting`
 
 ### Status
