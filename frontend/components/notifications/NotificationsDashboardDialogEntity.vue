@@ -129,8 +129,8 @@ const formatValueWei = (value: string) => {
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.proposal_done?.length"
-        :items="details?.proposal_done"
+        v-if="details?.proposal_success?.length"
+        :items="details?.proposal_success"
         :info-copy="$t('notifications.dashboards.dialog.entity.proposal_done')"
       >
         <template #headingIcon>
@@ -140,7 +140,7 @@ const formatValueWei = (value: string) => {
           />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.proposal_done') }} ({{ details?.proposal_done?.length ?? 0 }})
+          {{ $t('notifications.dashboards.dialog.entity.proposal_done') }} ({{ details?.proposal_success?.length ?? 0 }})
         </template>
         <template #item="{ item: proposalDone }">
           <BcLink
@@ -182,15 +182,15 @@ const formatValueWei = (value: string) => {
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.sync_committee?.length"
-        :items="details?.sync_committee"
+        v-if="details?.sync?.length"
+        :items="details?.sync"
         :info-copy="$t('notifications.dashboards.dialog.entity.sync_committee')"
       >
         <template #headingIcon>
           <FontAwesomeIcon :icon="faArrowsRotate" class="notifications-dashboard-dialog-entity__icon__green" />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.sync_committee') }} ({{ details?.sync_committee?.length ?? 0 }})
+          {{ $t('notifications.dashboards.dialog.entity.sync_committee') }} ({{ details?.sync?.length ?? 0 }})
         </template>
         <template #item="{ item: syncCommitteIndex }">
           <BcLink
@@ -256,8 +256,8 @@ const formatValueWei = (value: string) => {
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.validator_back_online?.length"
-        :items="details?.validator_back_online"
+        v-if="details?.validator_online?.length"
+        :items="details?.validator_online"
         :info-copy="$t('notifications.dashboards.dialog.entity.validator_back_online')"
       >
         <template #headingIcon>
@@ -267,7 +267,7 @@ const formatValueWei = (value: string) => {
           />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.validator_back_online') }} ({{ details?.validator_back_online?.length ?? 0 }})
+          {{ $t('notifications.dashboards.dialog.entity.validator_back_online') }} ({{ details?.validator_online?.length ?? 0 }})
         </template>
         <template #item="{ item: validator }">
           <BcLink
@@ -328,8 +328,8 @@ const formatValueWei = (value: string) => {
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.upcoming_proposals?.length"
-        :items="details?.upcoming_proposals"
+        v-if="details?.proposal_upcoming?.length"
+        :items="details?.proposal_upcoming"
         :info-copy="$t('notifications.dashboards.dialog.entity.upcoming_proposal')"
       >
         <template #headingIcon>
@@ -339,7 +339,7 @@ const formatValueWei = (value: string) => {
           />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.upcoming_proposal') }} ({{ details?.upcoming_proposals?.length ?? 0 }})
+          {{ $t('notifications.dashboards.dialog.entity.upcoming_proposal') }} ({{ details?.proposal_upcoming?.length ?? 0 }})
         </template>
         <template #item="{ item: upcomingProposal }">
           <BcLink
@@ -361,8 +361,8 @@ const formatValueWei = (value: string) => {
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.min_collateral_reached?.length"
-        :items="details?.min_collateral_reached"
+        v-if="details?.min_collateral?.length"
+        :items="details?.min_collateral"
         :info-copy="$t('notifications.dashboards.dialog.entity.min_collateral')"
       >
         <template #headingIcon>
@@ -372,7 +372,7 @@ const formatValueWei = (value: string) => {
           />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.min_collateral') }} ({{ details?.min_collateral_reached?.length ?? 0 }})
+          {{ $t('notifications.dashboards.dialog.entity.min_collateral') }} ({{ details?.min_collateral?.length ?? 0 }})
         </template>
         <template #item="{ item: minCollateral }">
           <BcFormatHash
@@ -387,8 +387,8 @@ const formatValueWei = (value: string) => {
         </template>
       </BcAccordion>
       <BcAccordion
-        v-if="details?.max_collateral_reached?.length"
-        :items="details?.max_collateral_reached"
+        v-if="details?.max_collateral?.length"
+        :items="details?.max_collateral"
         :info-copy="$t('notifications.dashboards.dialog.entity.max_collateral')"
       >
         <template #headingIcon>
@@ -398,7 +398,7 @@ const formatValueWei = (value: string) => {
           />
         </template>
         <template #heading>
-          {{ $t('notifications.dashboards.dialog.entity.max_collateral') }} ({{ details?.max_collateral_reached?.length ?? 0 }})
+          {{ $t('notifications.dashboards.dialog.entity.max_collateral') }} ({{ details?.max_collateral?.length ?? 0 }})
         </template>
         <template #item="{ item: maxCollateral }">
           <BcFormatHash

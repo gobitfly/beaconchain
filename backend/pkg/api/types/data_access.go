@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	t "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/shopspring/decimal"
@@ -139,20 +140,12 @@ type NotificationClientsCursor struct {
 	Ts     time.Time
 }
 
-type NotificationRocketPoolsCursor struct {
-	GenericCursor
-
-	NodeAddress []byte
-	EventType   string
-	Epoch       uint64
-}
-
 type NotificationNetworksCursor struct {
 	GenericCursor
 
 	Network   uint64
 	Ts        time.Time
-	EventType string
+	EventType t.EventName
 }
 
 type UserCredentialInfo struct {
