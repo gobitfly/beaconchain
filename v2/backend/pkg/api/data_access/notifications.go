@@ -405,16 +405,16 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	notificationDetails := t.NotificationValidatorDashboardDetail{
 		ValidatorOffline:         []uint64{},
 		ProposalMissed:           []t.IndexSlots{},
-		ProposalDone:             []t.IndexBlocks{},
-		UpcomingProposals:        []t.IndexSlots{},
+		ProposalSuccess:          []t.IndexBlocks{},
+		ProposalUpcoming:         []t.IndexSlots{},
 		Slashed:                  []uint64{},
-		SyncCommittee:            []uint64{},
+		Sync:                     []uint64{},
 		AttestationMissed:        []t.IndexEpoch{},
 		Withdrawal:               []t.NotificationEventWithdrawal{},
 		ValidatorOfflineReminder: []uint64{},
-		ValidatorBackOnline:      []t.NotificationEventValidatorBackOnline{},
-		MinimumCollateralReached: []t.Address{},
-		MaximumCollateralReached: []t.Address{},
+		ValidatorOnline:          []t.NotificationEventValidatorBackOnline{},
+		MinCollateral:            []t.Address{},
+		MaxCollateral:            []t.Address{},
 	}
 
 	var searchIndices []uint64
@@ -554,7 +554,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 					continue
 				}
-				notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexSlots{Index: curNotification.ValidatorIndex, Slots: []uint64{curNotification.Slot}})
+				notificationDetails.ProposalUpcoming = append(notificationDetails.ProposalUpcoming, t.IndexSlots{Index: curNotification.ValidatorIndex, Slots: []uint64{curNotification.Slot}})
 			case types.ValidatorGotSlashedEventName:
 				curNotification, ok := notification.(*n.ValidatorGotSlashedNotification)
 				if !ok {
@@ -583,7 +583,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 					continue
 				}
-				notificationDetails.ValidatorBackOnline = append(notificationDetails.ValidatorBackOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
+				notificationDetails.ValidatorOnline = append(notificationDetails.ValidatorOnline, t.NotificationEventValidatorBackOnline{Index: curNotification.ValidatorIndex, EpochCount: curNotification.Epoch})
 			case types.ValidatorReceivedWithdrawalEventName:
 				curNotification, ok := notification.(*n.ValidatorWithdrawalNotification)
 				if !ok {
@@ -630,9 +630,9 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				addr := t.Address{Hash: t.Hash(nodeAddress), IsContract: true}
 				addressMapping[nodeAddress] = &addr
 				if notification.GetEventName() == types.RocketpoolCollateralMinReachedEventName {
-					notificationDetails.MinimumCollateralReached = append(notificationDetails.MinimumCollateralReached, addr)
+					notificationDetails.MinCollateral = append(notificationDetails.MinCollateral, addr)
 				} else {
-					notificationDetails.MaximumCollateralReached = append(notificationDetails.MaximumCollateralReached, addr)
+					notificationDetails.MaxCollateral = append(notificationDetails.MaxCollateral, addr)
 				}
 			case types.SyncCommitteeSoonEventName:
 				curNotification, ok := notification.(*n.SyncCommitteeSoonNotification)
@@ -642,7 +642,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				if searchEnabled && !searchIndexSet[curNotification.ValidatorIndex] {
 					continue
 				}
-				notificationDetails.SyncCommittee = append(notificationDetails.SyncCommittee, curNotification.ValidatorIndex)
+				notificationDetails.Sync = append(notificationDetails.Sync, curNotification.ValidatorIndex)
 			default:
 				log.Debugf("Unhandled notification type: %s", notification.GetEventName())
 			}
@@ -652,10 +652,10 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	// fill proposals
 	for validatorIndex, proposalInfo := range proposalsInfo {
 		if len(proposalInfo.Proposed) > 0 {
-			notificationDetails.ProposalDone = append(notificationDetails.ProposalDone, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Proposed})
+			notificationDetails.ProposalSuccess = append(notificationDetails.ProposalSuccess, t.IndexBlocks{Index: validatorIndex, Blocks: proposalInfo.Proposed})
 		}
 		if len(proposalInfo.Scheduled) > 0 {
-			notificationDetails.UpcomingProposals = append(notificationDetails.UpcomingProposals, t.IndexSlots{Index: validatorIndex, Slots: proposalInfo.Scheduled})
+			notificationDetails.ProposalUpcoming = append(notificationDetails.ProposalUpcoming, t.IndexSlots{Index: validatorIndex, Slots: proposalInfo.Scheduled})
 		}
 		if len(proposalInfo.Missed) > 0 {
 			notificationDetails.ProposalMissed = append(notificationDetails.ProposalMissed, t.IndexSlots{Index: validatorIndex, Slots: proposalInfo.Missed})
@@ -674,14 +674,14 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	for i, contractStatus := range contractStatusRequests {
 		contractStatusPerAddress["0x"+contractStatus.Address] = i
 	}
-	for i := range notificationDetails.MinimumCollateralReached {
-		if address, ok := addressMapping[string(notificationDetails.MinimumCollateralReached[i].Hash)]; ok {
-			notificationDetails.MinimumCollateralReached[i] = *address
+	for i := range notificationDetails.MinCollateral {
+		if address, ok := addressMapping[string(notificationDetails.MinCollateral[i].Hash)]; ok {
+			notificationDetails.MinCollateral[i] = *address
 		}
 	}
-	for i := range notificationDetails.MaximumCollateralReached {
-		if address, ok := addressMapping[string(notificationDetails.MaximumCollateralReached[i].Hash)]; ok {
-			notificationDetails.MaximumCollateralReached[i] = *address
+	for i := range notificationDetails.MaxCollateral {
+		if address, ok := addressMapping[string(notificationDetails.MaxCollateral[i].Hash)]; ok {
+			notificationDetails.MaxCollateral[i] = *address
 		}
 	}
 	for i := range notificationDetails.Withdrawal {
@@ -777,24 +777,12 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	// Calculate the result
 	cursorData := notificationHistory
 	for _, notification := range notificationHistory {
-		resultEntry := t.NotificationMachinesTableRow{
+		result = append(result, t.NotificationMachinesTableRow{
 			MachineName: notification.MachineName,
 			Threshold:   notification.EventThreshold,
+			EventType:   string(notification.EventType),
 			Timestamp:   notification.Ts.Unix(),
-		}
-		switch notification.EventType {
-		case types.MonitoringMachineOfflineEventName:
-			resultEntry.EventType = "offline"
-		case types.MonitoringMachineDiskAlmostFullEventName:
-			resultEntry.EventType = "storage"
-		case types.MonitoringMachineCpuLoadEventName:
-			resultEntry.EventType = "cpu"
-		case types.MonitoringMachineMemoryUsageEventName:
-			resultEntry.EventType = "memory"
-		default:
-			return nil, nil, fmt.Errorf("invalid event name for machine notification: %v", notification.EventType)
-		}
-		result = append(result, resultEntry)
+		})
 	}
 
 	// -------------------------------------
@@ -996,19 +984,16 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		resultEntry := t.NotificationNetworksTableRow{
 			ChainId:   notification.Network,
 			Timestamp: notification.Ts.Unix(),
+			EventType: string(notification.EventType),
 		}
 		switch notification.EventType {
 		case types.NetworkGasAboveThresholdEventName:
-			resultEntry.EventType = "gas_above"
 			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
 		case types.NetworkGasBelowThresholdEventName:
-			resultEntry.EventType = "gas_below"
 			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold).Mul(decimal.NewFromInt(params.GWei))
 		case types.NetworkParticipationRateThresholdEventName:
-			resultEntry.EventType = "participation_rate"
 			resultEntry.Threshold = decimal.NewFromFloat(notification.EventThreshold)
 		case types.RocketpoolNewClaimRoundStartedEventName:
-			resultEntry.EventType = "new_reward_round"
 		default:
 			return nil, nil, fmt.Errorf("invalid event name for network notification: %v", notification.EventType)
 		}

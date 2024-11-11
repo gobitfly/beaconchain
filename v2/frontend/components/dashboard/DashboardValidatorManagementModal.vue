@@ -211,7 +211,7 @@ function isSearchResultRestricted(result: ResultSuggestion): boolean {
     case ResultType.ValidatorsByPubkey:
       return false
     default:
-      return isPublic.value || !user.value?.premium_perks?.ad_free
+      return isPublic.value || !user.value?.premium_perks?.bulk_adding
   }
 }
 
