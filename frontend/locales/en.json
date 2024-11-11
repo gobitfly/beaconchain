@@ -117,7 +117,7 @@
       "title": "Add a new dashboard",
       "type": {
         "accounts": "Accounts",
-        "placeholder": "Name",
+        "placeholder": "Enter dashboard name",
         "subtitle": "What would you like to monitor?",
         "validators": "Validators"
       }
