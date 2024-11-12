@@ -158,7 +158,6 @@ func Run() {
 
 	// check config
 	{
-
 		cfg := &types.Config{}
 		err := utils.ReadConfig(cfg, *configPath)
 		if err != nil {
@@ -278,6 +277,18 @@ func Run() {
 	log.Info("get latest block from node...")
 	updateBlockNumber(true, *noNewBlocks, time.Duration(*noNewBlocksThresholdSeconds)*time.Second, discordWebhookReportUrl, discordWebhookUser, discordWebhookAddTextFatal)
 	log.Infof("...get latest block (%s) from node done.", _formatInt64(currentNodeBlockNumber.Load()))
+
+	go func() {
+		for {
+			latestPGBlock, err := psqlGetLatestBlock(false)
+			if err != nil {
+				log.Fatal(err, "error while using psqlGetLatestBlock (start / read)", 0) // fatal, as if there is no initial value, we have nothing to start from
+			}
+
+			sendMessage(fmt.Sprintf("evmindexer for %s, version: %v, lastNodeBlock: %v, lastDbBlock: %v", getChainNamePretty(), version.Version, currentNodeBlockNumber.Load(), latestPGBlock), discordWebhookReportUrl, discordWebhookUser)
+			time.Sleep(time.Hour)
+		}
+	}()
 
 	// //////////////////////////////////////////
 	// Config done, now actually "doing" stuff //
