@@ -270,12 +270,17 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					goqu.L("NULL::TEXT").As("graffiti_text"),
 					goqu.L("NULL::BYTEA").As("fee_recipient"),
 					goqu.L("NULL::NUMERIC").As("el_reward"),
-				).
-				Order(order...).
-				Limit(uint(limit + 1))
+				)
 
-			if directions != nil {
-				scheduledDs = scheduledDs.Where(directions)
+			// We don't have access to exec_block_number and status for a WHERE without wrapping the query so if we sort by those get all the data
+			if colSort.Column == enums.VDBBlocksColumns.Proposer || colSort.Column == enums.VDBBlocksColumns.Slot {
+				scheduledDs = scheduledDs.
+					Order(order...).
+					Limit(uint(limit + 1))
+
+				if directions != nil {
+					scheduledDs = scheduledDs.Where(directions)
+				}
 			}
 
 			// Supply to result query
