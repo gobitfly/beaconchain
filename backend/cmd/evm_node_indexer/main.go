@@ -158,7 +158,7 @@ func Run() {
 
 	// check config
 	{
-		log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+
 		cfg := &types.Config{}
 		err := utils.ReadConfig(cfg, *configPath)
 		if err != nil {
@@ -167,6 +167,7 @@ func Run() {
 			log.Info("reading config completed")
 		}
 		utils.Config = cfg
+		log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 		if len(utils.Config.Eth1ErigonEndpoint) > 0 {
 			eth1RpcEndpoint = utils.Config.Eth1ErigonEndpoint
