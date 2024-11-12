@@ -328,9 +328,9 @@ func sendWebhookNotifications() error {
 				}
 
 				if n.Content.Webhook.DashboardId == 0 && n.Content.Webhook.DashboardGroupId == 0 {
-					_, err = db.FrontendWriterDB.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = retries + 1, webhook_last_sent = now() WHERE id = $1 AND dashboard_id = $2;`, n.Content.Webhook.DashboardGroupId, n.Content.Webhook.DashboardId)
-				} else {
 					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = retries + 1, last_sent = now(), request = $2, response = $3 WHERE id = $1;`, n.Content.Webhook.ID, n.Content, errResp)
+				} else {
+					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = retries + 1, webhook_last_sent = now() WHERE id = $1 AND dashboard_id = $2;`, n.Content.Webhook.DashboardGroupId, n.Content.Webhook.DashboardId)
 				}
 				if err != nil {
 					log.Error(err, "error updating users_webhooks table", 0)
