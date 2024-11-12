@@ -325,6 +325,6 @@ export interface VDBPostCreateGroupData {
   name: string;
 }
 export interface VDBPostValidatorsData {
-  public_key: string;
+  index: number /* uint64 */;
   group_id: number /* uint64 */;
 }

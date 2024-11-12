@@ -366,6 +366,6 @@ type VDBPostCreateGroupData struct {
 }
 
 type VDBPostValidatorsData struct {
-	PublicKey string `json:"public_key"`
-	GroupId   uint64 `json:"group_id"`
+	Index   uint64 `json:"index"`
+	GroupId uint64 `json:"group_id"`
 }
