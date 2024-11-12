@@ -1,9 +1,9 @@
 # Decision Record
 
-## D-001: conventinal commits for `commit message formatting`
+## D-FE-001: conventinal commits for `commit message formatting`
 
 ### Status
-
+superseded by D-BC-001
 accepted by @MauserBitfly @benji-bitfly @marcel-bitfly
 
 ### Context
@@ -31,7 +31,7 @@ Commit messsages will be formatted in a standard way.
 
 👇 Template: copy from here 👇
 
-## D-XXX: Short_title_of_solved_problem_and_solution
+## D-FE-XXX: Short_title_of_solved_problem_and_solution
 
 ### Status
 
