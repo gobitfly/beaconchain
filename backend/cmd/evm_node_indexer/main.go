@@ -270,7 +270,7 @@ func Run() {
 		if chainID != utils.Config.Chain.Id { // if the chain id is removed from the config, just remove this if, there is no point, except checking consistency
 			log.Fatal(err, "node chain different from config chain", 0) // fatal, config doesn't match node
 		}
-		log.Info("...check chain id done.")
+		log.InfoWithFields(log.Fields{"chainId": utils.Config.Chain.Id, "eth1RpcEndpoint": eth1RpcEndpoint, "bt.project": utils.Config.Bigtable.Project, "bt.instance": utils.Config.Bigtable.Instance}, "...check chain id done.")
 	}
 
 	// get latest block (as it's global, so we have a initial value)
