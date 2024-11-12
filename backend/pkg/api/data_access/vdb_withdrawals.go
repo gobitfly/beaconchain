@@ -481,11 +481,6 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		Amount         int64          `db:"acc_withdrawals_amount"`
 	}{}
 
-	dashboardValidators := make([]t.VDBValidator, 0)
-	if dashboardId.Validators != nil {
-		dashboardValidators = dashboardId.Validators
-	}
-
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("validator_index"),
@@ -502,7 +497,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
 	} else {
 		ds = ds.
-			Where(goqu.L("validator_index IN ?", dashboardValidators))
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	}
 
 	query, args, err := ds.Prepared(true).ToSQL()
