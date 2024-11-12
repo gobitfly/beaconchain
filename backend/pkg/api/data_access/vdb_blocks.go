@@ -198,8 +198,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if err != nil {
 		return nil, nil, err
 	}
-	blocksDs = goqu.Dialect("postgres").From(goqu.T("past_blocks_cte")).
-		With("past_blocks_cte", blocksDs). // encapsulate so we can use selected fields
+	blocksDs = blocksDs.
 		Order(order...)
 	if directions != nil {
 		blocksDs = blocksDs.Where(directions)
@@ -267,12 +266,17 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					goqu.C("slot"),
 					groupId,
 					goqu.V("0").As("status"),
-					goqu.V(nil).As("exec_block_number"),
-					goqu.V(nil).As("graffiti_text"),
-					goqu.V(nil).As("fee_recipient"),
-					goqu.V(nil).As("el_reward"),
+					goqu.L("NULL::INTEGER").As("exec_block_number"),
+					goqu.L("NULL::TEXT").As("graffiti_text"),
+					goqu.L("NULL::BYTEA").As("fee_recipient"),
+					goqu.L("NULL::NUMERIC").As("el_reward"),
 				).
-				As("scheduled_blocks")
+				Order(order...).
+				Limit(uint(limit + 1))
+
+			if directions != nil {
+				scheduledDs = scheduledDs.Where(directions)
+			}
 
 			// Supply to result query
 			// distinct + block number ordering to filter out duplicates in an edge case (if dutiesInfo didn't update yet after a block was proposed, but the blocks table was)
