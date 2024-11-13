@@ -11,7 +11,7 @@ import type {
   DashboardType,
 } from '~/types/dashboard'
 import {
-  isPublicDashboardKey, isSharedKey,
+  isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 
 export function useDashboardKeyProvider(
@@ -57,8 +57,8 @@ export function useDashboardKeyProvider(
       // only use the dashboard cookie key as default if you are not logged in and it's not private
       if (
         !isLoggedIn.value
-        && isPublicDashboardKey(dashboardKeyCookie.value)
-        && !isSharedKey(dashboardKeyCookie.value)
+        && isGuestDashboardKey(dashboardKeyCookie.value)
+        && !isSharedDashboardKey(dashboardKeyCookie.value)
       ) {
         setDashboardKey(`${dashboardKeyCookie.value}`)
       }
@@ -73,17 +73,17 @@ export function useDashboardKeyProvider(
   }
   initialCheck()
 
-  const isPublic = computed(() => {
-    return isPublicDashboardKey(dashboardKey.value)
+  const isGuest = computed(() => {
+    return isGuestDashboardKey(dashboardKey.value)
   })
 
   const isShared = computed(() => {
-    return isSharedKey(dashboardKey.value)
+    return isSharedDashboardKey(dashboardKey.value)
   })
 
   // validator id / publicKey for validator dashboard or account id or ens name for account dashboard
   const publicEntities = computed(() => {
-    if (!isPublic.value || !dashboardKey.value) {
+    if (!isGuest.value || !dashboardKey.value) {
       return []
     }
     return fromBase64Url(dashboardKey.value)?.split(',') ?? []
@@ -107,7 +107,7 @@ export function useDashboardKeyProvider(
     addEntities,
     dashboardKey,
     dashboardType,
-    isPublic,
+    isGuest,
     isShared,
     publicEntities,
     removeEntities,

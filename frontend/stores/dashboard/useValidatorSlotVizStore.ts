@@ -32,7 +32,7 @@ export function useValidatorSlotVizStore() {
     )
 
     // We use this hacky solution as we don't have an api endpoint to load a slot viz without validators
-    // So we load it for a small public dashboard and then remove the validator informations from it.
+    // So we load it for a small guest dashboard and then remove the validator informations from it.
     if (!dashboardKey) {
       data.value = res.data.map(e => ({
         ...e,

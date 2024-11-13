@@ -17,7 +17,7 @@ import {
 } from '~/types/dashboard/summary'
 
 const {
-  dashboardKey, isPublic,
+  dashboardKey, isGuest,
 } = useDashboardKey()
 
 const cursor = ref<Cursor>()
@@ -146,7 +146,7 @@ const getRowClass = (row: VDBSummaryTableRow) => {
 
 const searchPlaceholder = computed(() =>
   $t(
-    isPublic.value && (groups.value?.length ?? 0) <= 1
+    isGuest.value && (groups.value?.length ?? 0) <= 1
       ? 'dashboard.validator.summary.search_placeholder_public'
       : 'dashboard.validator.summary.search_placeholder',
   ),

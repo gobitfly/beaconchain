@@ -3,7 +3,7 @@ export type DashboardKey = string
 
 export type DashboardType = 'account' | 'notifications' | 'validator'
 
-export enum COOKIE_DASHBOARD_ID {
+export enum GUEST_DASHBOARD_ID {
   ACCOUNT = -3,
   VALIDATOR = -2,
 }
@@ -15,7 +15,7 @@ export type DashboardKeyData = {
   addEntities: (list: string[]) => void,
   dashboardKey: globalThis.Ref<string>,
   dashboardType: globalThis.Ref<DashboardType>,
-  isPublic: globalThis.Ref<boolean>,
+  isGuest: globalThis.Ref<boolean>,
   isShared: globalThis.Ref<boolean>,
   publicEntities: globalThis.Ref<string[]>,
   removeEntities: (list: string[]) => void,
@@ -29,6 +29,6 @@ export interface Dashboard {
 }
 
 // For not logged in Users we store the Dashboard in Cookies
-export interface CookieDashboard extends Dashboard {
-  hash?: string,
+export interface GuestDashboard extends Dashboard {
+  key?: string,
 }

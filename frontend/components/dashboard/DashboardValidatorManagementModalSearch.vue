@@ -6,7 +6,7 @@ import { API_PATH } from '~/types/customFetch'
 
 const props = defineProps<{
   hasPremiumPerkBulkAdding: boolean,
-  isPublicDashboard: boolean,
+  isGuest: boolean,
   maxValidatorsPerDashboard: number,
   totalValidators: number,
 }>()
@@ -67,7 +67,7 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type'], va
     return true
   }
   if (
-    props.isPublicDashboard
+    props.isGuest
     && ((type !== 'validator' && type !== 'validator_list'))
   ) {
     return true

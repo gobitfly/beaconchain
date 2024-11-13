@@ -37,15 +37,15 @@ const { isLoggedIn } = useUserStore()
 const {
   dashboardKey,
   dashboardType,
+  isGuest,
   isPrivate,
-  isPublic,
   isShared,
   publicEntities,
   setDashboardKey,
 } = useDashboardKey()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const {
-  dashboards, getDashboardLabel, refreshDashboards, updateHash,
+  dashboards, getDashboardLabel, refreshDashboards, updateGuestDashboardKey,
 }
   = useUserDashboardStore()
 
@@ -204,9 +204,9 @@ const share = () => {
 const deleteButtonOptions = computed(() => {
   const visible = !isShared.value
 
-  const disabled = isPublic.value && publicEntities.value?.length === 0
+  const disabled = isGuest.value && publicEntities.value?.length === 0
 
-  // private dashboards always get deleted, public dashboards only get cleared
+  // private dashboards always get deleted, guest dashboards only get cleared
   const deleteDashboard = isPrivate.value
 
   // we can only forward if there is something to forward to after a potential deletion
@@ -281,8 +281,8 @@ const deleteAction = async (
     await refreshDashboards()
   }
   else if (!isLoggedIn.value) {
-    // simply clear the public dashboard by emptying the hash
-    updateHash(dashboardType.value, '')
+    // simply clear the guest dashboard by emptying the key
+    updateGuestDashboardKey(dashboardType.value, '')
     setDashboardKey('')
     return
   }

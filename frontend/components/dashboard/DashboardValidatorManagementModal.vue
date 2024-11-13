@@ -44,10 +44,9 @@ const selectedGroup = ref<number>(-1)
 const {
   addEntities,
   dashboardKey,
-  isPublic: isPublicDashboard,
+  isGuest,
   removeEntities,
-}
-  = useDashboardKey()
+} = useDashboardKey()
 const {
   user,
 } = useUserStore()
@@ -136,7 +135,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     warn('no validators selected to change group')
     return
   }
-  if (isPublicDashboard.value) {
+  if (isGuest.value) {
     removeEntities(validators.map(v => v.toString()))
     return
   }
@@ -275,7 +274,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
 const totalValidators = computed(() => addUpValues(overview.value?.validators))
 
 const maxValidatorsPerDashboard = computed(() =>
-  isPublicDashboard.value || !user.value?.premium_perks?.validators_per_dashboard
+  isGuest.value || !user.value?.premium_perks?.validators_per_dashboard
     ? 20
     : user.value.premium_perks.validators_per_dashboard,
 )
@@ -312,7 +311,7 @@ const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefin
     handleInvalidSubmit()
     return
   }
-  if (isPublicDashboard.value) {
+  if (isGuest.value) {
     if (item.type === 'validator') {
       addEntities([ `${item.value.index}` ])
       resetInput()
@@ -360,7 +359,7 @@ const inputValidator = ref('')
     <BcTableControl
       :search-placeholder="
         $t(
-          isPublicDashboard
+          isGuest
             ? 'dashboard.validator.summary.search_placeholder_public'
             : 'dashboard.validator.summary.search_placeholder',
         )
@@ -390,7 +389,7 @@ const inputValidator = ref('')
             :has-premium-perk-bulk-adding
             :total-validators
             :max-validators-per-dashboard
-            :is-public-dashboard
+            :is-guest
             @submit="handleSubmit"
           />
         </div>
