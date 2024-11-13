@@ -26,7 +26,7 @@ import { formatTsToTime } from '~/utils/format'
 import { API_PATH } from '~/types/customFetch'
 import {
   type AggregationTimeframe,
-  SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
+  // SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
   SUMMARY_CHART_GROUP_TOTAL,
   type SummaryChartFilter,
 } from '~/types/dashboard/summary'
@@ -198,9 +198,9 @@ const loadData = async () => {
         if (element.id === SUMMARY_CHART_GROUP_TOTAL) {
           name = $t('dashboard.validator.summary.chart.total')
         }
-        else if (element.id === SUMMARY_CHART_GROUP_NETWORK_AVERAGE) {
-          name = $t('dashboard.validator.summary.chart.average')
-        }
+        // else if (element.id === SUMMARY_CHART_GROUP_NETWORK_AVERAGE) {
+        //   name = $t('dashboard.validator.summary.chart.average')
+        // }
         else {
           name = getGroupLabel($t, element.id, groups.value, allGroups)
         }

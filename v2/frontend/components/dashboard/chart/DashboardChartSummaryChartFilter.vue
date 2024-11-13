@@ -5,7 +5,7 @@ import {
   AggregationTimeframes,
   type EfficiencyType,
   EfficiencyTypes,
-  SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
+  // SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
   SUMMARY_CHART_GROUP_TOTAL,
   type SummaryChartFilter,
 } from '~/types/dashboard/summary'
@@ -52,10 +52,10 @@ const total = ref(
   !chartFilter.value.initialised
   || chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_TOTAL),
 )
-const average = ref(
-  !chartFilter.value.initialised
-  || chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_NETWORK_AVERAGE),
-)
+// const average = ref(
+//   !chartFilter.value.initialised
+//   || chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_NETWORK_AVERAGE),
+// )
 const groups = computed(() => {
   if (!overview.value?.groups) {
     return []
@@ -80,20 +80,20 @@ watch(
   [
     selectedGroups,
     total,
-    average,
+    // average,
   ],
   ([
     list,
     t,
-    a,
+    // a,
   ]) => {
     const groupIds: number[] = [ ...list ]
     if (t) {
       groupIds.push(SUMMARY_CHART_GROUP_TOTAL)
     }
-    if (a) {
-      groupIds.push(SUMMARY_CHART_GROUP_NETWORK_AVERAGE)
-    }
+    // if (a) {
+    //   groupIds.push(SUMMARY_CHART_GROUP_NETWORK_AVERAGE)
+    // }
     chartFilter.value.groupIds = groupIds
     chartFilter.value.initialised = true
   },
@@ -120,9 +120,9 @@ const selectedLabel = computed(() => {
     'asc',
   )
 
-  if (average.value) {
-    list.splice(0, 0, $t('dashboard.validator.summary.chart.average'))
-  }
+  // if (average.value) {
+  //   list.splice(0, 0, $t('dashboard.validator.summary.chart.average'))
+  // }
   if (total.value) {
     list.splice(0, 0, $t('dashboard.validator.summary.chart.total'))
   }
@@ -164,12 +164,12 @@ const selectedLabel = computed(() => {
             $t("dashboard.validator.summary.chart.total")
           }}</label>
         </div>
-        <div class="special-groups">
+        <!-- <div class="special-groups">
           <Checkbox v-model="average" input-id="average" :binary="true" />
           <label for="average">{{
             $t("dashboard.validator.summary.chart.average")
           }}</label>
-        </div>
+        </div> -->
         <span class="pointer" @click="toggleGroups">
           {{ $t("dashboard.group.selection.all") }}
         </span>
