@@ -22,7 +22,8 @@ const { fetch } = useCustomFetch()
 const dialog = useDialog()
 
 const {
-  dashboardKey, isPublic,
+  dashboardKey,
+  isGuestDashboard,
 } = useDashboardKey()
 
 const {
@@ -186,7 +187,7 @@ const dashboardName = computed(() => {
 })
 
 const maxGroupsPerDashboard = computed(() =>
-  isPublic.value || !user.value?.premium_perks?.validator_groups_per_dashboard
+  isGuestDashboard.value || !user.value?.premium_perks?.validator_groups_per_dashboard
     ? 1
     : user.value.premium_perks.validator_groups_per_dashboard,
 )
@@ -222,7 +223,7 @@ const isMobile = computed(() => {
       :search-placeholder="
         $t('dashboard.validator.group_management.search_placeholder')
       "
-      :disabled-filter="isPublic"
+      :disabled-filter="isGuestDashboard"
       @set-search="setSearch"
     >
       <template #header-left>
@@ -288,7 +289,7 @@ const isMobile = computed(() => {
                       : ''
                   "
                   :can-be-empty="slotProps.data.id === 0"
-                  :disabled="isPublic"
+                  :disabled="isGuestDashboard"
                   :pattern="REGEXP_VALID_NAME"
                   :trim-input="true"
                   :maxlength="20"

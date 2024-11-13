@@ -37,15 +37,15 @@ const { isLoggedIn } = useUserStore()
 const {
   dashboardKey,
   dashboardType,
-  isPrivate,
-  isPublic,
-  isShared,
+  isGuestDashboard,
+  isPrivateDashboard,
+  isSharedDashboard,
   publicEntities,
   setDashboardKey,
 } = useDashboardKey()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const {
-  dashboards, getDashboardLabel, refreshDashboards, updateHash,
+  dashboards, getDashboardLabel, refreshDashboards, updateGuestDashboardKey,
 }
   = useUserDashboardStore()
 
@@ -59,7 +59,7 @@ const manageGroupsModalVisisble = ref(false)
 const manageValidatorsModalVisisble = ref(false)
 
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
-  if (isShared.value) {
+  if (isSharedDashboard.value) {
     return undefined
   }
 
@@ -108,7 +108,7 @@ const shareDashboard = computed(() => {
 })
 
 const shareButtonOptions = computed(() => {
-  const edit = isPrivate.value && !shareDashboard.value?.public_ids?.length
+  const edit = isPrivateDashboard.value && !shareDashboard.value?.public_ids?.length
 
   const label = isMobile.value
     ? ''
@@ -116,7 +116,7 @@ const shareButtonOptions = computed(() => {
         ? $t('dashboard.shared')
         : $t('dashboard.share')
   const icon = !edit ? faUsers : faShare
-  const disabled = isShared.value || !dashboardKey.value
+  const disabled = isSharedDashboard.value || !dashboardKey.value
   return {
     disabled,
     edit,
@@ -130,7 +130,7 @@ const editButtons = computed<MenuBarEntry[]>(() => {
 
   buttons.push({ component: RocketpoolToggle })
 
-  if (isPrivate.value) {
+  if (isPrivateDashboard.value) {
     buttons.push({
       command: editDashboard,
       faIcon: faEdit,
@@ -148,7 +148,7 @@ const editButtons = computed<MenuBarEntry[]>(() => {
     })
   }
 
-  if (!isShared.value && dashboardKey.value) {
+  if (!isSharedDashboard.value && dashboardKey.value) {
     buttons.push({
       command: onDelete,
       faIcon: faTrash,
@@ -172,7 +172,7 @@ const shareView = () => {
     },
     onClose: (options?: DynamicDialogCloseOptions) => {
       if (options?.data === 'DELETE') {
-        if (isShared.value && dashboardId) {
+        if (isSharedDashboard.value && dashboardId) {
           setDashboardKey(`${dashboardId}`)
         }
       }
@@ -202,12 +202,12 @@ const share = () => {
 }
 
 const deleteButtonOptions = computed(() => {
-  const visible = !isShared.value
+  const visible = !isSharedDashboard.value
 
-  const disabled = isPublic.value && publicEntities.value?.length === 0
+  const disabled = isGuestDashboard.value && publicEntities.value?.length === 0
 
-  // private dashboards always get deleted, public dashboards only get cleared
-  const deleteDashboard = isPrivate.value
+  // private dashboards always get deleted, guest dashboards only get cleared
+  const deleteDashboard = isPrivateDashboard.value
 
   // we can only forward if there is something to forward to after a potential deletion
   const privateDashboardsCount = isLoggedIn.value
@@ -281,8 +281,8 @@ const deleteAction = async (
     await refreshDashboards()
   }
   else if (!isLoggedIn.value) {
-    // simply clear the public dashboard by emptying the hash
-    updateHash(dashboardType.value, '')
+    // simply clear the guest dashboard by emptying the key
+    updateGuestDashboardKey(dashboardType.value, '')
     setDashboardKey('')
     return
   }
