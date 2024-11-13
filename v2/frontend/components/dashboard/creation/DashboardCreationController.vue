@@ -123,7 +123,7 @@ async function createDashboard() {
     const response = await createAccountDashboard(name.value, publicKey)
 
     await navigateTo(
-      `/account-dashboard/${response?.hash ?? response?.id ?? 1}`,
+      `/account-dashboard/${response?.key ?? response?.id ?? 1}`,
     )
   }
   else if (type.value === 'validator') {
@@ -154,7 +154,7 @@ async function createDashboard() {
         { dashboardKey: response.id },
       )
     }
-    await navigateTo(`/dashboard/${response?.hash ?? response?.id ?? 1}`)
+    await navigateTo(`/dashboard/${response?.key ?? response?.id ?? 1}`)
   }
 }
 </script>

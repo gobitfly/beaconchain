@@ -59,7 +59,7 @@ use([
 const { fetch } = useCustomFetch()
 
 const {
-  dashboardKey, isPrivate: groupsEnabled,
+  dashboardKey, isPrivateDashboard: groupsEnabled,
 } = useDashboardKey()
 
 const data = ref<ChartData<number, string> | undefined>()

@@ -9,7 +9,8 @@ import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
 const {
-  dashboardKey, isPublic,
+  dashboardKey,
+  isGuestDashboard,
 } = useDashboardKey()
 
 const cursor = ref<Cursor>()
@@ -118,7 +119,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
       :title="$t('dashboard.validator.blocks.title')"
       :search-placeholder="
         $t(
-          isPublic
+          isGuestDashboard
             ? 'dashboard.validator.blocks.search_placeholder_public'
             : 'dashboard.validator.blocks.search_placeholder',
         )

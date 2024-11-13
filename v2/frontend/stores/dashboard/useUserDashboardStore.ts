@@ -7,16 +7,16 @@ import type {
 } from '~/types/api/dashboard'
 import type { VDBPostReturnData } from '~/types/api/validator_dashboard'
 import {
-  COOKIE_DASHBOARD_ID,
-  type CookieDashboard,
   type DashboardKey,
   type DashboardType,
+  GUEST_DASHBOARD_ID,
+  type GuestDashboard,
 } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
 import { API_PATH } from '~/types/customFetch'
 import type { ChainIDs } from '~/types/network'
 import {
-  isPublicDashboardKey, isSharedKey,
+  isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 
 const userDashboardStore = defineStore('user_dashboards_store', () => {
@@ -72,7 +72,7 @@ export function useUserDashboardStore() {
     return dashboards.value
   }
 
-  // Public dashboards are saved in a cookie (so that it's accessable during SSR)
+  // Guest dashboards are saved in a cookie (so that it's accessable during SSR)
   function saveToCookie(db: null | undefined | UserDashboardsData) {
     if (isLoggedIn.value) {
       warn('saveToCookie should only be called when not logged in')
@@ -86,20 +86,20 @@ export function useUserDashboardStore() {
     name: string,
     network: ChainIDs,
     dashboardKey?: string,
-  ): Promise<CookieDashboard | undefined> {
+  ): Promise<GuestDashboard | undefined> {
     if (!isLoggedIn.value) {
       // Create local Validator dashboard
-      const cd: CookieDashboard = {
-        hash: dashboardKey ?? '',
-        id: COOKIE_DASHBOARD_ID.VALIDATOR,
+      const gd: GuestDashboard = {
+        id: GUEST_DASHBOARD_ID.VALIDATOR,
+        key: dashboardKey ?? '',
         name: '',
       }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [ cd as ValidatorDashboard ],
+        validator_dashboards: [ gd as ValidatorDashboard ],
       }
       saveToCookie(data.value)
-      return cd
+      return gd
     }
     // Create user specific Validator dashboard
     const res = await fetch<{ data: VDBPostReturnData }>(
@@ -133,20 +133,20 @@ export function useUserDashboardStore() {
   async function createAccountDashboard(
     name: string,
     dashboardKey?: string,
-  ): Promise<CookieDashboard | undefined> {
+  ): Promise<GuestDashboard | undefined> {
     if (!isLoggedIn.value) {
       // Create local account dashboard
-      const cd: CookieDashboard = {
-        hash: dashboardKey ?? '',
-        id: COOKIE_DASHBOARD_ID.ACCOUNT,
+      const gd: GuestDashboard = {
+        id: GUEST_DASHBOARD_ID.ACCOUNT,
+        key: dashboardKey ?? '',
         name: '',
       }
       data.value = {
-        account_dashboards: [ cd ],
+        account_dashboards: [ gd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
       saveToCookie(data.value)
-      return cd
+      return gd
     }
     // Create user specific account dashboard
     const res = await fetch<{ data: VDBPostReturnData }>(
@@ -168,33 +168,33 @@ export function useUserDashboardStore() {
     }
   }
 
-  // Update the hash (=hashed list of id's) of a specific local dashboard
-  function updateHash(type: DashboardType, hash: string) {
-    if (!isPublicDashboardKey(hash) || isSharedKey(hash)) {
-      warn('invalid public hashed key: ', hash)
+  // Update the guest dashboard key (=encoded list of validator indices or public keys) of a specific local dashboard
+  function updateGuestDashboardKey(type: DashboardType, key: string) {
+    if (!isGuestDashboardKey(key) || isSharedDashboardKey(key)) {
+      warn('invalid guest dashboard key: ', key)
       return
     }
     if (type === 'validator') {
-      const cd: CookieDashboard = {
-        id: COOKIE_DASHBOARD_ID.VALIDATOR,
+      const gd: GuestDashboard = {
+        id: GUEST_DASHBOARD_ID.VALIDATOR,
         name: '',
         ...dashboards.value?.validator_dashboards?.[0],
-        hash,
+        key,
       }
       data.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
-        validator_dashboards: [ cd as ValidatorDashboard ],
+        validator_dashboards: [ gd as ValidatorDashboard ],
       }
     }
     else {
-      const cd: CookieDashboard = {
-        id: COOKIE_DASHBOARD_ID.ACCOUNT,
+      const gd: GuestDashboard = {
+        id: GUEST_DASHBOARD_ID.ACCOUNT,
         name: '',
         ...dashboards.value?.account_dashboards?.[0],
-        hash,
+        key,
       }
       data.value = {
-        account_dashboards: [ cd ],
+        account_dashboards: [ gd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
     }
@@ -230,6 +230,6 @@ export function useUserDashboardStore() {
     dashboards,
     getDashboardLabel,
     refreshDashboards,
-    updateHash,
+    updateGuestDashboardKey,
   }
 }

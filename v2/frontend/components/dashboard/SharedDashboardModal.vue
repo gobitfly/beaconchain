@@ -7,7 +7,7 @@ const cookiePreference = useCookie<CookiesPreference>(
   COOKIE_KEY.COOKIES_PREFERENCE,
   { default: () => undefined },
 )
-const { isShared } = useDashboardKey()
+const { isSharedDashboard } = useDashboardKey()
 const { dashboards } = useUserDashboardStore()
 const { t: $t } = useTranslation()
 const route = useRoute()
@@ -15,7 +15,7 @@ const route = useRoute()
 const dismissed = ref(false)
 const visible = computed(
   () =>
-    isShared.value && !dismissed.value && cookiePreference.value !== undefined,
+    isSharedDashboard.value && !dismissed.value && cookiePreference.value !== undefined,
 )
 
 const text = computed(() => {

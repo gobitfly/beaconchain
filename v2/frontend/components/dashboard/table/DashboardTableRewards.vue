@@ -15,7 +15,8 @@ import { formatRewardValueOption } from '~/utils/dashboard/table'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const {
-  dashboardKey, isPublic,
+  dashboardKey,
+  isGuestDashboard,
 } = useDashboardKey()
 
 const cursor = ref<Cursor>()
@@ -145,7 +146,7 @@ const findNextEpochDuties = (epoch: number) => {
       :title="$t('dashboard.validator.rewards.title')"
       :search-placeholder="
         $t(
-          isPublic
+          isGuestDashboard
             ? 'dashboard.validator.rewards.search_placeholder_public'
             : 'dashboard.validator.rewards.search_placeholder',
         )

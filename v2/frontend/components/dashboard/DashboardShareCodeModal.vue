@@ -2,10 +2,10 @@
 import { warn } from 'vue'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 import { API_PATH } from '~/types/customFetch'
-import { isSharedKey } from '~/utils/dashboard/key'
+import { isSharedDashboardKey } from '~/utils/dashboard/key'
 
 interface Props {
-  // Currently only validator dashboards are supported. For public dashboards this will be undefined
+  // Currently only validator dashboards are supported. For guest dashboards this will be undefined
   dashboard?: ValidatorDashboard,
   dashboardKey: string,
 }
@@ -29,7 +29,7 @@ const sharedKey = computed(() =>
     : props.value?.dashboardKey,
 )
 
-const isShared = computed(() => isSharedKey(sharedKey.value))
+const isShared = computed(() => isSharedDashboardKey(sharedKey.value))
 
 const path = computed(() => {
   const newRoute = router.resolve({
@@ -41,7 +41,7 @@ const path = computed(() => {
 
 const edit = () => {
   if (isReadonly.value) {
-    warn('cannot edit public dashboard share')
+    warn('cannot edit guest dashboard share')
     return
   }
   dialogRef?.value?.close('EDIT')
@@ -49,7 +49,7 @@ const edit = () => {
 
 const unpublish = async () => {
   if (isReadonly.value) {
-    warn('cannot delete public dashboard share')
+    warn('cannot delete guest dashboard share')
     return
   }
   if (isUpdating.value) {
