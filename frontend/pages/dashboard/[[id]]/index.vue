@@ -12,9 +12,9 @@ import {
   DashboardCreationController, DashboardTableBlocks, DashboardTableEmpty, DashboardTableRewards, DashboardTableSummary,
   DashboardTableWithdrawals,
 } from '#components'
-import type { CookieDashboard } from '~/types/dashboard'
+import type { GuestDashboard } from '~/types/dashboard'
 import {
-  isPublicDashboardKey, isSharedKey,
+  isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
 
@@ -70,7 +70,7 @@ const {
   dashboards,
   getDashboardLabel,
   refreshDashboards,
-  updateHash,
+  updateGuestDashboardKey,
 } = useUserDashboardStore()
 // when we run into an error loading a dashboard keep it here to prevent an infinity loop
 const errorDashboardKeys: string[] = []
@@ -138,38 +138,38 @@ watch(
     newLoggedIn,
   ], [ oldKey ]) => {
     if (!newLoggedIn || !newKey) {
-      // Some checks if we need to update the dashboard key or the public dashboard
-      let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
-      const isPublic = isPublicDashboardKey(newKey)
-      const isShared = isSharedKey(newKey)
+      // Some checks if we need to update the dashboard key or the guest dashboard
+      let gd = dashboards.value?.validator_dashboards?.[0] as GuestDashboard
+      const isGuest = isGuestDashboardKey(newKey)
+      const isShared = isSharedDashboardKey(newKey)
       if (isShared) {
         return
       }
       if (newLoggedIn) {
         // if we are logged in and have no dashboard key we only want to switch
         //  to the first dashboard if it is a private one
-        if (cd && cd.hash === undefined) {
-          setDashboardKeyIfNoError(cd.id.toString())
+        if (gd && gd.key === undefined) {
+          setDashboardKeyIfNoError(gd.id.toString())
         }
       }
       else if (
         !newLoggedIn
-        && cd
-        && isPublic
-        && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))
+        && gd
+        && isGuest
+        && (!gd.key || (gd.key ?? '') === (oldKey ?? ''))
       ) {
-        // we got a new public dashboard hash but the old hash matches the
+        // we got a new guest dashboard key but the old key matches the
         // stored dashboard - so we update the stored dashboard
         if (!errorDashboardKeys.includes(newKey)) {
-          updateHash('validator', newKey)
+          updateGuestDashboardKey('validator', newKey)
         }
         setDashboardKeyIfNoError(newKey ?? '')
       }
-      else if (!newKey || !isPublic) {
+      else if (!newKey || !isGuest) {
         // trying to view a private dashboad but not logged in
-        cd = cookieDashboards.value
-          ?.validator_dashboards?.[0] as CookieDashboard
-        setDashboardKeyIfNoError(cd?.hash ?? '')
+        gd = cookieDashboards.value
+          ?.validator_dashboards?.[0] as GuestDashboard
+        setDashboardKeyIfNoError(gd?.key ?? '')
       }
     }
   },
