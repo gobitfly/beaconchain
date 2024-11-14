@@ -715,7 +715,7 @@ func queueEmailNotifications(notificationsByUserID types.NotificationsPerUserId)
 	for userID, userNotifications := range notificationsByUserID {
 		userEmail, exists := emailsByUserID[userID]
 		if !exists {
-			log.WarnWithStackTrace(nil, "email notification skipping user", 0, log.Fields{"user_id": userID})
+			log.Infof("email notification skipping user %d", userID)
 			// we don't need this metrics as users can now deactivate email notifications and it would increment the counter
 			// metrics.Errors.WithLabelValues("notifications_mail_not_found").Inc()
 			continue
@@ -1151,7 +1151,7 @@ func sendDiscordNotifications() error {
 
 				resp, err := client.Post(webhook.Url, "application/json", reqBody)
 				if err != nil {
-					log.Error(err, "error sending discord webhook request", 0)
+					log.Warnf("error sending discord webhook request: %v", err)
 				} else {
 					metrics.NotificationsSent.WithLabelValues("webhook_discord", resp.Status).Inc()
 				}
