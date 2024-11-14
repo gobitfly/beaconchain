@@ -269,10 +269,13 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 		}
 
 		proofWrapper, err := getRewardsData(bytes)
+		if err != nil {
+			return fmt.Errorf("can not parse reward file %v, error: %w", missingInterval.Index, err)
+		}
 
 		merkleRootFromFile := common.HexToHash(proofWrapper.MerkleRoot)
 		if missingInterval.MerkleRoot != merkleRootFromFile {
-			return fmt.Errorf("invalid merkle root value : %w", err)
+			return fmt.Errorf("invalid merkle root value: %s != %s", missingInterval.MerkleRoot, merkleRootFromFile)
 		}
 
 		rp.RocketpoolRewardTreesDownloadQueue = append(rp.RocketpoolRewardTreesDownloadQueue, RocketpoolRewardTreeDownloadable{
