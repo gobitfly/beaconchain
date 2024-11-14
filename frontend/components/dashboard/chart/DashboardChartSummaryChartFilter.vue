@@ -64,7 +64,7 @@ const groups = computed(() => {
     overview.value.groups.filter(g => !!g.count),
     [ g => g.name.toLowerCase() ],
     'asc',
-  )
+  ).slice(0, 4)
 })
 const selectedGroups = ref<number[]>([])
 watch(
