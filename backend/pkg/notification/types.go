@@ -423,6 +423,8 @@ type EthClientNotification struct {
 	types.NotificationBaseImpl
 
 	EthClient string
+	Url       string
+	Version   string
 }
 
 func (n *EthClientNotification) GetEntitiyId() string {
@@ -430,37 +432,14 @@ func (n *EthClientNotification) GetEntitiyId() string {
 }
 
 func (n *EthClientNotification) GetInfo(format types.NotificationFormat) string {
-	clientUrls := map[string]string{
-		"Geth":       "https://github.com/ethereum/go-ethereum/releases",
-		"Nethermind": "https://github.com/NethermindEth/nethermind/releases",
-		"Teku":       "https://github.com/ConsenSys/teku/releases",
-		"Prysm":      "https://github.com/prysmaticlabs/prysm/releases",
-		"Nimbus":     "https://github.com/status-im/nimbus-eth2/releases",
-		"Lighthouse": "https://github.com/sigp/lighthouse/releases",
-		"Erigon":     "https://github.com/erigontech/erigon/releases",
-		"Rocketpool": "https://github.com/rocket-pool/smartnode-install/releases",
-		"MEV-Boost":  "https://github.com/flashbots/mev-boost/releases",
-		"Lodestar":   "https://github.com/chainsafe/lodestar/releases",
-	}
-	defaultUrl := "https://beaconcha.in/ethClients"
-
 	switch format {
 	case types.NotifciationFormatHtml:
-		generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
-		url := clientUrls[n.EthClient]
-		if url == "" {
-			url = defaultUrl
-		}
-		return generalPart + " " + url
+		generalPart := fmt.Sprintf(`A new version %s for %s is available.`, n.Version, n.EthClient)
+		return generalPart + " " + n.Url
 	case types.NotifciationFormatText:
 		return fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
 	case types.NotifciationFormatMarkdown:
-		url := clientUrls[n.EthClient]
-		if url == "" {
-			url = defaultUrl
-		}
-
-		generalPart := fmt.Sprintf(`A new version for [%s](%s) is available.`, n.EthClient, url)
+		generalPart := fmt.Sprintf(`A new version for [%s](%s) is available.`, n.EthClient, n.Url)
 
 		return generalPart
 	}
