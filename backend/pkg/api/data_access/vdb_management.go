@@ -842,7 +842,7 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 		return nil, nil
 	}
 
-	tx, err := d.userWriter.BeginTxx(ctx, nil)
+	tx, err := d.writerDb.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error starting db transactions to insert validators for a dashboard: %w", err)
 	}
