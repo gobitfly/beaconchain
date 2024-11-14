@@ -40,8 +40,10 @@ type gitAPIResponse struct {
 }
 
 type clientUpdateInfo struct {
-	Name string
-	Date time.Time
+	Name    string
+	Url     string
+	Version string
+	Date    time.Time
 }
 
 type EthClients struct {
@@ -177,7 +179,7 @@ func prepareEthClientData(repo string, name string, curTime time.Time) (string, 
 		timeDiff := (curTime.Sub(rTime).Hours() / 24.0)
 
 		if timeDiff < 1 { // add recent releases for notification collector to be collected
-			update := clientUpdateInfo{Name: name, Date: rTime}
+			update := clientUpdateInfo{Name: name, Date: rTime, Url: client.HTMLURL, Version: client.TagName}
 			bannerClients = append(bannerClients, update)
 		}
 		return client.Name, rTime.Unix()

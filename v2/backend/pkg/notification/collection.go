@@ -1403,6 +1403,8 @@ func collectEthClientNotifications(notificationsByUserID types.NotificationsPerU
 						DashboardGroupName: sub.DashboardGroupName,
 					},
 					EthClient: client.Name,
+					Url:       client.Url,
+					Version:   client.Version,
 				}
 				notificationsByUserID.AddNotification(n)
 				metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
