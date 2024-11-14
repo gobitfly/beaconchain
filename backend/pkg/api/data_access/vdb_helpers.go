@@ -198,17 +198,53 @@ func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId 
 		}
 
 		node := hexutil.Encode(res.NodeAddress)
-		if _, ok := rpInfo.Node[node]; !ok && res.EndTime.Valid && res.SmoothingPoolEth != nil {
-			epoch := utils.TimeToEpoch(res.EndTime.Time)
-
-			rpInfo.Node[node] = t.RPNodeInfo{
-				SmoothingPoolReward: make(map[uint64]decimal.Decimal),
+		if res.EndTime.Valid && res.SmoothingPoolEth != nil {
+			if _, ok := rpInfo.Node[node]; !ok {
+				rpInfo.Node[node] = t.RPNodeInfo{
+					SmoothingPoolReward: make(map[uint64]decimal.Decimal),
+				}
 			}
+
+			epoch := utils.TimeToEpoch(res.EndTime.Time)
 			rpInfo.Node[node].SmoothingPoolReward[uint64(epoch)] = *res.SmoothingPoolEth
 		}
 	}
 
 	return &rpInfo, nil
+}
+
+func (d *DataAccessService) getRocketPoolNodeDeposits(ctx context.Context, nodeAddresses [][]byte) (map[string]decimal.Decimal, error) {
+	queryResult := []struct {
+		NodeAddress        []byte          `db:"node_address"`
+		NodeDepositBalance decimal.Decimal `db:"acc_node_deposit_balance"`
+	}{}
+
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("node_address"),
+			goqu.L("COALESCE(SUM(node_deposit_balance), 0) AS acc_node_deposit_balance"),
+		).
+		From(goqu.L("rocketpool_minipools")).
+		Where(goqu.L("node_address = ANY(?)", nodeAddresses)).
+		GroupBy(goqu.L("node_address"))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving rocketpool node deposits data: %w", err)
+	}
+
+	result := make(map[string]decimal.Decimal)
+	for _, res := range queryResult {
+		node := hexutil.Encode(res.NodeAddress)
+		result[node] = res.NodeDepositBalance
+	}
+
+	return result, nil
 }
 
 func (d *DataAccessService) getRocketPoolOperatorFactor(minipool t.RPMinipoolInfo) decimal.Decimal {

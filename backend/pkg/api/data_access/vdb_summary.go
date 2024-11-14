@@ -16,6 +16,7 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -995,10 +996,41 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		}
 		rewards = rewards.Add(reward)
 	}
-
-	if !deposits.IsZero() {
-		elAPR = rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(deposits).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
+	smoothingPoolRewards := decimal.Zero
+	smoothingPoolDeposits := decimal.Zero
+	var smoothingPoolNodes [][]byte
+	if rpInfos != nil && protocolModes.RocketPool {
+		for node, nodeInfo := range rpInfos.Node {
+			for epoch, reward := range nodeInfo.SmoothingPoolReward {
+				if epoch >= epochStart && epoch <= epochEnd {
+					smoothingPoolRewards = smoothingPoolRewards.Add(reward)
+					nodeAddress, err := hexutil.Decode(node)
+					if err != nil {
+						return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error decoding node address: %w", err)
+					}
+					smoothingPoolNodes = append(smoothingPoolNodes, nodeAddress)
+				}
+			}
+		}
 	}
+
+	nodeDeposits, err := d.getRocketPoolNodeDeposits(ctx, smoothingPoolNodes)
+	if err != nil {
+		return decimal.Zero, 0, decimal.Zero, 0, err
+	}
+	for _, deposit := range nodeDeposits {
+		smoothingPoolDeposits = smoothingPoolDeposits.Add(deposit)
+	}
+
+	rewardsRatio := decimal.Zero
+	if !deposits.IsZero() {
+		rewardsRatio = rewards.Div(deposits)
+	}
+	smoothingPoolRewardsRatio := decimal.Zero
+	if !smoothingPoolDeposits.IsZero() {
+		smoothingPoolRewardsRatio = smoothingPoolRewards.Div(smoothingPoolDeposits)
+	}
+	elAPR = rewardsRatio.Add(smoothingPoolRewardsRatio).Div(decimal.NewFromInt(int64(aprDivisor))).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
 
 	if hours == -1 {
 		elTotalDs := elDs.
@@ -1024,6 +1056,15 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 				}
 			}
 			rewards = rewards.Add(reward)
+		}
+		if rpInfos != nil && protocolModes.RocketPool {
+			for _, nodeInfo := range rpInfos.Node {
+				for epoch, reward := range nodeInfo.SmoothingPoolReward {
+					if epoch >= epochStart && epoch <= epochEnd {
+						rewards = rewards.Add(reward)
+					}
+				}
+			}
 		}
 	}
 	elIncome = rewards
