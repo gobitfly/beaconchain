@@ -69,18 +69,7 @@ type Config struct {
 		PruneMarginEpochs    uint64 `yaml:"pruneMarginEpochs" envconfig:"BLOB_INDEXER_PRUNE_MARGIN_EPOCHS"`       // PruneMarginEpochs helps blobindexer to decide if connected node has pruned too far to have no holes in the data, set it to same value as lighthouse flag --blob-prune-margin-epochs
 		DisableStatusReports bool   `yaml:"disableStatusReports" envconfig:"BLOB_INDEXER_DISABLE_STATUS_REPORTS"` // disable status reports (no connection to db needed)
 	} `yaml:"blobIndexer"`
-	Chain struct {
-		Name                       string `yaml:"name" envconfig:"CHAIN_NAME"`
-		Id                         uint64 `yaml:"id" envconfig:"CHAIN_ID"`
-		GenesisTimestamp           uint64 `yaml:"genesisTimestamp" envconfig:"CHAIN_GENESIS_TIMESTAMP"`
-		GenesisValidatorsRoot      string `yaml:"genesisValidatorsRoot" envconfig:"CHAIN_GENESIS_VALIDATORS_ROOT"`
-		DomainBLSToExecutionChange string `yaml:"domainBLSToExecutionChange" envconfig:"CHAIN_DOMAIN_BLS_TO_EXECUTION_CHANGE"`
-		DomainVoluntaryExit        string `yaml:"domainVoluntaryExit" envconfig:"CHAIN_DOMAIN_VOLUNTARY_EXIT"`
-		ClConfigPath               string `yaml:"clConfigPath" envconfig:"CHAIN_CL_CONFIG_PATH"`
-		ElConfigPath               string `yaml:"elConfigPath" envconfig:"CHAIN_EL_CONFIG_PATH"`
-		ClConfig                   ClChainConfig
-		ElConfig                   *params.ChainConfig
-	} `yaml:"chain"`
+	Chain                     `yaml:"chain"`
 	Eth1ErigonEndpoint        string `yaml:"eth1ErigonEndpoint" envconfig:"ETH1_ERIGON_ENDPOINT"`
 	Eth1GethEndpoint          string `yaml:"eth1GethEndpoint" envconfig:"ETH1_GETH_ENDPOINT"`
 	EtherscanAPIKey           string `yaml:"etherscanApiKey" envconfig:"ETHERSCAN_API_KEY"`
@@ -317,6 +306,19 @@ type Config struct {
 	CorsAllowedHosts []string `yaml:"corsAllowedHosts" envconfig:"CORS_ALLOWED_HOSTS"`
 
 	SkipDataAccessServiceInitWait bool `yaml:"skipDataAccessServiceInitWait" envconfig:"SKIP_DATA_ACCESS_SERVICE_INIT_WAIT"`
+}
+
+type Chain struct {
+	Name                       string `yaml:"name" envconfig:"CHAIN_NAME"`
+	Id                         uint64 `yaml:"id" envconfig:"CHAIN_ID"`
+	GenesisTimestamp           uint64 `yaml:"genesisTimestamp" envconfig:"CHAIN_GENESIS_TIMESTAMP"`
+	GenesisValidatorsRoot      string `yaml:"genesisValidatorsRoot" envconfig:"CHAIN_GENESIS_VALIDATORS_ROOT"`
+	DomainBLSToExecutionChange string `yaml:"domainBLSToExecutionChange" envconfig:"CHAIN_DOMAIN_BLS_TO_EXECUTION_CHANGE"`
+	DomainVoluntaryExit        string `yaml:"domainVoluntaryExit" envconfig:"CHAIN_DOMAIN_VOLUNTARY_EXIT"`
+	ClConfigPath               string `yaml:"clConfigPath" envconfig:"CHAIN_CL_CONFIG_PATH"`
+	ElConfigPath               string `yaml:"elConfigPath" envconfig:"CHAIN_EL_CONFIG_PATH"`
+	ClConfig                   ClChainConfig
+	ElConfig                   *params.ChainConfig
 }
 
 type InternalAlertDiscord struct {
