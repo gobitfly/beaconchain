@@ -533,7 +533,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroupValidators(w http.Re
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		integer													true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators or update their group, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_address`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal address from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
+//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators or update their group, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_credential`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal credential from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
 //	@Success		201				{object}	types.ApiDataResponse[[]types.VDBPostValidatorsData]	"Returns a list of added validators."
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/validators [post]
@@ -541,11 +541,11 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	type request struct {
-		GroupId           uint64        `json:"group_id,omitempty" x-nullable:"true"`
-		Validators        []intOrString `json:"validators,omitempty"`
-		DepositAddress    string        `json:"deposit_address,omitempty"`
-		WithdrawalAddress string        `json:"withdrawal_address,omitempty"`
-		Graffiti          string        `json:"graffiti,omitempty"`
+		GroupId              uint64        `json:"group_id,omitempty" x-nullable:"true"`
+		Validators           []intOrString `json:"validators,omitempty"`
+		DepositAddress       string        `json:"deposit_address,omitempty"`
+		WithdrawalCredential string        `json:"withdrawal_credential,omitempty"`
+		Graffiti             string        `json:"graffiti,omitempty"`
 	}
 	req := request{
 		GroupId: types.DefaultGroupId, // default value
@@ -559,11 +559,11 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 	groupId := req.GroupId
-	// check if exactly one of validators, deposit_address, withdrawal_address, graffiti is set
+	// check if exactly one of validators, deposit_address, withdrawal_credential, graffiti is set
 	nilFields := []bool{
 		req.Validators == nil,
 		req.DepositAddress == "",
-		req.WithdrawalAddress == "",
+		req.WithdrawalCredential == "",
 		req.Graffiti == "",
 	}
 	var count int
@@ -573,7 +573,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		}
 	}
 	if count != 1 {
-		v.add("request body", "exactly one of `validators`, `deposit_address`, `withdrawal_address`, `graffiti` must be set. please check the API documentation for more information")
+		v.add("request body", "exactly one of `validators`, `deposit_address`, `withdrawal_credential`, `graffiti` must be set. please check the API documentation for more information")
 	}
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -644,13 +644,13 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		}
 		data, dataErr = h.getDataAccessor(r).AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
 
-	case req.WithdrawalAddress != "":
-		withdrawalAddress := v.checkRegex(reWithdrawalCredential, req.WithdrawalAddress, "withdrawal_address")
+	case req.WithdrawalCredential != "":
+		withdrawalCredential := v.checkRegex(reWithdrawalCredential, req.WithdrawalCredential, "withdrawal_credential")
 		if v.hasErrors() {
 			handleErr(w, r, v)
 			return
 		}
-		data, dataErr = h.getDataAccessor(r).AddValidatorDashboardValidatorsByWithdrawalAddress(ctx, dashboardId, groupId, withdrawalAddress, limit)
+		data, dataErr = h.getDataAccessor(r).AddValidatorDashboardValidatorsByWithdrawalCredential(ctx, dashboardId, groupId, withdrawalCredential, limit)
 
 	case req.Graffiti != "":
 		graffiti := v.checkRegex(reGraffiti, req.Graffiti, "graffiti")

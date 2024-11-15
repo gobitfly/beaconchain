@@ -274,7 +274,7 @@ func (d *DummyService) AddValidatorDashboardValidatorsByDepositAddress(ctx conte
 	return getDummyData[[]t.VDBPostValidatorsData](ctx)
 }
 
-func (d *DummyService) AddValidatorDashboardValidatorsByWithdrawalAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+func (d *DummyService) AddValidatorDashboardValidatorsByWithdrawalCredential(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
 	return getDummyData[[]t.VDBPostValidatorsData](ctx)
 }
 
