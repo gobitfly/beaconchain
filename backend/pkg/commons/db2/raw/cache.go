@@ -1,4 +1,4 @@
-package db2
+package raw
 
 import (
 	"encoding/json"
@@ -17,8 +17,8 @@ type MinimalBlock struct {
 	} `json:"result"`
 }
 
-type CachedRawStore struct {
-	db RawStoreReader
+type CachedStore struct {
+	store StoreReader
 	// sync.Map with manual delete have better perf than freecache because we can handle this way a ttl < 1s
 	cache sync.Map
 
@@ -26,14 +26,14 @@ type CachedRawStore struct {
 	mapLock sync.Mutex // to make the map safe concurrently
 }
 
-func WithCache(reader RawStoreReader) *CachedRawStore {
-	return &CachedRawStore{
-		db:    reader,
+func WithCache(reader StoreReader) *CachedStore {
+	return &CachedStore{
+		store: reader,
 		locks: make(map[string]*sync.RWMutex),
 	}
 }
 
-func (c *CachedRawStore) lockBy(key string) func() {
+func (c *CachedStore) lockBy(key string) func() {
 	c.mapLock.Lock()
 	defer c.mapLock.Unlock()
 
@@ -48,7 +48,7 @@ func (c *CachedRawStore) lockBy(key string) func() {
 	return lock.RUnlock
 }
 
-func (c *CachedRawStore) ReadBlockByNumber(chainID uint64, number int64) (*FullBlockRawData, error) {
+func (c *CachedStore) ReadBlockByNumber(chainID uint64, number int64) (*FullBlockData, error) {
 	key := blockKey(chainID, number)
 
 	unlock := c.lockBy(key)
@@ -58,17 +58,17 @@ func (c *CachedRawStore) ReadBlockByNumber(chainID uint64, number int64) (*FullB
 	if ok {
 		// once read ensure to delete it from the cache
 		go c.unCacheBlockAfter(key, "", oneBlockTTL)
-		return v.(*FullBlockRawData), nil
+		return v.(*FullBlockData), nil
 	}
 	// TODO make warning not found in cache
-	block, err := c.db.ReadBlockByNumber(chainID, number)
+	block, err := c.store.ReadBlockByNumber(chainID, number)
 	if block != nil {
 		c.cacheBlock(block, oneBlockTTL)
 	}
 	return block, err
 }
 
-func (c *CachedRawStore) cacheBlock(block *FullBlockRawData, ttl time.Duration) {
+func (c *CachedStore) cacheBlock(block *FullBlockData, ttl time.Duration) {
 	key := blockKey(block.ChainID, block.BlockNumber)
 	c.cache.Store(key, block)
 
@@ -82,7 +82,7 @@ func (c *CachedRawStore) cacheBlock(block *FullBlockRawData, ttl time.Duration) 
 	go c.unCacheBlockAfter(key, mini.Result.Hash, ttl)
 }
 
-func (c *CachedRawStore) unCacheBlockAfter(key, hash string, ttl time.Duration) {
+func (c *CachedStore) unCacheBlockAfter(key, hash string, ttl time.Duration) {
 	time.Sleep(ttl)
 	c.cache.Delete(key)
 	c.mapLock.Lock()
@@ -93,22 +93,22 @@ func (c *CachedRawStore) unCacheBlockAfter(key, hash string, ttl time.Duration) 
 	delete(c.locks, key)
 }
 
-func (c *CachedRawStore) ReadBlockByHash(chainID uint64, hash string) (*FullBlockRawData, error) {
+func (c *CachedStore) ReadBlockByHash(chainID uint64, hash string) (*FullBlockData, error) {
 	v, ok := c.cache.Load(hash)
 	if !ok {
-		return c.db.ReadBlockByHash(chainID, hash)
+		return c.store.ReadBlockByHash(chainID, hash)
 	}
 
 	v, ok = c.cache.Load(blockKey(chainID, v.(int64)))
 	if !ok {
-		return c.db.ReadBlockByHash(chainID, hash)
+		return c.store.ReadBlockByHash(chainID, hash)
 	}
 
-	return v.(*FullBlockRawData), nil
+	return v.(*FullBlockData), nil
 }
 
-func (c *CachedRawStore) ReadBlocksByNumber(chainID uint64, start, end int64) ([]*FullBlockRawData, error) {
-	blocks, err := c.db.ReadBlocksByNumber(chainID, start, end)
+func (c *CachedStore) ReadBlocksByNumber(chainID uint64, start, end int64) ([]*FullBlockData, error) {
+	blocks, err := c.store.ReadBlocksByNumber(chainID, start, end)
 	if err != nil {
 		return nil, err
 	}

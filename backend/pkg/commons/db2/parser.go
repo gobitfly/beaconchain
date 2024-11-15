@@ -8,6 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/jsonrpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/raw"
 )
 
 type GethTrace struct {
@@ -31,13 +34,13 @@ type GethTraceCall struct {
 	Calls               []*GethTraceCall
 }
 
-var EthParse = func(rawBlock *FullBlockRawData) (*types.Block, []*types.Receipt, []*GethTrace, error) {
-	var blockResp, receiptsResp, tracesResp jsonrpcMessage
+var EthParse = func(rawBlock *raw.FullBlockData) (*types.Block, []*types.Receipt, []*GethTrace, error) {
+	var blockResp, receiptsResp, tracesResp jsonrpc.Message
 	_ = json.Unmarshal(rawBlock.Receipts, &receiptsResp)
 	_ = json.Unmarshal(rawBlock.Block, &blockResp)
 	_ = json.Unmarshal(rawBlock.Traces, &tracesResp)
 
-	var unclesResp []jsonrpcMessage
+	var unclesResp []jsonrpc.Message
 	_ = json.Unmarshal(rawBlock.Uncles, &unclesResp)
 
 	block, err := parseEthBlock(blockResp.Result, unclesResp)
@@ -74,6 +77,7 @@ type rpcBlock struct {
 	Transactions []rpcTransaction    `json:"transactions"`
 	UncleHashes  []common.Hash       `json:"uncles"`
 	Withdrawals  []*types.Withdrawal `json:"withdrawals,omitempty"`
+	Requests     []*types.Request    `json:"requests,omitempty"`
 }
 
 type rpcTransaction struct {
@@ -96,8 +100,8 @@ type txExtraInfo struct {
 
 // parseEthBlock is a copy of ethclient.Client.getBlock
 // modified to work the with raw db
-// https://github.com/ethereum/go-ethereum/blob/v1.13.12/ethclient/ethclient.go#L129
-func parseEthBlock(raw json.RawMessage, rawUncles []jsonrpcMessage) (*types.Block, error) {
+// https://github.com/ethereum/go-ethereum/blob/v1.14.11/ethclient/ethclient.go#L129
+func parseEthBlock(raw json.RawMessage, rawUncles []jsonrpc.Message) (*types.Block, error) {
 	// Decode header and transactions.
 	var head *types.Header
 	if err := json.Unmarshal(raw, &head); err != nil {
@@ -142,7 +146,13 @@ func parseEthBlock(raw json.RawMessage, rawUncles []jsonrpcMessage) (*types.Bloc
 		}
 		txs[i] = tx.tx
 	}
-	return types.NewBlockWithHeader(head).WithBody(txs, uncles).WithWithdrawals(body.Withdrawals), nil
+	return types.NewBlockWithHeader(head).WithBody(
+		types.Body{
+			Transactions: txs,
+			Uncles:       uncles,
+			Withdrawals:  body.Withdrawals,
+			Requests:     body.Requests,
+		}), nil
 }
 
 // SenderFromDBSigner is a types.Signer that remembers the sender address returned by the RPC

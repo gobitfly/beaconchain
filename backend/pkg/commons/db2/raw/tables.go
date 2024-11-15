@@ -1,6 +1,6 @@
-package db2
+package raw
 
-const BlocksRawTable = "blocks-RawSchema"
+const BlocksRawTable = "blocks-Schema"
 
 const BT_COLUMNFAMILY_BLOCK = "b"
 const BT_COLUMN_BLOCK = "b"
@@ -13,7 +13,7 @@ const BT_COLUMN_UNCLES = "u"
 
 const MAX_EL_BLOCK_NUMBER = int64(1_000_000_000_000 - 1)
 
-var RawSchema = map[string][]string{
+var Schema = map[string][]string{
 	BlocksRawTable: {
 		BT_COLUMNFAMILY_BLOCK,
 		BT_COLUMNFAMILY_RECEIPTS,

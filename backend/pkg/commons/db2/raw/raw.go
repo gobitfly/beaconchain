@@ -1,11 +1,11 @@
-package db2
+package raw
 
 import (
 	"fmt"
 	"math/big"
 	"strings"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
@@ -15,39 +15,39 @@ type compressor interface {
 	decompress(src []byte) ([]byte, error)
 }
 
-type RawStore struct {
-	store      store.Store
+type Store struct {
+	db         database.Database
 	compressor compressor
 }
 
-func NewRawStore(store store.Store) RawStore {
-	return RawStore{
-		store:      store,
+func NewStore(store database.Database) Store {
+	return Store{
+		db:         store,
 		compressor: gzipCompressor{},
 	}
 }
 
-func (db RawStore) AddBlocks(blocks []FullBlockRawData) error {
-	itemsByKey := make(map[string][]store.Item)
+func (store Store) AddBlocks(blocks []FullBlockData) error {
+	itemsByKey := make(map[string][]database.Item)
 	for _, fullBlock := range blocks {
 		if len(fullBlock.Block) == 0 || len(fullBlock.BlockTxs) != 0 && len(fullBlock.Traces) == 0 {
 			return fmt.Errorf("block %d: empty data", fullBlock.BlockNumber)
 		}
 		key := blockKey(fullBlock.ChainID, fullBlock.BlockNumber)
 
-		block, err := db.compressor.compress(fullBlock.Block)
+		block, err := store.compressor.compress(fullBlock.Block)
 		if err != nil {
 			return fmt.Errorf("cannot compress block %d: %w", fullBlock.BlockNumber, err)
 		}
-		receipts, err := db.compressor.compress(fullBlock.Receipts)
+		receipts, err := store.compressor.compress(fullBlock.Receipts)
 		if err != nil {
 			return fmt.Errorf("cannot compress receipts %d: %w", fullBlock.BlockNumber, err)
 		}
-		traces, err := db.compressor.compress(fullBlock.Traces)
+		traces, err := store.compressor.compress(fullBlock.Traces)
 		if err != nil {
 			return fmt.Errorf("cannot compress traces %d: %w", fullBlock.BlockNumber, err)
 		}
-		itemsByKey[key] = []store.Item{
+		itemsByKey[key] = []database.Item{
 			{
 				Family: BT_COLUMNFAMILY_BLOCK,
 				Column: BT_COLUMN_BLOCK,
@@ -69,56 +69,56 @@ func (db RawStore) AddBlocks(blocks []FullBlockRawData) error {
 			log.Warn(fmt.Sprintf("empty receipts at block %d lRec %d lTxs %d", fullBlock.BlockNumber, len(fullBlock.Receipts), len(fullBlock.BlockTxs)))
 		}
 		if fullBlock.BlockUnclesCount > 0 {
-			uncles, err := db.compressor.compress(fullBlock.Uncles)
+			uncles, err := store.compressor.compress(fullBlock.Uncles)
 			if err != nil {
 				return fmt.Errorf("cannot compress block %d: %w", fullBlock.BlockNumber, err)
 			}
-			itemsByKey[key] = append(itemsByKey[key], store.Item{
+			itemsByKey[key] = append(itemsByKey[key], database.Item{
 				Family: BT_COLUMNFAMILY_UNCLES,
 				Column: BT_COLUMN_UNCLES,
 				Data:   uncles,
 			})
 		}
 	}
-	return db.store.BulkAdd(itemsByKey)
+	return store.db.BulkAdd(itemsByKey)
 }
 
-func (db RawStore) ReadBlockByNumber(chainID uint64, number int64) (*FullBlockRawData, error) {
-	return db.readBlock(chainID, number)
+func (store Store) ReadBlockByNumber(chainID uint64, number int64) (*FullBlockData, error) {
+	return store.readBlock(chainID, number)
 }
 
-func (db RawStore) ReadBlockByHash(chainID uint64, hash string) (*FullBlockRawData, error) {
-	// todo use sql db to retrieve hash
+func (store Store) ReadBlockByHash(chainID uint64, hash string) (*FullBlockData, error) {
+	// todo use sql store to retrieve hash
 	return nil, fmt.Errorf("ReadBlockByHash not implemented")
 }
 
-func (db RawStore) readBlock(chainID uint64, number int64) (*FullBlockRawData, error) {
+func (store Store) readBlock(chainID uint64, number int64) (*FullBlockData, error) {
 	key := blockKey(chainID, number)
-	data, err := db.store.GetRow(key)
+	data, err := store.db.GetRow(key)
 	if err != nil {
 		return nil, err
 	}
-	return db.parseRow(chainID, number, data)
+	return store.parseRow(chainID, number, data)
 }
 
-func (db RawStore) parseRow(chainID uint64, number int64, data map[string][]byte) (*FullBlockRawData, error) {
-	block, err := db.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_BLOCK, BT_COLUMN_BLOCK)])
+func (store Store) parseRow(chainID uint64, number int64, data map[string][]byte) (*FullBlockData, error) {
+	block, err := store.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_BLOCK, BT_COLUMN_BLOCK)])
 	if err != nil {
 		return nil, fmt.Errorf("cannot decompress block %d: %w", number, err)
 	}
-	receipts, err := db.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_RECEIPTS, BT_COLUMN_RECEIPTS)])
+	receipts, err := store.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_RECEIPTS, BT_COLUMN_RECEIPTS)])
 	if err != nil {
 		return nil, fmt.Errorf("cannot decompress receipts %d: %w", number, err)
 	}
-	traces, err := db.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_TRACES, BT_COLUMN_TRACES)])
+	traces, err := store.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_TRACES, BT_COLUMN_TRACES)])
 	if err != nil {
 		return nil, fmt.Errorf("cannot decompress traces %d: %w", number, err)
 	}
-	uncles, err := db.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_UNCLES, BT_COLUMN_UNCLES)])
+	uncles, err := store.compressor.decompress(data[fmt.Sprintf("%s:%s", BT_COLUMNFAMILY_UNCLES, BT_COLUMN_UNCLES)])
 	if err != nil {
 		return nil, fmt.Errorf("cannot decompress uncles %d: %w", number, err)
 	}
-	return &FullBlockRawData{
+	return &FullBlockData{
 		ChainID:          chainID,
 		BlockNumber:      number,
 		BlockHash:        nil,
@@ -131,14 +131,14 @@ func (db RawStore) parseRow(chainID uint64, number int64, data map[string][]byte
 	}, nil
 }
 
-func (db RawStore) ReadBlocksByNumber(chainID uint64, start, end int64) ([]*FullBlockRawData, error) {
-	rows, err := db.store.GetRowsRange(blockKey(chainID, start), blockKey(chainID, end))
+func (store Store) ReadBlocksByNumber(chainID uint64, start, end int64) ([]*FullBlockData, error) {
+	rows, err := store.db.GetRowsRange(blockKey(chainID, start), blockKey(chainID, end))
 	if err != nil {
 		return nil, err
 	}
-	blocks := make([]*FullBlockRawData, 0, end-start+1)
+	blocks := make([]*FullBlockData, 0, end-start+1)
 	for _, row := range rows {
-		block, err := db.parseRow(chainID, blockKeyToNumber(chainID, row.Key), row.Values)
+		block, err := store.parseRow(chainID, blockKeyToNumber(chainID, row.Key), row.Values)
 		if err != nil {
 			return nil, err
 		}
@@ -158,7 +158,7 @@ func blockKeyToNumber(chainID uint64, key string) int64 {
 	return MAX_EL_BLOCK_NUMBER - reversed.Int64()
 }
 
-type FullBlockRawData struct {
+type FullBlockData struct {
 	ChainID uint64
 
 	BlockNumber      int64

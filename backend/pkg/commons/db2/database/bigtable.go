@@ -1,4 +1,4 @@
-package store
+package database
 
 import (
 	"context"
@@ -18,65 +18,65 @@ const (
 )
 
 type TableWrapper struct {
-	*BigTableStore
+	*BigTable
 	table  string
 	family string
 }
 
-func Wrap(db *BigTableStore, table string, family string) TableWrapper {
+func Wrap(db *BigTable, table string, family string) TableWrapper {
 	return TableWrapper{
-		BigTableStore: db,
-		table:         table,
-		family:        family,
+		BigTable: db,
+		table:    table,
+		family:   family,
 	}
 }
 
 func (w TableWrapper) Add(key, column string, data []byte, allowDuplicate bool) error {
-	return w.BigTableStore.Add(w.table, w.family, key, column, data, allowDuplicate)
+	return w.BigTable.Add(w.table, w.family, key, column, data, allowDuplicate)
 }
 
 func (w TableWrapper) Read(prefix string) ([][]byte, error) {
-	return w.BigTableStore.Read(w.table, w.family, prefix)
+	return w.BigTable.Read(w.table, w.family, prefix)
 }
 
 func (w TableWrapper) GetLatestValue(key string) ([]byte, error) {
-	return w.BigTableStore.GetLatestValue(w.table, w.family, key)
+	return w.BigTable.GetLatestValue(w.table, w.family, key)
 }
 
 func (w TableWrapper) GetRow(key string) (map[string][]byte, error) {
-	return w.BigTableStore.GetRow(w.table, key)
+	return w.BigTable.GetRow(w.table, key)
 }
 
 func (w TableWrapper) GetRowKeys(prefix string) ([]string, error) {
-	return w.BigTableStore.GetRowKeys(w.table, prefix)
+	return w.BigTable.GetRowKeys(w.table, prefix)
 }
 
 func (w TableWrapper) BulkAdd(itemsByKey map[string][]Item) error {
-	return w.BigTableStore.BulkAdd(w.table, itemsByKey)
+	return w.BigTable.BulkAdd(w.table, itemsByKey)
 }
 
 func (w TableWrapper) GetRowsRange(high, low string) ([]Row, error) {
-	return w.BigTableStore.GetRowsRange(w.table, high, low)
+	return w.BigTable.GetRowsRange(w.table, high, low)
 }
 
-// BigTableStore is a wrapper around Google Cloud Bigtable for storing and retrieving data
-type BigTableStore struct {
+// BigTable is a wrapper around Google Cloud Bigtable for storing and retrieving data
+type BigTable struct {
 	client *bigtable.Client
 	admin  *bigtable.AdminClient
 }
 
-func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminClient *bigtable.AdminClient, tablesAndFamilies map[string][]string) (*BigTableStore, error) {
+func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminClient *bigtable.AdminClient, tablesAndFamilies map[string][]string) (*BigTable, error) {
 	// Initialize the Bigtable table and column family
 	if err := initTable(ctx, adminClient, tablesAndFamilies); err != nil {
 		return nil, err
 	}
 
-	return &BigTableStore{client: client, admin: adminClient}, nil
+	return &BigTable{client: client, admin: adminClient}, nil
 }
 
-// NewBigTable initializes a new BigTableStore
-// It returns a BigTableStore and an error if any part of the setup fails
-func NewBigTable(project, instance string, tablesAndFamilies map[string][]string) (*BigTableStore, error) {
+// NewBigTable initializes a new BigTable
+// It returns a BigTable and an error if any part of the setup fails
+func NewBigTable(project, instance string, tablesAndFamilies map[string][]string) (*BigTable, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -142,7 +142,7 @@ type Item struct {
 	Data   []byte
 }
 
-func (b BigTableStore) BulkAdd(table string, itemsByKey map[string][]Item) error {
+func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item) error {
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -171,7 +171,7 @@ func (b BigTableStore) BulkAdd(table string, itemsByKey map[string][]Item) error
 // Add inserts a new row with the given key, column, and data into the Bigtable
 // It applies a mutation that stores data in the receiver column family
 // It returns error if the operation fails
-func (b BigTableStore) Add(table, family string, key string, column string, data []byte, allowDuplicate bool) error {
+func (b BigTable) Add(table, family string, key string, column string, data []byte, allowDuplicate bool) error {
 	// Open the transfer table for data operations
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -193,7 +193,7 @@ func (b BigTableStore) Add(table, family string, key string, column string, data
 
 // Read retrieves all rows from the Bigtable's receiver column family
 // It returns the data in the form of a 2D byte slice and an error if the operation fails
-func (b BigTableStore) Read(table, family, prefix string) ([][]byte, error) {
+func (b BigTable) Read(table, family, prefix string) ([][]byte, error) {
 	// Open the transfer table for reading
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -215,7 +215,7 @@ func (b BigTableStore) Read(table, family, prefix string) ([][]byte, error) {
 	return data, nil
 }
 
-func (b BigTableStore) GetLatestValue(table, family, key string) ([]byte, error) {
+func (b BigTable) GetLatestValue(table, family, key string) ([]byte, error) {
 	// Open the transfer table for reading
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -234,7 +234,7 @@ func (b BigTableStore) GetLatestValue(table, family, key string) ([]byte, error)
 	return data, nil
 }
 
-func (b BigTableStore) GetRow(table, key string) (map[string][]byte, error) {
+func (b BigTable) GetRow(table, key string) (map[string][]byte, error) {
 	// Open the transfer table for reading
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -265,7 +265,7 @@ type Row struct {
 	Values map[string][]byte
 }
 
-func (b BigTableStore) GetRowsRange(table, high, low string) ([]Row, error) {
+func (b BigTable) GetRowsRange(table, high, low string) ([]Row, error) {
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -296,7 +296,7 @@ func (b BigTableStore) GetRowsRange(table, high, low string) ([]Row, error) {
 	return data, nil
 }
 
-func (b BigTableStore) GetRowKeys(table, prefix string) ([]string, error) {
+func (b BigTable) GetRowKeys(table, prefix string) ([]string, error) {
 	// Open the transfer table for reading
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -316,7 +316,7 @@ func (b BigTableStore) GetRowKeys(table, prefix string) ([]string, error) {
 	return data, nil
 }
 
-func (b BigTableStore) Clear() error {
+func (b BigTable) Clear() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -332,9 +332,9 @@ func (b BigTableStore) Clear() error {
 	return nil
 }
 
-// Close shuts down the BigTableStore by closing the Bigtable client connection
+// Close shuts down the BigTable by closing the Bigtable client connection
 // It returns an error if the operation fails
-func (b BigTableStore) Close() error {
+func (b BigTable) Close() error {
 	if err := b.client.Close(); err != nil && status.Code(err) != codes.Canceled {
 		return fmt.Errorf("could not close client: %v", err)
 	}
