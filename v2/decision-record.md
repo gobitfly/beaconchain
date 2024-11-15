@@ -27,13 +27,15 @@ We are using [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.
     1. `types` (teams `SHOULD` stick to the [default set](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type)) and
     1. `scopes`
 1. One pull requesst `MAY` contain multiple commits.
-1. Every `Pull Request` (opened by a `bitflyer`) `SHOULD` have one `commit` that has a `Footer` with an `issue number` (like BEDS-XXX).
-1. Before `merging` into `staging` all commits `MUST` be `rebased` (will be enforced by project settings).
+1. Every `Pull Request` (opened by a `bitflyer`) `SHOULD` have one `commit` that has a `Footer` with an `issue number` (like `BEDS-XXX`).
+1. Every `Branch` (created by a `bitflyer`) `SHOULD` contain the `issue number` as prefix (like `BEDS-XXX/<name>`) 
+1. Before `merging` into `staging` all commits `MUST` be `rebased` (enforced by project settings).
 
 ### References
 
 1. [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
 1. [Conventinal Commits Cheat Sheet](https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13)
+1. [Git Usage Example](https://chatgpt.com/c/6728dfa8-806c-800e-b1da-4b6129ecd3aa)
 
 👇 Template: copy from here 👇
 
