@@ -19,7 +19,7 @@ func TestRaw(t *testing.T) {
 	}
 
 	store := Store{
-		db:         database.Wrap(s, BlocksRawTable, ""),
+		db:         database.Wrap(s, BlocksRawTable),
 		compressor: noOpCompressor{},
 	}
 

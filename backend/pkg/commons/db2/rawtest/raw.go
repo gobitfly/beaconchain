@@ -15,13 +15,14 @@ import (
 )
 
 func NewRandSeededStore(t *testing.T) (raw.Store, *th.BlockchainBackend) {
+	t.Helper()
 	client, admin := databasetest.NewBigTable(t)
 	bt, err := database.NewBigTableWithClient(context.Background(), client, admin, raw.Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db := raw.NewStore(database.Wrap(bt, raw.BlocksRawTable, ""))
+	db := raw.NewStore(database.Wrap(bt, raw.BlocksRawTable))
 
 	backend := th.NewBackend(t)
 	for i := 0; i < 10; i++ {
