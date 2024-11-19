@@ -23,11 +23,11 @@ type MobileWidgetData struct {
 type InternalGetValidatorDashboardMobileWidgetResponse ApiDataResponse[MobileWidgetData]
 
 type MobileValidatorDashboardValidatorsRocketPool struct {
-	DepositAmount     decimal.Decimal `json:"deposit_Amount"`
+	DepositAmount     decimal.Decimal `json:"deposit_amount"`
 	Commission        float64         `json:"commission"` // percentage, 0-1
 	Status            string          `json:"status"  tstype:"'Staking' | 'Dissolved' | 'Prelaunch' | 'Initialized' | 'Withdrawable'" faker:"oneof: Staking, Dissolved, Prelaunch, Initialized, Withdrawable"`
 	PenaltyCount      uint64          `json:"penalty_count"`
-	IsInSmoothingPool bool            `json:"is_in_smokaothing_pool"`
+	IsInSmoothingPool bool            `json:"is_in_smoothing_pool"`
 }
 type MobileValidatorDashboardValidatorsTableRow struct {
 	Index                uint64          `json:"index"`
@@ -38,9 +38,10 @@ type MobileValidatorDashboardValidatorsTableRow struct {
 	QueuePosition        *uint64         `json:"queue_position,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential"`
 	// additional mobile fields
-	IsInSyncCommittee bool                                          `json:"is_in_sync_committee"`
-	Efficiency        float64                                       `json:"efficiency"`
-	RocketPool        *MobileValidatorDashboardValidatorsRocketPool `json:"rocket_pool,omitempty"`
+	IsInSyncCommittee     bool                                          `json:"is_in_sync_committee"`
+	IsInNextSyncCommittee bool                                          `json:"is_in_next_sync_committee"`
+	Efficiency            float64                                       `json:"efficiency"`
+	RocketPool            *MobileValidatorDashboardValidatorsRocketPool `json:"rocket_pool,omitempty"`
 }
 
 type InternalGetValidatorDashboardMobileValidatorsResponse ApiPagingResponse[MobileValidatorDashboardValidatorsTableRow]

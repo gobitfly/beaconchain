@@ -784,7 +784,7 @@ func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow](ctx)
 }
 
