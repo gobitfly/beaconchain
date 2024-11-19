@@ -3,14 +3,20 @@
 @import "~/assets/css/fonts.scss";
 @import "~/assets/css/utils.scss";
 
+html {
+  transition-behavior: allow-discrete;
+  interpolate-size: allow-keywords;
+}
+
 html,
 h1,h2,h3,h4,h5,h6,
+input,
 ul,
 li
  {
   margin: 0;
   padding: 0;
-  font: inherit;
+  font: var(--standard_text_font_family);
 }
 ul {
   padding-inline-start: 1.5rem;

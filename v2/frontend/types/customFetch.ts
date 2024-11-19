@@ -1,7 +1,4 @@
-import {
-  simulateAPIresponseAboutNetworkList,
-  simulateAPIresponseForTheSearchBar,
-} from '~/utils/mock'
+import { simulateAPIresponseAboutNetworkList } from '~/utils/mock'
 
 export enum API_PATH {
   AD_CONFIGURATIONs = '/adConfigurations',
@@ -394,8 +391,6 @@ export const mapping: Record<string, MappingData> = {
   },
   [API_PATH.SEARCH]: {
     method: 'POST',
-    mock: false,
-    mockFunction: simulateAPIresponseForTheSearchBar,
     path: '/search',
   },
   [API_PATH.STRIPE_CHECKOUT_SESSION]: {

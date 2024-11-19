@@ -1,11 +1,10 @@
 /* eslint-disable vue/max-len -- TODO:   plz fix this */
 import type { ComposerTranslation } from 'vue-i18n'
+import type {
+  InternalPostSearchResponse, SearchResult,
+} from '~/types/api/search'
 import type { ChainIDs } from '~/types/network'
-import {
-  type ApiErrorResponse,
-  type InternalPostSearchResponse,
-  type SearchResult,
-} from '~/types/api/common'
+import { type ApiErrorResponse } from '~/types/api/common'
 
 export const MinimumTimeBetweenAPIcalls = 400 // ms
 export const LayoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
@@ -827,18 +826,18 @@ export function realizeData(
   t: ComposerTranslation,
 ): any {
   const type = apiResponseElement.type as ResultType
-  let sourceField: keyof SingleAPIresult
+  // let sourceField: keyof SingleAPIresult
 
   switch (dataSource) {
-    case Indirect.APIhash_value:
-      sourceField = 'hash_value'
-      break
-    case Indirect.APInum_value:
-      sourceField = 'num_value'
-      break
-    case Indirect.APIstr_value:
-      sourceField = 'str_value'
-      break
+    // case Indirect.APIhash_value:
+    //   sourceField = 'hash_value'
+    //   break
+    // case Indirect.APInum_value:
+    //   sourceField = 'num_value'
+    //   break
+    // case Indirect.APIstr_value:
+    //   sourceField = 'str_value'
+    //   break
     case Indirect.CategoryTitle:
       return t(...CategoryInfo[TypeInfo[type].category].title)
     case Indirect.None:
@@ -848,10 +847,10 @@ export function realizeData(
     case Indirect.TypeTitle:
       return t(...TypeInfo[type].title)
     default:
-      return dataSource === '' ? '' : t(...dataSource)
+      // return dataSource === '' ? '' : t(...dataSource)
   }
 
-  return apiResponseElement[sourceField]
+  // return apiResponseElement[sourceField]
 }
 
 const listOfResultTypesAsDeclared: ResultType[] = []
