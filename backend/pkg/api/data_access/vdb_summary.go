@@ -260,6 +260,13 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochStart, epochEnd)).
 		GroupBy(goqu.L("b.proposer"))
 
+	if protocolModes.RocketPool {
+		// Exclude rewards that went to the smoothing pool
+		// TODO: Add smoothing pool address to the parameters
+		ds = ds.
+			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", 1, 2))
+	}
+
 	if len(validators) > 0 {
 		ds = ds.
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
@@ -975,6 +982,13 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		).
 		Where(goqu.L("b.status = '1'")).
 		GroupBy("b.proposer")
+
+	if protocolModes.RocketPool {
+		// Exclude rewards that went to the smoothing pool
+		// TODO: Add smoothing pool address to the parameters
+		elDs = elDs.
+			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", 1, 2))
+	}
 
 	if len(dashboardId.Validators) > 0 {
 		elDs = elDs.
