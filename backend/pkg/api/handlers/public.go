@@ -445,7 +445,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 	returnOk(w, r, response)
 }
 
-// PublicDeleteValidatorDashboardGroups godoc
+// PublicDeleteValidatorDashboardGroup godoc
 //
 //	@Description	Delete a group in a specified validator dashboard.
 //	@Tags			Validator Dashboard Management
@@ -485,6 +485,43 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 		return
 	}
 
+	returnNoContent(w, r)
+}
+
+// PublicDeleteValidatorDashboardGroupValidators godoc
+// @Description	Delete all validators from a specified group in a specified validator dashboard.
+// @Tags			Validator Dashboard Management
+// @Security		ApiKeyInHeader || ApiKeyInQuery
+// @Accept		json
+// @Produce		json
+// @Param			dashboard_id	path	integer	true	"The ID of the dashboard."
+// @Param			group_id		path	integer	true	"The ID of the group."
+// @Success		204				"Validators removed successfully."
+// @Failure		400				{object}	types.ApiErrorResponse
+// @Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/validators [delete]
+func (h *HandlerService) PublicDeleteValidatorDashboardGroupValidators(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	vars := mux.Vars(r)
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	groupId := v.checkExistingGroupId(vars["group_id"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	groupExists, err := h.getDataAccessor(r).GetValidatorDashboardGroupExists(r.Context(), dashboardId, groupId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if !groupExists {
+		returnNotFound(w, r, errors.New("group not found"))
+		return
+	}
+	err = h.getDataAccessor(r).RemoveValidatorDashboardGroupValidators(r.Context(), dashboardId, groupId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
 	returnNoContent(w, r)
 }
 
@@ -1894,9 +1931,10 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		handleErr(w, r, err)
 		return
 	}
+	mapDashboardNotificationEvents(data)
 	response := types.InternalGetUserNotificationDashboardsResponse{
 		Data:   data,
-		Paging: *paging, //	@Param			epoch			path		strings
+		Paging: *paging,
 	}
 	returnOk(w, r, response)
 }
@@ -2003,6 +2041,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+	mapMachineNotificationEventNames(data)
 	response := types.InternalGetUserNotificationMachinesResponse{
 		Data:   data,
 		Paging: *paging,
@@ -2049,45 +2088,6 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 	returnOk(w, r, response)
 }
 
-// PublicGetUserNotificationRocketPool godoc
-//
-//	@Description	Get a list of triggered notifications related to Rocket Pool.
-//	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Notifications
-//	@Produce		json
-//	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
-//	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type, node_address)
-//	@Param			search	query		string	false	"Search for Node Address"
-//	@Success		200		{object}	types.InternalGetUserNotificationRocketPoolResponse
-//	@Failure		400		{object}	types.ApiErrorResponse
-//	@Router			/users/me/notifications/rocket-pool [get]
-func (h *HandlerService) PublicGetUserNotificationRocketPool(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	userId, err := GetUserIdByContext(r)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
-	sort := checkSort[enums.NotificationRocketPoolColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	data, paging, err := h.getDataAccessor(r).GetRocketPoolNotifications(r.Context(), userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.InternalGetUserNotificationRocketPoolResponse{
-		Data:   data,
-		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetUserNotificationNetworks godoc
 //
 //	@Description	Get a list of triggered notifications related to networks.
@@ -2119,6 +2119,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
+	mapNetworkNotificationEventNames(data)
 	response := types.InternalGetUserNotificationNetworksResponse{
 		Data:   data,
 		Paging: *paging,

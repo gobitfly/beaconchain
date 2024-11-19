@@ -1,12 +1,15 @@
 {
   "conventionalCommits.scopes": [
     "BcButton",
+    "BcDataWrapper",
     "BcInputUnit",
     "BcLink",
+    "BcPageWrapper",
     "BcTablePager",
     "BcToggle",
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
+    "DashboardTableSummaryDetails",
     "DashboardTableValidators",
     "DashboardValidatorManagmentModal",
     "NotificationMachinesTable",
@@ -36,6 +39,7 @@
     "notifications",
     "nuxt.config",
     "qrCode",
+    "useCustomFetch",
     "useNotificationsOverviewStore",
     "useWindowSize",
     "vscode"

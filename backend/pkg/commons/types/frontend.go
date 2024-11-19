@@ -65,9 +65,6 @@ func (npui NotificationsPerUserId) AddNotification(n Notification) {
 }
 
 const (
-	ValidatorMissedProposalEventName   EventName = "validator_proposal_missed"
-	ValidatorExecutedProposalEventName EventName = "validator_proposal_submitted"
-
 	ValidatorDidSlashEventName EventName = "validator_did_slash"
 
 	ValidatorReceivedDepositEventName               EventName = "validator_received_deposit"
@@ -78,20 +75,20 @@ const (
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
 	TaxReportEventName                              EventName = "user_tax_report"
-	SyncCommitteeSoonEventName                      EventName = "validator_synccommittee_soon"
 	//nolint:misspell
 	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
 	// Validator dashboard events
 	ValidatorIsOfflineEventName             EventName = "validator_is_offline"
 	ValidatorIsOnlineEventName              EventName = "validator_is_online"
-	ValidatorGroupEfficiencyEventName       EventName = "validator_group_efficiency"
 	ValidatorMissedAttestationEventName     EventName = "validator_attestation_missed"
-	ValidatorProposalEventName              EventName = "validator_proposal"
+	ValidatorMissedProposalEventName        EventName = "validator_proposal_missed"
+	ValidatorExecutedProposalEventName      EventName = "validator_proposal_submitted"
 	ValidatorUpcomingProposalEventName      EventName = "validator_proposal_upcoming"
-	SyncCommitteeSoon                       EventName = "validator_synccommittee_soon"
+	SyncCommitteeSoonEventName              EventName = "validator_synccommittee_soon"
 	ValidatorReceivedWithdrawalEventName    EventName = "validator_withdrawal"
 	ValidatorGotSlashedEventName            EventName = "validator_got_slashed"
+	ValidatorGroupEfficiencyEventName       EventName = "validator_group_efficiency"
 	RocketpoolCollateralMinReachedEventName EventName = "rocketpool_colleteral_min" //nolint:misspell
 	RocketpoolCollateralMaxReachedEventName EventName = "rocketpool_colleteral_max" //nolint:misspell
 
@@ -113,8 +110,8 @@ const (
 
 	// Network events
 	RocketpoolNewClaimRoundStartedEventName    EventName = "rocketpool_new_claimround"
-	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
 	NetworkGasBelowThresholdEventName          EventName = "network_gas_below_threshold"
+	NetworkGasAboveThresholdEventName          EventName = "network_gas_above_threshold"
 	NetworkParticipationRateThresholdEventName EventName = "network_participation_rate_threshold"
 )
 
@@ -141,6 +138,8 @@ var EventSortOrder = []EventName{
 	RocketpoolCollateralMinReachedEventName,
 	RocketpoolCollateralMaxReachedEventName,
 	ValidatorMissedAttestationEventName,
+	NetworkGasAboveThresholdEventName,
+	NetworkGasBelowThresholdEventName,
 }
 
 var MachineEvents = []EventName{
@@ -196,6 +195,8 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 	RocketpoolCollateralMinReachedEventName:  "You reached the Rocket Pool min RPL collateral",
 	RocketpoolCollateralMaxReachedEventName:  "You reached the Rocket Pool max RPL collateral",
 	SyncCommitteeSoonEventName:               "Your validator(s) will soon be part of the sync committee",
+	NetworkGasAboveThresholdEventName:        "Gas price is above threshold",
+	NetworkGasBelowThresholdEventName:        "Gas price is below threshold",
 }
 
 var EventLabel map[EventName]string = map[EventName]string{
@@ -221,6 +222,8 @@ var EventLabel map[EventName]string = map[EventName]string{
 	RocketpoolCollateralMinReachedEventName:  "Rocket pool node min RPL collateral reached",
 	RocketpoolCollateralMaxReachedEventName:  "Rocket pool node max RPL collateral reached",
 	SyncCommitteeSoonEventName:               "Upcoming sync committee",
+	NetworkGasAboveThresholdEventName:        "Gas price is above threshold",
+	NetworkGasBelowThresholdEventName:        "Gas price is below threshold",
 }
 
 func IsUserIndexed(event EventName) bool {
@@ -255,6 +258,8 @@ var EventNames = []EventName{
 	RocketpoolCollateralMinReachedEventName,
 	RocketpoolCollateralMaxReachedEventName,
 	SyncCommitteeSoonEventName,
+	NetworkGasAboveThresholdEventName,
+	NetworkGasBelowThresholdEventName,
 }
 
 type EventNameDesc struct {
@@ -549,8 +554,9 @@ type TransitWebhook struct {
 
 type TransitWebhookContent struct {
 	Webhook UserWebhook
-	Event   WebhookEvent `json:"event"`
-	UserId  UserId       `json:"userId"`
+	Event   *WebhookEvent   `json:"event,omitempty"`
+	Events  []*WebhookEvent `json:"events,omitempty"`
+	UserId  UserId          `json:"userId"`
 }
 
 type WebhookEvent struct {
@@ -642,15 +648,17 @@ type Email struct {
 }
 
 type UserWebhook struct {
-	ID          uint64         `db:"id" json:"id"`
-	UserID      uint64         `db:"user_id" json:"-"`
-	Url         string         `db:"url" json:"url"`
-	Retries     uint64         `db:"retries" json:"retries"`
-	LastSent    sql.NullTime   `db:"last_sent" json:"lastRetry"`
-	Response    sql.NullString `db:"response" json:"response"`
-	Request     sql.NullString `db:"request" json:"request"`
-	Destination sql.NullString `db:"destination" json:"destination"`
-	EventNames  pq.StringArray `db:"event_names" json:"-"`
+	ID               uint64         `db:"id" json:"id"`
+	UserID           uint64         `db:"user_id" json:"-"`
+	Url              string         `db:"url" json:"url"`
+	Retries          uint64         `db:"retries" json:"retries"`
+	LastSent         sql.NullTime   `db:"last_sent" json:"lastRetry"`
+	Response         sql.NullString `db:"response" json:"response"`
+	Request          sql.NullString `db:"request" json:"request"`
+	Destination      sql.NullString `db:"destination" json:"destination"`
+	EventNames       pq.StringArray `db:"event_names" json:"-"`
+	DashboardId      uint64         `db:"dashboard_id" json:"dashboardId"`
+	DashboardGroupId uint64         `db:"dashboard_group_id" json:"dashboardGroupId"`
 }
 
 type UserWebhookSubscriptions struct {

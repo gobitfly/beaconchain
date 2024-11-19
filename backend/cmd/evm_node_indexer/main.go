@@ -19,9 +19,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	gcp_bigtable "cloud.google.com/go/bigtable"
 	"github.com/ethereum/go-ethereum"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/gtuk/discordwebhook"
+	"github.com/lib/pq"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/api/option"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -29,12 +35,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
-	"github.com/gtuk/discordwebhook"
-	"github.com/lib/pq"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/api/option"
-
-	gcp_bigtable "cloud.google.com/go/bigtable"
 )
 
 // defines
@@ -86,11 +86,17 @@ type intRange struct {
 
 // local globals
 var currentNodeBlockNumber atomic.Int64
-var elClient *ethclient.Client
+var elClient ethClient
 var reorgDepth *int64
 var httpClient *http.Client
 var errorIdentifier *regexp.Regexp
 var eth1RpcEndpoint string
+
+type ethClient interface {
+	SubscribeNewHead(ctx context.Context, ch chan<- *gethtypes.Header) (ethereum.Subscription, error)
+	ethereum.ChainIDReader
+	ethereum.BlockNumberReader
+}
 
 // init
 func init() {
@@ -275,7 +281,9 @@ func Run() {
 
 	// get latest block (as it's global, so we have a initial value)
 	log.Info("get latest block from node...")
-	updateBlockNumber(true, *noNewBlocks, time.Duration(*noNewBlocksThresholdSeconds)*time.Second, discordWebhookReportUrl, discordWebhookUser, discordWebhookAddTextFatal)
+	if err := updateBlockNumber(*noNewBlocks, time.Duration(*noNewBlocksThresholdSeconds)*time.Second, discordWebhookReportUrl, discordWebhookUser, discordWebhookAddTextFatal); err != nil {
+		log.Fatal(err, "updateBlockNumber", 0)
+	}
 	log.Infof("...get latest block (%s) from node done.", _formatInt64(currentNodeBlockNumber.Load()))
 
 	// //////////////////////////////////////////
@@ -892,21 +900,30 @@ func _splitAndVerifyJsonArray(jArray []byte, providedElementCount int64) ([][]by
 	return r, nil
 }
 
-// get newest block number from node, should be called always with TRUE
-func updateBlockNumber(firstCall bool, noNewBlocks bool, noNewBlocksThresholdDuration time.Duration, discordWebhookReportUrl *string, discordWebhookUser *string, discordWebhookAddTextFatal *string) {
-	if firstCall {
-		blockNumber, err := rpciGetLatestBlock()
-		if err != nil {
-			sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, failed to get newest block from node, on first try %s", getChainNamePretty(), *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
-			log.Fatal(err, "fatal, failed to get newest block from node, on first try", 0)
-		}
-		currentNodeBlockNumber.Store(blockNumber)
-		if !noNewBlocks {
-			go updateBlockNumber(false, false, noNewBlocksThresholdDuration, discordWebhookReportUrl, discordWebhookUser, discordWebhookAddTextFatal)
-		}
-		return
+// get newest block number from node
+func updateBlockNumber(noNewBlocks bool, noNewBlocksThresholdDuration time.Duration, discordWebhookReportUrl *string, discordWebhookUser *string, discordWebhookAddTextFatal *string) error {
+	blockNumber, err := rpciGetLatestBlock()
+	if err != nil {
+		sendMessage(fmt.Sprintf("%s NODE EXPORT: Fatal, failed to get newest block from node, on first try %s", getChainNamePretty(), *discordWebhookAddTextFatal), discordWebhookReportUrl, discordWebhookUser)
+		log.Fatal(err, "fatal, failed to get newest block from node, on first try", 0)
+	}
+	currentNodeBlockNumber.Store(blockNumber)
+	// request the block number a second time to verify if node is not rewinding
+	blockNumber, err = rpciGetLatestBlock()
+	if err != nil {
+		return err
+	}
+	if blockNumber < currentNodeBlockNumber.Load() {
+		return fmt.Errorf("node is rewinding: newest block %d < previous block %d", blockNumber, currentNodeBlockNumber.Load())
 	}
 
+	if !noNewBlocks {
+		go monitorBlockNumber(noNewBlocksThresholdDuration, discordWebhookReportUrl, discordWebhookUser, discordWebhookAddTextFatal)
+	}
+	return nil
+}
+
+func monitorBlockNumber(noNewBlocksThresholdDuration time.Duration, discordWebhookReportUrl *string, discordWebhookUser *string, discordWebhookAddTextFatal *string) {
 	var errorText string
 	gotNewBlockAt := time.Now()
 	timePerBlock := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)

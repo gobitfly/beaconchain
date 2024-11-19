@@ -5,19 +5,22 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 
+const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
 const {
   overview,
   refreshOverview,
 } = useNotificationsDashboardOverviewStore()
 
-refreshOverview()
+if (isLoggedIn.value) {
+  refreshOverview()
+}
 
 const hasEmail = computed(() => overview.value?.is_email_notifications_enabled)
 const hasPushNotifications = computed(() => overview.value?.is_push_notifications_enabled)
 const vdbMostNotifiedGroups = computed(() => overview.value?.vdb_most_notified_groups || [])
 const adbMostNotifiedGroups = computed(() => overview.value?.adb_most_notified_groups || [])
-const last24hEmailsCount = computed(() => overview.value?.last_24h_emails_count ?? 0)
+const last24hEmailsCount = computed(() => overview.value?.last_24h_email_count ?? 0)
 const last24hPushCount = computed(() => overview.value?.last_24h_push_count ?? 0)
 const last24hWebhookCount = computed(() => overview.value?.last_24h_webhook_count ?? 0)
 const notificationsTotal = computed(() => {
@@ -27,8 +30,7 @@ const notificationsTotal = computed(() => {
 const { user } = useUserStore()
 const mailLimit = computed(() => user.value?.premium_perks.email_notifications_per_day ?? 0)
 
-// TODO: replace with actual hours value when we get the endpoint.
-const resetHours = ref(12)
+const resetHours = computed(() => overview.value?.next_email_count_reset_timestamp ?? 0)
 const tooltipEmail = computed(() => {
   return $t('notifications.overview.email_tooltip', {
     hours: resetHours.value,

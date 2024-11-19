@@ -15,9 +15,10 @@ type NotificationOverviewData struct {
 	VDBMostNotifiedGroups [3]string `json:"vdb_most_notified_groups"`
 	ADBMostNotifiedGroups [3]string `json:"adb_most_notified_groups"`
 
-	Last24hEmailsCount  uint64 `json:"last_24h_emails_count"` // daily limit should be available in user info
-	Last24hPushCount    uint64 `json:"last_24h_push_count"`
-	Last24hWebhookCount uint64 `json:"last_24h_webhook_count"`
+	NextEmailCountResetTimestamp int64  `json:"next_email_count_reset_timestamp"`
+	Last24hEmailCount            uint64 `json:"last_24h_email_count"` // daily limit should be available in user info
+	Last24hPushCount             uint64 `json:"last_24h_push_count"`
+	Last24hWebhookCount          uint64 `json:"last_24h_webhook_count"`
 
 	// counts are shown in their respective tables
 	VDBSubscriptionsCount     uint64 `db:"vdb_subscriptions_count" json:"vdb_subscriptions_count"`
@@ -62,19 +63,19 @@ type NotificationEventWithdrawal struct {
 type NotificationValidatorDashboardDetail struct {
 	DashboardName            string                                 `db:"dashboard_name" json:"dashboard_name"`
 	GroupName                string                                 `db:"group_name" json:"group_name"`
-	ValidatorOffline         []uint64                               `json:"validator_offline"`                // validator indices
+	ValidatorOffline         []uint64                               `json:"validator_offline"`          // validator indices
+	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
+	ValidatorOnline          []NotificationEventValidatorBackOnline `json:"validator_online"`
 	GroupEfficiencyBelow     float64                                `json:"group_efficiency_below,omitempty"` // fill with the `group_efficiency_below` threshold if event is present
 	ProposalMissed           []IndexSlots                           `json:"proposal_missed"`
-	ProposalDone             []IndexBlocks                          `json:"proposal_done"`
-	UpcomingProposals        []IndexSlots                           `json:"upcoming_proposals"`
+	ProposalSuccess          []IndexBlocks                          `json:"proposal_success"`
+	ProposalUpcoming         []IndexSlots                           `json:"proposal_upcoming"`
 	Slashed                  []uint64                               `json:"slashed"`            // validator indices
-	SyncCommittee            []uint64                               `json:"sync_committee"`     // validator indices
+	Sync                     []uint64                               `json:"sync"`               // validator indices
 	AttestationMissed        []IndexEpoch                           `json:"attestation_missed"` // index (epoch)
 	Withdrawal               []NotificationEventWithdrawal          `json:"withdrawal"`
-	ValidatorOfflineReminder []uint64                               `json:"validator_offline_reminder"` // validator indices; TODO not filled yet
-	ValidatorBackOnline      []NotificationEventValidatorBackOnline `json:"validator_back_online"`
-	MinimumCollateralReached []Address                              `json:"min_collateral_reached"` // node addresses
-	MaximumCollateralReached []Address                              `json:"max_collateral_reached"` // node addresses
+	MinCollateral            []Address                              `json:"min_collateral"` // node addresses
+	MaxCollateral            []Address                              `json:"max_collateral"` // node addresses
 }
 
 type InternalGetUserNotificationsValidatorDashboardResponse ApiDataResponse[NotificationValidatorDashboardDetail]
@@ -117,17 +118,6 @@ type NotificationClientsTableRow struct {
 }
 
 type InternalGetUserNotificationClientsResponse ApiPagingResponse[NotificationClientsTableRow]
-
-// ------------------------------------------------------------
-// Rocket Pool Table
-type NotificationRocketPoolTableRow struct {
-	Timestamp int64   `json:"timestamp"`
-	EventType string  `json:"event_type" tstype:"'reward_round' | 'collateral_max' | 'collateral_min'" faker:"oneof: reward_round, collateral_max, collateral_min"`
-	Threshold float64 `json:"threshold,omitempty"` // only for some notification types, e.g. max collateral
-	Node      Address `json:"node"`
-}
-
-type InternalGetUserNotificationRocketPoolResponse ApiPagingResponse[NotificationRocketPoolTableRow]
 
 // ------------------------------------------------------------
 // Networks Table

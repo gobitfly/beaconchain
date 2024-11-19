@@ -65,8 +65,9 @@ type VDBSummaryTableRow struct {
 type GetValidatorDashboardSummaryResponse ApiPagingResponse[VDBSummaryTableRow]
 
 type VDBGroupSummaryColumnItem struct {
-	StatusCount StatusCount `json:"status_count"`
-	Validators  []uint64    `json:"validators,omitempty"`
+	StatusCount    StatusCount `json:"status_count"`
+	Validators     []uint64    `json:"validators,omitempty"` // fill with up to 3 validator indexes
+	ValidatorCount uint64      `json:"validator_count"`      // number of distinct validators
 }
 
 type VDBGroupSummarySyncCount struct {
@@ -87,11 +88,12 @@ type VDBGroupSummaryData struct {
 	AttestationEfficiency  float64     `json:"attestation_efficiency"`
 	AttestationAvgInclDist float64     `json:"attestation_avg_incl_dist"`
 
-	SyncCommittee      VDBGroupSummaryColumnItem    `json:"sync"`
-	SyncCommitteeCount VDBGroupSummarySyncCount     `json:"sync_count"`
-	Slashings          VDBGroupSummaryColumnItem    `json:"slashings"` // Failed slashings are count of validators in the group that were slashed
-	ProposalValidators []uint64                     `json:"proposal_validators"`
-	MissedRewards      VDBGroupSummaryMissedRewards `json:"missed_rewards"`
+	SyncCommittee          VDBGroupSummaryColumnItem    `json:"sync"`
+	SyncCommitteeCount     VDBGroupSummarySyncCount     `json:"sync_count"`
+	Slashings              VDBGroupSummaryColumnItem    `json:"slashings"`                // Failed slashings are count of validators in the group that were slashed
+	ProposalValidators     []uint64                     `json:"proposal_validators"`      // fill with up to 3 validator indexes
+	ProposalValidatorCount uint64                       `json:"proposal_validator_count"` // number of distinct validators
+	MissedRewards          VDBGroupSummaryMissedRewards `json:"missed_rewards"`
 
 	Apr ClElValue[float64] `json:"apr"`
 
@@ -364,6 +366,6 @@ type VDBPostCreateGroupData struct {
 }
 
 type VDBPostValidatorsData struct {
-	PublicKey string `json:"public_key"`
-	GroupId   uint64 `json:"group_id"`
+	Index   uint64 `json:"index"`
+	GroupId uint64 `json:"group_id"`
 }

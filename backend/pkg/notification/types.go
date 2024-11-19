@@ -260,7 +260,7 @@ func (n *ValidatorGroupEfficiencyNotification) GetEntitiyId() string {
 func (n *ValidatorGroupEfficiencyNotification) GetInfo(format types.NotificationFormat) string {
 	dashboardAndGroupInfo := formatPureDashboardAndGroupLink(format, n)
 	epoch := formatEpochLink(format, n.Epoch)
-	return fmt.Sprintf(`%s efficiency of %.2f%% was below the threhold of %.2f%% in epoch %s.`, dashboardAndGroupInfo, n.Efficiency, n.Threshold, epoch)
+	return fmt.Sprintf(`%s efficiency of %.2f%% was below the threshold of %.2f%% in epoch %s.`, dashboardAndGroupInfo, n.Efficiency*100, n.Threshold*100, epoch)
 }
 
 func (n *ValidatorGroupEfficiencyNotification) GetTitle() string {
@@ -423,6 +423,8 @@ type EthClientNotification struct {
 	types.NotificationBaseImpl
 
 	EthClient string
+	Url       string
+	Version   string
 }
 
 func (n *EthClientNotification) GetEntitiyId() string {
@@ -430,37 +432,14 @@ func (n *EthClientNotification) GetEntitiyId() string {
 }
 
 func (n *EthClientNotification) GetInfo(format types.NotificationFormat) string {
-	clientUrls := map[string]string{
-		"Geth":       "https://github.com/ethereum/go-ethereum/releases",
-		"Nethermind": "https://github.com/NethermindEth/nethermind/releases",
-		"Teku":       "https://github.com/ConsenSys/teku/releases",
-		"Prysm":      "https://github.com/prysmaticlabs/prysm/releases",
-		"Nimbus":     "https://github.com/status-im/nimbus-eth2/releases",
-		"Lighthouse": "https://github.com/sigp/lighthouse/releases",
-		"Erigon":     "https://github.com/erigontech/erigon/releases",
-		"Rocketpool": "https://github.com/rocket-pool/smartnode-install/releases",
-		"MEV-Boost":  "https://github.com/flashbots/mev-boost/releases",
-		"Lodestar":   "https://github.com/chainsafe/lodestar/releases",
-	}
-	defaultUrl := "https://beaconcha.in/ethClients"
-
 	switch format {
 	case types.NotifciationFormatHtml:
-		generalPart := fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
-		url := clientUrls[n.EthClient]
-		if url == "" {
-			url = defaultUrl
-		}
-		return generalPart + " " + url
+		generalPart := fmt.Sprintf(`A new version %s for %s is available.`, n.Version, n.EthClient)
+		return generalPart + " " + n.Url
 	case types.NotifciationFormatText:
 		return fmt.Sprintf(`A new version for %s is available.`, n.EthClient)
 	case types.NotifciationFormatMarkdown:
-		url := clientUrls[n.EthClient]
-		if url == "" {
-			url = defaultUrl
-		}
-
-		generalPart := fmt.Sprintf(`A new version for [%s](%s) is available.`, n.EthClient, url)
+		generalPart := fmt.Sprintf(`A new version for [%s](%s) is available.`, n.EthClient, n.Url)
 
 		return generalPart
 	}
@@ -631,6 +610,66 @@ func (n *NetworkNotification) GetLegacyInfo() string {
 
 func (n *NetworkNotification) GetLegacyTitle() string {
 	return "Beaconchain Network Issues"
+}
+
+type GasAboveThresholdNotification struct {
+	types.NotificationBaseImpl
+	AverageGasPrice   float64
+	ThresholdGasPrice float64
+}
+
+func (n *GasAboveThresholdNotification) GetEntitiyId() string {
+	return ""
+}
+
+func (n *GasAboveThresholdNotification) GetInfo(format types.NotificationFormat) string {
+	switch format {
+	case types.NotifciationFormatHtml, types.NotifciationFormatText, types.NotifciationFormatMarkdown:
+		return fmt.Sprintf(`Current network gas price of %.0f GWei is above your configured gas price threshold of %.0f GWei`, n.AverageGasPrice, n.ThresholdGasPrice)
+	}
+	return ""
+}
+
+func (n *GasAboveThresholdNotification) GetTitle() string {
+	return fmt.Sprintf("Gas Price (%0.f GWei) above threshold (%0.f GWei)", n.AverageGasPrice, n.ThresholdGasPrice)
+}
+
+func (n *GasAboveThresholdNotification) GetLegacyInfo() string {
+	return n.GetInfo(types.NotifciationFormatText)
+}
+
+func (n *GasAboveThresholdNotification) GetLegacyTitle() string {
+	return n.GetTitle()
+}
+
+type GasBelowThresholdNotification struct {
+	types.NotificationBaseImpl
+	AverageGasPrice   float64
+	ThresholdGasPrice float64
+}
+
+func (n *GasBelowThresholdNotification) GetEntitiyId() string {
+	return ""
+}
+
+func (n *GasBelowThresholdNotification) GetInfo(format types.NotificationFormat) string {
+	switch format {
+	case types.NotifciationFormatHtml, types.NotifciationFormatText, types.NotifciationFormatMarkdown:
+		return fmt.Sprintf(`Current network gas price of %.0f GWei is below your configured gas price threshold of %.0f GWei`, n.AverageGasPrice, n.ThresholdGasPrice)
+	}
+	return ""
+}
+
+func (n *GasBelowThresholdNotification) GetTitle() string {
+	return fmt.Sprintf("Gas Price (%0.f GWei) below threshold (%0.f GWei)", n.AverageGasPrice, n.ThresholdGasPrice)
+}
+
+func (n *GasBelowThresholdNotification) GetLegacyInfo() string {
+	return n.GetInfo(types.NotifciationFormatText)
+}
+
+func (n *GasBelowThresholdNotification) GetLegacyTitle() string {
+	return n.GetTitle()
 }
 
 type RocketpoolNotification struct {

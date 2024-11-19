@@ -343,12 +343,12 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving rewards data: %v", err)
+			return fmt.Errorf("error retrieving rewards data: %w", err)
 		}
 
 		validatorGroupMap := make(map[uint64]int64)
@@ -415,12 +415,12 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving el rewards data for rewards: %v", err)
+			return fmt.Errorf("error retrieving el rewards data for rewards: %w", err)
 		}
 
 		for _, entry := range elQueryResult {
@@ -441,7 +441,19 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 	err = wg.Wait()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %w", err)
+	}
+
+	// Add smoothing pool rewards to el rewards
+	if rpInfos != nil && protocolModes.RocketPool {
+		for epoch, groupRewards := range smoothingPoolRewards {
+			for groupId, reward := range groupRewards {
+				if _, ok := elRewards[epoch]; !ok {
+					elRewards[epoch] = make(map[int64]decimal.Decimal)
+				}
+				elRewards[epoch][groupId] = elRewards[epoch][groupId].Add(reward)
+			}
+		}
 	}
 
 	// Add smoothing pool rewards to el rewards
@@ -737,12 +749,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	wg.Go(func() error {
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving group rewards data: %v", err)
+			return fmt.Errorf("error retrieving group rewards data: %w", err)
 		}
 		return nil
 	})
@@ -758,12 +770,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving el rewards data for group rewards: %v", err)
+			return fmt.Errorf("error retrieving el rewards data for group rewards: %w", err)
 		}
 
 		for _, entry := range elQueryResult {
@@ -774,7 +786,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard group rewards data: %v", err)
+		return nil, fmt.Errorf("error retrieving validator dashboard group rewards data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -966,12 +978,12 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving rewards chart data: %v", err)
+			return fmt.Errorf("error retrieving rewards chart data: %w", err)
 		}
 
 		validatorGroupMap := make(map[uint64]uint64)
@@ -1026,12 +1038,12 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving el rewards data for rewards chart: %v", err)
+			return fmt.Errorf("error retrieving el rewards data for rewards chart: %w", err)
 		}
 
 		for _, entry := range elQueryResult {
@@ -1053,7 +1065,19 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 	err = wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %v", err)
+		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %w", err)
+	}
+
+	// Add smoothing pool rewards to el rewards
+	if rpInfos != nil && protocolModes.RocketPool {
+		for epoch, groupRewards := range smoothingPoolRewards {
+			for groupId, reward := range groupRewards {
+				if _, ok := elRewards[epoch]; !ok {
+					elRewards[epoch] = make(map[uint64]decimal.Decimal)
+				}
+				elRewards[epoch][groupId] = elRewards[epoch][groupId].Add(reward)
+			}
+		}
 	}
 
 	// Add smoothing pool rewards to el rewards
@@ -1324,12 +1348,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 		query, args, err := rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving validator rewards data: %v", err)
+			return fmt.Errorf("error retrieving validator rewards data: %w", err)
 		}
 
 		for _, entry := range queryResult {
@@ -1381,12 +1405,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 		query, args, err := elDs.Prepared(true).ToSQL()
 		if err != nil {
-			return fmt.Errorf("error preparing query: %v", err)
+			return fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving validator el rewards data for rewards: %v", err)
+			return fmt.Errorf("error retrieving validator el rewards data for rewards: %w", err)
 		}
 
 		for _, entry := range elQueryResult {
@@ -1403,7 +1427,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 	err = wg.Wait()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

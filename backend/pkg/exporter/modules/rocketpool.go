@@ -269,10 +269,13 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 		}
 
 		proofWrapper, err := getRewardsData(bytes)
+		if err != nil {
+			return fmt.Errorf("can not parse reward file %v, error: %w", missingInterval.Index, err)
+		}
 
 		merkleRootFromFile := common.HexToHash(proofWrapper.MerkleRoot)
 		if missingInterval.MerkleRoot != merkleRootFromFile {
-			return fmt.Errorf("invalid merkle root value : %w", err)
+			return fmt.Errorf("invalid merkle root value: %s != %s", missingInterval.MerkleRoot, merkleRootFromFile)
 		}
 
 		rp.RocketpoolRewardTreesDownloadQueue = append(rp.RocketpoolRewardTreesDownloadQueue, RocketpoolRewardTreeDownloadable{
@@ -856,6 +859,27 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 		if err != nil {
 			return fmt.Errorf("can not store reward file %v. Error %w", rewardTree.ID, err)
 		}
+	}
+
+	// refreshing materialized view
+	var exists bool
+	err = tx.Get(&exists, `SELECT EXISTS (
+		SELECT 1 
+		FROM pg_catalog.pg_matviews 
+		WHERE matviewname = 'rocketpool_rewards_summary'
+	)`)
+	if err != nil {
+		return fmt.Errorf("failed to check if materialized view exists: %w", err)
+	}
+
+	// If the view exists, refresh it concurrently
+	if exists {
+		_, err = tx.Exec(`REFRESH MATERIALIZED VIEW CONCURRENTLY rocketpool_rewards_summary`)
+		if err != nil {
+			return fmt.Errorf("cannot refresh materialized view rocketpool_rewards_summary. Error %w", err)
+		}
+	} else {
+		log.Infof("Materialized view rocketpool_rewards_summary does not exist, skipping refresh.")
 	}
 
 	err = tx.Commit()

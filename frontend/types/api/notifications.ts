@@ -17,7 +17,8 @@ export interface NotificationOverviewData {
    */
   vdb_most_notified_groups: string[];
   adb_most_notified_groups: string[];
-  last_24h_emails_count: number /* uint64 */; // daily limit should be available in user info
+  next_email_count_reset_timestamp: number /* int64 */;
+  last_24h_email_count: number /* uint64 */; // daily limit should be available in user info
   last_24h_push_count: number /* uint64 */;
   last_24h_webhook_count: number /* uint64 */;
   /**
@@ -59,18 +60,18 @@ export interface NotificationValidatorDashboardDetail {
   dashboard_name: string;
   group_name: string;
   validator_offline: number /* uint64 */[]; // validator indices
+  validator_offline_reminder: number /* uint64 */[]; // validator indices; TODO not filled yet
+  validator_online: NotificationEventValidatorBackOnline[];
   group_efficiency_below?: number /* float64 */; // fill with the `group_efficiency_below` threshold if event is present
   proposal_missed: IndexSlots[];
-  proposal_done: IndexBlocks[];
-  upcoming_proposals: IndexSlots[];
+  proposal_success: IndexBlocks[];
+  proposal_upcoming: IndexSlots[];
   slashed: number /* uint64 */[]; // validator indices
-  sync_committee: number /* uint64 */[]; // validator indices
+  sync: number /* uint64 */[]; // validator indices
   attestation_missed: IndexEpoch[]; // index (epoch)
   withdrawal: NotificationEventWithdrawal[];
-  validator_offline_reminder: number /* uint64 */[]; // validator indices; TODO not filled yet
-  validator_back_online: NotificationEventValidatorBackOnline[];
-  min_collateral_reached: Address[]; // node addresses
-  max_collateral_reached: Address[]; // node addresses
+  min_collateral: Address[]; // node addresses
+  max_collateral: Address[]; // node addresses
 }
 export type InternalGetUserNotificationsValidatorDashboardResponse = ApiDataResponse<NotificationValidatorDashboardDetail>;
 export interface NotificationEventExecution {
@@ -109,17 +110,6 @@ export interface NotificationClientsTableRow {
   timestamp: number /* int64 */;
 }
 export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
-/**
- * ------------------------------------------------------------
- * Rocket Pool Table
- */
-export interface NotificationRocketPoolTableRow {
-  timestamp: number /* int64 */;
-  event_type: 'reward_round' | 'collateral_max' | 'collateral_min';
-  threshold?: number /* float64 */; // only for some notification types, e.g. max collateral
-  node: Address;
-}
-export type InternalGetUserNotificationRocketPoolResponse = ApiPagingResponse<NotificationRocketPoolTableRow>;
 /**
  * ------------------------------------------------------------
  * Networks Table

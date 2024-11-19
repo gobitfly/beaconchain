@@ -1,8 +1,6 @@
 package types
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -41,9 +39,9 @@ type Address struct {
 }
 
 type LuckItem struct {
-	Percent  float64       `json:"percent"`
-	Expected time.Time     `json:"expected" swaggertype:"string" format:"date-time"`
-	Average  time.Duration `json:"average" swaggertype:"primitive,integer"`
+	Percent                float64 `json:"percent"`
+	ExpectedTimestamp      uint64  `json:"expected_timestamp"`
+	AverageIntervalSeconds uint64  `json:"average_interval_seconds"`
 }
 
 type Luck struct {
