@@ -175,6 +175,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			goqu.COALESCE(goqu.L("rb.value / 1e18"), goqu.I("ep.fee_recipient_reward")).As("el_reward"),
 		)
 
+	if protocolModes.RocketPool {
+		// TODO: Add smoothing pool address to the parameters
+		blocksDs = blocksDs.
+			SelectAppend(goqu.L("blocks.exec_fee_recipient = ? AND (rb.proposer_fee_recipient IS NULL OR rb.proposer_fee_recipient = ?) AS is_smoothing_pool", 1, 2))
+	}
+
 	// 3. Sorting and pagination
 	defaultColumns := []t.SortColumn{
 		{Column: enums.VDBBlocksColumns.Slot.ToExpr(), Desc: true, Offset: currentCursor.Slot},
@@ -272,6 +278,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					goqu.L("NULL::NUMERIC").As("el_reward"),
 				)
 
+			if protocolModes.RocketPool {
+				blocksDs = blocksDs.
+					SelectAppend(goqu.L("false").As("is_smoothing_pool"))
+			}
+
 			// We don't have access to exec_block_number and status for a WHERE without wrapping the query so if we sort by those get all the data
 			if colSort.Column == enums.VDBBlocksColumns.Proposer || colSort.Column == enums.VDBBlocksColumns.Slot {
 				scheduledDs = scheduledDs.
@@ -307,16 +318,17 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	// -------------------------------------
 	// Execute query
 	var proposals []struct {
-		Proposer     t.VDBValidator      `db:"validator_index"`
-		Group        uint64              `db:"group_id"`
-		Epoch        uint64              `db:"epoch"`
-		Slot         uint64              `db:"slot"`
-		Status       uint64              `db:"status"`
-		Block        sql.NullInt64       `db:"exec_block_number"`
-		FeeRecipient []byte              `db:"fee_recipient"`
-		ElReward     decimal.NullDecimal `db:"el_reward"`
-		ClReward     decimal.NullDecimal `db:"cl_reward"`
-		GraffitiText sql.NullString      `db:"graffiti_text"`
+		Proposer        t.VDBValidator      `db:"validator_index"`
+		Group           uint64              `db:"group_id"`
+		Epoch           uint64              `db:"epoch"`
+		Slot            uint64              `db:"slot"`
+		Status          uint64              `db:"status"`
+		Block           sql.NullInt64       `db:"exec_block_number"`
+		FeeRecipient    []byte              `db:"fee_recipient"`
+		ElReward        decimal.NullDecimal `db:"el_reward"`
+		ClReward        decimal.NullDecimal `db:"cl_reward"`
+		GraffitiText    sql.NullString      `db:"graffiti_text"`
+		IsSmoothingPool bool                `db:"is_smoothing_pool"`
 
 		// for cursor only
 		Reward decimal.Decimal
@@ -453,8 +465,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				TraceIdx: -1,
 			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
-			if rpInfos != nil && protocolModes.RocketPool {
-				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok /*TODO: && "Not a smoothing pool reward"*/ {
+			if rpInfos != nil && protocolModes.RocketPool && !proposal.IsSmoothingPool {
+				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok {
 					reward.El = reward.El.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
