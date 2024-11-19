@@ -239,8 +239,8 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
 		amount := utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount)))
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[withdrawal.ValidatorIndex]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[withdrawal.ValidatorIndex]; ok {
 				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 			}
 		}
@@ -290,8 +290,8 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			// TODO integrate label/ens data for "next" row
 			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
 
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[nextData.Index]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[nextData.Index]; ok {
 					nextData.Amount = nextData.Amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
@@ -529,8 +529,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 
 	for _, res := range queryResult {
 		amount := utils.GWeiToWei(big.NewInt(res.Amount))
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok {
 				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 			}
 		}
@@ -556,8 +556,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 
 	for _, res := range queryResult {
 		amount := utils.GWeiToWei(big.NewInt(res.Amount))
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok {
 				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 			}
 		}

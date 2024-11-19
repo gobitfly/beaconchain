@@ -16,7 +16,6 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -195,10 +194,11 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		SyncScheduled          uint64
 	}
 
-	queryResultSumMap := make(map[int64]QueryResultSum)
-
 	epochStart := int64(math.MaxInt32)
 	epochEnd := int64(0)
+
+	queryResultSumMap := make(map[int64]QueryResultSum)
+	validatorGroupMap := make(map[uint64]int64)
 
 	for _, row := range queryResult {
 		if row.EpochStart < epochStart {
@@ -215,6 +215,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			}
 		}
 
+		validatorGroupMap[row.ValidatorIndex] = row.GroupId
+
 		groupSum := queryResultSumMap[row.GroupId]
 		groupSum.ValidatorIndices = append(groupSum.ValidatorIndices, row.ValidatorIndex)
 		groupSum.AttestationReward = groupSum.AttestationReward.Add(row.AttestationReward)
@@ -227,8 +229,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		groupSum.SyncScheduled += row.SyncScheduled
 
 		clRewardWei := utils.GWeiToWei(big.NewInt(row.ClRewards))
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok {
 				clRewardWei = clRewardWei.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 			}
 		}
@@ -292,14 +294,26 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		return nil, nil, fmt.Errorf("error retrieving data from table blocks: %v", err)
 	}
 
+	// Add up EL rewards
 	for _, entry := range elRewardsQueryResult {
 		elReward := entry.ElRewards
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok {
 				elReward = elReward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 			}
 		}
 		elRewards[entry.GroupId] = elRewards[entry.GroupId].Add(elReward)
+	}
+
+	// Add up smoothing pool rewards
+	if rpInfos != nil && protocolModes.RocketPool {
+		for validatorIndex, groupId := range validatorGroupMap {
+			for epoch, reward := range rpInfos.Minipool[validatorIndex].SmoothingPoolRewards {
+				if epoch >= uint64(epochStart) && epoch <= uint64(epochEnd) {
+					elRewards[groupId] = elRewards[groupId].Add(reward)
+				}
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -873,6 +887,8 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	epochStartTotal := uint64(math.MaxInt32)
 	epochEndTotal := uint64(0)
 
+	validatorGroupMap := make(map[uint64]int64)
+
 	rewards := decimal.Zero
 	deposits := decimal.Zero
 
@@ -884,9 +900,11 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 			epochEnd = row.EpochEnd
 		}
 
+		validatorGroupMap[row.ValidatorIndex] = groupId
+
 		reward := utils.GWeiToWei(big.NewInt(row.Reward))
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok {
 				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 				deposits = deposits.Add(rpValidator.NodeDepositBalance)
 				continue
@@ -928,8 +946,8 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 			}
 
 			reward := utils.GWeiToWei(big.NewInt(row.Reward))
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok {
 					rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 					continue
 				}
@@ -985,52 +1003,33 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
+	// Add up EL rewards
 	rewards = decimal.Zero
 	for _, row := range elRewardsResult {
 		reward := row.Reward
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok {
 				rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 				continue
 			}
 		}
 		rewards = rewards.Add(reward)
 	}
-	smoothingPoolRewards := decimal.Zero
-	smoothingPoolDeposits := decimal.Zero
-	var smoothingPoolNodes [][]byte
+
+	// Add up smoothing pool rewards
 	if rpInfos != nil && protocolModes.RocketPool {
-		for node, nodeInfo := range rpInfos.Node {
-			for epoch, reward := range nodeInfo.SmoothingPoolReward {
-				if epoch >= epochStart && epoch <= epochEnd {
-					smoothingPoolRewards = smoothingPoolRewards.Add(reward)
-					nodeAddress, err := hexutil.Decode(node)
-					if err != nil {
-						return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error decoding node address: %w", err)
-					}
-					smoothingPoolNodes = append(smoothingPoolNodes, nodeAddress)
+		for validatorIndex := range validatorGroupMap {
+			for epoch, reward := range rpInfos.Minipool[validatorIndex].SmoothingPoolRewards {
+				if epoch >= uint64(epochStart) && epoch <= uint64(epochEnd) {
+					rewards = rewards.Add(reward)
 				}
 			}
 		}
 	}
 
-	nodeDeposits, err := d.getRocketPoolNodeDeposits(ctx, smoothingPoolNodes)
-	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, err
-	}
-	for _, deposit := range nodeDeposits {
-		smoothingPoolDeposits = smoothingPoolDeposits.Add(deposit)
-	}
-
-	rewardsRatio := decimal.Zero
 	if !deposits.IsZero() {
-		rewardsRatio = rewards.Div(deposits)
+		elAPR = rewards.Div(deposits).Div(decimal.NewFromInt(int64(aprDivisor))).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
 	}
-	smoothingPoolRewardsRatio := decimal.Zero
-	if !smoothingPoolDeposits.IsZero() {
-		smoothingPoolRewardsRatio = smoothingPoolRewards.Div(smoothingPoolDeposits)
-	}
-	elAPR = rewardsRatio.Add(smoothingPoolRewardsRatio).Div(decimal.NewFromInt(int64(aprDivisor))).Mul(decimal.NewFromInt(24 * 365 * 100)).InexactFloat64()
 
 	if hours == -1 {
 		elTotalDs := elDs.
@@ -1046,21 +1045,24 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
 
+		// Add up EL rewards
 		rewards = decimal.Zero
 		for _, row := range elRewardsResult {
 			reward := row.Reward
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok {
 					rewards = rewards.Add(reward.Mul(d.getRocketPoolOperatorFactor(rpValidator)))
 					continue
 				}
 			}
 			rewards = rewards.Add(reward)
 		}
+
+		// Add up smoothing pool rewards
 		if rpInfos != nil && protocolModes.RocketPool {
-			for _, nodeInfo := range rpInfos.Node {
-				for epoch, reward := range nodeInfo.SmoothingPoolReward {
-					if epoch >= epochStart && epoch <= epochEnd {
+			for validatorIndex := range validatorGroupMap {
+				for epoch, reward := range rpInfos.Minipool[validatorIndex].SmoothingPoolRewards {
+					if epoch >= uint64(epochStart) && epoch <= uint64(epochEnd) {
 						rewards = rewards.Add(reward)
 					}
 				}

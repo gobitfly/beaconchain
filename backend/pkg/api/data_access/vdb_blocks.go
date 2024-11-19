@@ -393,16 +393,16 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				TraceIdx: -1,
 			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok /*TODO: && "Not a smoothing pool reward"*/ {
 					reward.El = reward.El.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
 		}
 		if proposal.ClReward.Valid {
 			reward.Cl = proposal.ClReward.Decimal.Mul(decimal.NewFromInt(1e18))
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok {
 					reward.Cl = reward.Cl.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}

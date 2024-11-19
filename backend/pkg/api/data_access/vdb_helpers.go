@@ -15,6 +15,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
@@ -134,6 +135,8 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 }
 
 func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.RPInfo, error) {
+	wg := errgroup.Group{}
+
 	queryResult := []struct {
 		ValidatorIndex     uint64           `db:"validatorindex"`
 		NodeAddress        []byte           `db:"node_address"`
@@ -144,107 +147,104 @@ func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId 
 		SmoothingPoolEth   *decimal.Decimal `db:"smoothing_pool_eth"`
 	}{}
 
-	ds := goqu.Dialect("postgres").
-		Select(
-			goqu.L("v.validatorindex"),
-			goqu.L("rplm.node_address"),
-			goqu.L("rplm.node_fee"),
-			goqu.L("rplm.node_deposit_balance"),
-			goqu.L("rplm.user_deposit_balance"),
-			goqu.L("rplrs.end_time"),
-			goqu.L("rplrs.smoothing_pool_eth"),
-		).
-		From(goqu.L("rocketpool_minipools AS rplm")).
-		LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
-		LeftJoin(goqu.L("rocketpool_rewards_summary AS rplrs"), goqu.On(goqu.L("rplm.node_address = rplrs.node_address"))).
-		Where(goqu.L("rplm.node_deposit_balance IS NOT NULL")).
-		Where(goqu.L("rplm.user_deposit_balance IS NOT NULL"))
+	wg.Go(func() error {
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("v.validatorindex"),
+				goqu.L("rplm.node_address"),
+				goqu.L("rplm.node_fee"),
+				goqu.L("rplm.node_deposit_balance"),
+				goqu.L("rplm.user_deposit_balance"),
+				goqu.L("rplrs.end_time"),
+				goqu.L("rplrs.smoothing_pool_eth"),
+			).
+			From(goqu.L("rocketpool_minipools AS rplm")).
+			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
+			LeftJoin(goqu.L("rocketpool_rewards_summary AS rplrs"), goqu.On(goqu.L("rplm.node_address = rplrs.node_address"))).
+			Where(goqu.L("rplm.node_deposit_balance IS NOT NULL")).
+			Where(goqu.L("rplm.user_deposit_balance IS NOT NULL"))
 
-	if len(dashboardId.Validators) == 0 {
-		ds = ds.
-			LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
-			Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
-
-		if groupId != t.AllGroups {
+		if len(dashboardId.Validators) == 0 {
 			ds = ds.
-				Where(goqu.L("uvdv.group_id = ?", groupId))
+				LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
+				Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
+
+			if groupId != t.AllGroups {
+				ds = ds.
+					Where(goqu.L("uvdv.group_id = ?", groupId))
+			}
+		} else {
+			ds = ds.
+				Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
 		}
-	} else {
-		ds = ds.
-			Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
-	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %w", err)
+		}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		if err != nil {
+			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
+		}
+
+		return nil
+	})
+
+	nodeMinipoolCount := make(map[string]uint64)
+	wg.Go(func() error {
+		queryResult := []struct {
+			NodeAddress   []byte `db:"node_address"`
+			MinipoolCount uint64 `db:"minipool_count"`
+		}{}
+
+		err := d.alloyReader.SelectContext(ctx, &queryResult, `
+			SELECT
+				node_address,
+				COUNT(node_address) AS minipool_count
+			FROM rocketpool_minipools
+			GROUP BY node_address`)
+		if err != nil {
+			return fmt.Errorf("error retrieving rocketpool node deposits data: %w", err)
+		}
+
+		for _, res := range queryResult {
+			node := hexutil.Encode(res.NodeAddress)
+			nodeMinipoolCount[node] = res.MinipoolCount
+		}
+
+		return nil
+	})
+
+	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving rocketpool validators data: %w", err)
+		return nil, err
 	}
 
 	rpInfo := t.RPInfo{
-		Node:     make(map[string]t.RPNodeInfo),
 		Minipool: make(map[uint64]t.RPMinipoolInfo),
 	}
+
 	for _, res := range queryResult {
 		if _, ok := rpInfo.Minipool[res.ValidatorIndex]; !ok {
 			rpInfo.Minipool[res.ValidatorIndex] = t.RPMinipoolInfo{
-				NodeFee:            res.NodeFee,
-				NodeDepositBalance: res.NodeDepositBalance,
-				UserDepositBalance: res.UserDepositBalance,
+				NodeFee:              res.NodeFee,
+				NodeDepositBalance:   res.NodeDepositBalance,
+				UserDepositBalance:   res.UserDepositBalance,
+				SmoothingPoolRewards: make(map[uint64]decimal.Decimal),
 			}
 		}
 
 		node := hexutil.Encode(res.NodeAddress)
 		if res.EndTime.Valid && res.SmoothingPoolEth != nil {
-			if _, ok := rpInfo.Node[node]; !ok {
-				rpInfo.Node[node] = t.RPNodeInfo{
-					SmoothingPoolReward: make(map[uint64]decimal.Decimal),
-				}
-			}
-
-			epoch := utils.TimeToEpoch(res.EndTime.Time)
-			rpInfo.Node[node].SmoothingPoolReward[uint64(epoch)] = *res.SmoothingPoolEth
+			epoch := uint64(utils.TimeToEpoch(res.EndTime.Time))
+			splitReward := res.SmoothingPoolEth.Div(decimal.NewFromUint64(nodeMinipoolCount[node]))
+			rpInfo.Minipool[res.ValidatorIndex].SmoothingPoolRewards[epoch] =
+				rpInfo.Minipool[res.ValidatorIndex].SmoothingPoolRewards[epoch].Add(splitReward)
 		}
 	}
 
 	return &rpInfo, nil
-}
-
-func (d *DataAccessService) getRocketPoolNodeDeposits(ctx context.Context, nodeAddresses [][]byte) (map[string]decimal.Decimal, error) {
-	queryResult := []struct {
-		NodeAddress        []byte          `db:"node_address"`
-		NodeDepositBalance decimal.Decimal `db:"acc_node_deposit_balance"`
-	}{}
-
-	ds := goqu.Dialect("postgres").
-		Select(
-			goqu.L("node_address"),
-			goqu.L("COALESCE(SUM(node_deposit_balance), 0) AS acc_node_deposit_balance"),
-		).
-		From(goqu.L("rocketpool_minipools")).
-		Where(goqu.L("node_address = ANY(?)", nodeAddresses)).
-		GroupBy(goqu.L("node_address"))
-
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving rocketpool node deposits data: %w", err)
-	}
-
-	result := make(map[string]decimal.Decimal)
-	for _, res := range queryResult {
-		node := hexutil.Encode(res.NodeAddress)
-		result[node] = res.NodeDepositBalance
-	}
-
-	return result, nil
 }
 
 func (d *DataAccessService) getRocketPoolOperatorFactor(minipool t.RPMinipoolInfo) decimal.Decimal {

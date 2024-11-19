@@ -10,14 +10,12 @@ type RPNetworkStats struct {
 }
 
 type RPInfo struct {
-	Node     map[string]RPNodeInfo
 	Minipool map[uint64]RPMinipoolInfo
 }
-type RPNodeInfo struct {
-	SmoothingPoolReward map[uint64]decimal.Decimal
-}
+
 type RPMinipoolInfo struct {
-	NodeFee            float64
-	NodeDepositBalance decimal.Decimal
-	UserDepositBalance decimal.Decimal
+	NodeFee              float64
+	NodeDepositBalance   decimal.Decimal
+	UserDepositBalance   decimal.Decimal
+	SmoothingPoolRewards map[uint64]decimal.Decimal
 }

@@ -315,6 +315,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		BlocksSlashingCount   uint64
 	}
 	var queryResultSum []QueryResultSum
+	smoothingPoolRewards := make(map[uint64]map[int64]decimal.Decimal, 0) // epoch -> group -> reward
 
 	wg.Go(func() error {
 		type QueryResult struct {
@@ -343,6 +344,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			return fmt.Errorf("error retrieving rewards data: %v", err)
 		}
 
+		validatorGroupMap := make(map[uint64]int64)
 		for _, row := range queryResult {
 			if len(queryResultSum) == 0 ||
 				queryResultSum[len(queryResultSum)-1].Epoch != row.Epoch ||
@@ -352,6 +354,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 					GroupId: row.GroupId,
 				})
 			}
+
+			validatorGroupMap[row.ValidatorIndex] = row.GroupId
 
 			current := &queryResultSum[len(queryResultSum)-1]
 
@@ -367,12 +371,25 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			current.BlocksSlashingCount += row.BlocksSlashingCount
 
 			reward := utils.GWeiToWei(big.NewInt(row.ClRewards))
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[row.ValidatorIndex]; ok {
 					reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
 			current.ClRewards = current.ClRewards.Add(reward)
+		}
+
+		// Calculate smoothing pool rewards
+		// Has to be done here in the cl and not el part because here we have the list of all relevant validators
+		if rpInfos != nil && protocolModes.RocketPool {
+			for validatorIndex, groupId := range validatorGroupMap {
+				for epoch, reward := range rpInfos.Minipool[validatorIndex].SmoothingPoolRewards {
+					if _, ok := smoothingPoolRewards[epoch]; !ok {
+						smoothingPoolRewards[epoch] = make(map[int64]decimal.Decimal)
+					}
+					smoothingPoolRewards[epoch][groupId] = smoothingPoolRewards[epoch][groupId].Add(reward)
+				}
+			}
 		}
 
 		return nil
@@ -405,8 +422,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			}
 
 			reward := entry.ElRewards
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok {
 					reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
@@ -418,6 +435,18 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	err = wg.Wait()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %v", err)
+	}
+
+	// Add smoothing pool rewards to el rewards
+	if rpInfos != nil && protocolModes.RocketPool {
+		for epoch, groupRewards := range smoothingPoolRewards {
+			for groupId, reward := range groupRewards {
+				if _, ok := elRewards[epoch]; !ok {
+					elRewards[epoch] = make(map[int64]decimal.Decimal)
+				}
+				elRewards[epoch][groupId] = elRewards[epoch][groupId].Add(reward)
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -436,8 +465,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		SyncExecuted          uint64
 		Slashings             uint64
 	}
-	totalEpochInfo := make(map[uint64]*TotalEpochInfo, 0)
 
+	totalEpochInfo := make(map[uint64]*TotalEpochInfo, 0)
 	for _, res := range queryResultSum {
 		duty := t.VDBRewardsTableDuty{}
 		if res.AttestationsScheduled > 0 {
@@ -748,8 +777,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	for _, entry := range queryResult {
 		rpFactor := decimal.NewFromInt(1)
-		if rpInfos != nil {
-			if rpValidator, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok && protocolModes.RocketPool {
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok {
 				rpFactor = d.getRocketPoolOperatorFactor(rpValidator)
 			}
 		}
@@ -773,8 +802,17 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			ret.Inactivity.StatusCount.Success++
 		}
 
-		ret.Proposal.Income = ret.Proposal.Income.Add(entry.BlocksClReward.Mul(gWei).Add(elRewards[entry.ValidatorIndex]).Mul(rpFactor))
-		ret.ProposalElReward = ret.ProposalElReward.Add(elRewards[entry.ValidatorIndex])
+		elReward := elRewards[entry.ValidatorIndex].Mul(rpFactor)
+		if rpInfos != nil && protocolModes.RocketPool {
+			if _, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok {
+				if _, ok := rpInfos.Minipool[entry.ValidatorIndex].SmoothingPoolRewards[epoch]; ok {
+					elReward = elReward.Add(rpInfos.Minipool[entry.ValidatorIndex].SmoothingPoolRewards[epoch])
+				}
+			}
+		}
+
+		ret.Proposal.Income = ret.Proposal.Income.Add(entry.BlocksClReward.Mul(gWei).Mul(rpFactor).Add(elReward))
+		ret.ProposalElReward = ret.ProposalElReward.Add(elReward)
 		ret.Proposal.StatusCount.Success += uint64(entry.BlocksProposed)
 		ret.Proposal.StatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
 
@@ -895,6 +933,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		ClRewards decimal.Decimal
 	}
 	var queryResultSum []QueryResultSum
+	smoothingPoolRewards := make(map[uint64]map[uint64]decimal.Decimal, 0) // epoch -> group -> reward
 
 	wg.Go(func() error {
 		queryResult := []struct {
@@ -914,6 +953,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			return fmt.Errorf("error retrieving rewards chart data: %v", err)
 		}
 
+		validatorGroupMap := make(map[uint64]uint64)
 		for _, entry := range queryResult {
 			if len(queryResultSum) == 0 ||
 				queryResultSum[len(queryResultSum)-1].Epoch != entry.Epoch ||
@@ -924,14 +964,29 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 				})
 			}
 
+			validatorGroupMap[entry.ValidatorIndex] = entry.GroupId
+
 			current := &queryResultSum[len(queryResultSum)-1]
 			reward := utils.GWeiToWei(big.NewInt(entry.ClRewards))
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok {
 					reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
 			current.ClRewards = current.ClRewards.Add(reward)
+		}
+
+		// Calculate smoothing pool rewards
+		// Has to be done here in the cl and not el part because here we have the list of all relevant validators
+		if rpInfos != nil && protocolModes.RocketPool {
+			for validatorIndex, groupId := range validatorGroupMap {
+				for epoch, reward := range rpInfos.Minipool[validatorIndex].SmoothingPoolRewards {
+					if _, ok := smoothingPoolRewards[epoch]; !ok {
+						smoothingPoolRewards[epoch] = make(map[uint64]decimal.Decimal)
+					}
+					smoothingPoolRewards[epoch][groupId] = smoothingPoolRewards[epoch][groupId].Add(reward)
+				}
+			}
 		}
 
 		return nil
@@ -964,8 +1019,8 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			}
 
 			reward := entry.ElRewards
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok {
 					reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
@@ -978,6 +1033,18 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	err = wg.Wait()
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %v", err)
+	}
+
+	// Add smoothing pool rewards to el rewards
+	if rpInfos != nil && protocolModes.RocketPool {
+		for epoch, groupRewards := range smoothingPoolRewards {
+			for groupId, reward := range groupRewards {
+				if _, ok := elRewards[epoch]; !ok {
+					elRewards[epoch] = make(map[uint64]decimal.Decimal)
+				}
+				elRewards[epoch][groupId] = elRewards[epoch][groupId].Add(reward)
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -1257,8 +1324,8 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			current := &queryResultAdjusted[len(queryResultAdjusted)-1]
 
 			rpFactor := decimal.NewFromInt(1)
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok {
 					rpFactor = d.getRocketPoolOperatorFactor(rpValidator)
 				}
 			}
@@ -1296,8 +1363,8 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 		for _, entry := range elQueryResult {
 			reward := entry.ElRewards
-			if rpInfos != nil {
-				if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok && protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[entry.Proposer]; ok /*TODO: && "Not a smoothing pool reward"*/ {
 					reward = reward.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
 			}
