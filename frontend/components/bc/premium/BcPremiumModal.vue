@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { type BcButton } from '#components'
+
 interface Props {
   description?: string,
   dismissLabel?: string,
@@ -13,8 +15,21 @@ const hide = () => {
   dialogRef?.value.close()
 }
 
+const buttonDismiss = ref<typeof BcButton>()
+const lastActiveElement = ref<Element | null>(null)
+onBeforeMount(() => {
+  lastActiveElement.value = document.activeElement
+  console.log('👉', lastActiveElement.value)
+})
 onMounted(() => {
   setHeader($t('premium.title'), true)
+  buttonDismiss.value?.$el?.focus()
+})
+onUnmounted(() => {
+  console.log('👉', lastActiveElement.value)
+  if (lastActiveElement.value instanceof HTMLElement) {
+    lastActiveElement.value.focus()
+  }
 })
 </script>
 
@@ -23,12 +38,14 @@ onMounted(() => {
     {{ props?.description || $t("premium.description") }}
   </div>
   <div class="footer">
-    <div
+    <BcButton
+      ref="buttonDismiss"
+      variant="secondary"
       class="dismiss"
       @click="hide()"
     >
       {{ props?.dismissLabel || $t("navigation.dismiss") }}
-    </div>
+    </BcButton>
     <BcLink
       to="/pricing"
       target="_blank"

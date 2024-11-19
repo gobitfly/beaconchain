@@ -10,7 +10,10 @@ const props = defineProps<{
 </script>
 
 <template>
-  <button class="bc-button-icon">
+  <button
+    class="bc-button-icon"
+    type="button"
+  >
     <BcScreenreaderOnly>{{ props.screenreaderText }}</BcScreenreaderOnly>
     <slot />
   </button>
@@ -20,5 +23,10 @@ const props = defineProps<{
   .bc-button-icon {
     background-color: unset;
     border: unset;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.875rem;
+
 }
 </style>

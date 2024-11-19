@@ -39,6 +39,7 @@
     "earned": "Earned",
     "edit": "Edit",
     "email": "Email",
+    "empty_search": "No results found. Please adjust your search and try again.",
     "ens_address": "ENS address | ENS addresses",
     "epoch": "Epoch | Epochs",
     "erc20token": "ERC-20 Token | ERC-20 Tokens",
@@ -61,6 +62,7 @@
     "past": "Past",
     "penalty": "Penalty",
     "protocol": "Protocol | Protocols",
+    "search": "Search",
     "selected": "Selected",
     "send": "Send",
     "slot": "Slot | Slots",
@@ -260,6 +262,16 @@
       "management": {
         "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?",
         "remove_title": "Remove Validators",
+        "search": {
+          "by_index_or_public_key": "By Index or Public key",
+          "deposited_by": "Deposited by",
+          "empty": "No validators found. Try adjusting your search criteria.",
+          "label": "Search for Index, Public key, Deposit or Withdrawal credential, ENS or Graffiti",
+          "placeholder": "Index, Public key, Deposit or Withdrawal credential, ENS or Graffiti",
+          "with_graffiti": "with…block Graffiti",
+          "withdrawal_credential": "Withdrawal Credential"
+
+        },
         "sub_title": "Add or remove validators from your dashboard",
         "title": "Manage"
       },
@@ -995,7 +1007,6 @@
     "blocks_with": "Blocks with",
     "by_your_filters": "by your filters",
     "credential": "Credential | Credentials",
-    "deposited_by": "Deposited by",
     "ens_overview": "ENS Overview | ENS Overviews",
     "general_placeholder": "Search the blockchain",
     "named": "Named",

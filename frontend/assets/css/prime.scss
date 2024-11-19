@@ -503,7 +503,7 @@ div.p-select {
     height: 30px;
 
     .p-select-label {
-      font-size: var(--tiny_text_font_size);
+      font-size: var(--small_text_font_size);
       color: var(--input-active-text-color);
     }
 
@@ -641,4 +641,5 @@ div.p-accordion {
 
 div.p-dialog-mask.p-overlay-mask {
   background: rgba(0, 0, 0, 0.5);
+  // isolation: isolate;
 }
