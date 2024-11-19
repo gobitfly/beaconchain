@@ -33,8 +33,8 @@ export default defineNuxtConfig({
     ],
   },
   colorMode: {
-    fallback: 'dark', // fallback value if not system preference found
-    preference: 'system', // default value of $colorMode.preference
+    fallback: 'dark',
+    preference: 'dark',
   },
   compatibilityDate: '2024-07-15',
   css: [

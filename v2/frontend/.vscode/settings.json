@@ -27,6 +27,7 @@
     "a11y",
     "checkout",
     "ci",
+    "color-mode",
     "csrf",
     "customFetch",
     "dialog",
