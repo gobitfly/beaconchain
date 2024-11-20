@@ -65,6 +65,7 @@ export default withNuxt({
       'single',
     ],
     'no-console': 'warn',
+    'no-trailing-spaces': 'error',
     'vue/max-attributes-per-line': 'off',
     'vue/max-len': [
       'error',
