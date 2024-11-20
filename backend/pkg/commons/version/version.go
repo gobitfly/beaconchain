@@ -1,6 +1,7 @@
 package version
 
 import (
+	"net/http"
 	"runtime"
 )
 
@@ -12,3 +13,9 @@ var (
 	BuildDate = "undefined"
 	GoVersion = runtime.Version()
 )
+
+func HttpMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Set("X-Beaconchain-Version", Version)
+	})
+}
