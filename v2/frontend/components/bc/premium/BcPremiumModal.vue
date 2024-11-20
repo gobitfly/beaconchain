@@ -35,7 +35,10 @@ onUnmounted(() => {
   <div class="text">
     {{ props?.description || $t("premium.description") }}
   </div>
-  <div class="footer">
+  <div
+    class="footer"
+    @keydown.esc.stop="hide()"
+  >
     <BcButton
       ref="buttonDismiss"
       variant="secondary"
