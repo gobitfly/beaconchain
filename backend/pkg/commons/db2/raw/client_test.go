@@ -1,4 +1,4 @@
-package db2
+package raw
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/storetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
 )
 
 const (
@@ -43,12 +43,12 @@ func TestBigTableClientRealCondition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bg, err := store.NewBigTable(project, instance, nil)
+			bg, err := database.NewBigTable(project, instance, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			rawStore := NewRawStore(store.Wrap(bg, BlocksRawTable, ""))
+			rawStore := NewStore(database.Wrap(bg, BlocksRawTable, ""))
 			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
 				Transport: NewBigTableEthRaw(rawStore, chainID),
 			}))
@@ -125,12 +125,12 @@ func BenchmarkRawBigTable(b *testing.B) {
 		b.Skip("skipping test, set BIGTABLE_PROJECT and BIGTABLE_INSTANCE")
 	}
 
-	bt, err := store.NewBigTable(project, instance, nil)
+	bt, err := database.NewBigTable(project, instance, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	rawStore := WithCache(NewRawStore(store.Wrap(bt, BlocksRawTable, "")))
+	rawStore := WithCache(NewStore(database.Wrap(bt, BlocksRawTable, "")))
 	rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
 		Transport: NewBigTableEthRaw(rawStore, chainID),
 	}))
@@ -153,7 +153,7 @@ func BenchmarkAll(b *testing.B) {
 func TestBigTableClient(t *testing.T) {
 	tests := []struct {
 		name  string
-		block FullBlockRawData
+		block FullBlockData
 	}{
 		{
 			name:  "test block",
@@ -165,16 +165,16 @@ func TestBigTableClient(t *testing.T) {
 		},
 	}
 
-	client, admin := storetest.NewBigTable(t)
-	bg, err := store.NewBigTableWithClient(context.Background(), client, admin, RawSchema)
+	client, admin := databasetest.NewBigTable(t)
+	bg, err := database.NewBigTableWithClient(context.Background(), client, admin, Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rawStore := NewRawStore(store.Wrap(bg, BlocksRawTable, ""))
-			if err := rawStore.AddBlocks([]FullBlockRawData{tt.block}); err != nil {
+			rawStore := NewStore(database.Wrap(bg, BlocksRawTable, ""))
+			if err := rawStore.AddBlocks([]FullBlockData{tt.block}); err != nil {
 				t.Fatal(err)
 			}
 
@@ -221,7 +221,7 @@ func TestBigTableClientWithFallback(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		block FullBlockRawData
+		block FullBlockData
 	}{
 		{
 			name:  "test block",
@@ -229,15 +229,15 @@ func TestBigTableClientWithFallback(t *testing.T) {
 		},
 	}
 
-	client, admin := storetest.NewBigTable(t)
-	bg, err := store.NewBigTableWithClient(context.Background(), client, admin, RawSchema)
+	client, admin := databasetest.NewBigTable(t)
+	bt, err := database.NewBigTableWithClient(context.Background(), client, admin, Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rawStore := NewRawStore(store.Wrap(bg, BlocksRawTable, ""))
+			rawStore := NewStore(database.Wrap(bt, BlocksRawTable, ""))
 
 			rpcClient, err := rpc.DialOptions(context.Background(), node, rpc.WithHTTPClient(&http.Client{
 				Transport: NewWithFallback(NewBigTableEthRaw(rawStore, tt.block.ChainID), http.DefaultTransport),

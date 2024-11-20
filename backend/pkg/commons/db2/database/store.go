@@ -1,6 +1,6 @@
-package store
+package database
 
-type Store interface {
+type Database interface {
 	Add(key, column string, data []byte, allowDuplicate bool) error
 	BulkAdd(itemsByKey map[string][]Item) error
 	Read(prefix string) ([][]byte, error)
@@ -13,6 +13,6 @@ type Store interface {
 }
 
 var (
-	_ Store = (*TableWrapper)(nil)
-	_ Store = (*RemoteClient)(nil)
+	_ Database = (*TableWrapper)(nil)
+	_ Database = (*RemoteClient)(nil)
 )

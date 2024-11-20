@@ -1,36 +1,34 @@
-package db2
+package raw
 
 import (
-	"bytes"
 	"context"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/store"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/storetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
 )
 
 func TestRaw(t *testing.T) {
-	client, admin := storetest.NewBigTable(t)
+	client, admin := databasetest.NewBigTable(t)
 
-	s, err := store.NewBigTableWithClient(context.Background(), client, admin, RawSchema)
+	s, err := database.NewBigTableWithClient(context.Background(), client, admin, Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db := RawStore{
-		store:      store.Wrap(s, BlocksRawTable, ""),
+	store := Store{
+		db:         database.Wrap(s, BlocksRawTable, ""),
 		compressor: noOpCompressor{},
 	}
 
 	block := testFullBlock
-	if err := db.AddBlocks([]FullBlockRawData{block}); err != nil {
+	if err := store.AddBlocks([]FullBlockData{block}); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := db.ReadBlockByNumber(block.ChainID, block.BlockNumber)
+	res, err := store.ReadBlockByNumber(block.ChainID, block.BlockNumber)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,58 +45,9 @@ func TestRaw(t *testing.T) {
 	if got, want := string(res.Uncles), testUncles; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
-
-	ethBlock, receipts, traces, err := EthParse(res)
-	if err != nil {
-		t.Errorf("failed to parse block: %v", err)
-	}
-	if got, want := block.BlockHash, ethBlock.Hash().Bytes(); !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
-	if got, want := len(receipts), len(ethBlock.Transactions()); got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-	if got, want := len(traces), len(ethBlock.Transactions()); got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
-	for i, transaction := range ethBlock.Transactions() {
-		if got, want := receipts[i].TxHash, transaction.Hash(); got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := traces[i].TxHash, transaction.Hash().Hex(); got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-	}
 }
 
-func TestRawRemoteRealCondition(t *testing.T) {
-	remote := os.Getenv("REMOTE_URL")
-	if remote == "" {
-		t.Skip("skipping test, set REMOTE_URL")
-	}
-
-	client := store.NewRemoteClient(remote)
-	db := NewRawStore(client)
-	block, err := db.readBlock(1, 6008149)
-	if err != nil {
-		panic(err)
-	}
-
-	ethBlock, receipts, traces, err := EthParse(block)
-	if err != nil {
-		t.Errorf("failed to parse block: %v", err)
-	}
-	for i, transaction := range ethBlock.Transactions() {
-		if got, want := receipts[i].TxHash, transaction.Hash(); got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-		if got, want := traces[i].TxHash, transaction.Hash().Hex(); got != want {
-			t.Errorf("got %v, want %v", got, want)
-		}
-	}
-}
-
-var testFullBlock = FullBlockRawData{
+var testFullBlock = FullBlockData{
 	ChainID:          1,
 	BlockNumber:      testBlockNumber,
 	BlockHash:        common.HexToHash(testBlockHash).Bytes(),
@@ -109,7 +58,7 @@ var testFullBlock = FullBlockRawData{
 	Uncles:           []byte(testUncles),
 }
 
-var testTwoUnclesFullBlock = FullBlockRawData{
+var testTwoUnclesFullBlock = FullBlockData{
 	ChainID:          1,
 	BlockNumber:      testTwoUnclesBlockNumber,
 	BlockUnclesCount: 2,

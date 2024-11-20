@@ -1,4 +1,4 @@
-package store
+package database
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/storetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
 )
 
-func TestBigTableStore(t *testing.T) {
+func TestBigTable(t *testing.T) {
 	type item struct {
 		key    string
 		column string
@@ -76,12 +76,12 @@ func TestBigTableStore(t *testing.T) {
 		},
 	}
 	tables := map[string][]string{"testTable": {"testFamily"}}
-	client, admin := storetest.NewBigTable(t)
-	store, err := NewBigTableWithClient(context.Background(), client, admin, tables)
+	client, admin := databasetest.NewBigTable(t)
+	bt, err := NewBigTableWithClient(context.Background(), client, admin, tables)
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := Wrap(store, "testTable", "testFamily")
+	db := Wrap(bt, "testTable", "testFamily")
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -172,12 +172,12 @@ func TestBigTableStore(t *testing.T) {
 
 func TestRangeIncludeLimits(t *testing.T) {
 	tables := map[string][]string{"testTable": {"testFamily"}}
-	client, admin := storetest.NewBigTable(t)
-	store, err := NewBigTableWithClient(context.Background(), client, admin, tables)
+	client, admin := databasetest.NewBigTable(t)
+	bt, err := NewBigTableWithClient(context.Background(), client, admin, tables)
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := Wrap(store, "testTable", "testFamily")
+	db := Wrap(bt, "testTable", "testFamily")
 
 	_ = db.Add("1:999999999999", "", []byte("0"), false)
 	_ = db.Add("1:999999999998", "", []byte("1"), false)

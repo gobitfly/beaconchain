@@ -1,4 +1,4 @@
-package store
+package database
 
 import (
 	"bytes"
@@ -14,11 +14,11 @@ const (
 )
 
 type RemoteServer struct {
-	store Store
+	db Database
 }
 
-func NewRemoteStore(store Store) RemoteServer {
-	return RemoteServer{store: store}
+func NewRemote(db Database) RemoteServer {
+	return RemoteServer{db: db}
 }
 
 func (api RemoteServer) Routes() http.Handler {
@@ -42,7 +42,7 @@ func (api RemoteServer) GetRowsRange(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
-	rows, err := api.store.GetRowsRange(args.High, args.Low)
+	rows, err := api.db.GetRowsRange(args.High, args.Low)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(err.Error()))
@@ -69,7 +69,7 @@ func (api RemoteServer) GetRow(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
-	row, err := api.store.GetRow(args.Key)
+	row, err := api.db.GetRow(args.Key)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(err.Error()))
