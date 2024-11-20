@@ -128,7 +128,7 @@ type NotificationMachinesCursor struct {
 
 	MachineId      uint64
 	MachineName    string
-	EventType      string
+	EventType      t.EventName
 	EventThreshold float64
 	Ts             time.Time
 }
