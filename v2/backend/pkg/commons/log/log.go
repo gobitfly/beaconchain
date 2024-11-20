@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -69,6 +70,8 @@ func Debugf(format string, args ...interface{}) {
 
 func logErrorInfo(err error, callerSkip int, isWarning bool, additionalInfos ...Fields) *logrus.Entry {
 	logFields := logrus.NewEntry(logrus.New())
+
+	logFields = logFields.WithField("_version", version.Version)
 
 	metricName := "unknown"
 	if err != nil {
