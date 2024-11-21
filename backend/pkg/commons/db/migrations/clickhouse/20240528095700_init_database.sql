@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS _exporter_tasks (
     `status` Enum('pending', 'running', 'completed'),
 )
 ENGINE = ReplacingMergeTree
-Order By (hostname, priority, start_ts) -- order by start_ts DESC to get the latest task firs
+Order By (hostname, priority, start_ts) -- order by start_ts DESC to get the latest task irs
 SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
@@ -129,15 +129,16 @@ CREATE TABLE IF NOT EXISTS _unsafe_validator_dashboard_data_epoch
     `attestations_head_executed` Int64 COMMENT 'number of attestations executed on head',
     `attestations_target_executed` Int64 COMMENT 'number of attestations executed on target',
     `attestations_source_executed` Int64 COMMENT 'number of attestations executed on source',
-    `attestations_reward` Int64 COMMENT 'total reward for attestations',
-    `attestations_reward_rewards_only` Int64 COMMENT 'total reward for attestations, rewards only',
-    `attestations_reward_penalties_only` Int64 COMMENT 'total reward for attestations, penalties only',
-    `attestations_head_reward` Int64 COMMENT 'total reward for attestations on head',
-    `attestations_target_reward` Int64 COMMENT 'total reward for attestations on target',
-    `attestations_source_reward` Int64 COMMENT 'total reward for attestations on source',
-    `attestations_inactivity_reward` Int64 COMMENT 'total reward for attestations inactivity',
-    `attestations_inclusion_reward` Int64 COMMENT 'total reward for attestations inclusion',
-    `attestations_ideal_reward` Int64 COMMENT 'ideal reward for attestations',
+    `attestations_head_reward_rewards_only` Int64 COMMENT 'total reward for attestations on head, rewards only',
+    `attestations_head_reward_penalties_only` Int64 COMMENT 'total reward for attestations on head, penalties only',
+    `attestations_target_reward_rewards_only` Int64 COMMENT 'total reward for attestations on target, rewards only',
+    `attestations_target_reward_penalties_only` Int64 COMMENT 'total reward for attestations on target, penalties only',
+    `attestations_source_reward_rewards_only` Int64 COMMENT 'total reward for attestations on source, rewards only',
+    `attestations_source_reward_penalties_only` Int64 COMMENT 'total reward for attestations on source, penalties only',
+    `attestations_inactivity_reward_rewards_only` Int64 COMMENT 'total reward for attestations inactivity, rewards only',
+    `attestations_inactivity_reward_penalties_only` Int64 COMMENT 'total reward for attestations inactivity, penalties only',
+    `attestations_inclusion_reward_rewards_only` Int64 COMMENT 'total reward for attestations inclusion, rewards only',
+    `attestations_inclusion_reward_penalties_only` Int64 COMMENT 'total reward for attestations inclusion, penalties',
     `attestations_ideal_head_reward` Int64 COMMENT 'ideal reward for attestations on head',
     `attestations_ideal_target_reward` Int64 COMMENT 'ideal reward for attestations on target',
     `attestations_ideal_source_reward` Int64 COMMENT 'ideal reward for attestations on source',
@@ -158,7 +159,6 @@ CREATE TABLE IF NOT EXISTS _unsafe_validator_dashboard_data_epoch
     `blocks_expected` Float64 COMMENT 'expected blocks',
     `sync_scheduled` Int64 COMMENT 'number of syncs scheduled',
     `sync_executed` Int64 COMMENT 'number of syncs executed',
-    `sync_reward` Int64 COMMENT 'total sync rewards',
     `sync_reward_rewards_only` Int64 COMMENT 'total sync rewards, rewards only',
     `sync_reward_penalties_only` Int64 COMMENT 'total sync rewards, penalties only',
     `sync_localized_max_reward` Int64 COMMENT 'slot localized max reward for syncs',
@@ -207,15 +207,19 @@ AS SELECT
     attestations_head_executed,
     attestations_target_executed,
     attestations_source_executed,
-    attestations_head_reward + attestations_target_reward + attestations_source_reward + attestations_inactivity_reward + attestations_inclusion_reward as attestations_reward,
-    greatest(attestations_head_reward, 0) + greatest(attestations_target_reward, 0) + greatest(attestations_source_reward, 0) + greatest(attestations_inactivity_reward, 0) + greatest(attestations_inclusion_reward, 0) as attestations_reward_rewards_only,
-    least(attestations_head_reward, 0) + least(attestations_target_reward, 0) + least(attestations_source_reward, 0) + least(attestations_inactivity_reward, 0) + least(attestations_inclusion_reward, 0) as attestations_reward_penalties_only,
-    attestations_head_reward,
-    attestations_target_reward,
-    attestations_source_reward,
-    attestations_inactivity_reward,
-    attestations_inclusion_reward,
-    attestations_ideal_head_reward + attestations_ideal_target_reward + attestations_ideal_source_reward + attestations_ideal_inactivity_reward + attestations_ideal_inclusion_reward as attestations_ideal_reward,
+    -- attestations_head_reward + attestations_target_reward + attestations_source_reward + attestations_inactivity_reward + attestations_inclusion_reward as attestations_reward,
+    -- greatest(attestations_head_reward, 0) + greatest(attestations_target_reward, 0) + greatest(attestations_source_reward, 0) + greatest(attestations_inactivity_reward, 0) + greatest(attestations_inclusion_reward, 0) as attestations_reward_rewards_only,
+    -- least(attestations_head_reward, 0) + least(attestations_target_reward, 0) + least(attestations_source_reward, 0) + least(attestations_inactivity_reward, 0) + least(attestations_inclusion_reward, 0) as attestations_reward_penalties_only,
+    greatest(attestations_head_reward, 0) as attestations_head_reward_rewards_only,
+    least(attestations_head_reward, 0) as attestations_head_reward_penalties_only,
+    greatest(attestations_target_reward, 0) as attestations_target_reward_rewards_only,
+    least(attestations_target_reward, 0) as attestations_target_reward_penalties_only,
+    greatest(attestations_source_reward, 0) as attestations_source_reward_rewards_only,
+    least(attestations_source_reward, 0) as attestations_source_reward_penalties_only,
+    greatest(attestations_inactivity_reward, 0) as attestations_inactivity_reward_rewards_only,
+    least(attestations_inactivity_reward, 0) as attestations_inactivity_reward_penalties_only,
+    greatest(attestations_inclusion_reward, 0) as attestations_inclusion_reward_rewards_only,
+    least(attestations_inclusion_reward, 0) as attestations_inclusion_reward_penalties_only,
     attestations_ideal_head_reward,
     attestations_ideal_target_reward,
     attestations_ideal_source_reward,
@@ -236,9 +240,8 @@ AS SELECT
     blocks_expected, 
     sync_scheduled, 
     arrayCount(x -> x, sync_status.executed) as sync_executed,
-    arraySum(sync_rewards.reward) as sync_reward,
-    arraySum(x -> x > 0, sync_rewards.reward) as sync_reward_rewards_only,
-    arraySum(x -> x < 0, sync_rewards.reward) as sync_reward_penalties_only,
+    arraySum(x -> greatest(0, x), sync_rewards.reward) as sync_reward_rewards_only,
+    arraySum(x -> least(0, x), sync_rewards.reward) as sync_reward_penalties_only,
     sync_localized_max_reward,
     sync_committees_expected,
     slashed
@@ -349,8 +352,31 @@ AS SELECT
 FROM _insert_sink_validator_dashboard_data_epoch ARRAY JOIN block_rewards as x;
 -- +goose StatementEnd
 -- +goose StatementBegin
+CREATE TABLE IF NOT EXISTS validator_sync_committee_rewards_slot (
+    `validator_index` UInt64 COMMENT 'validator index' CODEC(T64, ZSTD(8)),
+    `epoch` Int64 COMMENT 'epoch number' CODEC(Delta, ZSTD(8)),
+    `epoch_timestamp` DateTime COMMENT 'timestamp of the first slot of the epoch' CODEC(Delta, ZSTD(8)),
+    `slot` Int64 CODEC(Delta, ZSTD(8)),
+    `reward` Int64 COMMENT 'reward for the sync committee contribution' CODEC(T64, ZSTD(8))
+)
+ENGINE = ReplacingMergeTree
+ORDER BY (toStartOfDay(epoch_timestamp), validator_index, epoch_timestamp, epoch, slot)
+PARTITION BY toStartOfMonth(epoch_timestamp)
+SETTINGS index_granularity = 8192;
+-- +goose StatementEnd
+-- +goose StatementBegin
+CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_validator_sync_committee_rewards_slot TO validator_sync_committee_rewards_slot
+AS SELECT
+    validator_index, 
+    epoch, 
+    epoch_timestamp, 
+    x.slot as slot,
+    x.reward as reward
+FROM _insert_sink_validator_dashboard_data_epoch ARRAY JOIN sync_rewards as x;
+-- +goose StatementEnd
+-- +goose StatementBegin
 -- sync_executed_map array join to generate table of validator_index, epoch_timestamp, slot
-CREATE TABLE IF NOT EXISTS validator_sync_committee_votes_epoch (
+CREATE TABLE IF NOT EXISTS validator_sync_committee_votes_slot (
     `validator_index` UInt64 COMMENT 'validator index' CODEC(DoubleDelta, ZSTD(8)),
     `epoch` Int64 COMMENT 'epoch number' CODEC(Delta, ZSTD(8)),
     `epoch_timestamp` DateTime COMMENT 'timestamp of the first slot of the epoch' CODEC(Delta, ZSTD(8)),
@@ -359,12 +385,12 @@ CREATE TABLE IF NOT EXISTS validator_sync_committee_votes_epoch (
 )
 ENGINE = ReplacingMergeTree
 ORDER BY (toStartOfDay(epoch_timestamp), validator_index, epoch_timestamp, epoch, slot)
-PARTITION BY toMonday(epoch_timestamp)
+PARTITION BY toStartOfMonth(epoch_timestamp)
 SETTINGS index_granularity = 8192;
 -- +goose StatementEnd
 -- +goose StatementBegin
 -- materialized view to forward data to the unsafe table
-CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_validator_sync_committee_votes_epoch TO validator_sync_committee_votes_epoch
+CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_validator_sync_committee_votes_slot TO validator_sync_committee_votes_slot
 AS SELECT
     validator_index, 
     epoch, 
@@ -396,15 +422,16 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_data_hourly (
     `attestations_head_executed` SimpleAggregateFunction(sum, Int64) COMMENT 'number of attestations executed on head',
     `attestations_target_executed` SimpleAggregateFunction(sum, Int64) COMMENT 'number of attestations executed on target',
     `attestations_source_executed` SimpleAggregateFunction(sum, Int64) COMMENT 'number of attestations executed on source',
-    `attestations_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations' CODEC(T64, ZSTD(8)),
-    `attestations_reward_rewards_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations, rewards only' CODEC(T64, ZSTD(8)),
-    `attestations_reward_penalties_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations, penalties only' CODEC(T64, ZSTD(8)),
-    `attestations_head_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on head' CODEC(T64, ZSTD(8)),
-    `attestations_target_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on target' CODEC(T64, ZSTD(8)),
-    `attestations_source_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on source' CODEC(T64, ZSTD(8)),
-    `attestations_inactivity_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations inactivity' CODEC(T64, ZSTD(8)),
-    `attestations_inclusion_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations inclusion' CODEC(T64, ZSTD(8)),
-    `attestations_ideal_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'ideal reward for attestations' CODEC(Delta, ZSTD(8)),
+    `attestations_head_reward_rewards_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on head, rewards only' CODEC(T64, ZSTD(8)),
+    `attestations_head_reward_penalties_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on head, penalties only' CODEC(T64, ZSTD(8)),
+    `attestations_target_reward_rewards_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on target, rewards only' CODEC(T64, ZSTD(8)),
+    `attestations_target_reward_penalties_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on target, penalties only' CODEC(T64, ZSTD(8)),
+    `attestations_source_reward_rewards_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on source, rewards only' CODEC(T64, ZSTD(8)),
+    `attestations_source_reward_penalties_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations on source, penalties only' CODEC(T64, ZSTD(8)),
+    `attestations_inactivity_reward_rewards_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations inactivity, rewards only' CODEC(T64, ZSTD(8)),
+    `attestations_inactivity_reward_penalties_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations inactivity, penalties only' CODEC(T64, ZSTD(8)),
+    `attestations_inclusion_reward_rewards_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations inclusion, rewards only' CODEC(T64, ZSTD(8)),
+    `attestations_inclusion_reward_penalties_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total reward for attestations inclusion, penalties only' CODEC(T64, ZSTD(8)),
     `attestations_ideal_head_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'ideal reward for attestations on head' CODEC(Delta, ZSTD(8)),
     `attestations_ideal_target_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'ideal reward for attestations on target' CODEC(Delta, ZSTD(8)),
     `attestations_ideal_source_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'ideal reward for attestations on source' CODEC(Delta, ZSTD(8)),
@@ -425,7 +452,6 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_data_hourly (
     `blocks_expected` SimpleAggregateFunction(sum, Float64) COMMENT 'expected blocks' CODEC(FPC, ZSTD(8)),
     `sync_scheduled` SimpleAggregateFunction(sum, Int64) COMMENT 'number of syncs scheduled',
     `sync_executed` SimpleAggregateFunction(sum, Int64) COMMENT 'number of syncs executed',
-    `sync_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'total sync rewards',
     `sync_reward_rewards_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total sync rewards, rewards only' CODEC(T64, ZSTD(8)),
     `sync_reward_penalties_only` SimpleAggregateFunction(sum, Int64) COMMENT 'total sync rewards, penalties only' CODEC(T64, ZSTD(8)),
     `sync_localized_max_reward` SimpleAggregateFunction(sum, Int64) COMMENT 'slot localized max reward for syncs' CODEC(Delta, ZSTD(8)),
