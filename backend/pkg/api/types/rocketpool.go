@@ -10,7 +10,8 @@ type RPNetworkStats struct {
 }
 
 type RPInfo struct {
-	Minipool map[uint64]RPMinipoolInfo
+	Minipool             map[uint64]RPMinipoolInfo
+	SmoothingPoolAddress []byte
 }
 
 type RPMinipoolInfo struct {

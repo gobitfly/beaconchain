@@ -78,6 +78,16 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	groupIdSearchMap := make(map[uint64]bool, 0)
 
 	// ------------------------------------------------------------------------------------------------------------------
+	// Get rocketpool minipool infos if needed
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
 	// Build the main and EL rewards queries
 	rewardsDs := goqu.Dialect("postgres").
 		From(goqu.L("validator_dashboard_data_epoch e")).
@@ -117,11 +127,10 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		).
 		GroupBy(goqu.L("b.epoch"), goqu.L("b.proposer"))
 
-	if protocolModes.RocketPool {
+	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
-		// TODO: Add smoothing pool address to the parameters
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", 1, 2))
+			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if dashboardId.Validators == nil {
@@ -293,16 +302,6 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		} else {
 			rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Asc())
 			elDs = elDs.Order(goqu.L("b.epoch").Asc())
-		}
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Get rocketpool minipool infos if needed
-	var rpInfos *t.RPInfo
-	if protocolModes.RocketPool {
-		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
-		if err != nil {
-			return nil, nil, err
 		}
 	}
 
@@ -634,10 +633,21 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	ret := &t.VDBGroupRewardsData{}
 
 	wg := errgroup.Group{}
+	var err error
 
 	if dashboardId.AggregateGroups {
 		// If we are aggregating groups then ignore the group id and sum up everything
 		groupId = t.AllGroups
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
+	// Get rocketpool minipool infos if needed
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, groupId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -689,11 +699,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		Where(goqu.L("b.epoch = ?", epoch)).
 		GroupBy(goqu.L("b.proposer"))
 
-	if protocolModes.RocketPool {
+	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
-		// TODO: Add smoothing pool address to the parameters
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", 1, 2))
+			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if dashboardId.Validators == nil {
@@ -785,21 +794,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		return nil
 	})
 
-	err := wg.Wait()
+	err = wg.Wait()
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard group rewards data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Create the result
-	var rpInfos *t.RPInfo
-	if protocolModes.RocketPool {
-		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, groupId)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	gWei := decimal.NewFromInt(1e9)
 
 	for _, entry := range queryResult {
@@ -877,6 +878,16 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
+	// Get rocketpool minipool infos if needed
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
 	// Build the main and EL rewards queries
 	rewardsDs := goqu.Dialect("postgres").
 		Select(
@@ -908,11 +919,10 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
 		GroupBy(goqu.L("b.epoch"), goqu.L("b.proposer"))
 
-	if protocolModes.RocketPool {
+	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
-		// TODO: Add smoothing pool address to the parameters
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", 1, 2))
+			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if dashboardId.Validators == nil {
@@ -948,16 +958,6 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
 			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
 			Order(goqu.L("b.epoch").Asc())
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Get rocketpool minipool infos if needed
-	var rpInfos *t.RPInfo
-	if protocolModes.RocketPool {
-		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -1203,6 +1203,16 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
+	// Get rocketpool minipool infos if needed
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, groupId)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------------------
 	// Build the main and EL rewards queries
 	rewardsDs := goqu.Dialect("postgres").
 		Select(
@@ -1253,11 +1263,10 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		Where(goqu.L("b.status = '1'")).
 		GroupBy(goqu.L("b.proposer"))
 
-	if protocolModes.RocketPool {
+	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
-		// TODO: Add smoothing pool address to the parameters
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", 1, 2))
+			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -1294,16 +1303,6 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 		rewardsDs = rewardsDs.Where(goqu.L("e.validator_index IN ?", validators))
 		elDs = elDs.Where(goqu.L("b.proposer = ANY(?)", pq.Array(validators)))
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Get rocketpool minipool infos if needed
-	var rpInfos *t.RPInfo
-	if protocolModes.RocketPool {
-		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, groupId)
-		if err != nil {
-			return nil, nil, err
-		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

@@ -42,6 +42,15 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		}
 	}
 
+	// Get the rocketpool minipool infos
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	searchPubkey := regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`).MatchString(search)
 	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
@@ -175,10 +184,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			goqu.COALESCE(goqu.L("rb.value / 1e18"), goqu.I("ep.fee_recipient_reward")).As("el_reward"),
 		)
 
-	if protocolModes.RocketPool {
-		// TODO: Add smoothing pool address to the parameters
+	if rpInfos != nil && protocolModes.RocketPool {
 		blocksDs = blocksDs.
-			SelectAppend(goqu.L("blocks.exec_fee_recipient = ? AND (rb.proposer_fee_recipient IS NULL OR rb.proposer_fee_recipient = ?) AS is_smoothing_pool", 1, 2))
+			SelectAppend(goqu.L("blocks.exec_fee_recipient = ? AND (rb.proposer_fee_recipient IS NULL OR rb.proposer_fee_recipient = ?) AS is_smoothing_pool", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	// 3. Sorting and pagination
@@ -278,7 +286,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					goqu.L("NULL::NUMERIC").As("el_reward"),
 				)
 
-			if protocolModes.RocketPool {
+			if rpInfos != nil && protocolModes.RocketPool {
 				blocksDs = blocksDs.
 					SelectAppend(goqu.L("false").As("is_smoothing_pool"))
 			}
@@ -356,15 +364,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 	if currentCursor.IsReverse() {
 		slices.Reverse(proposals)
-	}
-
-	// Get the rocketpool minipool infos
-	var rpInfos *t.RPInfo
-	if protocolModes.RocketPool {
-		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
-		if err != nil {
-			return nil, nil, err
-		}
 	}
 
 	slots := make([]uint64, len(proposals))

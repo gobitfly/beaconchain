@@ -138,13 +138,14 @@ func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId 
 	wg := errgroup.Group{}
 
 	queryResult := []struct {
-		ValidatorIndex     uint64           `db:"validatorindex"`
-		NodeAddress        []byte           `db:"node_address"`
-		NodeFee            float64          `db:"node_fee"`
-		NodeDepositBalance decimal.Decimal  `db:"node_deposit_balance"`
-		UserDepositBalance decimal.Decimal  `db:"user_deposit_balance"`
-		EndTime            sql.NullTime     `db:"end_time"`
-		SmoothingPoolEth   *decimal.Decimal `db:"smoothing_pool_eth"`
+		ValidatorIndex       uint64           `db:"validatorindex"`
+		NodeAddress          []byte           `db:"node_address"`
+		NodeFee              float64          `db:"node_fee"`
+		NodeDepositBalance   decimal.Decimal  `db:"node_deposit_balance"`
+		UserDepositBalance   decimal.Decimal  `db:"user_deposit_balance"`
+		EndTime              sql.NullTime     `db:"end_time"`
+		SmoothingPoolAddress []byte           `db:"smoothing_pool_address"`
+		SmoothingPoolEth     *decimal.Decimal `db:"smoothing_pool_eth"`
 	}{}
 
 	wg.Go(func() error {
@@ -156,11 +157,13 @@ func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId 
 				goqu.L("rplm.node_deposit_balance"),
 				goqu.L("rplm.user_deposit_balance"),
 				goqu.L("rplrs.end_time"),
+				goqu.L("rploc.smoothing_pool_address"),
 				goqu.L("rplrs.smoothing_pool_eth"),
 			).
 			From(goqu.L("rocketpool_minipools AS rplm")).
 			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
 			LeftJoin(goqu.L("rocketpool_rewards_summary AS rplrs"), goqu.On(goqu.L("rplm.node_address = rplrs.node_address"))).
+			LeftJoin(goqu.L("rocketpool_onchain_configs AS rploc"), goqu.On(goqu.L("rplm.rocketpool_storage_address = rploc.rocketpool_storage_address"))).
 			Where(goqu.L("rplm.node_deposit_balance IS NOT NULL")).
 			Where(goqu.L("rplm.user_deposit_balance IS NOT NULL"))
 
@@ -223,6 +226,8 @@ func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId 
 
 	rpInfo := t.RPInfo{
 		Minipool: make(map[uint64]t.RPMinipoolInfo),
+		// Smoothing pool address is the same for all nodes on the network so take the first result
+		SmoothingPoolAddress: queryResult[0].SmoothingPoolAddress,
 	}
 
 	for _, res := range queryResult {
