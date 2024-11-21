@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -112,6 +113,10 @@ type RocketpoolNetworkStats struct {
 	TotalEthBalance        *big.Int
 }
 
+type RocketPoolOnchainConfig struct {
+	SmoothingPoolAddress common.Address
+}
+
 type RocketpoolExporter struct {
 	Eth1Client                         *ethclient.Client
 	API                                *rocketpool.RocketPool
@@ -126,6 +131,7 @@ type RocketpoolExporter struct {
 	LastRewardTree                     uint64
 	RocketpoolRewardTreesDownloadQueue []RocketpoolRewardTreeDownloadable
 	RocketpoolRewardTreeData           map[uint64]RewardsFile
+	OnchainConfig                      *RocketPoolOnchainConfig
 }
 
 type RocketpoolRewardTreeDownloadable struct {
@@ -310,6 +316,8 @@ func (rp *RocketpoolExporter) Update(count int64) error {
 	wg.Go(func() error { return rp.UpdateDAOProposals() })
 	wg.Go(func() error { return rp.UpdateDAOMembers() })
 	wg.Go(func() error { return rp.UpdateNetworkStats() })
+	wg.Go(func() error { return rp.UpdateConfigs() })
+
 	return wg.Wait()
 }
 
@@ -348,6 +356,29 @@ func (rp *RocketpoolExporter) Save(count int64) error {
 	err = rp.SaveRewardTrees()
 	if err != nil {
 		return err
+	}
+
+	err = rp.SaveConfigs()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rp *RocketpoolExporter) UpdateConfigs() error {
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "updated rocketpool-configs")
+	}(t0)
+
+	smoothingPoolAddress, err := rp.API.GetContract("rocketSmoothingPool", nil)
+	if err != nil {
+		return err
+	}
+
+	rp.OnchainConfig = &RocketPoolOnchainConfig{
+		SmoothingPoolAddress: *smoothingPoolAddress.Address,
 	}
 
 	return nil
@@ -646,6 +677,38 @@ func getBigIntFrom(rp *rocketpool.RocketPool, contract string, method string, ar
 	return *perc, err
 }
 
+func (rp *RocketpoolExporter) SaveConfigs() error {
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-configs")
+	}(t0)
+
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	storageAddress, err := hex.DecodeString(strings.Trim(RP_CONFIG.GetStorageAddress(), "0x"))
+	if err != nil {
+		return errors.Wrap(err, "error decoding storage address")
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO rocketpool_onchain_configs (
+			rocketpool_storage_address,
+			smoothing_pool_address
+		) VALUES ($1, $2) ON CONFLICT (rocketpool_storage_address) DO UPDATE SET
+		 	smoothing_pool_address = excluded.smoothing_pool_address
+	`, storageAddress, rp.OnchainConfig.SmoothingPoolAddress.Bytes())
+
+	if err != nil {
+		return errors.Wrap(err, "error inserting into rocketpool_onchain_configs")
+	}
+
+	return tx.Commit()
+}
+
 func (rp *RocketpoolExporter) SaveMinipools() error {
 	if len(rp.MinipoolsByAddress) == 0 {
 		return nil
@@ -729,6 +792,21 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 		if err != nil {
 			return fmt.Errorf("error inserting into rocketpool_minipools: %w", err)
 		}
+	}
+
+	// updating index column after writing minipools for cheaper access later
+	_, err = tx.Exec(`
+		WITH mapping AS (
+			SELECT pubkey, validatorindex
+			FROM validators
+		)
+		UPDATE rocketpool_minipools
+		SET validator_index = mapping.validatorindex
+		FROM mapping
+		WHERE rocketpool_minipools.pubkey = mapping.pubkey
+	`)
+	if err != nil {
+		return fmt.Errorf("error updating rocketpool_minipools with validatorindex: %w", err)
 	}
 
 	return tx.Commit()
