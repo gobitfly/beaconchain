@@ -796,14 +796,10 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 
 	// updating index column after writing minipools for cheaper access later
 	_, err = tx.Exec(`
-		WITH mapping AS (
-			SELECT pubkey, validatorindex
-			FROM validators
-		)
 		UPDATE rocketpool_minipools
-		SET validator_index = mapping.validatorindex
-		FROM mapping
-		WHERE rocketpool_minipools.pubkey = mapping.pubkey
+		SET validator_index = validators.validatorindex
+		FROM validators
+		WHERE rocketpool_minipools.pubkey = validators.pubkey
 	`)
 	if err != nil {
 		return fmt.Errorf("error updating rocketpool_minipools with validatorindex: %w", err)
