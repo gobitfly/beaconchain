@@ -380,7 +380,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 						Epoch:  5 * day,
 						Hourly: month,
 						Daily:  2 * month,
-						Weekly: 8 * week,
+						Weekly: 6 * month,
 					},
 					EmailNotificationsPerDay:                       20,
 					ConfigureNotificationsViaApi:                   false,
