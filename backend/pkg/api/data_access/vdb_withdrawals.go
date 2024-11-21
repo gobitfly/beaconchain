@@ -138,7 +138,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		).
 		From(goqu.L("blocks_withdrawals AS w")).
 		InnerJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'"))).
-		Where(goqu.L("validatorindex = ANY(?)", validators))
+		Where(goqu.L("validatorindex = ANY(?)", pq.Array(validators)))
 
 	// Limit the query using sorting and the cursor
 	sortColName := ""

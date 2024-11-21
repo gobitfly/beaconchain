@@ -115,7 +115,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				GroupBy("exec_block_hash")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
-		GroupBy(goqu.L("b.proposer"))
+		GroupBy(goqu.L("b.epoch"), goqu.L("b.proposer"))
 
 	if protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
@@ -245,7 +245,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			rewardsDs = rewardsDs.
 				SelectAppend(goqu.L("v.group_id AS result_group_id"))
 			elDs = elDs.
-				SelectAppend(goqu.L("v.group_id AS result_group_id"))
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupByAppend(goqu.L("result_group_id"))
 
 			if isReverseDirection {
 				rewardsDs = rewardsDs.Order(goqu.L("e.epoch").Desc(), goqu.L("result_group_id").Desc())
@@ -881,7 +882,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		Select(
 			goqu.L("e.validator_index"),
 			goqu.L("e.epoch"),
-			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_rewards, 0)) AS cl_rewards`)).
+			goqu.L(`(e.attestations_reward + e.blocks_cl_reward + e.sync_rewards) AS cl_rewards`)).
 		From(goqu.L("validator_dashboard_data_epoch e")).
 		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(startEpoch).Unix()))
@@ -905,7 +906,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
-		GroupBy(goqu.L("b.proposer"))
+		GroupBy(goqu.L("b.epoch"), goqu.L("b.proposer"))
 
 	if protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
@@ -934,6 +935,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 				Order(goqu.L("e.epoch").Asc(), goqu.L("result_group_id").Asc())
 			elDs = elDs.
 				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupByAppend(goqu.L("result_group_id")).
 				Order(goqu.L("b.epoch").Asc(), goqu.L("result_group_id").Asc())
 		}
 	} else {
