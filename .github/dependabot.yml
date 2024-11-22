@@ -1,0 +1,17 @@
+version: 2
+updates:
+- package-ecosystem: "npm"
+  directory: "/frontend"
+  schedule:
+    interval: "weekly"
+    time: "05:00"
+    timezone: "Europe/Berlin"
+  target-branch: "staging"
+  assignees:
+    - "marcel-bitfly"
+    - "benji-bitfly"
+  commit-message:
+    prefix: "chore(update): dependencies"
+    include: "scope"
+    prefix-development: "chore(update): dev-dependencies"
+    include: "scope"
