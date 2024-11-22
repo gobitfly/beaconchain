@@ -2,7 +2,7 @@ import {
   expect, test,
 } from '@nuxt/test-utils/playwright'
 
-test('test public dashboard', async ({
+test('test public dashboard-test', async ({
   goto, page,
 }) => {
   await goto('/', { waitUntil: 'hydration' })
