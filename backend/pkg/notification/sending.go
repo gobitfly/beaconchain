@@ -333,7 +333,7 @@ func sendWebhookNotifications() error {
 					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = webhook_retries + 1, webhook_last_sent = now() WHERE id = $1 AND dashboard_id = $2;`, n.Content.Webhook.DashboardGroupId, n.Content.Webhook.DashboardId)
 				}
 				if err != nil {
-					log.Error(err, "error updating users_webhooks table", 0)
+					log.Error(err, "error updating users_webhooks table test", 0)
 					return nil
 				}
 			}
