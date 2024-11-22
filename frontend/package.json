@@ -9,7 +9,7 @@
     "@fortawesome/sharp-solid-svg-icons": "^6.5.1",
     "@fortawesome/vue-fontawesome": "^3.0.6",
     "@pinia/nuxt": "^0.5.1",
-    "@stripe/stripe-js": "^3.5.0",
+    "@stripe/stripe-js": "^5.2.0",
     "@vueuse/core": "^11.1.0",
     "@vueuse/nuxt": "^11.1.0",
     "echarts": "^5.5.1",
