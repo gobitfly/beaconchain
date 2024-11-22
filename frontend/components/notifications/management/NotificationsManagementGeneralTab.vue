@@ -95,6 +95,11 @@ const openPairdeDevicesModal = () => {
   isVisible.value = true
 }
 
+// 🚨 replace when api endpoint is ready
+const hasWebhoohNotifications = computed(() =>
+  ref())
+// notificationsManagementStore.settings.general_settings.is_webhook_notifications_enabled)
+
 const textMutedUntil = computed(() => {
   if (notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp === Number.MAX_SAFE_INTEGER) {
     return $t('notifications.general.mute.until_turned_on')
@@ -181,7 +186,6 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
     </div>
     <div
       class="row"
-      :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
     >
       <div>
         {{ $t("notifications.general.push_notifications") }}
@@ -209,6 +213,15 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
         </BcLink>
         {{ tOf($t, "notifications.general.download_app", 2) }}
       </div>
+    </div>
+    <div
+      class="row"
+      :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
+    >
+      <div>
+        {{ $t("notifications.general.webhook_notifications") }}
+      </div>
+      <BcToggle v-model="hasWebhoohNotifications.value" />
     </div>
     <div
       v-if="notificationsManagementStore.settings.general_settings.is_email_notifications_enabled"
