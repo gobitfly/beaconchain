@@ -11,7 +11,4 @@ updates:
     - "marcel-bitfly"
     - "benji-bitfly"
   commit-message:
-    prefix: "chore(update): dependencies"
-    include: "scope"
-    prefix-development: "chore(update): dev-dependencies"
-    include: "scope"
+    prefix: "chore(update)"
