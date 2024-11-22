@@ -549,7 +549,8 @@ func RenderPushMessagesForUserEvents(epoch uint64, notificationsByUserID types.N
 					notification.Body = bodySummary
 					message.Notification = notification
 					message.Data = map[string]string{
-						"epoch": fmt.Sprintf("%d", epoch),
+						"epoch":   fmt.Sprintf("%d", epoch),
+						"network": fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID),
 					}
 					transitPushContent := types.TransitPushContent{
 						Messages: []*messaging.Message{message},
