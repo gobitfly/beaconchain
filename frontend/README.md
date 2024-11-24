@@ -1,10 +1,10 @@
 # Beaconcha.in Good to know
 
-## Usefull VSC Plugins
+## Useful VSC Plugins
 
 - Nuxtr
 - EsLint
-- Prettier -COde Formatter
+- Prettier -Code Formatter
 - TypeScript Vue Plugin (Volar)
 - Vue language Features (Volar)
 
@@ -43,7 +43,7 @@ Add the following mapping in your `/etc/hosts` file:
 127.0.0.1 local.beaconcha.in
 ```
 
-Create server certificates for locally running on https, by runing these comands in the console
+Create server certificates for locally running on https, by runing these commands in the console
 
 ```bash
 openssl genrsa 2048 > server.key
@@ -128,7 +128,7 @@ If your `user` was added to the `ADMIN` or `DEV` group by the `api team`, you ca
 `mocked data` from the `api` for certain `endpoints` by adding `?is_mocked=true` as a 
 `query parameter`.
 
-You can `turn on` mocked data `globally` for all `configured enpoints` 
+You can `turn on` mocked data `globally` for all `configured endpoints` 
 - by setting `NUXT_PUBLIC_IS_API_MOCKED=true`
 in your [.env](.env) or
 - running `npm run dev:mock:api` (See: [package.json](package.json))
