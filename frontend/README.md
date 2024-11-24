@@ -1,4 +1,4 @@
-# Beaconch.in Good to know
+# Beaconcha.in Good to know
 
 ## Usefull VSC Plugins
 
