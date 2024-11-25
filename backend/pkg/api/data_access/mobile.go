@@ -7,14 +7,12 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
-	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -231,10 +229,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				goqu.COALESCE(goqu.SUM("rpln.rpl_stake"), 0).As("rpl_stake")).
 			From(goqu.L("rocketpool_nodes AS rpln")).
 			LeftJoin(goqu.L("rocketpool_minipools AS m"), goqu.On(goqu.L("m.node_address = rpln.address"))).
-			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("m.pubkey = v.pubkey"))).
 			Where(goqu.L("node_deposit_balance IS NOT NULL")).
 			Where(goqu.L("user_deposit_balance IS NOT NULL")).
-			LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
+			LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("m.validator_index = uvdv.validator_index"))).
 			Where(goqu.L("uvdv.dashboard_id = ?", dashboardId))
 
 		query, args, err := ds.Prepared(true).ToSQL()
@@ -357,6 +354,7 @@ func (d *DataAccessService) getInternalRpNetworkStats(ctx context.Context) (*t.R
 				EXTRACT(EPOCH FROM claim_interval_time) / 3600 AS claim_interval_hours,
 				node_operator_rewards,
 				effective_rpl_staked,
+				ts,
 				rpl_price 
 			FROM rocketpool_network_stats 
 			ORDER BY ID 
@@ -372,17 +370,8 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 		return nil, p, err
 	}
 
-	// Get extra information for this result subset
-	validatorMapping, err := d.services.GetCurrentValidatorMapping()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "validator mapping error")
-	}
-
-	pubKeys := make([][]byte, 0, len(result))
 	indices := make([]uint64, 0, len(result))
 	for _, row := range result {
-		metadata := validatorMapping.ValidatorMetadata[row.Index]
-		pubKeys = append(pubKeys, metadata.PublicKey)
 		indices = append(indices, row.Index)
 	}
 
@@ -395,6 +384,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 		DepositAmount     decimal.Decimal `db:"node_deposit_balance"`
 		Status            string          `db:"status"`
 		IsInSmoothingPool bool            `db:"smoothing_pool_opted_in"`
+		Index             uint64          `db:"validator_index"`
 	}
 
 	var rocketPoolMap map[uint64]RocketPoolData
@@ -408,20 +398,20 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 			penalty_count,
 			node_deposit_balance,
 			status,
-			rn.smoothing_pool_opted_in
+			rn.smoothing_pool_opted_in,
+			validator_index
 		FROM rocketpool_minipools
 		LEFT JOIN rocketpool_nodes rn ON rocketpool_minipools.node_address = rn.address
-		WHERE pubkey = ANY($1)
+		WHERE validator_index = ANY($1)
 		`
-		err := d.alloyReader.SelectContext(ctx, &rocketPoolResults, validatorsQuery, pq.ByteaArray(pubKeys))
+		err := d.alloyReader.SelectContext(ctx, &rocketPoolResults, validatorsQuery, indices)
 		if err != nil {
 			return errors.Wrap(err, "error retrieving rocketpool data")
 		}
 
 		rocketPoolMap = make(map[uint64]RocketPoolData, len(rocketPoolResults))
 		for _, row := range rocketPoolResults {
-			validatorIndex := validatorMapping.ValidatorIndices[string(t.PubKey(hexutil.Encode(row.PubKey)))]
-			rocketPoolMap[validatorIndex] = row
+			rocketPoolMap[row.Index] = row
 		}
 		return nil
 	})

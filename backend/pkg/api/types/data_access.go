@@ -133,6 +133,16 @@ type NotificationMachinesCursor struct {
 	Ts             time.Time
 }
 
+type RocketPoolCursor struct {
+	GenericCursor
+
+	Address            []byte
+	MinipoolsTotal     uint64
+	StakedRpl          decimal.Decimal
+	EffectiveRpl       decimal.Decimal
+	SmoothingpoolOptIn bool
+}
+
 type NotificationClientsCursor struct {
 	GenericCursor
 
