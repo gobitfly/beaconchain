@@ -249,37 +249,27 @@ export type GetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBT
  */
 export interface VDBRocketPoolTableRow {
   node: Address;
-  staked: {
-    eth: string /* decimal.Decimal */;
-    rpl: string /* decimal.Decimal */;
-  };
-  minipools: {
-    total: number /* uint64 */;
-    leb_16: number /* uint64 */;
-    leb_8: number /* uint64 */;
-  };
+  staked_eth: string /* decimal.Decimal */;
+  staked_rpl: string /* decimal.Decimal */;
+  minipools_count_total: number /* uint64 */;
+  minipools_count_leb_16: number /* uint64 */;
+  minipools_count_leb_8: number /* uint64 */;
   collateral: PercentageDetails<string /* decimal.Decimal */>;
   avg_commission: number /* float64 */;
-  rpl: {
-    claimed: string /* decimal.Decimal */;
-    unclaimed: string /* decimal.Decimal */;
-  };
+  rpl_claimed: string /* decimal.Decimal */;
+  rpl_unclaimed: string /* decimal.Decimal */;
   effective_rpl: string /* decimal.Decimal */;
   rpl_apr: number /* float64 */;
   rpl_apr_update_ts: number /* int64 */;
   rpl_estimate: string /* decimal.Decimal */;
-  smoothing_pool: {
-    is_opt_in: boolean;
-    claimed: string /* decimal.Decimal */;
-    unclaimed: string /* decimal.Decimal */;
-  };
+  smoothingpool_opt_in: boolean;
+  smoothingpool_claimed: string /* decimal.Decimal */;
+  smoothingpool_unclaimed: string /* decimal.Decimal */;
+  node_deposit_balance: string /* decimal.Decimal */;
+  user_deposit_balance: string /* decimal.Decimal */;
   timezone: string;
   refund_balance: string /* decimal.Decimal */;
   deposit_credit: string /* decimal.Decimal */;
-  rpl_stake: {
-    min: string /* decimal.Decimal */;
-    max: string /* decimal.Decimal */;
-  };
 }
 export type GetValidatorDashboardRocketPoolResponse = ApiPagingResponse<VDBRocketPoolTableRow>;
 export type GetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBRocketPoolTableRow>;
