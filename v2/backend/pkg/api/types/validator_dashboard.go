@@ -285,40 +285,32 @@ type GetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithd
 // ------------------------------------------------------------
 // Rocket Pool Tab
 type VDBRocketPoolTableRow struct {
-	Node   Address `json:"node" extensions:"x-order=1"`
-	Staked struct {
-		Eth decimal.Decimal `json:"eth"`
-		Rpl decimal.Decimal `json:"rpl"`
-	} `json:"staked"`
-	Minipools struct {
-		Total uint64 `json:"total"`
-		Leb16 uint64 `json:"leb_16"`
-		Leb8  uint64 `json:"leb_8"`
-	} `json:"minipools"`
-	Collateral    PercentageDetails[decimal.Decimal] `json:"collateral"`
-	AvgCommission float64                            `json:"avg_commission"`
-	Rpl           struct {
-		Claimed   decimal.Decimal `json:"claimed"`
-		Unclaimed decimal.Decimal `json:"unclaimed"`
-	} `json:"rpl"`
-	EffectiveRpl   decimal.Decimal `json:"effective_rpl"`
-	RplApr         float64         `json:"rpl_apr"`
-	RplAprUpdateTs int64           `json:"rpl_apr_update_ts"`
-	RplEstimate    decimal.Decimal `json:"rpl_estimate"`
-	SmoothingPool  struct {
-		IsOptIn   bool            `json:"is_opt_in"`
-		Claimed   decimal.Decimal `json:"claimed"`
-		Unclaimed decimal.Decimal `json:"unclaimed"`
-	} `json:"smoothing_pool"`
+	Address                []byte                             `json:"-"`
+	Node                   Address                            `json:"node" extensions:"x-order=1"`
+	StakedEth              decimal.Decimal                    `json:"staked_eth"`
+	StakedRpl              decimal.Decimal                    `json:"staked_rpl"`
+	MinipoolsTotal         uint64                             `json:"minipools_count_total"`
+	MinipoolsLeb16         uint64                             `json:"minipools_count_leb_16"`
+	MinipoolsLeb8          uint64                             `json:"minipools_count_leb_8"`
+	Collateral             PercentageDetails[decimal.Decimal] `json:"collateral"`
+	AvgCommission          float64                            `json:"avg_commission"`
+	RplClaimed             decimal.Decimal                    `json:"rpl_claimed"`
+	RplUnclaimed           decimal.Decimal                    `json:"rpl_unclaimed"`
+	EffectiveRpl           decimal.Decimal                    `json:"effective_rpl"`
+	RplApr                 float64                            `json:"rpl_apr"`
+	RplAprUpdateTs         int64                              `json:"rpl_apr_update_ts"`
+	RplEstimate            decimal.Decimal                    `json:"rpl_estimate"`
+	SmoothingpoolOptIn     bool                               `json:"smoothingpool_opt_in"`
+	SmoothingpoolClaimed   decimal.Decimal                    `json:"smoothingpool_claimed"`
+	SmoothingpoolUnclaimed decimal.Decimal                    `json:"smoothingpool_unclaimed"`
+	NodeDepositBalance     decimal.Decimal                    `json:"node_deposit_balance"`
+	UserDepositBalance     decimal.Decimal                    `json:"user_deposit_balance"`
 
 	Timezone      string          `json:"timezone"`
 	RefundBalance decimal.Decimal `json:"refund_balance"`
 	DepositCredit decimal.Decimal `json:"deposit_credit"`
-	RplStake      struct {
-		Min decimal.Decimal `json:"min"`
-		Max decimal.Decimal `json:"max"`
-	} `json:"rpl_stake"`
 }
+
 type GetValidatorDashboardRocketPoolResponse ApiPagingResponse[VDBRocketPoolTableRow]
 
 type GetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBRocketPoolTableRow]
