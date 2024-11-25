@@ -23,7 +23,7 @@
     "vue-echarts": "^6.7.3"
   },
   "devDependencies": {
-    "@nuxt/eslint": "^0.3.13",
+    "@nuxt/eslint": "^0.7.1",
     "@nuxtjs/color-mode": "^3.5.2",
     "@nuxtjs/i18n": "^8.0.0",
     "@nuxtjs/style-resources": "^1.2.2",
