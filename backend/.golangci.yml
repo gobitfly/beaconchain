@@ -124,9 +124,6 @@ linters-settings:
           - "!**/pkg/exporter/modules/eth1.go"
         allow:
           - $gostd
-        deny:
-          - pkg: github.com/prysmaticlabs/prysm/v3
-            desc: "Depending on your needs you might find something here https://github.com/wealdtech"
       main-logging:
         list-mode: lax # allow unless explicitely denied
         files:
