@@ -286,7 +286,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 			if rpInfos != nil && protocolModes.RocketPool {
 				scheduledDs = scheduledDs.
-					SelectAppend(goqu.L("false").As("is_smoothing_pool"))
+					SelectAppend(goqu.L("NULL::BOOL").As("is_smoothing_pool"))
 			}
 
 			// We don't have access to exec_block_number and status for a WHERE without wrapping the query so if we sort by those get all the data
@@ -334,7 +334,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		ElReward        decimal.NullDecimal `db:"el_reward"`
 		ClReward        decimal.NullDecimal `db:"cl_reward"`
 		GraffitiText    sql.NullString      `db:"graffiti_text"`
-		IsSmoothingPool bool                `db:"is_smoothing_pool"`
+		IsSmoothingPool sql.NullBool        `db:"is_smoothing_pool"`
 
 		// for cursor only
 		Reward decimal.Decimal
@@ -462,7 +462,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				TraceIdx: -1,
 			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
-			if rpInfos != nil && protocolModes.RocketPool && !proposal.IsSmoothingPool {
+			if rpInfos != nil && protocolModes.RocketPool && !(proposal.IsSmoothingPool.Valid && proposal.IsSmoothingPool.Bool) {
 				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok {
 					reward.El = reward.El.Mul(d.getRocketPoolOperatorFactor(rpValidator))
 				}
