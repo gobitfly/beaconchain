@@ -4,7 +4,6 @@ import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
@@ -29,10 +28,9 @@ const {
   value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
-const { groups } = useValidatorDashboardGroups()
 const {
-  hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+  groups, hasValidators,
+} = storeToRefs(useValidatorDashboardStore())
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -60,10 +58,7 @@ const loadData = (query?: TableQueryParams) => {
 }
 
 watch(
-  [
-    dashboardKey,
-    overview,
-  ],
+  [ dashboardKey ],
   () => {
     loadData()
   },

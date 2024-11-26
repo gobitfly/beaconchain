@@ -13,10 +13,11 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
 
+const validatorDashboardStore = useValidatorDashboardStore()
 const {
-  hasAbilityCharthistory,
-  overview,
-} = useValidatorDashboardOverviewStore()
+  groups: dashboardGroups,
+  hasAbilityChartHistory,
+} = storeToRefs(validatorDashboardStore)
 
 const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 
@@ -25,7 +26,7 @@ const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
 const aggregationList = computed(() => {
   return AggregationTimeframes.map(timeframe => ({
-    disabled: !hasAbilityCharthistory.value[timeframe],
+    disabled: !hasAbilityChartHistory.value[timeframe],
     id: timeframe,
     label: $t(`time_frames.${timeframe}`),
   }))
@@ -57,11 +58,11 @@ const total = ref(
 //   || chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_NETWORK_AVERAGE),
 // )
 const groups = computed(() => {
-  if (!overview.value?.groups) {
+  if (!dashboardGroups.value) {
     return []
   }
   return orderBy(
-    overview.value.groups.filter(g => !!g.count),
+    dashboardGroups.value.filter(g => !!g.count),
     [ g => g.name.toLowerCase() ],
     'asc',
   )

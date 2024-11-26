@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { orderBy } from 'lodash-es'
-import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
+import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
-const { dashboardKey } = useDashboardKey()
 const {
-  overview, validatorCount,
-} = useValidatorDashboardOverviewStore()
+  groups: dashboardGroups, validatorCount,
+} = storeToRefs(useValidatorDashboardStore())
 const { networkInfo } = useNetworkStore()
 const selectedGroups = ref<number[]>([])
 
@@ -15,17 +14,17 @@ const {
   resetTick, tick,
 } = useInterval(12)
 
-const {
-  refreshSlotViz, slotViz,
-} = useValidatorSlotVizStore()
+const props = defineProps<{
+  data?: SlotVizEpoch[],
+}>()
+const { data } = toRefs(props)
 
-await useAsyncData('validator_dashboard_slot_viz', () =>
-  refreshSlotViz(dashboardKey.value),
-)
+const emit = defineEmits<{
+  (e: 'update', groupIds?: number[]): void,
+}>()
 
 watch(
   () => [
-    dashboardKey.value,
     selectedGroups.value,
     tick.value,
   ],
@@ -37,9 +36,8 @@ watch(
     ) {
       resetTick()
     }
-    refreshSlotViz(dashboardKey.value, selectedGroups.value)
+    emit('update', selectedGroups.value)
   },
-  { immediate: true },
 )
 
 const initiallyHideVisible = computed(() => {
@@ -50,11 +48,11 @@ const initiallyHideVisible = computed(() => {
 })
 
 const groups = computed(() => {
-  if (!overview.value?.groups) {
+  if (!dashboardGroups.value) {
     return []
   }
   return orderBy(
-    overview.value.groups.filter(g => !!g.count),
+    dashboardGroups.value.filter(g => !!g.count),
     [ g => g.name.toLowerCase() ],
     'asc',
   )
@@ -83,7 +81,6 @@ watch(
       selectAll()
     }
   },
-  { immediate: true },
 )
 
 const selectedLabel = computed(() => {
@@ -103,8 +100,8 @@ const selectedLabel = computed(() => {
 
 <template>
   <SlotVizViewer
-    v-if="slotViz"
-    :data="slotViz"
+    v-if="data"
+    :data
     :network-info
     :timestamp="tick"
     :initially-hide-visible
