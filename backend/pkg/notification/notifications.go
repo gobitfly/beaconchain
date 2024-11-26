@@ -1171,6 +1171,14 @@ func sendDiscordNotifications() error {
 						errResp.Status = resp.Status
 						resp.Body.Close()
 
+						if resp.StatusCode != http.StatusOK {
+							trimmedBody := b
+							if len(trimmedBody) > 1000 {
+								trimmedBody = trimmedBody[:1000]
+							}
+							log.WarnWithFields(map[string]interface{}{"errResp.Body": trimmedBody, "webhook.Url": webhook.Url, "status": resp.StatusCode}, "error pushing discord webhook")
+						}
+
 						if resp.StatusCode == http.StatusTooManyRequests {
 							log.Warnf("could not push to discord webhook due to rate limit. %v url: %v", errResp.Body, webhook.Url)
 						} else {
