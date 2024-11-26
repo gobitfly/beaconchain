@@ -1,32 +1,30 @@
 import { test, expect } from "@playwright/test";
-import { DashboardPage } from "../../pageObject/dashboard.page";
+import { DashboardPage } from "../../page-object/dashboard.page";
+import { BasePage } from "../../page-object/base.page";
 
-test.describe("Add Dashboard Modal Tests", () => {
-    let dashboardPage: DashboardPage;
-
+test.describe("Dashboard Tests", () => {
     test.beforeEach(async ({ page }) => {
-        dashboardPage = new DashboardPage(page);
-        await page.goto("https://v2-staging-mainnet.beaconcha.in/dashboard#summary");
-        await page.waitForTimeout(2000);
+        await BasePage.goto(page, "/dashboard#summary");
     });
 
-    test("Verify modal title is visible", async () => {
-        await dashboardPage.verifyAddDashboardTitleVisible();
+    test("Verify modal title is visible", async ({ page }) => {
+        await DashboardPage.verifyAddDashboardTitleVisible(page);
     });
 
-    test("Verify Validators button is clickable", async () => {
-        await dashboardPage.clickValidators();
+    test("Verify Validators button is clickable", async ({ page }) => {
+        await DashboardPage.clickValidators(page);
     });
 
-    test("Verify Accounts button is disabled", async () => {
-        await dashboardPage.verifyAccountsButtonDisabled();
+    test("Verify Accounts button is disabled", async ({ page }) => {
+        await DashboardPage.verifyAccountsButtonDisabled(page);
     });
 
-    test("Verify Ethereum selection works", async () => {
-        await dashboardPage.clickValidators();
-        await dashboardPage.clickContinue();
-        await dashboardPage.clickEthereum();
-        await dashboardPage.clickContinueNetwork();
-        await expect(dashboardPage.overview).toBeVisible({timeout: 15000})
+    test("Verify Ethereum selection works", async ({ page }) => {
+        await DashboardPage.clickValidators(page);
+        await DashboardPage.clickContinue(page);
+        await DashboardPage.clickEthereum(page);
+        await DashboardPage.clickContinueNetwork(page);
+
+        await expect(DashboardPage.overview(page)).toBeVisible({ timeout: 15000 });
     });
 });
