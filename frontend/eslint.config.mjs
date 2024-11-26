@@ -65,6 +65,15 @@ export default withNuxt({
       'single',
     ],
     'no-console': 'warn',
+    'no-trailing-spaces': 'error',
+    'vue/html-closing-bracket-spacing': [
+      'error',
+      {
+        endTag: 'never',
+        selfClosingTag: 'never',
+        startTag: 'never',
+      },
+    ],
     'vue/max-attributes-per-line': 'off',
     'vue/max-len': [
       'error',
