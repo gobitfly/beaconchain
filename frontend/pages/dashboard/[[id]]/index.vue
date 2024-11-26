@@ -17,6 +17,8 @@ import {
   isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
+import type { VDBOverviewData } from '~/types/api/validator_dashboard'
+import type { SlotVizEpoch } from '~/types/api/slot_viz'
 
 const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
@@ -85,47 +87,7 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
-const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
-
-const { error: validatorOverviewError } = await useAsyncData(
-  'validator_overview',
-  () => refreshOverview(dashboardKey.value),
-  { watch: [ dashboardKey ] },
-)
-// when we run into an error loading a dashboard keep it here to prevent an infinity loop
-const errorDashboardKeys: string[] = []
-const setDashboardKeyIfNoError = (key: string) => {
-  if (!errorDashboardKeys.includes(key)) {
-    setDashboardKey(key)
-  }
-}
-watch(
-  validatorOverviewError,
-  (error) => {
-    // we temporary blacklist dashboard id's that threw an error
-    if (
-      error
-      && dashboardKey.value
-      && !(
-        !!dashboards.value?.account_dashboards?.find(
-          d => d.id.toString() === dashboardKey.value,
-        )
-        || !!dashboards.value?.validator_dashboards?.find(
-          d => !d.is_archived && d.id.toString() === dashboardKey.value,
-        )
-      )
-    ) {
-      if (!errorDashboardKeys.includes(dashboardKey.value)) {
-        errorDashboardKeys.push(dashboardKey.value)
-      }
-      setDashboardKey('')
-    }
-  },
-  { immediate: true },
-)
 
 const dashboardCreationControllerModal
   = ref<typeof DashboardCreationController>()
@@ -133,6 +95,12 @@ function showDashboardCreationDialog() {
   dashboardCreationControllerModal.value?.show()
 }
 
+const errorDashboardKeys: string[] = []
+const setDashboardKeyIfNoError = (key: string) => {
+  if (!errorDashboardKeys.includes(key)) {
+    setDashboardKey(key)
+  }
+}
 watch(
   [
     dashboardKey,
@@ -180,6 +148,105 @@ watch(
   },
   { immediate: true },
 )
+
+const validatorDashboardStore = useValidatorDashboardStore()
+
+const overviewData = ref<VDBOverviewData>()
+const {
+  fetchOverviewData,
+} = useValidatorDashboardOverview()
+
+const slotVizData = ref<SlotVizEpoch[]>()
+const {
+  fetchSlotVizData,
+} = useValidatorSlotViz()
+// fetches all data for the dashboard (overview, slot viz, active table)
+function fetchAllData() {
+  if (dashboardKey.value) { // valid dashboard key -> fetch all data
+    return Promise.allSettled([
+      fetchOverviewData(dashboardKey.value),
+      fetchSlotVizData(dashboardKey.value),
+    ])
+  }
+  if (!isLoggedIn.value) { // implies empty guest dashboard -> only fetch slot viz
+    return Promise.allSettled([
+      undefined,
+      fetchSlotVizData(dashboardKey.value),
+    ])
+  }
+  return Promise.allSettled([ // implies logged-in user with no dashboards -> fetch nothing
+    undefined,
+    undefined,
+  ])
+}
+
+function handleError(e: any) {
+  if (!e) {
+    return
+  }
+  if (e.statusCode === 404) {
+    // TODO: show that the dashboard does not exist
+    return
+  }
+  throw e
+}
+function handleFetchedData(
+  fetchedOverviewData: PromiseFulfilledResult<undefined>
+    | PromiseFulfilledResult<VDBOverviewData>
+    | PromiseRejectedResult,
+  fetchedSlotVizData: PromiseFulfilledResult<SlotVizEpoch[]>
+    | PromiseFulfilledResult<undefined>
+    | PromiseRejectedResult,
+) {
+  if (isRejected(fetchedOverviewData)) {
+    handleError(fetchedOverviewData.reason)
+    return
+  }
+  if (isRejected(fetchedSlotVizData)) {
+    handleError(fetchedSlotVizData.reason)
+    return
+  }
+  overviewData.value = fetchedOverviewData.value
+  slotVizData.value = fetchedSlotVizData.value
+  if (fetchedOverviewData.value) {
+    validatorDashboardStore.setByOverviewData(fetchedOverviewData.value)
+  }
+}
+function isRejected<T>(p: PromiseSettledResult<T>): p is PromiseRejectedResult {
+  return p.status === 'rejected'
+}
+function refreshSlotViz(groupIds: number[]) {
+  fetchSlotVizData(dashboardKey.value, groupIds)
+    .then((data) => {
+      slotVizData.value = data
+    })
+    .catch((e) => {
+      handleError(e)
+    })
+}
+
+// init SSR data
+const {
+  data,
+} = await useAsyncData('complete_validator_dashboard_fetch', async () => { return fetchAllData() })
+
+if (data?.value) {
+  const [
+    fetchedOverviewData,
+    fetchedSlotVizData,
+  ] = data.value
+  handleFetchedData(fetchedOverviewData, fetchedSlotVizData)
+}
+// updates data for all non-modal components, usually triggered by modyfing the dashboard
+function updateAll() {
+  fetchAllData()
+    .then(([
+      fetchedOverviewData,
+      fetchedSlotVizData,
+    ]) => {
+      handleFetchedData(fetchedOverviewData, fetchedSlotVizData)
+    })
+}
 </script>
 
 <template>
@@ -201,12 +268,21 @@ watch(
     <BcPageWrapper>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
-        <DashboardControls :dashboard-title="overview?.name" />
-        <DashboardValidatorOverview class="overview" />
+        <DashboardControls
+          :dashboard-title="overviewData?.name"
+          @dashboard-modified="updateAll"
+        />
+        <DashboardValidatorOverview
+          class="overview"
+          :data="overviewData"
+        />
       </template>
       <DashboardSharedDashboardModal />
       <div>
-        <DashboardValidatorSlotViz />
+        <DashboardValidatorSlotViz
+          :data="slotVizData"
+          @update="refreshSlotViz"
+        />
       </div>
       <BcTabList
         :tabs

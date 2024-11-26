@@ -10,7 +10,6 @@ import {
   BcPremiumModal,
   DashboardGroupSelectionDialog,
 } from '#components'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type {
   GetValidatorDashboardValidatorsResponse,
   VDBManageValidatorsTableRow,
@@ -32,9 +31,7 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
-const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
+const { validatorCount } = storeToRefs(useValidatorDashboardStore())
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
@@ -102,6 +99,9 @@ const mapIndexOrPubKey = (
   return [ ...new Set(validators?.map(
     validator => validator.index ?? validator.public_key)) ]
 }
+const emit = defineEmits<{
+  (e: 'dashboard-modified'): void,
+}>()
 
 const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
   if (
@@ -125,7 +125,7 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
   )
 
   loadData()
-  refreshOverview(dashboardKey.value)
+  emit('dashboard-modified')
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -148,7 +148,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   )
 
   loadData()
-  refreshOverview(dashboardKey.value)
+  emit('dashboard-modified')
 }
 
 const { premium_perks } = useUserStore()
@@ -270,11 +270,8 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
   })
 }
-const totalValidators = computed(() => {
-  // this is necessary after an `typescript update`
-  // for types created by api, we should use `types` instead of `interfaces`
-  return addUpValues(overview.value?.validators as unknown as Record<string, number>)
-})
+
+const totalValidators = computed(() => validatorCount.value ?? 0)
 
 const maxValidatorsPerDashboard = computed(() =>
   isGuestDashboard.value || !user.value?.premium_perks?.validators_per_dashboard

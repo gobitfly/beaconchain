@@ -9,10 +9,8 @@ import {
   DAHSHBOARDS_NEXT_EPOCH_ID,
 } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
-import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const {
   dashboardKey,
@@ -36,10 +34,9 @@ const {
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const { slotViz } = useValidatorSlotVizStore()
 
-const { groups } = useValidatorDashboardGroups()
 const {
-  hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+  groups, hasValidators,
+} = storeToRefs(useValidatorDashboardStore())
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -62,10 +59,7 @@ const loadData = (query?: TableQueryParams) => {
 }
 
 watch(
-  [
-    dashboardKey,
-    overview,
-  ],
+  [ dashboardKey ],
   () => {
     loadData()
   },
