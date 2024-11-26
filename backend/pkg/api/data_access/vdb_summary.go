@@ -30,7 +30,6 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBSummaryTableRow, 0)
 	var paging t.Paging
 
@@ -235,6 +234,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			}
 		}
 		groupSum.ClRewards = groupSum.ClRewards.Add(clRewardWei)
+		queryResultSumMap[row.GroupId] = groupSum
 	}
 	queryResultSum := slices.Collect(maps.Values(queryResultSumMap))
 
@@ -252,9 +252,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
+					goqu.L("proposer_fee_recipient"),
 					goqu.MAX("value").As("value")).
 				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
+				GroupBy("exec_block_hash", "proposer_fee_recipient")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochStart, epochEnd)).
@@ -263,7 +264,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
 		ds = ds.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+			Where(goqu.L("(b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?))", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if len(validators) > 0 {
@@ -583,7 +584,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	// TODO: implement data retrieval for the following new field
 	// Fetch validator list for user dashboard from the dashboard table when querying the past sync committees as the rolling table might miss exited validators
 	// TotalMissedRewards
-	// @DATA-ACCESS incorporate protocolModes
 	// @DATA-ACCESS implement data retrieval for Rocket Pool stats (if present)
 
 	var err error
@@ -1064,18 +1064,19 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
+					goqu.L("proposer_fee_recipient"),
 					goqu.MAX("value").As("value")).
 				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
+				GroupBy("exec_block_hash", "proposer_fee_recipient")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.status = '1'")).
-		GroupBy("b.proposer")
+		GroupBy(goqu.L("b.proposer"))
 
 	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+			Where(goqu.L("(b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?))", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if len(dashboardId.Validators) > 0 {

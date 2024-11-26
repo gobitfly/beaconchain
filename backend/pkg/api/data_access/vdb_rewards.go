@@ -21,7 +21,6 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
-	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBRewardsTableRow, 0)
 	var paging t.Paging
 
@@ -120,9 +119,10 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
+					goqu.L("proposer_fee_recipient"),
 					goqu.MAX("value").As("value")).
 				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
+				GroupBy("exec_block_hash", "proposer_fee_recipient")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		GroupBy(goqu.L("b.epoch"), goqu.L("b.proposer"))
@@ -130,7 +130,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+			Where(goqu.L("(b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?))", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if dashboardId.Validators == nil {
@@ -629,7 +629,6 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 }
 
 func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBGroupRewardsData, error) {
-	// @DATA-ACCESS incorporate protocolModes
 	ret := &t.VDBGroupRewardsData{}
 
 	wg := errgroup.Group{}
@@ -691,9 +690,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
+					goqu.L("proposer_fee_recipient"),
 					goqu.MAX("value").As("value")).
 				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
+				GroupBy("exec_block_hash", "proposer_fee_recipient")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch = ?", epoch)).
@@ -702,7 +702,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+			Where(goqu.L("(b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?))", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if dashboardId.Validators == nil {
@@ -862,7 +862,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 }
 
 func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.ChartData[int, decimal.Decimal], error) {
-	// @DATA-ACCESS incorporate protocolModes
 	// bar chart for the CL and EL rewards for each group for each epoch.
 	// NO series for all groups combined except if AggregateGroups is true.
 	// series id is group id, series property is 'cl' or 'el'
@@ -911,9 +910,10 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
+					goqu.L("proposer_fee_recipient"),
 					goqu.MAX("value").As("value")).
 				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
+				GroupBy("exec_block_hash", "proposer_fee_recipient")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
@@ -922,7 +922,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+			Where(goqu.L("(b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?))", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	if dashboardId.Validators == nil {
@@ -1254,9 +1254,10 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 				From("relays_blocks").
 				Select(
 					goqu.L("exec_block_hash"),
+					goqu.L("proposer_fee_recipient"),
 					goqu.MAX("value").As("value")).
 				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
+				GroupBy("exec_block_hash", "proposer_fee_recipient")).As("rb"),
 			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
 		).
 		Where(goqu.L("b.epoch = ?", epoch)).
@@ -1266,7 +1267,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	if rpInfos != nil && protocolModes.RocketPool {
 		// Exclude rewards that went to the smoothing pool
 		elDs = elDs.
-			Where(goqu.L("b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?)", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+			Where(goqu.L("(b.exec_fee_recipient != ? OR (rb.proposer_fee_recipient IS NOT NULL AND rb.proposer_fee_recipient != ?))", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------

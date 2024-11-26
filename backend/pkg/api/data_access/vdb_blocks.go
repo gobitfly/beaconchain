@@ -24,8 +24,6 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
-	// @DATA-ACCESS incorporate protocolModes
-
 	// -------------------------------------
 	// Setup
 	var err error
@@ -186,7 +184,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 	if rpInfos != nil && protocolModes.RocketPool {
 		blocksDs = blocksDs.
-			SelectAppend(goqu.L("blocks.exec_fee_recipient = ? AND (rb.proposer_fee_recipient IS NULL OR rb.proposer_fee_recipient = ?) AS is_smoothing_pool", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+			SelectAppend(goqu.L("(blocks.exec_fee_recipient = ? AND (rb.proposer_fee_recipient IS NULL OR rb.proposer_fee_recipient = ?)) AS is_smoothing_pool", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
 	}
 
 	// 3. Sorting and pagination
@@ -287,7 +285,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				)
 
 			if rpInfos != nil && protocolModes.RocketPool {
-				blocksDs = blocksDs.
+				scheduledDs = scheduledDs.
 					SelectAppend(goqu.L("false").As("is_smoothing_pool"))
 			}
 

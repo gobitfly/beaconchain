@@ -224,6 +224,10 @@ func (d *DataAccessService) getRocketPoolInfos(ctx context.Context, dashboardId 
 		return nil, err
 	}
 
+	if len(queryResult) == 0 {
+		return nil, nil
+	}
+
 	rpInfo := t.RPInfo{
 		Minipool: make(map[uint64]t.RPMinipoolInfo),
 		// Smoothing pool address is the same for all nodes on the network so take the first result

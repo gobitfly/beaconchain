@@ -375,7 +375,11 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
 
-			if rpValidator, ok := rpInfos.Minipool[validator]; ok {
+			if rpInfos == nil {
+				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
+
+				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
+			} else if rpValidator, ok := rpInfos.Minipool[validator]; ok {
 				if protocolModes.RocketPool {
 					// Calculate the balance of the operator
 					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
