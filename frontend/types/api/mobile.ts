@@ -22,11 +22,11 @@ export interface MobileWidgetData {
 }
 export type InternalGetValidatorDashboardMobileWidgetResponse = ApiDataResponse<MobileWidgetData>;
 export interface MobileValidatorDashboardValidatorsRocketPool {
-  deposit_Amount: string /* decimal.Decimal */;
+  deposit_amount: string /* decimal.Decimal */;
   commission: number /* float64 */; // percentage, 0-1
   status: 'Staking' | 'Dissolved' | 'Prelaunch' | 'Initialized' | 'Withdrawable';
   penalty_count: number /* uint64 */;
-  is_in_smokaothing_pool: boolean;
+  is_in_smoothing_pool: boolean;
 }
 export interface MobileValidatorDashboardValidatorsTableRow {
   index: number /* uint64 */;
@@ -40,6 +40,7 @@ export interface MobileValidatorDashboardValidatorsTableRow {
    * additional mobile fields
    */
   is_in_sync_committee: boolean;
+  is_in_next_sync_committee: boolean;
   efficiency: number /* float64 */;
   rocket_pool?: MobileValidatorDashboardValidatorsRocketPool;
 }

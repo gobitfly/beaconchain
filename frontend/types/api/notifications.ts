@@ -157,6 +157,7 @@ export interface NotificationSettingsGeneral {
   do_not_disturb_timestamp: number /* int64 */; // notifications are disabled until this timestamp
   is_email_notifications_enabled: boolean;
   is_push_notifications_enabled: boolean;
+  is_webhook_notifications_enabled: boolean;
   is_machine_offline_subscribed: boolean;
   is_machine_storage_usage_subscribed: boolean;
   machine_storage_usage_threshold: number /* float64 */;

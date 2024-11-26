@@ -190,6 +190,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.Frontend.WriterDatabase.Port,
 				MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
+				SSL:          cfg.Frontend.WriterDatabase.SSL,
 			},
 			&types.DatabaseConfig{
 				Username:     cfg.Frontend.ReaderDatabase.Username,
@@ -199,6 +200,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 				Port:         cfg.Frontend.ReaderDatabase.Port,
 				MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
 				MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
+				SSL:          cfg.Frontend.ReaderDatabase.SSL,
 			}, "pgx", "postgres",
 		)
 	}()

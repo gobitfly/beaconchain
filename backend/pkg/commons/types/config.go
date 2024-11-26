@@ -152,6 +152,7 @@ type Config struct {
 			Port         string `yaml:"port" envconfig:"FRONTEND_READER_DB_PORT"`
 			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"FRONTEND_READER_DB_MAX_OPEN_CONNS"`
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"FRONTEND_READER_DB_MAX_IDLE_CONNS"`
+			SSL          bool   `yaml:"ssl" envconfig:"FRONTEND_READER_DB_SSL"`
 		} `yaml:"readerDatabase"`
 		WriterDatabase struct {
 			Username     string `yaml:"user" envconfig:"FRONTEND_WRITER_DB_USERNAME"`
@@ -161,6 +162,7 @@ type Config struct {
 			Port         string `yaml:"port" envconfig:"FRONTEND_WRITER_DB_PORT"`
 			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"FRONTEND_WRITER_DB_MAX_OPEN_CONNS"`
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"FRONTEND_WRITER_DB_MAX_IDLE_CONNS"`
+			SSL          bool   `yaml:"ssl" envconfig:"FRONTEND_WRITER_DB_SSL"`
 		} `yaml:"writerDatabase"`
 		Stripe struct {
 			Webhook   string `yaml:"webhook" envconfig:"FRONTEND_STRIPE_WEBHOOK"`

@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -27,7 +30,7 @@ type AppRepository interface {
 	AddMobilePurchase(ctx context.Context, tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
 	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error)
 	IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error
-	GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error)
+	GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error)
 }
 
 // GetUserIdByRefreshToken basically used to confirm the claimed user id with the refresh token. Returns the userId if successful
@@ -369,6 +372,182 @@ func (d *DataAccessService) getInternalRpNetworkStats(ctx context.Context) (*t.R
 	return &networkStats, err
 }
 
-func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBMobileValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
-	return d.dummy.GetValidatorDashboardMobileValidators(ctx, dashboardId, period, cursor, colSort, search, limit)
+func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+	result, p, err := d.GetValidatorDashboardValidators(ctx, dashboardId, groupId, cursor, colSort, search, limit)
+	if err != nil {
+		return nil, p, err
+	}
+
+	// Get extra information for this result subset
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "validator mapping error")
+	}
+
+	pubKeys := make([][]byte, 0, len(result))
+	indices := make([]uint64, 0, len(result))
+	for _, row := range result {
+		metadata := validatorMapping.ValidatorMetadata[row.Index]
+		pubKeys = append(pubKeys, metadata.PublicKey)
+		indices = append(indices, row.Index)
+	}
+
+	wg := errgroup.Group{}
+
+	type RocketPoolData struct {
+		PubKey            []byte          `db:"pubkey"`
+		Commission        float64         `db:"node_fee"`
+		PenaltyCount      uint64          `db:"penalty_count"`
+		DepositAmount     decimal.Decimal `db:"node_deposit_balance"`
+		Status            string          `db:"status"`
+		IsInSmoothingPool bool            `db:"smoothing_pool_opted_in"`
+	}
+
+	var rocketPoolMap map[uint64]RocketPoolData
+	wg.Go(func() error {
+		rocketPoolResults := []RocketPoolData{}
+
+		validatorsQuery := `
+		SELECT
+			pubkey,
+			node_fee,
+			penalty_count,
+			node_deposit_balance,
+			status,
+			rn.smoothing_pool_opted_in
+		FROM rocketpool_minipools
+		LEFT JOIN rocketpool_nodes rn ON rocketpool_minipools.node_address = rn.address
+		WHERE pubkey = ANY($1)
+		`
+		err := d.alloyReader.SelectContext(ctx, &rocketPoolResults, validatorsQuery, pq.ByteaArray(pubKeys))
+		if err != nil {
+			return errors.Wrap(err, "error retrieving rocketpool data")
+		}
+
+		rocketPoolMap = make(map[uint64]RocketPoolData, len(rocketPoolResults))
+		for _, row := range rocketPoolResults {
+			validatorIndex := validatorMapping.ValidatorIndices[string(t.PubKey(hexutil.Encode(row.PubKey)))]
+			rocketPoolMap[validatorIndex] = row
+		}
+		return nil
+	})
+
+	var efficienciesMap map[uint64]float64
+	wg.Go(func() error {
+		var err error
+		clickhouseTable, _, err := d.getTablesForPeriod(period)
+		if err != nil {
+			return err
+		}
+
+		efficienciesMap, err = d.getIndividualEfficiencies(ctx, indices, clickhouseTable)
+		if err != nil {
+			return errors.Wrap(err, "error retrieving efficiencies")
+		}
+		return nil
+	})
+
+	currentSyncCommitteeValidators := make(map[uint64]bool)
+	upcomingSyncCommitteeValidators := make(map[uint64]bool)
+	wg.Go(func() error {
+		latestEpoch := cache.LatestEpoch.Get()
+		var err error
+		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err = d.getCurrentAndUpcomingSyncCommittees(ctx, latestEpoch)
+		if err != nil {
+			return errors.Wrap(err, "error retrieving sync committees")
+		}
+		return nil
+	})
+
+	err = wg.Wait()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var mobileResult []t.MobileValidatorDashboardValidatorsTableRow
+	for _, row := range result {
+		mobileRow := t.MobileValidatorDashboardValidatorsTableRow{
+			Index:                 row.Index,
+			PublicKey:             row.PublicKey,
+			GroupId:               row.GroupId,
+			Balance:               row.Balance,
+			Status:                row.Status,
+			QueuePosition:         row.QueuePosition,
+			WithdrawalCredential:  row.WithdrawalCredential,
+			IsInSyncCommittee:     currentSyncCommitteeValidators[row.Index],
+			IsInNextSyncCommittee: upcomingSyncCommitteeValidators[row.Index],
+			Efficiency:            efficienciesMap[row.Index],
+		}
+
+		if rp, ok := rocketPoolMap[row.Index]; ok {
+			mobileRow.RocketPool = &t.MobileValidatorDashboardValidatorsRocketPool{
+				DepositAmount:     rp.DepositAmount,
+				Commission:        rp.Commission,
+				Status:            rp.Status,
+				PenaltyCount:      rp.PenaltyCount,
+				IsInSmoothingPool: rp.IsInSmoothingPool,
+			}
+		}
+
+		mobileResult = append(mobileResult, mobileRow)
+	}
+
+	return mobileResult, p, nil
+}
+
+func (d *DataAccessService) getIndividualEfficiencies(ctx context.Context, indices []uint64, table string) (map[uint64]float64, error) {
+	ds := goqu.Dialect("postgres").
+		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
+		Select(
+			goqu.L("r.validator_index"),
+			goqu.L("COALESCE(r.attestations_reward::decimal, 0) AS attestations_reward"),
+			goqu.L("COALESCE(r.attestations_ideal_reward::decimal, 0) AS attestations_ideal_reward"),
+			goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
+			goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
+			goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
+			goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled"),
+		).Where(goqu.L("r.validator_index IN ?", indices))
+
+	var queryResult []struct {
+		Index                  uint64          `db:"validator_index"`
+		AttestationReward      decimal.Decimal `db:"attestations_reward"`
+		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
+		BlocksProposed         uint64          `db:"blocks_proposed"`
+		BlocksScheduled        uint64          `db:"blocks_scheduled"`
+		SyncExecuted           uint64          `db:"sync_executed"`
+		SyncScheduled          uint64          `db:"sync_scheduled"`
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[uint64]float64, len(queryResult))
+
+	// Calculate efficiency
+	for _, row := range queryResult {
+		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
+		if !row.AttestationIdealReward.IsZero() {
+			attestationEfficiency.Float64 = row.AttestationReward.Div(row.AttestationIdealReward).InexactFloat64()
+			attestationEfficiency.Valid = true
+		}
+		if row.BlocksScheduled > 0 {
+			proposerEfficiency.Float64 = float64(row.BlocksProposed) / float64(row.BlocksScheduled)
+			proposerEfficiency.Valid = true
+		}
+		if row.SyncScheduled > 0 {
+			syncEfficiency.Float64 = float64(row.SyncExecuted) / float64(row.SyncScheduled)
+			syncEfficiency.Valid = true
+		}
+
+		result[row.Index] = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+	}
+
+	return result, nil
 }

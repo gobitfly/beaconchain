@@ -916,10 +916,10 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(ctx 
 
 // Updates the group for validators already in the dashboard linked to the withdrawal address.
 // Adds up to limit new validators associated with the withdrawal address, if not already in the dashboard.
-func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
+func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalCredential(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, credential string, limit uint64) ([]t.VDBPostValidatorsData, error) {
 	result := []t.VDBPostValidatorsData{}
 
-	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
+	addressParsed, err := hex.DecodeString(strings.TrimPrefix(credential, "0x"))
 	if err != nil {
 		return nil, err
 	}
