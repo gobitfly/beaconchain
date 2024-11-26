@@ -26,7 +26,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
-const { groups } = useValidatorDashboardGroups()
+const { groups } = storeToRefs(useValidatorDashboardStore())
 
 const dialog = useDialog()
 

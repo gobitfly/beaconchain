@@ -6,7 +6,6 @@ import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import {
@@ -45,10 +44,8 @@ const {
 const showAbsoluteValues = ref<boolean | null>(null)
 
 const {
-  hasValidators, overview, validatorCount,
-}
-  = useValidatorDashboardOverviewStore()
-const { groups } = useValidatorDashboardGroups()
+  groups, hasValidators, validatorCount,
+} = storeToRefs(useValidatorDashboardStore())
 
 const timeFrames = computed(() =>
   SummaryTimeFrames.map(t => ({
@@ -91,10 +88,7 @@ watch(
 )
 
 watch(
-  [
-    dashboardKey,
-    overview,
-  ],
+  [ dashboardKey ],
   () => {
     loadData()
   },

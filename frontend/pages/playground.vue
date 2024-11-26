@@ -15,15 +15,12 @@ import type {
 import { formatNumber } from '~/utils/format'
 import type { HashTabs } from '~/types/hashTabs'
 
-const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
-
 useBcSeo()
 
 const {
   latestState, refreshLatestState,
 } = useLatestStateStore()
 const slotVizData = ref<null | SlotVizEpoch[]>(null)
-const { refreshOverview } = useValidatorDashboardOverviewStore()
 
 await Promise.all([
   useAsyncData('latest_state', () => refreshLatestState()),
@@ -33,9 +30,6 @@ await Promise.all([
     )
     slotVizData.value = res.data
   }),
-  useAsyncData('validator_dashboard_overview', () =>
-    refreshOverview(dashboardKey.value),
-  ),
 ])
 
 onMounted(async () => {

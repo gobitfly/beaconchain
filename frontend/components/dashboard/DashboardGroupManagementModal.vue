@@ -29,9 +29,10 @@ const {
 } = useWindowSize()
 
 const visible = defineModel<boolean>()
-
-const { refreshOverview } = useValidatorDashboardOverviewStore()
-const { groups } = useValidatorDashboardGroups()
+const emit = defineEmits<{
+  (e: 'dashboard-modified'): void,
+}>()
+const { groups } = storeToRefs(useValidatorDashboardStore())
 const { dashboards } = storeToRefs(useUserDashboardStore())
 const { user } = useUserStore()
 
@@ -114,7 +115,7 @@ const addGroup = async () => {
     },
     { dashboardKey: dashboardKey.value },
   )
-  await refreshOverview(dashboardKey.value)
+  emit('dashboard-modified')
   newGroupName.value = ''
 }
 
@@ -130,7 +131,7 @@ const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
       groupId: row.id,
     },
   )
-  refreshOverview(dashboardKey.value)
+  emit('dashboard-modified')
 }
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
@@ -142,7 +143,7 @@ const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
       groupId: row.id,
     },
   )
-  refreshOverview(dashboardKey.value)
+  emit('dashboard-modified')
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {

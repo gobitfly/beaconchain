@@ -15,12 +15,10 @@ const { t: $t } = useTranslation()
 
 const input = defineModel<string>()
 
-const {
-  overview,
-} = useValidatorDashboardOverviewStore()
+const { chainId } = storeToRefs(useValidatorDashboardStore())
 const { chainIdByDefault } = useRuntimeConfig().public
 
-const currentDashboardNetwork = computed(() => overview.value?.network ?? chainIdByDefault)
+const currentDashboardNetwork = computed(() => chainId.value ?? chainIdByDefault)
 const {
   data,
   error,
