@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { orderBy } from 'lodash-es'
-import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
+import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
-const { dashboardKey } = useDashboardKey()
+// TODO: REMOVE THIS
 const {
   overview, validatorCount,
 } = useValidatorDashboardOverviewStore()
@@ -16,16 +16,17 @@ const {
 } = useInterval(12)
 
 const {
-  refreshSlotViz, slotViz,
-} = useValidatorSlotVizStore()
+  slotVizData,
+} = defineProps<{
+  slotVizData?: SlotVizEpoch[],
+}>()
 
-await useAsyncData('validator_dashboard_slot_viz', () =>
-  refreshSlotViz(dashboardKey.value),
-)
+const emit = defineEmits<{
+  (e: 'update', groupIds?: number[]): void,
+}>()
 
 watch(
   () => [
-    dashboardKey.value,
     selectedGroups.value,
     tick.value,
   ],
@@ -37,9 +38,8 @@ watch(
     ) {
       resetTick()
     }
-    refreshSlotViz(dashboardKey.value, selectedGroups.value)
+    emit('update', selectedGroups.value)
   },
-  { immediate: true },
 )
 
 const initiallyHideVisible = computed(() => {
@@ -83,7 +83,6 @@ watch(
       selectAll()
     }
   },
-  { immediate: true },
 )
 
 const selectedLabel = computed(() => {
@@ -103,8 +102,8 @@ const selectedLabel = computed(() => {
 
 <template>
   <SlotVizViewer
-    v-if="slotViz"
-    :data="slotViz"
+    v-if="slotVizData"
+    :data="slotVizData"
     :network-info
     :timestamp="tick"
     :initially-hide-visible

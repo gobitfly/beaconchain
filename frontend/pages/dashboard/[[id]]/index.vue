@@ -81,40 +81,7 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
-const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
-
-const { error: validatorOverviewError } = await useAsyncData(
-  'validator_overview',
-  () => refreshOverview(dashboardKey.value),
-  { watch: [ dashboardKey ] },
-)
-watch(
-  validatorOverviewError,
-  (error) => {
-    // we temporary blacklist dashboard id's that threw an error
-    if (
-      error
-      && dashboardKey.value
-      && !(
-        !!dashboards.value?.account_dashboards?.find(
-          d => d.id.toString() === dashboardKey.value,
-        )
-        || !!dashboards.value?.validator_dashboards?.find(
-          d => !d.is_archived && d.id.toString() === dashboardKey.value,
-        )
-      )
-    ) {
-      if (!errorDashboardKeys.includes(dashboardKey.value)) {
-        errorDashboardKeys.push(dashboardKey.value)
-      }
-      setDashboardKey('')
-    }
-  },
-  { immediate: true },
-)
 
 const dashboardCreationControllerModal
   = ref<typeof DashboardCreationController>()
@@ -175,6 +142,62 @@ watch(
   },
   { immediate: true },
 )
+
+// ------------------- Overview -------------------
+
+const {
+  fetchOverviewData,
+  overviewData,
+} = useValidatorDashboardOverview()
+
+async function refreshOverview() {
+  const data = await fetchOverviewData(dashboardKey.value)
+  overviewData.value = data
+}
+// ------------------- Slot Viz -------------------
+const {
+  fetchSlotVizData,
+  slotVizData,
+} = useValidatorSlotViz()
+async function refreshSlotViz(groupIds?: number[]) {
+  const data = await fetchSlotVizData(dashboardKey.value, groupIds)
+  slotVizData.value = data
+}
+// ------------------- SSR Init fetches -------------------
+// SSR fetch for overview, slot viz data and table data
+const {
+  data: ssrInitData,
+  error: ssrInitError,
+} = await useAsyncData('init_validator_dashboard_fetch', async () => {
+  if (!dashboardKey.value) { // For empty guest dashboards only fetch slot viz
+    return await Promise.all([
+      undefined,
+      fetchSlotVizData(dashboardKey.value),
+    ])
+  }
+  return await Promise.all([
+    fetchOverviewData(dashboardKey.value),
+    fetchSlotVizData(dashboardKey.value),
+  ])
+})
+if (ssrInitError.value !== null) {
+  if (ssrInitError.value.statusCode === 404) {
+    // TODO: redirect to 404 page
+  }
+  else {
+    throw ssrInitError.value
+  }
+}
+if (ssrInitData.value !== null) {
+  overviewData.value = ssrInitData.value[0]
+  slotVizData.value = ssrInitData.value[1]
+}
+// ------------------- Mgmnt helpers -------------------
+function updateAll() {
+  refreshSlotViz()
+  refreshOverview()
+}
+provide('updateAll', updateAll)
 </script>
 
 <template>
@@ -191,12 +214,15 @@ watch(
     <BcPageWrapper>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
-        <DashboardControls :dashboard-title="overview?.name" />
-        <DashboardValidatorOverview class="overview" />
+        <DashboardControls :dashboard-title="overviewData?.name" />
+        <DashboardValidatorOverview class="overview" :overview-data />
       </template>
       <DashboardSharedDashboardModal />
       <div>
-        <DashboardValidatorSlotViz />
+        <DashboardValidatorSlotViz
+          :slot-viz-data
+          @update="refreshSlotViz"
+        />
       </div>
       <BcTabList
         :tabs default-tab="summary"
