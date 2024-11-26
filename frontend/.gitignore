@@ -34,3 +34,5 @@ server.crt
 server.key
 
 test-results/
+
+results/
