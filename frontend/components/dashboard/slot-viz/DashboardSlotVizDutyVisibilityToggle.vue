@@ -9,19 +9,26 @@ import {
   IconSlotSync,
 } from '#components'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
+import type { VDBOverviewData } from '~/types/api/validator_dashboard'
 
 type SlotVizCategoriesStorage = {
   [dashboardId: string]: SlotVizCategories[],
 }
 
+const {
+  overviewData,
+} = defineProps<{
+  overviewData?: VDBOverviewData,
+}>()
+
 const { t: $t } = useTranslation()
 const {
   dashboardKey, isSharedDashboard,
 } = useDashboardKey()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const validatorDashboardStore = useValidatorDashboardStore()
 const {
-  isLargeDashboard, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
+  isLargeDashboard,
+} = storeToRefs(validatorDashboardStore)
 
 const persistedSelectedCategories = useStorage<SlotVizCategoriesStorage>('bc-dashboard-slot-viz-visibile-categories', {})
 
@@ -77,7 +84,7 @@ onMounted(() => {
   }
 })
 
-watch(() => overview.value, () => {
+watch(() => overviewData, () => {
   if (!persistedSelectedCategories.value[storageDashboardKey.value]) {
     persistedSelectedCategories.value[storageDashboardKey.value] = selectedCategories.value
   }

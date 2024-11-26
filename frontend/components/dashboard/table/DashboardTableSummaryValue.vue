@@ -37,7 +37,7 @@ const props = defineProps<Props>()
 const { t: $t } = useTranslation()
 const { dashboardKey } = useDashboardKey()
 const dialog = useDialog()
-const { groups } = useValidatorDashboardGroups()
+const { groups } = storeToRefs(useValidatorDashboardStore())
 
 const data = computed(() => {
   const col = props.data

@@ -36,11 +36,10 @@ const {
   temp: tempQuery,
   value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const validatorDashboardStore = useValidatorDashboardStore()
 const {
-  hasValidators, isLargeDashboard, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
+  groups, hasValidators, isLargeDashboard,
+} = storeToRefs(validatorDashboardStore)
 const { width } = useWindowSize()
 const storageDashboardKey = computed(() => {
   return dashboardKey.value || 'guest-dashboard'
@@ -120,20 +119,10 @@ onMounted(() => {
   }
 })
 
-watch(() => overview.value, () => {
-  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
-    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
-  }
-})
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
+watch(dashboardKey, () => {
+  loadData()
+},
+{ immediate: true },
 )
 watch(
   [

@@ -4,9 +4,7 @@ import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboa
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { useValidatorDashboardElDepositsStore } from '~/stores/dashboard/useValidatorDashboardElDepositsStore'
 
 const { dashboardKey } = useDashboardKey()
 
@@ -29,11 +27,10 @@ const {
   TableQueryParams | undefined
 >(undefined, 500)
 
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const validatorDashboardStore = useValidatorDashboardStore()
 const {
-  hasValidators, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
+  groups, hasValidators,
+} = storeToRefs(validatorDashboardStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -56,16 +53,11 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-    getTotalAmount(dashboardKey.value)
-  },
-  { immediate: true },
+watch(dashboardKey, () => {
+  loadData()
+  getTotalAmount(dashboardKey.value)
+},
+{ immediate: true },
 )
 
 watch(

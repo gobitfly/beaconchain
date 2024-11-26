@@ -3,30 +3,35 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
+import type { VDBOverviewData } from '~/types/api/validator_dashboard'
+
+const {
+  overviewData,
+} = defineProps<{
+  isLoading: boolean,
+  overviewData?: VDBOverviewData,
+  timestamp: number,
+}>()
 
 const {
   dashboardKey,
 } = useDashboardKey()
 const { networkInfo } = useNetworkStore()
 const {
-  loading: loadingSlotViz, refreshSlotViz, slotViz,
+  refreshSlotViz, slotViz,
 } = useValidatorSlotVizStore()
 const { secondsPerSlot = 12 } = networkInfo.value
 const {
   resetTick, tick,
 } = useInterval(secondsPerSlot)
 const { getSlotFromTimestamp } = useNetworkStore()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  loading: loadingOverview, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
 
 const selectedCategories = ref<SlotVizCategories[]>([])
 const selectedGroupIds = ref<number[]>([])
 const refetchingSlotViz = ref(false)
 
 const activeValidatorGroups = computed(() =>
-  overview.value?.groups.filter(group => !!group.count) || [],
+  overviewData?.groups.filter(group => !!group.count) || [],
 )
 const mostRecentScheduledSlotId = computed(() => {
   if (!slotViz.value?.length) {
@@ -125,7 +130,7 @@ watch(
     </div>
 
     <div
-      v-if="(loadingSlotViz && !refetchingSlotViz) || loadingOverview"
+      v-if="isLoading && !refetchingSlotViz"
       class="dashboard-slot-viz-grid-loading-skeleton"
     >
       <BcLoadingSpinner

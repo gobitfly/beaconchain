@@ -41,7 +41,6 @@ const {
   publicEntities,
   setDashboardKey,
 } = useDashboardKey()
-const { refreshOverview } = useValidatorDashboardOverviewStore()
 const userDashboardStore = useUserDashboardStore()
 const {
   getDashboardLabel, refreshDashboards, updateGuestDashboardKey,
@@ -57,6 +56,10 @@ const { fetch } = useCustomFetch()
 const isMobile = computed(() => width.value < 520)
 const manageGroupsModalVisisble = ref(false)
 const manageValidatorsModalVisisble = ref(false)
+
+const emit = defineEmits<{
+  (e: 'dashboard-modified'): void,
+}>()
 
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
   if (isSharedDashboard.value) {
@@ -343,7 +346,7 @@ const editDashboard = () => {
     onClose: (value?: DynamicDialogCloseOptions | undefined) => {
       if (value?.data === true) {
         refreshDashboards()
-        refreshOverview(dashboardKey.value)
+        emit('dashboard-modified')
       }
     },
   })
@@ -351,10 +354,14 @@ const editDashboard = () => {
 </script>
 
 <template>
-  <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
+  <DashboardGroupManagementModal
+    v-model="manageGroupsModalVisisble"
+    @dashboard-modified="emit('dashboard-modified')"
+  />
   <DashboardValidatorManagementModal
     v-if="dashboardType == 'validator'"
     v-model="manageValidatorsModalVisisble"
+    @dashboard-modified="emit('dashboard-modified')"
   />
   <div class="header-row">
     <div class="h1 dashboard-title">

@@ -6,7 +6,6 @@ import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
@@ -39,11 +38,10 @@ const {
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
 
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const validatorDashboardStore = useValidatorDashboardStore()
 const {
-  hasValidators, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
+  groups, hasValidators,
+} = storeToRefs(validatorDashboardStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -66,16 +64,11 @@ const loadData = (query?: TableQueryParams) => {
   setQuery(query, true, true)
 }
 
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-    getTotalAmount(dashboardKey.value)
-  },
-  { immediate: true },
+watch(dashboardKey, () => {
+  loadData()
+  getTotalAmount(dashboardKey.value)
+},
+{ immediate: true },
 )
 
 watch(

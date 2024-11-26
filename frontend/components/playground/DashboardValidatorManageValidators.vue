@@ -5,7 +5,7 @@ import {
 } from '#components'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 
-const { groups } = useValidatorDashboardGroups()
+const { groups } = storeToRefs(useValidatorDashboardStore())
 
 const selectedGroupId = ref<number>(DAHSHBOARDS_ALL_GROUPS_ID)
 

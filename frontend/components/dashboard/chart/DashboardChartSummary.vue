@@ -62,9 +62,11 @@ const {
   secondsPerEpoch,
 } = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const { overview } = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
+
+const validatorDashboardStore = useValidatorDashboardStore()
+const {
+  chartHistorySeconds, groups,
+} = storeToRefs(validatorDashboardStore)
 const { latestState } = useLatestStateStore()
 const latestSlot = ref(latestState.value?.current_slot || 0)
 const {
@@ -103,7 +105,7 @@ const categories = computed<number[]>(() => {
     return []
   }
   const maxSeconds
-    = overview.value?.chart_history_seconds?.[aggregation.value] ?? 0
+    = chartHistorySeconds.value?.[aggregation.value] ?? 0
   if (!maxSeconds) {
     return []
   }

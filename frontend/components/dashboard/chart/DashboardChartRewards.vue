@@ -92,7 +92,7 @@ useAsyncData(
   },
 )
 
-const { groups } = useValidatorDashboardGroups()
+const { groups } = storeToRefs(useValidatorDashboardStore())
 
 const { t: $t } = useTranslation()
 const colorMode = useColorMode()
