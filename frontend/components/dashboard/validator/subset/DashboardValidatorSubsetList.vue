@@ -90,6 +90,9 @@ function mapDutyLinks(
   if (!dutyObjects) {
     return []
   }
+  if (props.category === 'pending') {
+    return []
+  }
   let path = ''
   let formatValue = true
   switch (props.category) {
