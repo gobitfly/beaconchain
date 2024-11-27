@@ -43,8 +43,12 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	searchPubkey := regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`).MatchString(search)
-	searchGroup := regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
+	searchGroup := !dashboardId.AggregateGroups && regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]+$`).MatchString(search)
 	searchIndex := regexp.MustCompile(`^[0-9]+$`).MatchString(search)
+
+	if search != "" && !searchPubkey && !searchGroup && !searchIndex {
+		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
+	}
 
 	validators := goqu.T("validators") // could adapt data type to make handling as table/alias less confusing
 	blocks := goqu.T("blocks")
