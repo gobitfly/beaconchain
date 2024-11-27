@@ -1701,16 +1701,14 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 
 	// Build the query and get the data
 	var queryResult []struct {
-		Slot           uint64        `db:"slot"`
-		Block          sql.NullInt64 `db:"exec_block_number"`
-		Status         string        `db:"status"`
-		ValidatorIndex uint64        `db:"proposer"`
+		Slot           uint64 `db:"slot"`
+		Status         string `db:"status"`
+		ValidatorIndex uint64 `db:"proposer"`
 	}
 
 	ds = goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.slot"),
-			goqu.L("b.exec_block_number"),
 			goqu.L("b.status"),
 			goqu.L("b.proposer")).
 		From(goqu.L("blocks b")).
@@ -1747,10 +1745,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 			if _, ok := proposedValidatorMap[row.ValidatorIndex]; !ok {
 				proposedValidatorMap[row.ValidatorIndex] = make([]uint64, 0)
 			}
-			if !row.Block.Valid {
-				return nil, fmt.Errorf("error no block number for slot %v found", row.Slot)
-			}
-			proposedValidatorMap[row.ValidatorIndex] = append(proposedValidatorMap[row.ValidatorIndex], uint64(row.Block.Int64))
+			proposedValidatorMap[row.ValidatorIndex] = append(proposedValidatorMap[row.ValidatorIndex], row.Slot)
 		} else {
 			if _, ok := missedValidatorMap[row.ValidatorIndex]; !ok {
 				missedValidatorMap[row.ValidatorIndex] = make([]uint64, 0)
@@ -1759,16 +1754,16 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		}
 	}
 
-	for validatorIndex, blockNumbers := range proposedValidatorMap {
-		result.Proposed = append(result.Proposed, t.IndexBlocks{
-			Index:  validatorIndex,
-			Blocks: blockNumbers,
+	for validatorIndex, slotNumbers := range proposedValidatorMap {
+		result.Proposed = append(result.Proposed, t.IndexSlots{
+			Index: validatorIndex,
+			Slots: slotNumbers,
 		})
 	}
 	for validatorIndex, slotNumbers := range missedValidatorMap {
-		result.Missed = append(result.Missed, t.IndexBlocks{
-			Index:  validatorIndex,
-			Blocks: slotNumbers,
+		result.Missed = append(result.Missed, t.IndexSlots{
+			Index: validatorIndex,
+			Slots: slotNumbers,
 		})
 	}
 

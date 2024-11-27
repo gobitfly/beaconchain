@@ -459,8 +459,8 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 
 	case *types.VDBProposalSummaryValidators:
 		return []types.VDBSummaryValidatorsData{
-			mapIndexBlocksSlice("proposal_proposed", v.Proposed),
-			mapIndexBlocksSlice("proposal_missed", v.Missed),
+			mapIndexSlotsSlice("proposal_proposed", v.Proposed),
+			mapIndexSlotsSlice("proposal_missed", v.Missed),
 		}, nil
 
 	default:
@@ -492,9 +492,9 @@ func mapIndexTimestampSlice(category string, validators []types.IndexTimestamp) 
 	)
 }
 
-func mapIndexBlocksSlice(category string, validators []types.IndexBlocks) types.VDBSummaryValidatorsData {
+func mapIndexSlotsSlice(category string, validators []types.IndexSlots) types.VDBSummaryValidatorsData {
 	return mapSlice(category, validators,
-		func(v types.IndexBlocks) (uint64, []uint64) { return v.Index, v.Blocks },
+		func(v types.IndexSlots) (uint64, []uint64) { return v.Index, v.Slots },
 	)
 }
 
