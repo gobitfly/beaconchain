@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/bigtable"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -60,8 +62,8 @@ func (w TableWrapper) GetRowKeys(prefix string, opts ...Option) ([]string, error
 	return w.BigTable.GetRowKeys(w.table, prefix, opts...)
 }
 
-func (w TableWrapper) BulkAdd(itemsByKey map[string][]Item) error {
-	return w.BigTable.BulkAdd(w.table, itemsByKey)
+func (w TableWrapper) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
+	return w.BigTable.BulkAdd(w.table, itemsByKey, opts...)
 }
 
 func (w TableWrapper) GetRowsRange(high, low string, opts ...Option) ([]Row, error) {
@@ -89,18 +91,18 @@ func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminCl
 
 // NewBigTable initializes a new BigTable
 // It returns a BigTable and an error if any part of the setup fails
-func NewBigTable(project, instance string, tablesAndFamilies map[string][]string) (*BigTable, error) {
+func NewBigTable(project, instance string, tablesAndFamilies map[string][]string, options ...option.ClientOption) (*BigTable, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// Create an admin client to manage Bigtable tables
-	adminClient, err := bigtable.NewAdminClient(ctx, project, instance)
+	adminClient, err := bigtable.NewAdminClient(ctx, project, instance, options...)
 	if err != nil {
 		return nil, fmt.Errorf("could not create admin client: %v", err)
 	}
 
 	// Create a Bigtable client for performing data operations
-	client, err := bigtable.NewClient(ctx, project, instance)
+	client, err := bigtable.NewClient(ctx, project, instance, options...)
 	if err != nil {
 		return nil, fmt.Errorf("could not create data operations client: %v", err)
 	}
@@ -149,7 +151,9 @@ func createTableAndFamilies(ctx context.Context, admin *bigtable.AdminClient, ta
 	return nil
 }
 
-func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item) error {
+func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item, opts ...Option) error {
+	options := apply(opts)
+
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -164,16 +168,27 @@ func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item) error {
 		keys = append(keys, key)
 		muts = append(muts, mut)
 	}
-	errs, err := tbl.ApplyBulk(ctx, keys, muts)
-	if err != nil {
-		return fmt.Errorf("cannot ApplyBulk err: %w", err)
+	bulk := &bulkMutations{
+		Keys: keys,
+		Muts: muts,
 	}
-	var bulkErrs []string
-	for _, err := range errs {
-		bulkErrs = append(bulkErrs, err.Error())
-	}
-	if len(bulkErrs) > 0 {
-		return fmt.Errorf("cannot BulkAdd errors: %v", bulkErrs)
+	sort.Sort(bulk)
+	for i := int64(0); i < int64(bulk.Len()); i = i + options.BatchSize {
+		from, to := i, i+options.BatchSize
+		if to > int64(bulk.Len()) {
+			to = int64(bulk.Len())
+		}
+		errs, err := tbl.ApplyBulk(ctx, bulk.Keys[from:to], bulk.Muts[from:to])
+		if err != nil {
+			return fmt.Errorf("cannot ApplyBulk err: %w", err)
+		}
+		var bulkErrs []string
+		for _, err := range errs {
+			bulkErrs = append(bulkErrs, err.Error())
+		}
+		if len(bulkErrs) > 0 {
+			return fmt.Errorf("cannot BulkAdd errors: %v", bulkErrs)
+		}
 	}
 	return nil
 }
@@ -301,6 +316,7 @@ func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, 
 	if options.OpenCloseRange {
 		rowRange = bigtable.NewOpenClosedRange(low, high)
 	}
+	readOptions := bigtableReadOptions(options, rowRange)
 	var data []Row
 	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
 		values := make(map[string][]byte)
@@ -314,8 +330,7 @@ func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, 
 			Values: values,
 		})
 		return true
-	}, bigtable.LimitRows(options.Limit))
-
+	}, readOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not read rows: %v", err)
 	}
@@ -333,13 +348,13 @@ func (b BigTable) GetRowKeys(table, prefix string, opts ...Option) ([]string, er
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	rowRange := bigtable.PrefixRange(prefix)
+	readOptions := bigtableReadOptions(options, bigtable.PrefixRange(prefix))
 	var data []string
-	// Read all rows from the table and collect all the row keys
-	err := tbl.ReadRows(ctx, bigtable.PrefixRange(prefix), func(row bigtable.Row) bool {
+	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
 		data = append(data, row.Key())
 		return true
-	}, bigtable.LimitRows(options.Limit))
-
+	}, readOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not read rows: %v", err)
 	}
@@ -408,4 +423,49 @@ func (b BigTable) Close() error {
 		}
 	}
 	return nil
+}
+
+type bulkMutations struct {
+	Keys []string
+	Muts []*bigtable.Mutation
+}
+
+func (bulkMutations *bulkMutations) Len() int {
+	return len(bulkMutations.Keys)
+}
+
+func (bulkMutations *bulkMutations) Less(i, j int) bool {
+	return bulkMutations.Keys[i] < bulkMutations.Keys[j]
+}
+
+func (bulkMutations *bulkMutations) Swap(i, j int) {
+	bulkMutations.Keys[i], bulkMutations.Keys[j] = bulkMutations.Keys[j], bulkMutations.Keys[i]
+	bulkMutations.Muts[i], bulkMutations.Muts[j] = bulkMutations.Muts[j], bulkMutations.Muts[i]
+}
+
+const (
+	KeyStatRange        = "range"
+	KeyStatRowsSeen     = "rowsSeen"
+	KeyStatRowsReturned = "rowsReturned"
+	KeyStatEfficiency   = "efficiency"
+)
+
+func bigtableReadOptions(options options, rowRange bigtable.RowRange) []bigtable.ReadOption {
+	readOptions := []bigtable.ReadOption{bigtable.LimitRows(options.Limit)}
+	if options.StatsReporter != nil {
+		readOptions = append(readOptions, bigtable.WithFullReadStats(func(stats *bigtable.FullReadStats) {
+			efficiency := int64(1)
+			if stats.ReadIterationStats.RowsSeenCount != 0 {
+				efficiency = stats.ReadIterationStats.RowsReturnedCount / stats.ReadIterationStats.RowsSeenCount
+			}
+			options.StatsReporter(
+				"query stats",
+				KeyStatRange, rowRange.String(),
+				KeyStatRowsSeen, stats.ReadIterationStats.RowsSeenCount,
+				KeyStatRowsReturned, stats.ReadIterationStats.RowsReturnedCount,
+				KeyStatEfficiency, efficiency,
+			)
+		}))
+	}
+	return readOptions
 }

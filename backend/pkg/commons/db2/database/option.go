@@ -1,13 +1,25 @@
 package database
 
+const (
+	defaultBatchSize = 10000
+	defaultLimit     = 100
+)
+
 type options struct {
 	OpenRange      bool
 	OpenCloseRange bool
 	Limit          int64
+	BatchSize      int64
+	StatsReporter  func(msg string, args ...any)
 }
 
 func apply(opts []Option) options {
-	options := options{}
+	options := options{
+		OpenRange:      false,
+		OpenCloseRange: false,
+		BatchSize:      defaultBatchSize,
+		Limit:          defaultLimit,
+	}
 	for _, o := range opts {
 		o.apply(&options)
 	}
@@ -47,3 +59,25 @@ func (l limitOption) apply(opts *options) {
 func WithLimit(l int64) Option {
 	return limitOption(l)
 }
+
+type withBatchSize int64
+
+func (l withBatchSize) apply(opts *options) {
+	opts.BatchSize = int64(l)
+}
+
+func WithBatchSize(l int64) Option {
+	return withBatchSize(l)
+}
+
+type statsOption StatsReporter
+
+func (l statsOption) apply(opts *options) {
+	opts.StatsReporter = l
+}
+
+func WithStats(reporter StatsReporter) Option {
+	return statsOption(reporter)
+}
+
+type StatsReporter func(msg string, args ...any)

@@ -77,7 +77,7 @@ func TestStoreExternal(t *testing.T) {
 			chainIDs:  chainIDs,
 			addresses: addresses,
 			opts: []data.Option{
-				data.IgnoreTransfers(),
+				data.OnlyTransactions(),
 				data.ByMethod("a9059cbb"),
 			},
 		},
@@ -87,15 +87,15 @@ func TestStoreExternal(t *testing.T) {
 			chainIDs:  chainIDs,
 			addresses: addresses,
 			opts: []data.Option{
-				data.IgnoreTransactions(),
+				data.OnlyTransactions(),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var lastPrefixes map[string]map[string]string
+			var lastPrefixes map[string]string
 			for i := 0; i < tt.scroll+1; i++ {
-				interactions, prefixes, err := store.Get(chainIDs, addresses, lastPrefixes, tt.limit, tt.opts...)
+				interactions, prefixes, err := store.Get(addresses, lastPrefixes, tt.limit, tt.opts...)
 				if err != nil {
 					t.Fatal(err)
 				}

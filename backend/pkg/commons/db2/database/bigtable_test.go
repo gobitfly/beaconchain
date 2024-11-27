@@ -5,14 +5,44 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
+	"cloud.google.com/go/bigtable/bttest"
 	"golang.org/x/exp/maps"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
 )
+
+func TestNewBigTable(t *testing.T) {
+	srv, err := bttest.NewServer("localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conn, err := grpc.NewClient(srv.Addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testTable, testFamily := "table", "family"
+	bt, err := NewBigTable("testProject", "testInstance", map[string][]string{testTable: {testFamily}}, option.WithGRPCConn(conn))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tableInfo, err := bt.admin.TableInfo(context.Background(), testTable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := tableInfo.Families, []string{testFamily}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
 
 func TestBigTable(t *testing.T) {
 	tests := []struct {
@@ -71,7 +101,7 @@ func TestBigTable(t *testing.T) {
 				_ = db.Clear()
 			}()
 
-			if err := db.BulkAdd(tt.items); err != nil {
+			if err := db.BulkAdd(tt.items, WithBatchSize(2)); err != nil {
 				t.Error(err)
 			}
 
@@ -215,6 +245,12 @@ func TestGetRowsRange(t *testing.T) {
 			txs:      9,
 			expected: 5,
 			options:  []Option{WithLimit(5)},
+		},
+		{
+			name:     "with stats",
+			txs:      1,
+			expected: 1,
+			options:  []Option{WithStats(func(msg string, args ...any) {})},
 		},
 	}
 	for _, tt := range tests {

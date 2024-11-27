@@ -1,139 +1,132 @@
 package data
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestFilter(t *testing.T) {
+func TestQueryFilter(t *testing.T) {
 	tests := []struct {
-		name       string
-		filter     chainFilter
-		add        func(chainFilter) error
-		expectErr  bool
-		expectType filterType
+		name    string
+		options []Option
+		want    string
+		err     string
 	}{
 		{
-			name:   "tx by asset should err",
-			filter: newChainFilterTx(),
-			add: func(c chainFilter) error {
-				return c.addByAsset(common.Address{})
-			},
-			expectErr: true,
+			name: "all",
+			want: "all:<address>",
 		},
 		{
-			name:   "tx invalid time range",
-			filter: newChainFilterTx(),
-			add: func(c chainFilter) error {
-				return c.addTimeRange(nil, nil)
+			name: "err for ByMethod and ByAsset",
+			options: []Option{
+				ByMethod(""),
+				ByAsset(common.Address{}),
 			},
-			expectErr: true,
+			err: "cannot filter by method and by asset together",
 		},
 		{
-			name:   "transfer by method should err",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				return c.addByMethod("")
+			name: "only sent",
+			options: []Option{
+				OnlySent(),
 			},
-			expectErr: true,
+			want: "out:<address>",
 		},
 		{
-			name:   "transfer by asset sent",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				if err := c.addByAsset(common.Address{}); err != nil {
-					return err
-				}
-				return c.addBySent()
+			name: "received",
+			options: []Option{
+				OnlyReceived(),
 			},
-			expectType: byAssetSent,
+			want: "in:<address>",
 		},
 		{
-			name:   "transfer by asset received",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				if err := c.addByAsset(common.Address{}); err != nil {
-					return err
-				}
-				return c.addByReceived()
+			name: "sent",
+			options: []Option{
+				OnlySent(),
 			},
-			expectType: byAssetReceived,
+			want: "out:<address>",
 		},
 		{
-			name:   "transfer by sent asset",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				if err := c.addBySent(); err != nil {
-					return err
-				}
-				return c.addByAsset(common.Address{})
+			name: "sent to",
+			options: []Option{
+				OnlySent(),
+				With(common.Address{}),
 			},
-			expectType: byAssetSent,
+			want: "out:with:<address>:0000000000000000000000000000000000000000",
 		},
 		{
-			name:   "transfer by received asset",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				if err := c.addByReceived(); err != nil {
-					return err
-				}
-				return c.addByAsset(common.Address{})
+			name: "on a chain ID",
+			options: []Option{
+				ByChainID("1234"),
 			},
-			expectType: byAssetReceived,
+			want: "all:chainID:<address>:1234",
 		},
 		{
-			name:   "transfer invalid time range",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				return c.addTimeRange(nil, nil)
+			name: "sent on a chain ID",
+			options: []Option{
+				OnlySent(),
+				ByChainID("1234"),
 			},
-			expectErr: true,
+			want: "out:chainID:<address>:1234",
 		},
 		{
-			name:   "transfer time range over bySent should err",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				if err := c.addTimeRange(timestamppb.New(t0), timestamppb.New(t0)); err != nil {
-					return err
-				}
-				if err := c.addBySent(); err != nil {
-					return err
-				}
-				return c.valid()
+			name: "received on a chain ID",
+			options: []Option{
+				OnlyReceived(),
+				ByChainID("1234"),
 			},
-			expectErr: true,
+			want: "in:chainID:<address>:1234",
 		},
 		{
-			name:   "transfer time range over byReceived should err",
-			filter: newChainFilterTransfer(),
-			add: func(c chainFilter) error {
-				if err := c.addTimeRange(timestamppb.New(t0), timestamppb.New(t0)); err != nil {
-					return err
-				}
-				if err := c.addByReceived(); err != nil {
-					return err
-				}
-				return c.valid()
+			name: "received TX on a chain ID",
+			options: []Option{
+				OnlyTransactions(),
+				OnlyReceived(),
+				ByChainID("1234"),
 			},
-			expectErr: true,
+			want: "in:chainID:TX:<address>:1234",
+		},
+		{
+			name: "received method on a chain ID",
+			options: []Option{
+				ByMethod("bar"),
+				OnlyReceived(),
+				ByChainID("1234"),
+			},
+			want: "in:chainID:TX:method:<address>:1234:bar",
+		},
+		{
+			name: "received method on a chain ID",
+			options: []Option{
+				ByAsset(common.Address{}),
+				OnlyReceived(),
+				ByChainID("1234"),
+			},
+			want: "in:chainID:ERC20:asset:<address>:1234:0000000000000000000000000000000000000000",
+		},
+		{
+			name: "with time range",
+			options: []Option{
+				WithTimeRange(timestamppb.New(t0), timestamppb.New(t1)),
+			},
+			want: "all:<address>:" + reversePaddedTimestamp(timestamppb.New(t1)),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.add(tt.filter)
+			filter, err := newQueryFilter(apply(tt.options))
 			if err != nil {
-				if !tt.expectErr {
-					t.Errorf("unexpected err: %s", err)
+				if got, want := err.Error(), tt.err; got != want {
+					t.Errorf("got error %v, want %v", got, want)
 				}
 				return
 			}
-			if tt.expectErr {
-				t.Error("expected err but got nil")
-			}
-			if got, want := tt.filter.filterType(), tt.expectType; got != want {
-				t.Errorf("got %v, want %v", got, want)
+			addr := common.Address{}
+			query := filter.get(addr)
+			if got, want := query, strings.ReplaceAll(tt.want, "<address>", toHex(addr.Bytes())); got != want {
+				t.Errorf("get() = %v, want %v", got, want)
 			}
 		})
 	}

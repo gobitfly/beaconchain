@@ -26,112 +26,45 @@ func NewStore(store database.Database) Store {
 	}
 }
 
-type TransferWithIndexes struct {
-	Indexed  *types.Eth1ERC20Indexed
-	TxIndex  int
-	LogIndex int
-}
-
-func (store Store) BlockERC20TransfersToItems(chainID string, transfers []TransferWithIndexes) (map[string][]database.Item, error) {
-	items := make(map[string][]database.Item)
-	for _, transfer := range transfers {
-		b, err := proto.Marshal(transfer.Indexed)
-		if err != nil {
-			return nil, err
-		}
-		key := keyERC20(chainID, transfer.Indexed.ParentHash, transfer.LogIndex)
-		item := []database.Item{{Family: defaultFamily, Column: key}}
-		items[key] = []database.Item{{Family: defaultFamily, Column: dataColumn, Data: b}}
-
-		items[keyERC20Time(chainID, transfer.Indexed, transfer.Indexed.From, transfer.TxIndex, transfer.LogIndex)] = item
-		items[keyERC20Time(chainID, transfer.Indexed, transfer.Indexed.To, transfer.TxIndex, transfer.LogIndex)] = item
-
-		items[keyERC20ContractAllTime(chainID, transfer.Indexed, transfer.TxIndex, transfer.LogIndex)] = item
-		items[keyERC20ContractTime(chainID, transfer.Indexed, transfer.Indexed.From, transfer.TxIndex, transfer.LogIndex)] = item
-		items[keyERC20ContractTime(chainID, transfer.Indexed, transfer.Indexed.To, transfer.TxIndex, transfer.LogIndex)] = item
-
-		items[keyERC20To(chainID, transfer.Indexed, transfer.TxIndex, transfer.LogIndex)] = item
-		items[keyERC20From(chainID, transfer.Indexed, transfer.TxIndex, transfer.LogIndex)] = item
-		items[keyERC20Sent(chainID, transfer.Indexed, transfer.TxIndex, transfer.LogIndex)] = item
-		items[keyERC20Received(chainID, transfer.Indexed, transfer.TxIndex, transfer.LogIndex)] = item
-	}
-	return items, nil
+func (store Store) AddItems(items map[string][]database.Item) error {
+	return store.db.BulkAdd(items)
 }
 
 func (store Store) AddBlockERC20Transfers(chainID string, transactions []TransferWithIndexes) error {
-	items, err := store.BlockERC20TransfersToItems(chainID, transactions)
+	items, err := BlockERC20TransfersToItemsV2(chainID, transactions)
 	if err != nil {
 		return err
 	}
 	return store.db.BulkAdd(items)
-}
-
-func (store Store) BlockTransactionsToItems(chainID string, transactions []*types.Eth1TransactionIndexed) (map[string][]database.Item, error) {
-	items := make(map[string][]database.Item)
-	for i, transaction := range transactions {
-		b, err := proto.Marshal(transaction)
-		if err != nil {
-			return nil, err
-		}
-		key := keyTx(chainID, transaction.GetHash())
-		item := []database.Item{{Family: defaultFamily, Column: key}}
-		items[key] = []database.Item{{Family: defaultFamily, Column: dataColumn, Data: b}}
-		items[keyTxSent(chainID, transaction, i)] = item
-		items[keyTxReceived(chainID, transaction, i)] = item
-
-		items[keyTxTime(chainID, transaction, transaction.To, i)] = item
-		items[keyTxBlock(chainID, transaction, transaction.To, i)] = item
-		items[keyTxMethod(chainID, transaction, transaction.To, i)] = item
-
-		items[keyTxTime(chainID, transaction, transaction.From, i)] = item
-		items[keyTxBlock(chainID, transaction, transaction.From, i)] = item
-		items[keyTxMethod(chainID, transaction, transaction.From, i)] = item
-
-		if transaction.ErrorMsg != "" {
-			items[keyTxError(chainID, transaction, transaction.To, i)] = item
-			items[keyTxError(chainID, transaction, transaction.From, i)] = item
-		}
-
-		if transaction.IsContractCreation {
-			items[keyTxContractCreation(chainID, transaction, transaction.To, i)] = item
-			items[keyTxContractCreation(chainID, transaction, transaction.From, i)] = item
-		}
-	}
-	return items, nil
 }
 
 func (store Store) AddBlockTransactions(chainID string, transactions []*types.Eth1TransactionIndexed) error {
-	items, err := store.BlockTransactionsToItems(chainID, transactions)
+	items, err := BlockTransactionsToItemsV2(chainID, transactions)
 	if err != nil {
 		return err
 	}
 	return store.db.BulkAdd(items)
 }
 
-func (store Store) Get(chainIDs []string, addresses []common.Address, prefixes map[string]map[string]string, limit int64, opts ...Option) ([]*Interaction, map[string]map[string]string, error) {
-	sources := map[formatType]unMarshalInteraction{
-		typeTx:       unMarshalTx,
-		typeTransfer: unMarshalTransfer,
-	}
+func (store Store) Get(addresses []common.Address, prefixes map[string]string, limit int64, opts ...Option) ([]*Interaction, map[string]string, error) {
 	options := apply(opts)
-	if options.ignoreTxs {
-		delete(sources, typeTx)
+
+	filter, err := newQueryFilter(options)
+	if err != nil {
+		return nil, nil, err
 	}
-	if options.ignoreTransfers {
-		delete(sources, typeTransfer)
+	databaseOptions := []database.Option{
+		database.WithLimit(limit),
+		database.WithOpenRange(true),
 	}
-	var interactions []*interactionWithInfo
-	for interactionType, unMarshalFunc := range sources {
-		filter, err := makeFilters(options, interactionType)
-		if err != nil {
-			return nil, nil, err
-		}
-		temp, err := store.getBy(unMarshalFunc, chainIDs, addresses, prefixes, limit, filter)
-		if err != nil {
-			return nil, nil, err
-		}
-		interactions = append(interactions, temp...)
+	if options.statsReporter != nil {
+		databaseOptions = append(databaseOptions, database.WithStats(options.statsReporter))
 	}
+	interactions, err := store.getBy(addresses, prefixes, filter, databaseOptions)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	sort.Sort(byTimeDesc(interactions))
 	if int64(len(interactions)) > limit {
 		interactions = interactions[:limit]
@@ -139,59 +72,59 @@ func (store Store) Get(chainIDs []string, addresses []common.Address, prefixes m
 
 	var res []*Interaction
 	if prefixes == nil {
-		prefixes = make(map[string]map[string]string)
+		prefixes = make(map[string]string)
 	}
 	for i := 0; i < len(interactions); i++ {
-		if prefixes[interactions[i].chainID] == nil {
-			prefixes[interactions[i].chainID] = make(map[string]string)
-		}
-		prefixes[interactions[i].chainID][interactions[i].root] = interactions[i].key
+		prefixes[interactions[i].root] = interactions[i].key
 		res = append(res, interactions[i].Interaction)
 	}
 	return res, prefixes, nil
 }
 
-func (store Store) getBy(unMarshal unMarshalInteraction, chainIDs []string, addresses []common.Address, prefixes map[string]map[string]string, limit int64, condition filter) ([]*interactionWithInfo, error) {
+func (store Store) getBy(addresses []common.Address, prefixes map[string]string, condition filter, databaseOptions []database.Option) ([]*interactionWithInfo, error) {
 	var interactions []*interactionWithInfo
-	for _, chainID := range chainIDs {
-		for _, address := range addresses {
-			root := condition.get(chainID, address)
-			prefix := root
-			if prefixes != nil && prefixes[chainID] != nil && prefixes[chainID][root] != "" {
-				prefix = prefixes[chainID][root]
+	for _, address := range addresses {
+		root := condition.get(address)
+		prefix := root
+		if prefixes != nil && prefixes[root] != "" {
+			prefix = prefixes[root]
+		}
+		upper := condition.limit(root)
+		indexRows, err := store.db.GetRowsRange(upper, prefix, databaseOptions...)
+		if err != nil {
+			if errors.Is(err, database.ErrNotFound) {
+				continue
 			}
-			upper := condition.limit(root)
-			indexRows, err := store.db.GetRowsRange(upper, prefix, database.WithLimit(limit), database.WithOpenRange(true))
+			return nil, err
+		}
+		txKeys := make(map[string]string)
+		for _, row := range indexRows {
+			for key := range row.Values {
+				txKey := strings.TrimPrefix(key, fmt.Sprintf("%s:", defaultFamily))
+				txKeys[txKey] = row.Key
+			}
+		}
+		txRows, err := store.db.GetRowsWithKeys(maps.Keys(txKeys))
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range txRows {
+			parts := strings.Split(row.Key, ":")
+			unMarshal := unMarshalTx
+			if parts[0] == "ERC20" {
+				unMarshal = unMarshalTransfer
+			}
+			interaction, err := unMarshal(row.Values[fmt.Sprintf("%s:%s", defaultFamily, dataColumn)])
 			if err != nil {
-				if errors.Is(err, database.ErrNotFound) {
-					continue
-				}
 				return nil, err
 			}
-			txKeys := make(map[string]string)
-			for _, row := range indexRows {
-				for key := range row.Values {
-					txKey := strings.TrimPrefix(key, fmt.Sprintf("%s:", defaultFamily))
-					txKeys[txKey] = row.Key
-				}
-			}
-			txRows, err := store.db.GetRowsWithKeys(maps.Keys(txKeys))
-			if err != nil {
-				return nil, err
-			}
-			for _, row := range txRows {
-				interaction, err := unMarshal(row.Values[fmt.Sprintf("%s:%s", defaultFamily, dataColumn)])
-				if err != nil {
-					return nil, err
-				}
-				interaction.ChainID = chainID
-				interactions = append(interactions, &interactionWithInfo{
-					Interaction: interaction,
-					chainID:     chainID,
-					root:        root,
-					key:         txKeys[row.Key],
-				})
-			}
+			interaction.ChainID = parts[1]
+			interactions = append(interactions, &interactionWithInfo{
+				Interaction: interaction,
+				chainID:     parts[1],
+				root:        root,
+				key:         txKeys[row.Key],
+			})
 		}
 	}
 	return interactions, nil
@@ -230,8 +163,6 @@ type Interaction struct {
 }
 
 var erc20Transfer, _ = hex.DecodeString("a9059cbb")
-
-type unMarshalInteraction func(b []byte) (*Interaction, error)
 
 func unMarshalTx(b []byte) (*Interaction, error) {
 	tx := &types.Eth1TransactionIndexed{}

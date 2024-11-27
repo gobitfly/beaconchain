@@ -2,7 +2,7 @@ package database
 
 type Database interface {
 	Add(key string, item Item, allowDuplicate bool) error
-	BulkAdd(itemsByKey map[string][]Item) error
+	BulkAdd(itemsByKey map[string][]Item, opts ...Option) error
 	Read(prefix string) ([]Row, error)
 	GetRow(key string) (*Row, error)
 	GetRowsWithKeys(keys []string) ([]Row, error)

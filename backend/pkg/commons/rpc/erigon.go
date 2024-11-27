@@ -3,16 +3,15 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
+	"math/big"
+	"strings"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
-
-	"fmt"
-	"math/big"
-	"strings"
-	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum"
@@ -21,9 +20,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 )

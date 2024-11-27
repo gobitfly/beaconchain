@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	maxInt                       = 9223372036854775807
-	maxExecutionLayerBlockNumber = 1000000000
+	maxInt = 9223372036854775807
+	// 	maxExecutionLayerBlockNumber = 1000000000
 
 	txPerBlockLimit = 10_000
 	logPerTxLimit   = 100_000
@@ -38,191 +38,151 @@ func reversePaddedTimestamp(timestamp *timestamppb.Timestamp) string {
 	return fmt.Sprintf("%019d", maxInt-timestamp.Seconds)
 }
 
-func reversedPaddedBlockNumber(blockNumber uint64) string {
-	return fmt.Sprintf("%09d", maxExecutionLayerBlockNumber-blockNumber)
-}
+// commented for now but we will use it soon
+// func reversedPaddedBlockNumber(blockNumber uint64) string {
+//	return fmt.Sprintf("%09d", maxExecutionLayerBlockNumber-blockNumber)
+//}
 
-func keyTx(chainID string, hash []byte) string {
-	format := "<chainID>:TX:<hash>"
-	replacer := strings.NewReplacer("<chainID>", chainID, "<hash>", fmt.Sprintf("%x", hash))
-	return replacer.Replace(format)
-}
-
-func keyTxSent(chainID string, tx *types.Eth1TransactionIndexed, index int) string {
-	format := "<chainID>:I:TX:<from>:TO:<to>:<time>:<index>"
+// lost keyTxBlock, keyTxError, keyTxContractCreation
+// key are sorted side, with, chainID, type, method
+func transactionKeys(chainID string, transaction *types.Eth1TransactionIndexed, index int) (string, []string) {
+	main := "TX:<chainID>:<hash>"
+	baseKeys := []string{
+		"all:<address>",
+		"all:with:<address>:<with>",
+		"all:chainID:<address>:<chainID>",
+		"all:with:chainID:<address>:<with>:<chainID>",
+	}
+	fromToKeys := []string{
+		"in:<to>",
+		"in:chainID:<to>:<chainID>",
+		"in:with:<to>:<from>",
+		"in:with:chainID:<to>:<from>:<chainID>",
+		"out:<from>",
+		"out:chainID:<from>:<chainID>",
+		"out:with:<from>:<to>",
+		"out:with:chainID:<from>:<to>:<chainID>",
+	}
+	baseTxKeys := []string{
+		"all:TX:<address>",
+		"all:TX:method:<address>:<method>",
+		"all:chainID:TX:<address>:<chainID>",
+		"all:chainID:TX:method:<address>:<chainID>:<method>",
+		"all:with:TX:<address>:<with>",
+		"all:with:TX:method:<address>:<with>",
+		"all:with:chainID:TX:<address>:<with>:<chainID>",
+		"all:with:chainID:TX:method:<address>:<with>:<chainID>",
+	}
+	fromToTxKeys := []string{
+		"in:TX:<to>",
+		"in:TX:method:<to>:<method>",
+		"in:chainID:TX:<to>:<chainID>",
+		"in:chainID:TX:method:<to>:<chainID>:<method>",
+		"in:with:TX:<to>:<from>",
+		"in:with:TX:method:<to>:<from>:<method>",
+		"in:with:chainID:TX:<to>:<from>:<chainID>",
+		"in:with:chainID:TX:method:<to>:<from>:<chainID>:<method>",
+		"out:TX:<from>",
+		"out:TX:method:<from>:<method>",
+		"out:chainID:TX:<from>:<chainID>",
+		"out:chainID:TX:method:<from>:<chainID>:<method>",
+		"out:with:TX:<from>:<to>",
+		"out:with:TX:method:<from>:<to>:<method>",
+		"out:with:chainID:TX:<from>:<to>:<chainID>",
+		"out:with:chainID:TX:method:<from>:<to>:<chainID>:<method>",
+	}
 	replacer := strings.NewReplacer(
+		"<hash>", toHex(transaction.Hash),
+		"<from>", toHex(transaction.From),
+		"<to>", toHex(transaction.To),
 		"<chainID>", chainID,
-		"<from>", fmt.Sprintf("%x", tx.From),
-		"<to>", fmt.Sprintf("%x", tx.To),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<time>", reversePaddedIndex(index, txPerBlockLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyTxReceived(chainID string, tx *types.Eth1TransactionIndexed, index int) string {
-	format := "<chainID>:I:TX:<to>:FROM:<from>:<time>:<index>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<to>", fmt.Sprintf("%x", tx.To),
-		"<from>", fmt.Sprintf("%x", tx.From),
-		"<time>", reversePaddedTimestamp(tx.Time),
+		"<time>", reversePaddedTimestamp(transaction.Time),
 		"<index>", reversePaddedIndex(index, txPerBlockLimit),
+		"<method>", fmt.Sprintf("%x", transaction.MethodId),
 	)
-	return replacer.Replace(format)
+	keys := append(fromToKeys, fromToTxKeys...)
+	for _, format := range append(baseKeys, baseTxKeys...) {
+		keys = append(keys,
+			strings.ReplaceAll(strings.ReplaceAll(format, "<address>", "<from>"), "<with>", "<to>"),
+			strings.ReplaceAll(strings.ReplaceAll(format, "<address>", "<to>"), "<with>", "<from>"),
+		)
+	}
+	id := ":<time>:<index>"
+	for i := range keys {
+		keys[i] = replacer.Replace(keys[i] + id)
+	}
+
+	return replacer.Replace(main), keys
 }
 
-func keyTxTime(chainID string, tx *types.Eth1TransactionIndexed, address []byte, index int) string {
-	format := "<chainID>:I:TX:<address>:TIME:<time>:<index>"
+// key are sorted side (+optional other address), chainID, type, asset
+func transferKeys(chainID string, transaction *types.Eth1ERC20Indexed, index int, logIndex int) (string, []string) {
+	main := "ERC20:<chainID>:<hash>"
+	baseKeys := []string{
+		"all:<address>",
+		"all:chainID:<address>:<chainID>",
+		"all:chainID:<address>:<chainID>",
+		"all:with:chainID:<address>:<with>:<chainID>",
+	}
+	fromToKeys := []string{
+		"in:<to>",
+		"in:chainID:<to>:<chainID>",
+		"in:with:<to>:<from>",
+		"in:with:chainID:<to>:<from>:<chainID>",
+		"out:<from>",
+		"out:chainID:<from>:<chainID>",
+		"out:with:<from>:<to>",
+		"out:with:chainID:<from>:<to>:<chainID>",
+	}
+	baseTxKeys := []string{
+		"all:ERC20:<address>",
+		"all:ERC20:asset:<address>:<asset>",
+		"all:chainID:ERC20:<address>:<chainID>",
+		"all:chainID:ERC20:asset:<address>:<chainID>:<asset>",
+		"all:with:ERC20:<address>:<with>",
+		"all:with:ERC20:method:<address>:<with>",
+		"all:with:chainID:ERC20:<address>:<with>:<chainID>",
+		"all:with:chainID:ERC20:method:<address>:<with>:<chainID>",
+	}
+	fromToTxKeys := []string{
+		"in:ERC20:<to>",
+		"in:ERC20:asset:<to>:<asset>",
+		"in:chainID:ERC20:<to>:<chainID>",
+		"in:chainID:ERC20:asset:<to>:<chainID>:<asset>",
+		"in:with:ERC20:<to>:<from>",
+		"in:with:ERC20:asset:<to>:<from>:<asset>",
+		"in:with:chainID:ERC20:<to>:<from>:<chainID>",
+		"in:with:chainID:ERC20:asset:<to>:<from>:<chainID>:<asset>",
+		"out:ERC20:<from>",
+		"out:ERC20:asset:<from>:<asset>",
+		"out:chainID:ERC20:<from>:<chainID>",
+		"out:chainID:ERC20:asset:<from>:<chainID>:<asset>",
+		"out:with:ERC20:<from>:<to>",
+		"out:with:ERC20:asset:<from>:<to>:<asset>",
+		"out:with:chainID:ERC20:<from>:<to>:<chainID>",
+		"out:with:chainID:ERC20:asset:<from>:<to>:<chainID>:<asset>",
+	}
 	replacer := strings.NewReplacer(
+		"<hash>", toHex(transaction.ParentHash),
+		"<from>", toHex(transaction.From),
+		"<to>", toHex(transaction.To),
 		"<chainID>", chainID,
-		"<address>", fmt.Sprintf("%x", address),
-		"<time>", reversePaddedTimestamp(tx.Time),
+		"<time>", reversePaddedTimestamp(transaction.Time),
 		"<index>", reversePaddedIndex(index, txPerBlockLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyTxBlock(chainID string, tx *types.Eth1TransactionIndexed, address []byte, index int) string {
-	format := "<chainID>:I:TX:<address>:BLOCK:<block>:<index>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<address>", fmt.Sprintf("%x", address),
-		"<block>", reversedPaddedBlockNumber(tx.BlockNumber),
-		"<index>", reversePaddedIndex(index, txPerBlockLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyTxMethod(chainID string, tx *types.Eth1TransactionIndexed, address []byte, index int) string {
-	format := "<chainID>:I:TX:<address>:METHOD:<method>:<time>:<index>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<address>", fmt.Sprintf("%x", address),
-		"<method>", fmt.Sprintf("%x", tx.MethodId),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(index, txPerBlockLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyTxError(chainID string, tx *types.Eth1TransactionIndexed, address []byte, index int) string {
-	format := "<chainID>:I:TX:<address>:ERROR:<time>:<index>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<address>", fmt.Sprintf("%x", address),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(index, txPerBlockLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyTxContractCreation(chainID string, tx *types.Eth1TransactionIndexed, address []byte, index int) string {
-	format := "<chainID>:I:TX:<address>:CONTRACT:<time>:<index>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<address>", fmt.Sprintf("%x", address),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(index, txPerBlockLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyERC20(chainID string, hash []byte, logIndex int) string {
-	format := "<chainID>:ERC20:<hash>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<hash>", fmt.Sprintf("%x", hash),
 		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
+		"<asset>", toHex(transaction.TokenAddress),
 	)
-	return replacer.Replace(format)
-}
+	keys := append(fromToKeys, fromToTxKeys...)
+	for _, format := range append(baseKeys, baseTxKeys...) {
+		keys = append(keys,
+			strings.ReplaceAll(strings.ReplaceAll(format, "<address>", "<from>"), "<with>", "<to>"),
+			strings.ReplaceAll(strings.ReplaceAll(format, "<address>", "<to>"), "<with>", "<from>"),
+		)
+	}
+	id := ":<time>:<index>:<logIndex>"
+	for i := range keys {
+		keys[i] = replacer.Replace(keys[i] + id)
+	}
 
-func keyERC20Time(chainID string, tx *types.Eth1ERC20Indexed, address []byte, txIndex int, logIndex int) string {
-	format := "<chainID>:I:ERC20:<address>:TIME:<time>:<index>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<address>", fmt.Sprintf("%x", address),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(txIndex, txPerBlockLimit),
-		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyERC20ContractAllTime(chainID string, tx *types.Eth1ERC20Indexed, txIndex int, logIndex int) string {
-	format := "<chainID>:I:ERC20:<contract>:ALL:TIME:<time>:<index>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<contract>", fmt.Sprintf("%x", tx.TokenAddress),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(txIndex, txPerBlockLimit),
-		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyERC20ContractTime(chainID string, tx *types.Eth1ERC20Indexed, address []byte, txIndex int, logIndex int) string {
-	format := "<chainID>:I:ERC20:<contract>:<address>:TIME:<time>:<index>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<contract>", fmt.Sprintf("%x", tx.TokenAddress),
-		"<address>", fmt.Sprintf("%x", address),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(txIndex, txPerBlockLimit),
-		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyERC20To(chainID string, tx *types.Eth1ERC20Indexed, txIndex int, logIndex int) string {
-	format := "<chainID>:I:ERC20:<from>:TO:<to>:<time>:<index>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<from>", fmt.Sprintf("%x", tx.From),
-		"<to>", fmt.Sprintf("%x", tx.To),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(txIndex, txPerBlockLimit),
-		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyERC20From(chainID string, tx *types.Eth1ERC20Indexed, txIndex int, logIndex int) string {
-	format := "<chainID>:I:ERC20:<to>:FROM:<from>:<time>:<index>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<to>", fmt.Sprintf("%x", tx.To),
-		"<from>", fmt.Sprintf("%x", tx.From),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(txIndex, txPerBlockLimit),
-		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyERC20Sent(chainID string, tx *types.Eth1ERC20Indexed, txIndex int, logIndex int) string {
-	format := "<chainID>:I:ERC20:<from>:TOKEN_SENT:<contract>:<time>:<index>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<from>", fmt.Sprintf("%x", tx.From),
-		"<contract>", fmt.Sprintf("%x", tx.TokenAddress),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(txIndex, txPerBlockLimit),
-		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
-	)
-	return replacer.Replace(format)
-}
-
-func keyERC20Received(chainID string, tx *types.Eth1ERC20Indexed, txIndex int, logIndex int) string {
-	format := "<chainID>:I:ERC20:<to>:TOKEN_RECEIVED:<contract>:<time>:<index>:<logIndex>"
-	replacer := strings.NewReplacer(
-		"<chainID>", chainID,
-		"<to>", fmt.Sprintf("%x", tx.To),
-		"<contract>", fmt.Sprintf("%x", tx.TokenAddress),
-		"<time>", reversePaddedTimestamp(tx.Time),
-		"<index>", reversePaddedIndex(txIndex, txPerBlockLimit),
-		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
-	)
-	return replacer.Replace(format)
+	return replacer.Replace(main), keys
 }

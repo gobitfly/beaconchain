@@ -1,10 +1,10 @@
 package data
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/timestamp"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 )
 
 type Option interface {
@@ -12,13 +12,16 @@ type Option interface {
 }
 
 type options struct {
-	from, to        *timestamp.Timestamp
-	method          *string
-	ignoreTxs       bool
-	ignoreTransfers bool
-	onlySent        bool
-	onlyReceived    bool
-	asset           *common.Address
+	from, to      *timestamp.Timestamp
+	method        *string
+	chainID       *string
+	onlySent      bool
+	onlyReceived  bool
+	asset         *common.Address
+	with          *common.Address
+	onlyTxs       bool
+	onlyTransfers bool
+	statsReporter func(msg string, args ...any)
 }
 
 func apply(opts []Option) options {
@@ -43,36 +46,44 @@ func (r byTimeRangeOption) apply(opts *options) {
 	opts.to = r.to
 }
 
-type byMethodOption struct {
-	method string
-}
+type byMethodOption string
 
 func ByMethod(method string) Option {
-	return byMethodOption{method: method}
+	return byMethodOption(method)
 }
 
 func (r byMethodOption) apply(opts *options) {
-	opts.method = &r.method
+	opts.method = (*string)(&r)
 }
 
-type ignoreTransactionsOption bool
+type byChainIDOption string
 
-func IgnoreTransactions() Option {
-	return ignoreTransactionsOption(true)
+func ByChainID(chainID string) Option {
+	return byChainIDOption(chainID)
 }
 
-func (r ignoreTransactionsOption) apply(opts *options) {
-	opts.ignoreTxs = bool(r)
+func (r byChainIDOption) apply(opts *options) {
+	opts.chainID = (*string)(&r)
 }
 
-type ignoreTransfersOption bool
+type onlyTransactionsOption bool
 
-func IgnoreTransfers() Option {
-	return ignoreTransfersOption(true)
+func OnlyTransactions() Option {
+	return onlyTransactionsOption(true)
 }
 
-func (r ignoreTransfersOption) apply(opts *options) {
-	opts.ignoreTransfers = bool(r)
+func (r onlyTransactionsOption) apply(opts *options) {
+	opts.onlyTxs = bool(r)
+}
+
+type onlyTransfersOption bool
+
+func OnlyTransfers() Option {
+	return onlyTransfersOption(true)
+}
+
+func (r onlyTransfersOption) apply(opts *options) {
+	opts.onlyTransfers = bool(r)
 }
 
 type onlySentOption bool
@@ -107,48 +118,22 @@ func (r byAssetOption) apply(opts *options) {
 	opts.asset = &r.asset
 }
 
-func makeFilters(options options, typeFilter formatType) (filter, error) {
-	var f chainFilter
-	switch typeFilter {
-	case typeTx:
-		f = newChainFilterTx()
-	case typeTransfer:
-		f = newChainFilterTransfer()
-	default:
-		return nil, fmt.Errorf("unknown filter type: %s", typeFilter)
-	}
-	if options.onlyReceived && options.onlySent {
-		options.onlyReceived = false
-		options.onlySent = false
-	}
-	if options.onlySent {
-		if err := f.addBySent(); err != nil {
-			return nil, err
-		}
-	}
-	if options.onlyReceived {
-		if err := f.addByReceived(); err != nil {
-			return nil, err
-		}
-	}
-	if options.method != nil {
-		if err := f.addByMethod(*options.method); err != nil {
-			return nil, err
-		}
-	}
-	if options.asset != nil {
-		if err := f.addByAsset(*options.asset); err != nil {
-			return nil, err
-		}
-	}
-	if options.from != nil && options.to != nil {
-		if err := f.addTimeRange(options.from, options.to); err != nil {
-			return nil, err
-		}
-	}
-	if err := f.valid(); err != nil {
-		return nil, err
-	}
+type withOption common.Address
 
-	return f, nil
+func With(address common.Address) Option {
+	return withOption(address)
+}
+
+func (r withOption) apply(opts *options) {
+	opts.with = (*common.Address)(&r)
+}
+
+type withDatabaseStatsOption database.StatsReporter
+
+func WithDatabaseStats(reporter database.StatsReporter) Option {
+	return withDatabaseStatsOption(reporter)
+}
+
+func (r withDatabaseStatsOption) apply(opts *options) {
+	opts.statsReporter = r
 }

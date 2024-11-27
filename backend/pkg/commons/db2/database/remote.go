@@ -136,7 +136,7 @@ func (r RemoteClient) Add(key string, item Item, allowDuplicate bool) error {
 	panic("implement me")
 }
 
-func (r RemoteClient) BulkAdd(itemsByKey map[string][]Item) error {
+func (r RemoteClient) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
 	//TODO implement me
 	panic("implement me")
 }

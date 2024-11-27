@@ -3,13 +3,11 @@ package data
 import (
 	"context"
 	"encoding/hex"
-	"slices"
-	"sort"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
@@ -22,6 +20,7 @@ var (
 	bob   = common.HexToAddress("0x000000000000000000000000000000000000beef")
 	carl  = common.HexToAddress("0x000000000000000000000000000000000000cafe")
 	usdc  = common.HexToAddress("0x000000000000000000000000000000000000dead")
+	dai   = common.HexToAddress("0x000000000000000000000000000000000000eeee")
 )
 
 func TestStore(t *testing.T) {
@@ -31,15 +30,13 @@ func TestStore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := Store{
-		db: database.Wrap(s, Table),
-	}
+
+	store := NewStore(database.Wrap(s, Table))
 
 	tests := []struct {
 		name           string
 		txs            map[string][][]*types.Eth1TransactionIndexed // map[chainID][block][txPosition]*types.Eth1TransactionIndexed
 		transfers      map[string][][]TransferWithIndexes
-		limit          int64
 		opts           []Option
 		addresses      []common.Address
 		expectedHashes []string
@@ -53,7 +50,6 @@ func TestStore(t *testing.T) {
 					{newTx("hash3", alice, bob, "", 2)},
 				},
 			},
-			limit:          1,
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash3", "hash2", "hash1"},
 		},
@@ -65,7 +61,6 @@ func TestStore(t *testing.T) {
 					{newTx("hash2", carl, bob, "", 1)},
 				},
 			},
-			limit:          2,
 			addresses:      []common.Address{alice, carl},
 			expectedHashes: []string{"hash2", "hash1"},
 		},
@@ -79,7 +74,6 @@ func TestStore(t *testing.T) {
 					{newTx("hash4", carl, bob, "", 3)},
 				},
 			},
-			limit:          2,
 			addresses:      []common.Address{alice, carl},
 			expectedHashes: []string{"hash4", "hash3", "hash2", "hash1"},
 		},
@@ -95,7 +89,6 @@ func TestStore(t *testing.T) {
 					{newTx("hash4", carl, bob, "", 3)},
 				},
 			},
-			limit:          2,
 			addresses:      []common.Address{alice, carl},
 			expectedHashes: []string{"hash4", "hash3", "hash2", "hash1"},
 		},
@@ -111,7 +104,6 @@ func TestStore(t *testing.T) {
 					{newTx("hash4", alice, bob, "", 3)},
 				},
 			},
-			limit:          2,
 			addresses:      []common.Address{alice, carl},
 			expectedHashes: []string{"hash4", "hash3", "hash2", "hash1"},
 		},
@@ -124,8 +116,7 @@ func TestStore(t *testing.T) {
 					{newTx("hash3", carl, bob, "foo", 2)},
 				},
 			},
-			limit:          1,
-			opts:           []Option{IgnoreTransfers(), ByMethod(hex.EncodeToString([]byte("foo")))},
+			opts:           []Option{OnlyTransactions(), ByMethod(hex.EncodeToString([]byte("foo")))},
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash1"},
 		},
@@ -138,8 +129,7 @@ func TestStore(t *testing.T) {
 					{newTx("hash3", alice, bob, "", 2)},
 				},
 			},
-			limit:          1,
-			opts:           []Option{WithTimeRange(timestamppb.New(t0), timestamppb.New(t0.Add(1*time.Second)))},
+			opts:           []Option{WithTimeRange(timestamppb.New(t0), timestamppb.New(t1))},
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash2", "hash1"},
 		},
@@ -152,7 +142,6 @@ func TestStore(t *testing.T) {
 					{newTx("hash3", alice, bob, "", 2)},
 				},
 			},
-			limit:          1,
 			opts:           []Option{OnlySent()},
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash3", "hash1"},
@@ -166,11 +155,11 @@ func TestStore(t *testing.T) {
 					{newTx("hash3", alice, bob, "", 2)},
 				},
 			},
-			limit:          1,
 			opts:           []Option{OnlyReceived()},
 			addresses:      []common.Address{bob},
 			expectedHashes: []string{"hash3", "hash1"},
-		}, {
+		},
+		{
 			name: "only transfers",
 			txs: map[string][][]*types.Eth1TransactionIndexed{
 				"1": {
@@ -183,8 +172,7 @@ func TestStore(t *testing.T) {
 					{newTransfer("hash3", alice, bob, common.Address{}, 2)},
 				},
 			},
-			limit:          1,
-			opts:           []Option{IgnoreTransactions()},
+			opts:           []Option{OnlyTransfers()},
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash3", "hash1"},
 		},
@@ -201,8 +189,7 @@ func TestStore(t *testing.T) {
 					{newTransfer("hash2", alice, bob, common.Address{}, 1)},
 				},
 			},
-			limit:          1,
-			opts:           []Option{IgnoreTransfers()},
+			opts:           []Option{OnlyTransactions()},
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash3", "hash1"},
 		},
@@ -226,7 +213,6 @@ func TestStore(t *testing.T) {
 					{newTransfer("hash10", alice, bob, common.Address{}, 9)},
 				},
 			},
-			limit:          2,
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash10", "hash9", "hash8", "hash7", "hash6", "hash5", "hash4", "hash3", "hash2", "hash1"},
 		},
@@ -236,31 +222,28 @@ func TestStore(t *testing.T) {
 				"1": {
 					{newTransfer("hash1", alice, bob, usdc, 0)},
 					{newTransfer("hash2", alice, bob, usdc, 1)},
-					{newTransfer("hash3", alice, bob, usdc, 2)},
+					{newTransfer("hash3", alice, bob, dai, 2)},
 					{newTransfer("hash4", alice, bob, usdc, 3)},
 					{newTransfer("hash5", alice, bob, usdc, 4)},
 				},
 			},
-			limit:          2,
-			opts:           []Option{IgnoreTransactions(), ByAsset(usdc), WithTimeRange(timestamppb.New(t0.Add(1*time.Second)), timestamppb.New(t0.Add(3*time.Second)))},
+			opts:           []Option{OnlyTransfers(), ByAsset(usdc), WithTimeRange(timestamppb.New(t1), timestamppb.New(t0.Add(3*time.Second)))},
 			addresses:      []common.Address{alice},
-			expectedHashes: []string{"hash4", "hash3", "hash2"},
+			expectedHashes: []string{"hash4", "hash2"},
 		},
 		{
-			name: "by asset and sender with time range",
+			name: "by asset and sender",
 			transfers: map[string][][]TransferWithIndexes{
 				"1": {
-					{newTransfer("hash1", alice, bob, usdc, 0)},
-					{newTransfer("hash2", bob, alice, usdc, 1)},
-					{newTransfer("hash3", alice, bob, usdc, 2)},
-					{newTransfer("hash4", bob, alice, usdc, 3)},
-					{newTransfer("hash5", alice, bob, usdc, 4)},
+					{newTransfer("hash1", bob, alice, usdc, 0)},
+					{newTransfer("hash2", bob, alice, dai, 1)},
+					{newTransfer("hash3", alice, bob, dai, 2)},
+					{newTransfer("hash4", alice, bob, usdc, 3)},
 				},
 			},
-			limit:          2,
-			opts:           []Option{IgnoreTransactions(), OnlySent(), ByAsset(usdc), WithTimeRange(timestamppb.New(t0.Add(1*time.Second)), timestamppb.New(t0.Add(3*time.Second)))},
+			opts:           []Option{OnlyTransfers(), ByAsset(usdc), OnlySent()},
 			addresses:      []common.Address{alice},
-			expectedHashes: []string{"hash3"},
+			expectedHashes: []string{"hash4"},
 		},
 		{
 			name: "by asset and receiver with time range",
@@ -273,8 +256,7 @@ func TestStore(t *testing.T) {
 					{newTransfer("hash5", bob, alice, usdc, 4)},
 				},
 			},
-			limit:          2,
-			opts:           []Option{IgnoreTransactions(), OnlyReceived(), ByAsset(usdc), WithTimeRange(timestamppb.New(t0.Add(1*time.Second)), timestamppb.New(t0.Add(3*time.Second)))},
+			opts:           []Option{OnlyTransfers(), OnlyReceived(), ByAsset(usdc), WithTimeRange(timestamppb.New(t1), timestamppb.New(t0.Add(3*time.Second)))},
 			addresses:      []common.Address{alice},
 			expectedHashes: []string{"hash3"},
 		},
@@ -296,33 +278,60 @@ func TestStore(t *testing.T) {
 					}
 				}
 			}
-			chainIDs := append(maps.Keys(tt.txs), maps.Keys(tt.transfers)...)
-			sort.Strings(chainIDs)
-			chainIDs = slices.Compact(chainIDs)
-			var suffix map[string]map[string]string
-			for i := int64(0); i < int64(len(tt.expectedHashes))/tt.limit; i++ {
-				txs, newSuffix, err := store.Get(chainIDs, tt.addresses, suffix, tt.limit, tt.opts...)
-				if err != nil {
-					t.Fatalf("tx %d: %v", i, err)
-				}
-				if len(txs) == 0 {
-					t.Fatalf("tx %d: no transactions found", i)
-				}
-				if got, want := int64(len(txs)), tt.limit; got != want {
+			var suffix map[string]string
+			txs, _, err := store.Get(tt.addresses, suffix, 25, tt.opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(txs) == 0 {
+				t.Fatalf("no transactions found")
+			}
+			if got, want := len(txs), len(tt.expectedHashes); got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			for i := int64(0); i < int64(len(tt.expectedHashes)); i++ {
+				if got, want := string(txs[i].Hash), tt.expectedHashes[i]; got != want {
 					t.Errorf("got %v, want %v", got, want)
 				}
-				for j := int64(0); j < tt.limit; j++ {
-					if got, want := string(txs[j].Hash), tt.expectedHashes[i*tt.limit+j]; got != want {
-						t.Errorf("got %v, want %v", got, want)
-					}
-				}
-				suffix = newSuffix
 			}
 		})
 	}
 }
 
-var t0 = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+func TestStoreLimitAndPagination(t *testing.T) {
+	client, admin := databasetest.NewBigTable(t)
+
+	s, err := database.NewBigTableWithClient(context.Background(), client, admin, Schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := NewStore(database.Wrap(s, Table))
+
+	for i := 0; i < 10; i++ {
+		err := store.AddBlockTransactions("1", []*types.Eth1TransactionIndexed{newTx(fmt.Sprintf("%d", i), common.Address{}, common.Address{}, "", int64(i))})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var prefix map[string]string
+	var txs []*Interaction
+	for i := 9; i >= 0; i-- {
+		txs, prefix, err = store.Get([]common.Address{{}}, prefix, 1)
+		if len(txs) != 1 {
+			t.Errorf("got %v, want 1", len(txs))
+		}
+		if got, want := string(txs[0].Hash), fmt.Sprintf("%d", i); got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	}
+}
+
+var (
+	t0 = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	t1 = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).Add(1 * time.Second)
+)
 
 func newTx(hash string, from, to common.Address, method string, delta int64) *types.Eth1TransactionIndexed {
 	return &types.Eth1TransactionIndexed{
