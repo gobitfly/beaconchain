@@ -18,23 +18,15 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
-import {
-  pickHighestPriorityAmongBestMatchings,
-  type ResultSuggestion,
-  ResultType,
-  type SearchBar,
-  SearchbarColors,
-  SearchbarPurpose,
-  SearchbarShape,
-} from '~/types/searchbar'
+
 import {
   API_PATH, type PathValues,
 } from '~/types/customFetch'
-import { useNetworkStore } from '~/stores/useNetworkStore'
+import type { InternalPostSearchResponse } from '~/types/api/search'
+// import type { InternalPostSearchResponse } from '~/types/api/search'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
-const { currentNetwork } = useNetworkStore()
 
 const { width } = useWindowSize()
 
@@ -49,14 +41,15 @@ const {
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
 const selectedGroup = ref<number>(-1)
-const selectedValidator = ref<string>('')
 const {
-  addEntities, dashboardKey, dashboardType, isPublic, removeEntities,
+  addEntities,
+  dashboardKey,
+  isPublic: isPublicDashboard,
+  removeEntities,
 }
   = useDashboardKey()
-const { updateHash } = useUserDashboardStore()
 const {
-  isLoggedIn, user,
+  user,
 } = useUserStore()
 
 const initialQuery = {
@@ -73,14 +66,13 @@ const {
 
 const data = ref<GetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
-const searchBar = ref<SearchBar>()
 const hasNoOpenDialogs = ref(true)
 
 type ValidatorUpdateBody = {
   deposit_address?: string,
   graffiti?: string,
   group_id?: number,
-  validators?: string[],
+  validators?: number[],
   withdrawal_address?: string,
 }
 
@@ -109,9 +101,9 @@ const onClose = () => {
 
 const mapIndexOrPubKey = (
   validators?: VDBManageValidatorsTableRow[],
-): string[] => {
+) => {
   return [ ...new Set(validators?.map(
-    validator => validator.index?.toString() ?? validator.public_key)) ]
+    validator => validator.index ?? validator.public_key)) ]
 }
 
 const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
@@ -144,8 +136,8 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     warn('no validators selected to change group')
     return
   }
-  if (isPublic.value) {
-    removeEntities(validators as string[])
+  if (isPublicDashboard.value) {
+    removeEntities(validators.map(v => v.toString()))
     return
   }
 
@@ -162,58 +154,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(dashboardKey.value)
 }
 
-const addValidator = (result: ResultSuggestion) => {
-  if (total.value + 1 > maxValidatorsPerDashboard.value) {
-    dialog.open(BcPremiumModal, {})
-    return
-  }
-
-  let list: string[] = []
-  selectedValidator.value = ''
-  const body: ValidatorUpdateBody = {}
-  switch (result.type) {
-    case ResultType.ValidatorsByIndex:
-    case ResultType.ValidatorsByPubkey:
-      list = [ String(result.rawResult.num_value!) ]
-      selectedValidator.value = list[0]
-      body.validators = list
-      break
-    case ResultType.ValidatorsByDepositAddress:
-    case ResultType.ValidatorsByDepositEnsName:
-      body.deposit_address = result.rawResult.hash_value
-      break
-    case ResultType.ValidatorsByWithdrawalCredential:
-    case ResultType.ValidatorsByWithdrawalAddress:
-    case ResultType.ValidatorsByWithdrawalEnsName:
-      body.withdrawal_address = result.rawResult.hash_value
-      break
-    case ResultType.ValidatorsByGraffiti:
-      body.graffiti = result.rawResult.str_value
-      break
-  }
-
-  if (isPublic.value || !isLoggedIn.value) {
-    addEntities(list)
-    if (!isLoggedIn.value) {
-      updateHash(dashboardType.value, dashboardKey.value)
-    }
-  }
-  else {
-    changeGroup(body, selectedGroup.value)
-  }
-  searchBar.value!.empty()
-}
-
-// called for each row in the drop-down of the search bar and returns `true` to deactivate the row
-function isSearchResultRestricted(result: ResultSuggestion): boolean {
-  switch (result.type) {
-    case ResultType.ValidatorsByIndex:
-    case ResultType.ValidatorsByPubkey:
-      return false
-    default:
-      return isPublic.value || !user.value?.premium_perks?.bulk_adding
-  }
-}
+const { premium_perks } = useUserStore()
 
 const editSelected = () => {
   hasNoOpenDialogs.value = false
@@ -221,7 +162,7 @@ const editSelected = () => {
     data: {
       groupId: selected.value?.[0]?.group_id ?? undefined,
       selectedValidators: selected.value?.length,
-      totalValidators: total?.value,
+      totalValidatorsValidators: totalValidators?.value,
     },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
@@ -331,17 +272,75 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   })
 }
 
-const total = computed(() => addUpValues(overview.value?.validators))
+const totalValidators = computed(() => addUpValues(overview.value?.validators))
 
 const maxValidatorsPerDashboard = computed(() =>
-  isPublic.value || !user.value?.premium_perks?.validators_per_dashboard
+  isPublicDashboard.value || !user.value?.premium_perks?.validators_per_dashboard
     ? 20
     : user.value.premium_perks.validators_per_dashboard,
 )
 
 const premiumLimit = computed(
-  () => total.value >= maxValidatorsPerDashboard.value,
+  () => totalValidators.value >= maxValidatorsPerDashboard.value,
 )
+// const hasTooManyValidators = computed(() => totalValidators.value + 1 > maxValidatorsPerDashboard.value)
+const hasPremiumPerkBulkAdding = computed(() => !!premium_perks.value?.bulk_adding)
+
+const handleInvalidSubmit = () => {
+  dialog.open(BcPremiumModal, {})
+}
+const resetInput = () => {
+  inputValidator.value = ''
+}
+const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefined) => {
+  if (!item) return
+  const {
+    type,
+    value,
+  } = item
+  if (
+    totalValidators.value + 1 > maxValidatorsPerDashboard.value
+    || (type === 'validator_list' && totalValidators.value + value.validators.length > maxValidatorsPerDashboard.value)
+  ) {
+    handleInvalidSubmit()
+    return
+  }
+  if (
+    !hasPremiumPerkBulkAdding.value
+    && (type !== 'validator' && type !== 'validator_list')
+  ) {
+    handleInvalidSubmit()
+    return
+  }
+  if (isPublicDashboard.value) {
+    if (item.type === 'validator') {
+      addEntities([ `${item.value.index}` ])
+      resetInput()
+      return
+    }
+    if (item.type === 'validator_list') {
+      addEntities(
+        item.value.validators
+          .map(validator => `${validator}`),
+      )
+      resetInput()
+      return
+    }
+    handleInvalidSubmit()
+    return
+  }
+  changeGroup({
+    ...(type === 'validator' && { validators: [ value.index ] }),
+    ...(type === 'validator_list' && { validators: value.validators }),
+    ...(type === 'validators_by_deposit_address' && { deposit_address: value.deposit_address }),
+    ...(type === 'validators_by_withdrawal_credential' && { withdrawal_credential: value.withdrawal_credential }),
+    ...(type === 'validators_by_graffiti' && { graffiti: value.graffiti }),
+  },
+  selectedGroup.value,
+  )
+  resetInput()
+}
+const inputValidator = ref('')
 </script>
 
 <template>
@@ -361,7 +360,7 @@ const premiumLimit = computed(
     <BcTableControl
       :search-placeholder="
         $t(
-          isPublic
+          isPublicDashboard
             ? 'dashboard.validator.summary.search_placeholder_public'
             : 'dashboard.validator.summary.search_placeholder',
         )
@@ -385,22 +384,14 @@ const premiumLimit = computed(
             :include-all="true"
             class="small group-selection"
           />
-          <!-- TODO: below, "[currentNetwork]" is wrong! Replace it with an array containing the chain ID that
-           the dashboard was created for (it is not necessarily the current network). -->
-          <BcSearchbarMain
-            ref="searchBar"
-            :bar-shape="SearchbarShape.Small"
-            :color-theme="SearchbarColors.Default"
-            :bar-purpose="SearchbarPurpose.ValidatorAddition"
-            :only-networks="[currentNetwork]"
-            :row-lacks-premium-subscription="isSearchResultRestricted"
-            :pick-by-default="pickHighestPriorityAmongBestMatchings"
-            :screen-width-causing-sudden-change="
-              0 /*if you introduce a media query (or similar) changing the width of the bar, give the threshold here
-              to avoid visual bugs in the list of results */
-            "
+          <DashboardValidatorManagementModalSearch
+            v-model="inputValidator"
             class="search-bar"
-            @go="addValidator"
+            :has-premium-perk-bulk-adding
+            :total-validators
+            :max-validators-per-dashboard
+            :is-public-dashboard
+            @submit="handleSubmit"
           />
         </div>
       </template>
@@ -583,7 +574,7 @@ const premiumLimit = computed(
                 >
                   <span>
                     <BcFormatNumber
-                      :value="total"
+                      :value="totalValidators"
                       default="0"
                     /> /
                     <BcFormatNumber
@@ -613,6 +604,7 @@ const premiumLimit = computed(
 @use "~/assets/css/main.scss";
 @use "~/assets/css/utils.scss";
 @use "~/assets/css/fonts.scss";
+@use '~/assets/css/breakpoints' as *;
 
 :global(.validator-managment-modal-container) {
   width: 1060px;
@@ -643,7 +635,10 @@ const premiumLimit = computed(
 }
 
 .group-selection {
-  width: 160px;
+  width: 6rem;
+  @media (min-width: $breakpoint-md) {
+    width: 10rem;
+  }
 }
 
 .management-table {
