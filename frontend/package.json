@@ -58,7 +58,7 @@
     "lint:fix": "npm run lint -- --fix",
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
-    "test": "npx playwright test --config=tests/playwright.config.ts",
+    "test:e2e": "npx playwright test --config=tests/playwright.config.ts",
     "typecheck": "npx nuxi typecheck",
     "validate": "npm run lint:fix && npm run typecheck"
   },
