@@ -37,7 +37,7 @@ cp .env-example .env
 In file `.env`, write the URLs of the API servers and the secret key to access to them.
 The variable evoking the development is used to show/hide features and components that are not ready for production.
 
-Set the following mapping in your `/etc/hosts` file:
+Add the following mapping in your `/etc/hosts` file:
 
 ```
 127.0.0.1 local.beaconcha.in
@@ -121,6 +121,17 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+## Get mocked api data
+
+If your `user` was added to the `ADMIN` or `DEV` group by the `api team`, you can get
+`mocked data` from the `api` for certain `endpoints` by adding `?is_mocked=true` as a 
+`query parameter`.
+
+You can `turn on` mocked data `globally` for all `configured enpoints` 
+- by setting `NUXT_PUBLIC_IS_API_MOCKED=true`
+in your [.env](.env) or
+- running `npm run dev:mock:api` (See: [package.json](package.json))
 
 ## Descision Record
 

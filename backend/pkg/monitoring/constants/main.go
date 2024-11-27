@@ -11,3 +11,5 @@ const (
 	Failure StatusType    = "failure"
 	Default time.Duration = -1 * time.Second
 )
+
+const CleanShutdownEvent = "clean_shutdown"

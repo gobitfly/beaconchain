@@ -5,8 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -20,6 +22,7 @@ type searchTypeKey string
 const (
 	validatorByIndex           searchTypeKey = "validator_by_index"
 	validatorByPublicKey       searchTypeKey = "validator_by_public_key"
+	validatorList              searchTypeKey = "validator_list"
 	validatorsByDepositAddress searchTypeKey = "validators_by_deposit_address"
 	validatorsByDepositEnsName searchTypeKey = "validators_by_deposit_ens_name"
 	//nolint:gosec
@@ -33,12 +36,13 @@ const (
 var searchTypeToRegex = map[searchTypeKey]*regexp.Regexp{
 	validatorByIndex:                 reInteger,
 	validatorByPublicKey:             reValidatorPublicKey,
+	validatorList:                    reValidatorList,
 	validatorsByDepositAddress:       reEthereumAddress,
 	validatorsByDepositEnsName:       reEnsName,
 	validatorsByWithdrawalCredential: reWithdrawalCredential,
 	validatorsByWithdrawalAddress:    reEthereumAddress,
 	validatorsByWithdrawalEns:        reEnsName,
-	validatorsByGraffiti:             reNonEmpty,
+	validatorsByGraffiti:             reGraffiti,
 }
 
 // --------------------------------------
@@ -68,16 +72,16 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	searchResultChan := make(chan types.SearchResult)
 
 	// iterate over all combinations of search types and networks
-	for searchType := range searchTypeSet {
+	for _, searchType := range searchTypeSet {
 		// check if input matches the regex for the search type
 		if !searchTypeToRegex[searchType].MatchString(req.Input) {
 			continue
 		}
-		for chainId := range chainIdSet {
+		for _, chainId := range chainIdSet {
 			chainId := chainId
 			searchType := searchType
 			g.Go(func() error {
-				searchResult, err := h.handleSearch(ctx, req.Input, searchType, chainId)
+				searchResult, err := h.handleSearchType(ctx, req.Input, searchType, chainId)
 				if err != nil {
 					if errors.Is(err, dataaccess.ErrNotFound) {
 						return nil
@@ -117,223 +121,203 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 // --------------------------------------
 //	 Search Helper Functions
 
-func (h *HandlerService) handleSearch(ctx context.Context, input string, searchType searchTypeKey, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
+func (h *HandlerService) handleSearchType(ctx context.Context, input string, searchType searchTypeKey, chainId uint64) (*types.SearchResult, error) {
+	switch searchType {
+	case validatorByIndex:
+		return h.handleSearchValidatorByIndex(ctx, input, chainId)
+	case validatorByPublicKey:
+		return h.handleSearchValidatorByPublicKey(ctx, input, chainId)
+	case validatorList:
+		return h.handleSearchValidatorList(ctx, input, chainId)
+	case validatorsByDepositAddress:
+		return h.handleSearchValidatorsByDepositAddress(ctx, input, chainId)
+	case validatorsByDepositEnsName:
+		return h.handleSearchValidatorsByDepositEnsName(ctx, input, chainId)
+	case validatorsByWithdrawalCredential:
+		return h.handleSearchValidatorsByWithdrawalCredential(ctx, input, chainId)
+	case validatorsByWithdrawalAddress:
+		return h.handleSearchValidatorsByWithdrawalAddress(ctx, input, chainId)
+	case validatorsByWithdrawalEns:
+		return h.handleSearchValidatorsByWithdrawalEnsName(ctx, input, chainId)
+	case validatorsByGraffiti:
+		return h.handleSearchValidatorsByGraffiti(ctx, input, chainId)
 	default:
-		switch searchType {
-		case validatorByIndex:
-			return h.handleSearchValidatorByIndex(ctx, input, chainId)
-		case validatorByPublicKey:
-			return h.handleSearchValidatorByPublicKey(ctx, input, chainId)
-		case validatorsByDepositAddress:
-			return h.handleSearchValidatorsByDepositAddress(ctx, input, chainId)
-		case validatorsByDepositEnsName:
-			return h.handleSearchValidatorsByDepositEnsName(ctx, input, chainId)
-		case validatorsByWithdrawalCredential:
-			return h.handleSearchValidatorsByWithdrawalCredential(ctx, input, chainId)
-		case validatorsByWithdrawalAddress:
-			return h.handleSearchValidatorsByWithdrawalAddress(ctx, input, chainId)
-		case validatorsByWithdrawalEns:
-			return h.handleSearchValidatorsByWithdrawalEnsName(ctx, input, chainId)
-		case validatorsByGraffiti:
-			return h.handleSearchValidatorsByGraffiti(ctx, input, chainId)
-		default:
-			return nil, errors.New("invalid search type")
-		}
+		return nil, errors.New("invalid search type")
 	}
 }
 
 func (h *HandlerService) handleSearchValidatorByIndex(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		index, err := strconv.ParseUint(input, 10, 64)
-		if err != nil {
-			// input should've been checked by the regex before, this should never happen
-			return nil, err
-		}
-		result, err := h.dai.GetSearchValidatorByIndex(ctx, chainId, index)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:      string(validatorByIndex),
-			ChainId:   chainId,
-			HashValue: "0x" + hex.EncodeToString(result.PublicKey),
-			NumValue:  &result.Index,
-		}, nil
+	index, err := strconv.ParseUint(input, 10, 64)
+	if err != nil {
+		// input should've been checked by the regex before, this should never happen
+		return nil, err
 	}
+	result, err := h.daService.GetSearchValidatorByIndex(ctx, chainId, index)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.SearchResult{
+		Type:      string(validatorByIndex),
+		ChainId:   chainId,
+		HashValue: "0x" + hex.EncodeToString(result.PublicKey),
+		NumValue:  &result.Index,
+	}, nil
 }
 
 func (h *HandlerService) handleSearchValidatorByPublicKey(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		publicKey, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
-		if err != nil {
-			// input should've been checked by the regex before, this should never happen
-			return nil, err
-		}
-		result, err := h.dai.GetSearchValidatorByPublicKey(ctx, chainId, publicKey)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:      string(validatorByPublicKey),
-			ChainId:   chainId,
-			HashValue: "0x" + hex.EncodeToString(result.PublicKey),
-			NumValue:  &result.Index,
-		}, nil
+	publicKey, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		// input should've been checked by the regex before, this should never happen
+		return nil, err
 	}
+	result, err := h.daService.GetSearchValidatorByPublicKey(ctx, chainId, publicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.SearchResult{
+		Type:      string(validatorByPublicKey),
+		ChainId:   chainId,
+		HashValue: "0x" + hex.EncodeToString(result.PublicKey),
+		NumValue:  &result.Index,
+	}, nil
+}
+
+func (h *HandlerService) handleSearchValidatorList(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
+	var v validationError
+	// split the input string into a slice of strings
+	indices, pubkeys := v.checkValidatorList(input, forbidEmpty)
+	if v.hasErrors() {
+		return nil, nil // return no error as to not disturb the other search types
+	}
+	validators, err := h.daService.GetValidatorsFromSlices(ctx, indices, pubkeys)
+	if err != nil {
+		return nil, err
+	}
+	if len(validators) == 0 {
+		return nil, nil
+	}
+
+	var resultLength uint64 = uint64(len(validators))
+	return &types.SearchResult{
+		Type:     string(validatorList),
+		ChainId:  chainId,
+		NumValue: &resultLength,
+	}, nil
 }
 
 func (h *HandlerService) handleSearchValidatorsByDepositAddress(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		address, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
-		if err != nil {
-			return nil, err
-		}
-		result, err := h.dai.GetSearchValidatorsByDepositAddress(ctx, chainId, address)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:      string(validatorsByDepositAddress),
-			ChainId:   chainId,
-			HashValue: "0x" + hex.EncodeToString(result.Address),
-			NumValue:  &result.Count,
-		}, nil
+	address, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
 	}
+	result, err := h.daService.GetSearchValidatorsByDepositAddress(ctx, chainId, address)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.SearchResult{
+		Type:      string(validatorsByDepositAddress),
+		ChainId:   chainId,
+		HashValue: "0x" + hex.EncodeToString(result.Address),
+		NumValue:  &result.Count,
+	}, nil
 }
 
 func (h *HandlerService) handleSearchValidatorsByDepositEnsName(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		result, err := h.dai.GetSearchValidatorsByDepositEnsName(ctx, chainId, input)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:      string(validatorsByDepositEnsName),
-			ChainId:   chainId,
-			StrValue:  result.EnsName,
-			HashValue: "0x" + hex.EncodeToString(result.Address),
-			NumValue:  &result.Count,
-		}, nil
+	result, err := h.daService.GetSearchValidatorsByDepositEnsName(ctx, chainId, input)
+	if err != nil {
+		return nil, err
 	}
+
+	return &types.SearchResult{
+		Type:      string(validatorsByDepositEnsName),
+		ChainId:   chainId,
+		StrValue:  result.EnsName,
+		HashValue: "0x" + hex.EncodeToString(result.Address),
+		NumValue:  &result.Count,
+	}, nil
 }
 
 func (h *HandlerService) handleSearchValidatorsByWithdrawalCredential(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		withdrawalCredential, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
-		if err != nil {
-			return nil, err
-		}
-		result, err := h.dai.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:      string(validatorsByWithdrawalCredential),
-			ChainId:   chainId,
-			HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
-			NumValue:  &result.Count,
-		}, nil
+	withdrawalCredential, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
 	}
+	result, err := h.daService.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.SearchResult{
+		Type:      string(validatorsByWithdrawalCredential),
+		ChainId:   chainId,
+		HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
+		NumValue:  &result.Count,
+	}, nil
 }
 
 func (h *HandlerService) handleSearchValidatorsByWithdrawalAddress(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		withdrawalString := "010000000000000000000000" + strings.TrimPrefix(input, "0x")
-		withdrawalCredential, err := hex.DecodeString(withdrawalString)
-		if err != nil {
-			return nil, err
-		}
-		result, err := h.dai.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:      string(validatorsByWithdrawalAddress),
-			ChainId:   chainId,
-			HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
-			NumValue:  &result.Count,
-		}, nil
+	withdrawalString := "010000000000000000000000" + strings.TrimPrefix(input, "0x")
+	withdrawalCredential, err := hex.DecodeString(withdrawalString)
+	if err != nil {
+		return nil, err
 	}
+	result, err := h.daService.GetSearchValidatorsByWithdrawalCredential(ctx, chainId, withdrawalCredential)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.SearchResult{
+		Type:      string(validatorsByWithdrawalAddress),
+		ChainId:   chainId,
+		HashValue: "0x" + hex.EncodeToString(result.WithdrawalCredential),
+		NumValue:  &result.Count,
+	}, nil
 }
 
 func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		result, err := h.dai.GetSearchValidatorsByWithdrawalEnsName(ctx, chainId, input)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:      string(validatorsByWithdrawalEns),
-			ChainId:   chainId,
-			StrValue:  result.EnsName,
-			HashValue: "0x" + hex.EncodeToString(result.Address),
-			NumValue:  &result.Count,
-		}, nil
+	result, err := h.daService.GetSearchValidatorsByWithdrawalEnsName(ctx, chainId, input)
+	if err != nil {
+		return nil, err
 	}
+
+	return &types.SearchResult{
+		Type:      string(validatorsByWithdrawalEns),
+		ChainId:   chainId,
+		StrValue:  result.EnsName,
+		HashValue: "0x" + hex.EncodeToString(result.Address),
+		NumValue:  &result.Count,
+	}, nil
 }
 
 func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, nil
-	default:
-		result, err := h.dai.GetSearchValidatorsByGraffiti(ctx, chainId, input)
-		if err != nil {
-			return nil, err
-		}
-
-		return &types.SearchResult{
-			Type:     string(validatorsByGraffiti),
-			ChainId:  chainId,
-			StrValue: result.Graffiti,
-			NumValue: &result.Count,
-		}, nil
+	result, err := h.daService.GetSearchValidatorsByGraffiti(ctx, chainId, input)
+	if err != nil {
+		return nil, err
 	}
+
+	return &types.SearchResult{
+		Type:     string(validatorsByGraffiti),
+		ChainId:  chainId,
+		StrValue: result.Graffiti,
+		NumValue: &result.Count,
+	}, nil
 }
 
 // --------------------------------------
 //   Input Validation
 
 // if the passed slice is empty, return a set with all chain IDs; otherwise check if the passed networks are valid
-func (v *validationError) checkNetworkSlice(networks []intOrString) map[uint64]struct{} {
+func (v *validationError) checkNetworkSlice(networks []intOrString) []uint64 {
 	networkSet := map[uint64]struct{}{}
 	// if the list is empty, query all networks
 	if len(networks) == 0 {
 		for _, n := range allNetworks {
 			networkSet[n.ChainId] = struct{}{}
 		}
-		return networkSet
+		return slices.Collect(maps.Keys(networkSet))
 	}
 	// list not empty, check if networks are valid
 	for _, network := range networks {
@@ -344,18 +328,18 @@ func (v *validationError) checkNetworkSlice(networks []intOrString) map[uint64]s
 		}
 		networkSet[chainId] = struct{}{}
 	}
-	return networkSet
+	return slices.Collect(maps.Keys(networkSet))
 }
 
 // if the passed slice is empty, return a set with all search types; otherwise check if the passed types are valid
-func (v *validationError) checkSearchTypes(types []searchTypeKey) map[searchTypeKey]struct{} {
+func (v *validationError) checkSearchTypes(types []searchTypeKey) []searchTypeKey {
 	typeSet := map[searchTypeKey]struct{}{}
 	// if the list is empty, query all types
 	if len(types) == 0 {
 		for t := range searchTypeToRegex {
 			typeSet[t] = struct{}{}
 		}
-		return typeSet
+		return slices.Collect(maps.Keys(typeSet))
 	}
 	// list not empty, check if types are valid
 	for _, t := range types {
@@ -365,5 +349,5 @@ func (v *validationError) checkSearchTypes(types []searchTypeKey) map[searchType
 		}
 		typeSet[t] = struct{}{}
 	}
-	return typeSet
+	return slices.Collect(maps.Keys(typeSet))
 }

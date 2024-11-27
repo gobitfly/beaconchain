@@ -121,6 +121,7 @@ export function useUserDashboardStore() {
             id: res.data.id,
             is_archived: false,
             name: res.data.name,
+            network: res.data.network,
             validator_count: 0,
           },
         ],

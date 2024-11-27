@@ -3,6 +3,7 @@ package mail
 import (
 	"bytes"
 	"context"
+	"html/template"
 
 	"fmt"
 	"net/smtp"
@@ -13,6 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/templates"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/k3a/html2text"
 	"github.com/mailgun/mailgun-go/v4"
 )
 
@@ -71,28 +73,40 @@ func createTextMessage(msg types.Email) string {
 
 // SendMailRateLimited sends an email to a given address with the given message.
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
-func SendMailRateLimited(to, subject string, msg types.Email, attachment []types.EmailAttachment) error {
-	if utils.Config.Frontend.MaxMailsPerEmailPerDay > 0 {
-		now := time.Now()
-		count, err := db.GetMailsSentCount(to, now)
+func SendMailRateLimited(content types.TransitEmailContent, maxEmailsPerDay int64, bucket string) error {
+	sendThresholdReachedMail := false
+	count, err := db.CountSentMessage(bucket, content.UserId)
+	if err != nil {
+		return err
+	}
+	timeLeft := time.Until(time.Now().Add(utils.Day).Truncate(utils.Day))
+
+	log.Debugf("user %d has sent %d of %d emails today, time left is %v", content.UserId, count, maxEmailsPerDay, timeLeft)
+	if count > maxEmailsPerDay {
+		return &types.RateLimitError{TimeLeft: timeLeft}
+	} else if count == maxEmailsPerDay {
+		sendThresholdReachedMail = true
+	}
+
+	err = SendHTMLMail(content.Address, content.Subject, content.Email, content.Attachments)
+	if err != nil {
+		log.Error(err, "error sending email", 0)
+	}
+
+	// make sure the threshold reached email arrives last
+	if sendThresholdReachedMail {
+		// send an email if this was the last email for today
+		err := SendHTMLMail(content.Address,
+			"beaconcha.in - Email notification threshold limit reached",
+			types.Email{
+				Title: "Email notification threshold limit reached",
+				//nolint: gosec
+				Body: template.HTML(fmt.Sprintf("You have reached the email notification threshold limit of %d emails per day. Further notification emails will be suppressed for %.1f hours.", maxEmailsPerDay, timeLeft.Hours())),
+			},
+			[]types.EmailAttachment{})
 		if err != nil {
 			return err
 		}
-		if count >= utils.Config.Frontend.MaxMailsPerEmailPerDay {
-			timeLeft := now.Add(utils.Day).Truncate(utils.Day).Sub(now)
-			return &types.RateLimitError{TimeLeft: timeLeft}
-		}
-	}
-
-	err := db.CountSentMail(to)
-	if err != nil {
-		// only log if counting did not work
-		return fmt.Errorf("error counting sent email: %v", err)
-	}
-
-	err = SendHTMLMail(to, subject, msg, attachment)
-	if err != nil {
-		return err
 	}
 
 	return nil
@@ -120,6 +134,10 @@ func SendMailMailgun(to, subject, msgHtml, msgText string, attachment []types.Em
 		utils.Config.Frontend.Mail.Mailgun.Domain,
 		utils.Config.Frontend.Mail.Mailgun.PrivateKey,
 	)
+
+	// if the text part still contains html tags / entities, remove / convert them
+	msgText = html2text.HTML2Text(msgText)
+
 	message := mg.NewMessage(utils.Config.Frontend.Mail.Mailgun.Sender, subject, msgText, to)
 	message.SetHtml(msgHtml)
 

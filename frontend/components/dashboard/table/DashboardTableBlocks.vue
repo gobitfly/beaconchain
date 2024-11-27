@@ -52,7 +52,7 @@ const loadData = (query?: TableQueryParams) => {
   if (!query) {
     query = {
       limit: pageSize.value,
-      sort: 'block:desc',
+      sort: 'slot:desc',
     }
   }
   setQuery(query, true, true)
@@ -280,7 +280,6 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             <Column
               v-if="colsVisible.rewards"
               field="reward"
-              :sortable="true"
               body-class="reward"
               header-class="reward"
               :header="$t('dashboard.validator.col.proposer_rewards')"

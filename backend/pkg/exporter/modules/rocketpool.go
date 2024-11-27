@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
 
@@ -110,6 +113,10 @@ type RocketpoolNetworkStats struct {
 	TotalEthBalance        *big.Int
 }
 
+type RocketPoolOnchainConfig struct {
+	SmoothingPoolAddress common.Address
+}
+
 type RocketpoolExporter struct {
 	Eth1Client                         *ethclient.Client
 	API                                *rocketpool.RocketPool
@@ -124,6 +131,7 @@ type RocketpoolExporter struct {
 	LastRewardTree                     uint64
 	RocketpoolRewardTreesDownloadQueue []RocketpoolRewardTreeDownloadable
 	RocketpoolRewardTreeData           map[uint64]RewardsFile
+	OnchainConfig                      *RocketPoolOnchainConfig
 }
 
 type RocketpoolRewardTreeDownloadable struct {
@@ -195,6 +203,10 @@ func (rp *RocketpoolExporter) Run() error {
 			continue
 		}
 
+		services.ReportStatus("rocketpoolExporter", "Running", nil)
+
+		metrics.TaskDuration.WithLabelValues("exporter_rocketpoolExporter").Observe(time.Since(t0).Seconds())
+
 		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "exported rocketpool-data")
 		count++
 		<-t.C
@@ -263,10 +275,13 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 		}
 
 		proofWrapper, err := getRewardsData(bytes)
+		if err != nil {
+			return fmt.Errorf("can not parse reward file %v, error: %w", missingInterval.Index, err)
+		}
 
 		merkleRootFromFile := common.HexToHash(proofWrapper.MerkleRoot)
 		if missingInterval.MerkleRoot != merkleRootFromFile {
-			return fmt.Errorf("invalid merkle root value : %w", err)
+			return fmt.Errorf("invalid merkle root value: %s != %s", missingInterval.MerkleRoot, merkleRootFromFile)
 		}
 
 		rp.RocketpoolRewardTreesDownloadQueue = append(rp.RocketpoolRewardTreesDownloadQueue, RocketpoolRewardTreeDownloadable{
@@ -301,6 +316,8 @@ func (rp *RocketpoolExporter) Update(count int64) error {
 	wg.Go(func() error { return rp.UpdateDAOProposals() })
 	wg.Go(func() error { return rp.UpdateDAOMembers() })
 	wg.Go(func() error { return rp.UpdateNetworkStats() })
+	wg.Go(func() error { return rp.UpdateConfigs() })
+
 	return wg.Wait()
 }
 
@@ -339,6 +356,29 @@ func (rp *RocketpoolExporter) Save(count int64) error {
 	err = rp.SaveRewardTrees()
 	if err != nil {
 		return err
+	}
+
+	err = rp.SaveConfigs()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rp *RocketpoolExporter) UpdateConfigs() error {
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "updated rocketpool-configs")
+	}(t0)
+
+	smoothingPoolAddress, err := rp.API.GetContract("rocketSmoothingPool", nil)
+	if err != nil {
+		return err
+	}
+
+	rp.OnchainConfig = &RocketPoolOnchainConfig{
+		SmoothingPoolAddress: *smoothingPoolAddress.Address,
 	}
 
 	return nil
@@ -637,6 +677,38 @@ func getBigIntFrom(rp *rocketpool.RocketPool, contract string, method string, ar
 	return *perc, err
 }
 
+func (rp *RocketpoolExporter) SaveConfigs() error {
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-configs")
+	}(t0)
+
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	storageAddress, err := hex.DecodeString(strings.Trim(RP_CONFIG.GetStorageAddress(), "0x"))
+	if err != nil {
+		return errors.Wrap(err, "error decoding storage address")
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO rocketpool_onchain_configs (
+			rocketpool_storage_address,
+			smoothing_pool_address
+		) VALUES ($1, $2) ON CONFLICT (rocketpool_storage_address) DO UPDATE SET
+		 	smoothing_pool_address = excluded.smoothing_pool_address
+	`, storageAddress, rp.OnchainConfig.SmoothingPoolAddress.Bytes())
+
+	if err != nil {
+		return errors.Wrap(err, "error inserting into rocketpool_onchain_configs")
+	}
+
+	return tx.Commit()
+}
+
 func (rp *RocketpoolExporter) SaveMinipools() error {
 	if len(rp.MinipoolsByAddress) == 0 {
 		return nil
@@ -720,6 +792,17 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 		if err != nil {
 			return fmt.Errorf("error inserting into rocketpool_minipools: %w", err)
 		}
+	}
+
+	// updating index column after writing minipools for cheaper access later
+	_, err = tx.Exec(`
+		UPDATE rocketpool_minipools
+		SET validator_index = validators.validatorindex
+		FROM validators
+		WHERE rocketpool_minipools.pubkey = validators.pubkey
+	`)
+	if err != nil {
+		return fmt.Errorf("error updating rocketpool_minipools with validatorindex: %w", err)
 	}
 
 	return tx.Commit()
@@ -850,6 +933,27 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 		if err != nil {
 			return fmt.Errorf("can not store reward file %v. Error %w", rewardTree.ID, err)
 		}
+	}
+
+	// refreshing materialized view
+	var exists bool
+	err = tx.Get(&exists, `SELECT EXISTS (
+		SELECT 1 
+		FROM pg_catalog.pg_matviews 
+		WHERE matviewname = 'rocketpool_rewards_summary'
+	)`)
+	if err != nil {
+		return fmt.Errorf("failed to check if materialized view exists: %w", err)
+	}
+
+	// If the view exists, refresh it concurrently
+	if exists {
+		_, err = tx.Exec(`REFRESH MATERIALIZED VIEW CONCURRENTLY rocketpool_rewards_summary`)
+		if err != nil {
+			return fmt.Errorf("cannot refresh materialized view rocketpool_rewards_summary. Error %w", err)
+		}
+	} else {
+		log.Infof("Materialized view rocketpool_rewards_summary does not exist, skipping refresh.")
 	}
 
 	err = tx.Commit()

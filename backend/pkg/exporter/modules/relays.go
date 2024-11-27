@@ -107,21 +107,21 @@ func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
 	if offset != 0 {
 		url += fmt.Sprintf("&cursor=%v", offset)
 	}
-
-	//nolint:gosec
-	resp, err := http.Get(url)
+	client := &http.Client{
+		Timeout: time.Second * 30,
+	}
+	resp, err := client.Get(url)
 
 	if err != nil {
-		log.Error(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": r.ID})
-		return nil, err
+		log.Error(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": r.ID, "offset": offset, "url": url})
+		return nil, fmt.Errorf("error retrieving delivered payloads for relay: %v, offset: %v, url: %v: %w", r.ID, offset, url, err)
 	}
 
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&payloads)
-
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding json for delivered payloads for relay: %v, offset: %v, url: %v: %w", r.ID, offset, url, err)
 	}
 
 	return payloads, nil
@@ -175,7 +175,7 @@ func retrieveAndInsertPayloadsFromRelay(r types.Relay, low_bound uint64, high_bo
 	for {
 		resp, err := fetchDeliveredPayloads(r, offset)
 		if err != nil {
-			return err
+			return fmt.Errorf("error calling fetchDeliveredPayloads with offset: %v for relay: %v: %w", offset, r.ID, err)
 		}
 
 		if resp == nil {

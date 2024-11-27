@@ -80,7 +80,7 @@ export type SummaryTableVisibility = {
 }
 
 export const SUMMARY_CHART_GROUP_TOTAL = -1
-export const SUMMARY_CHART_GROUP_NETWORK_AVERAGE = -2
+// export const SUMMARY_CHART_GROUP_NETWORK_AVERAGE = -2
 
 export type AggregationTimeframe = keyof ChartHistorySeconds
 export const AggregationTimeframes: AggregationTimeframe[] = [

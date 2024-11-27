@@ -61,24 +61,15 @@ type Config struct {
 	} `yaml:"bigtable"`
 	BlobIndexer struct {
 		S3 struct {
-			Endpoint        string `yaml:"endpoint" envconfig:"BLOB_INDEXER_S3_ENDPOINT"`
-			Bucket          string `yaml:"bucket" envconfig:"BLOB_INDEXER_S3_BUCKET"`
-			AccessKeyId     string `yaml:"accessKeyId" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_ID"`
-			AccessKeySecret string `yaml:"accessKeySecret" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_SECRET"`
+			Endpoint        string `yaml:"endpoint" envconfig:"BLOB_INDEXER_S3_ENDPOINT"`                 // s3 endpoint
+			Bucket          string `yaml:"bucket" envconfig:"BLOB_INDEXER_S3_BUCKET"`                     // s3 bucket
+			AccessKeyId     string `yaml:"accessKeyId" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_ID"`         // s3 access key id
+			AccessKeySecret string `yaml:"accessKeySecret" envconfig:"BLOB_INDEXER_S3_ACCESS_KEY_SECRET"` // s3 access key secret
 		} `yaml:"s3"`
+		PruneMarginEpochs    uint64 `yaml:"pruneMarginEpochs" envconfig:"BLOB_INDEXER_PRUNE_MARGIN_EPOCHS"`       // PruneMarginEpochs helps blobindexer to decide if connected node has pruned too far to have no holes in the data, set it to same value as lighthouse flag --blob-prune-margin-epochs
+		DisableStatusReports bool   `yaml:"disableStatusReports" envconfig:"BLOB_INDEXER_DISABLE_STATUS_REPORTS"` // disable status reports (no connection to db needed)
 	} `yaml:"blobIndexer"`
-	Chain struct {
-		Name                       string `yaml:"name" envconfig:"CHAIN_NAME"`
-		Id                         uint64 `yaml:"id" envconfig:"CHAIN_ID"`
-		GenesisTimestamp           uint64 `yaml:"genesisTimestamp" envconfig:"CHAIN_GENESIS_TIMESTAMP"`
-		GenesisValidatorsRoot      string `yaml:"genesisValidatorsRoot" envconfig:"CHAIN_GENESIS_VALIDATORS_ROOT"`
-		DomainBLSToExecutionChange string `yaml:"domainBLSToExecutionChange" envconfig:"CHAIN_DOMAIN_BLS_TO_EXECUTION_CHANGE"`
-		DomainVoluntaryExit        string `yaml:"domainVoluntaryExit" envconfig:"CHAIN_DOMAIN_VOLUNTARY_EXIT"`
-		ClConfigPath               string `yaml:"clConfigPath" envconfig:"CHAIN_CL_CONFIG_PATH"`
-		ElConfigPath               string `yaml:"elConfigPath" envconfig:"CHAIN_EL_CONFIG_PATH"`
-		ClConfig                   ClChainConfig
-		ElConfig                   *params.ChainConfig
-	} `yaml:"chain"`
+	Chain                     `yaml:"chain"`
 	Eth1ErigonEndpoint        string `yaml:"eth1ErigonEndpoint" envconfig:"ETH1_ERIGON_ENDPOINT"`
 	Eth1GethEndpoint          string `yaml:"eth1GethEndpoint" envconfig:"ETH1_GETH_ENDPOINT"`
 	EtherscanAPIKey           string `yaml:"etherscanApiKey" envconfig:"ETHERSCAN_API_KEY"`
@@ -161,6 +152,7 @@ type Config struct {
 			Port         string `yaml:"port" envconfig:"FRONTEND_READER_DB_PORT"`
 			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"FRONTEND_READER_DB_MAX_OPEN_CONNS"`
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"FRONTEND_READER_DB_MAX_IDLE_CONNS"`
+			SSL          bool   `yaml:"ssl" envconfig:"FRONTEND_READER_DB_SSL"`
 		} `yaml:"readerDatabase"`
 		WriterDatabase struct {
 			Username     string `yaml:"user" envconfig:"FRONTEND_WRITER_DB_USERNAME"`
@@ -170,6 +162,7 @@ type Config struct {
 			Port         string `yaml:"port" envconfig:"FRONTEND_WRITER_DB_PORT"`
 			MaxOpenConns int    `yaml:"maxOpenConns" envconfig:"FRONTEND_WRITER_DB_MAX_OPEN_CONNS"`
 			MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"FRONTEND_WRITER_DB_MAX_IDLE_CONNS"`
+			SSL          bool   `yaml:"ssl" envconfig:"FRONTEND_WRITER_DB_SSL"`
 		} `yaml:"writerDatabase"`
 		Stripe struct {
 			Webhook   string `yaml:"webhook" envconfig:"FRONTEND_STRIPE_WEBHOOK"`
@@ -313,6 +306,21 @@ type Config struct {
 
 	ApiKeySecret     string   `yaml:"apiKeySecret" envconfig:"API_KEY_SECRET"`
 	CorsAllowedHosts []string `yaml:"corsAllowedHosts" envconfig:"CORS_ALLOWED_HOSTS"`
+
+	SkipDataAccessServiceInitWait bool `yaml:"skipDataAccessServiceInitWait" envconfig:"SKIP_DATA_ACCESS_SERVICE_INIT_WAIT"`
+}
+
+type Chain struct {
+	Name                       string `yaml:"name" envconfig:"CHAIN_NAME"`
+	Id                         uint64 `yaml:"id" envconfig:"CHAIN_ID"`
+	GenesisTimestamp           uint64 `yaml:"genesisTimestamp" envconfig:"CHAIN_GENESIS_TIMESTAMP"`
+	GenesisValidatorsRoot      string `yaml:"genesisValidatorsRoot" envconfig:"CHAIN_GENESIS_VALIDATORS_ROOT"`
+	DomainBLSToExecutionChange string `yaml:"domainBLSToExecutionChange" envconfig:"CHAIN_DOMAIN_BLS_TO_EXECUTION_CHANGE"`
+	DomainVoluntaryExit        string `yaml:"domainVoluntaryExit" envconfig:"CHAIN_DOMAIN_VOLUNTARY_EXIT"`
+	ClConfigPath               string `yaml:"clConfigPath" envconfig:"CHAIN_CL_CONFIG_PATH"`
+	ElConfigPath               string `yaml:"elConfigPath" envconfig:"CHAIN_EL_CONFIG_PATH"`
+	ClConfig                   ClChainConfig
+	ElConfig                   *params.ChainConfig
 }
 
 type InternalAlertDiscord struct {

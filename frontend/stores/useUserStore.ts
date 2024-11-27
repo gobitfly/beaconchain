@@ -1,5 +1,3 @@
-import { defineStore } from 'pinia'
-import type { LoginResponse } from '~/types/user'
 import type {
   InternalGetUserInfoResponse, UserInfo,
 } from '~/types/api/user'
@@ -16,7 +14,7 @@ export function useUserStore() {
   const router = useRouter()
 
   async function doLogin(email: string, password: string) {
-    await fetch<LoginResponse>(API_PATH.LOGIN, {
+    await fetch(API_PATH.LOGIN, {
       body: {
         email,
         password,
@@ -29,26 +27,22 @@ export function useUserStore() {
     data.value = user
   }
 
-  async function getUser(): Promise<undefined | UserInfo> {
+  async function getUser() {
     try {
       const res = await fetch<InternalGetUserInfoResponse>(
         API_PATH.USER,
-        undefined,
-        undefined,
-        undefined,
-        true,
       )
       setUser(res.data)
       return res.data
     }
     catch {
       setUser(undefined)
-      return undefined
+      return null
     }
   }
 
   const doLogout = async () => {
-    await fetch(API_PATH.LOGOUT, undefined, undefined, undefined, true)
+    await fetch(API_PATH.LOGOUT)
     setUser(undefined)
     router.replace('/')
   }

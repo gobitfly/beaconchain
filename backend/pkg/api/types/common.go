@@ -1,8 +1,6 @@
 package types
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -34,14 +32,16 @@ type PubKey string
 type Hash string // blocks, txs etc.
 
 type Address struct {
-	Hash Hash   `json:"hash"`
-	Ens  string `json:"ens,omitempty"`
+	Hash       Hash   `json:"hash"`
+	IsContract bool   `json:"is_contract"`
+	Ens        string `json:"ens,omitempty"`
+	Label      string `json:"label,omitempty"`
 }
 
 type LuckItem struct {
-	Percent  float64       `json:"percent"`
-	Expected time.Time     `json:"expected"`
-	Average  time.Duration `json:"average"`
+	Percent                float64 `json:"percent"`
+	ExpectedTimestamp      uint64  `json:"expected_timestamp"`
+	AverageIntervalSeconds uint64  `json:"average_interval_seconds"`
 }
 
 type Luck struct {
@@ -139,7 +139,25 @@ type ChartHistorySeconds struct {
 	Weekly uint64 `json:"weekly"`
 }
 
+type IndexEpoch struct {
+	Index uint64 `json:"index"`
+	Epoch uint64 `json:"epoch"`
+}
+
 type IndexBlocks struct {
 	Index  uint64   `json:"index"`
 	Blocks []uint64 `json:"blocks"`
+}
+
+type IndexSlots struct {
+	Index uint64   `json:"index"`
+	Slots []uint64 `json:"slots"`
+}
+
+type ValidatorStateCounts struct {
+	Online  uint64 `json:"online"`
+	Offline uint64 `json:"offline"`
+	Pending uint64 `json:"pending"`
+	Exited  uint64 `json:"exited"`
+	Slashed uint64 `json:"slashed"`
 }

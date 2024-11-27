@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
@@ -67,6 +66,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 	wg.Go(func() error {
 		dbReturn := []struct {
 			Name         string         `db:"name"`
+			Network      uint64         `db:"network"`
 			IsArchived   sql.NullString `db:"is_archived"`
 			PublicId     sql.NullString `db:"public_id"`
 			PublicName   sql.NullString `db:"public_name"`
@@ -76,6 +76,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
 		SELECT
 			uvd.name,
+			uvd.network,
 			uvd.is_archived,
 			uvds.public_id,
 			uvds.name AS public_name,
@@ -95,6 +96,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 		mutex.Lock()
 		result.Id = uint64(dashboardId)
 		result.Name = dbReturn[0].Name
+		result.Network = dbReturn[0].Network
 		result.IsArchived = dbReturn[0].IsArchived.Valid
 		result.ArchivedReason = dbReturn[0].IsArchived.String
 
@@ -145,7 +147,7 @@ func (d *DataAccessService) GetValidatorDashboardInfo(ctx context.Context, dashb
 
 	err := wg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving user dashboards data: %v", err)
+		return nil, fmt.Errorf("error retrieving user dashboards data: %w", err)
 	}
 
 	return result, nil
@@ -165,7 +167,7 @@ func (d *DataAccessService) GetValidatorDashboardName(ctx context.Context, dashb
 }
 
 // param validators: slice of validator public keys or indices
-func (d *DataAccessService) GetValidatorsFromSlices(indices []t.VDBValidator, publicKeys []string) ([]t.VDBValidator, error) {
+func (d *DataAccessService) GetValidatorsFromSlices(ctx context.Context, indices []t.VDBValidator, publicKeys []string) ([]t.VDBValidator, error) {
 	if len(indices) == 0 && len(publicKeys) == 0 {
 		return []t.VDBValidator{}, nil
 	}
@@ -232,6 +234,16 @@ func (d *DataAccessService) RemoveValidatorDashboard(ctx context.Context, dashbo
 	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = $1
 	`, dashboardId)
+	if err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("%s:%d:", ValidatorDashboardEventPrefix, dashboardId)
+
+	// Remove all events related to the dashboard
+	_, err = d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_subscriptions WHERE event_filter LIKE ($1 || '%')
+	`, prefix)
 	return err
 }
 
@@ -273,6 +285,21 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	data := t.VDBOverviewData{}
 	eg := errgroup.Group{}
 	var err error
+
+	// Network
+	if dashboardId.Validators == nil {
+		eg.Go(func() error {
+			query := `SELECT network
+			FROM
+				users_val_dashboards
+			WHERE
+				id = $1`
+			return d.alloyReader.GetContext(ctx, &data.Network, query, dashboardId.Id)
+		})
+	} else { // load the chain id from the config in case of public dashboards
+		data.Network = utils.Config.Chain.ClConfig.DepositChainID
+	}
+
 	// Groups
 	if dashboardId.Validators == nil && !dashboardId.AggregateGroups {
 		// should have valid primary id
@@ -312,7 +339,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
 		if err != nil {
-			return fmt.Errorf("error retrieving validators from dashboard id: %v", err)
+			return fmt.Errorf("error retrieving validators from dashboard id: %w", err)
 		}
 
 		if dashboardId.Validators != nil || dashboardId.AggregateGroups {
@@ -320,10 +347,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		}
 
 		// Status
-		pubKeyList := make([][]byte, 0, len(validators))
 		for _, validator := range validators {
 			metadata := validatorMapping.ValidatorMetadata[validator]
-			pubKeyList = append(pubKeyList, metadata.PublicKey)
 
 			switch constypes.ValidatorDbStatus(metadata.Status) {
 			case constypes.DbExitingOnline, constypes.DbSlashingOnline, constypes.DbActiveOnline:
@@ -341,32 +366,46 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		// Find rocketpool validators
 		type RpOperatorInfo struct {
-			Pubkey             []byte          `db:"pubkey"`
+			ValidatorIndex     uint64          `db:"validatorindex"`
 			NodeFee            float64         `db:"node_fee"`
 			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
 			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
 		}
 		var queryResult []RpOperatorInfo
-		query := `
-			SELECT 
-				pubkey,
-				node_fee,
-				node_deposit_balance,
-				user_deposit_balance
-			FROM rocketpool_minipools
-			WHERE pubkey = ANY($1)
-				AND node_deposit_balance is not null
-				AND user_deposit_balance is not null
-			`
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, pubKeyList)
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("v.validatorindex"),
+				goqu.L("rplm.node_fee"),
+				goqu.L("rplm.node_deposit_balance"),
+				goqu.L("rplm.user_deposit_balance")).
+			From(goqu.L("rocketpool_minipools AS rplm")).
+			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
+			Where(goqu.L("node_deposit_balance IS NOT NULL")).
+			Where(goqu.L("user_deposit_balance IS NOT NULL"))
+
+		if len(dashboardId.Validators) == 0 {
+			ds = ds.
+				LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
+				Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
+		} else {
+			ds = ds.
+				Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
+		}
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %w", err)
+		}
+
+		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
 		}
 
-		rpValidators := make(map[string]RpOperatorInfo)
+		rpValidators := make(map[uint64]RpOperatorInfo)
 		for _, res := range queryResult {
-			rpValidators[hexutil.Encode(res.Pubkey)] = res
+			rpValidators[res.ValidatorIndex] = res
 		}
 
 		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
@@ -377,7 +416,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
 
-			if rpValidator, ok := rpValidators[hexutil.Encode(metadata.PublicKey)]; ok {
+			if rpValidator, ok := rpValidators[validator]; ok {
 				if protocolModes.RocketPool {
 					// Calculate the balance of the operator
 					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
@@ -458,7 +497,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 			query, args, err := ds.Prepared(true).ToSQL()
 			if err != nil {
-				return fmt.Errorf("error preparing query: %v", err)
+				return fmt.Errorf("error preparing query: %w", err)
 			}
 
 			err = d.clickhouseReader.GetContext(ctx, &queryResult, query, args...)
@@ -480,7 +519,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
 				syncEfficiency.Valid = true
 			}
-			*efficiency = d.calculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 			return nil
 		})
@@ -494,7 +533,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	err = eg.Wait()
 
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %v", err)
+		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
 
 	return &data, nil
@@ -553,6 +592,29 @@ func (d *DataAccessService) RemoveValidatorDashboardGroup(ctx context.Context, d
 	_, err := d.alloyWriter.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards_groups WHERE dashboard_id = $1 AND id = $2
 	`, dashboardId, groupId)
+	if err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("%s:%d:%d", ValidatorDashboardEventPrefix, dashboardId, groupId)
+
+	// Remove all events related to the group
+	_, err = d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_subscriptions WHERE event_filter = $1
+	`, prefix)
+	return err
+}
+
+func (d *DataAccessService) RemoveValidatorDashboardGroupValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
+	//Create the query to delete validators
+	deleteValidatorsQuery := `
+		DELETE FROM users_val_dashboards_validators
+		WHERE dashboard_id = $1 AND group_id = $2
+	`
+
+	// Delete the validators
+	_, err := d.alloyWriter.ExecContext(ctx, deleteValidatorsQuery, dashboardId, groupId)
+
 	return err
 }
 
@@ -772,290 +834,234 @@ func (d *DataAccessService) GetValidatorDashboardGroupExists(ctx context.Context
 	return groupExists, err
 }
 
-// return how many of the passed validators are already in the dashboard
-func (d *DataAccessService) GetValidatorDashboardExistingValidatorCount(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) (uint64, error) {
-	if len(validators) == 0 {
-		return 0, nil
-	}
-
-	var count uint64
-	err := d.alloyReader.GetContext(ctx, &count, `
-		SELECT COUNT(*)
-		FROM users_val_dashboards_validators
-		WHERE dashboard_id = $1 AND validator_index = ANY($2)
-	`, dashboardId, pq.Array(validators))
-	return count, err
-}
-
 func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+	result := []t.VDBPostValidatorsData{}
+
 	if len(validators) == 0 {
 		// No validators to add
 		return nil, nil
 	}
 
-	pubkeys := []struct {
-		ValidatorIndex t.VDBValidator `db:"validatorindex"`
-		Pubkey         []byte         `db:"pubkey"`
-	}{}
-
-	addedValidators := []struct {
-		ValidatorIndex t.VDBValidator `db:"validator_index"`
-		GroupId        uint64         `db:"group_id"`
-	}{}
-
-	// Query to find the pubkey for each validator index
-	pubkeysQuery := `
-		SELECT
-			validatorindex,
-			pubkey
-		FROM validators
-		WHERE validatorindex = ANY($1)
-	`
-
-	// Query to add the validators to the dashboard and group
-	addValidatorsQuery := `
-		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
-			VALUES
-	`
-
-	for idx := range validators {
-		addValidatorsQuery += fmt.Sprintf("($1, $2, $%d), ", idx+3)
-	}
-	addValidatorsQuery = addValidatorsQuery[:len(addValidatorsQuery)-2] // remove trailing comma
-
-	// If a validator is already in the dashboard, update the group
-	// If the validator is already in that group nothing changes but we will include it in the result anyway
-	addValidatorsQuery += `
-		ON CONFLICT (dashboard_id, validator_index) DO UPDATE SET
-			dashboard_id = EXCLUDED.dashboard_id,
-			group_id = EXCLUDED.group_id,
-			validator_index = EXCLUDED.validator_index
-		RETURNING validator_index, group_id
-	`
-
-	// Find all the pubkeys
-	err := d.alloyReader.SelectContext(ctx, &pubkeys, pubkeysQuery, pq.Array(validators))
+	tx, err := d.writerDb.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error starting db transactions to insert validators for a dashboard: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	numArgs := 3
+	batchSize := 65535 / numArgs // max 65535 params per batch, since postgres uses int16 for binding input params
+	batchIdx, allIdx := 0, 0
+	var validatorsToInsert []goqu.Record
+	for _, validatorIdx := range validators {
+		validatorsToInsert = append(validatorsToInsert,
+			goqu.Record{"dashboard_id": dashboardId, "group_id": groupId, "validator_index": validatorIdx})
+
+		batchIdx++
+		allIdx++
+
+		if batchIdx >= batchSize || allIdx >= len(validators) {
+			insertDs := goqu.Dialect("postgres").
+				Insert("users_val_dashboards_validators").
+				Cols("dashboard_id", "group_id", "validator_index").
+				Rows(validatorsToInsert).
+				OnConflict(goqu.DoUpdate(
+					"dashboard_id, validator_index",
+					goqu.Record{
+						"dashboard_id":    goqu.L("EXCLUDED.dashboard_id"),
+						"group_id":        goqu.L("EXCLUDED.group_id"),
+						"validator_index": goqu.L("EXCLUDED.validator_index"),
+					},
+				))
+
+			query, args, err := insertDs.Prepared(true).ToSQL()
+			if err != nil {
+				return nil, fmt.Errorf("error preparing query: %w", err)
+			}
+
+			_, err = tx.ExecContext(ctx, query, args...)
+			if err != nil {
+				return nil, err
+			}
+
+			batchIdx = 0
+			validatorsToInsert = validatorsToInsert[:0]
+		}
 	}
 
-	// Add all the validators to the dashboard and group
-	addValidatorsArgsIntf := []interface{}{dashboardId, groupId}
-	for _, validatorIndex := range validators {
-		addValidatorsArgsIntf = append(addValidatorsArgsIntf, validatorIndex)
-	}
-	err = d.alloyWriter.SelectContext(ctx, &addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
+	err = tx.Commit()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error committing tx to insert validators for a dashboard: %w", err)
 	}
 
-	// Combine the pubkeys and group ids for the result
-	pubkeysMap := make(map[t.VDBValidator]string, len(pubkeys))
-	for _, pubKeyInfo := range pubkeys {
-		pubkeysMap[pubKeyInfo.ValidatorIndex] = fmt.Sprintf("%#x", pubKeyInfo.Pubkey)
-	}
-
-	addedValidatorsMap := make(map[t.VDBValidator]uint64, len(addedValidators))
-	for _, addedValidatorInfo := range addedValidators {
-		addedValidatorsMap[addedValidatorInfo.ValidatorIndex] = addedValidatorInfo.GroupId
-	}
-
-	result := []t.VDBPostValidatorsData{}
 	for _, validator := range validators {
 		result = append(result, t.VDBPostValidatorsData{
-			PublicKey: pubkeysMap[validator],
-			GroupId:   addedValidatorsMap[validator],
+			Index:   validator,
+			GroupId: groupId,
 		})
 	}
 
 	return result, nil
 }
 
+// Updates the group for validators already in the dashboard linked to the deposit address.
+// Adds up to limit new validators associated with the deposit address, if not already in the dashboard.
 func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	// for all validators already in the dashboard that are associated with the deposit address, update the group
-	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	result := []t.VDBPostValidatorsData{}
+
 	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
 	if err != nil {
 		return nil, err
 	}
 
-	if len(addressParsed) != 20 {
-		return nil, fmt.Errorf("invalid deposit address: %s", address)
-	}
-	var validatorIndicesToAdd []uint64
-	err = d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE pubkey IN (SELECT publickey FROM eth1_deposits WHERE from_address = $1) ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+	uniqueValidatorIndexesQuery := `
+		(SELECT 
+   		    DISTINCT uvdv.validator_index
+   		FROM validators v
+   		JOIN eth1_deposits d ON v.pubkey = d.publickey
+   		JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+   		WHERE uvdv.dashboard_id = $1 AND d.from_address = $2)
+
+   		UNION
+
+   		(SELECT 
+   		    DISTINCT v.validatorindex AS validator_index
+   		FROM validators v
+   		JOIN eth1_deposits d ON v.pubkey = d.publickey
+   		LEFT JOIN users_val_dashboards_validators uvdv
+   		    ON v.validatorindex = uvdv.validator_index AND uvdv.dashboard_id = $1
+   		WHERE d.from_address = $2 AND uvdv.validator_index IS NULL
+   		ORDER BY validator_index
+   		LIMIT $3)`
+
+	addValidatorsQuery := d.getAddValidatorsQuery(uniqueValidatorIndexesQuery)
+
+	var validators []uint64
+	err = d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, dashboardId, addressParsed, limit, groupId)
 	if err != nil {
 		return nil, err
 	}
 
-	// retrieve the existing validators
-	var existingValidators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
-	if err != nil {
-		return nil, err
-	}
-	existingValidatorsMap := make(map[uint64]bool, len(existingValidators))
-	for _, validatorIndex := range existingValidators {
-		existingValidatorsMap[validatorIndex] = true
+	for _, validator := range validators {
+		result = append(result, t.VDBPostValidatorsData{
+			Index:   validator,
+			GroupId: groupId,
+		})
 	}
 
-	// filter out the validators that are already in the dashboard
-	var validatorIndicesToUpdate []uint64
-	var validatorIndicesToInsert []uint64
-	for _, validatorIndex := range validatorIndicesToAdd {
-		if _, ok := existingValidatorsMap[validatorIndex]; ok {
-			validatorIndicesToUpdate = append(validatorIndicesToUpdate, validatorIndex)
-		} else {
-			validatorIndicesToInsert = append(validatorIndicesToInsert, validatorIndex)
-		}
-	}
-
-	// update the group for all existing validators
-	validatorIndices := make([]uint64, 0, int(limit))
-	validatorIndices = append(validatorIndices, validatorIndicesToUpdate...)
-
-	// insert the new validators up to the allowed user max limit taking into account how many validators are already in the dashboard
-	if len(validatorIndicesToInsert) > 0 {
-		freeSpace := int(limit) - len(existingValidators)
-		if freeSpace > 0 {
-			if len(validatorIndicesToInsert) > freeSpace { // cap inserts to the amount of free space available
-				log.Infof("limiting the number of validators to insert to %d", freeSpace)
-				validatorIndicesToInsert = validatorIndicesToInsert[:freeSpace]
-			}
-			validatorIndices = append(validatorIndices, validatorIndicesToInsert...)
-		}
-	}
-
-	if len(validatorIndices) == 0 {
-		// no validators to add
-		return []t.VDBPostValidatorsData{}, nil
-	}
-	log.Infof("inserting %d new validators and updating %d validators of dashboard %d, limit is %d", len(validatorIndicesToInsert), len(validatorIndicesToUpdate), dashboardId, limit)
-	return d.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validatorIndices)
+	return result, nil
 }
 
+// Updates the group for validators already in the dashboard linked to the withdrawal address.
+// Adds up to limit new validators associated with the withdrawal address, if not already in the dashboard.
 func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	// for all validators already in the dashboard that are associated with the withdrawal address, update the group
-	// then add no more than `limit` validators associated with the deposit address to the dashboard
+	result := []t.VDBPostValidatorsData{}
+
 	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
 	if err != nil {
 		return nil, err
 	}
-	var validatorIndicesToAdd []uint64
-	err = d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT validatorindex FROM validators WHERE withdrawalcredentials = $1 ORDER BY validatorindex LIMIT $2;", addressParsed, limit)
+
+	uniqueValidatorIndexesQuery := `
+		(SELECT 
+			DISTINCT uvdv.validator_index
+		FROM validators v
+		JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+		WHERE uvdv.dashboard_id = $1 AND v.withdrawalcredentials = $2)
+
+		UNION
+
+		(SELECT 
+			DISTINCT v.validatorindex AS validator_index
+		FROM validators v
+		LEFT JOIN users_val_dashboards_validators uvdv 
+			ON v.validatorindex = uvdv.validator_index AND uvdv.dashboard_id = $1
+		WHERE v.withdrawalcredentials = $2 AND uvdv.validator_index IS NULL
+		ORDER BY v.validatorindex
+		LIMIT $3)`
+
+	addValidatorsQuery := d.getAddValidatorsQuery(uniqueValidatorIndexesQuery)
+
+	var validators []uint64
+	err = d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, dashboardId, addressParsed, limit, groupId)
 	if err != nil {
 		return nil, err
 	}
 
-	// retrieve the existing validators
-	var existingValidators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
-	if err != nil {
-		return nil, err
-	}
-	existingValidatorsMap := make(map[uint64]bool, len(existingValidators))
-	for _, validatorIndex := range existingValidators {
-		existingValidatorsMap[validatorIndex] = true
+	for _, validator := range validators {
+		result = append(result, t.VDBPostValidatorsData{
+			Index:   validator,
+			GroupId: groupId,
+		})
 	}
 
-	// filter out the validators that are already in the dashboard
-	var validatorIndicesToUpdate []uint64
-	var validatorIndicesToInsert []uint64
-	for _, validatorIndex := range validatorIndicesToAdd {
-		if _, ok := existingValidatorsMap[validatorIndex]; ok {
-			validatorIndicesToUpdate = append(validatorIndicesToUpdate, validatorIndex)
-		} else {
-			validatorIndicesToInsert = append(validatorIndicesToInsert, validatorIndex)
-		}
-	}
-
-	// update the group for all existing validators
-	validatorIndices := make([]uint64, 0, int(limit))
-	validatorIndices = append(validatorIndices, validatorIndicesToUpdate...)
-
-	// insert the new validators up to the allowed user max limit taking into account how many validators are already in the dashboard
-	if len(validatorIndicesToInsert) > 0 {
-		freeSpace := int(limit) - len(existingValidators)
-		if freeSpace > 0 {
-			if len(validatorIndicesToInsert) > freeSpace { // cap inserts to the amount of free space available
-				log.Infof("limiting the number of validators to insert to %d", freeSpace)
-				validatorIndicesToInsert = validatorIndicesToInsert[:freeSpace]
-			}
-			validatorIndices = append(validatorIndices, validatorIndicesToInsert...)
-		}
-	}
-
-	if len(validatorIndices) == 0 {
-		// no validators to add
-		return []t.VDBPostValidatorsData{}, nil
-	}
-	log.Infof("inserting %d new validators and updating %d validators of dashboard %d, limit is %d", len(validatorIndicesToInsert), len(validatorIndicesToUpdate), dashboardId, limit)
-	return d.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validatorIndices)
+	return result, nil
 }
 
+// Update the group for validators already in the dashboard linked to the graffiti (via produced block).
+// Add up to limit new validators associated with the graffiti, if not already in the dashboard.
 func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	// for all validators already in the dashboard that are associated with the graffiti (by produced block), update the group
-	// then add no more than `limit` validators associated with the deposit address to the dashboard
-	var validatorIndicesToAdd []uint64
-	err := d.readerDb.SelectContext(ctx, &validatorIndicesToAdd, "SELECT DISTINCT proposer FROM blocks WHERE graffiti_text = $1 ORDER BY proposer LIMIT $2;", graffiti, limit)
+	result := []t.VDBPostValidatorsData{}
+
+	uniqueValidatorIndexesQuery := `
+		(SELECT 
+			DISTINCT uvdv.validator_index
+		FROM blocks b
+		JOIN users_val_dashboards_validators uvdv ON b.proposer = uvdv.validator_index
+		WHERE uvdv.dashboard_id = $1 AND b.graffiti_text = $2)
+
+		UNION
+		
+		(SELECT DISTINCT b.proposer AS validator_index
+		FROM blocks b
+		LEFT JOIN users_val_dashboards_validators uvdv 
+			ON b.proposer = uvdv.validator_index AND uvdv.dashboard_id = $1
+		WHERE b.graffiti_text = $2 AND uvdv.validator_index IS NULL
+		ORDER BY b.proposer
+		LIMIT $3)`
+
+	addValidatorsQuery := d.getAddValidatorsQuery(uniqueValidatorIndexesQuery)
+
+	var validators []uint64
+	err := d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, dashboardId, graffiti, limit, groupId)
 	if err != nil {
 		return nil, err
 	}
 
-	// retrieve the existing validators
-	var existingValidators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &existingValidators, "SELECT validator_index FROM users_val_dashboards_validators WHERE dashboard_id = $1", dashboardId)
-	if err != nil {
-		return nil, err
-	}
-	existingValidatorsMap := make(map[uint64]bool, len(existingValidators))
-	for _, validatorIndex := range existingValidators {
-		existingValidatorsMap[validatorIndex] = true
+	for _, validator := range validators {
+		result = append(result, t.VDBPostValidatorsData{
+			Index:   validator,
+			GroupId: groupId,
+		})
 	}
 
-	// filter out the validators that are already in the dashboard
-	var validatorIndicesToUpdate []uint64
-	var validatorIndicesToInsert []uint64
-	for _, validatorIndex := range validatorIndicesToAdd {
-		if _, ok := existingValidatorsMap[validatorIndex]; ok {
-			validatorIndicesToUpdate = append(validatorIndicesToUpdate, validatorIndex)
-		} else {
-			validatorIndicesToInsert = append(validatorIndicesToInsert, validatorIndex)
-		}
-	}
+	return result, nil
+}
 
-	// update the group for all existing validators
-	validatorIndices := make([]uint64, 0, int(limit))
-	validatorIndices = append(validatorIndices, validatorIndicesToUpdate...)
-
-	// insert the new validators up to the allowed user max limit taking into account how many validators are already in the dashboard
-	if len(validatorIndicesToInsert) > 0 {
-		freeSpace := int(limit) - len(existingValidators)
-		if freeSpace > 0 {
-			if len(validatorIndicesToInsert) > freeSpace { // cap inserts to the amount of free space available
-				log.Infof("limiting the number of validators to insert to %d", freeSpace)
-				validatorIndicesToInsert = validatorIndicesToInsert[:freeSpace]
-			}
-			validatorIndices = append(validatorIndices, validatorIndicesToInsert...)
-		}
-	}
-
-	if len(validatorIndices) == 0 {
-		// no validators to add
-		return []t.VDBPostValidatorsData{}, nil
-	}
-	log.Infof("inserting %d new validators and updating %d validators of dashboard %d, limit is %d", len(validatorIndicesToInsert), len(validatorIndicesToUpdate), dashboardId, limit)
-	return d.AddValidatorDashboardValidators(ctx, dashboardId, groupId, validatorIndices)
+func (d *DataAccessService) getAddValidatorsQuery(uniqueValidatorIndexesQuery string) string {
+	return fmt.Sprintf(`
+		WITH unique_validator_indexes AS (
+			%s
+		)
+		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
+		SELECT $1 AS dashboard_id, $4 AS group_id, validator_index
+		FROM unique_validator_indexes
+		ON CONFLICT (dashboard_id, validator_index) DO UPDATE 
+		SET
+		    dashboard_id = EXCLUDED.dashboard_id,
+		    group_id = EXCLUDED.group_id,
+		    validator_index = EXCLUDED.validator_index
+		RETURNING validator_index`, uniqueValidatorIndexesQuery)
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
-		// // Remove all validators for the dashboard
-		// _, err := d.alloyWriter.ExecContext(ctx, `
-		// 	DELETE FROM users_val_dashboards_validators
-		// 	WHERE dashboard_id = $1
-		// `, dashboardId)
-		return fmt.Errorf("calling RemoveValidatorDashboardValidators with empty validators list is not allowed")
+		// Remove all validators for the dashboard
+		// This is usually forbidden by API validation
+		_, err := d.alloyWriter.ExecContext(ctx, `
+			DELETE FROM users_val_dashboards_validators
+			WHERE dashboard_id = $1
+		`, dashboardId)
+		return err
 	}
 
 	//Create the query to delete validators

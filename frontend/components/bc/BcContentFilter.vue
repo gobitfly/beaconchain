@@ -1,15 +1,14 @@
 <script lang="ts" setup>
 import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type InputText from 'primevue/inputtext'
 
-interface Props {
+const props = defineProps<{
   disabledFilter?: boolean,
+  isLoading?: boolean,
   searchPlaceholder?: string,
-}
-const props = defineProps<Props>()
+}>()
 
-defineEmits<{ (e: 'filter-changed', value: string): void }>()
+const emit = defineEmits<{ (e: 'filter-changed', value: string): void }>()
 
 const isFilterVisible = ref(false)
 const filter = ref('')
@@ -36,53 +35,66 @@ const handleClick = () => {
     focusAndSelect(input.value)
   }
 }
+watchDebounced(filter, () => {
+  emit('filter-changed', filter.value)
+})
 </script>
 
 <template>
   <div class="filter_elements_container">
     <InputText
       ref="input"
-      v-model="filter"
+      v-model.trim="filter"
+      type="search"
+      aria-busy="true"
       :placeholder="props.searchPlaceholder"
       :disabled="!isFilterVisible"
       :class="{ visible: isFilterVisible }"
       @keydown.escape.stop="closeFilter"
-      @input="$emit('filter-changed', filter)"
     />
     <Button
       ref="button"
       :disabled="disabledFilter"
       :aria-expanded="isFilterVisible"
       severity="secondary"
-      class="p-button-icon-only"
+      class="p-button-icon-only bc-content-filter__button"
       :class="{ filter_visible: isFilterVisible }"
       @click="handleClick"
     >
-      <span class="sr-only">
-        {{ !isFilterVisible ? $t('filter.open') : $t('filter.close') }}
-      </span>
-      <FontAwesomeIcon :icon="faMagnifyingGlass" />
+      <BcScreenreaderOnly>
+        {{ isFilterVisible ? $t('filter.open') : $t('filter.close') }}
+      </BcScreenreaderOnly>
+      <BcLoadingSpinner
+        v-if="isFilterVisible && isLoading"
+        size="full"
+        alignment="center"
+        loading
+      />
+      <FontAwesomeIcon
+        v-else
+        :icon="faMagnifyingGlass"
+      />
     </Button>
   </div>
 </template>
 
 <style lang="scss">
 .filter_elements_container {
+  --outline-width: 0.125rem;
+  --outline-offset: 0.125rem;
+  padding: .25rem;
   display: flex;
   justify-content: flex-end;
   position: relative;
 
-  > :first-child {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+  > .p-inputtext:first-child {
     height: var(--default-button-height);
     width: 0;
     opacity: 0;
     padding: 0;
     position: absolute;
     transition: width 0.2s ease-in-out, opacity 0.01s ease-in-out 0.19s,
-      padding 0.2s ease-in-out;
-
+    padding 0.2s ease-in-out;
     &.visible {
       width: 230px;
       opacity: 100%;
@@ -104,5 +116,9 @@ const handleClick = () => {
       border-bottom-left-radius: 0;
     }
   }
+}
+button.bc-content-filter__button:focus-visible {
+  outline: var(--outline-width) solid var(--blue-500);
+  outline-offset: var(--outline-offset);
 }
 </style>

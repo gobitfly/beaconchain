@@ -103,7 +103,7 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
     <div class="top-background" />
     <div class="rows">
       <div class="grid-cell blockchain-info">
-        <span v-if="latestState?.current_slot"><span>{{ $t("header.current_slot") }}</span>:
+        <span v-if="latestState?.current_slot"><span>{{ $t("header.slot") }}</span>:
           <BcLink
             :to="`/slot/${latestState.current_slot}`"
             :disabled="!showInDevelopment || null"
@@ -114,7 +114,7 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
             />
           </BcLink>
         </span>
-        <span v-if="currentEpoch !== undefined"><span>{{ $t("header.current_epoch") }}</span>:
+        <span v-if="currentEpoch !== undefined"><span>{{ $t("header.epoch") }}</span>:
           <BcLink
             :to="`/epoch/${currentEpoch}`"
             :disabled="!showInDevelopment || null"

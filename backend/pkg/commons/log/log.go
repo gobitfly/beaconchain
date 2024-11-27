@@ -8,23 +8,24 @@ import (
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/sirupsen/logrus"
 )
 
 // Fatal logs a fatal error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
 // callerSkip equal to 0 gives you info directly where Fatal is called.
 func Fatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
-	logErrorInfo(err, callerSkip, additionalInfos...).Fatal(errorMsg)
+	logErrorInfo(err, callerSkip, false, additionalInfos...).Fatal(errorMsg)
 }
 
 // Error logs an error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
 // callerSkip equal to 0 gives you info directly where Error is called.
 func Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
-	logErrorInfo(err, callerSkip, additionalInfos...).Error(errorMsg)
+	logErrorInfo(err, callerSkip, false, additionalInfos...).Error(errorMsg)
 }
 
 func WarnWithStackTrace(err error, errorMsg interface{}, callerSkip int, additionalInfos ...Fields) {
-	logErrorInfo(err, callerSkip, additionalInfos...).Warn(errorMsg)
+	logErrorInfo(err, callerSkip, true, additionalInfos...).Warn(errorMsg)
 }
 
 func Info(args ...interface{}) {
@@ -36,12 +37,7 @@ func Infof(format string, args ...interface{}) {
 }
 
 func InfoWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Info(msg)
+	logrus.WithFields(additionalInfos).Info(msg)
 }
 
 func Warn(args ...interface{}) {
@@ -53,12 +49,7 @@ func Warnf(format string, args ...interface{}) {
 }
 
 func WarnWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Warn(msg)
+	logrus.WithFields(additionalInfos).Warn(msg)
 }
 
 func Tracef(format string, args ...interface{}) {
@@ -66,29 +57,21 @@ func Tracef(format string, args ...interface{}) {
 }
 
 func TraceWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Trace(msg)
+	logrus.WithFields(additionalInfos).Trace(msg)
 }
 
 func DebugWithFields(additionalInfos Fields, msg string) {
-	logFields := logrus.NewEntry(logrus.New())
-	for name, info := range additionalInfos {
-		logFields = logFields.WithField(name, info)
-	}
-
-	logFields.Debug(msg)
+	logrus.WithFields(additionalInfos).Debug(msg)
 }
 
 func Debugf(format string, args ...interface{}) {
 	logrus.Debugf(format, args...)
 }
 
-func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.Entry {
+func logErrorInfo(err error, callerSkip int, isWarning bool, additionalInfos ...Fields) *logrus.Entry {
 	logFields := logrus.NewEntry(logrus.New())
+
+	logFields = logFields.WithField("_version", version.Version)
 
 	metricName := "unknown"
 	if err != nil {
@@ -96,7 +79,7 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 	}
 	pc, fullFilePath, line, ok := runtime.Caller(callerSkip + 2)
 	if ok {
-		logFields = logFields.WithFields(logrus.Fields{
+		logFields = logFields.WithFields(Fields{
 			"_file":     filepath.Base(fullFilePath),
 			"_function": runtime.FuncForPC(pc).Name(),
 			"_line":     line,
@@ -108,7 +91,9 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 	if len(metricName) > 30 {
 		metricName = metricName[len(metricName)-30:]
 	}
-	metrics.Errors.WithLabelValues(metricName).Inc()
+	if !isWarning {
+		metrics.Errors.WithLabelValues(metricName).Inc()
+	}
 
 	errColl := []string{}
 	for {
@@ -152,4 +137,4 @@ func logErrorInfo(err error, callerSkip int, additionalInfos ...Fields) *logrus.
 	return logFields
 }
 
-type Fields map[string]interface{}
+type Fields = logrus.Fields
