@@ -118,7 +118,7 @@ func (bigtable *Bigtable) TransformEnsNameRegistered(blk *types.Eth1Block, cache
 			ethLog.Data = txLog.Data
 			ethLog.Topics = ethTopics
 			ethLog.BlockNumber = blk.GetNumber()
-			ethLog.TxHash = common.BytesToHash(tx.GetHash())
+			ethLog.TxHash = common.HexToHash(tx.GetHash())
 			ethLog.TxIndex = uint(i)
 			ethLog.BlockHash = common.BytesToHash(blk.GetHash())
 			ethLog.Index = uint(j)

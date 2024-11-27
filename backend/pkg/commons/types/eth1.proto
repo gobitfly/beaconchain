@@ -43,23 +43,23 @@ message Eth1Withdrawal {
 message Eth1Transaction {
     uint32 type = 1;
     uint64 nonce = 2;
-    bytes gas_price = 3;
-    bytes max_priority_fee_per_gas = 4;
-    bytes max_fee_per_gas = 5;
+    uint64 gas_price = 3;
+    uint64 max_priority_fee_per_gas = 4;
+    uint64 max_fee_per_gas = 5;
     uint64 gas = 6;
-    bytes value = 7;
+    uint64 value = 7;
     bytes data = 8;
-    bytes to = 12;
-    bytes from = 13;
+    string to = 12;
+    string from = 13;
 
-    bytes chain_id = 14;
+    uint64 chain_id = 14;
 
     repeated AccessList access_list = 15;
 
-    bytes hash = 16;
+    string hash = 16;
 
     // Receipt fields
-    bytes contract_address = 17;
+    string contract_address = 17;
     uint64 commulative_gas_used = 18;
     uint64 gas_used = 19;
     bytes logs_bloom = 20;
@@ -71,11 +71,16 @@ message Eth1Transaction {
     repeated Eth1InternalTransaction itx = 24;
 
     // EIP 4844 transaction
-    bytes max_fee_per_blob_gas = 25;
+    uint64 max_fee_per_blob_gas = 25;
     repeated bytes blob_versioned_hashes = 26;
     // EIP 4844 receipt
-    bytes blob_gas_price = 27;
+    uint64 blob_gas_price = 27;
     uint64 blob_gas_used = 28;
+}
+
+message IsContractUpdate {
+    bool is_contract = 1;
+    bool success = 2;
 }
 
 message AccessList {
@@ -92,11 +97,12 @@ message Eth1Log {
 
 message Eth1InternalTransaction {
     string type = 1;
-    bytes from = 2;
-    bytes to = 3;
-    bytes value = 4;
+    string from = 2;
+    string to = 3;
+    string value = 4;
     string error_msg = 5;
     string path = 6;
+    uint64 gas_limit = 7;
 }
 
 // Indexed structs stored in the data table

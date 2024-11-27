@@ -1560,10 +1560,10 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 			// }
 			// blk.Time
 			txCount += 1
-			maxFee := decimal.NewFromBigInt(new(big.Int).SetBytes(tx.MaxFeePerGas), 0)
-			prioFee := decimal.NewFromBigInt(new(big.Int).SetBytes(tx.MaxPriorityFeePerGas), 0)
-			gasUsed := decimal.NewFromBigInt(new(big.Int).SetUint64(tx.GasUsed), 0)
-			gasPrice := decimal.NewFromBigInt(new(big.Int).SetBytes(tx.GasPrice), 0)
+			maxFee := decimal.NewFromUint64(tx.MaxFeePerGas)
+			prioFee := decimal.NewFromUint64(tx.MaxPriorityFeePerGas)
+			gasUsed := decimal.NewFromUint64(tx.GasUsed)
+			gasPrice := decimal.NewFromUint64(tx.GasPrice)
 
 			var tipFee decimal.Decimal
 			var txFees decimal.Decimal
@@ -1598,7 +1598,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 
 				blobGasUsed := decimal.NewFromBigInt(new(big.Int).SetUint64(tx.BlobGasUsed), 0)
 				totalBlobGasUsed = totalBlobGasUsed.Add(blobGasUsed)
-				totalBurnedBlob = blobGasUsed.Mul(decimal.NewFromBigInt(new(big.Int).SetBytes(tx.BlobGasPrice), 0))
+				totalBurnedBlob = blobGasUsed.Mul(decimal.NewFromUint64(tx.BlobGasPrice))
 				totalBlobCount = totalBlobCount.Add(decimal.NewFromInt(int64(len(tx.BlobVersionedHashes))))
 
 			default:

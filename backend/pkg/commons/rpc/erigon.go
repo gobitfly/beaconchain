@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -177,41 +176,41 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	txs := block.Transactions()
 
 	for _, tx := range txs {
-		var from []byte
+		var from string
 		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
-			from, _ = hex.DecodeString("abababababababababababababababababababab")
+			from = "abababababababababababababababababababab"
 			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
-			from = sender.Bytes()
+			from = sender.String()
 		}
 
 		pbTx := &types.Eth1Transaction{
 			Type:                 uint32(tx.Type()),
 			Nonce:                tx.Nonce(),
-			GasPrice:             tx.GasPrice().Bytes(),
-			MaxPriorityFeePerGas: tx.GasTipCap().Bytes(),
-			MaxFeePerGas:         tx.GasFeeCap().Bytes(),
+			GasPrice:             tx.GasPrice().Uint64(),
+			MaxPriorityFeePerGas: tx.GasTipCap().Uint64(),
+			MaxFeePerGas:         tx.GasFeeCap().Uint64(),
 			Gas:                  tx.Gas(),
-			Value:                tx.Value().Bytes(),
+			Value:                tx.Value().Uint64(),
 			Data:                 tx.Data(),
 			From:                 from,
-			ChainId:              tx.ChainId().Bytes(),
+			ChainId:              tx.ChainId().Uint64(),
 			AccessList:           []*types.AccessList{},
-			Hash:                 tx.Hash().Bytes(),
+			Hash:                 tx.Hash().String(),
 			Itx:                  []*types.Eth1InternalTransaction{},
 			BlobVersionedHashes:  [][]byte{},
 		}
 
 		if tx.BlobGasFeeCap() != nil {
-			pbTx.MaxFeePerBlobGas = tx.BlobGasFeeCap().Bytes()
+			pbTx.MaxFeePerBlobGas = tx.BlobGasFeeCap().Uint64()
 		}
 		for _, h := range tx.BlobHashes() {
 			pbTx.BlobVersionedHashes = append(pbTx.BlobVersionedHashes, h.Bytes())
 		}
 
 		if tx.To() != nil {
-			pbTx.To = tx.To().Bytes()
+			pbTx.To = tx.To().String()
 		}
 
 		c.Transactions = append(c.Transactions, pbTx)
@@ -266,17 +265,17 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 					}
 
 					if trace.Type == "create" {
-						tracePb.From = common.FromHex(trace.Action.From)
-						tracePb.To = common.FromHex(trace.Result.Address)
-						tracePb.Value = common.FromHex(trace.Action.Value)
+						tracePb.From = trace.Action.From
+						tracePb.To = trace.Result.Address
+						tracePb.Value = trace.Action.Value
 					} else if trace.Type == "suicide" {
-						tracePb.From = common.FromHex(trace.Action.Address)
-						tracePb.To = common.FromHex(trace.Action.RefundAddress)
-						tracePb.Value = common.FromHex(trace.Action.Balance)
+						tracePb.From = trace.Action.Address
+						tracePb.To = trace.Action.RefundAddress
+						tracePb.Value = trace.Action.Balance
 					} else if trace.Type == "call" {
-						tracePb.From = common.FromHex(trace.Action.From)
-						tracePb.To = common.FromHex(trace.Action.To)
-						tracePb.Value = common.FromHex(trace.Action.Value)
+						tracePb.From = trace.Action.From
+						tracePb.To = trace.Action.To
+						tracePb.Value = trace.Action.Value
 					} else {
 						spew.Dump(trace)
 						log.Fatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionHash), "", 0)
@@ -313,9 +312,9 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 					Path: "0",
 				}
 
-				tracePb.From = trace.From.Bytes()
-				tracePb.To = trace.To.Bytes()
-				tracePb.Value = common.FromHex(trace.Value)
+				tracePb.From = trace.From.String()
+				tracePb.To = trace.To.String()
+				tracePb.Value = trace.Value
 				if trace.Type == "CREATE" {
 				} else if trace.Type == "SELFDESTRUCT" {
 				} else if trace.Type == "SUICIDE" {
@@ -347,14 +346,14 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	start = time.Now()
 
 	for i, r := range receipts {
-		c.Transactions[i].ContractAddress = r.ContractAddress[:]
+		c.Transactions[i].ContractAddress = r.ContractAddress.String()
 		c.Transactions[i].CommulativeGasUsed = r.CumulativeGasUsed
 		c.Transactions[i].GasUsed = r.GasUsed
 		c.Transactions[i].LogsBloom = r.Bloom[:]
 		c.Transactions[i].Logs = make([]*types.Eth1Log, 0, len(r.Logs))
 
 		if r.BlobGasPrice != nil {
-			c.Transactions[i].BlobGasPrice = r.BlobGasPrice.Bytes()
+			c.Transactions[i].BlobGasPrice = r.BlobGasPrice.Uint64()
 		}
 		c.Transactions[i].BlobGasUsed = r.BlobGasUsed
 

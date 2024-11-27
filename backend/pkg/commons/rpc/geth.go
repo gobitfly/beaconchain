@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -155,33 +154,33 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 	txs := block.Transactions()
 
 	for _, tx := range txs {
-		var from []byte
+		var from string
 		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
-			from, _ = hex.DecodeString("abababababababababababababababababababab")
+			from = "abababababababababababababababababababab"
 			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
-			from = sender.Bytes()
+			from = sender.String()
 		}
 
 		pbTx := &types.Eth1Transaction{
 			Type:                 uint32(tx.Type()),
 			Nonce:                tx.Nonce(),
-			GasPrice:             tx.GasPrice().Bytes(),
-			MaxPriorityFeePerGas: tx.GasTipCap().Bytes(),
-			MaxFeePerGas:         tx.GasFeeCap().Bytes(),
+			GasPrice:             tx.GasPrice().Uint64(),
+			MaxPriorityFeePerGas: tx.GasTipCap().Uint64(),
+			MaxFeePerGas:         tx.GasFeeCap().Uint64(),
 			Gas:                  tx.Gas(),
-			Value:                tx.Value().Bytes(),
+			Value:                tx.Value().Uint64(),
 			Data:                 tx.Data(),
 			From:                 from,
-			ChainId:              tx.ChainId().Bytes(),
+			ChainId:              tx.ChainId().Uint64(),
 			AccessList:           []*types.AccessList{},
-			Hash:                 tx.Hash().Bytes(),
+			Hash:                 tx.Hash().String(),
 			Itx:                  []*types.Eth1InternalTransaction{},
 		}
 
 		if tx.To() != nil {
-			pbTx.To = tx.To().Bytes()
+			pbTx.To = tx.To().String()
 		}
 		c.Transactions = append(c.Transactions, pbTx)
 	}
@@ -210,7 +209,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 		}
 
 		r := receipts[i]
-		c.Transactions[i].ContractAddress = r.ContractAddress[:]
+		c.Transactions[i].ContractAddress = r.ContractAddress.String()
 		c.Transactions[i].CommulativeGasUsed = r.CumulativeGasUsed
 		c.Transactions[i].GasUsed = r.GasUsed
 		c.Transactions[i].LogsBloom = r.Bloom[:]
