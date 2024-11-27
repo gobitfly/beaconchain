@@ -53,9 +53,12 @@ const groupName = computed(() => {
 </script>
 
 <template>
-  <div class="validator_column">
+  <div
+    v-if="validators.length"
+    class="validator_column"
+  >
     <span
-      v-if="validators.length && validatorCount <= 3"
+      v-if="validatorCount <= 3"
       class="validators"
     >
       <template
@@ -76,7 +79,6 @@ const groupName = computed(() => {
       {{ validatorCount }} {{ $t('common.validator', validatorCount) }}
     </span>
     <FontAwesomeIcon
-      v-if="validators?.length"
       class="link popout"
       :icon="faArrowUpRightFromSquare"
       @click="openValidatorModal"

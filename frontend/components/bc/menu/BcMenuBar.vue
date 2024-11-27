@@ -33,7 +33,7 @@ defineProps<Props>()
       <BcLink
         v-else-if="item.route && !item.command"
         :to="item.route"
-        class="pointer"
+
         :class="{ 'p-active': item.active }"
       >
         <span
@@ -50,7 +50,7 @@ defineProps<Props>()
       </BcLink>
       <span
         v-else
-        class="button-content pointer"
+        class="button-content"
         :class="[item.class, { 'p-active': item.active }]"
         :highlight="item.highlight || null"
       >

@@ -238,6 +238,7 @@ const openValidatorModal = () => {
       </template>
     </DashboardTableEfficiency>
     <BcTooltip
+      v-if="data.tooltip?.title && data.tooltip?.text"
       position="top"
       :text="data.tooltip?.text"
       :title="data.tooltip?.title"
@@ -248,7 +249,7 @@ const openValidatorModal = () => {
       />
     </BcTooltip>
     <FontAwesomeIcon
-      v-if="data?.context"
+      v-if="data?.context && data.efficiency.status_count.success > 0"
       class="link popout"
       :icon="faArrowUpRightFromSquare"
       @click="openValidatorModal"
@@ -274,6 +275,7 @@ const openValidatorModal = () => {
       :color-break-point="80"
     />
     <BcTooltip
+      v-if="data.tooltip?.title"
       position="top"
       :text="data.tooltip?.text"
       :title="data.tooltip?.title"

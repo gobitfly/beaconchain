@@ -11,6 +11,7 @@
     "BcToggle",
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
+    "DashboardTableEfficiency",
     "DashboardTableSummaryDetails",
     "DashboardTableValidators",
     "DashboardValidatorManagmentModal",
