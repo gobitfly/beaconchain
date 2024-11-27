@@ -32,15 +32,16 @@
         border-color: var(--primary-color);
       }
       > .p-menubar-item-content {
+        cursor: pointer;
         padding: var(--padding-small) var(--padding);
         border-radius: var(--border-radius);
-        height: 27px;
-        margin-top: 1px;
+        height: 1.6875rem;
+        margin-top: 0.0625rem;
         justify-content: center;
 
         &:not(:has(.text)) {
-          padding-left: 8px;
-          padding-right: 8px;
+          padding-left: 0.5rem;
+          padding-right: 0.5rem;
         }
       }
 
