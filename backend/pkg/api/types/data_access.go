@@ -240,8 +240,8 @@ type VDBSlashingsSummaryValidators struct {
 }
 
 type VDBProposalSummaryValidators struct {
-	Proposed []IndexBlocks
-	Missed   []IndexBlocks
+	Proposed []IndexSlots
+	Missed   []IndexSlots
 }
 
 type VDBProtocolModes struct {
