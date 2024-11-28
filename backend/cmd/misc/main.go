@@ -269,6 +269,19 @@ func Run() {
 	defer db.ClickHouseReader.Close()
 	defer db.ClickHouseWriter.Close()
 
+	// init clickhouse for evm transactions
+	db.ClickHouseNativeWriter = db.MustInitClickhouseNative(&types.DatabaseConfig{
+		Username:     cfg.ClickHouse.WriterDatabase.Username,
+		Password:     cfg.ClickHouse.WriterDatabase.Password,
+		Name:         cfg.ClickHouse.WriterDatabase.Name,
+		Host:         cfg.ClickHouse.WriterDatabase.Host,
+		Port:         cfg.ClickHouse.WriterDatabase.Port,
+		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+		SSL:          false,
+		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+	})
+	defer db.ClickHouseNativeWriter.Close()
+
 	// Initialize the persistent redis client
 	if requires.Redis {
 		rdc := redis.NewClient(&redis.Options{
@@ -541,6 +554,8 @@ func Run() {
 		err = collectUserDbNotifications(opts.StartEpoch)
 	case "verify-fcm-tokens":
 		err = verifyFCMTokens()
+	case "index-txs-to-clickhouse":
+		err = indexTxsToClickhouse(opts.StartBlock, opts.EndBlock, opts.BatchSize, opts.DataConcurrency, opts.Transformers, erigonClient)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -2228,5 +2243,50 @@ func verifyFCMTokens() error {
 		}
 		time.Sleep(time.Millisecond * 250)
 	}
+	return nil
+}
+
+func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, client *rpc.ErigonClient) error {
+
+	ctx := context.Background()
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(int(concurrency))
+
+	log.Infof("transformerFlag: %v", transformerFlag)
+	transformerList := strings.Split(transformerFlag, ",")
+	if transformerFlag == "all" || len(transformerList) == 0 {
+		transformerList = []string{"TransformTx", "TransformBlobTx", "TransformItx", "TransformERC20", "TransformERC721", "TransformERC1155"}
+	}
+	log.Infof("transformers: %v", transformerList)
+
+	for i := startBlock; i <= endBlock; i++ {
+		i := i
+		g.Go(func() error {
+			select {
+			case <-gCtx.Done():
+				return gCtx.Err()
+			default:
+			}
+
+			bc, _, err := client.GetBlock(int64(i), "geth")
+			if err != nil {
+				return fmt.Errorf("error getting block: %v from ethereum node err: %w", i, err)
+			}
+
+			err = db.SaveTransactionsToClickHouse(bc, transformerList)
+			if err != nil {
+				return fmt.Errorf("error saving evm tx data into ClickHouse %w", err)
+			}
+
+			return nil
+		})
+	}
+
+	err := g.Wait()
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
