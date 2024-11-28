@@ -9,7 +9,6 @@ import {
   faUsers,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import {
   BcDialogConfirm,
@@ -44,10 +43,12 @@ const {
   setDashboardKey,
 } = useDashboardKey()
 const { refreshOverview } = useValidatorDashboardOverviewStore()
+const userDashboardStore = useUserDashboardStore()
 const {
-  dashboards, getDashboardLabel, refreshDashboards, updateGuestDashboardKey,
-}
-  = useUserDashboardStore()
+  getDashboardLabel, refreshDashboards, updateGuestDashboardKey,
+} = userDashboardStore
+
+const { dashboards } = storeToRefs(userDashboardStore)
 
 const { t: $t } = useTranslation()
 const { width } = useWindowSize()

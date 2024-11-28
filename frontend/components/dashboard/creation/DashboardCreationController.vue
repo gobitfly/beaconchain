@@ -7,11 +7,16 @@ import {
 import { type ChainIDs } from '~/types/network'
 import { API_PATH } from '~/types/customFetch'
 
+const userDashboardStore = useUserDashboardStore()
 const {
-  createAccountDashboard, createValidatorDashboard,
-}
-  = useUserDashboardStore()
-const { dashboards } = useUserDashboardStore()
+  createAccountDashboard,
+  createValidatorDashboard,
+} = userDashboardStore
+
+const {
+  dashboards,
+} = storeToRefs(userDashboardStore)
+
 const {
   isLoggedIn, user,
 } = useUserStore()

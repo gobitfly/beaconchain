@@ -8,7 +8,6 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 import {
   BcDialogConfirm, BcPremiumModal,
 } from '#components'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import type {
@@ -34,7 +33,7 @@ const visible = defineModel<boolean>()
 
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const { groups } = useValidatorDashboardGroups()
-const { dashboards } = useUserDashboardStore()
+const { dashboards } = storeToRefs(useUserDashboardStore())
 const { user } = useUserStore()
 
 const cursor = ref<Cursor>(0)
