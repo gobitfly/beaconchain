@@ -2,7 +2,6 @@
 import type {
   MenuBarButton, MenuBarEntry,
 } from '~/types/menuBar'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import {
   type Dashboard, type DashboardKey, type DashboardType, GUEST_DASHBOARD_ID, type GuestDashboard,
 } from '~/types/dashboard'
@@ -14,7 +13,7 @@ const router = useRouter()
 const { has } = useFeatureFlag()
 
 const { isLoggedIn } = useUserStore()
-const { dashboards } = useUserDashboardStore()
+const { dashboards } = storeToRefs(useUserDashboardStore())
 const {
   dashboardKey, dashboardType, isSharedDashboard, setDashboardKey,
 } = useDashboardKey()

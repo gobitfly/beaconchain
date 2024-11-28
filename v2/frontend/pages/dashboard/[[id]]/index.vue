@@ -65,15 +65,19 @@ const tabs: HashTabs = [
 const {
   dashboardKey, setDashboardKey,
 } = useDashboardKeyProvider('validator')
+
+const userDashboardStore = useUserDashboardStore()
 const {
-  cookieDashboards,
-  dashboards,
   getDashboardLabel,
   refreshDashboards,
   updateGuestDashboardKey,
-} = useUserDashboardStore()
-// when we run into an error loading a dashboard keep it here to prevent an infinity loop
-const errorDashboardKeys: string[] = []
+} = userDashboardStore
+
+const {
+  cookieDashboards,
+  dashboards,
+} = storeToRefs(userDashboardStore)
+await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const seoTitle = computed(() => {
   return getDashboardLabel(dashboardKey.value, 'validator')
@@ -122,12 +126,13 @@ function showDashboardCreationDialog() {
   dashboardCreationControllerModal.value?.show()
 }
 
+// when we run into an error loading a dashboard keep it here to prevent an infinity loop
+const errorDashboardKeys: string[] = []
 const setDashboardKeyIfNoError = (key: string) => {
   if (!errorDashboardKeys.includes(key)) {
     setDashboardKey(key)
   }
 }
-
 watch(
   [
     dashboardKey,
