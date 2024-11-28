@@ -1,4 +1,3 @@
-import { defineStore } from 'pinia'
 import { warn } from 'vue'
 import type {
   GetUserDashboardsResponse,
@@ -19,20 +18,12 @@ import {
   isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 
-const userDashboardStore = defineStore('user_dashboards_store', () => {
-  const data = ref<null | undefined | UserDashboardsData>()
-  return { data }
-})
-
-export function useUserDashboardStore() {
+export const useUserDashboardStore = defineStore('user_dashboards_store', () => {
   const { fetch } = useCustomFetch()
   const { t: $t } = useTranslation()
-  const { data } = storeToRefs(userDashboardStore())
   const { isLoggedIn } = useUserStore()
   const dashboardCookie = useCookie(COOKIE_KEY.USER_DASHBOARDS)
-
-  const dashboards = computed(() => data.value)
-
+  const dashboards = ref<UserDashboardsData>()
   const cookieDashboards = computed(() => {
     if (dashboardCookie.value) {
       if (typeof dashboardCookie.value === 'object') {
@@ -50,7 +41,7 @@ export function useUserDashboardStore() {
       const res = await fetch<GetUserDashboardsResponse>(
         API_PATH.USER_DASHBOARDS,
       )
-      data.value = res.data
+      dashboards.value = res.data
 
       // add fallback names for dashboards that have no names
       if (dashboards.value) {
@@ -67,13 +58,13 @@ export function useUserDashboardStore() {
       }
     }
     else {
-      data.value = cookieDashboards.value
+      dashboards.value = cookieDashboards.value
     }
     return dashboards.value
   }
 
   // Guest dashboards are saved in a cookie (so that it's accessable during SSR)
-  function saveToCookie(db: null | undefined | UserDashboardsData) {
+  function saveToCookie(db: UserDashboardsData) {
     if (isLoggedIn.value) {
       warn('saveToCookie should only be called when not logged in')
       return
@@ -94,11 +85,11 @@ export function useUserDashboardStore() {
         key: dashboardKey ?? '',
         name: '',
       }
-      data.value = {
+      dashboards.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [ gd as ValidatorDashboard ],
       }
-      saveToCookie(data.value)
+      saveToCookie(dashboards.value)
       return gd
     }
     // Create user specific Validator dashboard
@@ -112,7 +103,7 @@ export function useUserDashboardStore() {
       },
     )
     if (res.data) {
-      data.value = {
+      dashboards.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [
           ...(dashboards.value?.validator_dashboards || []),
@@ -141,11 +132,11 @@ export function useUserDashboardStore() {
         key: dashboardKey ?? '',
         name: '',
       }
-      data.value = {
+      dashboards.value = {
         account_dashboards: [ gd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
-      saveToCookie(data.value)
+      saveToCookie(dashboards.value)
       return gd
     }
     // Create user specific account dashboard
@@ -154,7 +145,7 @@ export function useUserDashboardStore() {
       { body: { name } },
     )
     if (res.data) {
-      data.value = {
+      dashboards.value = {
         account_dashboards: [
           ...(dashboards.value?.account_dashboards || []),
           {
@@ -181,7 +172,7 @@ export function useUserDashboardStore() {
         ...dashboards.value?.validator_dashboards?.[0],
         key,
       }
-      data.value = {
+      dashboards.value = {
         account_dashboards: dashboards.value?.account_dashboards || [],
         validator_dashboards: [ gd as ValidatorDashboard ],
       }
@@ -193,12 +184,12 @@ export function useUserDashboardStore() {
         ...dashboards.value?.account_dashboards?.[0],
         key,
       }
-      data.value = {
+      dashboards.value = {
         account_dashboards: [ gd ],
         validator_dashboards: dashboards.value?.validator_dashboards || [],
       }
     }
-    saveToCookie(data.value)
+    saveToCookie(dashboards.value)
   }
 
   function getDashboardLabel(key: DashboardKey, type: DashboardType): string {
@@ -232,4 +223,4 @@ export function useUserDashboardStore() {
     refreshDashboards,
     updateGuestDashboardKey,
   }
-}
+})

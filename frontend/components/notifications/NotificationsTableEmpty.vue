@@ -21,10 +21,15 @@ const handleClick = () => {
   }
   emit('openDialog')
 }
+
+const userDashboardStore = useUserDashboardStore()
+const {
+  refreshDashboards,
+} = userDashboardStore
+
 const {
   dashboards,
-  refreshDashboards,
-} = useUserDashboardStore()
+} = storeToRefs(userDashboardStore)
 
 if (!dashboards.value) {
   refreshDashboards()

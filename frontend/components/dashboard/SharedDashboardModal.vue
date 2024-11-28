@@ -8,7 +8,7 @@ const cookiePreference = useCookie<CookiesPreference>(
   { default: () => undefined },
 )
 const { isSharedDashboard } = useDashboardKey()
-const { dashboards } = useUserDashboardStore()
+const { dashboards } = storeToRefs(useUserDashboardStore())
 const { t: $t } = useTranslation()
 const route = useRoute()
 
