@@ -1,11 +1,13 @@
-import { test, expect } from "@playwright/test";
-import { BasePage } from "../../page-object/base.page";
+// import { test, expect } from "@nuxt/test-utils/playwright";
+// import { BasePage } from "../../page-object/base.page";
 import { LoginPage } from "../../page-object/login.page";
 import { DashboardPage } from "../../page-object/dashboard.page";
 
+import { test, expect, goto } from "../../utils/helpers";
 test.describe("Login", () => {
-    test.beforeEach(async ({ page }) => {
-        await BasePage.goto(page, "/login");
+    test.beforeEach(async ({page}) => {
+        console.log('Base URL:', process.env.NUXT_PUBLIC_DOMAIN);
+        await goto(page, "/login");
     });
     test("Successful login with valid credentials", async ({ page }) => {
         await LoginPage.email(page).fill("tanya.stasevych@bitfly.at");
@@ -14,7 +16,7 @@ test.describe("Login", () => {
         await page.waitForTimeout(5000)
         await LoginPage.loginBtn(page).click();
 
-        await expect(DashboardPage.overview(page)).toBeVisible({ timeout: 15000 });
+        await expect(DashboardPage.dashboard(page)).toBeVisible({ timeout: 15000 });
     });
 
     test("The login button is active after filling in all fields", async ({ page }) => {

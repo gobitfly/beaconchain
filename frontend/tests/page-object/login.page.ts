@@ -7,10 +7,4 @@ export const LoginPage = {
     errorEmail: (page: Page) => page.locator(".p-error").nth(0),
     errorPassword: (page: Page) => page.locator(".p-error").nth(1),
     toastMessage: (page: Page) => page.locator(".p-toast-message-error"),
-
-    login: async (page: Page, userEmail: string, userPassword: string) => {
-        await LoginPage.email(page).fill(userEmail);
-        await LoginPage.password(page).fill(userPassword);
-        await LoginPage.loginBtn(page).click();
-    },
 };

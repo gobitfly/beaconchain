@@ -33,6 +33,5 @@ pnpm-lock.yaml
 server.crt
 server.key
 
-test-results/
-
-results/
+/test-results
+/tests/results
