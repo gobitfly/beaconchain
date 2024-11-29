@@ -702,7 +702,7 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 	}
 	search := types.VDBManageValidatorsSearch{DashboardId: *dashboardId}
 	if !checkSearch(&search, pagingParams.search) {
-		returnOk(w, r, types.GetValidatorDashboardValidatorsResponse{Paging: types.Paging{}, Data: []types.VDBManageValidatorsTableRow{}})
+		returnOk(w, r, emptyPagingResponse())
 	}
 
 	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardValidators(r.Context(), *dashboardId, groupId, pagingParams.cursor, *sort, search, pagingParams.limit)
@@ -1073,7 +1073,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	}
 	search := types.VDBSummarySearch{DashboardId: *dashboardId}
 	if !checkSearch(&search, pagingParams.search) {
-		returnOk(w, r, types.GetValidatorDashboardSummaryResponse{Paging: types.Paging{}, Data: []types.VDBSummaryTableRow{}})
+		returnOk(w, r, emptyPagingResponse())
 	}
 
 	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardSummary(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, search, pagingParams.limit, protocolModes)
@@ -1440,7 +1440,7 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	}
 	search := types.VDBBlocksSearch{DashboardId: *dashboardId}
 	if !checkSearch(&search, pagingParams.search) {
-		returnOk(w, r, types.GetValidatorDashboardBlocksResponse{Paging: types.Paging{}, Data: []types.VDBBlocksTableRow{}})
+		returnOk(w, r, emptyPagingResponse())
 	}
 
 	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, search, pagingParams.limit, protocolModes)
