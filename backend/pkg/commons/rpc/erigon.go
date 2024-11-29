@@ -310,6 +310,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				tracePb := &types.Eth1InternalTransaction{
 					Type: strings.ToLower(trace.Type),
 					Path: "0",
+					Gas:  hexutil.MustDecodeUint64(trace.Gas),
 				}
 
 				tracePb.From = trace.From.String()
