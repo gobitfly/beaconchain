@@ -48,7 +48,6 @@ var searchEnumsRegexMapping = map[enums.SearchType]*regexp.Regexp{
 	enums.SearchTypeEthereumAddress:      reEthereumAddress,
 	enums.SearchTypeWithdrawalCredential: reWithdrawalCredential,
 	enums.SearchTypeEnsName:              reEnsName,
-	enums.SearchTypeNonEmpty:             reNonEmpty,
 	enums.SearchTypeGraffiti:             reGraffiti,
 	enums.SearchTypeCursor:               reCursor,
 	enums.SearchTypeEmail:                reEmail,

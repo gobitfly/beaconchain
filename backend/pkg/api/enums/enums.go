@@ -29,7 +29,6 @@ const (
 	SearchTypeEthereumAddress
 	SearchTypeWithdrawalCredential
 	SearchTypeEnsName
-	SearchTypeNonEmpty
 	SearchTypeGraffiti
 	SearchTypeCursor
 	SearchTypeEmail
@@ -68,7 +67,6 @@ func (bs *BasicSearch) GetSearches() []SearchType {
 		SearchTypeEthereumAddress,
 		SearchTypeWithdrawalCredential,
 		SearchTypeEnsName,
-		SearchTypeNonEmpty,
 		SearchTypeGraffiti,
 		SearchTypeCursor,
 		SearchTypeEmail,
