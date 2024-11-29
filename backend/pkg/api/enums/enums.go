@@ -1,6 +1,10 @@
 package enums
 
-import "time"
+import (
+	"time"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+)
 
 type Enum interface {
 	Int() int
@@ -38,30 +42,43 @@ const (
 	ValidatorPublicKey
 )
 
-var InvalidSearch = Searchable(nil)
-
 type Searchable interface {
 	GetSearches() []SearchType
-	// return if successful
 	SetSearchType(st SearchType, b bool) Searchable
-	SetSearchValue(s string) Searchable
+	SetSearchValue(s string)
 }
 
 type BasicSearch struct {
 	Value string // searched string
 }
 
-func (bs BasicSearch) SetSearchValue(s string) Searchable {
+func (bs *BasicSearch) SetSearchValue(s string) {
+	if bs == nil {
+		log.Warnf("BasicSearch is nil, can't apply search: %s", s)
+		return
+	}
 	bs.Value = s
-	return bs
 }
 
-func (bs BasicSearch) GetSearches() []SearchType {
-	return []SearchType{}
-}
-
-func (bs BasicSearch) SetSearchType(st SearchType, b bool) Searchable {
-	return bs
+// optional: implement in embedding structs to limit regex pattern matches
+func (bs *BasicSearch) GetSearches() []SearchType {
+	return []SearchType{
+		Name,
+		Integer,
+		EthereumAddress,
+		WithdrawalCredential,
+		EnsName,
+		NonEmpty,
+		Graffiti,
+		Cursor,
+		Email,
+		Password,
+		EmailUserToken,
+		JsonContentType,
+		ValidatorDashboardPublicId,
+		ValidatorPublicKeyWithPrefix,
+		ValidatorPublicKey,
+	}
 }
 
 type AdInsertMode int

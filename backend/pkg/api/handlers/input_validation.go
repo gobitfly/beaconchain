@@ -436,15 +436,16 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	return &types.Sort[T]{Column: sortCol, Desc: desc}
 }
 
-func checkSearch[T enums.Searchable](searchString string) (T, error) {
+func checkSearch[T enums.Searchable](searchString string) T {
 	var search T
+	if searchString == "" {
+		return search
+	}
 	for _, acceptedSearchType := range search.GetSearches() {
-		if search := search.SetSearchType(acceptedSearchType, searchEnumsRegexMapping[acceptedSearchType].MatchString(searchString)); search == enums.InvalidSearch {
-			return search.(T), newInternalServerErr("Error setting search request")
-		}
+		search = search.SetSearchType(acceptedSearchType, searchEnumsRegexMapping[acceptedSearchType].MatchString(searchString)).(T)
 	}
 	search.SetSearchValue(searchString)
-	return search, nil
+	return search
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {
