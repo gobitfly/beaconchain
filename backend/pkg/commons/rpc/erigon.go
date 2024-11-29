@@ -318,14 +318,14 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				if trace.Type == "CREATE" {
 				} else if trace.Type == "SELFDESTRUCT" {
 				} else if trace.Type == "SUICIDE" {
-				} else if trace.Type == "CALL" || trace.Type == "DELEGATECALL" || trace.Type == "STATICCALL" {
+				} else if trace.Type == "CALL" || trace.Type == "DELEGATECALL" || trace.Type == "STATICCALL" || trace.Type == "CALLCODE" {
 				} else if trace.Type == "" {
 					log.Error(fmt.Errorf("geth style trace without type"), "", 0, map[string]interface{}{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()})
 					spew.Dump(trace)
 					continue
 				} else {
 					spew.Dump(trace)
-					log.Fatal(fmt.Errorf("unknown trace type %v in tx %v", trace.Type, trace.TransactionPosition), "", 0)
+					log.Fatal(fmt.Errorf("unknown trace type %v in tx %v with block number: %d", trace.Type, trace.TransactionPosition, number), "", 0)
 				}
 				c.Transactions[trace.TransactionPosition].Itx = append(c.Transactions[trace.TransactionPosition].Itx, tracePb)
 			}
