@@ -32,30 +32,36 @@ const data = computed(() => {
       <slot name="tooltip">
         <DashboardTableEfficiency
           v-bind="props"
-          :absolute="!absolute"
+          :absolute
           :is-tooltip="true"
         />
       </slot>
     </template>
     <span v-if="absolute">
-      <BcFormatNumber
-        class="positive"
-        :value="props.success"
-      />
-      <span class="slash"> / </span>
-      <BcFormatNumber
-        :class="data.failedClass"
-        :value="props.failed"
+      <span v-if="props.success === 0 && props.failed === 0">0 / 0</span>
+      <template v-else>
+        <BcFormatNumber
+          class="positive"
+          :value="props.success === 0 ? undefined : props.success"
+        />
+        <span class="slash"> / </span>
+        <BcFormatNumber
+          :class="data.failedClass"
+          :value="props.failed === 0 ? undefined : props.failed"
+        />
+      </template>
+    </span>
+    <span v-else>
+      <span v-if="props.success === 0 && props.failed === 0">-</span>
+      <BcFormatPercent
+        v-else
+        class="percent"
+        :base="typeof data.sum === 'number' ? data.sum : undefined"
+        :value="props.success === 0 ? undefined : props.success"
+        :fixed="undefined"
+        :color-break-point="80"
+        :full-on-empty-base="true"
       />
     </span>
-    <BcFormatPercent
-      v-else
-      class="percent"
-      :base="data.sum"
-      :value="props.success"
-      :fixed="undefined"
-      :color-break-point="80"
-      :full-on-empty-base="true"
-    />
   </BcTooltip>
 </template>
