@@ -22,7 +22,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search enums.VDBBlocksSearches, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search t.VDBBlocksSearch, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
 
 	// -------------------------------------
@@ -64,39 +64,28 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			"validator_index",
 		)
 	if dashboardId.Validators == nil {
-		// could also optimize this for the average and/or the whale case; will go with some middle-ground, needs testing
-		// (query validators twice: once without search applied (fast) to pre-filter scheduled proposals (which are sent to db, want to minimize),
-		// again for blocks query with search applied to not having to send potentially huge validator-list)
-		startTime := time.Now()
-		valis, err := d.getDashboardValidators(ctx, dashboardId, nil)
-		log.Debugf("=== getting validators took %s", time.Since(startTime))
-		if err != nil {
-			return nil, nil, err
+		filteredValidatorsDs = filteredValidatorsDs.
+			From(goqu.T("users_val_dashboards_validators").As(validators.GetTable())).
+			Where(validators.Col("dashboard_id").Eq(dashboardId.Id))
+		// apply search filters
+		searches := []exp.Expression{}
+		if indexSearch := search.Index(); indexSearch.Enabled {
+			searches = append(searches, validators.Col("validator_index").Eq(indexSearch.Value))
 		}
-		for _, v := range valis {
-			validatorMap[v] = true
+		if groupSearch := search.Group(); groupSearch.Enabled {
+			filteredValidatorsDs = filteredValidatorsDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As(groups), goqu.On(
+					validators.Col("group_id").Eq(groups.Col("id")),
+					validators.Col("dashboard_id").Eq(groups.Col("dashboard_id")),
+				))
+			searches = append(searches,
+				goqu.L("LOWER(?)", groups.Col("name")).Like(strings.Replace(strings.ToLower(groupSearch.Value), "_", "\\_", -1)+"%"),
+			)
 		}
-
-		// create a subquery to get the (potentially filtered) validators and their groups for later
-		params = append(params, dashboardId.Id)
-		selectStr := `SELECT validator_index, group_id `
-		from := `FROM users_val_dashboards_validators validators `
-		where := `WHERE validators.dashboard_id = $1`
-		extraConds := make([]string, 0, 3)
-		if search.Index {
-			params = append(params, search.Value)
-			extraConds = append(extraConds, fmt.Sprintf(`validator_index = $%d`, len(params)))
-		}
-		if search.Group {
-			from += `INNER JOIN users_val_dashboards_groups groups ON validators.dashboard_id = groups.dashboard_id AND validators.group_id = groups.id `
-			// escape the psql single character wildcard "_"; apply prefix-search
-			params = append(params, strings.Replace(search.Value, "_", "\\_", -1)+"%")
-			extraConds = append(extraConds, fmt.Sprintf(`LOWER(name) LIKE LOWER($%d)`, len(params)))
-		}
-		if search.PublicKey {
-			index, ok := validatorMapping.ValidatorIndices[search.Value]
-			if !ok && len(extraConds) == 0 {
-				// don't even need to query
+		if pubkeySearch := search.Pubkey(); pubkeySearch.Enabled {
+			index, ok := validatorMapping.ValidatorIndices[pubkeySearch.Value]
+			if !ok && !search.Group().Enabled && !search.Index().Enabled {
+				// searched pubkey doesn't exist, don't even need to query anything
 				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 			}
 			searches = append(searches,
@@ -109,13 +98,18 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	} else {
 		validatorList := make([]t.VDBValidator, 0, len(dashboardId.Validators))
 		for _, validator := range dashboardId.Validators {
-			if search.Index && fmt.Sprint(validator) != search.Value ||
-				search.PublicKey && validator != validatorMapping.ValidatorIndices[search.Value] {
+			indexSearch := search.Index()
+			pubkeySearch := search.Pubkey()
+			if indexSearch.Enabled && validator != indexSearch.Value ||
+				pubkeySearch.Enabled && validator != validatorMapping.ValidatorIndices[pubkeySearch.Value] {
 				continue
 			}
-			validatorMap[validator] = true
-			validators = append(validators, validator)
-			if search.Index || search.PublicKey {
+			filteredValidators = append(filteredValidators, validatorGroup{
+				Validator: validator,
+				Group:     t.DefaultGroupId,
+			})
+			validatorList = append(validatorList, validator)
+			if search.Index().Enabled || search.Pubkey().Enabled {
 				break
 			}
 		}

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -626,7 +625,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupCount(ctx context.Context,
 	return count, err
 }
 
-func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search t.VDBManageValidatorsSearch, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	// Initialize the cursor
 	var currentCursor t.ValidatorsCursor
 	var err error
@@ -720,21 +719,14 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 			row.QueuePosition = &activationIndex
 		}
 
-		if search == "" {
-			data = append(data, row)
-		} else {
-			index, err := strconv.ParseUint(search, 10, 64)
-			indexSearch := err == nil && index == row.Index
-
-			pubKey := strings.ToLower(strings.TrimPrefix(search, "0x"))
-			pubkeySearch := pubKey == strings.TrimPrefix(string(row.PublicKey), "0x")
-
-			groupNameSearch := search == validatorGroupMap[validator].GroupName
-
-			if indexSearch || pubkeySearch || groupNameSearch {
-				data = append(data, row)
-			}
+		// TODO should apply filter to db query
+		if search.IsEnabled() &&
+			!(search.Index().Enabled && row.Index == search.Index().Value ||
+				search.Pubkey().Enabled && strings.ToLower(string(row.PublicKey)) == search.Pubkey().Value ||
+				search.Group().Enabled && validatorGroupMap[validator].GroupName == search.Group().Value) {
+			continue
 		}
+		data = append(data, row)
 	}
 
 	// no data found (searched for something that does not exist)

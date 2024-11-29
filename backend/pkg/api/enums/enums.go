@@ -2,8 +2,6 @@ package enums
 
 import (
 	"time"
-
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
 type Enum interface {
@@ -18,65 +16,6 @@ type EnumFactory[T Enum] interface {
 
 func IsInvalidEnum(e Enum) bool {
 	return e.Int() == -1
-}
-
-type SearchType int
-
-// all possible search types
-const (
-	SearchTypeName SearchType = iota // default
-	SearchTypeInteger
-	SearchTypeEthereumAddress
-	SearchTypeWithdrawalCredential
-	SearchTypeEnsName
-	SearchTypeGraffiti
-	SearchTypeCursor
-	SearchTypeEmail
-	SearchTypePassword
-	SearchTypeEmailUserToken
-	SearchTypeJsonContentType
-	// Validator Dashboard
-	SearchTypeValidatorDashboardPublicId
-	SearchTypeValidatorPublicKeyWithPrefix
-	SearchTypeValidatorPublicKey
-)
-
-type Searchable interface {
-	GetSearches() []SearchType
-	SetSearchType(st SearchType, b bool) Searchable
-	SetSearchValue(s string)
-}
-
-type BasicSearch struct {
-	Value string // searched string
-}
-
-func (bs *BasicSearch) SetSearchValue(s string) {
-	if bs == nil {
-		log.Warnf("BasicSearch is nil, can't apply search: %s", s)
-		return
-	}
-	bs.Value = s
-}
-
-// optional: implement in embedding structs to limit regex pattern matches
-func (bs *BasicSearch) GetSearches() []SearchType {
-	return []SearchType{
-		SearchTypeName,
-		SearchTypeInteger,
-		SearchTypeEthereumAddress,
-		SearchTypeWithdrawalCredential,
-		SearchTypeEnsName,
-		SearchTypeGraffiti,
-		SearchTypeCursor,
-		SearchTypeEmail,
-		SearchTypePassword,
-		SearchTypeEmailUserToken,
-		SearchTypeJsonContentType,
-		SearchTypeValidatorDashboardPublicId,
-		SearchTypeValidatorPublicKeyWithPrefix,
-		SearchTypeValidatorPublicKey,
-	}
 }
 
 type AdInsertMode int

@@ -700,7 +700,12 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardValidators(r.Context(), *dashboardId, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	search := types.VDBManageValidatorsSearch{DashboardId: *dashboardId}
+	if !checkSearch(&search, pagingParams.search) {
+		returnOk(w, r, types.GetValidatorDashboardValidatorsResponse{Paging: types.Paging{}, Data: []types.VDBManageValidatorsTableRow{}})
+	}
+
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardValidators(r.Context(), *dashboardId, groupId, pagingParams.cursor, *sort, search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1066,8 +1071,12 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 		handleErr(w, r, v)
 		return
 	}
+	search := types.VDBSummarySearch{DashboardId: *dashboardId}
+	if !checkSearch(&search, pagingParams.search) {
+		returnOk(w, r, types.GetValidatorDashboardSummaryResponse{Paging: types.Paging{}, Data: []types.VDBSummaryTableRow{}})
+	}
 
-	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardSummary(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardSummary(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1429,7 +1438,10 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 		handleErr(w, r, v)
 		return
 	}
-	search := checkSearch[enums.VDBBlocksSearches](pagingParams.search)
+	search := types.VDBBlocksSearch{DashboardId: *dashboardId}
+	if !checkSearch(&search, pagingParams.search) {
+		returnOk(w, r, types.GetValidatorDashboardBlocksResponse{Paging: types.Paging{}, Data: []types.VDBBlocksTableRow{}})
+	}
 
 	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, search, pagingParams.limit, protocolModes)
 	if err != nil {

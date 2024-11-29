@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,7 +27,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search t.VDBSummarySearch, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBSummaryTableRow, 0)
 	var paging t.Paging
@@ -41,30 +40,26 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		return nil, nil, err
 	}
 
-	// Searching for a group name is not supported when aggregating groups or for guest dashboards
-	groupNameSearchEnabled := !dashboardId.AggregateGroups && dashboardId.Validators == nil
-
 	// Analyze the search term
-	searchValidator := -1
-	if search != "" {
-		if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
-			search = strings.ToLower(search)
-
+	searchValidator := struct {
+		Enabled bool
+		Index   uint64
+	}{Enabled: search.Index().Enabled || search.Pubkey().Enabled}
+	if search.IsEnabled() {
+		if pubKey := search.Pubkey(); pubKey.Enabled {
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
 				return nil, nil, err
 			}
-			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-				searchValidator = int(index)
+			if index, ok := validatorMapping.ValidatorIndices[pubKey.Value]; ok {
+				searchValidator.Index = index
 			} else {
 				// No validator index for pubkey found, return empty results
 				return result, &paging, nil
 			}
-		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
-			searchValidator = int(number)
-		} else if !groupNameSearchEnabled {
-			return result, &paging, nil
+		} else if index := search.Index(); index.Enabled {
+			searchValidator.Index = index.Value
 		}
 	}
 
@@ -74,12 +69,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	if dashboardId.Validators != nil {
 		validatorFound := false
 		for _, validator := range dashboardId.Validators {
-			if searchValidator != -1 && int(validator) == searchValidator {
+			if searchValidator.Enabled && validator == searchValidator.Index {
 				validatorFound = true
 			}
 			validators = append(validators, validator)
 		}
-		if searchValidator != -1 && !validatorFound {
+		if searchValidator.Enabled && !validatorFound {
 			// The searched validator is not part of the dashboard
 			return result, &paging, nil
 		}
@@ -148,7 +143,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
-		if groupNameSearchEnabled && (search != "" || colSort.Column == enums.VDBSummaryColumns.Group) {
+		if search.Group().Enabled && colSort.Column == enums.VDBSummaryColumns.Group {
 			// Get the group names since we can filter and/or sort for them
 			ds = ds.
 				SelectAppend(goqu.L("g.name AS group_name")).
@@ -259,7 +254,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Sort by group name, after this the name is no longer relevant
-	if groupNameSearchEnabled && colSort.Column == enums.VDBSummaryColumns.Group {
+	// TODO should apply filter to db query
+	if search.Group().Enabled && colSort.Column == enums.VDBSummaryColumns.Group {
 		sort.Slice(queryResult, func(i, j int) bool {
 			if colSort.Desc {
 				return queryResult[i].GroupName > queryResult[j].GroupName
@@ -380,11 +376,12 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.SyncScheduled += queryEntry.SyncScheduled
 
 		// If the search permits it add the entry to the result
-		if search != "" {
-			prefixSearch := strings.ToLower(search)
+		// TODO should apply filter to db query
+		if search.IsEnabled() {
+			groupSearch := search.Group()
 			for _, validatorIndex := range queryEntry.ValidatorIndices {
-				if searchValidator != -1 && validatorIndex == uint64(searchValidator) ||
-					(groupNameSearchEnabled && strings.HasPrefix(strings.ToLower(queryEntry.GroupName), prefixSearch)) {
+				if searchValidator.Enabled && validatorIndex == searchValidator.Index ||
+					(groupSearch.Enabled && strings.HasPrefix(strings.ToLower(queryEntry.GroupName), strings.ToLower(groupSearch.Value))) {
 					result = append(result, resultEntry)
 					break
 				}
