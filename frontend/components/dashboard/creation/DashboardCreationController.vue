@@ -83,7 +83,7 @@ function show(
   }
   network.value = forcedNetwork || currentNetwork.value
   state.value = 'type'
-  name.value = isLoggedIn.value ? '' : 'cookie'
+  name.value = isLoggedIn.value ? '' : ''
 }
 
 defineExpose({ show })

@@ -10,6 +10,7 @@
     "BcTablePager",
     "BcToggle",
     "DashboardChartSummaryChartFilter",
+    "DashboardCreationController",
     "DashboardGroupManagementModal",
     "DashboardTableSummaryDetails",
     "DashboardTableValidators",
