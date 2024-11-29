@@ -3,7 +3,7 @@ import { DashboardPage } from "../../page-object/dashboard.page";
 
 test.describe("Dashboard Tests Unauthorized User", () => {
   test.beforeEach(async ({ page }) => {
-    await goto(page, "/dashboard#summary");
+    await goto(page, "/dashboard#summary", { waitUntil: 'hydration' });
   });
 
   test("Verify modal title is visible", async ({ page }) => {
