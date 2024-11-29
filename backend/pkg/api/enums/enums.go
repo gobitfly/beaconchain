@@ -24,22 +24,22 @@ type SearchType int
 
 // all possible search types
 const (
-	Name SearchType = iota // default
-	Integer
-	EthereumAddress
-	WithdrawalCredential
-	EnsName
-	NonEmpty
-	Graffiti
-	Cursor
-	Email
-	Password
-	EmailUserToken
-	JsonContentType
+	SearchTypeName SearchType = iota // default
+	SearchTypeInteger
+	SearchTypeEthereumAddress
+	SearchTypeWithdrawalCredential
+	SearchTypeEnsName
+	SearchTypeNonEmpty
+	SearchTypeGraffiti
+	SearchTypeCursor
+	SearchTypeEmail
+	SearchTypePassword
+	SearchTypeEmailUserToken
+	SearchTypeJsonContentType
 	// Validator Dashboard
-	ValidatorDashboardPublicId
-	ValidatorPublicKeyWithPrefix
-	ValidatorPublicKey
+	SearchTypeValidatorDashboardPublicId
+	SearchTypeValidatorPublicKeyWithPrefix
+	SearchTypeValidatorPublicKey
 )
 
 type Searchable interface {
@@ -63,21 +63,21 @@ func (bs *BasicSearch) SetSearchValue(s string) {
 // optional: implement in embedding structs to limit regex pattern matches
 func (bs *BasicSearch) GetSearches() []SearchType {
 	return []SearchType{
-		Name,
-		Integer,
-		EthereumAddress,
-		WithdrawalCredential,
-		EnsName,
-		NonEmpty,
-		Graffiti,
-		Cursor,
-		Email,
-		Password,
-		EmailUserToken,
-		JsonContentType,
-		ValidatorDashboardPublicId,
-		ValidatorPublicKeyWithPrefix,
-		ValidatorPublicKey,
+		SearchTypeName,
+		SearchTypeInteger,
+		SearchTypeEthereumAddress,
+		SearchTypeWithdrawalCredential,
+		SearchTypeEnsName,
+		SearchTypeNonEmpty,
+		SearchTypeGraffiti,
+		SearchTypeCursor,
+		SearchTypeEmail,
+		SearchTypePassword,
+		SearchTypeEmailUserToken,
+		SearchTypeJsonContentType,
+		SearchTypeValidatorDashboardPublicId,
+		SearchTypeValidatorPublicKeyWithPrefix,
+		SearchTypeValidatorPublicKey,
 	}
 }
 

@@ -210,11 +210,11 @@ func (s VDBBlocksSearches) SetSearchType(st SearchType, b bool) Searchable {
 		s.BasicSearch = &BasicSearch{}
 	}
 	switch st {
-	case Integer:
+	case SearchTypeInteger:
 		s.Index = b
-	case ValidatorPublicKeyWithPrefix:
+	case SearchTypeValidatorPublicKeyWithPrefix:
 		s.PublicKey = b
-	case Name:
+	case SearchTypeName:
 		s.Group = b
 	}
 	return s
