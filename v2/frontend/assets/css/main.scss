@@ -1,7 +1,7 @@
-@import "~/assets/css/colors.scss";
-@import "~/assets/css/variables.scss";
-@import "~/assets/css/fonts.scss";
-@import "~/assets/css/utils.scss";
+@use "~/assets/css/colors.scss";
+@use "~/assets/css/variables.scss";
+@use "~/assets/css/fonts.scss" as font;
+@use "~/assets/css/utils.scss";
 
 html {
   transition-behavior: allow-discrete;
@@ -22,7 +22,7 @@ ul {
   padding-inline-start: 1.5rem;
 }
 body {
-  @include standard_text;
+  @include font.standard_text;
   margin: 0;
   padding: 0;
   background-color: var(--background-color);

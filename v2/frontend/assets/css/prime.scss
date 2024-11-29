@@ -1,8 +1,8 @@
-@use "~/assets/css/fonts.scss";
+@use "~/assets/css/fonts.scss" as fonts;
 @use "~/assets/css/utils.scss";
-@import "~/assets/css/prime_datatable.scss";
-@import "~/assets/css/prime_megamenu.scss";
-@import "~/assets/css/prime_menubar.scss";
+@use "~/assets/css/prime_datatable.scss";
+@use "~/assets/css/prime_megamenu.scss";
+@use "~/assets/css/prime_menubar.scss";
 
 .p-error {
   color: #e24c4c;
@@ -303,13 +303,13 @@ div.p-checkbox {
       }
 
       .p-toast-summary {
-        @include text-toast;
+        @include fonts.text-toast;
       }
 
       .p-toast-detail {
         color: var(--light-black);
         margin: 8px 0 0 0;
-        @include text-toast-sm;
+        @include fonts.text-toast-sm;
       }
     }
 

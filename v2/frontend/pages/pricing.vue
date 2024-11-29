@@ -76,7 +76,7 @@ const scrollToAddons = () => {
 
 <style lang="scss">
 // we need this one to have the pricing css variables on the whole page available
-@import "~/assets/css/pricing.scss";
+@use "~/assets/css/pricing.scss";
 </style>
 
 <style lang="scss" scoped>
