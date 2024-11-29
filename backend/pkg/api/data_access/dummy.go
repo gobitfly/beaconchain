@@ -567,9 +567,7 @@ func (d *DummyService) GetMachineNotifications(ctx context.Context, userId uint6
 func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor t.NotificationClientsCursor, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationClientsTableRow](ctx)
 }
-func (d *DummyService) GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor t.NotificationRocketPoolsCursor, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error) {
-	return getDummyWithPaging[t.NotificationRocketPoolTableRow](ctx)
-}
+
 func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor t.NotificationNetworksCursor, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationNetworksTableRow](ctx)
 }
@@ -787,7 +785,7 @@ func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor t.VDBMobileValidatorsCursor, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor t.VDBMobileValidatorsCursor, colSort t.Sort[enums.VDBManageValidatorsColumn], search t.VDBManageValidatorsSearch, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow](ctx)
 }
 

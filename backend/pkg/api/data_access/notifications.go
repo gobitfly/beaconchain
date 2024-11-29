@@ -44,7 +44,6 @@ type NotificationsRepository interface {
 
 	GetMachineNotifications(ctx context.Context, userId uint64, cursor t.NotificationMachinesCursor, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error)
 	GetClientNotifications(ctx context.Context, userId uint64, cursor t.NotificationClientsCursor, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error)
-	GetRocketPoolNotifications(ctx context.Context, userId uint64, cursor t.NotificationRocketPoolsCursor, colSort t.Sort[enums.NotificationRocketPoolColumn], search string, limit uint64) ([]t.NotificationRocketPoolTableRow, *t.Paging, error)
 	GetNetworkNotifications(ctx context.Context, userId uint64, cursor t.NotificationNetworksCursor, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
 
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
@@ -891,7 +890,7 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	return result, p, nil
 }
 
-func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor t.NotificationNetworksCursor, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	result := make([]t.NotificationNetworksTableRow, 0)
 	var paging t.Paging
 
@@ -917,9 +916,9 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (ts, network, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
-		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: currentCursor.Network},
-		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
+		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: cursor.Ts},
+		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: cursor.Network},
+		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: cursor.EventType},
 	}
 	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, cursor.GenericCursor)
 	if err != nil {

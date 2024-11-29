@@ -1,8 +1,6 @@
 package types
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
 )
 

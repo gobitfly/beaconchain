@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
-	t "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	t "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/shopspring/decimal"
@@ -131,9 +131,7 @@ type VDBRocketPoolMinipoolsCursor struct {
 }
 
 type VDBMobileValidatorsCursor struct {
-	GenericCursor
-
-	// TODO
+	ValidatorsCursor
 }
 
 type NotificationSettingsCursor struct {
