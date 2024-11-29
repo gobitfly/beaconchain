@@ -57,22 +57,22 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			Where(validators.Col("dashboard_id").Eq(dashboardId.Id))
 		// apply search filters
 		searches := []exp.Expression{}
-		if indexSearch := search.Index(); indexSearch.Enabled {
-			searches = append(searches, validators.Col("validator_index").Eq(indexSearch.Value))
+		if search.Index.Enabled {
+			searches = append(searches, validators.Col("validator_index").Eq(search.Index.Value))
 		}
-		if groupSearch := search.Group(); groupSearch.Enabled {
+		if search.Group.Enabled {
 			filteredValidatorsDs = filteredValidatorsDs.
 				InnerJoin(goqu.T("users_val_dashboards_groups").As(groups), goqu.On(
 					validators.Col("group_id").Eq(groups.Col("id")),
 					validators.Col("dashboard_id").Eq(groups.Col("dashboard_id")),
 				))
 			searches = append(searches,
-				goqu.L("LOWER(?)", groups.Col("name")).Like(strings.Replace(strings.ToLower(groupSearch.Value), "_", "\\_", -1)+"%"),
+				goqu.L("LOWER(?)", groups.Col("name")).Like(strings.Replace(search.Group.Value, "_", "\\_", -1)+"%"),
 			)
 		}
-		if pubkeySearch := search.Pubkey(); pubkeySearch.Enabled {
-			index, ok := validatorMapping.ValidatorIndices[pubkeySearch.Value]
-			if !ok && !search.Group().Enabled && !search.Index().Enabled {
+		if search.Pubkey.Enabled {
+			index, ok := validatorMapping.ValidatorIndices[search.Pubkey.Value]
+			if !ok && !search.Group.Enabled && !search.Index.Enabled {
 				// searched pubkey doesn't exist, don't even need to query anything
 				return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 			}
@@ -86,10 +86,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	} else {
 		validatorList := make([]t.VDBValidator, 0, len(dashboardId.Validators))
 		for _, validator := range dashboardId.Validators {
-			indexSearch := search.Index()
-			pubkeySearch := search.Pubkey()
-			if indexSearch.Enabled && validator != indexSearch.Value ||
-				pubkeySearch.Enabled && validator != validatorMapping.ValidatorIndices[pubkeySearch.Value] {
+			if search.Index.Filtered(validator) ||
+				search.Pubkey.Enabled && validator != validatorMapping.ValidatorIndices[search.Pubkey.Value] {
 				continue
 			}
 			filteredValidators = append(filteredValidators, validatorGroup{
@@ -97,7 +95,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				Group:     t.DefaultGroupId,
 			})
 			validatorList = append(validatorList, validator)
-			if search.Index().Enabled || search.Pubkey().Enabled {
+			if search.Index.Enabled || search.Pubkey.Enabled {
 				break
 			}
 		}

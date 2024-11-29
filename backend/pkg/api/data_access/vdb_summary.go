@@ -45,22 +45,22 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	searchValidator := struct {
 		Enabled bool
 		Index   uint64
-	}{Enabled: search.Index().Enabled || search.Pubkey().Enabled}
+	}{Enabled: search.Index.Enabled || search.Pubkey.Enabled}
 	if search.IsEnabled() {
-		if pubKey := search.Pubkey(); pubKey.Enabled {
+		if search.Pubkey.Enabled {
 			// Get the current validator state to convert pubkey to index
 			validatorMapping, err := d.services.GetCurrentValidatorMapping()
 			if err != nil {
 				return nil, nil, err
 			}
-			if index, ok := validatorMapping.ValidatorIndices[pubKey.Value]; ok {
+			if index, ok := validatorMapping.ValidatorIndices[search.Pubkey.Value]; ok {
 				searchValidator.Index = index
 			} else {
 				// No validator index for pubkey found, return empty results
 				return result, &paging, nil
 			}
-		} else if index := search.Index(); index.Enabled {
-			searchValidator.Index = index.Value
+		} else if search.Index.Enabled {
+			searchValidator.Index = search.Index.Value
 		}
 	}
 
@@ -144,7 +144,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
-		if search.Group().Enabled && colSort.Column == enums.VDBSummaryColumns.Group {
+		if search.Group.Enabled && colSort.Column == enums.VDBSummaryColumns.Group {
 			// Get the group names since we can filter and/or sort for them
 			ds = ds.
 				SelectAppend(goqu.L("g.name AS group_name")).
@@ -256,7 +256,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	// ------------------------------------------------------------------------------------------------------------------
 	// Sort by group name, after this the name is no longer relevant
 	// TODO should apply filter to db query
-	if search.Group().Enabled && colSort.Column == enums.VDBSummaryColumns.Group {
+	if search.Group.Enabled && colSort.Column == enums.VDBSummaryColumns.Group {
 		sort.Slice(queryResult, func(i, j int) bool {
 			if colSort.Desc {
 				return queryResult[i].GroupName > queryResult[j].GroupName
@@ -379,10 +379,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		// If the search permits it add the entry to the result
 		// TODO should apply filter to db query
 		if search.IsEnabled() {
-			groupSearch := search.Group()
 			for _, validatorIndex := range queryEntry.ValidatorIndices {
 				if searchValidator.Enabled && validatorIndex == searchValidator.Index ||
-					(groupSearch.Enabled && strings.HasPrefix(strings.ToLower(queryEntry.GroupName), strings.ToLower(groupSearch.Value))) {
+					search.Group.Enabled && strings.HasPrefix(strings.ToLower(queryEntry.GroupName), search.Group.Value) {
 					result = append(result, resultEntry)
 					break
 				}

@@ -701,8 +701,12 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 		return
 	}
 	search := &types.VDBManageValidatorsSearch{DashboardId: *dashboardId}
-	if !checkSearch(search, pagingParams.search) {
+	if searchEnabled, err := checkSearch(search, pagingParams.search); err != nil {
+		handleErr(w, r, err)
+		return
+	} else if !searchEnabled {
 		returnOk(w, r, emptyPagingResponse())
+		return
 	}
 
 	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardValidators(r.Context(), *dashboardId, groupId, pagingParams.cursor, *sort, *search, pagingParams.limit)
@@ -1073,8 +1077,12 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 		return
 	}
 	search := &types.VDBSummarySearch{DashboardId: *dashboardId}
-	if !checkSearch(search, pagingParams.search) {
+	if searchEnabled, err := checkSearch(search, pagingParams.search); err != nil {
+		handleErr(w, r, err)
+		return
+	} else if !searchEnabled {
 		returnOk(w, r, emptyPagingResponse())
+		return
 	}
 
 	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardSummary(r.Context(), *dashboardId, period, "", *sort, *search, pagingParams.limit, protocolModes)
@@ -1440,8 +1448,12 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 		return
 	}
 	search := &types.VDBBlocksSearch{DashboardId: *dashboardId}
-	if !checkSearch(search, pagingParams.search) {
+	if searchEnabled, err := checkSearch(search, pagingParams.search); err != nil {
+		handleErr(w, r, err)
+		return
+	} else if !searchEnabled {
 		returnOk(w, r, emptyPagingResponse())
+		return
 	}
 
 	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardBlocks(r.Context(), *dashboardId, pagingParams.cursor, *sort, *search, pagingParams.limit, protocolModes)

@@ -371,7 +371,8 @@ const (
 type Searchable interface {
 	GetSearches() []SearchType
 	SetSearchValue(s string)
-	SetSearchType(st SearchType, b bool)
+	SetSearchType(st SearchType) error
+	HasSearchType(st SearchType) bool
 	IsEnabled() bool
 	HasAnyMatches() bool
 }
@@ -391,11 +392,23 @@ func (bs *basicSearch) SetSearchValue(s string) {
 	bs.value = s
 }
 
-func (bs *basicSearch) SetSearchType(st SearchType, b bool) {
+func (bs *basicSearch) SetSearchType(st SearchType) error {
 	if bs.types == nil {
 		bs.types = make(map[SearchType]bool)
 	}
-	bs.types[st] = b
+	bs.types[st] = true
+	return nil
+}
+
+func (bs *basicSearch) HasSearchType(st SearchType) bool {
+	if bs.types == nil {
+		return false
+	}
+	v, ok := bs.types[st]
+	if !ok {
+		return false
+	}
+	return v
 }
 
 func (bs *basicSearch) IsEnabled() bool {
@@ -429,49 +442,20 @@ func (bs *basicSearch) GetSearches() []SearchType {
 	}
 }
 
-type baseSearchResult[T any] struct {
+type baseSearchResult[T comparable] struct {
 	Enabled bool
 	Value   T
 }
 
-type SearchNumber baseSearchResult[uint64]
-type SearchString baseSearchResult[string]
+type SearchNumber = baseSearchResult[uint64]
+type SearchString = baseSearchResult[string]
 
-func (bs *basicSearch) AsNumber(st SearchType) SearchNumber {
-	if !bs.IsEnabled() {
-		return SearchNumber{}
-	}
-
-	if !bs.types[st] {
-		log.Warn("tried accessing invalid search: ", st)
-		return SearchNumber{}
-	}
-
-	switch st {
-	case SearchTypeInteger:
-		number, err := strconv.ParseUint(bs.value, 10, 64)
-		if err != nil {
-			log.Error(err, "error converting search value, check regex parsing", 0)
-			return SearchNumber{}
-		}
-		return SearchNumber{true, number}
-	}
-	return SearchNumber{}
+func (bsr baseSearchResult[T]) Matches(other T) bool {
+	return !bsr.Filtered(other)
 }
 
-func (bs *basicSearch) AsString(st SearchType) SearchString {
-	if !bs.IsEnabled() {
-		log.Warn("tried accessing invalid search", 1)
-		return SearchString{}
-	}
-
-	// apply custom conversion by type (e.g. prefix search term with 0x)
-	switch st {
-	case SearchTypeValidatorPublicKeyWithPrefix:
-		return SearchString{true, strings.ToLower(bs.value)}
-	default:
-		return SearchString{true, bs.value}
-	}
+func (bsr baseSearchResult[T]) Filtered(other T) bool {
+	return bsr.Enabled && bsr.Value != other
 }
 
 // -- Commonly used
@@ -479,21 +463,34 @@ type SearchTableByIndexPubkeyGroup struct {
 	basicSearch
 	// conditionals
 	DashboardId VDBId
+	// matched values
+	Index  SearchNumber
+	Pubkey SearchString
+	Group  SearchString
 }
 
-func (s SearchTableByIndexPubkeyGroup) Index() SearchNumber {
-	return s.AsNumber(SearchTypeInteger)
-}
-
-func (s SearchTableByIndexPubkeyGroup) Pubkey() SearchString {
-	return s.AsString(SearchTypeValidatorPublicKeyWithPrefix)
-}
-
-func (s SearchTableByIndexPubkeyGroup) Group() SearchString {
-	if s.DashboardId.AggregateGroups || s.DashboardId.Validators != nil {
-		return SearchString{false, ""}
+func (s SearchTableByIndexPubkeyGroup) SetSearchType(st SearchType) error {
+	var err error
+	if err = s.basicSearch.SetSearchType(st); err != nil {
+		return err
 	}
-	return s.AsString(SearchTypeName)
+	if _, ok := s.basicSearch.types[SearchTypeInteger]; ok {
+		s.Index.Value, err = strconv.ParseUint(s.value, 10, 64)
+		if err != nil {
+			return err
+		}
+		s.Index.Enabled = true
+	}
+
+	if s.Pubkey.Enabled = s.HasSearchType(SearchTypeValidatorPublicKeyWithPrefix); s.Pubkey.Enabled {
+		s.Pubkey.Value = s.value
+	}
+	if !s.DashboardId.AggregateGroups && s.DashboardId.Validators == nil {
+		if s.Group.Enabled = s.HasSearchType(SearchTypeName); s.Group.Enabled {
+			s.Group.Value = strings.ToLower(s.value)
+		}
+	}
+	return nil
 }
 
 // masked
@@ -507,5 +504,5 @@ func (s SearchTableByIndexPubkeyGroup) GetSearches() []SearchType {
 
 // custom to filter out certain group searches
 func (s SearchTableByIndexPubkeyGroup) HasAnyMatches() bool {
-	return s.Group().Enabled || s.basicSearch.HasAnyMatches()
+	return s.Group.Enabled || s.basicSearch.HasAnyMatches()
 }

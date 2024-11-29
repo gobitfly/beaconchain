@@ -440,15 +440,19 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 }
 
 // returns false if the search string doesn't match any search type
-func checkSearch[T types.Searchable](search T, searchString string) bool {
+func checkSearch[T types.Searchable](search T, searchString string) (bool, error) {
 	if searchString == "" {
-		return true
-	}
-	for _, acceptedSearchType := range search.GetSearches() {
-		search.SetSearchType(acceptedSearchType, searchEnumsRegexMapping[acceptedSearchType].MatchString(searchString))
+		return true, nil
 	}
 	search.SetSearchValue(searchString)
-	return search.HasAnyMatches()
+	for _, acceptedSearchType := range search.GetSearches() {
+		if searchEnumsRegexMapping[acceptedSearchType].MatchString(searchString) {
+			if err := search.SetSearchType(acceptedSearchType); err != nil {
+				return false, err
+			}
+		}
+	}
+	return search.HasAnyMatches(), nil
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {

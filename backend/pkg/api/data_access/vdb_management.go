@@ -711,9 +711,9 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 
 		// TODO should apply filter to db query
 		if search.IsEnabled() &&
-			!(search.Index().Enabled && row.Index == search.Index().Value ||
-				search.Pubkey().Enabled && strings.ToLower(string(row.PublicKey)) == search.Pubkey().Value ||
-				search.Group().Enabled && validatorGroupMap[validator].GroupName == search.Group().Value) {
+			search.Index.Filtered(row.Index) &&
+			search.Pubkey.Filtered(string(row.PublicKey)) &&
+			search.Group.Filtered(validatorGroupMap[validator].GroupName) {
 			continue
 		}
 		data = append(data, row)
