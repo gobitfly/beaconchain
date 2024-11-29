@@ -16,6 +16,54 @@ func IsInvalidEnum(e Enum) bool {
 	return e.Int() == -1
 }
 
+type SearchType int
+
+// all possible search types
+const (
+	Name SearchType = iota // default
+	Integer
+	EthereumAddress
+	WithdrawalCredential
+	EnsName
+	NonEmpty
+	Graffiti
+	Cursor
+	Email
+	Password
+	EmailUserToken
+	JsonContentType
+	// Validator Dashboard
+	ValidatorDashboardPublicId
+	ValidatorPublicKeyWithPrefix
+	ValidatorPublicKey
+)
+
+var InvalidSearch = Searchable(nil)
+
+type Searchable interface {
+	GetSearches() []SearchType
+	// return if successful
+	SetSearchType(st SearchType, b bool) Searchable
+	SetSearchValue(s string) Searchable
+}
+
+type BasicSearch struct {
+	Value string // searched string
+}
+
+func (bs BasicSearch) SetSearchValue(s string) Searchable {
+	bs.Value = s
+	return bs
+}
+
+func (bs BasicSearch) GetSearches() []SearchType {
+	return []SearchType{}
+}
+
+func (bs BasicSearch) SetSearchType(st SearchType, b bool) Searchable {
+	return bs
+}
+
 type AdInsertMode int
 
 var _ EnumFactory[AdInsertMode] = AdInsertMode(0)

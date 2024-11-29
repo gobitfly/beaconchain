@@ -354,7 +354,7 @@ func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboar
 	return getDummyWithPaging[t.VDBEpochDutiesTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search enums.VDBBlocksSearches, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBBlocksTableRow](ctx)
 }
 

@@ -198,6 +198,35 @@ var VDBBlocksColumns = struct {
 	VDBBlockProposerReward,
 }
 
+type VDBBlocksSearches struct {
+	BasicSearch
+	Index     bool
+	PublicKey bool
+	Group     bool
+}
+
+func (s VDBBlocksSearches) GetSearches() []SearchType {
+	return []SearchType{
+		Integer,
+		ValidatorPublicKeyWithPrefix,
+		Name,
+	}
+}
+
+func (s VDBBlocksSearches) SetSearchType(st SearchType, b bool) Searchable {
+	switch st {
+	case Integer:
+		s.Index = b
+	case ValidatorPublicKeyWithPrefix:
+		s.PublicKey = b
+	case Name:
+		s.Group = b
+	default:
+		return InvalidSearch
+	}
+	return s
+}
+
 // ----------------
 // Validator Dashboard Withdrawals Table
 
