@@ -1,4 +1,4 @@
-@import "~/assets/css/fonts.scss";
+@use "~/assets/css/fonts.scss" as fonts;
 
 :root {
   --expander-col-width: 53px;
@@ -134,7 +134,7 @@
       }
 
       > td {
-        @include standard_text;
+        @include fonts.standard_text;
         text-align: left;
         border: 1px solid var(--container-border-color);
         border-width: 0 0 1px 0;
@@ -160,7 +160,7 @@
     --table-background-color: var(--table-header-background);
     .p-datatable-tbody {
       > tr {
-        @include standard_text;
+        @include fonts.standard_text;
 
         > td {
           text-align: left;
