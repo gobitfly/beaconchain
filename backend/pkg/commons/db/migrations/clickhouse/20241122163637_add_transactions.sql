@@ -12,19 +12,24 @@ CREATE TABLE IF NOT EXISTS transactions_ethereum (
     nonce UInt64,
     status Enum('failed' = 0, 'success' = 1, 'partialy failed' = 2) CODEC(ZSTD(3)), 
     timestamp DateTime,
+    tx_fee Int128 CODEC(ZSTD(3)),
     gas UInt64 CODEC(T64, ZSTD(3)),
     gas_price Nullable(UInt64) CODEC(ZSTD(3)),
+    gas_used UInt64 CODEC(T64, ZSTD(3)),
     max_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)),
     max_priority_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)),
+    -- Blob Tx
     max_fee_per_blob_gas Nullable(UInt64) CODEC(ZSTD(3)),
-    gas_used UInt64 CODEC(T64, ZSTD(3)),
     blob_gas_price Nullable(UInt64) CODEC(ZSTD(3)),
     blob_gas_used Nullable(UInt64) CODEC(T64, ZSTD(3)),
+    blob_tx_fee Nullable(Int128) CODEC(ZSTD(3)),
+    blob_versioned_hashes Array(Nullable(String)),
     access_list Array(Nullable(String)),
-    input_data Array(Nullable(UInt8)), -- []byte
+    input_data Array(Nullable(UInt8)),
     is_contract_creation Boolean,
     logs Array(Nullable(String)),
-    logs_bloom Array(Nullable(UInt8)),  -- []byte
+    logs_bloom Array(Nullable(UInt8)),
+
     INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
     INDEX idx_method (method) TYPE bloom_filter(0.5) GRANULARITY 1
 ) ENGINE = MergeTree()
@@ -45,14 +50,16 @@ CREATE TABLE IF NOT EXISTS internal_tx_ethereum (
     path String,
     gas UInt64 CODEC(T64, ZSTD(3)),
     timestamp DateTime,
-    error_msg Nullable(String)
+    error_msg Nullable(String),
+
+    INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1
+    
 )ENGINE = MergeTree()
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
 PARTITION BY toStartOfMonth(timestamp) 
 SETTINGS index_granularity = 8192
 -- +goose StatementEnd
-
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS erc20_ethereum (
