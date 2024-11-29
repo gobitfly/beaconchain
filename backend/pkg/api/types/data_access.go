@@ -376,8 +376,8 @@ func (bs *basicSearch) SetSearchValue(s string) {
 }
 
 func (bs *basicSearch) SetSearchType(st SearchType, b bool) {
-	if bs == nil {
-		bs = &basicSearch{}
+	if bs.types == nil {
+		bs.types = make(map[SearchType]bool)
 	}
 	bs.types[st] = b
 }
@@ -414,27 +414,21 @@ func (bs *basicSearch) GetSearches() []SearchType {
 	}
 }
 
-type baseSearchResult struct {
+type baseSearchResult[T any] struct {
 	Enabled bool
+	Value   T
 }
 
-type SearchNumber struct {
-	baseSearchResult
-	Value uint64
-}
-
-type SearchString struct {
-	baseSearchResult
-	Value string
-}
+type SearchNumber baseSearchResult[uint64]
+type SearchString baseSearchResult[string]
 
 func (bs *basicSearch) AsNumber(st SearchType) SearchNumber {
 	if !bs.IsEnabled() {
-		log.Warn("tried accessing invalid search", 1)
 		return SearchNumber{}
 	}
 
 	if !bs.types[st] {
+		log.Warn("tried accessing invalid search: ", st)
 		return SearchNumber{}
 	}
 
@@ -445,7 +439,7 @@ func (bs *basicSearch) AsNumber(st SearchType) SearchNumber {
 			log.Error(err, "error converting search value, check regex parsing", 0)
 			return SearchNumber{}
 		}
-		return SearchNumber{baseSearchResult{true}, number}
+		return SearchNumber{true, number}
 	}
 	return SearchNumber{}
 }
@@ -459,15 +453,15 @@ func (bs *basicSearch) AsString(st SearchType) SearchString {
 	// apply custom conversion by type (e.g. prefix search term with 0x)
 	switch st {
 	case SearchTypeValidatorPublicKeyWithPrefix:
-		return SearchString{baseSearchResult{true}, strings.ToLower(bs.value)}
+		return SearchString{true, strings.ToLower(bs.value)}
 	default:
-		return SearchString{baseSearchResult{true}, bs.value}
+		return SearchString{true, bs.value}
 	}
 }
 
 // -- Commonly used
 type SearchTableByIndexPubkeyGroup struct {
-	*basicSearch
+	basicSearch
 	// conditionals
 	DashboardId VDBId
 }
@@ -482,7 +476,7 @@ func (s SearchTableByIndexPubkeyGroup) Pubkey() SearchString {
 
 func (s SearchTableByIndexPubkeyGroup) Group() SearchString {
 	if s.DashboardId.AggregateGroups || s.DashboardId.Validators != nil {
-		return SearchString{baseSearchResult{false}, ""}
+		return SearchString{false, ""}
 	}
 	return s.AsString(SearchTypeName)
 }
