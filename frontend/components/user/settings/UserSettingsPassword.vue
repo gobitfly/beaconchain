@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { object as yupObject } from 'yup'
-import { useForm } from 'vee-validate'
 import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useTranslation()
