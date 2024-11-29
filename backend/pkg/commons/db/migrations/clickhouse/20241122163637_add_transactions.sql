@@ -12,14 +12,14 @@ CREATE TABLE IF NOT EXISTS transactions_ethereum (
     nonce UInt64,
     status Enum('failed' = 0, 'success' = 1, 'partialy failed' = 2) CODEC(ZSTD(3)), 
     timestamp DateTime,
-    gas Int64 CODEC(T64, ZSTD(3)),
-    gas_price Nullable(Int64) CODEC(ZSTD(3)),
-    max_fee_per_gas Nullable(Int64) CODEC(ZSTD(3)),
-    max_priority_fee_per_gas Nullable(Int64) CODEC(ZSTD(3)),
-    max_fee_per_blob_gas Nullable(Int64) CODEC(ZSTD(3)),
-    gas_used Int64 CODEC(T64, ZSTD(3)),
-    blob_gas_price Nullable(Int64) CODEC(ZSTD(3)),
-    blob_gas_used Nullable(Int64) CODEC(T64, ZSTD(3)),
+    gas UInt64 CODEC(T64, ZSTD(3)),
+    gas_price Nullable(UInt64) CODEC(ZSTD(3)),
+    max_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)),
+    max_priority_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)),
+    max_fee_per_blob_gas Nullable(UInt64) CODEC(ZSTD(3)),
+    gas_used UInt64 CODEC(T64, ZSTD(3)),
+    blob_gas_price Nullable(UInt64) CODEC(ZSTD(3)),
+    blob_gas_used Nullable(UInt64) CODEC(T64, ZSTD(3)),
     access_list Array(Nullable(String)),
     input_data Array(Nullable(UInt8)), -- []byte
     is_contract_creation Boolean,
@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS internal_tx_ethereum (
     type String,
     value String,
     path String,
+    gas UInt64 CODEC(T64, ZSTD(3)),
     timestamp DateTime,
     error_msg Nullable(String)
 )ENGINE = MergeTree()
@@ -54,7 +55,7 @@ SETTINGS index_granularity = 8192
 
 
 -- +goose StatementBegin
-CREATE TABLE erc20_ethereum (
+CREATE TABLE IF NOT EXISTS erc20_ethereum (
     parent_hash String,
     block_number UInt64 CODEC(T64, ZSTD(3)),
     from_address String,
@@ -77,7 +78,7 @@ SETTINGS index_granularity = 8192
 -- +goose StatementEnd
 
 -- +goose StatementBegin
-CREATE TABLE erc721_ethereum(
+CREATE TABLE IF NOT EXISTS erc721_ethereum(
     parent_hash String,
     block_number UInt64 CODEC(T64, ZSTD(3)),
     from_address String,
@@ -100,15 +101,15 @@ SETTINGS index_granularity = 8192
 -- +goose StatementEnd
 
 -- +goose StatementBegin
-CREATE TABLE erc1155_ethereum(
+CREATE TABLE IF NOT EXISTS erc1155_ethereum(
     parent_hash String,
     block_number UInt64 CODEC(T64, ZSTD(3)),
     from_address String,
     to_address String,
     operator String,
     token_address String,
-    token_ids Array(UInt256),
-    value Array(Int128),
+    token_id UInt256,
+    value Int128,
     log_index UInt32,
     log_type Nullable(String),
     transaction_log_index Nullable(UInt32) CODEC(T64, ZSTD(3)),
