@@ -232,358 +232,45 @@ type InternalTransaction struct {
 }
 
 func SaveTransactionsToClickHouse(block *types.Eth1Block, transformerList []string) error {
-	ctx := context.Background()
-
-	// prepare ClickHouse batches to send
-	txBatch, err := prepareTxBatch(ctx)
-	itxBatch, err := prepareItxBatch(ctx)
-	erc20Batch, err := prepareERC20Batch(ctx)
-	erc721Batch, err := prepareERC721Batch(ctx)
-	erc1155Batch, err := prepareERC1155Batch(ctx)
 
 	for i, tx := range block.Transactions {
-		/////////////////////
-		//  Transactions ///
-		///////////////////
-		if slices.Contains(transformerList, "TransformTx") {
-			// parse contract address
-			to := tx.GetTo()
-			isContract := false
-			if tx.GetContractAddress() != ZERO_ADDRESS_STRING {
-				to = tx.GetContractAddress()
-				isContract = true
-			}
-
-			// parse method type
-			method := make([]byte, 0)
-			if len(tx.GetData()) > 3 {
-				method = tx.GetData()[:4]
-			}
-
-			status := mapStatusToEnum(tx.Status)
-
-			err = txBatch.Append(
-				i,
-				string(tx.Hash),
-				block.Number,
-				string(tx.From),
-				to,
-				fmt.Sprintf("0x%x", tx.Type),
-				fmt.Sprintf("%x", string(method)),
-				tx.Value,
-				tx.Nonce,
-				status,
-				block.Time.Seconds,
-				tx.Gas,
-				tx.GasPrice,
-				tx.MaxFeePerGas,
-				tx.MaxPriorityFeePerGas,
-				tx.MaxFeePerBlobGas,
-				tx.Gas,
-				tx.BlobGasPrice,
-				tx.BlobGasUsed,
-				tx.AccessList,
-				tx.Data,
-				isContract,
-				tx.Logs,
-				tx.LogsBloom,
-			)
-
+		switch {
+		case slices.Contains(transformerList, "TransformTx"):
+			err := saveTxsToClickHouse(tx, i, block.Number, block.Time.Seconds)
 			if err != nil {
-				log.Error(err, "error appending tx data to batch", 0)
+				log.Error(err, "error while processing tx", 0)
 			}
-		}
-
-		////////////////////////////
-		// Internal Transactions ///
-		///////////////////////////
-		if slices.Contains(transformerList, "TransformItx") {
-			for _, itx := range tx.Itx {
-				err = itxBatch.Append(
-					string(tx.Hash),
-					block.Number,
-					itx.From,
-					itx.To,
-					itx.Type,
-					itx.Value,
-					itx.Path,
-					itx.Gas,
-					block.Time.Seconds,
-					itx.ErrorMsg,
-				)
-
-				if err != nil {
-					log.Error(err, "error appending itx data to batch", 0)
-				}
+		case slices.Contains(transformerList, "TransformItx"):
+			err := saveItxToClickHouse(tx, block.Number, block.Time.Seconds)
+			if err != nil {
+				log.Error(err, "error while processing itx", 0)
 			}
-		}
-
-		////////////////////////////
-		//   ERC20 Transfers    ///
-		///////////////////////////
-		if slices.Contains(transformerList, "TransformERC20") {
-
-			for j, txLog := range tx.GetLogs() {
-				// no events emitted continue
-				if len(txLog.GetTopics()) != 3 || !bytes.Equal(txLog.GetTopics()[0], erc20.TransferTopic) {
-					continue
-				}
-
-				filterer, err := erc20.NewErc20Filterer(common.Address{}, nil)
-				if err != nil {
-					log.Error(err, "error creating ERC20 filterer", 0)
-				}
-
-				topics := make([]common.Hash, 0, len(txLog.GetTopics()))
-
-				for _, lTopic := range txLog.GetTopics() {
-					topics = append(topics, common.BytesToHash(lTopic))
-				}
-				ethLog := gethtypes.Log{
-					Address:     common.BytesToAddress(txLog.GetAddress()),
-					Data:        txLog.Data,
-					Topics:      topics,
-					BlockNumber: block.Number,
-					TxHash:      common.HexToHash(tx.Hash),
-					TxIndex:     uint(i),
-					BlockHash:   common.BytesToHash(block.GetHash()),
-					Index:       uint(j),
-					Removed:     txLog.GetRemoved(),
-				}
-
-				transfer, _ := filterer.ParseTransfer(ethLog)
-				if transfer == nil {
-					continue
-				}
-				var value *big.Int
-				if transfer != nil && transfer.Value != nil {
-					value = transfer.Value
-				}
-
-				err = erc20Batch.Append(
-					string(tx.Hash),
-					block.Number,
-					transfer.From.String(),
-					transfer.To.String(),
-					common.BytesToAddress(txLog.Address).String(),
-					value,
-					uint64(j),
-					topics[0].String(),
-					uint64(i),
-					txLog.GetRemoved(),
-					block.Time.Seconds,
-				)
-
-				if err != nil {
-					log.Error(err, "error appending ERC20 data to batch", 0)
-				}
+		case slices.Contains(transformerList, "TransformERC20"):
+			err := saveERC20ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds)
+			if err != nil {
+				log.Error(err, "error while processing ERC20 transfers", 0)
 			}
-		}
-
-		//////////////////////////
-		//  ERC721 Transfers   ///
-		//////////////////////////
-		if slices.Contains(transformerList, "TransformERC721") {
-
-			for j, txLog := range tx.GetLogs() {
-				// no events emitted continue
-				if len(txLog.GetTopics()) != 4 || !bytes.Equal(txLog.GetTopics()[0], erc721.TransferTopic) {
-					continue
-				}
-
-				filterer, err := erc721.NewErc721Filterer(common.Address{}, nil)
-				if err != nil {
-					log.Error(err, "error creating ERC721 filterer", 0)
-				}
-
-				topics := make([]common.Hash, 0, len(txLog.GetTopics()))
-
-				for _, lTopic := range txLog.GetTopics() {
-					topics = append(topics, common.BytesToHash(lTopic))
-				}
-
-				ethLog := gethtypes.Log{
-					Address:     common.BytesToAddress(txLog.GetAddress()),
-					Data:        txLog.Data,
-					Topics:      topics,
-					BlockNumber: block.Number,
-					TxHash:      common.HexToHash(tx.Hash),
-					TxIndex:     uint(i),
-					BlockHash:   common.BytesToHash(block.GetHash()),
-					Index:       uint(j),
-					Removed:     txLog.GetRemoved(),
-				}
-
-				transfer, _ := filterer.ParseTransfer(ethLog)
-				if transfer == nil {
-					continue
-				}
-
-				tokenId := new(big.Int)
-				if transfer != nil && transfer.TokenId != nil {
-					tokenId = transfer.TokenId
-				}
-
-				err = erc721Batch.Append(
-					string(tx.Hash),
-					block.Number,
-					transfer.From.String(),
-					transfer.To.String(),
-					common.Bytes2Hex(txLog.Address),
-					tokenId,
-					uint64(j),
-					topics[0].String(),
-					uint64(i),
-					txLog.GetRemoved(),
-					block.Time.Seconds,
-				)
-
-				if err != nil {
-					log.Error(err, "error appending ERC721 data to batch", 0)
-				}
+		case slices.Contains(transformerList, "TransformERC721"):
+			err := saveERC721ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds)
+			if err != nil {
+				log.Error(err, "error while processing ERC721 transfers", 0)
 			}
-		}
-
-		////////////////////////////
-		//   ERC1155 Transfers  ///
-		///////////////////////////
-		if slices.Contains(transformerList, "TransformERC1155") {
-			for j, txLog := range tx.GetLogs() {
-				// no events emitted continue
-				if len(txLog.GetTopics()) != 4 || (!bytes.Equal(txLog.GetTopics()[0], erc1155.TransferBulkTopic) && !bytes.Equal(txLog.GetTopics()[0], erc1155.TransferSingleTopic)) {
-					continue
-				}
-
-				filterer, err := erc1155.NewErc1155Filterer(common.Address{}, nil)
-				if err != nil {
-					log.Error(err, "error creating ERC1155 filterer", 0)
-				}
-
-				topics := make([]common.Hash, 0, len(txLog.GetTopics()))
-
-				for _, lTopic := range txLog.GetTopics() {
-					topics = append(topics, common.BytesToHash(lTopic))
-				}
-
-				ethLog := gethtypes.Log{
-					Address:     common.BytesToAddress(txLog.GetAddress()),
-					Data:        txLog.Data,
-					Topics:      topics,
-					BlockNumber: block.Number,
-					TxHash:      common.HexToHash(tx.Hash),
-					TxIndex:     uint(i),
-					BlockHash:   common.BytesToHash(block.GetHash()),
-					Index:       uint(j),
-					Removed:     txLog.GetRemoved(),
-				}
-
-				transferBatch, _ := filterer.ParseTransferBatch(ethLog)
-				transferSingle, _ := filterer.ParseTransferSingle(ethLog)
-				if transferBatch == nil && transferSingle == nil {
-					continue
-				}
-
-				if transferBatch != nil {
-					if len(transferBatch.Ids) != len(transferBatch.Values) {
-						log.Error(fmt.Errorf("error parsing ERC1155 batch transfer logs. Expected len(ids): %v len(values): %v to be the same", len(transferBatch.Ids), len(transferBatch.Values)), "", 0)
-						continue
-					}
-
-					for index := range transferBatch.Ids {
-						err = erc1155Batch.Append(
-							string(tx.Hash),
-							block.Number,
-							transferBatch.From.String(),
-							transferBatch.To.String(),
-							transferBatch.Operator.String(),
-							common.Bytes2Hex(txLog.Address),
-							transferBatch.Ids[index],
-							transferBatch.Values[index],
-							uint64(j),
-							topics[0].String(),
-							uint64(i),
-							txLog.GetRemoved(),
-							block.Time.Seconds,
-						)
-
-						if err != nil {
-							log.Error(err, "error appending ERC1155 data to batch", 0)
-						}
-					}
-				} else if transferSingle != nil {
-					err = erc1155Batch.Append(
-						string(tx.Hash),
-						block.Number,
-						transferSingle.From.String(),
-						transferSingle.To.String(),
-						transferSingle.Operator.String(),
-						common.Bytes2Hex(txLog.Address),
-						[]*big.Int{transferSingle.Id},
-						[]*big.Int{transferSingle.Value},
-						uint64(j),
-						topics[0].String(),
-						uint64(i),
-						txLog.GetRemoved(),
-						block.Time.Seconds,
-					)
-
-					if err != nil {
-						log.Error(err, "error appending ERC1155 data to batch", 0)
-					}
-				}
+		case slices.Contains(transformerList, "TransformERC1155"):
+			err := saveERC1155ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds)
+			if err != nil {
+				log.Error(err, "error while processing ERC1155 transfers", 0)
 			}
-		}
-	}
-
-	// Send the batches to ClickHouse
-	if slices.Contains(transformerList, "TransformTx") {
-		err = txBatch.Send()
-		if err != nil {
-			return fmt.Errorf("error while sending tx batch to ClickHouse: %v", err)
-		}
-	}
-	if slices.Contains(transformerList, "TransformItx") {
-		err = itxBatch.Send()
-		if err != nil {
-			return fmt.Errorf("error while sending itx batch to ClickHouse: %v", err)
-		}
-	}
-
-	if slices.Contains(transformerList, "TransformERC20") {
-		err = erc20Batch.Send()
-		if err != nil {
-			return fmt.Errorf("error while sending ERC20 batch to ClickHouse: %v", err)
-		}
-	}
-
-	if slices.Contains(transformerList, "TransformERC721") {
-		err = erc721Batch.Send()
-		if err != nil {
-			return fmt.Errorf("error while sending ERC721 batch to ClickHouse: %v", err)
-		}
-	}
-
-	if slices.Contains(transformerList, "TransformERC1155") {
-		err = erc1155Batch.Send()
-		if err != nil {
-			return fmt.Errorf("error while sending ERC1155 batch to ClickHouse: %v", err)
+		// case slices.Contains(transformerList, "TransformBlobTx"):
+		// 	err := saveBlobTxToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds)
+		// 	if err != nil {
+		// 		log.Error(err, "error while processing Blob tx transfers", 0)
+		// 	}
+		default:
+			log.Error(nil, "unknown transformer type", 0)
 		}
 	}
 
 	return nil
-}
-
-func mapStatusToEnum(status uint64) string {
-	switch status {
-	case 0:
-		return "failed"
-	case 1:
-		return "success"
-	case 2:
-		return "partially failed"
-	default:
-		return "unknown"
-	}
 }
 
 func prepareTxBatch(ctx context.Context) (driver.Batch, error) {
@@ -643,4 +330,377 @@ func prepareERC1155Batch(ctx context.Context) (driver.Batch, error) {
 	}
 
 	return erc1155Batch, nil
+}
+
+func mapStatusToEnum(status uint64) string {
+	switch status {
+	case 0:
+		return "failed"
+	case 1:
+		return "success"
+	case 2:
+		return "partially failed"
+	default:
+		return "unknown"
+	}
+}
+
+func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockTime int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	// prepare tx batch to send to ClickHouse
+	txBatch, err := prepareTxBatch(ctx)
+	if err != nil {
+		return err
+	}
+
+	// parse contract address
+	to := tx.GetTo()
+	isContract := false
+	if tx.GetContractAddress() != ZERO_ADDRESS_STRING {
+		to = tx.GetContractAddress()
+		isContract = true
+	}
+
+	// parse method type
+	method := make([]byte, 0)
+	if len(tx.GetData()) > 3 {
+		method = tx.GetData()[:4]
+	}
+
+	status := mapStatusToEnum(tx.Status)
+
+	err = txBatch.Append(
+		txIndex,
+		string(tx.Hash),
+		blockNumber,
+		string(tx.From),
+		to,
+		fmt.Sprintf("0x%x", tx.Type),
+		fmt.Sprintf("%x", string(method)),
+		tx.Value,
+		tx.Nonce,
+		status,
+		blockTime,
+		tx.Gas,
+		tx.GasPrice,
+		tx.MaxFeePerGas,
+		tx.MaxPriorityFeePerGas,
+		tx.MaxFeePerBlobGas,
+		tx.Gas,
+		tx.BlobGasPrice,
+		tx.BlobGasUsed,
+		tx.AccessList,
+		tx.Data,
+		isContract,
+		tx.Logs,
+		tx.LogsBloom,
+	)
+
+	if err != nil {
+		log.Error(err, "error appending tx data to batch", 0)
+	}
+
+	// send the tx batch to ClickHouse
+	err = txBatch.Send()
+	if err != nil {
+		return fmt.Errorf("error while sending tx batch to ClickHouse: %v", err)
+	}
+
+	return nil
+}
+
+func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTime int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	// prepare itx batch to send to ClickHouse
+	itxBatch, err := prepareItxBatch(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, itx := range tx.Itx {
+		err = itxBatch.Append(
+			string(tx.Hash),
+			blockNumber,
+			itx.From,
+			itx.To,
+			itx.Type,
+			itx.Value,
+			itx.Path,
+			itx.Gas,
+			blockTime,
+			itx.ErrorMsg,
+		)
+
+		if err != nil {
+			log.Error(err, "error appending itx data to batch", 0)
+		}
+	}
+
+	// send the itx batch to ClickHouse
+	err = itxBatch.Send()
+	if err != nil {
+		return fmt.Errorf("error while sending itx batch to ClickHouse: %v", err)
+	}
+
+	return nil
+}
+
+func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTime int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	// prepare ERC20 batch to send to ClickHouse
+	erc20Batch, err := prepareERC20Batch(ctx)
+	if err != nil {
+		return err
+	}
+
+	for j, txLog := range tx.GetLogs() {
+		// no events emitted continue
+		if len(txLog.GetTopics()) != 3 || !bytes.Equal(txLog.GetTopics()[0], erc20.TransferTopic) {
+			continue
+		}
+
+		filterer, err := erc20.NewErc20Filterer(common.Address{}, nil)
+		if err != nil {
+			log.Error(err, "error creating ERC20 filterer", 0)
+		}
+
+		topics := make([]common.Hash, 0, len(txLog.GetTopics()))
+
+		for _, lTopic := range txLog.GetTopics() {
+			topics = append(topics, common.BytesToHash(lTopic))
+		}
+		ethLog := gethtypes.Log{
+			Address:     common.BytesToAddress(txLog.GetAddress()),
+			Data:        txLog.Data,
+			Topics:      topics,
+			BlockNumber: blockNumber,
+			TxHash:      common.HexToHash(tx.Hash),
+			TxIndex:     uint(txIndex),
+			BlockHash:   blockHash,
+			Index:       uint(j),
+			Removed:     txLog.GetRemoved(),
+		}
+
+		transfer, _ := filterer.ParseTransfer(ethLog)
+		if transfer == nil {
+			continue
+		}
+		var value *big.Int
+		if transfer != nil && transfer.Value != nil {
+			value = transfer.Value
+		}
+
+		err = erc20Batch.Append(
+			string(tx.Hash),
+			blockNumber,
+			transfer.From.String(),
+			transfer.To.String(),
+			common.BytesToAddress(txLog.Address).String(),
+			value,
+			uint64(j),
+			topics[0].String(),
+			uint64(txIndex),
+			txLog.GetRemoved(),
+			blockTime,
+		)
+
+		if err != nil {
+			log.Error(err, "error appending ERC20 data to batch", 0)
+		}
+	}
+
+	// send the ERC20 batch to ClickHouse
+	err = erc20Batch.Send()
+	if err != nil {
+		return fmt.Errorf("error while sending ERC20 batch to ClickHouse: %v", err)
+	}
+
+	return nil
+}
+
+func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTime int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	// prepare ERC721 batch to send to ClickHouse
+	erc721Batch, err := prepareERC721Batch(ctx)
+	if err != nil {
+		return err
+	}
+
+	for j, txLog := range tx.GetLogs() {
+		// no events emitted continue
+		if len(txLog.GetTopics()) != 4 || !bytes.Equal(txLog.GetTopics()[0], erc721.TransferTopic) {
+			continue
+		}
+
+		filterer, err := erc721.NewErc721Filterer(common.Address{}, nil)
+		if err != nil {
+			log.Error(err, "error creating ERC721 filterer", 0)
+		}
+
+		topics := make([]common.Hash, 0, len(txLog.GetTopics()))
+
+		for _, lTopic := range txLog.GetTopics() {
+			topics = append(topics, common.BytesToHash(lTopic))
+		}
+
+		ethLog := gethtypes.Log{
+			Address:     common.BytesToAddress(txLog.GetAddress()),
+			Data:        txLog.Data,
+			Topics:      topics,
+			BlockNumber: blockNumber,
+			TxHash:      common.HexToHash(tx.Hash),
+			TxIndex:     uint(txIndex),
+			BlockHash:   blockHash,
+			Index:       uint(j),
+			Removed:     txLog.GetRemoved(),
+		}
+
+		transfer, _ := filterer.ParseTransfer(ethLog)
+		if transfer == nil {
+			continue
+		}
+
+		tokenId := new(big.Int)
+		if transfer != nil && transfer.TokenId != nil {
+			tokenId = transfer.TokenId
+		}
+
+		err = erc721Batch.Append(
+			string(tx.Hash),
+			blockNumber,
+			transfer.From.String(),
+			transfer.To.String(),
+			common.Bytes2Hex(txLog.Address),
+			tokenId,
+			uint64(j),
+			topics[0].String(),
+			uint64(txIndex),
+			txLog.GetRemoved(),
+			blockTime,
+		)
+
+		if err != nil {
+			log.Error(err, "error appending ERC721 data to batch", 0)
+		}
+	}
+
+	// send the ERC721 batch to ClickHouse
+	err = erc721Batch.Send()
+	if err != nil {
+		return fmt.Errorf("error while sending ERC721 batch to ClickHouse: %v", err)
+	}
+
+	return nil
+}
+
+func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTime int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	// prepare ERC1155 batch to send to ClickHouse
+	erc1155Batch, err := prepareERC1155Batch(ctx)
+	if err != nil {
+		return err
+	}
+
+	for j, txLog := range tx.GetLogs() {
+		// no events emitted continue
+		if len(txLog.GetTopics()) != 4 || (!bytes.Equal(txLog.GetTopics()[0], erc1155.TransferBulkTopic) && !bytes.Equal(txLog.GetTopics()[0], erc1155.TransferSingleTopic)) {
+			continue
+		}
+
+		filterer, err := erc1155.NewErc1155Filterer(common.Address{}, nil)
+		if err != nil {
+			log.Error(err, "error creating ERC1155 filterer", 0)
+		}
+
+		topics := make([]common.Hash, 0, len(txLog.GetTopics()))
+
+		for _, lTopic := range txLog.GetTopics() {
+			topics = append(topics, common.BytesToHash(lTopic))
+		}
+
+		ethLog := gethtypes.Log{
+			Address:     common.BytesToAddress(txLog.GetAddress()),
+			Data:        txLog.Data,
+			Topics:      topics,
+			BlockNumber: blockNumber,
+			TxHash:      common.HexToHash(tx.Hash),
+			TxIndex:     uint(txIndex),
+			BlockHash:   blockHash,
+			Index:       uint(j),
+			Removed:     txLog.GetRemoved(),
+		}
+
+		transferBatch, _ := filterer.ParseTransferBatch(ethLog)
+		transferSingle, _ := filterer.ParseTransferSingle(ethLog)
+		if transferBatch == nil && transferSingle == nil {
+			continue
+		}
+
+		if transferBatch != nil {
+			if len(transferBatch.Ids) != len(transferBatch.Values) {
+				log.Error(fmt.Errorf("error parsing ERC1155 batch transfer logs. Expected len(ids): %v len(values): %v to be the same", len(transferBatch.Ids), len(transferBatch.Values)), "", 0)
+				continue
+			}
+
+			for index := range transferBatch.Ids {
+				err = erc1155Batch.Append(
+					string(tx.Hash),
+					blockNumber,
+					transferBatch.From.String(),
+					transferBatch.To.String(),
+					transferBatch.Operator.String(),
+					common.Bytes2Hex(txLog.Address),
+					transferBatch.Ids[index],
+					transferBatch.Values[index],
+					uint64(j),
+					topics[0].String(),
+					uint64(txIndex),
+					txLog.GetRemoved(),
+					blockTime,
+				)
+
+				if err != nil {
+					log.Error(err, "error appending ERC1155 data to batch", 0)
+				}
+			}
+		} else if transferSingle != nil {
+			err = erc1155Batch.Append(
+				string(tx.Hash),
+				blockNumber,
+				transferSingle.From.String(),
+				transferSingle.To.String(),
+				transferSingle.Operator.String(),
+				common.Bytes2Hex(txLog.Address),
+				transferSingle.Id,
+				transferSingle.Value,
+				uint64(j),
+				topics[0].String(),
+				uint64(txIndex),
+				txLog.GetRemoved(),
+				blockTime,
+			)
+
+			if err != nil {
+				log.Error(err, "error appending ERC1155 data to batch", 0)
+			}
+		}
+	}
+
+	// send the ERC1155 batch to ClickHouse
+	err = erc1155Batch.Send()
+	if err != nil {
+		return fmt.Errorf("error while sending ERC1155 batch to ClickHouse: %v", err)
+	}
+
+	return nil
 }
