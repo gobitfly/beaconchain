@@ -28,6 +28,7 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search t.VDBSummarySearch, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+	// TODO either implement or remove cursor parameter
 	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBSummaryTableRow, 0)
 	var paging t.Paging

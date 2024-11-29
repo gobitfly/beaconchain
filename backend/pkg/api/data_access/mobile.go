@@ -30,7 +30,7 @@ type AppRepository interface {
 	AddMobilePurchase(ctx context.Context, tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error
 	GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error)
 	IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error
-	GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error)
+	GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor t.VDBMobileValidatorsCursor, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error)
 }
 
 // GetUserIdByRefreshToken basically used to confirm the claimed user id with the refresh token. Returns the userId if successful
@@ -366,7 +366,7 @@ func (d *DataAccessService) getInternalRpNetworkStats(ctx context.Context) (*t.R
 	return &networkStats, err
 }
 
-func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor t.VDBMobileValidatorsCursor, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
 	result, p, err := d.GetValidatorDashboardValidators(ctx, dashboardId, groupId, cursor, colSort, search, limit)
 	if err != nil {
 		return nil, p, err

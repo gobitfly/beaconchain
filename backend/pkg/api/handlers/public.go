@@ -694,7 +694,7 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 	}
 	q := r.URL.Query()
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.ValidatorsCursor](&v, q)
 	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -1062,7 +1062,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	// no paging present here, TODO check if it can be removed
+	pagingParams := checkPagingParams[types.CursorLike](&v, q)
 	sort := checkSort[enums.VDBSummaryColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
@@ -1076,7 +1077,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 		returnOk(w, r, emptyPagingResponse())
 	}
 
-	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardSummary(r.Context(), *dashboardId, period, pagingParams.cursor, *sort, *search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(r).GetValidatorDashboardSummary(r.Context(), *dashboardId, period, "", *sort, *search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1266,7 +1267,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.RewardsCursor](&v, q)
 	sort := checkSort[enums.VDBRewardsColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
@@ -1389,7 +1390,7 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 	q := r.URL.Query()
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	epoch := v.checkUint(vars["epoch"], "epoch")
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.ValidatorDutiesCursor](&v, q)
 	sort := checkSort[enums.VDBDutiesColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
@@ -1431,7 +1432,7 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.BlocksCursor](&v, q)
 	sort := checkSort[enums.VDBBlocksColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
@@ -1572,7 +1573,7 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 		handleErr(w, r, err)
 		return
 	}
-	pagingParams := v.checkPagingParams(r.URL.Query())
+	pagingParams := checkPagingParams[types.ELDepositsCursor](&v, r.URL.Query())
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1608,7 +1609,7 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 		handleErr(w, r, err)
 		return
 	}
-	pagingParams := v.checkPagingParams(r.URL.Query())
+	pagingParams := checkPagingParams[types.CLDepositsCursor](&v, r.URL.Query())
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1705,7 +1706,7 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.WithdrawalsCursor](&v, q)
 	sort := checkSort[enums.VDBWithdrawalsColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
@@ -1743,7 +1744,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 		handleErr(w, r, err)
 		return
 	}
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.CursorLike](&v, q)
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -1783,7 +1784,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWr
 		handleErr(w, r, err)
 		return
 	}
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.VDBRocketPoolCursor](&v, q)
 	sort := checkSort[enums.VDBRocketPoolColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -1819,7 +1820,7 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 		handleErr(w, r, err)
 		return
 	}
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.CursorLike](&v, q)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
@@ -1861,7 +1862,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 	}
 	// support ENS names ?
 	nodeAddress := v.checkAddress(vars["node_address"])
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.VDBRocketPoolMinipoolsCursor](&v, q)
 	sort := checkSort[enums.VDBRocketPoolMinipoolsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -1931,7 +1932,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.NotificationsDashboardsCursor](&v, q)
 	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
 	chainIds := v.checkNetworksParameter(q.Get("networks"))
 	if v.hasErrors() {
@@ -2043,7 +2044,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.NotificationMachinesCursor](&v, q)
 	sort := checkSort[enums.NotificationMachinesColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -2083,7 +2084,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.NotificationClientsCursor](&v, q)
 	sort := checkSort[enums.NotificationClientsColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -2121,7 +2122,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.NotificationNetworksCursor](&v, q)
 	sort := checkSort[enums.NotificationNetworksColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, r, v)
@@ -2496,7 +2497,7 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.NotificationSettingsCursor](&v, q)
 	sort := checkSort[enums.NotificationSettingsDashboardColumn](&v, q.Get("sort"))
 	if v.hasErrors() {
 		handleErr(w, r, v)

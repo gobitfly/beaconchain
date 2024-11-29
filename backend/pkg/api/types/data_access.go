@@ -118,6 +118,24 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type VDBRocketPoolCursor struct {
+	GenericCursor
+
+	// TODO
+}
+
+type VDBRocketPoolMinipoolsCursor struct {
+	GenericCursor
+
+	// TODO
+}
+
+type VDBMobileValidatorsCursor struct {
+	GenericCursor
+
+	// TODO
+}
+
 type NotificationSettingsCursor struct {
 	GenericCursor
 
@@ -342,7 +360,6 @@ const (
 	SearchTypeWithdrawalCredential
 	SearchTypeEnsName
 	SearchTypeGraffiti
-	SearchTypeCursor
 	SearchTypeEmail
 	SearchTypePassword
 	SearchTypeEmailUserToken
@@ -354,14 +371,15 @@ const (
 )
 
 type Searchable interface {
-	GetSearches() []SearchType // optional: implement in embedding structs to limit regex pattern matches
-	SetSearchValue(s string)   // optional: implement for custom behavior
+	GetSearches() []SearchType
+	SetSearchValue(s string)
 	SetSearchType(st SearchType, b bool)
 	IsEnabled() bool
 	HasAnyMatches() bool
 }
 
 // not to be used directly, only for embedding
+// think of this as a base class which provides default implementations that can be overridden / shadowed / masked (see below)
 type basicSearch struct {
 	types map[SearchType]bool
 	value string
@@ -403,7 +421,6 @@ func (bs *basicSearch) GetSearches() []SearchType {
 		SearchTypeWithdrawalCredential,
 		SearchTypeEnsName,
 		SearchTypeGraffiti,
-		SearchTypeCursor,
 		SearchTypeEmail,
 		SearchTypePassword,
 		SearchTypeEmailUserToken,
@@ -481,6 +498,7 @@ func (s SearchTableByIndexPubkeyGroup) Group() SearchString {
 	return s.AsString(SearchTypeName)
 }
 
+// masked
 func (s SearchTableByIndexPubkeyGroup) GetSearches() []SearchType {
 	return []SearchType{
 		SearchTypeInteger,

@@ -22,25 +22,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor t.RewardsCursor, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
 	result := make([]t.VDBRewardsTableRow, 0)
 	var paging t.Paging
 
 	wg := errgroup.Group{}
-
-	// Initialize the cursor
-	var currentCursor t.RewardsCursor
 	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.RewardsCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as RewardsCursor: %w", err)
-		}
-	}
 
 	// Prepare the sorting
-	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
+	isReverseDirection := (colSort.Desc && !cursor.IsReverse()) || (!colSort.Desc && cursor.IsReverse())
 	sortSearchDirection := ">"
 	if isReverseDirection {
 		sortSearchDirection = "<"
@@ -122,28 +113,28 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
 		elDs = elDs.
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
-		if currentCursor.IsValid() {
-			if currentCursor.IsReverse() {
-				if currentCursor.GroupId == t.AllGroups {
+		if cursor.IsValid() {
+			if cursor.IsReverse() {
+				if cursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups excluding the cursor epoch
-					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
-					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
+					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(cursor.Epoch).Unix()))
+					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), cursor.Epoch))
 				} else {
 					// The cursor is on a specific group, get the data for the whole epoch since we could need it for the total rewards
-					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
-					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
+					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(cursor.Epoch).Unix()))
+					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), cursor.Epoch))
 				}
 			} else {
-				if currentCursor.GroupId == t.AllGroups {
+				if cursor.GroupId == t.AllGroups {
 					// The cursor is on the total rewards so get the data for all groups including the cursor epoch
-					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
-					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), currentCursor.Epoch))
+					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s= fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(cursor.Epoch).Unix()))
+					elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s= ?", sortSearchDirection), cursor.Epoch))
 				} else {
 					// The cursor is on a specific group so get the data for groups before/after it
 					rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("(e.epoch_timestamp %[1]s fromUnixTimestamp(?) OR (e.epoch_timestamp = fromUnixTimestamp(?) AND v.group_id %[1]s ?))", sortSearchDirection),
-						utils.EpochToTime(currentCursor.Epoch).Unix(), utils.EpochToTime(currentCursor.Epoch).Unix(), currentCursor.GroupId))
+						utils.EpochToTime(cursor.Epoch).Unix(), utils.EpochToTime(cursor.Epoch).Unix(), cursor.GroupId))
 					elDs = elDs.Where(goqu.L(fmt.Sprintf("(b.epoch %[1]s ? OR (b.epoch = ? AND v.group_id %[1]s ?))", sortSearchDirection),
-						currentCursor.Epoch, currentCursor.Epoch, currentCursor.GroupId))
+						cursor.Epoch, cursor.Epoch, cursor.GroupId))
 				}
 			}
 		}
@@ -262,9 +253,9 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators))).
 			GroupBy(goqu.L("b.epoch"))
 
-		if currentCursor.IsValid() {
-			rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(currentCursor.Epoch).Unix()))
-			elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), currentCursor.Epoch))
+		if cursor.IsValid() {
+			rewardsDs = rewardsDs.Where(goqu.L(fmt.Sprintf("e.epoch_timestamp %s fromUnixTimestamp(?)", sortSearchDirection), utils.EpochToTime(cursor.Epoch).Unix()))
+			elDs = elDs.Where(goqu.L(fmt.Sprintf("b.epoch %s ?", sortSearchDirection), cursor.Epoch))
 		}
 		if search != "" {
 			if epochSearch == -1 && indexSearch == -1 {
@@ -464,15 +455,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	}
 
 	// Reverse the data if the cursor is reversed to correct it to the requested direction
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(resultWoTotal)
 	}
 
 	// Place the total rewards in the result data at the correct position and ignore group data that is not searched for
 	// Ascending or descending order makes no difference but the cursor direction does
 	previousEpoch := int64(-1)
-	if currentCursor.IsValid() && !currentCursor.IsReverse() {
-		previousEpoch = int64(currentCursor.Epoch)
+	if cursor.IsValid() && !cursor.IsReverse() {
+		previousEpoch = int64(cursor.Epoch)
 	}
 	for _, res := range resultWoTotal {
 		if previousEpoch != int64(res.Epoch) {
@@ -482,7 +473,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		}
 
 		// If we reach a specific group cursor which should only happen if the cursor is reversed don't include it and stop
-		if currentCursor.IsReverse() && currentCursor.Epoch == res.Epoch && currentCursor.GroupId == res.GroupId {
+		if cursor.IsReverse() && cursor.Epoch == res.Epoch && cursor.GroupId == res.GroupId {
 			break
 		}
 		// If we don't search for specific groups or the group is in the search add the row
@@ -494,21 +485,21 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return result, &paging, nil
 	}
 
 	// Remove the last entries from data
 	if moreDataFlag {
-		if currentCursor.IsReverse() {
+		if cursor.IsReverse() {
 			result = result[len(result)-int(limit):]
 		} else {
 			result = result[:limit]
 		}
 	}
 
-	p, err := utils.GetPagingFromData(result, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(result, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
@@ -903,7 +894,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	return &result, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor t.ValidatorDutiesCursor, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	result := make([]t.VDBEpochDutiesTableRow, 0)
 	var paging t.Paging
 
@@ -914,18 +905,8 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		groupId = t.AllGroups
 	}
 
-	// Initialize the cursor
-	var currentCursor t.ValidatorDutiesCursor
-	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.ValidatorDutiesCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as ValidatorDutiesCursor: %w", err)
-		}
-	}
-
 	// Prepare the sorting
-	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
+	isReverseDirection := (colSort.Desc && !cursor.IsReverse()) || (!colSort.Desc && cursor.IsReverse())
 
 	// Analyze the search term
 	indexSearch := int64(-1)
@@ -1100,7 +1081,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		return nil
 	})
 
-	err = wg.Wait()
+	err := wg.Wait()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving validator dashboard rewards data: %w", err)
 	}
@@ -1234,11 +1215,11 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	})
 
 	// Remove data before the cursor
-	if currentCursor.IsValid() {
+	if cursor.IsValid() {
 		cursorIndex := -1
 
 		for idx, cursorEntry := range cursorData {
-			if cursorEntry.Index == currentCursor.Index && cursorEntry.Reward.Equal(currentCursor.Reward) {
+			if cursorEntry.Index == cursor.Index && cursorEntry.Reward.Equal(cursor.Reward) {
 				cursorIndex = idx
 				break
 			}
@@ -1253,7 +1234,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return result, &paging, nil
 	}
@@ -1265,12 +1246,12 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	}
 
 	// Reverse the data if the cursor is reversed to correct it to the requested direction
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(result)
 		slices.Reverse(cursorData)
 	}
 
-	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(cursorData, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}

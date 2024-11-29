@@ -380,7 +380,7 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.Re
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.VDBMobileValidatorsCursor](&v, q)
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))

@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/shopspring/decimal"
@@ -49,7 +50,6 @@ var searchEnumsRegexMapping = map[types.SearchType]*regexp.Regexp{
 	types.SearchTypeWithdrawalCredential: reWithdrawalCredential,
 	types.SearchTypeEnsName:              reEnsName,
 	types.SearchTypeGraffiti:             reGraffiti,
-	types.SearchTypeCursor:               reCursor,
 	types.SearchTypeEmail:                reEmail,
 	types.SearchTypePassword:             rePassword,
 	types.SearchTypeEmailUserToken:       reEmailUserToken,
@@ -366,15 +366,15 @@ func (v *validationError) checkUintMinMax(param string, min uint64, max uint64, 
 	return checkMinMax(v, v.checkUint(param, paramName), min, max, paramName)
 }
 
-type Paging struct {
-	cursor string
+type Paging[T types.CursorLike] struct {
+	cursor T
 	limit  uint64
 	search string
 }
 
-func (v *validationError) checkPagingParams(q url.Values) Paging {
-	paging := Paging{
-		cursor: q.Get("cursor"),
+func checkPagingParams[T types.CursorLike](v *validationError, q url.Values) Paging[T] {
+	paging := Paging[T]{
+		cursor: *new(T),
 		limit:  defaultReturnLimit,
 		search: q.Get("search"),
 	}
@@ -383,8 +383,12 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 		paging.limit = v.checkUintMinMax(limitStr, 1, maxQueryLimit, "limit")
 	}
 
-	if paging.cursor != "" {
-		paging.cursor = v.checkRegex(reCursor, paging.cursor, "cursor")
+	if q.Get("cursor") != "" {
+		cursor, err := utils.StringToCursor[T](v.checkRegex(reCursor, q.Get("cursor"), "cursor"))
+		if err != nil {
+			v.add("cursor", fmt.Sprintf("give value '%s' is not valid: %v", q.Get("cursor"), err))
+		}
+		paging.cursor = cursor
 	}
 
 	return paging

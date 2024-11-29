@@ -22,27 +22,15 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search t.VDBBlocksSearch, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor t.BlocksCursor, colSort t.Sort[enums.VDBBlocksColumn], search t.VDBBlocksSearch, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	// @DATA-ACCESS incorporate protocolModes
 
 	// -------------------------------------
 	// Setup
 	var err error
-	var currentCursor t.BlocksCursor
 	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
 		return nil, nil, err
-	}
-
-	// TODO @LuccaBitfly move validation to handler?
-	if cursor != "" {
-		if currentCursor, err = utils.StringToCursor[t.BlocksCursor](cursor); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as BlocksCursor: %w", err)
-		}
-	}
-
-	if search != "" && !searchPubkey && !searchGroup && !searchIndex {
-		return make([]t.VDBBlocksTableRow, 0), &t.Paging{}, nil
 	}
 
 	validators := goqu.T("validators") // could adapt data type to make handling as table/alias less confusing
@@ -178,24 +166,24 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 	// 3. Sorting and pagination
 	defaultColumns := []t.SortColumn{
-		{Column: enums.VDBBlocksColumns.Slot.ToExpr(), Desc: true, Offset: currentCursor.Slot},
+		{Column: enums.VDBBlocksColumns.Slot.ToExpr(), Desc: true, Offset: cursor.Slot},
 	}
 	var offset any
 	switch colSort.Column {
 	case enums.VDBBlocksColumns.Proposer:
-		offset = currentCursor.Proposer
+		offset = cursor.Proposer
 	case enums.VDBBlocksColumns.Block:
-		offset = currentCursor.Block
-		if !currentCursor.Block.Valid {
+		offset = cursor.Block
+		if !cursor.Block.Valid {
 			offset = nil
 		}
 	case enums.VDBBlocksColumns.Status:
-		offset = fmt.Sprintf("%d", currentCursor.Status) // type of 'status' column is text for some reason
+		offset = fmt.Sprintf("%d", cursor.Status) // type of 'status' column is text for some reason
 	case enums.VDBBlocksColumns.ProposerReward:
-		offset = currentCursor.Reward
+		offset = cursor.Reward
 	}
 
-	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, cursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -212,9 +200,9 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	latestSlot := cache.LatestSlot.Get()
 	onlyPrimarySort := colSort.Column == enums.VDBBlockSlot
 	if !(onlyPrimarySort || colSort.Column == enums.VDBBlockBlock) ||
-		!currentCursor.IsValid() ||
-		currentCursor.Slot > latestSlot+1 ||
-		colSort.Desc == currentCursor.Reverse {
+		!cursor.IsValid() ||
+		cursor.Slot > latestSlot+1 ||
+		colSort.Desc == cursor.Reverse {
 		dutiesInfo, err := d.services.GetCurrentDutiesInfo()
 		if err == nil {
 			if dashboardId.Validators == nil {
@@ -343,7 +331,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if moreDataFlag {
 		proposals = proposals[:len(proposals)-1]
 	}
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(proposals)
 	}
 
@@ -472,11 +460,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			contractIdx += 1
 		}
 	}
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return data, &t.Paging{}, nil
 	}
-	p, err := utils.GetPagingFromData(proposals, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(proposals, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, err
 	}
