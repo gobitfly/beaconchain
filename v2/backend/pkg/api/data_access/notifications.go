@@ -1090,10 +1090,11 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 	// -------------------------------------
 	// Get the notification channels
-	notificationChannels := []struct {
+	type notificationChannelsRow struct {
 		Channel types.NotificationChannel `db:"channel"`
 		Active  bool                      `db:"active"`
-	}{}
+	}
+	notificationChannels := []notificationChannelsRow{}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &notificationChannels, `
 		SELECT
@@ -1103,6 +1104,15 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		WHERE user_id = $1`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for notifications channels: %w`, err)
+		}
+
+		if len(notificationChannels) == 0 {
+			// Set the default values
+			notificationChannels = []notificationChannelsRow{
+				{Channel: types.EmailNotificationChannel, Active: true},
+				{Channel: types.PushNotificationChannel, Active: true},
+				{Channel: types.WebhookNotificationChannel, Active: true},
+			}
 		}
 
 		return nil
