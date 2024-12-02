@@ -11,7 +11,7 @@
     "@pinia/nuxt": "^0.5.1",
     "@stripe/stripe-js": "^3.5.0",
     "@vueuse/core": "^11.1.0",
-    "@vueuse/nuxt": "^11.1.0",
+    "@vueuse/nuxt": "^12.0.0",
     "echarts": "^5.5.1",
     "git-describe": "^4.1.1",
     "lodash-es": "^4.17.21",
