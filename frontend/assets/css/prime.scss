@@ -380,7 +380,6 @@ div.p-checkbox {
 // Multiselect drop-down
 
 div.p-multiselect {
-  @include fonts.button_text;
   color: var(--input-active-text-color);
   background: var(--input-background);
   border: 1px solid var(--input-border-color);
@@ -402,7 +401,6 @@ div.p-multiselect {
       margin-left: var(--padding-small);
 
       .p-multiselect-label {
-        font-size: var(--tiny_text_font_size);
         font-weight: var(--standard_text_font_weight);
       }
     }
