@@ -10,7 +10,6 @@ import {
   BcPremiumModal,
   DashboardGroupSelectionDialog,
 } from '#components'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type {
   GetValidatorDashboardValidatorsResponse,
   VDBManageValidatorsTableRow,
@@ -34,9 +33,7 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
-const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
+const { validatorCount } = storeToRefs(useValidatorDashboardStore())
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
@@ -104,6 +101,12 @@ const mapIndexOrPubKey = (
   return [ ...new Set(validators?.map(
     validator => validator.index ?? validator.public_key)) ]
 }
+const emit = defineEmits<{
+  (e: 'modified-dashboard'): void,
+}>()
+function emitModifiedDashboard() {
+  emit('modified-dashboard')
+}
 
 const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
   if (
@@ -127,7 +130,7 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
   )
 
   loadData()
-  refreshOverview(dashboardKey.value)
+  emitModifiedDashboard()
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -150,7 +153,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   )
 
   loadData()
-  refreshOverview(dashboardKey.value)
+  emitModifiedDashboard()
 }
 
 const { premium_perks } = useUserStore()
@@ -271,7 +274,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   })
 }
 
-const totalValidators = computed(() => addUpValues(overview.value?.validators))
+const totalValidators = computed(() => validatorCount.value ?? 0)
 
 const maxValidatorsPerDashboard = computed(() =>
   isGuestDashboard.value || !user.value?.premium_perks?.validators_per_dashboard

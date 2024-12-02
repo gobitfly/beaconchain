@@ -6,7 +6,6 @@ import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
@@ -40,9 +39,8 @@ const {
 const totalIdentifier = 'total'
 
 const {
-  hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
-const { groups } = useValidatorDashboardGroups()
+  groups, hasValidators,
+} = storeToRefs(useValidatorDashboardStore())
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -66,10 +64,7 @@ const loadData = (query?: TableQueryParams) => {
 }
 
 watch(
-  [
-    dashboardKey,
-    overview,
-  ],
+  [ dashboardKey ],
   () => {
     loadData()
     getTotalAmount(dashboardKey.value)
