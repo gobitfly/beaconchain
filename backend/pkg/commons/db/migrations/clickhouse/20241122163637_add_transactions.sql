@@ -2,37 +2,38 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS transactions_ethereum (
     tx_index UInt64 CODEC(T64, ZSTD(3)),
-    tx_hash String,
+    tx_hash String CODEC(ZSTD(3)), 
     block_number UInt64 CODEC(T64, ZSTD(3)),           
-    from_address String,
-    to_address String,
+    from_address String CODEC(ZSTD(3)), 
+    to_address String CODEC(ZSTD(3)), 
     type LowCardinality(String) CODEC(ZSTD(3)),  
     method String CODEC(ZSTD(3)), 
-    value UInt64,
-    nonce UInt64,
+    value UInt256, 
+    nonce UInt64 CODEC(T64, ZSTD(3)), 
     status Enum('failed' = 0, 'success' = 1, 'partialy failed' = 2) CODEC(ZSTD(3)), 
-    timestamp DateTime,
-    tx_fee Int128 CODEC(ZSTD(3)),
-    gas UInt64 CODEC(T64, ZSTD(3)),
-    gas_price Nullable(UInt64) CODEC(ZSTD(3)),
-    gas_used UInt64 CODEC(T64, ZSTD(3)),
-    max_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)),
-    max_priority_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)),
+    timestamp DateTime, 
+    tx_fee UInt256 CODEC(ZSTD(3)), 
+    gas UInt64 CODEC(ZSTD(3)),
+    gas_price Nullable(UInt64) CODEC(ZSTD(3)), 
+    gas_used UInt64 CODEC(ZSTD(3)),
+    max_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)), 
+    max_priority_fee_per_gas Nullable(UInt64) CODEC(ZSTD(3)), 
     -- Blob Tx
-    max_fee_per_blob_gas Nullable(UInt64) CODEC(ZSTD(3)),
-    blob_gas_price Nullable(UInt64) CODEC(ZSTD(3)),
-    blob_gas_used Nullable(UInt64) CODEC(T64, ZSTD(3)),
-    blob_tx_fee Nullable(Int128) CODEC(ZSTD(3)),
-    blob_versioned_hashes Array(Nullable(String)),
-    access_list Array(Nullable(String)),
-    input_data Array(Nullable(UInt8)),
+    max_fee_per_blob_gas Nullable(UInt64) CODEC(ZSTD(3)), 
+    blob_gas_price Nullable(UInt64) CODEC(ZSTD(3)), 
+    blob_gas_used Nullable(UInt64) CODEC(T64, ZSTD(3)), 
+    blob_tx_fee Nullable(UInt256) CODEC(ZSTD(3)), 
+    blob_versioned_hashes Array(Nullable(String)) CODEC(ZSTD(3)), 
+    access_list Array(Nullable(String)) CODEC(ZSTD(3)), 
+    input_data Array(Nullable(UInt8)) CODEC(ZSTD(3)), 
     is_contract_creation Boolean,
-    logs Array(Nullable(String)),
-    logs_bloom Array(Nullable(UInt8)),
+    logs Array(Nullable(String)) CODEC(ZSTD(3)), 
+    logs_bloom Array(Nullable(UInt8)) CODEC(ZSTD(3)), 
+    inserted_timestamp DateTime DEFAULT now(), 
 
     INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
     INDEX idx_method (method) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = MergeTree()
+) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), from_address, block_number, tx_index)
 PRIMARY KEY (toStartOfWeek(timestamp), from_address, block_number, tx_index)
 PARTITION BY toStartOfQuarter(timestamp)
@@ -41,20 +42,21 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS internal_tx_ethereum (
-    parent_hash String,
+    parent_hash String CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String,
-    to_address String,
-    type String,
-    value String,
+    from_address String CODEC(ZSTD(3)),
+    to_address String CODEC(ZSTD(3)),
+    type String CODEC(ZSTD(3)),
+    value String CODEC(ZSTD(3)),
     path String,
-    gas UInt64 CODEC(T64, ZSTD(3)),
+    gas UInt64 CODEC(ZSTD(3)),
     timestamp DateTime,
-    error_msg Nullable(String),
+    error_msg Nullable(String) CODEC(ZSTD(3)),
+    inserted_timestamp DateTime DEFAULT now(),
 
     INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1
     
-)ENGINE = MergeTree()
+)ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
 PARTITION BY toStartOfMonth(timestamp) 
@@ -63,21 +65,22 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS erc20_ethereum (
-    parent_hash String,
+    parent_hash String CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String,
-    to_address String,
-    token_address String,
-    value Int128,
-    log_index UInt32,
-    log_type String,
-    transaction_log_index UInt32 CODEC(T64, ZSTD(3)),
+    from_address String CODEC(ZSTD(3)),
+    to_address String CODEC(ZSTD(3)),
+    token_address String CODEC(ZSTD(3)),
+    value UInt256 CODEC(ZSTD(3)),
+    log_index UInt32 CODEC(T64, ZSTD(3)),
+    log_type String CODEC(ZSTD(3)),
+    transaction_log_index UInt32 CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
+    inserted_timestamp DateTime DEFAULT now(),
 
     INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
     INDEX idx_token_address (token_address) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = MergeTree()
+) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PARTITION BY toStartOfMonth(timestamp) 
@@ -86,21 +89,22 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS erc721_ethereum(
-    parent_hash String,
+    parent_hash String CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String,
-    to_address String,
-    token_address String,
-    token_id UInt256,
-    log_index UInt32,
-    log_type Nullable(String),
-    transaction_log_index Nullable(UInt32) CODEC(T64, ZSTD(3)),
+    from_address String CODEC(ZSTD(3)),
+    to_address String CODEC(ZSTD(3)),
+    token_address String CODEC(ZSTD(3)),
+    token_id UInt256 CODEC(ZSTD(3)),
+    log_index UInt32 CODEC(ZSTD(3)),
+    log_type Nullable(String) CODEC(ZSTD(3)),
+    transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
+    inserted_timestamp DateTime DEFAULT now(),
 
     INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
     INDEX idx_token_address (token_address) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = MergeTree()
+) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PARTITION BY toStartOfMonth(timestamp) 
@@ -109,23 +113,24 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS erc1155_ethereum(
-    parent_hash String,
+    parent_hash String CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String,
-    to_address String,
-    operator String,
-    token_address String,
-    token_id UInt256,
-    value Int128,
-    log_index UInt32,
-    log_type Nullable(String),
-    transaction_log_index Nullable(UInt32) CODEC(T64, ZSTD(3)),
+    from_address String CODEC(ZSTD(3)),
+    to_address String CODEC(ZSTD(3)),
+    operator String CODEC(ZSTD(3)),
+    token_address String CODEC(ZSTD(3)),
+    token_id UInt256 CODEC(ZSTD(3)),
+    value UInt256 CODEC(ZSTD(3)),
+    log_index UInt32 CODEC(ZSTD(3)),
+    log_type Nullable(String) CODEC(ZSTD(3)),
+    transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
+    inserted_timestamp DateTime DEFAULT now(),
 
     INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
     INDEX idx_token_address (token_address) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = MergeTree()
+) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PARTITION BY toStartOfMonth(timestamp) 
@@ -135,17 +140,17 @@ SETTINGS index_granularity = 8192
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE transactions_ethereum IF EXISTS
+DROP TABLE IF EXISTS transactions_ethereum 
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE internal_tx_ethereum IF EXISTS
+DROP TABLE IF EXISTS internal_tx_ethereum 
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE erc20_ethereum IF EXISTS
+DROP TABLE IF EXISTS erc20_ethereum 
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE erc721_ethereum IF EXISTS
+DROP TABLE IF EXISTS erc721_ethereum 
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE erc1155_ethereum IF EXISTS
+DROP TABLE IF EXISTS erc1155_ethereum 
 -- +goose StatementEnd
