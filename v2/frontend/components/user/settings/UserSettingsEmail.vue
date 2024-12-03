@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
-import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -39,7 +38,7 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
 
   buttonsDisabled.value = true
   try {
-    await fetch(API_PATH.USER_CHANGE_EMAIL, {
+    await fetch('USER_CHANGE_EMAIL', {
       body: {
         email: values.newEmail,
         password: values.password,

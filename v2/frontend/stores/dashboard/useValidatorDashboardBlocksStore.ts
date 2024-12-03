@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import type { GetValidatorDashboardBlocksResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardBlocksStore = defineStore(
   'validator_dashboard_blocks_store',
@@ -42,7 +41,7 @@ export function useValidatorDashboardBlocksStore() {
     isLoading.value = true
     storedQuery.value = query
     const res = await fetch<GetValidatorDashboardBlocksResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_BLOCKS,
+      'DASHBOARD_VALIDATOR_BLOCKS',
       undefined,
       { dashboardKey },
       query,

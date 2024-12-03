@@ -1,5 +1,5 @@
 import type { TableQueryParams } from '~/types/datatable'
-import { API_PATH } from '~/types/customFetch'
+
 import type {
   InternalGetUserNotificationSettingsDashboardsResponse,
   InternalPutUserNotificationSettingsAccountDashboardResponse,
@@ -37,7 +37,7 @@ export function useNotificationsManagementDashboards() {
     setStoredQuery(q)
     const res
       = await fetch<InternalGetUserNotificationSettingsDashboardsResponse>(
-        API_PATH.GET_NOTIFICATIONS_SETTINGS_DASHBOARD,
+        'GET_NOTIFICATIONS_SETTINGS_DASHBOARD',
         undefined,
         undefined,
         q,
@@ -118,7 +118,7 @@ export function useNotificationsManagementDashboards() {
     })
     if (is_account_dashboard) {
       return await fetch<InternalPutUserNotificationSettingsAccountDashboardResponse>(
-        API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION,
+        'NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION',
         {
           body: settings,
         },
@@ -129,7 +129,7 @@ export function useNotificationsManagementDashboards() {
       )
     }
     return await fetch<InternalPutUserNotificationSettingsValidatorDashboardResponse>(
-      API_PATH.NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION,
+      'NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION',
       {
         body: settings,
       },
@@ -174,7 +174,7 @@ export function useNotificationsManagementDashboards() {
     },
   ) {
     await fetch<InternalPutUserNotificationSettingsValidatorDashboardResponse>(
-      API_PATH.SAVE_VALIDATOR_DASHBOARDS_SETTINGS,
+      'SAVE_VALIDATOR_DASHBOARDS_SETTINGS',
       {
         body: {
           ...settings,

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { API_PATH } from '~/types/customFetch'
+
 import type {
   InternalGetUserNotificationsResponse, NotificationOverviewData,
 } from '~/types/api/notifications'
@@ -16,7 +16,7 @@ export function useNotificationsDashboardOverviewStore() {
   async function refreshOverview() {
     try {
       const res = await fetch<InternalGetUserNotificationsResponse>(
-        API_PATH.NOTIFICATIONS_OVERVIEW,
+        'NOTIFICATIONS_OVERVIEW',
       )
       overview.value = res.data
 

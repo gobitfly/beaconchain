@@ -4,7 +4,7 @@ import {
   faPaperPlane,
 } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { API_PATH } from '~/types/customFetch'
+
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
@@ -65,8 +65,8 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   try {
     await fetch(
       type === 'email'
-        ? API_PATH.NOTIFICATIONS_TEST_EMAIL
-        : API_PATH.NOTIFICATIONS_TEST_PUSH,
+        ? 'NOTIFICATIONS_TEST_EMAIL'
+        : 'NOTIFICATIONS_TEST_PUSH',
     )
   }
   catch {

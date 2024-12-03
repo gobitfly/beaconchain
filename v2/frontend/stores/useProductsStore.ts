@@ -3,7 +3,7 @@ import type {
   InternalGetProductSummaryResponse,
   ProductSummary,
 } from '~/types/api/user'
-import { API_PATH } from '~/types/customFetch'
+
 import {
   ProductCategoryPremium,
   ProductStoreAndroidPlaystore,
@@ -51,7 +51,7 @@ export function useProductsStore() {
     }
 
     const res = await fetch<InternalGetProductSummaryResponse>(
-      API_PATH.PRODUCT_SUMMARY,
+      'PRODUCT_SUMMARY',
     )
 
     data.value = res.data

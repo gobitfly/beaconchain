@@ -1,7 +1,6 @@
 import type {
   InternalGetUserInfoResponse, UserInfo,
 } from '~/types/api/user'
-import { API_PATH } from '~/types/customFetch'
 
 const userStore = defineStore('user-store', () => {
   const data = ref<null | undefined | UserInfo>()
@@ -14,7 +13,7 @@ export function useUserStore() {
   const router = useRouter()
 
   async function doLogin(email: string, password: string) {
-    await fetch(API_PATH.LOGIN, {
+    await fetch('LOGIN', {
       body: {
         email,
         password,
@@ -30,7 +29,7 @@ export function useUserStore() {
   async function getUser() {
     try {
       const res = await fetch<InternalGetUserInfoResponse>(
-        API_PATH.USER,
+        'USER',
       )
       setUser(res.data)
       return res.data
@@ -42,7 +41,7 @@ export function useUserStore() {
   }
 
   const doLogout = async () => {
-    await fetch(API_PATH.LOGOUT)
+    await fetch('LOGOUT')
     setUser(undefined)
     router.replace('/')
   }

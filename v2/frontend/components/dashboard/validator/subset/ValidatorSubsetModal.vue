@@ -12,7 +12,7 @@ import type {
   ValidatorSubsetCategory,
 } from '~/types/validator'
 import { sortSummaryValidators } from '~/utils/dashboard/validator'
-import { API_PATH } from '~/types/customFetch'
+
 import type {
   GetValidatorDashboardSummaryValidatorsResponse,
   VDBGroupSummaryData,
@@ -85,7 +85,7 @@ watch(
 
       const res
         = await fetch<GetValidatorDashboardSummaryValidatorsResponse>(
-          API_PATH.DASHBOARD_VALIDATOR_INDICES,
+          'DASHBOARD_VALIDATOR_INDICES',
           {
             query: {
               duty,

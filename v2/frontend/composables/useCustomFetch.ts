@@ -1,13 +1,11 @@
-import type { NitroFetchOptions } from 'nitropack'
 import type { RuntimeConfig } from 'nuxt/schema'
 import {
-  API_PATH, mapping, type PathValues,
+  type API_PATH,
+  mapping,
+  type PathValues,
 } from '~/types/customFetch'
 
 const APIcallTimeout = 30 * 1000 // 30 seconds
-
-const pathNames = Object.values(API_PATH)
-type PathName = (typeof pathNames)[number]
 
 export function useCustomFetch() {
   const runtimeConfig = useRuntimeConfig()
@@ -20,9 +18,8 @@ export function useCustomFetch() {
     tokenCsrf,
   } = useCsrfStore()
   async function fetch<T>(
-    pathName: PathName,
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    options: NitroFetchOptions<{} & string> = {},
+    pathName: API_PATH,
+    options: Parameters<typeof $fetch>[1] = {},
     pathValues?: PathValues,
     query?: PathValues,
   ): Promise<T> {

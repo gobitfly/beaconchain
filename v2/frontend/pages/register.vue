@@ -3,7 +3,7 @@ import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
-import { API_PATH } from '~/types/customFetch'
+
 import {
   handleMobileAuth, provideMobileAuthParams,
 } from '~/utils/mobileAuth'
@@ -49,7 +49,7 @@ const onSubmit = handleSubmit(async (values) => {
     return
   }
   try {
-    await fetch(API_PATH.REGISTER, {
+    await fetch('REGISTER', {
       body: {
         email: values.email,
         password: values.password,

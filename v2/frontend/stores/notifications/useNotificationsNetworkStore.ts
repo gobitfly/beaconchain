@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { InternalGetUserNotificationNetworksResponse } from '~/types/api/notifications'
-import { API_PATH } from '~/types/customFetch'
+
 import type { TableQueryParams } from '~/types/datatable'
 
 const notificationsNetworkStore = defineStore('notifications-network-store', () => {
@@ -25,7 +25,7 @@ export function useNotificationsNetworkStore() {
     setStoredQuery(q)
     try {
       const result = await fetch<InternalGetUserNotificationNetworksResponse>(
-        API_PATH.NOTIFICATIONS_NETWORK,
+        'NOTIFICATIONS_NETWORK',
         undefined,
         undefined,
         q,

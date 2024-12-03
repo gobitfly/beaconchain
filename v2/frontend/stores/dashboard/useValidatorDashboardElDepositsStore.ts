@@ -5,7 +5,6 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardElDepositsStore = defineStore(
   'validator_dashboard_el_deposits_store',
@@ -51,7 +50,7 @@ export function useValidatorDashboardElDepositsStore() {
     isLoadingDeposits.value = true
     const res
       = await fetch<GetValidatorDashboardExecutionLayerDepositsResponse>(
-        API_PATH.DASHBOARD_EL_DEPOSITS,
+        'DASHBOARD_EL_DEPOSITS',
         undefined,
         { dashboardKey },
         query,
@@ -75,7 +74,7 @@ export function useValidatorDashboardElDepositsStore() {
     isLoadingTotal.value = true
     const res
       = await fetch<GetValidatorDashboardTotalExecutionDepositsResponse>(
-        API_PATH.DASHBOARD_EL_DEPOSITS_TOTAL,
+        'DASHBOARD_EL_DEPOSITS_TOTAL',
         undefined,
         { dashboardKey },
       )

@@ -4,7 +4,6 @@ import type {
   SlotVizEpoch,
 } from '~/types/api/slot_viz'
 import type { DashboardKey } from '~/types/dashboard'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorSlotVizStore = defineStore('validator_slotViz', () => {
   const data = ref<null | SlotVizEpoch[] | undefined>()
@@ -23,7 +22,7 @@ export function useValidatorSlotVizStore() {
       query = { group_ids: groups.join(',') }
     }
     const res = await fetch<GetValidatorDashboardSlotVizResponse>(
-      API_PATH.DASHBOARD_SLOTVIZ,
+      'DASHBOARD_SLOTVIZ',
       {
         headers: {},
         query,

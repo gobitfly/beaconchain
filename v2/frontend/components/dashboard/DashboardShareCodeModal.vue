@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { warn } from 'vue'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
-import { API_PATH } from '~/types/customFetch'
+
 import { isSharedDashboardKey } from '~/utils/dashboard/key'
 
 interface Props {
@@ -58,7 +58,7 @@ const unpublish = async () => {
   isUpdating.value = true
   const publicId = `${props.value?.dashboard?.public_ids?.[0]?.public_id}`
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID,
+    'DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID',
     { method: 'DELETE' },
     {
       dashboardKey: `${props.value?.dashboard?.id}`,

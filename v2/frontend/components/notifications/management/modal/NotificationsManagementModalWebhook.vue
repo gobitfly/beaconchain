@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faPaperPlane } from '@fortawesome/pro-solid-svg-icons'
 import { useForm } from 'vee-validate'
 import { warn } from 'vue'
-import { API_PATH } from '~/types/customFetch'
+
 import type { NotificationSettingsValidatorDashboard } from '~/types/api/notifications'
 
 type WebhookForm = Pick<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>
@@ -64,7 +64,7 @@ const handleTestNotification = async () => {
   }
   try {
     if (is_webhook_discord_enabled.value) {
-      await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
+      await fetch('NOTIFICATIONS_TEST_WEBHOOK', {
         body: {
           is_webhook_discord_enabled: is_webhook_discord_enabled.value,
           webhook_url: webhook_url.value,
@@ -74,7 +74,7 @@ const handleTestNotification = async () => {
       toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_discord') })
       return
     }
-    await fetch(API_PATH.NOTIFICATIONS_TEST_WEBHOOK, {
+    await fetch('NOTIFICATIONS_TEST_WEBHOOK', {
       body: { webhook_url: webhook_url.value },
       method: 'POST',
     })

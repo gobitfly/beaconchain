@@ -5,7 +5,6 @@ import type {
   DashboardCreationState,
 } from '~/types/dashboard/creation'
 import type { ChainIDs } from '~/types/network'
-import { API_PATH } from '~/types/customFetch'
 
 const userDashboardStore = useUserDashboardStore()
 const {
@@ -125,7 +124,7 @@ async function createDashboard() {
       && response.id > 0
     ) {
       await fetch(
-        API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+        'DASHBOARD_VALIDATOR_MANAGEMENT',
         {
           body: {
             group_id: '0',

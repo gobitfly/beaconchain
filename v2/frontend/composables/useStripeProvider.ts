@@ -9,7 +9,6 @@ import type {
   StripeCreateCheckoutSession,
   StripeCustomerPortal,
 } from '~/types/api/user'
-import { API_PATH } from '~/types/customFetch'
 
 export function useStripeProvider() {
   const { fetch } = useCustomFetch()
@@ -42,7 +41,7 @@ export function useStripeProvider() {
     isStripeProcessing.value = true
 
     const res = await fetch<StripeCustomerPortal>(
-      API_PATH.STRIPE_CUSTOMER_PORTAL,
+      'STRIPE_CUSTOMER_PORTAL',
       {
         baseURL: stripeBaseUrl,
         body: JSON.stringify({ returnURL: window.location.href }),
@@ -62,7 +61,7 @@ export function useStripeProvider() {
     isStripeProcessing.value = true
 
     const res = await fetch<StripeCreateCheckoutSession>(
-      API_PATH.STRIPE_CHECKOUT_SESSION,
+      'STRIPE_CHECKOUT_SESSION',
       {
         baseURL: stripeBaseUrl,
         body: JSON.stringify({

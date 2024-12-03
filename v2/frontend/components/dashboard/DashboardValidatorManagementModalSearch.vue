@@ -2,7 +2,6 @@
 import { faGem } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { InternalPostSearchResponse } from '~/types/api/search'
-import { API_PATH } from '~/types/customFetch'
 
 const props = defineProps<{
   hasPremiumPerkBulkAdding: boolean,
@@ -29,7 +28,7 @@ const {
   status,
 } = useAsyncData(
   'validator_search',
-  () => fetch<InternalPostSearchResponse>(API_PATH.SEARCH, {
+  () => fetch<InternalPostSearchResponse>('SEARCH', {
     body: {
       input: input.value,
       networks: [ currentDashboardNetwork.value ],

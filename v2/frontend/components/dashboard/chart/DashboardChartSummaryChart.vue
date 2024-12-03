@@ -23,7 +23,7 @@ import {
 import type { GetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatTsToTime } from '~/utils/format'
-import { API_PATH } from '~/types/customFetch'
+
 import {
   type AggregationTimeframe,
   // SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
@@ -174,7 +174,7 @@ const loadData = async () => {
   const newSeries: SeriesObject[] = []
   try {
     const res = await fetch<GetValidatorDashboardSummaryChartResponse>(
-      API_PATH.DASHBOARD_SUMMARY_CHART,
+      'DASHBOARD_SUMMARY_CHART',
       {
         query: {
           after_ts: timeFrames.value.from,
