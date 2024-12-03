@@ -122,6 +122,5 @@ export default defineNuxtConfig({
   },
   postcss: { plugins: { autoprefixer: {} } },
   eslint: { config: { stylistic: true } },
-  i18n: { vueI18n: './i18n.config.ts' },
   /* eslint-enable perfectionist/sort-objects */
 })

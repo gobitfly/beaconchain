@@ -25,7 +25,7 @@
   "devDependencies": {
     "@nuxt/eslint": "^0.7.2",
     "@nuxtjs/color-mode": "^3.5.2",
-    "@nuxtjs/i18n": "^8.0.0",
+    "@nuxtjs/i18n": "^9.1.0",
     "@nuxtjs/style-resources": "^1.2.2",
     "@primevue/nuxt-module": "4.0.4",
     "@rollup/plugin-babel": "^6.0.4",
