@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { MessageSchema } from '~/i18n.config'
+import type { MessageSchema } from '~/i18n/i18n.config'
 import type { KeyPaths } from '~/types/helper'
 
 defineProps<{
