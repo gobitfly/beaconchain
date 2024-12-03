@@ -1,4 +1,4 @@
-import type { MessageSchema } from '~/i18n.config'
+import type { MessageSchema } from '~/i18n/i18n.config'
 
 export function useTranslation() {
   // enables autocompletion
