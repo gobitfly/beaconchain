@@ -52,7 +52,7 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
 
       data.value = result
     }
-    catch (e) {
+    catch {
       data.value = undefined
       isLoading.value = false
     }
@@ -68,7 +68,9 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
     networkId,
   ], ([ q ]) => {
     if (q) {
-      isLoggedIn.value && loadNotificationsDashboards(q)
+      if (isLoggedIn.value) {
+        loadNotificationsDashboards(q)
+      }
     }
   },
   { immediate: true },

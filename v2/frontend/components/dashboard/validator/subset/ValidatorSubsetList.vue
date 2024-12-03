@@ -3,7 +3,7 @@ import { warn } from 'vue'
 import { faCopy } from '@fortawesome/pro-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { Paging } from '~/types/api/common'
-import { type Cursor } from '~/types/datatable'
+import type { Cursor } from '~/types/datatable'
 import type { ValidatorSubsetCategory } from '~/types/validator'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 
@@ -62,10 +62,10 @@ function mapDutyLabel(dutyObjects?: number[]) {
     return
   }
   switch (props.category) {
-    case 'proposal_proposed':
-      return $t('common.block', dutyObjects.length) + ':'
-    case 'proposal_missed':
-      return $t('common.slot', dutyObjects.length) + ':'
+    case 'got_slashed':
+      return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
+    case 'has_slashed':
+      return $t('dashboard.validator.subset_dialog.slashed') + ':'
     case 'pending':
       return formatGoTimestamp(
         dutyObjects[0],
@@ -75,10 +75,10 @@ function mapDutyLabel(dutyObjects?: number[]) {
         $t('locales.date'),
         true,
       )
-    case 'has_slashed':
-      return $t('dashboard.validator.subset_dialog.slashed') + ':'
-    case 'got_slashed':
-      return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
+    case 'proposal_missed':
+      return $t('common.slot', dutyObjects.length) + ':'
+    case 'proposal_proposed':
+      return $t('common.block', dutyObjects.length) + ':'
   }
 }
 function mapDutyLinks(
@@ -93,16 +93,16 @@ function mapDutyLinks(
   let path = ''
   let formatValue = true
   switch (props.category) {
-    case 'proposal_proposed':
-      path = '/block/'
+    case 'got_slashed':
+    case 'has_slashed':
+      path = '/validator/'
+      formatValue = false
       break
     case 'proposal_missed':
       path = '/slot/'
       break
-    case 'has_slashed':
-    case 'got_slashed':
-      path = '/validator/'
-      formatValue = false
+    case 'proposal_proposed':
+      path = '/block/'
       break
   }
   if (path) {

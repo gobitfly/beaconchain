@@ -11,9 +11,9 @@ import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-type ExtendedVDBWithdrawalsTableRow = {
+type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {
   identifier: string,
-} & VDBWithdrawalsTableRow
+}
 
 const { dashboardKey } = useDashboardKey()
 

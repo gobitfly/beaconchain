@@ -6,7 +6,7 @@ import {
   faArrowsLeftRight,
   faArrowUp,
 } from '@fortawesome/pro-solid-svg-icons'
-import { type CompareResult } from '~/types/value'
+import type { CompareResult } from '~/types/value'
 
 interface Props {
   addPositiveSign?: boolean,

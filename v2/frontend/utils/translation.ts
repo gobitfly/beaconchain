@@ -23,44 +23,6 @@ export function formatMultiPartSpan(
   return `<span>${parts.join(' ')}</span>`
 }
 
-/** Translation with default. Needed if we want to default to '' as the
- * translation lib does not support to default to '' */
-export function tD(
-  t: ComposerTranslation,
-  path: string,
-  options?: any,
-  d: string = '',
-): string {
-  if (typeof options === 'number') {
-    options = { plural: options }
-  }
-  const translation = t(path, NOT_FOUND, {
-    ...options,
-    missingWarn: false,
-  })
-  return translation === NOT_FOUND ? d : translation
-}
-
-function tOfWithEOA(
-  t: ComposerTranslation,
-  path: string,
-  index: number,
-  options?: any,
-): string {
-  return tD(t, `${path}[${index}]`, options, END_OF_ARRAY)
-}
-
-/** gets a translation at a specific index, if it exists */
-export function tOf(
-  t: ComposerTranslation,
-  path: string,
-  index: number,
-  options?: any,
-): string {
-  const element = tOfWithEOA(t, path, index, options)
-  return element === END_OF_ARRAY ? '' : element
-}
-
 /** returns an array of translations (with only one element if the translation data is a simple string) */
 export function tAll(
   t: ComposerTranslation,
@@ -84,4 +46,42 @@ export function tAll(
     }
   }
   return list
+}
+
+/** Translation with default. Needed if we want to default to '' as the
+ * translation lib does not support to default to '' */
+export function tD(
+  t: ComposerTranslation,
+  path: string,
+  options?: any,
+  d: string = '',
+): string {
+  if (typeof options === 'number') {
+    options = { plural: options }
+  }
+  const translation = t(path, NOT_FOUND, {
+    ...options,
+    missingWarn: false,
+  })
+  return translation === NOT_FOUND ? d : translation
+}
+
+/** gets a translation at a specific index, if it exists */
+export function tOf(
+  t: ComposerTranslation,
+  path: string,
+  index: number,
+  options?: any,
+): string {
+  const element = tOfWithEOA(t, path, index, options)
+  return element === END_OF_ARRAY ? '' : element
+}
+
+function tOfWithEOA(
+  t: ComposerTranslation,
+  path: string,
+  index: number,
+  options?: any,
+): string {
+  return tD(t, `${path}[${index}]`, options, END_OF_ARRAY)
 }

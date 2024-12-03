@@ -1,7 +1,7 @@
 import { reduce } from 'lodash-es'
-import { type EthConversionRate } from '~/types/api/latest_state'
+import type { EthConversionRate } from '~/types/api/latest_state'
 import { COOKIE_KEY } from '~/types/cookie'
-import { type Currency } from '~/types/currencies'
+import type { Currency } from '~/types/currencies'
 
 export function useCurrency() {
   const { latestState } = useLatestStateStore()

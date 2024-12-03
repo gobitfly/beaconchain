@@ -2,10 +2,10 @@ export default {
   scrollBehavior(
     _to: any,
     _from: any,
-    savedPosition: {
+    savedPosition: null | {
       left: number,
       top: number,
-    } | null,
+    },
   ) {
     return {
       _to,

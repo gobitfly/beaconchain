@@ -266,12 +266,17 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
-      response?.data && removeValidators(list)
+      if (response?.data) {
+        removeValidators(list)
+      }
     },
   })
 }
-
-const totalValidators = computed(() => addUpValues(overview.value?.validators))
+const totalValidators = computed(() => {
+  // this is necessary after an `typescript update`
+  // for types created by api, we should use `types` instead of `interfaces`
+  return addUpValues(overview.value?.validators as unknown as Record<string, number>)
+})
 
 const maxValidatorsPerDashboard = computed(() =>
   isGuestDashboard.value || !user.value?.premium_perks?.validators_per_dashboard

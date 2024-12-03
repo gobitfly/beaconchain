@@ -13,9 +13,9 @@ const emit = defineEmits<{ (e: 'filter-changed', value: string): void }>()
 const isFilterVisible = ref(false)
 const filter = ref('')
 
-const button = ref<{ $el: HTMLButtonElement } | null>(null)
+const button = ref<null | { $el: HTMLButtonElement }>(null)
 
-const input = ref<{ $el: HTMLInputElement } | null>(null)
+const input = ref<null | { $el: HTMLInputElement }>(null)
 const focusAndSelect = (inputElement: { $el: HTMLInputElement }) => {
   if (inputElement?.$el) {
     // make sure the input is not disabled anymore

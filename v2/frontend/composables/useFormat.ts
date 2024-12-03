@@ -1,4 +1,4 @@
-import { type StringUnitLength } from 'luxon'
+import type { StringUnitLength } from 'luxon'
 import type { AgeFormat } from '~/types/settings'
 import {
   formatEpochToDate as formatEpochToDateImported,

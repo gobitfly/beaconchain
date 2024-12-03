@@ -3,7 +3,7 @@ import { faEye } from '@fortawesome/pro-solid-svg-icons'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { SlotVizEpoch } from '~/types/api/slot_viz'
-import { type SlotVizCategories } from '~/types/dashboard/slotViz'
+import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 import { formatNumber } from '~/utils/format'
 import {
   IconSlotAttestation,

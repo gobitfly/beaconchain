@@ -109,7 +109,7 @@ const sort = computed(() => {
 
 <template>
   <DataTable
-    v-model:expandedRows="expandedRows"
+    v-model:expanded-rows="expandedRows"
     class="bc-table"
     sort-mode="single"
     lazy

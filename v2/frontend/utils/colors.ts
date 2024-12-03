@@ -1,3 +1,43 @@
+export function getChartTextColor(theme: string) {
+  const styles = window.getComputedStyle(document.documentElement)
+
+  if (theme === 'light') {
+    return styles.getPropertyValue('--light-black')
+  }
+  else {
+    return styles.getPropertyValue('--light-grey')
+  }
+}
+
+export function getChartTooltipBackgroundColor(theme: string) {
+  const styles = window.getComputedStyle(document.documentElement)
+
+  if (theme === 'light') {
+    return styles.getPropertyValue('--light-grey-3')
+  }
+  else {
+    return styles.getPropertyValue('--dark-grey')
+  }
+}
+
+export function getRewardChartColors() {
+  return {
+    cl: '#7DB5EC',
+    el: '#ffaa31',
+  }
+}
+
+export function getRewardsChartLineColor(theme: string) {
+  const styles = window.getComputedStyle(document.documentElement)
+
+  if (theme === 'light') {
+    return styles.getPropertyValue('--light-grey-3')
+  }
+  else {
+    return styles.getPropertyValue('--dark-grey')
+  }
+}
+
 export function getSummaryChartGroupColors(theme: string) {
   const colorsLight = [
     '#ffaa31',
@@ -65,44 +105,4 @@ export function getSummaryChartGroupColors(theme: string) {
   ]
 
   return theme === 'light' ? colorsLight : colorsDark
-}
-
-export function getChartTextColor(theme: string) {
-  const styles = window.getComputedStyle(document.documentElement)
-
-  if (theme === 'light') {
-    return styles.getPropertyValue('--light-black')
-  }
-  else {
-    return styles.getPropertyValue('--light-grey')
-  }
-}
-
-export function getChartTooltipBackgroundColor(theme: string) {
-  const styles = window.getComputedStyle(document.documentElement)
-
-  if (theme === 'light') {
-    return styles.getPropertyValue('--light-grey-3')
-  }
-  else {
-    return styles.getPropertyValue('--dark-grey')
-  }
-}
-
-export function getRewardsChartLineColor(theme: string) {
-  const styles = window.getComputedStyle(document.documentElement)
-
-  if (theme === 'light') {
-    return styles.getPropertyValue('--light-grey-3')
-  }
-  else {
-    return styles.getPropertyValue('--dark-grey')
-  }
-}
-
-export function getRewardChartColors() {
-  return {
-    cl: '#7DB5EC',
-    el: '#ffaa31',
-  }
 }

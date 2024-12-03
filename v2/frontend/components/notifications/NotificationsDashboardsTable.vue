@@ -89,7 +89,7 @@ const textDashboardNotifications = (event_types: NotificationDashboardsTableRow[
 
 const dialog = useDialog()
 
-const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow) => {
+const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }) => {
   dialog.open(NotificationsDashboardDialogEntity, {
     data: {
       dashboard_id: row.dashboard_id,

@@ -88,11 +88,10 @@
   "cookies": {
     "accept_all": "Accept All",
     "only_necessary": "Only Necessary",
-    "text": [
-      "By using our site you agree to our use of",
-      "cookies",
-      "to deliver a better user experience."
-    ]
+    "text": {
+      "_link": "cookies",
+      "template": "By using our site you agree to our use of {_link} to deliver a better user experience."
+    }
   },
   "currency": {
     "label": {
@@ -917,7 +916,10 @@
         "manage_addon": "Manage Add-On",
         "select_addon": "Select Add-On"
       },
-      "contact_support": ["Contact", "support", "for a higher limit"],
+      "contact_support":{
+        "_link": "support",
+        "template": "Contact our {_link} for a higher limit"
+      },
       "currently_active": "Currently active: {amount}",
       "per_dashboard": "per Dashboard",
       "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",

@@ -17,10 +17,10 @@ const CryptoCurrencies = [
 ] as const
 type CryptoCurrency = (typeof CryptoCurrencies)[number]
 const Native = 'NAT' as const
-type Native = typeof Native
+type CryptoUnits = 'GWEI' | 'MAIN' | 'WEI'
 type Currency = CryptoCurrency | FiatCurrency | Native
 
-type CryptoUnits = 'GWEI' | 'MAIN' | 'WEI'
+type Native = typeof Native
 
 export {
   CryptoCurrencies,

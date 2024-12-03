@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { type BcButton } from '#components'
+import type { BcButton } from '#components'
 
 interface Props {
   description?: string,

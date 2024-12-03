@@ -4,34 +4,10 @@ import type {
   InternalPostSearchResponse, SearchResult,
 } from '~/types/api/search'
 import type { ChainIDs } from '~/types/network'
-import { type ApiErrorResponse } from '~/types/api/common'
+import type { ApiErrorResponse } from '~/types/api/common'
 
 export const MinimumTimeBetweenAPIcalls = 400 // ms
 export const LayoutThreshold = 500 // px  (tells when the bar must switch between its narrow and large layouts)
-
-export enum SearchbarShape { // do not change the litterals, they are used as class names
-  Big = 'big',
-  Medium = 'medium',
-  Small = 'small',
-}
-export enum SearchbarColors { // do not change the litterals, they are used as class names
-  DarkBlue = 'darkblue',
-  Default = 'default',
-  LightBlue = 'lightblue',
-}
-export enum SearchbarPurpose {
-  GlobalSearch,
-  AccountAddition,
-  ValidatorAddition,
-}
-
-// List of the possible ways to organise the information in each row of the result-suggestion list.
-export enum SuggestionrowCells {
-  NameDescriptionLowlevelCategory, // this mode displays everything
-  SubcategoryIdentificationDescription, // shows less information, and this information is a bit different from what the complete mode shows
-  // If you add here a display-mode, update the `SearchbarPurposeInfo` record to tell SuggestionRow.vue which display-mode
-  // it should use, and then implement this mode in the `<template>` of SuggestionRow.vue.
-}
 
 export enum Category {
   Tokens,
@@ -40,21 +16,16 @@ export enum Category {
   Addresses,
   Validators,
 }
-
-export enum SubCategory {
-  Tokens,
-  NFTs,
-  Epochs,
-  SlotsAndBlocks,
-  Transactions,
-  Batches,
-  Contracts,
-  Accounts,
-  EnsOverview,
-  Graffiti,
-  Validators,
+// This type determines different sources that we can retrieve data from, mainly to fill the fields of ResultSuggestionOutput after the API responded
+export enum Indirect {
+  None = 0,
+  APIstr_value,
+  APInum_value,
+  APIhash_value,
+  CategoryTitle,
+  SubCategoryTitle,
+  TypeTitle,
 }
-
 export enum ResultType {
   Accounts = 'accounts',
   BlockRoots = 'block_roots',
@@ -82,6 +53,45 @@ export enum ResultType {
   // ValidatorsByName = 'validators_by_name'  // for users having given a name to their validator in our DB
 }
 
+export enum SearchbarColors { // do not change the litterals, they are used as class names
+  DarkBlue = 'darkblue',
+  Default = 'default',
+  LightBlue = 'lightblue',
+}
+
+export enum SearchbarPurpose {
+  GlobalSearch,
+  AccountAddition,
+  ValidatorAddition,
+}
+
+export enum SearchbarShape { // do not change the litterals, they are used as class names
+  Big = 'big',
+  Medium = 'medium',
+  Small = 'small',
+}
+
+export enum SubCategory {
+  Tokens,
+  NFTs,
+  Epochs,
+  SlotsAndBlocks,
+  Transactions,
+  Batches,
+  Contracts,
+  Accounts,
+  EnsOverview,
+  Graffiti,
+  Validators,
+}
+
+// List of the possible ways to organise the information in each row of the result-suggestion list.
+export enum SuggestionrowCells {
+  NameDescriptionLowlevelCategory, // this mode displays everything
+  SubcategoryIdentificationDescription, // shows less information, and this information is a bit different from what the complete mode shows
+  // If you add here a display-mode, update the `SearchbarPurposeInfo` record to tell SuggestionRow.vue which display-mode
+  // it should use, and then implement this mode in the `<template>` of SuggestionRow.vue.
+}
 // The parameter of the callback function that you give to <BcSearchbarMain>'s props `pick-by-default` is an array of `Matching` elements
 // and the function returns one `Matching` element (or undefined).
 export type Matching = {
@@ -89,6 +99,7 @@ export type Matching = {
   network: ChainIDs, // the network that this result belongs to
   type: ResultType, // the type of the result
 }
+
 /* When the user presses Enter, the callback function receives a simplified representation of the suggested results and returns one
    element from this list (or undefined). This list is passed in parameter `possibilities` as a simplified view of the actual list of
    results. It is sorted by ChainInfo[chainId].priority and TypeInfo[resultType].priority. After you return a matching, the bar
@@ -98,6 +109,15 @@ export type Matching = {
 export interface PickingCallBackFunction {
   (possibilities: Matching[]): Matching | undefined,
 }
+// in SuggestionRow.vue, you will see that the drop-down where the list of result suggestions appear is organised into 3 rows that display a "name", a "description" and some "low level data", about each result
+export type ResultSuggestionOutput = {
+  description: string,
+  lowLevelData: string,
+  name: string,
+}
+export interface SearchAheadAPIresponse
+  extends ApiErrorResponse,
+  InternalPostSearchResponse {}
 
 export interface SearchRequest {
   count?: boolean,
@@ -105,28 +125,8 @@ export interface SearchRequest {
   networks: ChainIDs[],
   types: ResultType[],
 }
+
 export type SingleAPIresult = SearchResult
-export interface SearchAheadAPIresponse
-  extends ApiErrorResponse,
-  InternalPostSearchResponse {}
-
-// in SuggestionRow.vue, you will see that the drop-down where the list of result suggestions appear is organised into 3 rows that display a "name", a "description" and some "low level data", about each result
-export type ResultSuggestionOutput = {
-  description: string,
-  lowLevelData: string,
-  name: string,
-}
-
-// This type determines different sources that we can retrieve data from, mainly to fill the fields of ResultSuggestionOutput after the API responded
-export enum Indirect {
-  None = 0,
-  APIstr_value,
-  APInum_value,
-  APIhash_value,
-  CategoryTitle,
-  SubCategoryTitle,
-  TypeTitle,
-}
 // The following 3 definitions will be used as parameters of function `t()` of I18n.
 export type TranslatableLitteral = [string, number] // you will have to destructure the parameters with an ellipsis, like so: t(...myTranslatableLitteral)
 const SINGULAR = 1
@@ -139,6 +139,16 @@ export interface HowToFillresultSuggestionOutput {
   description: FillFrom,
   lowLevelData: FillFrom,
   name: FillFrom,
+}
+
+export interface OrganizedResults {
+  networks: {
+    chainId: ChainIDs,
+    types: {
+      suggestions: ResultSuggestionInternal[],
+      type: ResultType,
+    }[],
+  }[],
 }
 
 export interface ResultSuggestion {
@@ -155,16 +165,6 @@ export interface ResultSuggestionInternal extends ResultSuggestion {
   lacksPremiumSubscription: boolean, // `true` if the result is not accessible to the user due to account restrictions
   nameWasUnknown: boolean, // Tells whether the API had the possibility to fill field `name` in `output` but could not.
   stringifyiedRawResult: string, // Original data given by the API.
-}
-
-export interface OrganizedResults {
-  networks: {
-    chainId: ChainIDs,
-    types: {
-      suggestions: ResultSuggestionInternal[],
-      type: ResultType,
-    }[],
-  }[],
 }
 
 interface SearchbarPurposeInfoField {
@@ -783,9 +783,7 @@ export const TypeInfo: Record<ResultType, TypeInfoFields> = {
   } */
 }
 
-export interface PremiumRowCallBackFunction {
-  (result: ResultSuggestion): boolean,
-}
+export type CategoryFilter = Map<Category, boolean> // for internal use
 
 export interface ExposedSearchbarMethods {
   closeDropdown: () => void,
@@ -793,29 +791,15 @@ export interface ExposedSearchbarMethods {
   // for internal use
   hideResult: (whichOne: ResultSuggestion) => void,
 }
+export type NetworkFilter = Map<ChainIDs, boolean> // for internal use
+
+export interface PremiumRowCallBackFunction {
+  (result: ResultSuggestion): boolean,
+}
 export interface SearchBar // your ref to the search-bar component must be of this type
   extends ComponentPublicInstance,
   ExposedSearchbarMethods {}
-
-export type CategoryFilter = Map<Category, boolean> // for internal use
-export type NetworkFilter = Map<ChainIDs, boolean> // for internal use
 export type SearchbarDropdownLayout = 'large-dropdown' | 'narrow-dropdown' // for internal use (do not change the litterals, they are used as class names)
-
-export function wasOutputDataGivenByTheAPI(
-  type: ResultType,
-  resultSuggestionOutputField: keyof HowToFillresultSuggestionOutput,
-): boolean {
-  switch (
-    TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]
-  ) {
-    case Indirect.APIstr_value:
-    case Indirect.APInum_value:
-    case Indirect.APIhash_value:
-      return true
-    default:
-      return false
-  }
-}
 
 /**
  * @returns Data read from the API response. `undefined` means that something is wrong.
@@ -853,6 +837,22 @@ export function realizeData(
   // return apiResponseElement[sourceField]
 }
 
+export function wasOutputDataGivenByTheAPI(
+  type: ResultType,
+  resultSuggestionOutputField: keyof HowToFillresultSuggestionOutput,
+): boolean {
+  switch (
+    TypeInfo[type].howToFillresultSuggestionOutput[resultSuggestionOutputField]
+  ) {
+    case Indirect.APIhash_value:
+    case Indirect.APInum_value:
+    case Indirect.APIstr_value:
+      return true
+    default:
+      return false
+  }
+}
+
 const listOfResultTypesAsDeclared: ResultType[] = []
 const listOfResultTypesPrioritized: ResultType[] = []
 // Returns all litterals in `ResultType` used to communicate with the API.
@@ -877,6 +877,15 @@ const searchableTypesPerCategory: Record<Category, ResultType[]> = {} as Record<
   Category,
   ResultType[]
 >
+/**
+ * @returns the I18n path of a TranslatableLitteral that you can give to t(). Useful to display the litteral in singular or in plural with respect to your needs.
+ */
+export function getI18nPathOfTranslatableLitteral(
+  litteral: TranslatableLitteral,
+): string {
+  return litteral[0] as string
+}
+
 /**
  * @returns the list of types belonging to the given category.
  * This function is fast on average: it computes the lists only at the first call. Subsequent calls return the already computed lists.
@@ -917,13 +926,4 @@ export function pickHighestPriorityAmongBestMatchings(
     }
   }
   return bestMatchWithHigherPriority
-}
-
-/**
- * @returns the I18n path of a TranslatableLitteral that you can give to t(). Useful to display the litteral in singular or in plural with respect to your needs.
- */
-export function getI18nPathOfTranslatableLitteral(
-  litteral: TranslatableLitteral,
-): string {
-  return litteral[0] as string
 }

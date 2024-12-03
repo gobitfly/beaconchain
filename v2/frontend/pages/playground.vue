@@ -8,9 +8,9 @@ import {
   PlaygroundSubsetList,
 } from '#components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
-import {
-  type GetValidatorDashboardSlotVizResponse,
-  type SlotVizEpoch,
+import type {
+  GetValidatorDashboardSlotVizResponse,
+  SlotVizEpoch,
 } from '~/types/api/slot_viz'
 import { formatNumber } from '~/utils/format'
 import type { HashTabs } from '~/types/hashTabs'

@@ -1,5 +1,3 @@
-export type AdInsertMode = 'after' | 'before' | 'insert' | 'replace'
-
 export type AdConfiguration = {
   banner_id?: number,
   enabled: boolean,
@@ -10,3 +8,5 @@ export type AdConfiguration = {
   key: string,
   refresh_interval: number,
 }
+
+export type AdInsertMode = 'after' | 'before' | 'insert' | 'replace'

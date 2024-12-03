@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { VDBSlotVizSlot } from '~/types/api/slot_viz'
-import {
-  type SlotVizCategories,
-  type SlotVizIcons,
+import type {
+  SlotVizCategories,
+  SlotVizIcons,
 } from '~/types/dashboard/slotViz'
 
 interface Props {

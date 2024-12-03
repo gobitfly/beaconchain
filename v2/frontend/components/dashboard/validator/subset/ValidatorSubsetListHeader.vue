@@ -30,6 +30,14 @@ const icon = computed(() => {
     case 'deposited':
       icon = faMoneyBill
       break
+    case 'got_slashed':
+      className = 'negative'
+      slotVizCategory = 'slashing'
+      break
+    case 'has_slashed':
+      className = 'positive'
+      slotVizCategory = 'slashing'
+      break
     case 'offline':
       className = 'negative'
       icon = faPowerOff
@@ -41,11 +49,15 @@ const icon = computed(() => {
     case 'pending':
       icon = faClock
       break
-    case 'sync_current':
-      className = 'positive'
-      slotVizCategory = 'sync'
+    case 'proposal_missed':
+      className = 'negative'
+      slotVizCategory = 'proposal'
       break
-    case 'sync_upcoming':
+    case 'proposal_proposed':
+      className = 'positive'
+      slotVizCategory = 'proposal'
+      break
+    case 'sync_current':
       className = 'positive'
       slotVizCategory = 'sync'
       break
@@ -53,21 +65,9 @@ const icon = computed(() => {
       className = 'text-disabled'
       slotVizCategory = 'sync'
       break
-    case 'has_slashed':
+    case 'sync_upcoming':
       className = 'positive'
-      slotVizCategory = 'slashing'
-      break
-    case 'got_slashed':
-      className = 'negative'
-      slotVizCategory = 'slashing'
-      break
-    case 'proposal_proposed':
-      className = 'positive'
-      slotVizCategory = 'proposal'
-      break
-    case 'proposal_missed':
-      className = 'negative'
-      slotVizCategory = 'proposal'
+      slotVizCategory = 'sync'
       break
     default:
       icon = faDesktop

@@ -196,7 +196,7 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
               })
               closeCallback()
             }
-            catch (error) {
+            catch {
               toast.showError({
                 detail: $t('notifications.subscriptions.error_message'),
                 group: $t('notifications.subscriptions.error_group'),

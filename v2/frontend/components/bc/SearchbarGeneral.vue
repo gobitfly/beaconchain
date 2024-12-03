@@ -20,53 +20,53 @@ async function redirectToRelevantPage(result: ResultSuggestion) {
   const networkPath = '/networks/' + result.chainId
 
   switch (result.type) {
-    case ResultType.Tokens:
-    case ResultType.NFTs:
-      path = '/token/' + result.queryParam
-      break
-    case ResultType.Epochs:
-      path = networkPath + '/epoch/' + result.queryParam
-      break
-    case ResultType.Slots:
-      path = networkPath + '/slot/' + result.queryParam
-      break
-    case ResultType.Blocks:
-      path = networkPath + '/block/' + result.queryParam
+    case ResultType.Accounts:
+    case ResultType.Contracts:
+    case ResultType.EnsAddresses:
+      path = '/address/' + result.queryParam
       break
     case ResultType.BlockRoots:
     case ResultType.StateRoots:
     case ResultType.Transactions:
       path = networkPath + '/tx/' + result.queryParam
       break
-    case ResultType.TransactionBatches:
-      path = networkPath + '/transactionbatch/' + result.queryParam
-      break
-    case ResultType.StateBatches:
-      path = networkPath + '/batch/' + result.queryParam
-      break
-    case ResultType.Contracts:
-    case ResultType.Accounts:
-    case ResultType.EnsAddresses:
-      path = '/address/' + result.queryParam
+    case ResultType.Blocks:
+      path = networkPath + '/block/' + result.queryParam
       break
     case ResultType.EnsOverview:
       path = '/ens/' + result.queryParam
+      break
+    case ResultType.Epochs:
+      path = networkPath + '/epoch/' + result.queryParam
       break
     case ResultType.Graffiti:
       path = networkPath + '/slots'
       q = result.queryParam
       break
-    case ResultType.ValidatorsByIndex:
-    case ResultType.ValidatorsByPubkey:
-      path = networkPath + '/validator/' + result.queryParam
+    case ResultType.NFTs:
+    case ResultType.Tokens:
+      path = '/token/' + result.queryParam
+      break
+    case ResultType.Slots:
+      path = networkPath + '/slot/' + result.queryParam
+      break
+    case ResultType.StateBatches:
+      path = networkPath + '/batch/' + result.queryParam
+      break
+    case ResultType.TransactionBatches:
+      path = networkPath + '/transactionbatch/' + result.queryParam
       break
     case ResultType.ValidatorsByDepositAddress:
     case ResultType.ValidatorsByDepositEnsName:
       path = networkPath + '/validators/deposits'
       q = result.queryParam
       break
-    case ResultType.ValidatorsByWithdrawalCredential:
+    case ResultType.ValidatorsByIndex:
+    case ResultType.ValidatorsByPubkey:
+      path = networkPath + '/validator/' + result.queryParam
+      break
     case ResultType.ValidatorsByWithdrawalAddress:
+    case ResultType.ValidatorsByWithdrawalCredential:
     case ResultType.ValidatorsByWithdrawalEnsName:
       path = networkPath + '/validators/withdrawals'
       q = result.queryParam

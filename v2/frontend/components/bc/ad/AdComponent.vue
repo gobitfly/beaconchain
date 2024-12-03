@@ -39,15 +39,15 @@ onMounted(() => {
   }
 
   switch (props.ad.insert_mode) {
-    case 'replace':
-      target.after(adComponent.value!)
-      target.remove()
-      break
     case 'after':
       target.after(adComponent.value!)
       break
     case 'before':
       target.before(adComponent.value!)
+      break
+    case 'replace':
+      target.after(adComponent.value!)
+      target.remove()
       break
   }
   if (props.ad.banner_id) {

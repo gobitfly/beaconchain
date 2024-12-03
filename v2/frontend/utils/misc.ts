@@ -5,6 +5,14 @@ export const addUpValues = (obj?: Record<string, number>): number => {
   return Object.values(obj).reduce((sum, val) => sum + val, 0)
 }
 
+export function isInt(value?: string): boolean {
+  if (!value) {
+    return false
+  }
+  const parsed = parseInt(value)
+  return !isNaN(parsed) && `${parsed}` === value
+}
+
 /**
  * @returns Levenshtein distance between the two strings. Lower value means better similarity and vice-versa.
  */
@@ -28,12 +36,4 @@ export function levenshteinDistance(str1: string, str2: string): number {
     }
   }
   return dist[str1.length][str2.length]
-}
-
-export function isInt(value?: string): boolean {
-  if (!value) {
-    return false
-  }
-  const parsed = parseInt(value)
-  return !isNaN(parsed) && `${parsed}` === value
 }

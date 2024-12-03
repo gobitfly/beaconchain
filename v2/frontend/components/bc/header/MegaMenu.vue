@@ -15,10 +15,10 @@ const {
   doLogout, isLoggedIn,
 } = useUserStore()
 const route = useRoute()
-const megaMenu = ref<{
+const megaMenu = ref<null | {
   mobileActive: boolean,
   toggle: (evt: Event) => void,
-} | null>(null)
+}>(null)
 
 const breakpoint = `${smallHeaderThreshold}px`
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
@@ -872,7 +872,7 @@ defineExpose({
   <ClientOnly>
     <MegaMenu
       ref="megaMenu"
-      :model="items"
+      :model="[items]"
       :breakpoint
     >
       <template #item="{ item, hasSubmenu }">

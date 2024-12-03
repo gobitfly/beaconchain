@@ -6,7 +6,9 @@ export function useDebounceValue<T>(initialValue: T, bounceMs: number = 100) {
   const timeout = ref<NodeJS.Timeout | null>(null)
 
   const removeTimeout = () => {
-    timeout.value && clearTimeout(timeout.value)
+    if (timeout.value) {
+      clearTimeout(timeout.value)
+    }
     timeout.value = null
   }
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import {
-  type SummaryDetailsEfficiencyCombinedProp,
-  type SummaryRow,
-  type SummaryTableVisibility,
-  type SummaryTimeFrame,
+import type {
+  SummaryDetailsEfficiencyCombinedProp,
+  SummaryRow,
+  SummaryTableVisibility,
+  SummaryTimeFrame,
 } from '~/types/dashboard/summary'
 
 interface Props {

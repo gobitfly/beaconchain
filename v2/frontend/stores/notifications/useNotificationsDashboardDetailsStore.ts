@@ -14,10 +14,10 @@ export const useNotificationsDashboardDetailsStore = defineStore('notifications-
     group_id,
     search,
   }:
-    {
+    Pick<NotificationDashboardsTableRow, 'dashboard_id' | 'epoch' | 'group_id'>
+    & {
       search?: string,
-    }
-    & Pick<NotificationDashboardsTableRow, 'dashboard_id' | 'epoch' | 'group_id'>,
+    },
   ) => {
     return fetch<InternalGetUserNotificationsValidatorDashboardResponse>(
       API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR,
