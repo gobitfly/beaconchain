@@ -39,7 +39,6 @@ import {
 import {
   ChainIDs, ChainInfo,
 } from '~/types/network'
-import { API_PATH } from '~/types/customFetch'
 
 const dropdownLayout = ref<SearchbarDropdownLayout>('narrow-dropdown')
 
@@ -324,7 +323,7 @@ async function callAPIthenOrganizeResultsThenCallBack(nonceWhenCalled: number) {
     if (areResultsCountable(types, true)) {
       body.count = true
     }
-    received = await fetch<SearchAheadAPIresponse>(API_PATH.SEARCH, {
+    received = await fetch<SearchAheadAPIresponse>('SEARCH', {
       body,
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',

@@ -3,7 +3,6 @@ import type { GetValidatorDashboardRewardsResponse } from '~/types/api/validator
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
 import { DAHSHBOARDS_NEXT_EPOCH_ID } from '~/types/dashboard'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardRewardsStore = defineStore(
   'validator_dashboard_rewards_store',
@@ -45,7 +44,7 @@ export function useValidatorDashboardRewardsStore() {
     isLoading.value = true
     storedQuery.value = query
     const res = await fetch<GetValidatorDashboardRewardsResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_REWARDS,
+      'DASHBOARD_VALIDATOR_REWARDS',
       undefined,
       { dashboardKey },
       query,

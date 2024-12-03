@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
-import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -39,7 +38,7 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
 
   buttonsDisabled.value = true
   try {
-    await fetch(API_PATH.USER_CHANGE_PASSWORD, { body: { password: values.newPassword } })
+    await fetch('USER_CHANGE_PASSWORD', { body: { password: values.newPassword } })
     toast.showSuccess({
       detail: $t('user_settings.password.success.toast_message'),
       group: $t('user_settings.password.success.toast_group'),

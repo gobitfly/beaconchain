@@ -5,7 +5,6 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardWithdrawalsStore = defineStore(
   'validator_dashboard_withdrawals',
@@ -50,7 +49,7 @@ export function useValidatorDashboardWithdrawalsStore() {
     storedQuery.value = query
     isLoadingWithdrawals.value = true
     const res = await fetch<GetValidatorDashboardWithdrawalsResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_WITHDRAWALS,
+      'DASHBOARD_VALIDATOR_WITHDRAWALS',
       undefined,
       { dashboardKey },
       query,
@@ -75,7 +74,7 @@ export function useValidatorDashboardWithdrawalsStore() {
     isLoadingTotal.value = true
     const res
       = await fetch<GetValidatorDashboardTotalWithdrawalsResponse>(
-        API_PATH.DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS,
+        'DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS',
         undefined,
         { dashboardKey },
       )

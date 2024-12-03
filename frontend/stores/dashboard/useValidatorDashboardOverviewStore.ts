@@ -5,7 +5,6 @@ import type {
   VDBOverviewData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorOverviewStore = defineStore('validator_overview_store', () => {
   const data = ref<null | undefined | VDBOverviewData>()
@@ -27,7 +26,7 @@ export function useValidatorDashboardOverviewStore() {
     }
     try {
       const res = await fetch<GetValidatorDashboardResponse>(
-        API_PATH.DASHBOARD_OVERVIEW,
+        'DASHBOARD_OVERVIEW',
         undefined,
         { dashboardKey: key },
       )

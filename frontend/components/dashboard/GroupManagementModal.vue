@@ -14,7 +14,6 @@ import type {
   Cursor, SortOrder,
 } from '~/types/datatable'
 import { getSortOrder } from '~/utils/table'
-import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -108,7 +107,7 @@ const addGroup = async () => {
   }
 
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_GROUPS,
+    'DASHBOARD_VALIDATOR_GROUPS',
     {
       body: { name: newGroupName.value },
       method: 'POST',
@@ -121,7 +120,7 @@ const addGroup = async () => {
 
 const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY,
+    'DASHBOARD_VALIDATOR_GROUP_MODIFY',
     {
       body: { name: newName },
       method: 'PUT',
@@ -136,7 +135,7 @@ const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_GROUP_MODIFY,
+    'DASHBOARD_VALIDATOR_GROUP_MODIFY',
     { method: 'DELETE' },
     {
       dashboardKey: dashboardKey.value,

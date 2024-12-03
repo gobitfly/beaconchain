@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { API_PATH } from '~/types/customFetch'
+
 import type { ApiDataResponse } from '~/types/api/common'
 import * as networkTs from '~/types/network'
 
@@ -31,7 +31,7 @@ export function useNetworkStore() {
     try {
       const { fetch } = useCustomFetch()
       const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(
-        API_PATH.AVAILABLE_NETWORKS,
+        'AVAILABLE_NETWORKS',
       )
       if (!response.data || !response.data.length) {
         return false

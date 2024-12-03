@@ -2,7 +2,6 @@
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
-import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   dashboard: ValidatorDashboard, // Currently only validator dashboards are supported
@@ -47,7 +46,7 @@ watch(
 const add = async () => {
   isUpdating.value = true
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID,
+    'DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID',
     {
       body: {
         name: dashboardName.value,
@@ -65,7 +64,7 @@ const edit = async () => {
   isUpdating.value = true
   const publicId = `${props.value?.dashboard.public_ids?.[0]?.public_id}`
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID,
+    'DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID',
     {
       body: {
         name: dashboardName.value,

@@ -5,7 +5,6 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardClDepositsStore = defineStore(
   'validator_dashboard_cl_deposits_store',
@@ -51,7 +50,7 @@ export function useValidatorDashboardClDepositsStore() {
     isLoadingDeposits.value = true
     const res
       = await fetch<GetValidatorDashboardConsensusLayerDepositsResponse>(
-        API_PATH.DASHBOARD_CL_DEPOSITS,
+        'DASHBOARD_CL_DEPOSITS',
         undefined,
         { dashboardKey },
         query,
@@ -75,7 +74,7 @@ export function useValidatorDashboardClDepositsStore() {
     isLoadingTotal.value = true
     const res
       = await fetch<GetValidatorDashboardTotalConsensusDepositsResponse>(
-        API_PATH.DASHBOARD_CL_DEPOSITS_TOTAL,
+        'DASHBOARD_CL_DEPOSITS_TOTAL',
         undefined,
         { dashboardKey },
       )
