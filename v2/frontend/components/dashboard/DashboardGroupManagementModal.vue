@@ -433,6 +433,7 @@ const isMobile = computed(() => {
   margin-bottom: var(--padding);
 
   .search-input {
+    padding: var(--padding-small);
     flex-shrink: 1;
     flex-grow: 1;
     width: 50px;
