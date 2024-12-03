@@ -24,14 +24,13 @@ func TestRemote(t *testing.T) {
 
 	client := NewRemoteClient(server.URL)
 
-	items := map[string]Item{
-		"foo": {},
-		"bar": {},
+	itemsByKey := map[string][]Item{
+		"foo": {{}},
+		"bar": {{}},
 	}
-	for key, item := range items {
-		if err := db.Add(key, item, false); err != nil {
-			t.Fatal(err)
-		}
+
+	if err := client.BulkAdd(itemsByKey); err != nil {
+		t.Fatalf("bulkAdd: %s", err)
 	}
 
 	t.Run("Read", func(t *testing.T) {
@@ -39,7 +38,7 @@ func TestRemote(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := len(res), len(items); got != want {
+		if got, want := len(res), len(itemsByKey); got != want {
 			t.Fatalf("got %v, want %v", got, want)
 		}
 	})

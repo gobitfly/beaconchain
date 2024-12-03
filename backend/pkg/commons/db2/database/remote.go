@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	routeBulkAdd         = "/bulkAdd"
 	routeGetRowsRange    = "/rowRange"
 	routeGetRow          = "/row"
 	routeRead            = "/read"
@@ -25,12 +26,31 @@ func NewRemote(db Database) RemoteServer {
 
 func (api RemoteServer) Routes() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc(routeBulkAdd, api.BulkAdd)
 	mux.HandleFunc(routeGetRowsRange, api.GetRowsRange)
 	mux.HandleFunc(routeGetRow, api.GetRow)
 	mux.HandleFunc(routeRead, api.Read)
 	mux.HandleFunc(routeGetRowsWithKeys, api.GetRowsWithKeys)
 
 	return mux
+}
+
+type ParamsBulkAdd struct {
+	Items map[string][]Item `json:"items"`
+}
+
+func (api RemoteServer) BulkAdd(w http.ResponseWriter, r *http.Request) {
+	var args ParamsBulkAdd
+	if err := json.NewDecoder(r.Body).Decode(&args); err != nil {
+		respondWithErr(w, http.StatusBadRequest, err)
+		return
+	}
+	err := api.db.BulkAdd(args.Items)
+	if err != nil {
+		respondWithErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	respond(w, nil)
 }
 
 type ParamsGetRowsRange struct {
@@ -137,8 +157,27 @@ func (r RemoteClient) Add(key string, item Item, allowDuplicate bool) error {
 }
 
 func (r RemoteClient) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
-	//TODO implement me
-	panic("implement me")
+	b, err := json.Marshal(ParamsBulkAdd{Items: itemsByKey})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", r.url, routeBulkAdd), bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		if ErrNotFound.Error() == string(b) {
+			return ErrNotFound
+		}
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, b)
+	}
+	return nil
 }
 
 func (r RemoteClient) Read(prefix string) ([]Row, error) {
