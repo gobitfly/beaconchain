@@ -1,3 +1,4 @@
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file 
 version: 2
 updates:
 - package-ecosystem: "npm"
@@ -9,6 +10,6 @@ updates:
   target-branch: "staging"
   assignees:
     - "marcel-bitfly"
-    - "benji-bitfly"
   commit-message:
-    prefix: "chore(update)"
+    prefix: "chore(deps)"
+    prefix-development: "chore(dev-deps)"
