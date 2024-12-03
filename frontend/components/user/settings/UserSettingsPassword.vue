@@ -47,7 +47,7 @@ const onSubmit = handleSubmit(async (values, { resetForm }) => {
     })
     resetForm()
   }
-  catch (error) {
+  catch {
     toast.showError({
       detail: $t('user_settings.password.error.toast_message'),
       group: $t('user_settings.password.error.toast_group'),

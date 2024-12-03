@@ -4,6 +4,11 @@ import { isMainNet } from '~/types/network'
 
 let mockSlot = 10000
 
+interface ApiChainInfo {
+  chain_id: number,
+  name: string,
+}
+
 export function mockLatestState(..._: any): InternalGetLatestStateResponse {
   const randomize = (num: number) => {
     return num + Math.random() * num
@@ -28,11 +33,6 @@ export function mockLatestState(..._: any): InternalGetLatestStateResponse {
       finalized_epoch: Math.floor(mockSlot / 32),
     },
   }
-}
-
-interface ApiChainInfo {
-  chain_id: number,
-  name: string,
 }
 
 export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<

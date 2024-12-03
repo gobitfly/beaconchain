@@ -125,7 +125,7 @@ const data = computed(() => {
     const hasNoReward = reward.isTotal
       ? reward.value.income === '0'
       : !reward?.value?.status_count?.failed
-      && !reward?.value?.status_count?.success
+        && !reward?.value?.status_count?.success
     const className = hasNoReward ? 'text-disabled' : ''
     return {
       ...reward,

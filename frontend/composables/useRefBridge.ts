@@ -1,5 +1,5 @@
 /* eslint-disable vue/max-len -- TODO:   plz fix this */
-import { type ModelRef } from 'vue'
+import type { ModelRef } from 'vue'
 
 export interface BridgeRef<T> extends Ref<T> {
   pauseBridgeFromNowOn: () => void,
@@ -7,27 +7,6 @@ export interface BridgeRef<T> extends Ref<T> {
 }
 interface ConverterCallback<Tx, Ty> {
   (x: Tx): Ty,
-}
-
-/** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back
- *  and forth transparently from A to B and B to A, the reactivity is preserved on both ends, the types are converted
- *  when the values pass through, infinite loops (refs triggering each other) are prevented.
- * @param origRef Ref that you want to bridge with the new ref that this function will create for you.
- * @param origToCreated (optional) Callback/Arrow function that converts the value in the original ref into the type of the value in the created ref. For strings and numbers, the function can be omitted (then the bridge converts the strings to numbers and vice-versa).
- * @param createdToOrig (optional) Callback/Arrow function that converts the value in the created ref into the type of the value in the original ref. For strings and numbers, the function can be omitted (then the bridge converts the strings to numbers and vice-versa).
- * @returns a `BridgeRef` that is essentially a regular Vue `Ref` (you use it the same way, you can assign it to regular refs and v-models, no difference), containing two methods that you can call to control the bridge if needed (`.pauseBridgeFromNowOn()` and `.wakeupBridgeAtNextTick()`).
- * */
-export function usePrimitiveRefBridge<Torig, Tcreated>(
-  origRef: ModelRef<Torig> | Ref<Torig>,
-  origToCreated?: ConverterCallback<Torig, Tcreated>,
-  createdToOrig?: ConverterCallback<Tcreated, Torig>,
-): BridgeRef<Tcreated> {
-  return createBridge<Torig, Tcreated, Torig, Tcreated>(
-    origRef,
-    origToCreated ?? stringNumberConversion<Tcreated>,
-    createdToOrig ?? stringNumberConversion<Torig>,
-    false,
-  )
 }
 
 /** This composable creates a two-way pipe between reactive arrays of 2 different types. The values circulate back
@@ -68,6 +47,27 @@ export function useObjectRefBridge<Torig, Tcreated>(
     origRef,
     origToCreated,
     createdToOrig,
+    false,
+  )
+}
+
+/** This composable creates a two-way pipe between reactive variables of 2 different types. The values circulate back
+ *  and forth transparently from A to B and B to A, the reactivity is preserved on both ends, the types are converted
+ *  when the values pass through, infinite loops (refs triggering each other) are prevented.
+ * @param origRef Ref that you want to bridge with the new ref that this function will create for you.
+ * @param origToCreated (optional) Callback/Arrow function that converts the value in the original ref into the type of the value in the created ref. For strings and numbers, the function can be omitted (then the bridge converts the strings to numbers and vice-versa).
+ * @param createdToOrig (optional) Callback/Arrow function that converts the value in the created ref into the type of the value in the original ref. For strings and numbers, the function can be omitted (then the bridge converts the strings to numbers and vice-versa).
+ * @returns a `BridgeRef` that is essentially a regular Vue `Ref` (you use it the same way, you can assign it to regular refs and v-models, no difference), containing two methods that you can call to control the bridge if needed (`.pauseBridgeFromNowOn()` and `.wakeupBridgeAtNextTick()`).
+ * */
+export function usePrimitiveRefBridge<Torig, Tcreated>(
+  origRef: ModelRef<Torig> | Ref<Torig>,
+  origToCreated?: ConverterCallback<Torig, Tcreated>,
+  createdToOrig?: ConverterCallback<Tcreated, Torig>,
+): BridgeRef<Tcreated> {
+  return createBridge<Torig, Tcreated, Torig, Tcreated>(
+    origRef,
+    origToCreated ?? stringNumberConversion<Tcreated>,
+    createdToOrig ?? stringNumberConversion<Torig>,
     false,
   )
 }

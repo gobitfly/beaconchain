@@ -8,14 +8,6 @@ const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-type CompareValue = {
-  class?: string,
-  tooltip?: string,
-  value?: boolean | string,
-}
-
-type RowType = 'group' | 'header' | 'label' | 'perc'
-
 type CompareRow = {
   className?: string,
   label?: string,
@@ -23,6 +15,14 @@ type CompareRow = {
   type: RowType,
   values?: CompareValue[],
 }
+
+type CompareValue = {
+  class?: string,
+  tooltip?: string,
+  value?: boolean | string,
+}
+
+type RowType = 'group' | 'header' | 'label' | 'perc'
 
 const showContent = ref(false)
 

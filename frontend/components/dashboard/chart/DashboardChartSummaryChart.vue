@@ -5,7 +5,7 @@ import {
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
-import { type ECharts } from 'echarts'
+import type { ECharts } from 'echarts'
 import { get } from 'lodash-es'
 import {
   DataZoomComponent,
@@ -20,7 +20,7 @@ import {
   getChartTooltipBackgroundColor,
   getSummaryChartGroupColors,
 } from '~/utils/colors'
-import { type GetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
+import type { GetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatTsToTime } from '~/utils/format'
 import { API_PATH } from '~/types/customFetch'
@@ -109,11 +109,11 @@ const categories = computed<number[]>(() => {
   let latestTs = slotToTs(latestSlot.value - 7) || 0
   let step = 0
   switch (aggregation.value) {
-    case 'epoch':
-      step = secondsPerEpoch.value
-      break
     case 'daily':
       step = ONE_DAY
+      break
+    case 'epoch':
+      step = secondsPerEpoch.value
       break
     case 'hourly':
       step = ONE_HOUR
@@ -215,7 +215,7 @@ const loadData = async () => {
       })
     }
   }
-  catch (e) {
+  catch {
     if (currentCounter !== reloadCounter) {
       return // make sure we only use the data from the latest call
     }
@@ -470,11 +470,11 @@ const validateDataZoom = (instant?: boolean, categoryChanged?: boolean) => {
     dataPointsChanged = true
     let targetPoints = 6
     switch (aggregation.value) {
-      case 'epoch':
-        targetPoints = 12
-        break
       case 'daily':
         targetPoints = 7
+        break
+      case 'epoch':
+        targetPoints = 12
         break
       case 'weekly':
         targetPoints = 8

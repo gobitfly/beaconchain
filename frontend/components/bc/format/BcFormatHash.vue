@@ -93,11 +93,11 @@ const data = computed(() => {
       case 'block_hash':
         link = `/block/${props.hash}`
         break
-      case 'root':
-        link = `/slot/${props.hash}`
-        break
       case 'public_key':
         link = `/validator/${props.hash}`
+        break
+      case 'root':
+        link = `/slot/${props.hash}`
         break
       case 'tx':
         link = `/tx/${props.hash}`

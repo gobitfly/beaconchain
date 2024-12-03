@@ -87,10 +87,10 @@ export function useValue() {
         if (
           options?.fixedUnit === 'WEI'
           || ((!options?.minUnit || options?.minUnit === 'WEI')
-          && lessThanGwei(
-            value.abs(),
-            options?.minUnitDecimalCount ?? maxDecimalCount,
-          ))
+            && lessThanGwei(
+              value.abs(),
+              options?.minUnitDecimalCount ?? maxDecimalCount,
+            ))
         ) {
           value = value.mul(OneEther)
           maxDecimalCount = 0
@@ -99,10 +99,10 @@ export function useValue() {
         else if (
           options?.fixedUnit === 'GWEI'
           || ((!options?.minUnit || options?.minUnit === 'GWEI')
-          && lessThanEth(
-            value.abs(),
-            options?.minUnitDecimalCount ?? maxDecimalCount,
-          ))
+            && lessThanEth(
+              value.abs(),
+              options?.minUnitDecimalCount ?? maxDecimalCount,
+            ))
         ) {
           value = value.mul(OneGwei)
           currencyLabel = 'GWEI'

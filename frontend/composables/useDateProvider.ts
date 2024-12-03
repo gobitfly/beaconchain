@@ -20,7 +20,7 @@ export function useDateProvider() {
   })
 
   onUnmounted(() => {
-    interval && clearInterval(interval)
+    if (interval) clearInterval(interval)
   })
 
   provide<DateInfo>('date-info', {

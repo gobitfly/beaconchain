@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { StringUnitLength } from 'luxon'
 import { useFormat } from '~/composables/useFormat'
-import { type AgeFormat } from '~/types/settings'
+import type { AgeFormat } from '~/types/settings'
 import { formatGoTimestamp } from '~/utils/format'
 
 const {

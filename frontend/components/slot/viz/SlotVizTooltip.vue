@@ -4,13 +4,12 @@ import type {
   VDBSlotVizSlot,
   VDBSlotVizStatus,
 } from '~/types/api/slot_viz'
-import { type SlotVizIcons } from '~/types/dashboard/slotViz'
+import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
-type RowDuty = {
-  duty_object?: number,
-  dutySubLink?: string,
-  dutySubText?: string,
-  validator?: number,
+interface Props {
+  currentSlotId?: number,
+  data: VDBSlotVizSlot,
+  id: string,
 }
 type Row = {
   andMore?: number,
@@ -22,10 +21,11 @@ type Row = {
   icon: SlotVizIcons,
   validators?: number[],
 }
-interface Props {
-  currentSlotId?: number,
-  data: VDBSlotVizSlot,
-  id: string,
+type RowDuty = {
+  duty_object?: number,
+  dutySubLink?: string,
+  dutySubText?: string,
+  validator?: number,
 }
 const props = defineProps<Props>()
 const { t: $t } = useTranslation()
@@ -57,14 +57,14 @@ const data = computed(() => {
       const dutySubText = $t(`slot_viz.tooltip.proposal.${slot.status}.sub`)
       let className = 'scheduled'
       switch (slot.status) {
-        case 'proposed':
-          className = 'success'
-          hasSuccessDuties = true
-          break
         case 'missed':
         case 'orphaned':
           className = 'failed'
           hasFailedDuties = true
+          break
+        case 'proposed':
+          className = 'success'
+          hasSuccessDuties = true
           break
         case 'scheduled':
           hasScheduledDuty = true

@@ -38,7 +38,7 @@ export function useNotificationsMachineStore() {
 
       data.value = result
     }
-    catch (e) {
+    catch {
       data.value = undefined
       isLoading.value = false
     }
@@ -51,7 +51,9 @@ export function useNotificationsMachineStore() {
 
   watch(query, (q) => {
     if (q) {
-      isLoggedIn.value && loadMachineNotifications(q)
+      if (isLoggedIn.value) {
+        loadMachineNotifications(q)
+      }
     }
   }, { immediate: true })
 

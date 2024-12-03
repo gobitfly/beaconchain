@@ -4,19 +4,19 @@ const characters
   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 const randomTexts = ref<string[]>([])
 
-// custom rnd because we need to start with the same seed during SSR and at the first client rendering
-function rand(max: number): number {
-  randomInt = (214013 * randomInt + 2531011) & 0xffffffff
-  const normalized = ((randomInt >> 16) & 0xffff) / 65535
-  return Math.round(normalized * max)
-}
-
 function getRandomText(): string {
   let result = ''
   for (let l = 20 + rand(100); l > 0; l--) {
     result += characters[rand(characters.length - 1)]
   }
   return result
+}
+
+// custom rnd because we need to start with the same seed during SSR and at the first client rendering
+function rand(max: number): number {
+  randomInt = (214013 * randomInt + 2531011) & 0xffffffff
+  const normalized = ((randomInt >> 16) & 0xffff) / 65535
+  return Math.round(normalized * max)
 }
 
 function reGenerateTextList() {

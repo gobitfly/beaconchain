@@ -75,6 +75,20 @@ function listenToKeys(event: KeyboardEvent) {
   }
 }
 
+function oneOptionChanged(index: number) {
+  const selected = listInDropdown.value[index].selected
+  if (listInDropdown.value[index].chainId !== ChainIDs.Any) {
+    liveState.value.set(listInDropdown.value[index].chainId, selected)
+  }
+  else {
+    for (const filter of liveState.value) {
+      liveState.value.set(filter[0], selected)
+    }
+  }
+  updateLocalState()
+  emit('change')
+}
+
 function updateLocalState() {
   // first we update the head
   let howManyAreSelected = 0
@@ -105,20 +119,6 @@ function updateLocalState() {
       selected: filter[1],
     })
   }
-}
-
-function oneOptionChanged(index: number) {
-  const selected = listInDropdown.value[index].selected
-  if (listInDropdown.value[index].chainId !== ChainIDs.Any) {
-    liveState.value.set(listInDropdown.value[index].chainId, selected)
-  }
-  else {
-    for (const filter of liveState.value) {
-      liveState.value.set(filter[0], selected)
-    }
-  }
-  updateLocalState()
-  emit('change')
 }
 </script>
 

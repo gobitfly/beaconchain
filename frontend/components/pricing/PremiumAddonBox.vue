@@ -10,7 +10,6 @@ import {
   ProductCategoryPremiumAddon,
 } from '~/types/api/user'
 import { formatPremiumProductPrice } from '~/utils/format'
-import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
 const {
@@ -76,7 +75,7 @@ const addonSubscriptionCount = computed(() => {
       sub =>
         sub.product_category === ProductCategoryPremiumAddon
         && (sub.product_id === props.addon.product_id_monthly
-        || sub.product_id === props.addon.product_id_yearly),
+          || sub.product_id === props.addon.product_id_yearly),
     ).length || 0
   )
 })
@@ -125,7 +124,7 @@ const addonButton = computed(() => {
 const maximumQuantity = computed(() => {
   return Math.floor(
     ((props.maximumValidatorLimit || 10000)
-    - (user.value?.premium_perks.validators_per_dashboard || 0))
+      - (user.value?.premium_perks.validators_per_dashboard || 0))
     / props.addon.extra_dashboard_validators,
   )
 })
@@ -277,17 +276,12 @@ const purchaseQuantityButtons = computed(() => {
         </div>
       </div>
       <div class="limit-reached-row">
-        <div v-if="limitReached">
-          {{ tOf($t, "pricing.addons.contact_support", 0) }}
-          <BcLink
-            to="https://dsc.gg/beaconchain  "
-            :target="Target.External"
-            class="link"
-          >
-            {{ tOf($t, "pricing.addons.contact_support", 1) }}
-          </BcLink>
-          {{ tOf($t, "pricing.addons.contact_support", 2) }}
-        </div>
+        <BcTranslation
+          v-if="limitReached"
+          keypath="pricing.addons.contact_support.template"
+          linkpath="pricing.addons.contact_support._link"
+          to="https://dsc.gg/beaconchain"
+        />
       </div>
       <Button
         :label="addonButton.text"

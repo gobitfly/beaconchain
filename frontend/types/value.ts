@@ -3,6 +3,13 @@ import type {
   CryptoCurrency, CryptoUnits, Currency,
 } from '~/types/currencies'
 
+export type ExtendedLabel = {
+  fullLabel?: string,
+  label: NumberOrString,
+}
+
+export type NumberOrString = number | string
+
 export type ValueConvertOptions = {
   addPlus?: boolean, // add + sign if value is positive
   fixedDecimalCount?: number, // can override the usual settings, but can't go over 2 for fiat
@@ -16,24 +23,17 @@ export type ValueConvertOptions = {
   targetCurrency?: Currency, // target currency - overrides the selected currency
 }
 
-export type NumberOrString = number | string
-
-export type ExtendedLabel = {
-  fullLabel?: string,
-  label: NumberOrString,
-}
-
 export const TimeFrames = [
   'last_24h',
   'last_7d',
   'last_30d',
   'all_time',
 ] as const
+export type CompareResult = 'equal' | 'higher' | 'lower'
+
 export type TimeFrame = (typeof TimeFrames)[number]
 
 export type WeiToValue = (
   wei?: BigNumber | string,
   options?: ValueConvertOptions,
 ) => ExtendedLabel
-
-export type CompareResult = 'equal' | 'higher' | 'lower'
