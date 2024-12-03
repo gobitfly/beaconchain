@@ -68,7 +68,7 @@ const onSubmit = handleSubmit(async (values) => {
       await navigateTo('/')
     }
   }
-  catch (error) {
+  catch {
     toast.showError({
       detail: $t('login_and_register.error_register_message'),
       group: $t('login_and_register.error_register_group'),

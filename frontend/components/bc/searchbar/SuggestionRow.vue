@@ -33,16 +33,17 @@ const props = defineProps<{
 
 const { t } = useTranslation()
 
-function formatSubcategoryCell(): string {
-  const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(
-    SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title,
-  )
-  let label = t(i18nPathOfSubcategoryTitle, props.suggestion.count)
-
-  if (props.suggestion.count >= 2) {
-    label = String(props.suggestion.count) + ' ' + label
+function formatDescriptionCell(): string {
+  if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'description')) {
+    // we tell the user what is the data that they see (ex: "Index" for a validator index)
+    switch (props.suggestion.type) {
+      case ResultType.ValidatorsByIndex:
+      case ResultType.ValidatorsByPubkey:
+        return t('common.index') + ' ' + props.suggestion.output.description
+      // more cases might arise in the future
+    }
   }
-  return label
+  return props.suggestion.output.description
 }
 
 function formatIdentificationCell(): string {
@@ -55,17 +56,16 @@ function formatIdentificationCell(): string {
   return props.suggestion.output.lowLevelData
 }
 
-function formatDescriptionCell(): string {
-  if (wasOutputDataGivenByTheAPI(props.suggestion.type, 'description')) {
-    // we tell the user what is the data that they see (ex: "Index" for a validator index)
-    switch (props.suggestion.type) {
-      case ResultType.ValidatorsByIndex:
-      case ResultType.ValidatorsByPubkey:
-        return t('common.index') + ' ' + props.suggestion.output.description
-      // more cases might arise in the future
-    }
+function formatSubcategoryCell(): string {
+  const i18nPathOfSubcategoryTitle = getI18nPathOfTranslatableLitteral(
+    SubCategoryInfo[TypeInfo[props.suggestion.type].subCategory].title,
+  )
+  let label = t(i18nPathOfSubcategoryTitle, props.suggestion.count)
+
+  if (props.suggestion.count >= 2) {
+    label = String(props.suggestion.count) + ' ' + label
   }
-  return props.suggestion.output.description
+  return label
 }
 
 const deactivationClass = props.suggestion.lacksPremiumSubscription

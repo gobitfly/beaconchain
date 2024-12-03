@@ -80,7 +80,7 @@ const handleTestNotification = async () => {
     })
     toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
   }
-  catch (error) {
+  catch {
     const summary = is_webhook_discord_enabled.value
       ? $t('notifications.dashboards.toast.error.discord')
       : $t('notifications.dashboards.toast.error.webhook_url')

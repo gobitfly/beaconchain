@@ -74,31 +74,6 @@ const infos = computed(() => {
         props.summary?.row.attestations?.failed,
       )
       break
-    case 'sync':
-      addSuccessFailed(
-        'sync',
-        props.summary?.data?.sync.status_count.success,
-        props.summary?.data?.sync.status_count.failed,
-      )
-      break
-    case 'slashings':
-      addSuccessFailed(
-        'slashing',
-        props.summary?.data?.slashings.status_count.success,
-        props.summary?.data?.slashings.status_count.failed,
-        [ 'has_slashed' ],
-        [ 'got_slashed' ],
-      )
-      break
-    case 'proposal':
-      addSuccessFailed(
-        'proposal',
-        props.summary?.row.proposals.success,
-        props.summary?.row.proposals.failed,
-        [ 'proposal_proposed' ],
-        [ 'proposal_missed' ],
-      )
-      break
     case 'dashboard':
     case 'group': {
       let online = 0
@@ -139,6 +114,32 @@ const infos = computed(() => {
       percent.total = online + offline
       percent.value = online
     }
+      break
+    case 'proposal':
+      addSuccessFailed(
+        'proposal',
+        props.summary?.row.proposals.success,
+        props.summary?.row.proposals.failed,
+        [ 'proposal_proposed' ],
+        [ 'proposal_missed' ],
+      )
+      break
+    case 'slashings':
+      addSuccessFailed(
+        'slashing',
+        props.summary?.data?.slashings.status_count.success,
+        props.summary?.data?.slashings.status_count.failed,
+        [ 'has_slashed' ],
+        [ 'got_slashed' ],
+      )
+      break
+    case 'sync':
+      addSuccessFailed(
+        'sync',
+        props.summary?.data?.sync.status_count.success,
+        props.summary?.data?.sync.status_count.failed,
+      )
+      break
   }
 
   return {

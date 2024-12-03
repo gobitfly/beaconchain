@@ -1,3 +1,36 @@
+export function findAllScrollParents(
+  child: HTMLElement | null,
+  list?: HTMLElement[],
+): HTMLElement[] {
+  if (!list) {
+    list = []
+  }
+  if (!child) {
+    return list
+  }
+  if (isScrollable(child)) {
+    list.push(child)
+  }
+  return findAllScrollParents(child.parentElement, list)
+}
+
+export function isOrIsInIteractiveContainer(
+  child: HTMLElement | null,
+  stopSearchAtElement?: HTMLElement,
+): boolean {
+  if (!child || child === stopSearchAtElement) {
+    return false
+  }
+
+  if (child.nodeName === 'INPUT') {
+    return true
+  }
+  if (isScrollable(child)) {
+    return true
+  }
+  return isOrIsInIteractiveContainer(child.parentElement, stopSearchAtElement)
+}
+
 export function isParent(
   parent: HTMLElement | null,
   child: HTMLElement | null,
@@ -25,37 +58,4 @@ function isScrollable(element: HTMLElement): boolean {
     return true
   }
   return false
-}
-
-export function isOrIsInIteractiveContainer(
-  child: HTMLElement | null,
-  stopSearchAtElement?: HTMLElement,
-): boolean {
-  if (!child || child === stopSearchAtElement) {
-    return false
-  }
-
-  if (child.nodeName === 'INPUT') {
-    return true
-  }
-  if (isScrollable(child)) {
-    return true
-  }
-  return isOrIsInIteractiveContainer(child.parentElement, stopSearchAtElement)
-}
-
-export function findAllScrollParents(
-  child: HTMLElement | null,
-  list?: HTMLElement[],
-): HTMLElement[] {
-  if (!list) {
-    list = []
-  }
-  if (!child) {
-    return list
-  }
-  if (isScrollable(child)) {
-    list.push(child)
-  }
-  return findAllScrollParents(child.parentElement, list)
 }

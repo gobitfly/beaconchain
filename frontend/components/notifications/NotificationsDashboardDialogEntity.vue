@@ -18,7 +18,7 @@ const { t: $t } = useTranslation()
 
 const {
   props,
-} = useBcDialog<{ identifier: string } & Pick<NotificationDashboardsTableRow, 'dashboard_id' | 'epoch' | 'group_id' | 'group_name'>>()
+} = useBcDialog<Pick<NotificationDashboardsTableRow, 'dashboard_id' | 'epoch' | 'group_id' | 'group_name'> & { identifier: string }>()
 
 const store = useNotificationsDashboardDetailsStore()
 

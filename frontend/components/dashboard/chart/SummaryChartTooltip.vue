@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { type ComposerTranslation } from 'vue-i18n'
-import {
-  type AggregationTimeframe,
-  type EfficiencyType,
+import type { ComposerTranslation } from 'vue-i18n'
+import type {
+  AggregationTimeframe,
+  EfficiencyType,
 } from '~/types/dashboard/summary'
 
 interface Props {

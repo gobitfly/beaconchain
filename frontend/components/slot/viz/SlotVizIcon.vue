@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type SlotVizIcons } from '~/types/dashboard/slotViz'
+import type { SlotVizIcons } from '~/types/dashboard/slotViz'
 
 interface Props {
   icon: SlotVizIcons,

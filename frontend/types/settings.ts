@@ -1,8 +1,14 @@
-export type GlobalSetting = 'age-format' | 'rpl'
-
 export type AgeFormat = 'absolute' | 'relative'
 
 export type CookieValue = null | string | undefined
+
+export type GlobalSetting = 'age-format' | 'rpl'
+
+type SettingsConfig = {
+  default: unknown,
+  parseValue?: SettingsGetter,
+  valueToString?: SettingsSetter,
+}
 
 interface SettingsGetter {
   <T>(value?: string): T,
@@ -10,12 +16,6 @@ interface SettingsGetter {
 
 interface SettingsSetter {
   <T>(value?: T): string,
-}
-
-type SettingsConfig = {
-  default: unknown,
-  parseValue?: SettingsGetter,
-  valueToString?: SettingsSetter,
 }
 
 const parseValueBoolean = (value: string) => value === 'true'

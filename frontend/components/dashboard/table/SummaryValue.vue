@@ -59,10 +59,10 @@ const data = computed(() => {
       props.property as SummaryDetailsEfficiencyProp,
     )
   ) {
-    const tooltip: { text: string,
-      title: string, } | undefined = $tm(
+    const tooltip: undefined | { text: string,
+      title: string, } = $tm(
       `dashboard.validator.tooltip.${props.property}`,
-      )
+    )
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
 
     return {
@@ -106,10 +106,10 @@ const data = computed(() => {
     }
   }
   else if (col && props.property === 'attestation_efficiency') {
-    const tooltip: { text: string,
-      title: string, } | undefined = $tm(
-        'dashboard.validator.tooltip.attestation_efficiency',
-      )
+    const tooltip: undefined | { text: string,
+      title: string, } = $tm(
+      'dashboard.validator.tooltip.attestation_efficiency',
+    )
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip,

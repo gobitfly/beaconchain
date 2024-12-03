@@ -188,7 +188,9 @@ const shareEdit = () => {
   dialog.open(DashboardShareModal, {
     data: { dashboard: shareDashboard.value },
     onClose: (options?: DynamicDialogCloseOptions) => {
-      options?.data && shareView()
+      if (options?.data) {
+        shareView()
+      }
     },
   })
 }

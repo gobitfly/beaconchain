@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { type ComposerTranslation } from 'vue-i18n'
+import type { ComposerTranslation } from 'vue-i18n'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import {
-  type AggregationTimeframe,
-  type EfficiencyType,
+import type {
+  AggregationTimeframe,
+  EfficiencyType,
 } from '~/types/dashboard/summary'
 import {
   ONE_DAY, ONE_HOUR, ONE_WEEK,

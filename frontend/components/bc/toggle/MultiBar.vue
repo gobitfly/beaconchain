@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/max-len -- TODO:   plz fix this -->
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { type MultiBarItem } from '~/types/multiBar'
+import type { MultiBarItem } from '~/types/multiBar'
 
 interface Props {
   buttons: MultiBarItem[],

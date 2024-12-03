@@ -100,12 +100,12 @@ const setPosition = () => {
       left = rect.left - padding - ttWidth
       top = rect.top + rect.height / 2 - ttHeight / 2
       break
-    case 'top':
-      top = rect.top - padding - ttHeight
-      break
     case 'right':
       left = rect.right + padding
       top = rect.top + rect.height / 2 - ttHeight / 2
+      break
+    case 'top':
+      top = rect.top - padding - ttHeight
       break
   }
   left = Math.max(0, Math.min(left, width.value - ttWidth))
@@ -134,12 +134,12 @@ const setPosition = () => {
         afterLeft = ttWidth
         afterTop = centerY
         break
-      case 'top':
-        afterTop = ttHeight
-        break
       case 'right':
         afterLeft = -10
         afterTop = centerY
+        break
+      case 'top':
+        afterTop = ttHeight
         break
     }
     bcTooltip.value.style.setProperty('--tt-after-left', `${afterLeft}px`)
