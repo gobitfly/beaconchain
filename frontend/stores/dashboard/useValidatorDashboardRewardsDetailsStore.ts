@@ -4,7 +4,6 @@ import type {
   VDBGroupRewardsData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorDashboardRewardsDetailsStore = defineStore(
   'validator_dashboard_rewards_details_store',
@@ -33,7 +32,7 @@ export const useValidatorDashboardRewardsDetailsStore = (
       return data.value[getKey()]
     }
     const res = await fetch<GetValidatorDashboardGroupRewardsResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_REWARDS_DETAILS,
+      'DASHBOARD_VALIDATOR_REWARDS_DETAILS',
       undefined,
       {
         dashboardKey,

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import type { GetValidatorDashboardSummaryResponse } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
-import { API_PATH } from '~/types/customFetch'
+
 import type { SummaryTimeFrame } from '~/types/dashboard/summary'
 
 const validatorDashboardSummaryStore = defineStore(
@@ -46,7 +46,7 @@ export function useValidatorDashboardSummaryStore() {
     storedQuery.value = query
 
     const res = await fetch<GetValidatorDashboardSummaryResponse>(
-      API_PATH.DASHBOARD_SUMMARY,
+      'DASHBOARD_SUMMARY',
       { query: { period: timeFrame } },
       { dashboardKey },
       query,

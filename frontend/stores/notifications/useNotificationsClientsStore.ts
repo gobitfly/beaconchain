@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { InternalGetUserNotificationClientsResponse } from '~/types/api/notifications'
-import { API_PATH } from '~/types/customFetch'
+
 import type { TableQueryParams } from '~/types/datatable'
 
 const notificationsClientStore = defineStore('notifications-clients-store', () => {
@@ -25,7 +25,7 @@ export function useNotificationsClientStore() {
     setStoredQuery(q)
     try {
       const result = await fetch<InternalGetUserNotificationClientsResponse>(
-        API_PATH.NOTIFICATIONS_CLIENTS,
+        'NOTIFICATIONS_CLIENTS',
         undefined,
         undefined,
         q,

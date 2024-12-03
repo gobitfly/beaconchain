@@ -30,7 +30,6 @@ import type {
 } from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsChartTooltip } from '#components'
-import { API_PATH } from '~/types/customFetch'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 import { useFormat } from '~/composables/useFormat'
 import type { CryptoUnits } from '~/types/currencies'
@@ -74,7 +73,7 @@ useAsyncData(
     }
     isLoading.value = true
     const res = await fetch<GetValidatorDashboardRewardsChartResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_REWARDS_CHART,
+      'DASHBOARD_VALIDATOR_REWARDS_CHART',
       undefined,
       { dashboardKey: dashboardKey.value },
     )

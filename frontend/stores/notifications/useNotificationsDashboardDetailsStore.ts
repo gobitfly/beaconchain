@@ -2,7 +2,6 @@ import type {
   InternalGetUserNotificationsValidatorDashboardResponse,
   NotificationDashboardsTableRow, NotificationValidatorDashboardDetail,
 } from '~/types/api/notifications'
-import { API_PATH } from '~/types/customFetch'
 
 export const useNotificationsDashboardDetailsStore = defineStore('notifications-dashboard-details', () => {
   const { fetch } = useCustomFetch()
@@ -20,7 +19,7 @@ export const useNotificationsDashboardDetailsStore = defineStore('notifications-
     },
   ) => {
     return fetch<InternalGetUserNotificationsValidatorDashboardResponse>(
-      API_PATH.NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR,
+      'NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR',
       {
         query: {
           search,

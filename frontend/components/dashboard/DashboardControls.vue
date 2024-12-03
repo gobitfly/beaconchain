@@ -23,7 +23,6 @@ import type {
 import type {
   MenuBarButton, MenuBarEntry,
 } from '~/types/menuBar'
-import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   dashboardTitle?: string,
@@ -268,14 +267,14 @@ const deleteAction = async (
   if (deleteDashboard) {
     if (dashboardType.value === 'validator') {
       await fetch(
-        API_PATH.DASHBOARD_DELETE_VALIDATOR,
+        'DASHBOARD_DELETE_VALIDATOR',
         { body: { key } },
         { dashboardKey: key },
       )
     }
     else {
       await fetch(
-        API_PATH.DASHBOARD_DELETE_ACCOUNT,
+        'DASHBOARD_DELETE_ACCOUNT',
         { body: { key } },
         { dashboardKey: key },
       )

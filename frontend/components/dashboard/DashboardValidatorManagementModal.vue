@@ -19,9 +19,7 @@ import type {
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 
-import {
-  API_PATH, type PathValues,
-} from '~/types/customFetch'
+import type { PathValues } from '~/types/customFetch'
 import type { InternalPostSearchResponse } from '~/types/api/search'
 // import type { InternalPostSearchResponse } from '~/types/api/search'
 
@@ -118,7 +116,7 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
   body.group_id = groupId && groupId !== -1 ? groupId : 0
 
   await fetch<VDBPostValidatorsData>(
-    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+    'DASHBOARD_VALIDATOR_MANAGEMENT',
     {
       body,
       method: 'POST',
@@ -141,7 +139,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   }
 
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT_DELETE,
+    'DASHBOARD_VALIDATOR_MANAGEMENT_DELETE',
     {
       body: JSON.stringify({ validators }),
       method: 'POST',
@@ -204,7 +202,7 @@ const loadData = async () => {
   if (dashboardKey.value) {
     const testQ = JSON.stringify(query.value)
     const result = await fetch<GetValidatorDashboardValidatorsResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+      'DASHBOARD_VALIDATOR_MANAGEMENT',
       undefined,
       { dashboardKey: dashboardKey.value },
       query.value,

@@ -12,7 +12,6 @@ import {
   type GuestDashboard,
 } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
-import { API_PATH } from '~/types/customFetch'
 import type { ChainIDs } from '~/types/network'
 import {
   isGuestDashboardKey, isSharedDashboardKey,
@@ -39,7 +38,7 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
   async function refreshDashboards() {
     if (isLoggedIn.value) {
       const res = await fetch<GetUserDashboardsResponse>(
-        API_PATH.USER_DASHBOARDS,
+        'USER_DASHBOARDS',
       )
       dashboards.value = res.data
 
@@ -94,7 +93,7 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
     }
     // Create user specific Validator dashboard
     const res = await fetch<{ data: VDBPostReturnData }>(
-      API_PATH.DASHBOARD_CREATE_VALIDATOR,
+      'DASHBOARD_CREATE_VALIDATOR',
       {
         body: {
           name,
@@ -141,7 +140,7 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
     }
     // Create user specific account dashboard
     const res = await fetch<{ data: VDBPostReturnData }>(
-      API_PATH.DASHBOARD_CREATE_ACCOUNT,
+      'DASHBOARD_CREATE_ACCOUNT',
       { body: { name } },
     )
     if (res.data) {
