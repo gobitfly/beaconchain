@@ -32,7 +32,8 @@
     "@types/lodash-es": "^4.17.12",
     "@types/luxon": "^3.4.2",
     "eslint-plugin-jsonc": "^2.18.2",
-    "eslint-plugin-perfectionist": "^4.1.2",
+    "typescript": "5.6.2",
+    "vue-tsc": "2.0.29"
   },
   "engines": {
     "node": ">=22.0.0"
