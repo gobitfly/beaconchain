@@ -12,6 +12,7 @@
     "DashboardChartSummaryChartFilter",
     "DashboardGroupManagementModal",
     "DashboardTableSummaryDetails",
+    "DashboardTableSummaryValue",
     "DashboardTableValidators",
     "DashboardValidatorManagmentModal",
     "NotificationMachinesTable",
