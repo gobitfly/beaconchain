@@ -34,9 +34,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const {
-  t: $t, tm: $tm,
-} = useTranslation()
+const { t: $t } = useTranslation()
 const { dashboardKey } = useDashboardKey()
 const dialog = useDialog()
 const { groups } = useValidatorDashboardGroups()
@@ -60,9 +58,11 @@ const data = computed(() => {
     )
   ) {
     const tooltip: undefined | { text: string,
-      title: string, } = $tm(
-      `dashboard.validator.tooltip.${props.property}`,
-    )
+      title: string, } = {
+      text: $t('dashboard.validator.tooltip.sync.text'),
+      title: $t('dashboard.validator.tooltip.sync.title'),
+    }
+
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
 
     return {
@@ -107,9 +107,11 @@ const data = computed(() => {
   }
   else if (col && props.property === 'attestation_efficiency') {
     const tooltip: undefined | { text: string,
-      title: string, } = $tm(
-      'dashboard.validator.tooltip.attestation_efficiency',
-    )
+      title: string, }
+      = {
+        text: $t('dashboard.validator.tooltip.attestation_efficiency.text'),
+        title: $t('dashboard.validator.tooltip.attestation_efficiency.title'),
+      }
     return {
       attestationEfficiency: col.attestation_efficiency,
       tooltip,
