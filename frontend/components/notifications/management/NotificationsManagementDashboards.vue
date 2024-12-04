@@ -360,6 +360,7 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
               <BcTablePopoutEdit
                 class="value"
                 :label="slotProps.data.settings.webhook_url"
+                truncate-text
                 @on-edit="() => onEdit('webhook', slotProps.data)"
               />
             </div>
