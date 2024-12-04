@@ -98,11 +98,13 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 	defer utils.Rollback(tx)
 
 	if d.FirstRun {
+		log.Infof("performing first run consistency checks")
 		// get all slots we currently have in the database
 		dbSlots, err := db.GetAllSlots(tx)
 		if err != nil {
 			return fmt.Errorf("error retrieving all db slots: %w", err)
 		}
+		log.Info("retrieved all exported slots from the database")
 
 		if len(dbSlots) > 0 {
 			if dbSlots[0] != 0 {
@@ -119,6 +121,7 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 		}
 
 		if len(dbSlots) > 1 {
+			log.Info("performing gap checks")
 			// export any gaps we might have (for whatever reason)
 			for slotIndex := 1; slotIndex < len(dbSlots); slotIndex++ {
 				previousSlot := dbSlots[slotIndex-1]
@@ -167,7 +170,7 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 			slotsExported++
 
 			// in case of large export runs, export at most 10 epochs per tx
-			if slotsExported == int(utils.Config.Chain.ClConfig.SlotsPerEpoch)*10 {
+			if slotsExported == int(utils.Config.Chain.ClConfig.SlotsPerEpoch)*1 { // TODO: change this back to 10
 				err := tx.Commit()
 
 				if err != nil {
@@ -475,8 +478,9 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			}
 			return nil
 		})
+
 		// if we are exporting the head epoch, update the validator db table
-		if isHeadEpoch {
+		if isHeadEpoch || epoch%5 == 0 {
 			// this function sets exports the validator status into the db
 			// and also updates the status field in the validators array
 			err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)
@@ -636,6 +640,12 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		err = g.Wait()
 		if err != nil {
 			return err
+		}
+
+		// save the execution layer request status
+		err = edb.SaveExecutionLayerRequestStatus(epoch, block, tx)
+		if err != nil {
+			return fmt.Errorf("error saving execution layer request status: %w", err)
 		}
 
 		// save the epoch metadata to the database

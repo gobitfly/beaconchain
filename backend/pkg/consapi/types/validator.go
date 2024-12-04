@@ -1,6 +1,8 @@
 package types
 
-import "github.com/ethereum/go-ethereum/common/hexutil"
+import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
 
 const (
 	// Node statuses

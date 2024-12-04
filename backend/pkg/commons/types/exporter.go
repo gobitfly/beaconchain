@@ -130,11 +130,47 @@ type Block struct {
 	ExcessBlobGas              uint64
 	BlobKZGCommitments         [][]byte
 	BlobKZGProofs              [][]byte
+	ExecutionRequests          *ExecutionRequests
+
 	AttestationDuties          map[ValidatorIndex][]Slot
 	SyncDuties                 map[ValidatorIndex]bool
 	Finalized                  bool
 	EpochAssignments           *EpochAssignments
 	Validators                 []*Validator
+	QueuedExecutionRequest     *ExecutionRequests
+	ProcessedExecutionRequests *ExecutionRequests
+}
+
+type ExecutionRequests struct {
+	Deposits       []*DepositExecutionRequest
+	Withdrawals    []*WithdrawalExecutionRequest
+	Consolidations []*ConsolidationExecutionRequest
+}
+
+type DepositExecutionRequest struct {
+	Pubkey                []byte
+	WithdrawalCredentials []byte
+	Amount                uint64
+	Signature             []byte
+	Index                 uint64
+	SlotFromState         uint64
+}
+
+type WithdrawalExecutionRequest struct {
+	SourceAddress     []byte
+	ValidatorPubkey   []byte
+	ValidatorIndex    uint64
+	Amount            uint64
+	WithdrawableEpoch uint64
+}
+
+type ConsolidationExecutionRequest struct {
+	SourceAddress      []byte
+	SourcePubkey       []byte
+	SourceIndex        uint64
+	TargetPubkey       []byte
+	TargetIndex        uint64
+	AmountConsolidated uint64
 }
 
 type SignedBLSToExecutionChange struct {
@@ -170,23 +206,23 @@ type Transaction struct {
 }
 
 type ExecutionPayload struct {
-	ParentHash    []byte
-	FeeRecipient  []byte
-	StateRoot     []byte
-	ReceiptsRoot  []byte
-	LogsBloom     []byte
-	Random        []byte
-	BlockNumber   uint64
-	GasLimit      uint64
-	GasUsed       uint64
-	Timestamp     uint64
-	ExtraData     []byte
-	BaseFeePerGas uint64
-	BlockHash     []byte
-	Transactions  []*Transaction
-	Withdrawals   []*Withdrawals
-	BlobGasUsed   uint64
-	ExcessBlobGas uint64
+	ParentHash        []byte
+	FeeRecipient      []byte
+	StateRoot         []byte
+	ReceiptsRoot      []byte
+	LogsBloom         []byte
+	Random            []byte
+	BlockNumber       uint64
+	GasLimit          uint64
+	GasUsed           uint64
+	Timestamp         uint64
+	ExtraData         []byte
+	BaseFeePerGas     uint64
+	BlockHash         []byte
+	TransactionsCount int
+	Withdrawals       []*Withdrawals
+	BlobGasUsed       uint64
+	ExcessBlobGas     uint64
 }
 
 type Withdrawals struct {
@@ -243,6 +279,7 @@ type IndexedAttestation struct {
 // Attestation is a struct to hold attestation header data
 type Attestation struct {
 	AggregationBits []byte
+	CommitteeBits   []byte
 	Attesters       []uint64
 	Data            *AttestationData
 	Signature       []byte
@@ -297,9 +334,10 @@ type CanonBlock struct {
 
 // EpochAssignments is a struct to hold epoch assignment data
 type EpochAssignments struct {
-	ProposerAssignments map[uint64]uint64
-	AttestorAssignments map[string]uint64
-	SyncAssignments     []uint64
+	ProposerAssignments         map[uint64]uint64
+	AttestorAssignments         map[string]uint64
+	AttestationCommitteeLengths map[string]uint64
+	SyncAssignments             []uint64
 }
 
 // ELDeposit is a struct to hold execution layer deposit data

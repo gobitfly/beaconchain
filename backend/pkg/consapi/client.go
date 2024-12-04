@@ -62,6 +62,9 @@ type ClientInt interface {
 
 	// /eth/v1/events
 	GetEvents(topics []types.EventTopic) chan *types.EventResponse
+
+	// /eth/v1/debug/beacon/states/%v
+	GetState(stateID any) (*types.StandardBeaconStateResponse, error)
 }
 type NodeClient struct {
 	Endpoint   string

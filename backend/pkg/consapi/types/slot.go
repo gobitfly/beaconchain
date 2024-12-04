@@ -1,6 +1,8 @@
 package types
 
-import "github.com/ethereum/go-ethereum/common/hexutil"
+import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
 
 // /eth/v2/beacon/blocks/{block_id}
 type StandardBeaconSlotResponse struct {
@@ -37,9 +39,36 @@ type AnySignedBlock struct {
 
 			// present only after deneb
 			BlobKZGCommitments []hexutil.Bytes `json:"blob_kzg_commitments"`
+
+			// present only after pectra
+			ExecutionRequests struct {
+				Deposits       []DepositExecutionRequest       `json:"deposits"`
+				Withdrawals    []WithdrawalExecutionRequest    `json:"withdrawals"`
+				Consolidations []ConsolidationExecutionRequest `json:"consolidations"`
+			} `json:"execution_requests"`
 		} `json:"body"`
 	} `json:"message"`
 	Signature hexutil.Bytes `json:"signature"`
+}
+
+type DepositExecutionRequest struct {
+	Pubkey                hexutil.Bytes `json:"pubkey"`
+	WithdrawalCredentials hexutil.Bytes `json:"withdrawal_credentials"`
+	Amount                uint64        `json:"amount,string"`
+	Signature             hexutil.Bytes `json:"signature"`
+	Index                 uint64        `json:"index,string"`
+}
+
+type WithdrawalExecutionRequest struct {
+	SourceAddress   hexutil.Bytes `json:"source_address"`
+	ValidatorPubkey hexutil.Bytes `json:"validator_pubkey"`
+	Amount          uint64        `json:"amount,string"`
+}
+
+type ConsolidationExecutionRequest struct {
+	SourceAddress hexutil.Bytes `json:"source_address"`
+	SourcePubkey  hexutil.Bytes `json:"source_pubkey"`
+	TargetPubkey  hexutil.Bytes `json:"target_pubkey"`
 }
 
 type ProposerSlashing struct {
@@ -120,6 +149,7 @@ func (a *AttesterSlashing) GetSlashedIndices() []uint64 {
 
 type Attestation struct {
 	AggregationBits hexutil.Bytes `json:"aggregation_bits"`
+	CommitteeBits   hexutil.Bytes `json:"committee_bits"`
 	Signature       hexutil.Bytes `json:"signature"`
 	Data            struct {
 		Slot            uint64        `json:"slot,string"`

@@ -59,7 +59,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1)
 		ON CONFLICT (block_hash) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtExecutionPayload: %w", err)
 	}
 	defer stmtExecutionPayload.Close()
 
@@ -68,7 +68,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)
 		ON CONFLICT (slot, blockroot) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtBlock: %w", err)
 	}
 	defer stmtBlock.Close()
 
@@ -77,7 +77,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_slot, block_root, withdrawalindex) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtWithdrawals: %w", err)
 	}
 	defer stmtWithdrawals.Close()
 
@@ -86,7 +86,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_slot, block_root, validatorindex) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtBLSChange: %w", err)
 	}
 	defer stmtBLSChange.Close()
 
@@ -95,7 +95,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtProposerSlashing: %w", err)
 	}
 	defer stmtProposerSlashing.Close()
 
@@ -104,16 +104,16 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 		ON CONFLICT (block_slot, block_index) DO UPDATE SET attestation1_indices = excluded.attestation1_indices, attestation2_indices = excluded.attestation2_indices`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtAttesterSlashing: %w", err)
 	}
 	defer stmtAttesterSlashing.Close()
 
 	stmtAttestations, err := tx.Prepare(`
-		INSERT INTO blocks_attestations (block_slot, block_index, block_root, aggregationbits, validators, signature, slot, committeeindex, beaconblockroot, source_epoch, source_root, target_epoch, target_root)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO blocks_attestations (block_slot, block_index, block_root, aggregationbits, validators, signature, slot, committeeindex, beaconblockroot, source_epoch, source_root, target_epoch, target_root, committeebits)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtAttestations: %w", err)
 	}
 	defer stmtAttestations.Close()
 
@@ -122,7 +122,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtDeposits: %w", err)
 	}
 	defer stmtDeposits.Close()
 
@@ -131,7 +131,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_root, index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtBlobs: %w", err)
 	}
 	defer stmtBlobs.Close()
 
@@ -140,7 +140,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtVoluntaryExits: %w", err)
 	}
 	defer stmtVoluntaryExits.Close()
 
@@ -149,9 +149,36 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (epoch, validatorindex, proposerslot) DO UPDATE SET status = excluded.status`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtProposalAssignments: %w", err)
 	}
 	defer stmtProposalAssignments.Close()
+
+	stmtConsolidationExecutionRequest, err := tx.Prepare(`
+		INSERT INTO blocks_consolidation_requests (block_slot, block_root, request_index, source_address, source_pubkey, target_pubkey)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (block_slot, block_root, request_index) DO NOTHING`)
+	if err != nil {
+		return fmt.Errorf("error preparing stmtConsolidationExecutionRequest: %w", err)
+	}
+	defer stmtConsolidationExecutionRequest.Close()
+
+	stmtWithdrawalExecutionRequest, err := tx.Prepare(`
+		INSERT INTO blocks_withdrawal_requests (block_slot, block_root, request_index, source_address, validator_pubkey, amount)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (block_slot, block_root, request_index) DO NOTHING`)
+	if err != nil {
+		return fmt.Errorf("error preparing stmtWithdrawalExecutionRequest: %w", err)
+	}
+	defer stmtWithdrawalExecutionRequest.Close()
+
+	stmtDepositExecutionRequest, err := tx.Prepare(`
+		INSERT INTO blocks_deposit_requests (block_slot, block_root, request_index, pubkey, withdrawal_credentials, amount, signature, index)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (block_slot, block_root, request_index) DO NOTHING`)
+	if err != nil {
+		return fmt.Errorf("error preparing stmtDepositExecutionRequest: %w", err)
+	}
+	defer stmtDepositExecutionRequest.Close()
 
 	slots := make([]uint64, 0, len(blocks))
 	for slot := range blocks {
@@ -211,7 +238,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				ExtraData       []byte
 				BaseFeePerGas   *uint64
 				BlockHash       []byte
-				TxCount         *int64
+				TxCount         *int
 				WithdrawalCount *int64
 				BlobGasUsed     *uint64
 				ExcessBlobGas   *uint64
@@ -221,7 +248,6 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			execData := new(exectionPayloadData)
 
 			if b.ExecutionPayload != nil {
-				txCount := int64(len(b.ExecutionPayload.Transactions))
 				withdrawalCount := int64(len(b.ExecutionPayload.Withdrawals))
 				blobTxCount := int64(len(b.BlobKZGCommitments))
 				execData = &exectionPayloadData{
@@ -238,7 +264,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 					ExtraData:       b.ExecutionPayload.ExtraData,
 					BaseFeePerGas:   &b.ExecutionPayload.BaseFeePerGas,
 					BlockHash:       b.ExecutionPayload.BlockHash,
-					TxCount:         &txCount,
+					TxCount:         &b.ExecutionPayload.TransactionsCount,
 					WithdrawalCount: &withdrawalCount,
 					BlobGasUsed:     &b.ExecutionPayload.BlobGasUsed,
 					ExcessBlobGas:   &b.ExecutionPayload.ExcessBlobGas,
@@ -328,8 +354,9 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 					return fmt.Errorf("error executing stmtAttesterSlashing for block %v index %v: %w", b.Slot, i, err)
 				}
 			}
+
 			for i, a := range b.Attestations {
-				_, err = stmtAttestations.Exec(b.Slot, i, b.BlockRoot, a.AggregationBits, pq.Array(a.Attesters), a.Signature, a.Data.Slot, a.Data.CommitteeIndex, a.Data.BeaconBlockRoot, a.Data.Source.Epoch, a.Data.Source.Root, a.Data.Target.Epoch, a.Data.Target.Root)
+				_, err = stmtAttestations.Exec(b.Slot, i, b.BlockRoot, a.AggregationBits, pq.Array(a.Attesters), a.Signature, a.Data.Slot, a.Data.CommitteeIndex, a.Data.BeaconBlockRoot, a.Data.Source.Epoch, a.Data.Source.Root, a.Data.Target.Epoch, a.Data.Target.Root, a.CommitteeBits)
 				if err != nil {
 					return fmt.Errorf("error executing stmtAttestations for block %v index %v: %w", b.Slot, i, err)
 				}
@@ -361,6 +388,30 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			_, err = stmtProposalAssignments.Exec(b.Slot/utils.Config.Chain.ClConfig.SlotsPerEpoch, b.Proposer, b.Slot, b.Status)
 			if err != nil {
 				return fmt.Errorf("error executing stmtProposalAssignments for block %v: %w", b.Slot, err)
+			}
+
+			for i, c := range b.ExecutionRequests.Consolidations {
+				_, err := stmtConsolidationExecutionRequest.Exec(b.Slot, b.BlockRoot, i, c.SourceAddress, c.SourcePubkey, c.TargetPubkey)
+				if err != nil {
+					return fmt.Errorf("error executing stmtConsolidationExecutionRequest for block %v index %v: %w", b.Slot, i, err)
+				}
+			}
+
+			for i, w := range b.ExecutionRequests.Withdrawals {
+				if w.Amount > db.MaxSqlNumber {
+					w.Amount = db.MaxSqlNumber
+				}
+				_, err := stmtWithdrawalExecutionRequest.Exec(b.Slot, b.BlockRoot, i, w.SourceAddress, w.ValidatorPubkey, w.Amount)
+				if err != nil {
+					return fmt.Errorf("error executing stmtWithdrawalExecutionRequest for block %v index %v: %w", b.Slot, i, err)
+				}
+			}
+
+			for i, d := range b.ExecutionRequests.Deposits {
+				_, err := stmtDepositExecutionRequest.Exec(b.Slot, b.BlockRoot, i, d.Pubkey, d.WithdrawalCredentials, d.Amount, d.Signature, d.Index)
+				if err != nil {
+					return fmt.Errorf("error executing stmtDepositExecutionRequest for block %v index %v: %w", b.Slot, i, err)
+				}
 			}
 
 			// save the graffitiwall data of the block the db
@@ -778,6 +829,182 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		return fmt.Errorf("analyzing validators table: %w", err)
 	}
 	log.Infof("analyze of validators table completed, took %v", time.Since(s))
+
+	return nil
+}
+
+func SaveExecutionLayerRequestStatus(epoch uint64, block *types.Block, tx *sqlx.Tx) error {
+	// save the el request status to the database
+	type blockSlotRootIndexRow struct {
+		BlockSlot    uint64 `db:"block_slot"`
+		BlockRoot    []byte `db:"block_root"`
+		RequestIndex uint64 `db:"request_index"`
+	}
+	// process queued execution requests
+	for _, queuedCr := range block.QueuedExecutionRequest.Consolidations {
+		// first retrieve the request we need to update (can be included directly in the update query using a WITH clause)
+		row := &blockSlotRootIndexRow{}
+		err := db.WriterDb.Get(row, `
+			SELECT 
+				block_slot, 
+				block_root, 
+				request_index 
+			FROM blocks_consolidation_requests 
+			WHERE 
+				source_pubkey = $1 AND 
+				target_pubkey = $2
+			ORDER BY 
+				block_slot ASC, 
+				request_index ASC 
+			LIMIT 1;`, queuedCr.SourcePubkey, queuedCr.TargetPubkey)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				log.Warnf("no unqueued consolidation request found for source %x and target %x", queuedCr.SourcePubkey, queuedCr.TargetPubkey)
+				continue
+			} else {
+				return fmt.Errorf("error retrieving queued consolidation request: %w", err)
+			}
+		}
+		res, err := tx.Exec(`
+			UPDATE blocks_consolidation_requests SET queued_at_epoch = LEAST(queued_at_epoch, $1) WHERE block_slot = $2 AND block_root = $3 AND request_index = $4;
+		`, epoch, row.BlockSlot, row.BlockRoot, row.RequestIndex)
+		if err != nil {
+			return fmt.Errorf("error updating queued consolidation request: %w", err)
+		}
+
+		rowsAffected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("error retrieving rows affected: %w", err)
+		}
+		log.Infof("updated queued_at_epoch for %v consolidation requests for epoch %v (%d -> %d)", rowsAffected, epoch, queuedCr.SourceIndex, queuedCr.TargetIndex)
+	}
+	for _, processedCr := range block.ProcessedExecutionRequests.Consolidations {
+		// first retrieve the request we need to update (can be included directly in the update query using a WITH clause)
+		row := &blockSlotRootIndexRow{}
+		err := db.WriterDb.Get(row, `
+			SELECT 
+				block_slot, 
+				block_root, 
+				request_index 
+			FROM blocks_consolidation_requests 
+			WHERE 
+				source_pubkey = $1 AND 
+				target_pubkey = $2 AND 
+				processed_at_epoch IS NULL AND
+				queued_at_epoch IS NOT NULL
+			ORDER BY 
+				block_slot ASC, 
+				request_index ASC 
+			LIMIT 1;`, processedCr.SourcePubkey, processedCr.TargetPubkey)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				log.Warnf("no unprocessed consolidation request found for source %x and target %x", processedCr.SourcePubkey, processedCr.TargetPubkey)
+				continue
+			} else {
+				return fmt.Errorf("error retrieving unprocessed consolidation request: %w", err)
+			}
+		}
+		res, err := tx.Exec(`
+			UPDATE blocks_consolidation_requests SET processed_at_epoch = $1, amount_consolidated = $2 WHERE block_slot = $3 AND block_root = $4 AND request_index = $5;
+		`, epoch, processedCr.AmountConsolidated, row.BlockSlot, row.BlockRoot, row.RequestIndex)
+		if err != nil {
+			return fmt.Errorf("error updating queued consolidation request: %w", err)
+		}
+
+		rowsAffected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("error retrieving rows affected: %w", err)
+		}
+		log.Infof("updated processed_at_epoch for %v consolidation requests for epoch %v (%d -> %d)", rowsAffected, epoch, processedCr.SourceIndex, processedCr.TargetIndex)
+	}
+
+	for _, queuedDr := range block.QueuedExecutionRequest.Deposits {
+		// first retrieve the request we need to update (can be included directly in the update query using a WITH clause)
+		row := &blockSlotRootIndexRow{}
+		err := db.WriterDb.Get(row, `
+			SELECT 
+				block_slot, 
+				block_root, 
+				request_index 
+			FROM blocks_deposit_requests 
+			WHERE 
+				pubkey = $1 AND 
+				withdrawal_credentials = $2 AND 
+				amount = $3 AND
+				signature = $4 AND
+				block_slot = $5 AND
+				queued_at_epoch IS NULL
+			ORDER BY 
+				block_slot ASC, 
+				request_index ASC 
+			LIMIT 1;`, queuedDr.Pubkey, queuedDr.WithdrawalCredentials, queuedDr.Amount, queuedDr.Signature, queuedDr.SlotFromState)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				log.Warnf("no unqueued deposit request found for validator %x ", queuedDr.Pubkey)
+				continue
+			} else {
+				return fmt.Errorf("error retrieving queued consolidation request: %w", err)
+			}
+		}
+		res, err := tx.Exec(`
+			UPDATE blocks_deposit_requests SET queued_at_epoch = LEAST(queued_at_epoch, $1) WHERE block_slot = $2 AND block_root = $3 AND request_index = $4;
+		`, epoch, row.BlockSlot, row.BlockRoot, row.RequestIndex)
+		if err != nil {
+			return fmt.Errorf("error updating queued consolidation request: %w", err)
+		}
+
+		rowsAffected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("error retrieving rows affected: %w", err)
+		}
+		log.Infof("updated queued_at_epoch for %v deposit requests for epoch %v for validator %x", rowsAffected, epoch, queuedDr.Pubkey)
+	}
+	for _, processedDr := range block.ProcessedExecutionRequests.Deposits {
+		// first retrieve the request we need to update (can be included directly in the update query using a WITH clause)
+		row := &blockSlotRootIndexRow{}
+		err := db.WriterDb.Get(row, `
+			SELECT 
+				block_slot, 
+				block_root, 
+				request_index 
+			FROM blocks_deposit_requests 
+			WHERE 
+				pubkey = $1 AND 
+				withdrawal_credentials = $2 AND 
+				amount = $3 AND
+				signature = $4 AND
+				block_slot = $5 AND
+				processed_at_epoch IS NULL AND
+				queued_at_epoch IS NOT NULL
+			ORDER BY 
+				block_slot ASC, 
+				request_index ASC 
+			LIMIT 1;`, processedDr.Pubkey, processedDr.WithdrawalCredentials, processedDr.Amount, processedDr.Signature, processedDr.SlotFromState)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				log.Warnf("no unprocessed deposit request found for validator %x", processedDr.Pubkey)
+				continue
+			} else {
+				return fmt.Errorf("error retrieving unprocessed consolidation request: %w", err)
+			}
+		}
+		res, err := tx.Exec(`
+			UPDATE blocks_deposit_requests SET processed_at_epoch = $1 WHERE block_slot = $2 AND block_root = $3 AND request_index = $4;
+		`, epoch, row.BlockSlot, row.BlockRoot, row.RequestIndex)
+		if err != nil {
+			return fmt.Errorf("error updating queued consolidation request: %w", err)
+		}
+
+		rowsAffected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("error retrieving rows affected: %w", err)
+		}
+		log.Infof("updated processed_at_epoch for %v deposit requests for epoch %v for validator %x", rowsAffected, epoch, processedDr.Pubkey)
+	}
 
 	return nil
 }

@@ -291,6 +291,10 @@ func setELConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &minimalCfg)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &minimalCfg)
+		case "mekong":
+			err = yaml.Unmarshal([]byte(config.MekongChainYml), &minimalCfg)
+		case "pectra-devnet-5":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &minimalCfg)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ElConfigPath)
 		}
