@@ -100,7 +100,7 @@ const tabs: HashTabs = [
         <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
       </template>
     </BcTabList>
-    <BcFooterMainFooter />
+    <BcFooterMain />
   </div>
 </template>
 
