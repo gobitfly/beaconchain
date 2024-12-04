@@ -19,6 +19,7 @@ import (
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/coocood/freecache"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
@@ -2247,21 +2248,31 @@ func verifyFCMTokens() error {
 }
 
 func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, client *rpc.ErigonClient) error {
-
 	ctx := context.Background()
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(int(concurrency))
 
-	log.Infof("transformerFlag: %v", transformerFlag)
-	transformerList := strings.Split(transformerFlag, ",")
-	if transformerFlag == "all" || len(transformerList) == 0 {
-		transformerList = []string{"TransformTx", "TransformBlobTx", "TransformItx", "TransformERC20", "TransformERC721", "TransformERC1155"}
-	}
-	log.Infof("transformers: %v", transformerList)
+	var transformerList []string
 
-	for i := startBlock; i <= endBlock; i++ {
-		i := i
-		g.Go(func() error {
+	if transformerFlag == "" {
+		return fmt.Errorf("Transformer flag is empty")
+	}
+	if transformerFlag == "all" {
+		transformerList = []string{"TransformTx", "TransformItx", "TransformERC20", "TransformERC721", "TransformERC1155"}
+	} else {
+		transformerList = strings.Split(transformerFlag, ",")
+	}
+
+	log.Infof("Transformers: %v", transformerList)
+
+	processBatch := func(startBlock, endBlock uint64) error {
+		var blockCount uint64
+		txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch, err := db.PrepareBatchesToSend(transformerList)
+		if err != nil {
+			return fmt.Errorf("error while preparing batches to send to ClickHouse: %w", err)
+		}
+
+		for i := startBlock; i <= endBlock; i++ {
 			select {
 			case <-gCtx.Done():
 				return gCtx.Err()
@@ -2270,23 +2281,50 @@ func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, 
 
 			bc, _, err := client.GetBlock(int64(i), "geth")
 			if err != nil {
-				return fmt.Errorf("error getting block: %v from ethereum node err: %w", i, err)
+				return fmt.Errorf("error getting block %d: %w", i, err)
 			}
 
-			err = db.SaveTransactionsToClickHouse(bc, transformerList)
+			err = db.PrepareTransactionsToClickHouse(bc, transformerList, txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
 			if err != nil {
-				return fmt.Errorf("error saving evm tx data into ClickHouse %w", err)
+				log.Error(err, "error preparing transactions to ClickHouse", 0)
+				return err
 			}
 
-			return nil
+			blockCount++
+
+			// check if we have accumulated enough transactions to send them to ClickHouse
+			if blockCount >= batchSize {
+				batchesToSend := []driver.Batch{txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch}
+
+				// send transactions to ClickHouse
+				err := db.SendBatchesToClickHouse(batchesToSend)
+				if err != nil {
+					log.Error(err, "error sending transactions to ClickHouse", 0)
+					return err
+				}
+
+				// reset blockCount after sending the batches to ClickHouse
+				blockCount = 0
+			}
+		}
+
+		return nil
+	}
+
+	// process blocks in parallel using batches
+	for i := startBlock; i <= endBlock; i += batchSize {
+		batchEnd := i + batchSize - 1
+		if batchEnd > endBlock {
+			batchEnd = endBlock
+		}
+
+		batchStart := i
+		g.Go(func() error {
+			return processBatch(batchStart, batchEnd)
 		})
 	}
 
-	err := g.Wait()
-
-	if err != nil {
-		return err
-	}
+	g.Wait()
 
 	return nil
 }
