@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -39,11 +41,17 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	// Prepare the sorting
+	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
 	sortSearchDirection := ">"
-	sortSearchOrder := " ASC"
-	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
+	if isReverseDirection {
 		sortSearchDirection = "<"
-		sortSearchOrder = " DESC"
+	}
+
+	orderFunc := func(col string) exp.OrderedExpression {
+		if isReverseDirection {
+			return goqu.I(col).Desc()
+		}
+		return goqu.I(col).Asc()
 	}
 
 	// Analyze the search term
@@ -119,28 +127,20 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		Amount          uint64 `db:"amount"`
 	}{}
 
-	queryParams := []interface{}{}
-	withdrawalsQuery := `
-		SELECT
-		    w.block_slot,
-		    b.exec_block_number,
-			w.withdrawalindex,
-			w.validatorindex,
-			w.address,
-			w.amount
-		FROM
-		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
-		`
-
-	// Limit the query to relevant validators
-	queryParams = append(queryParams, pq.Array(validators))
-	whereQuery := fmt.Sprintf(`
-		WHERE
-		    validatorindex = ANY ($%d)`, len(queryParams))
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("w.block_slot"),
+			goqu.L("b.exec_block_number"),
+			goqu.L("w.withdrawalindex"),
+			goqu.L("w.validatorindex"),
+			goqu.L("w.address"),
+			goqu.L("w.amount"),
+		).
+		From(goqu.L("blocks_withdrawals AS w")).
+		InnerJoin(goqu.L("blocks AS b"), goqu.On(goqu.L("w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'"))).
+		Where(goqu.L("validatorindex = ANY(?)", pq.Array(validators)))
 
 	// Limit the query using sorting and the cursor
-	orderQuery := ""
 	sortColName := ""
 	sortColCursor := interface{}(nil)
 	switch colSort.Column {
@@ -160,35 +160,38 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		colSort.Column == enums.VDBWithdrawalsColumns.Slot {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, currentCursor.Slot, currentCursor.WithdrawalIndex)
-			whereQuery += fmt.Sprintf(" AND (w.block_slot%[1]s$%[2]d OR (w.block_slot=$%[2]d AND w.withdrawalindex%[1]s$%[3]d))",
-				sortSearchDirection, len(queryParams)-1, len(queryParams))
+			ds = ds.
+				Where(goqu.L(fmt.Sprintf("(w.block_slot%[1]s? OR (w.block_slot=? AND w.withdrawalindex%[1]s?))",
+					sortSearchDirection), currentCursor.Slot, currentCursor.Slot, currentCursor.WithdrawalIndex))
 		}
-		orderQuery = fmt.Sprintf(" ORDER BY w.block_slot %[1]s, w.withdrawalindex %[1]s", sortSearchOrder)
+		ds = ds.
+			Order(orderFunc("w.block_slot"), orderFunc("w.withdrawalindex"))
 	} else {
 		if currentCursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
 
 			// The additional WHERE requirement is
 			// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
 			// with the > flipped if the sort is descending
-			whereQuery += fmt.Sprintf(" AND (%[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND (w.block_slot%[2]s$%[4]d OR (w.block_slot=$%[4]d AND w.withdrawalindex%[2]s$%[5]d))))",
-				sortColName, sortSearchDirection, len(queryParams)-2, len(queryParams)-1, len(queryParams))
+			ds = ds.
+				Where(goqu.L(fmt.Sprintf("(%[1]s%[2]s? OR (%[1]s=? AND (w.block_slot%[2]s? OR (w.block_slot=? AND w.withdrawalindex%[2]s?))))", sortColName, sortSearchDirection), sortColCursor, sortColCursor, currentCursor.Slot, currentCursor.Slot, currentCursor.WithdrawalIndex))
 		}
 		// The ordering is
 		// ORDER BY sortColName ASC, block_slot ASC, withdrawalindex ASC
 		// with the ASC flipped if the sort is descending
-		orderQuery = fmt.Sprintf(" ORDER BY %[1]s %[2]s, w.block_slot %[2]s, w.withdrawalindex %[2]s",
-			sortColName, sortSearchOrder)
+		ds = ds.
+			Order(orderFunc(sortColName), orderFunc("w.block_slot"), orderFunc("w.withdrawalindex"))
 	}
 
-	queryParams = append(queryParams, limit+1)
-	limitQuery := fmt.Sprintf(" LIMIT $%d", len(queryParams))
+	ds = ds.
+		Limit(uint(limit) + 1)
 
-	withdrawalsQuery += whereQuery + orderQuery + limitQuery
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error preparing withdrawals query: %w", err)
+	}
 
-	err = d.readerDb.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
+	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting withdrawals for dashboardId: %d (%d validators): %w", dashboardId.Id, len(validators), err)
 	}
@@ -223,17 +226,31 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		return nil, nil, err
 	}
 
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	// Create the result
 	cursorData := make([]t.WithdrawalsCursor, 0)
 	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
+		amount := utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount)))
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[withdrawal.ValidatorIndex]; ok {
+				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
+		}
 		result = append(result, t.VDBWithdrawalsTableRow{
 			Epoch:     withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
 			Slot:      withdrawal.BlockSlot,
 			Index:     withdrawal.ValidatorIndex,
 			Recipient: *addressMapping[address],
 			GroupId:   validatorGroupMap[withdrawal.ValidatorIndex],
-			Amount:    utils.GWeiToWei(big.NewInt(int64(withdrawal.Amount))),
+			Amount:    amount,
 		})
 		result[i].Recipient.IsContract = contractStatuses[i] == types.CONTRACT_CREATION || contractStatuses[i] == types.CONTRACT_PRESENT
 		cursorData = append(cursorData, t.WithdrawalsCursor{
@@ -272,6 +289,12 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			nextData.GroupId = validatorGroupMap[nextData.Index]
 			// TODO integrate label/ens data for "next" row
 			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
+
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[nextData.Index]; ok {
+					nextData.Amount = nextData.Amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+				}
+			}
 		} else {
 			// If there is no next data, add a missing estimate row
 			nextData = &t.VDBWithdrawalsTableRow{
@@ -458,43 +481,31 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		Amount         int64          `db:"acc_withdrawals_amount"`
 	}{}
 
-	withdrawalsQuery := `
-			WITH validators AS (
-				SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = $1)
-			)
-			SELECT
-				validator_index,
-				SUM(withdrawals_amount) AS acc_withdrawals_amount,
-				MAX(epoch_end) AS epoch_end
-			FROM validator_dashboard_data_rolling_total FINAL
-			INNER JOIN validators v ON validator_dashboard_data_rolling_total.validator_index = v.validator_index
-			WHERE validator_index IN (select validator_index FROM validators)
-			GROUP BY validator_index
-		`
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("validator_index"),
+			goqu.L("SUM(withdrawals_amount) AS acc_withdrawals_amount"),
+			goqu.L("MAX(epoch_end) AS epoch_end"),
+		).
+		From(goqu.L("validator_dashboard_data_rolling_total AS t FINAL")).
+		GroupBy("validator_index")
 
-	if dashboardId.Validators != nil {
-		withdrawalsQuery = `
-			SELECT
-				validator_index,
-				SUM(withdrawals_amount) AS acc_withdrawals_amount,
-				MAX(epoch_end) AS epoch_end
-			from validator_dashboard_data_rolling_total FINAL
-			where validator_index IN ($1)
-			group by validator_index
-		`
-	}
-
-	dashboardValidators := make([]t.VDBValidator, 0)
-	if dashboardId.Validators != nil {
-		dashboardValidators = dashboardId.Validators
-	}
-
-	if len(dashboardValidators) > 0 {
-		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardValidators)
+	if dashboardId.Validators == nil {
+		ds = ds.
+			With("validators", goqu.L("(SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = ?))", dashboardId.Id)).
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("t.validator_index = v.validator_index"))).
+			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
 	} else {
-		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardId.Id)
+		ds = ds.
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	}
 
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing total withdrawals query: %w", err)
+	}
+
+	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
 	}
@@ -504,34 +515,54 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		return result, nil
 	}
 
-	var totalAmount int64
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var validators []t.VDBValidator
 	lastEpoch := queryResult[0].Epoch
 	lastSlot := (lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
 
 	for _, res := range queryResult {
-		// Calculate the total amount of withdrawals
-		totalAmount += res.Amount
+		amount := utils.GWeiToWei(big.NewInt(res.Amount))
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok {
+				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
+		}
+		result.TotalAmount = result.TotalAmount.Add(amount)
 
 		// Calculate the current validators
 		validators = append(validators, res.ValidatorIndex)
 	}
 
-	var latestWithdrawalsAmount int64
-	err = d.readerDb.GetContext(ctx, &latestWithdrawalsAmount, `
+	err = d.readerDb.SelectContext(ctx, &queryResult, `
 		SELECT
-			COALESCE(SUM(w.amount), 0)
+			w.validatorindex AS validator_index,
+			SUM(w.amount) AS acc_withdrawals_amount
 		FROM
 		    blocks_withdrawals w
 		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
 		WHERE w.block_slot > $1 AND w.validatorindex = ANY ($2)
+		GROUP BY w.validatorindex
 		`, lastSlot, validators)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("error getting latest withdrawals for validators: %+v: %w", dashboardId, err)
 	}
 
-	totalAmount += latestWithdrawalsAmount
-	result.TotalAmount = utils.GWeiToWei(big.NewInt(totalAmount))
+	for _, res := range queryResult {
+		amount := utils.GWeiToWei(big.NewInt(res.Amount))
+		if rpInfos != nil && protocolModes.RocketPool {
+			if rpValidator, ok := rpInfos.Minipool[res.ValidatorIndex]; ok {
+				amount = amount.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+			}
+		}
+		result.TotalAmount = result.TotalAmount.Add(amount)
+	}
 
 	return result, nil
 }
