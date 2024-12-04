@@ -206,10 +206,9 @@ func IndexTxsToClickHouseFromBigtable(start, end, concurrency int64) error {
 	g.SetLimit(int(concurrency))
 
 	log.Infof("ClickHouse indexing blocks from %d to %d", start, end)
-	batchSize := int64(10)
+	batchSize := int64(100)
 	transformerList := []string{"TransformTx", "TransformItx", "TransformERC20", "TransformERC721", "TransformERC1155"}
 
-	// Optimized concurrency for fetching blocks and saving to ClickHouse
 	for i := start; i <= end; i += batchSize {
 		firstBlock := i
 		lastBlock := firstBlock + batchSize - 1
@@ -237,23 +236,49 @@ func IndexTxsToClickHouseFromBigtable(start, end, concurrency int64) error {
 				close(stream)
 			}(blocksChan)
 
+			txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch, err := PrepareBatchesToSend(transformerList)
+			if err != nil {
+				return fmt.Errorf("error preparing batches: %w", err)
+			}
+
 			// Use another goroutine to process transactions concurrently
 			subG := new(errgroup.Group)
 			subG.SetLimit(int(concurrency))
+			var blockCount int64
 
 			for b := range blocksChan {
 				block := b
 				subG.Go(func() error {
-					err := SaveTransactionsToClickHouse(block, transformerList)
+					err := PrepareTransactionsToClickHouse(block, transformerList, txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
 					if err != nil {
 						log.Error(err, "error saving transactions to ClickHouse", 0)
 						return err
 					}
+
+					blockCount++
+
 					return nil
 				})
 			}
 
-			return subG.Wait()
+			if err := subG.Wait(); err != nil {
+				return fmt.Errorf("block processing error: %w", err)
+			}
+
+			if blockCount >= batchSize {
+				batchesToSend := []driver.Batch{txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch}
+				// send transactions to ClickHouse
+				err := SendBatchesToClickHouse(batchesToSend)
+				if err != nil {
+					log.Error(err, "error sending batches to ClickHouse", 0)
+					return err
+				}
+
+				// reset blockCount after sending the batches to ClickHouse
+				blockCount = 0
+			}
+
+			return nil
 		})
 	}
 
@@ -315,7 +340,7 @@ type InternalTransaction struct {
 	ErrorMsg    *string
 }
 
-func SaveTransactionsToClickHouse(block *types.Eth1Block, transformerList []string) error {
+func PrepareTransactionsToClickHouse(block *types.Eth1Block, transformerList []string, txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch driver.Batch) error {
 	// set values for logging
 	startTs := time.Now()
 	lastTickTs := time.Now()
@@ -326,29 +351,29 @@ func SaveTransactionsToClickHouse(block *types.Eth1Block, transformerList []stri
 		for _, transformer := range transformerList {
 			switch transformer {
 			case "TransformTx":
-				err := saveTxsToClickHouse(tx, i, block.Number, block.Time.Seconds)
+				err := saveTxsToClickHouse(tx, i, block.Number, block.Time.Seconds, txBatch)
 				if err != nil {
 					log.Error(err, "error while processing tx", 0)
 				}
 				currentProcessed = atomic.AddInt64(&processedTxs, 1)
 
 			case "TransformItx":
-				err := saveItxToClickHouse(tx, block.Number, block.Time.Seconds)
+				err := saveItxToClickHouse(tx, block.Number, block.Time.Seconds, itxBatch)
 				if err != nil {
 					log.Error(err, "error while processing itx", 0)
 				}
 			case "TransformERC20":
-				err := saveERC20ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds)
+				err := saveERC20ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds, erc20Batch)
 				if err != nil {
 					log.Error(err, "error while processing ERC20 transfers", 0)
 				}
 			case "TransformERC721":
-				err := saveERC721ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds)
+				err := saveERC721ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds, erc721Batch)
 				if err != nil {
 					log.Error(err, "error while processing ERC721 transfers", 0)
 				}
 			case "TransformERC1155":
-				err := saveERC1155ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds)
+				err := saveERC1155ToClickHouse(tx, i, block.Number, common.BytesToHash(block.GetHash()), block.Time.Seconds, erc1155Batch)
 				if err != nil {
 					log.Error(err, "error while processing ERC1155 transfers", 0)
 				}
@@ -363,7 +388,48 @@ func SaveTransactionsToClickHouse(block *types.Eth1Block, transformerList []stri
 	return nil
 }
 
-func prepareTxBatch(ctx context.Context) (driver.Batch, error) {
+func PrepareBatchesToSend(transformerList []string) (driver.Batch, driver.Batch, driver.Batch, driver.Batch, driver.Batch, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+	defer cancel()
+
+	var txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch driver.Batch
+	var err error
+	for _, transformer := range transformerList {
+		switch transformer {
+		case "TransformTx":
+			txBatch, err = PrepareTxBatch(ctx)
+			if err != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare tx batch: %v", err)
+			}
+		case "TransformItx":
+			itxBatch, err = PrepareItxBatch(ctx)
+			if err != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare itx batch: %v", err)
+			}
+		case "TransformERC20":
+			erc20Batch, err = PrepareERC20Batch(ctx)
+			if err != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC20 batch: %v", err)
+			}
+		case "TransformERC721":
+			erc721Batch, err = PrepareERC721Batch(ctx)
+			if err != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC721 batch: %v", err)
+			}
+		case "TransformERC1155":
+			erc1155Batch, err = PrepareERC1155Batch(ctx)
+			if err != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC1155 batch: %v", err)
+			}
+		default:
+			log.Error(nil, "unknown transformer type", 0)
+		}
+	}
+
+	return txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch, nil
+}
+
+func PrepareTxBatch(ctx context.Context) (driver.Batch, error) {
 	txBatch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO transactions_ethereum (
 			tx_index, tx_hash, block_number, from_address, to_address, type, method, value, nonce, status,
@@ -379,7 +445,7 @@ func prepareTxBatch(ctx context.Context) (driver.Batch, error) {
 	return txBatch, nil
 }
 
-func prepareItxBatch(ctx context.Context) (driver.Batch, error) {
+func PrepareItxBatch(ctx context.Context) (driver.Batch, error) {
 	itxBatch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO internal_tx_ethereum (parent_hash, block_number, from_address, to_address, type, value,
 			path, gas, timestamp, error_msg)`)
@@ -390,7 +456,7 @@ func prepareItxBatch(ctx context.Context) (driver.Batch, error) {
 	return itxBatch, nil
 }
 
-func prepareERC20Batch(ctx context.Context) (driver.Batch, error) {
+func PrepareERC20Batch(ctx context.Context) (driver.Batch, error) {
 	erc20Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO erc20_ethereum (parent_hash, block_number, from_address, to_address, token_address,
 			value, log_index, log_type, transaction_log_index, removed, timestamp)`)
@@ -401,7 +467,7 @@ func prepareERC20Batch(ctx context.Context) (driver.Batch, error) {
 	return erc20Batch, nil
 }
 
-func prepareERC721Batch(ctx context.Context) (driver.Batch, error) {
+func PrepareERC721Batch(ctx context.Context) (driver.Batch, error) {
 	erc721Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO erc721_ethereum (parent_hash, block_number, from_address, to_address, token_address,
 			 token_id, log_index, log_type, transaction_log_index, removed, timestamp)`)
@@ -412,7 +478,7 @@ func prepareERC721Batch(ctx context.Context) (driver.Batch, error) {
 	return erc721Batch, nil
 }
 
-func prepareERC1155Batch(ctx context.Context) (driver.Batch, error) {
+func PrepareERC1155Batch(ctx context.Context) (driver.Batch, error) {
 	erc1155Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO erc1155_ethereum (parent_hash, block_number, from_address, to_address, operator, token_address, 
 			token_id, value, log_index, log_type, transaction_log_index, removed, timestamp)`)
@@ -421,6 +487,19 @@ func prepareERC1155Batch(ctx context.Context) (driver.Batch, error) {
 	}
 
 	return erc1155Batch, nil
+}
+
+func SendBatchesToClickHouse(batches []driver.Batch) error {
+	for _, batch := range batches {
+		if batch != nil {
+			err := batch.Send()
+			if err != nil {
+				return fmt.Errorf("failed to send batch to ClickHouse: %v", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func mapStatusToEnum(status uint64) string {
@@ -436,22 +515,8 @@ func mapStatusToEnum(status uint64) string {
 	}
 }
 
-func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockTimestamp int64) error {
+func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockTimestamp int64, txBatch driver.Batch) error {
 	for attempt := 1; attempt <= MAX_RETRY; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-
-		// prepare tx batch to send to ClickHouse
-		txBatch, err := prepareTxBatch(ctx)
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to prepare tx batch: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to prepare tx batch after %d attempts: %v", MAX_RETRY, err)
-		}
-
 		// parse contract address
 		toAddress := tx.GetTo()
 		isContract := false
@@ -476,7 +541,7 @@ func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uin
 			blobVersionedHashes = append(blobVersionedHashes, blobHash.String())
 		}
 
-		err = txBatch.Append(
+		err := txBatch.Append(
 			txIndex,
 			string(tx.Hash),
 			blockNumber,
@@ -513,18 +578,8 @@ func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uin
 				time.Sleep(RETRY_DELAY)
 				continue
 			}
-			return fmt.Errorf("failed to append tx data to batch after %d attempts: %v", MAX_RETRY, err)
-		}
-
-		// send the tx batch to ClickHouse
-		err = txBatch.Send()
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to send tx batch to ClickHouse: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to send tx batch to ClickHouse after %d attempts: %v", MAX_RETRY, err)
+			fmt.Errorf("failed to append tx data to batch after %d attempts: %v", MAX_RETRY, err)
+			panic("failed to process tx")
 		}
 
 		return nil
@@ -533,11 +588,8 @@ func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uin
 	return fmt.Errorf("failed to process transactions for block %d after %d attempts", blockNumber, MAX_RETRY)
 }
 
-func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTimestamp int64) error {
+func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTimestamp int64, itxBatch driver.Batch) error {
 	for attempt := 1; attempt <= MAX_RETRY; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-
 		if len(tx.Itx) == 0 {
 			return nil
 		}
@@ -548,19 +600,8 @@ func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTim
 		lastTickTs := time.Now()
 		var currentProcessed int64
 
-		// prepare itx batch to send to ClickHouse
-		itxBatch, err := prepareItxBatch(ctx)
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to prepare ITX batch: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to prepare ITX batch after %d attempts: %v", MAX_RETRY, err)
-		}
-
 		for _, itx := range tx.Itx {
-			err = itxBatch.Append(
+			err := itxBatch.Append(
 				string(tx.Hash),
 				blockNumber,
 				itx.From,
@@ -580,20 +621,10 @@ func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTim
 					time.Sleep(RETRY_DELAY)
 					continue
 				}
-				return fmt.Errorf("failed to append ITX data to batch after %d attempts: %v", MAX_RETRY, err)
+				fmt.Errorf("failed to append ITX data to batch after %d attempts: %v", MAX_RETRY, err)
+				panic("failed to process ITX")
 			}
 			currentProcessed = atomic.AddInt64(&processedItx, 1)
-		}
-
-		// send the itx batch to ClickHouse
-		err = itxBatch.Send()
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to send ITX batch to ClickHouse: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to send ITX batch to ClickHouse after %d attempts: %v", MAX_RETRY, err)
 		}
 
 		log.Infof("processed %v ITXs in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, tx.Hash)
@@ -605,27 +636,14 @@ func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTim
 
 }
 
-func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTimestamp int64) error {
+func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTimestamp int64, erc20Batch driver.Batch) error {
 	for attempt := 1; attempt <= MAX_RETRY; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		// set values for logging
 		processedERC20 := int64(0)
 		startTs := time.Now()
 		lastTickTs := time.Now()
 		var currentProcessed int64
-
-		// prepare ERC20 batch to send to ClickHouse
-		erc20Batch, err := prepareERC20Batch(ctx)
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to prepare ERC20 batch: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to prepare ERC20 batch after %d attempts: %v", MAX_RETRY, err)
-		}
 
 		for j, txLog := range tx.GetLogs() {
 			// no events emitted continue
@@ -685,21 +703,11 @@ func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber u
 					time.Sleep(RETRY_DELAY)
 					continue
 				}
-				return fmt.Errorf("failed to append ERC20 data to batch after %d attempts: %v", MAX_RETRY, err)
+				fmt.Errorf("failed to append ERC20 data to batch after %d attempts: %v", MAX_RETRY, err)
+				panic("failed to process ERC20")
 			}
 
 			currentProcessed = atomic.AddInt64(&processedERC20, 1)
-		}
-
-		// send the ERC20 batch to ClickHouse
-		err = erc20Batch.Send()
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to send ERC20 batch to ClickHouse: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to send ERC20 batch to ClickHouse after %d attempts: %v", MAX_RETRY, err)
 		}
 
 		if processedERC20 != 0 {
@@ -712,27 +720,13 @@ func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber u
 	return fmt.Errorf("failed to process ERC20 data for block %d for tx %s after %d attempts", blockNumber, tx.Hash, MAX_RETRY)
 }
 
-func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTimestamp int64) error {
+func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTimestamp int64, erc721Batch driver.Batch) error {
 	for attempt := 1; attempt <= MAX_RETRY; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-
 		// set values for logging
 		processedERC721 := int64(0)
 		startTs := time.Now()
 		lastTickTs := time.Now()
 		var currentProcessed int64
-
-		// prepare ERC721 batch to send to ClickHouse
-		erc721Batch, err := prepareERC721Batch(ctx)
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to prepare ERC721 batch: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to prepare ERC721 batch after %d attempts: %v", MAX_RETRY, err)
-		}
 
 		for j, txLog := range tx.GetLogs() {
 			// no events emitted continue
@@ -794,21 +788,11 @@ func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber 
 					time.Sleep(RETRY_DELAY)
 					continue
 				}
-				return fmt.Errorf("failed to append ERC721 data to batch after %d attempts: %v", MAX_RETRY, err)
+				fmt.Errorf("failed to append ERC721 data to batch after %d attempts: %v", MAX_RETRY, err)
+				panic("failed to process ERC721")
 			}
 
 			currentProcessed = atomic.AddInt64(&processedERC721, 1)
-		}
-
-		// send the ERC721 batch to ClickHouse
-		err = erc721Batch.Send()
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to send ERC721 batch to ClickHouse: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to send ERC721 batch to ClickHouse after %d attempts: %v", MAX_RETRY, err)
 		}
 
 		if processedERC721 != 0 {
@@ -821,27 +805,14 @@ func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber 
 	return fmt.Errorf("failed to process ERC721 data for block %d for tx %s after %d attempts", blockNumber, tx.Hash, MAX_RETRY)
 }
 
-func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTimestamp int64) error {
+func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockHash common.Hash, blockTimestamp int64, erc1155Batch driver.Batch) error {
 	for attempt := 1; attempt <= MAX_RETRY; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
 
 		// set values for logging
 		processedERC1155 := int64(0)
 		startTs := time.Now()
 		lastTickTs := time.Now()
 		var currentProcessed int64
-
-		// prepare ERC1155 batch to send to ClickHouse
-		erc1155Batch, err := prepareERC1155Batch(ctx)
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to prepare ERC1155 batch: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to prepare ERC1155 batch after %d attempts: %v", MAX_RETRY, err)
-		}
 
 		for j, txLog := range tx.GetLogs() {
 			// no events emitted continue
@@ -908,7 +879,8 @@ func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber
 							time.Sleep(RETRY_DELAY)
 							continue
 						}
-						return fmt.Errorf("failed to append ERC1155 data to batch after %d attempts: %v", MAX_RETRY, err)
+						fmt.Errorf("failed to append ERC1155 data to batch after %d attempts: %v", MAX_RETRY, err)
+						panic("failed to process ERC1155")
 					}
 
 					currentProcessed = atomic.AddInt64(&processedERC1155, 1)
@@ -937,22 +909,12 @@ func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber
 						time.Sleep(RETRY_DELAY)
 						continue
 					}
-					return fmt.Errorf("failed to append ERC1155 data to batch after %d attempts: %v", MAX_RETRY, err)
+					fmt.Errorf("failed to append ERC1155 data to batch after %d attempts: %v", MAX_RETRY, err)
+					panic("failed to process ERC1155")
 				}
 
 				currentProcessed = atomic.AddInt64(&processedERC1155, 1)
 			}
-		}
-
-		// send the ERC1155 batch to ClickHouse
-		err = erc1155Batch.Send()
-		if err != nil {
-			if attempt < MAX_RETRY {
-				log.Warn(fmt.Sprintf("Attempt %d failed to send ERC1155 batch to ClickHouse: %v. Retrying...", attempt, err))
-				time.Sleep(RETRY_DELAY)
-				continue
-			}
-			return fmt.Errorf("failed to send ERC1155 batch to ClickHouse after %d attempts: %v", MAX_RETRY, err)
 		}
 
 		if processedERC1155 != 0 {
