@@ -20,7 +20,7 @@ defineProps<{
       <div id="bottom_banner" />
       <slot name="bottom" />
     </div>
-    <BcFooterMainFooter />
+    <BcFooterMain />
   </div>
 </template>
 
