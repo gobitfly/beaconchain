@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS transactions_ethereum (
     to_address String CODEC(ZSTD(3)), 
     type LowCardinality(String) CODEC(ZSTD(3)),  
     method String CODEC(ZSTD(3)), 
-    value UInt256, 
+    value UInt64, 
     nonce UInt64 CODEC(T64, ZSTD(3)), 
     status Enum('failed' = 0, 'success' = 1, 'partialy failed' = 2) CODEC(ZSTD(3)), 
     timestamp DateTime, 
