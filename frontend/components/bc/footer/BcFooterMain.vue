@@ -1,17 +1,34 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const year = new Date().getFullYear()
+const version = useRuntimeConfig().public.gitVersion
+</script>
 
 <template>
   <div class="main-footer">
-    <div class="links">
+    <div class="main-footer__links">
       <BcFooterLinkList />
     </div>
-    <div class="very-last-line">
-      <BcFooterCopyrightAndVersion />&nbsp;|&nbsp;<BcFooterColorThemeToggle />
+    <div class="main-footer__meta">
+      <span>
+        © bitfly explorer GmbH {{ year }}
+      </span>
+      <span class="main-footer__meta_seperator">
+        |
+      </span>
+      <span>
+        v{{ version }}
+      </span>
+      <span class="main-footer__meta_seperator">
+        |
+      </span>
+      <BcThemeToggle />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+@use '~/assets/css/breakpoints' as *;
+
 .main-footer {
   display: flex;
   position: relative;
@@ -19,7 +36,7 @@
   width: 100%;
   flex-direction: column;
   gap: var(--padding-large);
-  padding-top: var(--padding-large);
+  padding-block: var(--padding-large);
   margin-top: 64px;
   background-color: var(--container-background);
 
@@ -34,7 +51,7 @@
     padding-left: var(--padding-large);
   }
 
-  .links {
+  .main-footer__links {
     display: flex;
     position: relative;
 
@@ -53,20 +70,22 @@
     }
   }
 
-  .very-last-line {
+  .main-footer__meta {
     display: flex;
-    position: relative;
-    flex-direction: row;
-    padding-bottom: 13px;
-
-    @media (min-width: 600px) {
-      // large screen
-      justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--padding);
+    .main-footer__meta_seperator {
+      display: none;
     }
 
-    @media (max-width: 599.9px) {
-      // mobile
-      justify-content: flex-start;
+    @media (min-width: $breakpoint-sm) {
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      .main-footer__meta_seperator {
+        display: inline;
+      }
     }
   }
 }
