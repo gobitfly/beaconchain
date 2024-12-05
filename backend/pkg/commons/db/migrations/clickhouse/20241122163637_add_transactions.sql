@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS transactions_ethereum (
     tx_index UInt64 CODEC(T64, ZSTD(3)),
-    tx_hash FixedString(32) CODEC(ZSTD(3)), 
+    tx_hash FixedString(32) CODEC(NONE), 
     block_number UInt64 CODEC(T64, ZSTD(3)),           
     from_address FixedString(20) CODEC(ZSTD(3)), 
     to_address FixedString(20) CODEC(ZSTD(3)),
