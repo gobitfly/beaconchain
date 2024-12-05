@@ -389,35 +389,32 @@ func PrepareTransactionsToClickHouse(block *types.Eth1Block, transformerList []s
 }
 
 func PrepareBatchesToSend(transformerList []string) (driver.Batch, driver.Batch, driver.Batch, driver.Batch, driver.Batch, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
-	defer cancel()
-
 	var txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch driver.Batch
 	var err error
 	for _, transformer := range transformerList {
 		switch transformer {
 		case "TransformTx":
-			txBatch, err = PrepareTxBatch(ctx)
+			txBatch, err = PrepareTxBatch()
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare tx batch: %v", err)
 			}
 		case "TransformItx":
-			itxBatch, err = PrepareItxBatch(ctx)
+			itxBatch, err = PrepareItxBatch()
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare itx batch: %v", err)
 			}
 		case "TransformERC20":
-			erc20Batch, err = PrepareERC20Batch(ctx)
+			erc20Batch, err = PrepareERC20Batch()
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC20 batch: %v", err)
 			}
 		case "TransformERC721":
-			erc721Batch, err = PrepareERC721Batch(ctx)
+			erc721Batch, err = PrepareERC721Batch()
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC721 batch: %v", err)
 			}
 		case "TransformERC1155":
-			erc1155Batch, err = PrepareERC1155Batch(ctx)
+			erc1155Batch, err = PrepareERC1155Batch()
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC1155 batch: %v", err)
 			}
@@ -429,7 +426,8 @@ func PrepareBatchesToSend(transformerList []string) (driver.Batch, driver.Batch,
 	return txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch, nil
 }
 
-func PrepareTxBatch(ctx context.Context) (driver.Batch, error) {
+func PrepareTxBatch() (driver.Batch, error) {
+	ctx := context.Background()
 	txBatch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO transactions_ethereum (
 			tx_index, tx_hash, block_number, from_address, to_address, type, method, value, nonce, status,
@@ -445,7 +443,8 @@ func PrepareTxBatch(ctx context.Context) (driver.Batch, error) {
 	return txBatch, nil
 }
 
-func PrepareItxBatch(ctx context.Context) (driver.Batch, error) {
+func PrepareItxBatch() (driver.Batch, error) {
+	ctx := context.Background()
 	itxBatch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO internal_tx_ethereum (parent_hash, block_number, from_address, to_address, type, value,
 			path, gas, timestamp, error_msg)`)
@@ -456,7 +455,8 @@ func PrepareItxBatch(ctx context.Context) (driver.Batch, error) {
 	return itxBatch, nil
 }
 
-func PrepareERC20Batch(ctx context.Context) (driver.Batch, error) {
+func PrepareERC20Batch() (driver.Batch, error) {
+	ctx := context.Background()
 	erc20Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO erc20_ethereum (parent_hash, block_number, from_address, to_address, token_address,
 			value, log_index, log_type, transaction_log_index, removed, timestamp)`)
@@ -467,7 +467,8 @@ func PrepareERC20Batch(ctx context.Context) (driver.Batch, error) {
 	return erc20Batch, nil
 }
 
-func PrepareERC721Batch(ctx context.Context) (driver.Batch, error) {
+func PrepareERC721Batch() (driver.Batch, error) {
+	ctx := context.Background()
 	erc721Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO erc721_ethereum (parent_hash, block_number, from_address, to_address, token_address,
 			 token_id, log_index, log_type, transaction_log_index, removed, timestamp)`)
@@ -478,7 +479,8 @@ func PrepareERC721Batch(ctx context.Context) (driver.Batch, error) {
 	return erc721Batch, nil
 }
 
-func PrepareERC1155Batch(ctx context.Context) (driver.Batch, error) {
+func PrepareERC1155Batch() (driver.Batch, error) {
+	ctx := context.Background()
 	erc1155Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 	INSERT INTO erc1155_ethereum (parent_hash, block_number, from_address, to_address, operator, token_address, 
 			token_id, value, log_index, log_type, transaction_log_index, removed, timestamp)`)
@@ -496,6 +498,7 @@ func SendBatchesToClickHouse(batches []driver.Batch) error {
 			if err != nil {
 				return fmt.Errorf("failed to send batch to ClickHouse: %v", err)
 			}
+			log.Infof("Sent data to ClickHouse successfully")
 		}
 	}
 
@@ -520,7 +523,7 @@ func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uin
 		// parse contract address
 		toAddress := tx.GetTo()
 		isContract := false
-		if tx.GetContractAddress() != ZERO_ADDRESS_STRING {
+		if !bytes.Equal(tx.GetContractAddress(), ZERO_ADDRESS) {
 			toAddress = tx.GetContractAddress()
 			isContract = true
 		}
@@ -546,7 +549,7 @@ func saveTxsToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber uin
 			string(tx.Hash),
 			blockNumber,
 			string(tx.From),
-			toAddress,
+			string(toAddress),
 			fmt.Sprintf("0x%x", tx.Type),
 			fmt.Sprintf("%x", string(method)),
 			tx.Value,
@@ -604,8 +607,8 @@ func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTim
 			err := itxBatch.Append(
 				string(tx.Hash),
 				blockNumber,
-				itx.From,
-				itx.To,
+				string(itx.From),
+				string(itx.To),
 				itx.Type,
 				itx.Value,
 				itx.Path,
@@ -627,7 +630,7 @@ func saveItxToClickHouse(tx *types.Eth1Transaction, blockNumber uint64, blockTim
 			currentProcessed = atomic.AddInt64(&processedItx, 1)
 		}
 
-		log.Infof("processed %v ITXs in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, tx.Hash)
+		log.Infof("processed %v ITXs in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, common.Bytes2Hex(tx.Hash))
 
 		return nil
 	}
@@ -666,7 +669,7 @@ func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber u
 				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blockNumber,
-				TxHash:      common.HexToHash(tx.Hash),
+				TxHash:      common.BytesToHash(tx.Hash),
 				TxIndex:     uint(txIndex),
 				BlockHash:   blockHash,
 				Index:       uint(j),
@@ -685,9 +688,9 @@ func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber u
 			err = erc20Batch.Append(
 				string(tx.Hash),
 				blockNumber,
-				transfer.From.String(),
-				transfer.To.String(),
-				common.BytesToAddress(txLog.Address).String(),
+				string(transfer.From.Bytes()),
+				string(transfer.To.Bytes()),
+				string(txLog.Address),
 				value,
 				uint64(j),
 				topics[0].String(),
@@ -711,7 +714,7 @@ func saveERC20ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber u
 		}
 
 		if processedERC20 != 0 {
-			log.Infof("processed %v ERC20 transfers in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, tx.Hash)
+			log.Infof("processed %v ERC20 transfers in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, common.Bytes2Hex(tx.Hash))
 		}
 
 		return nil
@@ -750,7 +753,7 @@ func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber 
 				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blockNumber,
-				TxHash:      common.HexToHash(tx.Hash),
+				TxHash:      common.BytesToHash(tx.Hash),
 				TxIndex:     uint(txIndex),
 				BlockHash:   blockHash,
 				Index:       uint(j),
@@ -770,9 +773,9 @@ func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber 
 			err = erc721Batch.Append(
 				string(tx.Hash),
 				blockNumber,
-				transfer.From.String(),
-				transfer.To.String(),
-				common.Bytes2Hex(txLog.Address),
+				string(transfer.From.Bytes()),
+				string(transfer.To.Bytes()),
+				string(txLog.Address),
 				tokenId,
 				uint64(j),
 				topics[0].String(),
@@ -796,7 +799,7 @@ func saveERC721ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber 
 		}
 
 		if processedERC721 != 0 {
-			log.Infof("processed %v ERC721 transfers in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, tx.Hash)
+			log.Infof("processed %v ERC721 transfers in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, common.Bytes2Hex(tx.Hash))
 		}
 
 		return nil
@@ -836,7 +839,7 @@ func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber
 				Data:        txLog.Data,
 				Topics:      topics,
 				BlockNumber: blockNumber,
-				TxHash:      common.HexToHash(tx.Hash),
+				TxHash:      common.BytesToHash(tx.Hash),
 				TxIndex:     uint(txIndex),
 				BlockHash:   blockHash,
 				Index:       uint(j),
@@ -859,10 +862,10 @@ func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber
 					err = erc1155Batch.Append(
 						string(tx.Hash),
 						blockNumber,
-						transferBatch.From.String(),
-						transferBatch.To.String(),
-						transferBatch.Operator.String(),
-						common.Bytes2Hex(txLog.Address),
+						string(transferBatch.From.Bytes()),
+						string(transferBatch.To.Bytes()),
+						string(transferBatch.Operator.Bytes()),
+						string(txLog.Address),
 						transferBatch.Ids[index],
 						transferBatch.Values[index],
 						uint64(j),
@@ -889,10 +892,10 @@ func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber
 				err = erc1155Batch.Append(
 					string(tx.Hash),
 					blockNumber,
-					transferSingle.From.String(),
-					transferSingle.To.String(),
-					transferSingle.Operator.String(),
-					common.Bytes2Hex(txLog.Address),
+					string(transferSingle.From.Bytes()),
+					string(transferSingle.To.Bytes()),
+					string(transferSingle.Operator.Bytes()),
+					string(txLog.Address),
 					transferSingle.Id,
 					transferSingle.Value,
 					uint64(j),
@@ -918,7 +921,7 @@ func saveERC1155ToClickHouse(tx *types.Eth1Transaction, txIndex int, blockNumber
 		}
 
 		if processedERC1155 != 0 {
-			log.Infof("processed %v ERC1155 transfers in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, tx.Hash)
+			log.Infof("processed %v ERC1155 transfers in %v (%.1f txs / sec) for block %d for tx %s", currentProcessed, time.Since(startTs), float64((currentProcessed))/time.Since(lastTickTs).Seconds(), blockNumber, common.Bytes2Hex(tx.Hash))
 		}
 
 		return nil
