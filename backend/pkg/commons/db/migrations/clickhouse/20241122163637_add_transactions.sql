@@ -2,10 +2,10 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS transactions_ethereum (
     tx_index UInt64 CODEC(T64, ZSTD(3)),
-    tx_hash String CODEC(ZSTD(3)), 
+    tx_hash FixedString(32) CODEC(ZSTD(3)), 
     block_number UInt64 CODEC(T64, ZSTD(3)),           
-    from_address String CODEC(ZSTD(3)), 
-    to_address String CODEC(ZSTD(3)), 
+    from_address FixedString(20) CODEC(ZSTD(3)), 
+    to_address FixedString(20) CODEC(ZSTD(3)),
     type LowCardinality(String) CODEC(ZSTD(3)),  
     method String CODEC(ZSTD(3)), 
     value UInt64, 
@@ -42,10 +42,10 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS internal_tx_ethereum (
-    parent_hash String CODEC(ZSTD(3)),
+    parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String CODEC(ZSTD(3)),
-    to_address String CODEC(ZSTD(3)),
+    from_address FixedString(20) CODEC(ZSTD(3)),
+    to_address FixedString(20) CODEC(ZSTD(3)),
     type String CODEC(ZSTD(3)),
     value String CODEC(ZSTD(3)),
     path String,
@@ -65,11 +65,11 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS erc20_ethereum (
-    parent_hash String CODEC(ZSTD(3)),
+    parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String CODEC(ZSTD(3)),
-    to_address String CODEC(ZSTD(3)),
-    token_address String CODEC(ZSTD(3)),
+    from_address FixedString(20) CODEC(ZSTD(3)),
+    to_address FixedString(20) CODEC(ZSTD(3)),
+    token_address FixedString(20) CODEC(ZSTD(3)),
     value UInt256 CODEC(ZSTD(3)),
     log_index UInt32 CODEC(T64, ZSTD(3)),
     log_type String CODEC(ZSTD(3)),
@@ -89,11 +89,11 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS erc721_ethereum(
-    parent_hash String CODEC(ZSTD(3)),
+    parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String CODEC(ZSTD(3)),
-    to_address String CODEC(ZSTD(3)),
-    token_address String CODEC(ZSTD(3)),
+    from_address FixedString(20) CODEC(ZSTD(3)),
+    to_address FixedString(20) CODEC(ZSTD(3)),
+    token_address FixedString(20) CODEC(ZSTD(3)),
     token_id UInt256 CODEC(ZSTD(3)),
     log_index UInt32 CODEC(ZSTD(3)),
     log_type Nullable(String) CODEC(ZSTD(3)),
@@ -113,12 +113,12 @@ SETTINGS index_granularity = 8192
 
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS erc1155_ethereum(
-    parent_hash String CODEC(ZSTD(3)),
+    parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
-    from_address String CODEC(ZSTD(3)),
-    to_address String CODEC(ZSTD(3)),
-    operator String CODEC(ZSTD(3)),
-    token_address String CODEC(ZSTD(3)),
+    from_address FixedString(20) CODEC(ZSTD(3)),
+    to_address FixedString(20) CODEC(ZSTD(3)),
+    operator FixedString(20) CODEC(ZSTD(3)),
+    token_address FixedString(20) CODEC(ZSTD(3)),
     token_id UInt256 CODEC(ZSTD(3)),
     value UInt256 CODEC(ZSTD(3)),
     log_index UInt32 CODEC(ZSTD(3)),
