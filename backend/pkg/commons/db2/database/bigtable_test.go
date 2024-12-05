@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
 )
 
 func TestNewBigTable(t *testing.T) {

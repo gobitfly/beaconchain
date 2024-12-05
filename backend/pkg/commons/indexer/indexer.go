@@ -26,10 +26,11 @@ func New(store data.Store, transformers ...TransformFunc) *Indexer {
 	}
 }
 
-func (indexer *Indexer) IndexBlocksWithTransformers(chainID string, blocks []*types.Eth1Block) error {
-	updates := make(map[string][]database.Item)
-	updatesMetadata := make(map[string][]database.Item)
+func (indexer *Indexer) IndexBlocks(chainID string, blocks []*types.Eth1Block) error {
 	for _, block := range blocks {
+		updates := make(map[string][]database.Item)
+		updatesMetadata := make(map[string][]database.Item)
+
 		for _, transform := range indexer.transformers {
 			update, updateMetadata, err := transform(chainID, block)
 			if err != nil {
@@ -46,12 +47,12 @@ func (indexer *Indexer) IndexBlocksWithTransformers(chainID string, blocks []*ty
 				maps.Copy(updatesMetadata, metadata.BlockKeysMutation(chainID, block.Number, block.Hash, metaKeys))
 			}
 		}
-	}
 
-	if len(updates) > 0 {
-		err := indexer.store.AddItems(updates)
-		if err != nil {
-			return fmt.Errorf("error writing blocks [%v-%v] to bigtable data table: %w", blocks[0].Number, blocks[len(blocks)-1].Number, err)
+		if len(updates) > 0 {
+			err := indexer.store.AddItems(updates)
+			if err != nil {
+				return fmt.Errorf("error writing blocks [%v-%v] to bigtable data table: %w", blocks[0].Number, blocks[len(blocks)-1].Number, err)
+			}
 		}
 	}
 

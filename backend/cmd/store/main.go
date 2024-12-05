@@ -2,8 +2,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -15,6 +17,10 @@ func main() {
 	project := args[0]
 	instance := args[1]
 	table := args[2]
+	port, err := strconv.Atoi(args[3])
+	if err != nil {
+		panic(err)
+	}
 
 	bt, err := database.NewBigTable(project, instance, nil)
 	if err != nil {
@@ -22,8 +28,8 @@ func main() {
 	}
 	remote := database.NewRemote(database.Wrap(bt, table))
 	go func() {
-		log.Info("starting remote raw store on port 8087")
-		if err := http.ListenAndServe("0.0.0.0:8087", remote.Routes()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Infof("starting remote raw store on port %d", port)
+		if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), remote.Routes()); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(err)
 		}
 	}()

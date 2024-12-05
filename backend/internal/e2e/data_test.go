@@ -12,20 +12,15 @@ import (
 	"github.com/gobitfly/beaconchain/internal/th"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/db2test"
 	"github.com/gobitfly/beaconchain/pkg/commons/indexer"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 func TestStoreWithBackend(t *testing.T) {
-	clientBT, adminBT := databasetest.NewBigTable(t)
-	bigtable, err := database.NewBigTableWithClient(context.Background(), clientBT, adminBT, data.Schema)
-	if err != nil {
-		t.Fatal(err)
-	}
+	store := db2test.NewDataStore(t)
 
-	store := data.NewStore(database.Wrap(bigtable, data.Table))
 	backend := th.NewBackend(t)
 	_, usdt := backend.DeployToken(t, "usdt", "usdt", backend.BankAccount.From)
 
@@ -49,6 +44,7 @@ func TestStoreWithBackend(t *testing.T) {
 				t.Fatal(i, j, err)
 			}
 			backend.Commit()
+
 			lastBlock, err := backend.Client().BlockNumber(context.Background())
 			if err != nil {
 				t.Fatal(err)
@@ -57,7 +53,7 @@ func TestStoreWithBackend(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := indexer.IndexBlocksWithTransformers(fmt.Sprintf("%d", backend.ChainID), []*types.Eth1Block{block}); err != nil {
+			if err := indexer.IndexBlocks(fmt.Sprintf("%d", backend.ChainID), []*types.Eth1Block{block}); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -65,19 +61,7 @@ func TestStoreWithBackend(t *testing.T) {
 
 	t.Run("get interactions", func(t *testing.T) {
 		efficiencies := make(map[string]int64)
-		interactions, _, err := store.Get(addresses, nil, 50, data.WithDatabaseStats(func(msg string, args ...any) {
-			var efficiency int64
-			var rowRange string
-			for i := 0; i < len(args); i = i + 2 {
-				if args[i].(string) == database.KeyStatEfficiency {
-					efficiency = args[i+1].(int64)
-				}
-				if args[i].(string) == database.KeyStatRange {
-					rowRange = args[i+1].(string)
-				}
-			}
-			efficiencies[rowRange] = efficiency
-		}))
+		interactions, _, err := store.Get(addresses, nil, 50, data.WithDatabaseStats(getEfficiencies(efficiencies)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -93,4 +77,20 @@ func TestStoreWithBackend(t *testing.T) {
 			}
 		}
 	})
+}
+
+func getEfficiencies(efficiencies map[string]int64) func(msg string, args ...any) {
+	return func(msg string, args ...any) {
+		var efficiency int64
+		var rowRange string
+		for i := 0; i < len(args); i = i + 2 {
+			if args[i].(string) == database.KeyStatEfficiency {
+				efficiency = args[i+1].(int64)
+			}
+			if args[i].(string) == database.KeyStatRange {
+				rowRange = args[i+1].(string)
+			}
+		}
+		efficiencies[rowRange] = efficiency
+	}
 }

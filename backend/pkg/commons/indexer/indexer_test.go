@@ -9,7 +9,7 @@ import (
 	"github.com/gobitfly/beaconchain/internal/th"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
@@ -51,7 +51,7 @@ func TestIndexer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := indexer.IndexBlocksWithTransformers(fmt.Sprintf("%d", backend.ChainID), []*types.Eth1Block{block}); err != nil {
+		if err := indexer.IndexBlocks(fmt.Sprintf("%d", backend.ChainID), []*types.Eth1Block{block}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -63,9 +63,5 @@ func TestIndexer(t *testing.T) {
 
 	if len(rows) == 0 {
 		t.Errorf("no rows found")
-	}
-
-	for _, row := range rows {
-		t.Log(row.Key)
 	}
 }

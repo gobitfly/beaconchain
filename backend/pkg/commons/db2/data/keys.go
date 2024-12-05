@@ -117,7 +117,7 @@ func transactionKeys(chainID string, transaction *types.Eth1TransactionIndexed, 
 
 // key are sorted side (+optional other address), chainID, type, asset
 func transferKeys(chainID string, transaction *types.Eth1ERC20Indexed, index int, logIndex int) (string, []string) {
-	main := "ERC20:<chainID>:<hash>"
+	main := "ERC20:<chainID>:<hash>:<logIndex>"
 	baseKeys := []string{
 		"all:<address>",
 		"all:chainID:<address>:<chainID>",

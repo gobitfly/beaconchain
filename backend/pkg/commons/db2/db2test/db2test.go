@@ -1,4 +1,4 @@
-package rawtest
+package db2test
 
 import (
 	"context"
@@ -8,40 +8,42 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gobitfly/beaconchain/internal/th"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/raw"
 )
 
-func NewRandSeededStore(t *testing.T) (raw.Store, *th.BlockchainBackend) {
-	t.Helper()
+func NewDataStore(t *testing.T) data.Store {
 	client, admin := databasetest.NewBigTable(t)
-	bt, err := database.NewBigTableWithClient(context.Background(), client, admin, raw.Schema)
+	db, err := database.NewBigTableWithClient(context.Background(), client, admin, data.Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
+	return data.NewStore(database.Wrap(db, data.Table))
+}
 
-	db := raw.NewStore(database.Wrap(bt, raw.BlocksRawTable))
-
-	backend := th.NewBackend(t)
-	for i := 0; i < 10; i++ {
-		temp := th.CreateEOA(t)
-		backend.FundOneEther(t, temp.From)
-	}
-	lastBlock, err := backend.Client().BlockNumber(context.Background())
+func NewRawStore(t *testing.T) raw.Store {
+	client, admin := databasetest.NewBigTable(t)
+	db, err := database.NewBigTableWithClient(context.Background(), client, admin, raw.Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var blocks []raw.FullBlockData
-	for i := uint64(0); i <= lastBlock; i++ {
-		blocks = append(blocks, makeRawBlock(t, backend.Endpoint, uint64(backend.ChainID), i))
+	return raw.NewStore(database.Wrap(db, raw.Table))
+}
+
+func NewStores(t *testing.T) (raw.Store, data.Store) {
+	return NewRawStore(t), NewDataStore(t)
+}
+
+func AddBlockToRawStore(t *testing.T, store raw.Store, endpoint string, chainID uint64, blocks []uint64) {
+	var fullBlocks []raw.FullBlockData
+	for _, block := range blocks {
+		fullBlocks = append(fullBlocks, makeRawBlock(t, endpoint, chainID, block))
 	}
-	if err := db.AddBlocks(blocks); err != nil {
+	if err := store.AddBlocks(fullBlocks); err != nil {
 		t.Fatal(err)
 	}
-
-	return db, backend
 }
 
 func makeRawBlock(t *testing.T, endpoint string, chainID uint64, block uint64) raw.FullBlockData {

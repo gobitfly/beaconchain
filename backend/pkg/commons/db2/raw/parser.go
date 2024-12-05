@@ -1,4 +1,4 @@
-package db2
+package raw
 
 import (
 	"encoding/json"
@@ -10,31 +10,16 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/jsonrpc"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/raw"
+	"github.com/gobitfly/beaconchain/pkg/commons/types/geth"
 )
 
-type GethTrace struct {
-	TxHash string
-	Result *GethTraceCall
+type FullGethBlock struct {
+	block    *types.Block
+	receipts []*types.Receipt
+	traces   []*geth.Trace
 }
 
-type GethTraceCall struct {
-	TransactionPosition int
-	Time                string
-	GasUsed             string
-	From                common.Address
-	To                  common.Address
-	Value               string
-	Gas                 string
-	Input               string
-	Output              string
-	Error               string
-	RevertReason        string // todo have a look at this, it could improve revert message
-	Type                string
-	Calls               []*GethTraceCall
-}
-
-var EthParse = func(rawBlock *raw.FullBlockData) (*types.Block, []*types.Receipt, []*GethTrace, error) {
+var GethParse = func(rawBlock *FullBlockData) (*types.Block, []*types.Receipt, []*geth.Trace, error) {
 	var blockResp, receiptsResp, tracesResp jsonrpc.Message
 	_ = json.Unmarshal(rawBlock.Receipts, &receiptsResp)
 	_ = json.Unmarshal(rawBlock.Block, &blockResp)
@@ -49,7 +34,7 @@ var EthParse = func(rawBlock *raw.FullBlockData) (*types.Block, []*types.Receipt
 	}
 
 	var receipts []*types.Receipt
-	var traces []*GethTrace
+	var traces []*geth.Trace
 	if len(block.Transactions()) != 0 {
 		if err := json.Unmarshal(receiptsResp.Result, &receipts); err != nil {
 			return nil, nil, nil, err
@@ -66,6 +51,14 @@ var EthParse = func(rawBlock *raw.FullBlockData) (*types.Block, []*types.Receipt
 			// manually insert the hash in case it is missing
 			// ie: old block traces don't include the hash
 			traces[i].TxHash = receipts[i].TxHash.Hex()
+		}
+		// manually insert the transaction position
+		for i := 0; i < len(traces); i++ {
+			calls := []*geth.TraceCall{traces[i].Result}
+			for len(calls) != 0 {
+				calls[0].TransactionPosition = i
+				calls = append(calls[1:], calls[0].Calls...)
+			}
 		}
 	}
 
