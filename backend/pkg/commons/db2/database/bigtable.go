@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/bigtable"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,46 +19,59 @@ const (
 	timeout = time.Minute // Timeout duration for Bigtable operations
 )
 
-type TableWrapper struct {
-	*BigTable
-	table  string
-	family string
+type Item struct {
+	Family string
+	Column string
+	Data   []byte
 }
 
-func Wrap(db *BigTable, table string, family string) TableWrapper {
+type Row struct {
+	Key    string
+	Values map[string][]byte
+}
+
+type TableWrapper struct {
+	*BigTable
+	table string
+}
+
+func Wrap(db *BigTable, table string) TableWrapper {
 	return TableWrapper{
 		BigTable: db,
 		table:    table,
-		family:   family,
 	}
 }
 
-func (w TableWrapper) Add(key, column string, data []byte, allowDuplicate bool) error {
-	return w.BigTable.Add(w.table, w.family, key, column, data, allowDuplicate)
+func (w TableWrapper) Add(key string, item Item, allowDuplicate bool) error {
+	return w.BigTable.Add(w.table, key, item, allowDuplicate)
 }
 
-func (w TableWrapper) Read(prefix string) ([][]byte, error) {
-	return w.BigTable.Read(w.table, w.family, prefix)
+func (w TableWrapper) Read(prefix string) ([]Row, error) {
+	return w.BigTable.Read(w.table, prefix)
 }
 
-func (w TableWrapper) GetLatestValue(key string) ([]byte, error) {
-	return w.BigTable.GetLatestValue(w.table, w.family, key)
+func (w TableWrapper) GetLatestValue(key string) (*Row, error) {
+	return w.BigTable.GetLatestValue(w.table, key)
 }
 
-func (w TableWrapper) GetRow(key string) (map[string][]byte, error) {
+func (w TableWrapper) GetRow(key string) (*Row, error) {
 	return w.BigTable.GetRow(w.table, key)
 }
 
-func (w TableWrapper) GetRowKeys(prefix string) ([]string, error) {
-	return w.BigTable.GetRowKeys(w.table, prefix)
+func (w TableWrapper) GetRowKeys(prefix string, opts ...Option) ([]string, error) {
+	return w.BigTable.GetRowKeys(w.table, prefix, opts...)
 }
 
-func (w TableWrapper) BulkAdd(itemsByKey map[string][]Item) error {
-	return w.BigTable.BulkAdd(w.table, itemsByKey)
+func (w TableWrapper) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
+	return w.BigTable.BulkAdd(w.table, itemsByKey, opts...)
 }
 
-func (w TableWrapper) GetRowsRange(high, low string) ([]Row, error) {
-	return w.BigTable.GetRowsRange(w.table, high, low)
+func (w TableWrapper) GetRowsRange(high, low string, opts ...Option) ([]Row, error) {
+	return w.BigTable.GetRowsRange(w.table, high, low, opts...)
+}
+
+func (w TableWrapper) GetRowsWithKeys(keys []string) ([]Row, error) {
+	return w.BigTable.GetRowsWithKeys(w.table, keys)
 }
 
 // BigTable is a wrapper around Google Cloud Bigtable for storing and retrieving data
@@ -76,18 +91,18 @@ func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminCl
 
 // NewBigTable initializes a new BigTable
 // It returns a BigTable and an error if any part of the setup fails
-func NewBigTable(project, instance string, tablesAndFamilies map[string][]string) (*BigTable, error) {
+func NewBigTable(project, instance string, tablesAndFamilies map[string][]string, options ...option.ClientOption) (*BigTable, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// Create an admin client to manage Bigtable tables
-	adminClient, err := bigtable.NewAdminClient(ctx, project, instance)
+	adminClient, err := bigtable.NewAdminClient(ctx, project, instance, options...)
 	if err != nil {
 		return nil, fmt.Errorf("could not create admin client: %v", err)
 	}
 
 	// Create a Bigtable client for performing data operations
-	client, err := bigtable.NewClient(ctx, project, instance)
+	client, err := bigtable.NewClient(ctx, project, instance, options...)
 	if err != nil {
 		return nil, fmt.Errorf("could not create data operations client: %v", err)
 	}
@@ -136,13 +151,9 @@ func createTableAndFamilies(ctx context.Context, admin *bigtable.AdminClient, ta
 	return nil
 }
 
-type Item struct {
-	Family string
-	Column string
-	Data   []byte
-}
+func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item, opts ...Option) error {
+	options := apply(opts)
 
-func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item) error {
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -157,16 +168,27 @@ func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item) error {
 		keys = append(keys, key)
 		muts = append(muts, mut)
 	}
-	errs, err := tbl.ApplyBulk(ctx, keys, muts)
-	if err != nil {
-		return fmt.Errorf("cannot ApplyBulk err: %w", err)
+	bulk := &bulkMutations{
+		Keys: keys,
+		Muts: muts,
 	}
-	var bulkErrs []string
-	for _, err := range errs {
-		bulkErrs = append(bulkErrs, err.Error())
-	}
-	if len(bulkErrs) > 0 {
-		return fmt.Errorf("cannot BulkAdd errors: %v", bulkErrs)
+	sort.Sort(bulk)
+	for i := int64(0); i < int64(bulk.Len()); i = i + options.BatchSize {
+		from, to := i, i+options.BatchSize
+		if to > int64(bulk.Len()) {
+			to = int64(bulk.Len())
+		}
+		errs, err := tbl.ApplyBulk(ctx, bulk.Keys[from:to], bulk.Muts[from:to])
+		if err != nil {
+			return fmt.Errorf("cannot ApplyBulk err: %w", err)
+		}
+		var bulkErrs []string
+		for _, err := range errs {
+			bulkErrs = append(bulkErrs, err.Error())
+		}
+		if len(bulkErrs) > 0 {
+			return fmt.Errorf("cannot BulkAdd errors: %v", bulkErrs)
+		}
 	}
 	return nil
 }
@@ -174,7 +196,7 @@ func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item) error {
 // Add inserts a new row with the given key, column, and data into the Bigtable
 // It applies a mutation that stores data in the receiver column family
 // It returns error if the operation fails
-func (b BigTable) Add(table, family string, key string, column string, data []byte, allowDuplicate bool) error {
+func (b BigTable) Add(table, key string, item Item, allowDuplicate bool) error {
 	// Open the transfer table for data operations
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -182,7 +204,7 @@ func (b BigTable) Add(table, family string, key string, column string, data []by
 
 	// Create a new mutation to store data in the given column
 	mut := bigtable.NewMutation()
-	mut.Set(family, column, bigtable.Now(), data)
+	mut.Set(item.Family, item.Column, bigtable.Now(), item.Data)
 
 	if !allowDuplicate {
 		mut = bigtable.NewCondMutation(bigtable.RowKeyFilter(key), nil, mut)
@@ -196,63 +218,119 @@ func (b BigTable) Add(table, family string, key string, column string, data []by
 
 // Read retrieves all rows from the Bigtable's receiver column family
 // It returns the data in the form of a 2D byte slice and an error if the operation fails
-func (b BigTable) Read(table, family, prefix string) ([][]byte, error) {
+func (b BigTable) Read(table, prefix string) ([]Row, error) {
 	// Open the transfer table for reading
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	var data [][]byte
+	var rows []Row
 	// Read all rows from the table and collect values from the receiver column family
 	err := tbl.ReadRows(ctx, bigtable.PrefixRange(prefix), func(row bigtable.Row) bool {
-		for _, item := range row[family] {
-			// Append each value from the receiver family to the data slice
-			data = append(data, item.Value)
-		}
-		return true
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
-	}
-
-	return data, nil
-}
-
-func (b BigTable) GetLatestValue(table, family, key string) ([]byte, error) {
-	// Open the transfer table for reading
-	tbl := b.client.Open(table)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	var data []byte
-	err := tbl.ReadRows(ctx, bigtable.PrefixRange(key), func(row bigtable.Row) bool {
-		data = row[family][0].Value
-		return true
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
-	}
-
-	return data, nil
-}
-
-func (b BigTable) GetRow(table, key string) (map[string][]byte, error) {
-	// Open the transfer table for reading
-	tbl := b.client.Open(table)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	data := make(map[string][]byte)
-	err := tbl.ReadRows(ctx, bigtable.PrefixRange(key), func(row bigtable.Row) bool {
+		values := make(map[string][]byte)
 		for _, family := range row {
 			for _, item := range family {
-				data[item.Column] = item.Value
+				values[item.Column] = item.Value
 			}
+		}
+		rows = append(rows, Row{
+			Key:    row.Key(),
+			Values: values,
+		})
+		return true
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not read rows: %v", err)
+	}
+
+	return rows, nil
+}
+
+func (b BigTable) GetLatestValue(table, key string) (*Row, error) {
+	// Open the transfer table for reading
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var data Row
+	err := tbl.ReadRows(ctx, bigtable.PrefixRange(key), func(row bigtable.Row) bool {
+		values := make(map[string][]byte)
+		for _, family := range row {
+			for _, item := range family {
+				values[item.Column] = item.Value
+			}
+		}
+		data = Row{
+			Key:    row.Key(),
+			Values: values,
 		}
 		return true
 	})
 
+	if err != nil {
+		return nil, fmt.Errorf("could not read rows: %v", err)
+	}
+
+	return &data, nil
+}
+
+func (b BigTable) GetRow(table, key string) (*Row, error) {
+	// Open the transfer table for reading
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var data *Row
+	row, err := tbl.ReadRow(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("could not read row: %v", err)
+	}
+	if row == nil {
+		return nil, ErrNotFound
+	}
+	values := make(map[string][]byte)
+	for _, family := range row {
+		for _, item := range family {
+			values[item.Column] = item.Value
+		}
+	}
+	data = &Row{
+		Key:    row.Key(),
+		Values: values,
+	}
+
+	return data, nil
+}
+
+func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, error) {
+	options := apply(opts)
+
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	rowRange := bigtable.NewClosedRange(low, high)
+	if options.OpenRange {
+		rowRange = bigtable.NewOpenRange(low, high)
+	}
+	if options.OpenCloseRange {
+		rowRange = bigtable.NewOpenClosedRange(low, high)
+	}
+	readOptions := bigtableReadOptions(options, rowRange)
+	var data []Row
+	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
+		values := make(map[string][]byte)
+		for _, family := range row {
+			for _, item := range family {
+				values[item.Column] = item.Value
+			}
+		}
+		data = append(data, Row{
+			Key:    row.Key(),
+			Values: values,
+		})
+		return true
+	}, readOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not read rows: %v", err)
 	}
@@ -263,19 +341,34 @@ func (b BigTable) GetRow(table, key string) (map[string][]byte, error) {
 	return data, nil
 }
 
-type Row struct {
-	Key    string
-	Values map[string][]byte
-}
+func (b BigTable) GetRowKeys(table, prefix string, opts ...Option) ([]string, error) {
+	options := apply(opts)
 
-func (b BigTable) GetRowsRange(table, high, low string) ([]Row, error) {
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	rowRange := bigtable.NewClosedRange(low, high)
-	var data []Row
+	rowRange := bigtable.PrefixRange(prefix)
+	readOptions := bigtableReadOptions(options, bigtable.PrefixRange(prefix))
+	var data []string
 	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
+		data = append(data, row.Key())
+		return true
+	}, readOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("could not read rows: %v", err)
+	}
+
+	return data, nil
+}
+
+func (b BigTable) GetRowsWithKeys(table string, keys []string) ([]Row, error) {
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var data []Row
+	err := tbl.ReadRows(ctx, bigtable.RowList(keys), func(row bigtable.Row) bool {
 		values := make(map[string][]byte)
 		for _, family := range row {
 			for _, item := range family {
@@ -294,26 +387,6 @@ func (b BigTable) GetRowsRange(table, high, low string) ([]Row, error) {
 	}
 	if len(data) == 0 {
 		return nil, ErrNotFound
-	}
-
-	return data, nil
-}
-
-func (b BigTable) GetRowKeys(table, prefix string) ([]string, error) {
-	// Open the transfer table for reading
-	tbl := b.client.Open(table)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	var data []string
-	// Read all rows from the table and collect all the row keys
-	err := tbl.ReadRows(ctx, bigtable.PrefixRange(prefix), func(row bigtable.Row) bool {
-		data = append(data, row.Key())
-		return true
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
 	}
 
 	return data, nil
@@ -350,4 +423,49 @@ func (b BigTable) Close() error {
 		}
 	}
 	return nil
+}
+
+type bulkMutations struct {
+	Keys []string
+	Muts []*bigtable.Mutation
+}
+
+func (bulkMutations *bulkMutations) Len() int {
+	return len(bulkMutations.Keys)
+}
+
+func (bulkMutations *bulkMutations) Less(i, j int) bool {
+	return bulkMutations.Keys[i] < bulkMutations.Keys[j]
+}
+
+func (bulkMutations *bulkMutations) Swap(i, j int) {
+	bulkMutations.Keys[i], bulkMutations.Keys[j] = bulkMutations.Keys[j], bulkMutations.Keys[i]
+	bulkMutations.Muts[i], bulkMutations.Muts[j] = bulkMutations.Muts[j], bulkMutations.Muts[i]
+}
+
+const (
+	KeyStatRange        = "range"
+	KeyStatRowsSeen     = "rowsSeen"
+	KeyStatRowsReturned = "rowsReturned"
+	KeyStatEfficiency   = "efficiency"
+)
+
+func bigtableReadOptions(options options, rowRange bigtable.RowRange) []bigtable.ReadOption {
+	readOptions := []bigtable.ReadOption{bigtable.LimitRows(options.Limit)}
+	if options.StatsReporter != nil {
+		readOptions = append(readOptions, bigtable.WithFullReadStats(func(stats *bigtable.FullReadStats) {
+			efficiency := int64(1)
+			if stats.ReadIterationStats.RowsSeenCount != 0 {
+				efficiency = stats.ReadIterationStats.RowsReturnedCount / stats.ReadIterationStats.RowsSeenCount
+			}
+			options.StatsReporter(
+				"query stats",
+				KeyStatRange, rowRange.String(),
+				KeyStatRowsSeen, stats.ReadIterationStats.RowsSeenCount,
+				KeyStatRowsReturned, stats.ReadIterationStats.RowsReturnedCount,
+				KeyStatEfficiency, efficiency,
+			)
+		}))
+	}
+	return readOptions
 }
