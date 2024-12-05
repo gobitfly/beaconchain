@@ -374,12 +374,18 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			// Balance
 			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
+			data.Balances.Effective = data.Balances.Effective.Add(effectiveBalance)
+
+			handleNonRpDashboard := func() {
+				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
+				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
+			}
 
 			if rpInfos == nil {
-				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
-
-				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
-			} else if rpValidator, ok := rpInfos.Minipool[validator]; ok {
+				handleNonRpDashboard()
+			} else if rpValidator, ok := rpInfos.Minipool[validator]; !ok {
+				handleNonRpDashboard()
+			} else {
 				if protocolModes.RocketPool {
 					// Calculate the balance of the operator
 					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
@@ -397,12 +403,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					data.Balances.Total = data.Balances.Total.Add(validatorBalance)
 				}
 				data.Balances.StakedEth = data.Balances.StakedEth.Add(rpValidator.NodeDepositBalance)
-			} else {
-				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
-
-				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
 			}
-			data.Balances.Effective = data.Balances.Effective.Add(effectiveBalance)
 		}
 
 		// Get the total cl deposits for non-rocketpool validators

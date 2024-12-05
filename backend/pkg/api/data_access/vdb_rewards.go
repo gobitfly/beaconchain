@@ -87,7 +87,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Build the main and EL rewards queries
+	// Build the main (CL) and EL rewards queries
 	rewardsDs := goqu.Dialect("postgres").
 		From(goqu.L("validator_dashboard_data_epoch e")).
 		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
@@ -348,7 +348,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving rewards data: %v", err)
+			return fmt.Errorf("error retrieving rewards data: %w", err)
 		}
 
 		validatorGroupMap := make(map[uint64]int64)
@@ -821,9 +821,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		elReward := elRewards[entry.ValidatorIndex].Mul(rpFactor)
 		if rpInfos != nil && protocolModes.RocketPool {
 			if _, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok {
-				if _, ok := rpInfos.Minipool[entry.ValidatorIndex].SmoothingPoolRewards[epoch]; ok {
-					elReward = elReward.Add(rpInfos.Minipool[entry.ValidatorIndex].SmoothingPoolRewards[epoch])
-				}
+				elReward = elReward.Add(rpInfos.Minipool[entry.ValidatorIndex].SmoothingPoolRewards[epoch])
 			}
 		}
 
@@ -973,7 +971,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving rewards chart data: %v", err)
+			return fmt.Errorf("error retrieving rewards chart data: %w", err)
 		}
 
 		validatorGroupMap := make(map[uint64]uint64)
@@ -1331,34 +1329,18 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 		err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
-			return fmt.Errorf("error retrieving validator rewards data: %v", err)
+			return fmt.Errorf("error retrieving validator rewards data: %w", err)
 		}
 
 		for _, entry := range queryResult {
-			queryResultAdjusted = append(queryResultAdjusted, QueryResultAdjusted{
-				QueryResultBase: QueryResultBase{
-					ValidatorIndex:             entry.ValidatorIndex,
-					AttestationsScheduled:      entry.AttestationsScheduled,
-					AttestationsSourceExecuted: entry.AttestationsSourceExecuted,
-					AttestationsTargetExecuted: entry.AttestationsTargetExecuted,
-					AttestationsHeadExecuted:   entry.AttestationsHeadExecuted,
-					SyncScheduled:              entry.SyncScheduled,
-					SyncExecuted:               entry.SyncExecuted,
-					Slashed:                    entry.Slashed,
-					BlocksSlashingCount:        entry.BlocksSlashingCount,
-					BlocksScheduled:            entry.BlocksScheduled,
-					BlocksProposed:             entry.BlocksProposed,
-				},
-			})
-
-			current := &queryResultAdjusted[len(queryResultAdjusted)-1]
-
 			rpFactor := decimal.NewFromInt(1)
 			if rpInfos != nil && protocolModes.RocketPool {
 				if rpValidator, ok := rpInfos.Minipool[entry.ValidatorIndex]; ok {
 					rpFactor = d.getRocketPoolOperatorFactor(rpValidator)
 				}
 			}
+
+			current := QueryResultAdjusted{QueryResultBase: entry.QueryResultBase}
 
 			current.AttestationsSourceReward = utils.GWeiToWei(big.NewInt(entry.AttestationsSourceReward)).Mul(rpFactor)
 			current.AttestationsTargetReward = utils.GWeiToWei(big.NewInt(entry.AttestationsTargetReward)).Mul(rpFactor)
@@ -1367,6 +1349,8 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			current.BlocksClSlasherReward = utils.GWeiToWei(big.NewInt(entry.BlocksClSlasherReward)).Mul(rpFactor)
 			current.BlocksClAttestationsReward = utils.GWeiToWei(big.NewInt(entry.BlocksClAttestationsReward)).Mul(rpFactor)
 			current.BlocksClSyncAggregateReward = utils.GWeiToWei(big.NewInt(entry.BlocksClSyncAggregateReward)).Mul(rpFactor)
+
+			queryResultAdjusted = append(queryResultAdjusted, current)
 		}
 
 		return nil
@@ -1438,8 +1422,9 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			if res.Slashed {
 				if res.BlocksSlashingCount > 0 {
 					slashedEvent.Status = "partial"
+				} else {
+					slashedEvent.Status = "failed"
 				}
-				slashedEvent.Status = "failed"
 			} else if res.BlocksSlashingCount > 0 {
 				slashedEvent.Status = "success"
 			}
