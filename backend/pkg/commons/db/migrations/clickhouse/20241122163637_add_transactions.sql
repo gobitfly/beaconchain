@@ -1,6 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS transactions_ethereum (
+CREATE TABLE IF NOT EXISTS transactions(
+    chain_id LowCardinality(String) CODEC(ZSTD(3)),
     tx_index UInt64 CODEC(T64, ZSTD(3)),
     tx_hash FixedString(32) CODEC(NONE), 
     block_number UInt64 CODEC(T64, ZSTD(3)),           
@@ -36,12 +37,13 @@ CREATE TABLE IF NOT EXISTS transactions_ethereum (
 ) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), from_address, block_number, tx_index)
 PRIMARY KEY (toStartOfWeek(timestamp), from_address, block_number, tx_index)
-PARTITION BY toStartOfQuarter(timestamp)
+PARTITION BY (chain_id, toStartOfQuarter(timestamp))
 SETTINGS index_granularity = 8192
 -- +goose StatementEnd
 
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS internal_tx_ethereum (
+CREATE TABLE IF NOT EXISTS internal_transactions(
+    chain_id LowCardinality(String) CODEC(ZSTD(3)),
     parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
     from_address FixedString(20) CODEC(ZSTD(3)),
@@ -59,12 +61,13 @@ CREATE TABLE IF NOT EXISTS internal_tx_ethereum (
 )ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
-PARTITION BY toStartOfMonth(timestamp) 
+PARTITION BY (chain_id, toStartOfQuarter(timestamp))
 SETTINGS index_granularity = 8192
 -- +goose StatementEnd
 
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS erc20_ethereum (
+CREATE TABLE IF NOT EXISTS erc20_transfers (
+    chain_id LowCardinality(String) CODEC(ZSTD(3)),
     parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
     from_address FixedString(20) CODEC(ZSTD(3)),
@@ -83,12 +86,13 @@ CREATE TABLE IF NOT EXISTS erc20_ethereum (
 ) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PARTITION BY toStartOfMonth(timestamp) 
+PARTITION BY (chain_id, toStartOfQuarter(timestamp))
 SETTINGS index_granularity = 8192
 -- +goose StatementEnd
 
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS erc721_ethereum(
+CREATE TABLE IF NOT EXISTS erc721_transfers(
+    chain_id LowCardinality(String) CODEC(ZSTD(3)),
     parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
     from_address FixedString(20) CODEC(ZSTD(3)),
@@ -107,12 +111,13 @@ CREATE TABLE IF NOT EXISTS erc721_ethereum(
 ) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PARTITION BY toStartOfMonth(timestamp) 
+PARTITION BY (chain_id, toStartOfQuarter(timestamp))
 SETTINGS index_granularity = 8192
 -- +goose StatementEnd
 
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS erc1155_ethereum(
+CREATE TABLE IF NOT EXISTS erc1155_transfers(
+    chain_id LowCardinality(String) CODEC(ZSTD(3)),
     parent_hash FixedString(32) CODEC(ZSTD(3)),
     block_number UInt64 CODEC(T64, ZSTD(3)),
     from_address FixedString(20) CODEC(ZSTD(3)),
@@ -133,24 +138,24 @@ CREATE TABLE IF NOT EXISTS erc1155_ethereum(
 ) ENGINE = ReplacingMergeTree(inserted_timestamp)
 ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
 PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PARTITION BY toStartOfMonth(timestamp) 
+PARTITION BY (chain_id, toStartOfQuarter(timestamp))
 SETTINGS index_granularity = 8192
 -- +goose StatementEnd
 
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS transactions_ethereum 
+DROP TABLE IF EXISTS transactions
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS internal_tx_ethereum 
+DROP TABLE IF EXISTS internal_transactions 
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS erc20_ethereum 
+DROP TABLE IF EXISTS erc20_transfers 
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS erc721_ethereum 
+DROP TABLE IF EXISTS erc721_transfers
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS erc1155_ethereum 
+DROP TABLE IF EXISTS erc1155_transfers
 -- +goose StatementEnd
