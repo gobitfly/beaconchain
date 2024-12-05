@@ -49,17 +49,17 @@ message Eth1Transaction {
     uint64 gas = 6;
     uint64 value = 7;
     bytes data = 8;
-    string to = 12;
-    string from = 13;
+    bytes to = 12;
+    bytes from = 13;
 
     uint64 chain_id = 14;
 
     repeated AccessList access_list = 15;
 
-    string hash = 16;
+    bytes hash = 16;
 
     // Receipt fields
-    string contract_address = 17;
+    bytes contract_address = 17;
     uint64 commulative_gas_used = 18;
     uint64 gas_used = 19;
     bytes logs_bloom = 20;
@@ -97,8 +97,8 @@ message Eth1Log {
 
 message Eth1InternalTransaction {
     string type = 1;
-    string from = 2;
-    string to = 3;
+    bytes from = 2;
+    bytes to = 3;
     string value = 4;
     string error_msg = 5;
     string path = 6;

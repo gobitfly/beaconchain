@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -176,13 +177,13 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	txs := block.Transactions()
 
 	for _, tx := range txs {
-		var from string
+		var from []byte
 		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
-			from = "abababababababababababababababababababab"
+			from, _ = hex.DecodeString("abababababababababababababababababababab")
 			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
-			from = sender.String()
+			from = sender.Bytes()
 		}
 
 		pbTx := &types.Eth1Transaction{
@@ -197,7 +198,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 			From:                 from,
 			ChainId:              tx.ChainId().Uint64(),
 			AccessList:           []*types.AccessList{},
-			Hash:                 tx.Hash().String(),
+			Hash:                 tx.Hash().Bytes(),
 			Itx:                  []*types.Eth1InternalTransaction{},
 			BlobVersionedHashes:  [][]byte{},
 		}
@@ -210,7 +211,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		}
 
 		if tx.To() != nil {
-			pbTx.To = tx.To().String()
+			pbTx.To = tx.To().Bytes()
 		}
 
 		c.Transactions = append(c.Transactions, pbTx)
@@ -265,16 +266,16 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 					}
 
 					if trace.Type == "create" {
-						tracePb.From = trace.Action.From
-						tracePb.To = trace.Result.Address
+						tracePb.From = common.FromHex(trace.Action.From)
+						tracePb.To = common.FromHex(trace.Result.Address)
 						tracePb.Value = trace.Action.Value
 					} else if trace.Type == "suicide" {
-						tracePb.From = trace.Action.Address
-						tracePb.To = trace.Action.RefundAddress
+						tracePb.From = common.FromHex(trace.Action.Address)
+						tracePb.To = common.FromHex(trace.Action.RefundAddress)
 						tracePb.Value = trace.Action.Balance
 					} else if trace.Type == "call" {
-						tracePb.From = trace.Action.From
-						tracePb.To = trace.Action.To
+						tracePb.From = common.FromHex(trace.Action.From)
+						tracePb.To = common.FromHex(trace.Action.To)
 						tracePb.Value = trace.Action.Value
 					} else {
 						spew.Dump(trace)
@@ -313,8 +314,8 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 					Gas:  hexutil.MustDecodeUint64(trace.Gas),
 				}
 
-				tracePb.From = trace.From.String()
-				tracePb.To = trace.To.String()
+				tracePb.From = trace.From.Bytes()
+				tracePb.To = trace.To.Bytes()
 				tracePb.Value = trace.Value
 				if trace.Type == "CREATE" {
 				} else if trace.Type == "SELFDESTRUCT" {
@@ -347,7 +348,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	start = time.Now()
 
 	for i, r := range receipts {
-		c.Transactions[i].ContractAddress = r.ContractAddress.String()
+		c.Transactions[i].ContractAddress = r.ContractAddress[:]
 		c.Transactions[i].CommulativeGasUsed = r.CumulativeGasUsed
 		c.Transactions[i].GasUsed = r.GasUsed
 		c.Transactions[i].LogsBloom = r.Bloom[:]

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -154,13 +155,13 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 	txs := block.Transactions()
 
 	for _, tx := range txs {
-		var from string
+		var from []byte
 		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
-			from = "abababababababababababababababababababab"
+			from, _ = hex.DecodeString("abababababababababababababababababababab")
 			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
 		} else {
-			from = sender.String()
+			from = sender.Bytes()
 		}
 
 		pbTx := &types.Eth1Transaction{
@@ -175,12 +176,12 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 			From:                 from,
 			ChainId:              tx.ChainId().Uint64(),
 			AccessList:           []*types.AccessList{},
-			Hash:                 tx.Hash().String(),
+			Hash:                 tx.Hash().Bytes(),
 			Itx:                  []*types.Eth1InternalTransaction{},
 		}
 
 		if tx.To() != nil {
-			pbTx.To = tx.To().String()
+			pbTx.To = tx.To().Bytes()
 		}
 		c.Transactions = append(c.Transactions, pbTx)
 	}
@@ -209,7 +210,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 		}
 
 		r := receipts[i]
-		c.Transactions[i].ContractAddress = r.ContractAddress.String()
+		c.Transactions[i].ContractAddress = r.ContractAddress[:]
 		c.Transactions[i].CommulativeGasUsed = r.CumulativeGasUsed
 		c.Transactions[i].GasUsed = r.GasUsed
 		c.Transactions[i].LogsBloom = r.Bloom[:]

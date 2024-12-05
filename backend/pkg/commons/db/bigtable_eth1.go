@@ -970,7 +970,7 @@ func CalculateMevFromBlock(block *types.Eth1Block) *big.Int {
 
 	for _, tx := range block.GetTransactions() {
 		for _, itx := range tx.GetItx() {
-			if common.HexToAddress(itx.To) == common.BytesToAddress(block.GetCoinbase()) {
+			if common.BytesToAddress(itx.To) == common.BytesToAddress(block.GetCoinbase()) {
 				value, err := strconv.ParseInt(itx.GetValue(), 0, 64)
 				if err != nil {
 					fmt.Println("error parsing MEV value:", err)
