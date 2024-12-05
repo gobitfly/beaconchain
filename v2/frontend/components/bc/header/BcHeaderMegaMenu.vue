@@ -81,7 +81,7 @@ defineExpose({
   <ClientOnly>
     <MegaMenu
       ref="megaMenu"
-      :model="[items]"
+      :model="items"
       :breakpoint
     >
       <template #item="{ item, hasSubmenu }">
