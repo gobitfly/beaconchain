@@ -275,7 +275,7 @@ type MobileSubscriptionTransactionGeneric struct {
 type VDBValidatorSummaryChartRow struct {
 	Timestamp              time.Time `db:"ts"`
 	GroupId                int64     `db:"group_id"`
-	AttestationReward      float64   `db:"attestation_reward"`
+	AttestationReward      float64   `db:"attestations_reward"`
 	AttestationIdealReward float64   `db:"attestations_ideal_reward"`
 	BlocksProposed         float64   `db:"blocks_proposed"`
 	BlocksScheduled        float64   `db:"blocks_scheduled"`
