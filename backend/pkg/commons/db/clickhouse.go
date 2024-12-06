@@ -15,11 +15,15 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/raw"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"golang.org/x/sync/errgroup"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -47,7 +51,7 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 		// ConnMaxLifetime: time.Minute,
 		// the following lowers traffic between client and server
 		Compression: &ch.Compression{
-			Method: ch.CompressionLZ4,
+			Method: ch.CompressionZSTD,
 		},
 		Addr: []string{fmt.Sprintf("%s:%s", writer.Host, writer.Port)},
 		Auth: ch.Auth{
@@ -217,10 +221,9 @@ func IndexTxsToClickHouseFromBigtable(start, end, concurrency int64) error {
 		}
 
 		g.Go(func() error {
-			// Create a buffered channel to handle blocks efficiently
+			// create a buffered channel to handle blocks
 			blocksChan := make(chan *types.Eth1Block, batchSize)
 
-			// Fetch blocks asynchronously
 			go func(stream chan *types.Eth1Block) {
 				log.Infof("Querying blocks from %v to %v", firstBlock, lastBlock)
 				high := lastBlock
@@ -241,7 +244,6 @@ func IndexTxsToClickHouseFromBigtable(start, end, concurrency int64) error {
 				return fmt.Errorf("error preparing batches: %w", err)
 			}
 
-			// Use another goroutine to process transactions concurrently
 			subG := new(errgroup.Group)
 			subG.SetLimit(int(concurrency))
 			var blockCount int64
@@ -282,13 +284,13 @@ func IndexTxsToClickHouseFromBigtable(start, end, concurrency int64) error {
 		})
 	}
 
-	// Wait for all main goroutines to finish
+	// wait for all main goroutines to finish
 	if err := g.Wait(); err != nil {
 		log.Error(err, "ClickHouse wait group error", 0)
 		return err
 	}
 
-	// Check if last block in cache is updated correctly
+	// check if last block in cache is updated correctly
 	lastBlockInCache, err := BigtableClient.GetLastBlockInDataTable()
 	if err != nil {
 		log.Error(err, "failed to get last block in data table in bigTable", 0)
@@ -304,6 +306,106 @@ func IndexTxsToClickHouseFromBigtable(start, end, concurrency int64) error {
 	}
 
 	log.Infof("Clickhouse transactions indexing completed")
+	return nil
+}
+
+func IndexTxsToClickHouseFromRawBigtable(start, end, concurrency int64) error {
+	g := new(errgroup.Group)
+	g.SetLimit(int(concurrency))
+
+	log.Infof("ClickHouse indexing blocks from %d to %d", start, end)
+	batchSize := int64(100)
+	transformerList := []string{"TransformTx", "TransformItx", "TransformERC20", "TransformERC721", "TransformERC1155"}
+
+	project, instance := utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance
+	bt, err := database.NewBigTable(project, instance, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	store := raw.NewStore(database.Wrap(bt, raw.Table))
+
+	chainId := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
+	rawStore := rpc.NewRawStoreClient(chainId, store)
+
+	for i := start; i <= end; i += batchSize {
+		firstBlock := i
+		lastBlock := firstBlock + batchSize - 1
+		if lastBlock > end {
+			lastBlock = end
+		}
+
+		g.Go(func() error {
+			// create a buffered channel to handle blocks
+			blocksChan := make(chan *types.Eth1Block, batchSize)
+
+			go func(stream chan *types.Eth1Block) {
+				log.Infof("Querying blocks from %v to %v", firstBlock, lastBlock)
+
+				for blockNum := firstBlock; blockNum <= lastBlock; blockNum++ {
+					block, err := rawStore.GetBlock(blockNum, "geth")
+					if err != nil {
+						log.Error(err, "error getting block from raw bigTable", 0, map[string]interface{}{"block": blockNum})
+						continue
+					}
+					stream <- block
+				}
+
+				close(stream)
+
+			}(blocksChan)
+
+			txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch, err := PrepareBatchesToSend(transformerList)
+			if err != nil {
+				return fmt.Errorf("error preparing batches: %w", err)
+			}
+
+			subG := new(errgroup.Group)
+			subG.SetLimit(int(concurrency))
+			var blockCount int64
+
+			for b := range blocksChan {
+				block := b
+				subG.Go(func() error {
+					err := PrepareTransactionsToClickHouse(block, transformerList, txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
+					if err != nil {
+						log.Error(err, "error saving transactions to ClickHouse", 0)
+						return err
+					}
+
+					blockCount++
+					return nil
+				})
+			}
+
+			if err := subG.Wait(); err != nil {
+				return fmt.Errorf("block processing error: %w", err)
+			}
+
+			if blockCount >= batchSize {
+				batchesToSend := []driver.Batch{txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch}
+				// send transactions to ClickHouse
+				err := SendBatchesToClickHouse(batchesToSend)
+				if err != nil {
+					log.Error(err, "error sending batches to ClickHouse", 0)
+					return err
+				}
+
+				// reset blockCount after sending the batches to ClickHouse
+				blockCount = 0
+			}
+
+			return nil
+		})
+	}
+
+	// wait for all main goroutines to finish
+	if err := g.Wait(); err != nil {
+		log.Error(err, "ClickHouse wait group error", 0)
+		return err
+	}
+
+	log.Infof("Clickhouse transactions indexing from raw bigTable completed")
 	return nil
 }
 
@@ -391,30 +493,31 @@ func PrepareTransactionsToClickHouse(block *types.Eth1Block, transformerList []s
 func PrepareBatchesToSend(transformerList []string) (driver.Batch, driver.Batch, driver.Batch, driver.Batch, driver.Batch, error) {
 	var txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch driver.Batch
 	var err error
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
 	for _, transformer := range transformerList {
 		switch transformer {
 		case "TransformTx":
-			txBatch, err = PrepareTxBatch()
+			txBatch, err = PrepareTxBatch(ctx)
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare tx batch: %v", err)
 			}
 		case "TransformItx":
-			itxBatch, err = PrepareItxBatch()
+			itxBatch, err = PrepareItxBatch(ctx)
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare itx batch: %v", err)
 			}
 		case "TransformERC20":
-			erc20Batch, err = PrepareERC20Batch()
+			erc20Batch, err = PrepareERC20Batch(ctx)
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC20 batch: %v", err)
 			}
 		case "TransformERC721":
-			erc721Batch, err = PrepareERC721Batch()
+			erc721Batch, err = PrepareERC721Batch(ctx)
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC721 batch: %v", err)
 			}
 		case "TransformERC1155":
-			erc1155Batch, err = PrepareERC1155Batch()
+			erc1155Batch, err = PrepareERC1155Batch(ctx)
 			if err != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("failed to prepare ERC1155 batch: %v", err)
 			}
@@ -426,8 +529,7 @@ func PrepareBatchesToSend(transformerList []string) (driver.Batch, driver.Batch,
 	return txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch, nil
 }
 
-func PrepareTxBatch() (driver.Batch, error) {
-	ctx := context.Background()
+func PrepareTxBatch(ctx context.Context) (driver.Batch, error) {
 	txBatch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO transactions (
 			chain_id, tx_index, tx_hash, block_number, from_address, to_address, type, method, value, nonce,
@@ -443,8 +545,7 @@ func PrepareTxBatch() (driver.Batch, error) {
 	return txBatch, nil
 }
 
-func PrepareItxBatch() (driver.Batch, error) {
-	ctx := context.Background()
+func PrepareItxBatch(ctx context.Context) (driver.Batch, error) {
 	itxBatch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO internal_transactions (
 			chain_id, parent_hash, block_number, from_address, to_address,
@@ -458,8 +559,7 @@ func PrepareItxBatch() (driver.Batch, error) {
 	return itxBatch, nil
 }
 
-func PrepareERC20Batch() (driver.Batch, error) {
-	ctx := context.Background()
+func PrepareERC20Batch(ctx context.Context) (driver.Batch, error) {
 	erc20Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO erc20_transfers (
 			chain_id, parent_hash, block_number, from_address, to_address, token_address,
@@ -473,8 +573,7 @@ func PrepareERC20Batch() (driver.Batch, error) {
 	return erc20Batch, nil
 }
 
-func PrepareERC721Batch() (driver.Batch, error) {
-	ctx := context.Background()
+func PrepareERC721Batch(ctx context.Context) (driver.Batch, error) {
 	erc721Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO erc721_transfers (
 			chain_id, parent_hash, block_number, from_address, to_address,
@@ -488,8 +587,7 @@ func PrepareERC721Batch() (driver.Batch, error) {
 	return erc721Batch, nil
 }
 
-func PrepareERC1155Batch() (driver.Batch, error) {
-	ctx := context.Background()
+func PrepareERC1155Batch(ctx context.Context) (driver.Batch, error) {
 	erc1155Batch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO erc1155_transfers (
 			chain_id, parent_hash, block_number, from_address, to_address, operator, token_address, 
