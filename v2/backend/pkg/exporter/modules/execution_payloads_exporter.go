@@ -133,9 +133,9 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	minBlock := uint64(blocks.MinBlock.Int64)
 	maxBlock := uint64(blocks.MaxBlock.Int64)
 
-	// limit to 1mil blocks to prevent reading too much from bigtable
-	if maxBlock-minBlock > 1e6 {
-		maxBlock = minBlock + 1e6
+	// limit to 200k blocks to prevent reading too much from bigtable
+	if maxBlock-minBlock > 200_000 {
+		maxBlock = minBlock + 200_000
 	}
 
 	log.Infof("min block: %v, max block: %v", blocks.MinBlock, blocks.MaxBlock)
