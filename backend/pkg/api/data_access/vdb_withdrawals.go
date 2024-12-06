@@ -68,6 +68,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	var validators []t.VDBValidator
 	if dashboardId.Validators == nil {
 		// Get the validators and their groups in case a dashboard id is provided
+		// HACK should rather join on validators table; apply if performance issues arise for large dashboards
 		queryResult := []struct {
 			ValidatorIndex t.VDBValidator `db:"validator_index"`
 			GroupId        uint64         `db:"group_id"`
@@ -540,6 +541,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 		validators = append(validators, res.ValidatorIndex)
 	}
 
+	// above was only finalized withdrawals; get data from latest slots now
 	err = d.readerDb.SelectContext(ctx, &queryResult, `
 		SELECT
 			w.validatorindex AS validator_index,

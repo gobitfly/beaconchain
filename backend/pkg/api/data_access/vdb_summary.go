@@ -117,18 +117,18 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable))).
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
-			goqu.L("r.validator_index AS validator_index"),
+			goqu.L("r.validator_index"),
 			goqu.L("(r.balance_end + r.withdrawals_amount - r.deposits_amount - r.balance_start) AS cl_rewards"),
-			goqu.L("r.attestations_reward::decimal AS attestations_reward"),
-			goqu.L("r.attestations_ideal_reward::decimal AS attestations_ideal_reward"),
-			goqu.L("r.attestations_executed AS attestations_executed"),
-			goqu.L("r.attestations_scheduled AS attestations_scheduled"),
-			goqu.L("r.blocks_proposed AS blocks_proposed"),
-			goqu.L("r.blocks_scheduled AS blocks_scheduled"),
-			goqu.L("r.sync_executed AS sync_executed"),
-			goqu.L("r.sync_scheduled AS sync_scheduled"),
-			goqu.L("r.epoch_start AS epoch_start"),
-			goqu.L("r.epoch_end AS epoch_end"))
+			goqu.L("r.attestations_reward::decimal"),
+			goqu.L("r.attestations_ideal_reward::decimal"),
+			goqu.L("r.attestations_executed"),
+			goqu.L("r.attestations_scheduled"),
+			goqu.L("r.blocks_proposed"),
+			goqu.L("r.blocks_scheduled"),
+			goqu.L("r.sync_executed"),
+			goqu.L("r.sync_scheduled"),
+			goqu.L("r.epoch_start"),
+			goqu.L("r.epoch_end"))
 
 	if len(validators) > 0 {
 		ds = ds.
@@ -1165,7 +1165,7 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 		if rpInfos != nil && protocolModes.RocketPool {
 			for validatorIndex := range validatorGroupMap {
 				for epoch, reward := range rpInfos.Minipool[validatorIndex].SmoothingPoolRewards {
-					if epoch >= epochStart && epoch <= epochEnd {
+					if epoch >= epochStartTotal && epoch <= epochEndTotal {
 						rewards = rewards.Add(reward)
 					}
 				}
