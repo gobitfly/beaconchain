@@ -2236,8 +2236,7 @@ func verifyFCMTokens() error {
 }
 
 func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, client *rpc.ErigonClient) error {
-	ctx := context.Background()
-	g, gCtx := errgroup.WithContext(ctx)
+	g := new(errgroup.Group)
 	g.SetLimit(int(concurrency))
 
 	var transformerList []string
@@ -2252,6 +2251,7 @@ func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, 
 	}
 
 	log.Infof("Transformers: %v", transformerList)
+	log.Infof("Batch Size: %v", batchSize)
 
 	processBatch := func(startBlock, endBlock uint64) error {
 		var blockCount uint64
@@ -2261,33 +2261,29 @@ func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, 
 		}
 
 		for i := startBlock; i <= endBlock; i++ {
-			select {
-			case <-gCtx.Done():
-				return gCtx.Err()
-			default:
-			}
-
 			bc, _, err := client.GetBlock(int64(i), "geth")
 			if err != nil {
+				log.Error(err, "error getting block %v", 0)
 				return fmt.Errorf("error getting block %d: %w", i, err)
 			}
 
 			err = db.PrepareTransactionsToClickHouse(bc, transformerList, txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
 			if err != nil {
-				log.Error(err, "error preparing transactions to ClickHouse", 0)
+				log.Error(err, "error preparing transactions to ClickHouse error: %v", 0)
 				return err
 			}
 
 			blockCount++
 
-			// check if we have accumulated enough transactions to send them to ClickHouse
 			if blockCount >= batchSize {
 				batchesToSend := []driver.Batch{txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch}
 
-				// send transactions to ClickHouse
 				err := db.SendBatchesToClickHouse(batchesToSend)
 				if err != nil {
-					log.Error(err, "error sending transactions to ClickHouse", 0)
+					log.Error(err, "Error sending transactions to ClickHouse: %v", 0)
+					if errors.Is(err, context.Canceled) {
+						log.Warn("context was canceled while sending batches to ClickHouse")
+					}
 					return err
 				}
 
@@ -2307,12 +2303,17 @@ func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, 
 		}
 
 		batchStart := i
+
+		log.Infof("Processing batch: %d-%d", batchStart, batchEnd)
+
 		g.Go(func() error {
 			return processBatch(batchStart, batchEnd)
 		})
 	}
 
-	g.Wait()
+	if err := g.Wait(); err != nil {
+		log.Error(err, "rrror in processing tx batches: %v", 0)
+	}
 
 	return nil
 }
