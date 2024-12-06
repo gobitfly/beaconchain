@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -626,17 +625,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupCount(ctx context.Context,
 	return count, err
 }
 
-func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
-	// Initialize the cursor
-	var currentCursor t.ValidatorsCursor
-	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.ValidatorsCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as ValidatorsCursor: %w", err)
-		}
-	}
-
+func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor t.ValidatorsCursor, colSort t.Sort[enums.VDBManageValidatorsColumn], search t.VDBManageValidatorsSearch, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	type ValidatorGroupInfo struct {
 		GroupId   uint64
 		GroupName string
@@ -720,21 +709,14 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 			row.QueuePosition = &activationIndex
 		}
 
-		if search == "" {
-			data = append(data, row)
-		} else {
-			index, err := strconv.ParseUint(search, 10, 64)
-			indexSearch := err == nil && index == row.Index
-
-			pubKey := strings.ToLower(strings.TrimPrefix(search, "0x"))
-			pubkeySearch := pubKey == strings.TrimPrefix(string(row.PublicKey), "0x")
-
-			groupNameSearch := search == validatorGroupMap[validator].GroupName
-
-			if indexSearch || pubkeySearch || groupNameSearch {
-				data = append(data, row)
-			}
+		// TODO should apply filter to db query
+		if search.IsEnabled() &&
+			search.Index.Filtered(row.Index) &&
+			search.Pubkey.Filtered(string(row.PublicKey)) &&
+			search.Group.Filtered(validatorGroupMap[validator].GroupName) {
+			continue
 		}
+		data = append(data, row)
 	}
 
 	// no data found (searched for something that does not exist)
@@ -771,9 +753,9 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 
 	// Find the index for the cursor and limit the data
 	var cursorIndex uint64
-	if currentCursor.IsValid() {
+	if cursor.IsValid() {
 		for idx, row := range data {
-			if row.Index == currentCursor.Index {
+			if row.Index == cursor.Index {
 				cursorIndex = uint64(idx)
 				break
 			}
@@ -781,7 +763,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 	}
 
 	var result []t.VDBManageValidatorsTableRow
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		// opposite direction
 		var limitCutoff uint64
 		if cursorIndex > limit+1 {
@@ -789,7 +771,7 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 		}
 		result = data[limitCutoff:cursorIndex]
 	} else {
-		if currentCursor.IsValid() {
+		if cursor.IsValid() {
 			cursorIndex++
 		}
 		limitCutoff := utilMath.MinU64(cursorIndex+limit+1, uint64(len(data)))
@@ -798,21 +780,21 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 
 	// flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// no paging required
 		return result, &paging, nil
 	}
 
 	// remove the last entry from data as it is only required for the check
 	if moreDataFlag {
-		if currentCursor.IsReverse() {
+		if cursor.IsReverse() {
 			result = result[1:]
 		} else {
 			result = result[:len(result)-1]
 		}
 	}
 
-	p, err := utils.GetPagingFromData(result, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(result, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}

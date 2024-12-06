@@ -20,17 +20,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
-	var err error
+func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor t.ELDepositsCursor, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	currentDirection := enums.DESC // TODO: expose over parameter
-	var currentCursor t.ELDepositsCursor
-
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.ELDepositsCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as ELDepositsCursor: %w", err)
-		}
-	}
 
 	// Resolve validator indices to pubkeys
 	byteaArray, err := d.getValidatorPubkeys(dashboardId)
@@ -88,12 +79,12 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 
 	params := []interface{}{filter}
 	filterFragment := ` ORDER BY ed.block_number DESC, ed.log_index DESC`
-	if currentCursor.IsValid() {
+	if cursor.IsValid() {
 		filterFragment = ` AND (ed.block_number < $2 or (ed.block_number = $2 and ed.log_index < $3)) ` + filterFragment
-		params = append(params, currentCursor.BlockNumber, currentCursor.LogIndex)
+		params = append(params, cursor.BlockNumber, cursor.LogIndex)
 	}
 
-	if currentDirection == enums.ASC && !currentCursor.IsReverse() || currentDirection == enums.DESC && currentCursor.IsReverse() {
+	if currentDirection == enums.ASC && !cursor.IsReverse() || currentDirection == enums.DESC && cursor.IsReverse() {
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
 	}
 
@@ -194,7 +185,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	var paging t.Paging
 
 	moreDataFlag := len(responseData) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return responseData, &paging, nil
 	}
@@ -204,13 +195,13 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		data = data[:len(data)-1]
 	}
 
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
 		slices.Reverse(data)
 	}
 
-	p, err := utils.GetPagingFromData(data, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(data, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
@@ -218,17 +209,8 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	return responseData, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
-	var err error
+func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor t.CLDepositsCursor, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	currentDirection := enums.DESC // TODO: expose over parameter
-	var currentCursor t.CLDepositsCursor
-
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.CLDepositsCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as CLDepositsCursor: %w", err)
-		}
-	}
 
 	// Resolve validator indices to pubkeys
 	byteaArray, err := d.getValidatorPubkeys(dashboardId)
@@ -279,12 +261,12 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 
 	params := []interface{}{filter}
 	filterFragment := ` ORDER BY bd.block_slot DESC, bd.block_index DESC`
-	if currentCursor.IsValid() {
+	if cursor.IsValid() {
 		filterFragment = ` AND (bd.block_slot < $2 or (bd.block_slot = $2 and bd.block_index < $3)) ` + filterFragment
-		params = append(params, currentCursor.Slot, currentCursor.SlotIndex)
+		params = append(params, cursor.Slot, cursor.SlotIndex)
 	}
 
-	if currentDirection == enums.ASC && !currentCursor.IsReverse() || currentDirection == enums.DESC && currentCursor.IsReverse() {
+	if currentDirection == enums.ASC && !cursor.IsReverse() || currentDirection == enums.DESC && cursor.IsReverse() {
 		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
 	}
 
@@ -334,7 +316,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	var paging t.Paging
 
 	moreDataFlag := len(responseData) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return responseData, &paging, nil
 	}
@@ -344,13 +326,13 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		data = data[:len(data)-1]
 	}
 
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
 		slices.Reverse(data)
 	}
 
-	p, err := utils.GetPagingFromData(data, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(data, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}

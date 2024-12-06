@@ -380,15 +380,23 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.Re
 		return
 	}
 	q := r.URL.Query()
-	pagingParams := v.checkPagingParams(q)
+	pagingParams := checkPagingParams[types.VDBMobileValidatorsCursor](&v, q)
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
+	search := &types.VDBManageValidatorsSearch{DashboardId: *dashboardId}
+	if searchEnabled, err := checkSearch(search, pagingParams.search); err != nil {
+		handleErr(w, r, err)
+		return
+	} else if !searchEnabled {
+		returnOk(w, r, emptyPagingResponse())
+		return
+	}
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	data, paging, err := h.daService.GetValidatorDashboardMobileValidators(r.Context(), *dashboardId, groupId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.daService.GetValidatorDashboardMobileValidators(r.Context(), *dashboardId, groupId, period, pagingParams.cursor, *sort, *search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return

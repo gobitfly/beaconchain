@@ -24,24 +24,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor t.WithdrawalsCursor, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	result := make([]t.VDBWithdrawalsTableRow, 0)
 	var paging t.Paging
-
-	// Initialize the cursor
-	var currentCursor t.WithdrawalsCursor
-	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.WithdrawalsCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsCursor: %w", err)
-		}
-	}
 
 	// Prepare the sorting
 	sortSearchDirection := ">"
 	sortSearchOrder := " ASC"
-	if (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse()) {
+	if (colSort.Desc && !cursor.IsReverse()) || (!colSort.Desc && cursor.IsReverse()) {
 		sortSearchDirection = "<"
 		sortSearchOrder = " DESC"
 	}
@@ -147,28 +137,28 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	case enums.VDBWithdrawalsColumns.Epoch, enums.VDBWithdrawalsColumns.Slot:
 	case enums.VDBWithdrawalsColumns.Index:
 		sortColName = "w.validatorindex"
-		sortColCursor = currentCursor.Index
+		sortColCursor = cursor.Index
 	case enums.VDBWithdrawalsColumns.Recipient:
 		sortColName = "w.address"
-		sortColCursor = currentCursor.Recipient
+		sortColCursor = cursor.Recipient
 	case enums.VDBWithdrawalsColumns.Amount:
 		sortColName = "w.amount"
-		sortColCursor = currentCursor.Amount
+		sortColCursor = cursor.Amount
 	}
 
 	if colSort.Column == enums.VDBWithdrawalsColumns.Epoch ||
 		colSort.Column == enums.VDBWithdrawalsColumns.Slot {
-		if currentCursor.IsValid() {
+		if cursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, currentCursor.Slot, currentCursor.WithdrawalIndex)
+			queryParams = append(queryParams, cursor.Slot, cursor.WithdrawalIndex)
 			whereQuery += fmt.Sprintf(" AND (w.block_slot%[1]s$%[2]d OR (w.block_slot=$%[2]d AND w.withdrawalindex%[1]s$%[3]d))",
 				sortSearchDirection, len(queryParams)-1, len(queryParams))
 		}
 		orderQuery = fmt.Sprintf(" ORDER BY w.block_slot %[1]s, w.withdrawalindex %[1]s", sortSearchOrder)
 	} else {
-		if currentCursor.IsValid() {
+		if cursor.IsValid() {
 			// If we have a valid cursor only check the results before/after it
-			queryParams = append(queryParams, sortColCursor, currentCursor.Slot, currentCursor.WithdrawalIndex)
+			queryParams = append(queryParams, sortColCursor, cursor.Slot, cursor.WithdrawalIndex)
 
 			// The additional WHERE requirement is
 			// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
@@ -255,14 +245,14 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	}
 
 	// Reverse the data if the cursor is reversed to correct it to the requested direction
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(result)
 		slices.Reverse(cursorData)
 	}
 
 	// Find the next withdrawal if we are currently at the first page
 	// If we have a prev_cursor but not enough data it means the next data is missing
-	if !currentCursor.IsValid() || (currentCursor.IsReverse() && len(result) < int(limit)) {
+	if !cursor.IsValid() || (cursor.IsReverse() && len(result) < int(limit)) {
 		nextData, err := d.getNextWithdrawalRow(validators)
 		if err != nil {
 			return nil, nil, err
@@ -282,7 +272,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 
 		// Flag if above limit
 		moreDataFlag = moreDataFlag || len(result) > int(limit)
-		if !moreDataFlag && !currentCursor.IsValid() {
+		if !moreDataFlag && !cursor.IsValid() {
 			// No paging required
 			return result, &paging, nil
 		}
@@ -294,7 +284,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		}
 	}
 
-	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(cursorData, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
