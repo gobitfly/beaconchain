@@ -57,10 +57,12 @@ const data = computed(() => {
       props.property as SummaryDetailsEfficiencyProp,
     )
   ) {
-    const tooltip: undefined | { text: string,
-      title: string, } = {
-      text: $t('dashboard.validator.tooltip.sync.text'),
-      title: $t('dashboard.validator.tooltip.sync.title'),
+    let tooltip: undefined | { text: string, title: string }
+    if (props.property === 'sync') {
+      tooltip = {
+        text: $t('dashboard.validator.tooltip.sync.text'),
+        title: $t('dashboard.validator.tooltip.sync.title'),
+      }
     }
 
     const prop = col[props.property as SummaryDetailsEfficiencyProp]
