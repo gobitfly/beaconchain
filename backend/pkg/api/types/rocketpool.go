@@ -8,3 +8,15 @@ type RPNetworkStats struct {
 	EffectiveRPLStaked  decimal.Decimal `db:"effective_rpl_staked"`
 	RPLPrice            decimal.Decimal `db:"rpl_price"`
 }
+
+type RPInfo struct {
+	Minipool             map[uint64]RPMinipoolInfo
+	SmoothingPoolAddress []byte
+}
+
+type RPMinipoolInfo struct {
+	NodeFee              float64
+	NodeDepositBalance   decimal.Decimal
+	UserDepositBalance   decimal.Decimal
+	SmoothingPoolRewards map[uint64]decimal.Decimal
+}

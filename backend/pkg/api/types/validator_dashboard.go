@@ -98,11 +98,6 @@ type VDBGroupSummaryData struct {
 	Apr ClElValue[float64] `json:"apr"`
 
 	Luck Luck `json:"luck"`
-
-	RocketPool struct {
-		Minipools  uint64  `json:"minipools"`
-		Collateral float64 `json:"collateral"`
-	} `json:"rocket_pool,omitempty"`
 }
 type GetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
