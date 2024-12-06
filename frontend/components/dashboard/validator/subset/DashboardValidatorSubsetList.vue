@@ -78,7 +78,7 @@ function mapDutyLabel(dutyObjects?: number[]) {
     case 'proposal_missed':
       return $t('common.slot', dutyObjects.length) + ':'
     case 'proposal_proposed':
-      return $t('common.block', dutyObjects.length) + ':'
+      return $t('common.slot', dutyObjects.length) + ':'
   }
 }
 function mapDutyLinks(
@@ -102,7 +102,7 @@ function mapDutyLinks(
       path = '/slot/'
       break
     case 'proposal_proposed':
-      path = '/block/'
+      path = '/slot/'
       break
   }
   if (path) {
