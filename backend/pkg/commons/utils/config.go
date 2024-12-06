@@ -248,6 +248,11 @@ func ReadConfig(cfg *types.Config, path string) error {
 		cfg.RedisSessionStoreEndpoint = cfg.RedisCacheEndpoint
 	}
 
+	if cfg.RedisLocalCacheEndpoint == "" && cfg.RedisCacheEndpoint != "" {
+		log.Warnf("using RedisCacheEndpoint %s as RedisLocalCacheEndpoint as no dedicated RedisLocalCacheEndpoint was provided", cfg.RedisCacheEndpoint)
+		cfg.RedisLocalCacheEndpoint = cfg.RedisCacheEndpoint
+	}
+
 	confSanityCheck(cfg)
 
 	log.InfoWithFields(log.Fields{

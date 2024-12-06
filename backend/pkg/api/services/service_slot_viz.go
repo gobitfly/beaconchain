@@ -1,31 +1,16 @@
 package services
 
 import (
-	"bytes"
-	"context"
-	"encoding/gob"
-	"fmt"
-	"strconv"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
-	"github.com/juliangruber/go-intersect"
-	"github.com/lib/pq"
-	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
-var currentDutiesInfo atomic.Pointer[SyncData]
+// var currentDutiesInfo atomic.Pointer[SyncData]
 
 func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 	o := sync.Once{}
@@ -49,7 +34,8 @@ func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 }
 
 func (s *Services) updateSlotVizData() error {
-	var dutiesInfo *SyncData
+	return nil
+	/*var dutiesInfo *SyncData
 	if currentDutiesInfo.Load() == nil {
 		dutiesInfo = s.initDutiesInfo()
 	} else {
@@ -284,19 +270,39 @@ func (s *Services) updateSlotVizData() error {
 
 	currentDutiesInfo.Store(dutiesInfo)
 
-	return nil
+	return nil*/
 }
 
 // GetCurrentDutiesInfo returns the current duties info and a function to release the lock
 // Call release lock after you are done with accessing the data, otherwise it will block the slot viz service from updating
 func (s *Services) GetCurrentDutiesInfo() (*SyncData, error) {
-	if currentDutiesInfo.Load() == nil {
+	dutiesInfo := SyncData{}
+	// dummy data to avoid downloading duties from redis
+	dutiesInfo.PropAssignmentsForSlot = make(map[uint64]uint64)
+	// validators in megatron
+	dutiesInfo.PropAssignmentsForSlot[3_000_000] = 1
+	dutiesInfo.PropAssignmentsForSlot[3_000_001] = 7
+	dutiesInfo.PropAssignmentsForSlot[3_000_002] = 13
+	dutiesInfo.PropAssignmentsForSlot[3_000_003] = 19
+	dutiesInfo.PropAssignmentsForSlot[3_000_004] = 25
+	dutiesInfo.PropAssignmentsForSlot[3_000_005] = 31
+	// and some others
+	dutiesInfo.PropAssignmentsForSlot[3_000_006] = 29141
+	dutiesInfo.PropAssignmentsForSlot[3_000_007] = 500167
+	dutiesInfo.PropAssignmentsForSlot[3_000_008] = 531705
+	dutiesInfo.PropAssignmentsForSlot[3_000_009] = 542402
+	dutiesInfo.PropAssignmentsForSlot[3_000_010] = 845851
+	dutiesInfo.PropAssignmentsForSlot[3_000_011] = 894749
+
+	return &dutiesInfo, nil
+
+	/*if currentDutiesInfo.Load() == nil {
 		return nil, fmt.Errorf("%w: dutiesInfo", ErrWaiting)
 	}
-	return currentDutiesInfo.Load(), nil
+	return currentDutiesInfo.Load(), nil*/
 }
 
-func (s *Services) initDutiesInfo() *SyncData {
+/*func (s *Services) initDutiesInfo() *SyncData {
 	dutiesInfo := SyncData{}
 	dutiesInfo.LatestSlot = uint64(0)
 	dutiesInfo.LatestProposedSlot = uint64(0)
@@ -430,9 +436,9 @@ func (s *Services) copyAndCleanDutiesInfo() *SyncData {
 		}
 	}
 	return dutiesInfo
-}
+}*/
 
-func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
+/*func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 	headEpoch := cache.LatestEpoch.Get()
 	slotsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch
 
@@ -448,7 +454,7 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 		- Attestation data amount is the main culprit for the database call since it returns huge amounts of data
 		- Other fields used by slotviz do not change as well (sync bits, exec block). If we at some point include changing fields for headEpoch -2
 		  we should consider making this a separate call to avoid loading all attestation data again
-	*/
+
 	if err == nil && p.AssignmentsFetchedForEpoch > 0 && headEpoch > 0 { // if we have fetched epoch assignments before
 		minEpoch = headEpoch - 1
 	}
@@ -456,7 +462,7 @@ func (s *Services) getMaxValidatorDutiesInfoSlot() uint64 {
 	maxValidatorDutiesInfoSlot := minEpoch * slotsPerEpoch
 
 	return maxValidatorDutiesInfoSlot
-}
+}*/
 
 type SyncData struct {
 	LatestSlot                   uint64

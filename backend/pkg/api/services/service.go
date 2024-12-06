@@ -22,9 +22,10 @@ type Services struct {
 	clickhouseReader        *sqlx.DB
 	bigtable                *db.Bigtable
 	persistentRedisDbClient *redis.Client
+	localRedisDbClient      *redis.Client
 }
 
-func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader *sqlx.DB, bigtable *db.Bigtable, persistentRedisDbClient *redis.Client) *Services {
+func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader *sqlx.DB, bigtable *db.Bigtable, persistentRedisDbClient, localRedisDbClient *redis.Client) *Services {
 	return &Services{
 		readerDb:                readerDb,
 		writerDb:                writerDb,
@@ -33,6 +34,7 @@ func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader 
 		clickhouseReader:        clickhouseReader,
 		bigtable:                bigtable,
 		persistentRedisDbClient: persistentRedisDbClient,
+		localRedisDbClient:      localRedisDbClient,
 	}
 }
 

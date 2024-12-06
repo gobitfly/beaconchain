@@ -58,6 +58,7 @@ type DataAccessService struct {
 	userWriter              *sqlx.DB
 	bigtable                *db.Bigtable
 	persistentRedisDbClient *redis.Client
+	localRedisDbClient      *redis.Client
 
 	services *services.Services
 
@@ -83,6 +84,7 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	db.ClickHouseReader = das.clickhouseReader
 	db.BigtableClient = das.bigtable
 	db.PersistentRedisDbClient = das.persistentRedisDbClient
+	db.LocalRedisDbClient = das.localRedisDbClient
 
 	return das
 }
@@ -241,6 +243,21 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 		dataAccessService.persistentRedisDbClient = rdc
 	}()
 
+	// Initialize the persistent redis client
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rdc := redis.NewClient(&redis.Options{
+			Addr:        cfg.RedisLocalCacheEndpoint,
+			ReadTimeout: time.Second * 60,
+		})
+
+		if err := rdc.Ping(context.Background()).Err(); err != nil {
+			log.Fatal(err, "error connecting to local redis cache", 0)
+		}
+		dataAccessService.localRedisDbClient = rdc
+	}()
+
 	wg.Wait()
 
 	if cfg.TieredCacheProvider != "redis" {
@@ -253,7 +270,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 
 func (d *DataAccessService) StartDataAccessServices() {
 	// Create the services
-	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
+	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient, d.localRedisDbClient)
 
 	// Initialize repositories
 	d.registerNotificationInterfaceTypes()
