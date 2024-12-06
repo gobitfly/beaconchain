@@ -49,3 +49,21 @@ export const formatSecondsTo = (seconds: number,
     minutes,
   }
 }
+
+export const getRelativeTime = (timestampInSeconds: number, {
+  locale = 'en-US',
+}: {
+  locale?: string,
+} = {}) => {
+  const seconds = timestampInSeconds - (Date.now() / 1000)
+  const minutes = (seconds / 60)
+  const hours = (minutes / 60)
+
+  if (hours >= 1 || hours <= -1) {
+    return new Intl.RelativeTimeFormat(locale).format(Math.round(hours), 'hours')
+  }
+  if (minutes >= 1 || minutes <= -1) {
+    return new Intl.RelativeTimeFormat(locale).format(Math.round(minutes), 'minutes')
+  }
+  return new Intl.RelativeTimeFormat(locale).format(Math.round(seconds), 'seconds')
+}
