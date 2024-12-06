@@ -30,10 +30,13 @@ const notificationsTotal = computed(() => {
 const { user } = useUserStore()
 const mailLimit = computed(() => user.value?.premium_perks.email_notifications_per_day ?? 0)
 
-const resetHours = computed(() => overview.value?.next_email_count_reset_timestamp ?? 0)
+const resetHours = computed(
+  () => getRelativeTime(overview.value?.next_email_count_reset_timestamp ?? 0),
+)
+
 const tooltipEmail = computed(() => {
   return $t('notifications.overview.email_tooltip', {
-    hours: resetHours.value,
+    in_x_hours: resetHours.value,
     limit: mailLimit.value,
   })
 })
