@@ -1,3 +1,5 @@
+export const currentTimestampInSeconds = () => Math.round(Date.now() / 1000)
+
 export const getFutureTimestampInSeconds = (
   {
     seconds = 0,
