@@ -113,7 +113,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 	} else {
 		sslParam = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			sslParam = "sslmode=disable"
 		}
 	}
 
@@ -143,7 +143,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 	} else {
 		sslParam = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			sslParam = "sslmode=disablw"
 		}
 	}
 

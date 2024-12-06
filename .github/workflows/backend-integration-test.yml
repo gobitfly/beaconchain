@@ -33,6 +33,9 @@ jobs:
           cache-dependency-path: 'backend/go.sum'
       - name: Test with the Go CLI
         working-directory: backend
+        env:
+          CLICKHOUSE_WRITER_DB_NAME: holesky_re_export_2024_11_09
+          CLICKHOUSE_READER_DB_NAME: holesky_re_export_2024_11_09
         run:
           go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go
           go test -failfast ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"
