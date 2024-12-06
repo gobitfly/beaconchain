@@ -798,7 +798,7 @@
     },
     "overview": {
       "email_activate": "Click here to activate Email notifications",
-      "email_tooltip": "Your current limit is { limit } emails per day. Your email limit resets in { hours } hours. Upgrade to premium for more.",
+      "email_tooltip": "Your current limit is { limit } emails per day. Your email limit resets { in_x_hours }. Upgrade to premium for more.",
       "headers": {
         "account_groups": "Most notified account groups",
         "email_notifications": "Email Notifications",
