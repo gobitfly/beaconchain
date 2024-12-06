@@ -7,4 +7,5 @@ type Requires struct {
 	ElNode     bool
 	NetworkDBs bool
 	UserDBs    bool
+	Clickhouse bool
 }
