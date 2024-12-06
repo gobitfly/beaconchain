@@ -11,13 +11,13 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const notificationsManagementStore = useNotificationsManagementStore()
+const store = useNotificationsManagementStore()
 const {
   status,
 } = useAsyncData(
-  () => notificationsManagementStore
+  () => store
     .getSettings()
-    .then(({ data }) => notificationsManagementStore.settings = data),
+    .then(({ data }) => store.settings = data),
 )
 
 const isVisible = ref(false)
@@ -50,12 +50,12 @@ const muteDropdownList = [
 
 const muteNotifications = (seconds: number) => {
   if (seconds === Number.MAX_SAFE_INTEGER) {
-    return notificationsManagementStore
+    return store
       .settings
       .general_settings
       .do_not_disturb_timestamp = seconds
   }
-  notificationsManagementStore
+  store
     .settings
     .general_settings
     .do_not_disturb_timestamp = getFutureTimestampInSeconds({ seconds })
@@ -78,30 +78,39 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   }
 }
 
-const pairedDevicesCount = computed(() => notificationsManagementStore.settings.paired_devices?.length || 0)
+const pairedDevicesCount = computed(() => store.settings.paired_devices?.length || 0)
 
 const hasPushNotificationTest = computed(() =>
-  notificationsManagementStore
+  store
     .settings
     .general_settings
     .is_push_notifications_enabled
-    && notificationsManagementStore.settings.paired_devices?.length,
+    && store.settings.paired_devices?.length,
 )
 
 const hasEmailNotificationTest = computed(() =>
-  notificationsManagementStore.settings.general_settings.is_email_notifications_enabled,
+  store.settings.general_settings.is_email_notifications_enabled,
 )
 const openPairdeDevicesModal = () => {
   isVisible.value = true
 }
-
+const isMuted = computed(() => {
+  const timeStampIsInTheFuture = store.settings.general_settings.do_not_disturb_timestamp > currentTimestampInSeconds()
+  if (
+    store.settings.general_settings.do_not_disturb_timestamp > 0
+    && timeStampIsInTheFuture
+  ) {
+    return true
+  }
+  return false
+})
 const textMutedUntil = computed(() => {
-  if (notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp === Number.MAX_SAFE_INTEGER) {
+  if (store.settings.general_settings.do_not_disturb_timestamp === Number.MAX_SAFE_INTEGER) {
     return $t('notifications.general.mute.until_turned_on')
   }
   return $t('notifications.general.mute.until', {
     date: formatTsToAbsolute(
-      notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp,
+      store.settings.general_settings.do_not_disturb_timestamp,
       $t('locales.date'),
       true,
     ),
@@ -110,8 +119,8 @@ const textMutedUntil = computed(() => {
 const {
   refreshOverview,
 } = useNotificationsDashboardOverviewStore()
-watchDebounced(() => notificationsManagementStore.settings.general_settings, async () => {
-  await notificationsManagementStore.saveSettings()
+watchDebounced(() => store.settings.general_settings, async () => {
+  await store.saveSettings()
   // this is a quickfix and should not be needed,
   // reactive data should be updated automatically and  `user actions` should be atomic -> error handling
   await refreshOverview()
@@ -146,12 +155,12 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
         }}</span>
       </div>
       <div
-        v-if="notificationsManagementStore.settings.general_settings?.do_not_disturb_timestamp"
+        v-if="isMuted"
         class="unmute-container"
       >
         <Button
           :label="$t('notifications.general.mute.unmute')"
-          @click="notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp = 0"
+          @click="store.settings.general_settings.do_not_disturb_timestamp = 0"
         />
         <div class="muted-until">
           {{ textMutedUntil }}
@@ -177,7 +186,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       <div>
         {{ $t("notifications.general.email_notifications") }}
       </div>
-      <BcToggle v-model="notificationsManagementStore.settings.general_settings.is_email_notifications_enabled" />
+      <BcToggle v-model="store.settings.general_settings.is_email_notifications_enabled" />
     </div>
     <div
       class="row"
@@ -196,7 +205,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       </div>
       <BcToggle
         v-if="pairedDevicesCount > 0"
-        v-model="notificationsManagementStore.settings.general_settings.is_push_notifications_enabled"
+        v-model="store.settings.general_settings.is_push_notifications_enabled"
       />
       <div v-else>
         {{ tOf($t, "notifications.general.download_app", 0) }}
@@ -211,7 +220,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       </div>
     </div>
     <div
-      v-if="notificationsManagementStore.settings.general_settings.is_email_notifications_enabled"
+      v-if="store.settings.general_settings.is_email_notifications_enabled"
       class="row"
     >
       <span>

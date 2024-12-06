@@ -22,6 +22,7 @@
     "NotificationsDashboardDialogEntity",
     "NotificationsDashboardTable",
     "NotificationsManagementDashboards",
+    "NotificationsManagementGeneralTab",
     "NotificationsManagementModalDashboardsDelete",
     "NotificationsManagementModalWebhook",
     "NotificationsManagementNetwork",
