@@ -678,9 +678,8 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 	LEFT JOIN users_val_dashboards ON users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
 	WHERE users_val_dashboards.user_id = ANY($1)
 	AND webhook_target IS NOT NULL
-	AND webhook_format IS NOT NULL
-	AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2);
-	`, pq.Array(userIds), types.WebhookNotificationChannel)
+	AND webhook_format IS NOT NULL;
+	`, pq.Array(userIds))
 	if err != nil {
 		return fmt.Errorf("error quering users_val_dashboards_groups, err: %w", err)
 	}
