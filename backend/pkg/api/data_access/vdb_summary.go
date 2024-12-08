@@ -103,7 +103,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		ClRewards              int64           `db:"cl_rewards"`
 		AttestationReward      decimal.Decimal `db:"attestations_reward"`
 		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-		AttestationsExecuted   uint64          `db:"attestations_executed"`
+		AttestationsObserved   uint64          `db:"attestations_observed"`
 		AttestationsScheduled  uint64          `db:"attestations_scheduled"`
 		BlocksProposed         uint64          `db:"blocks_proposed"`
 		BlocksScheduled        uint64          `db:"blocks_scheduled"`
@@ -121,7 +121,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS cl_rewards"),
 			goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
 			goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
-			goqu.L("COALESCE(SUM(r.attestations_executed), 0) AS attestations_executed"),
+			goqu.L("COALESCE(SUM(r.attestations_observed), 0) AS attestations_observed"),
 			goqu.L("COALESCE(SUM(r.attestations_scheduled), 0) AS attestations_scheduled"),
 			goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
 			goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
@@ -277,7 +277,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		Validators             t.VDBSummaryValidators
 		AttestationReward      decimal.Decimal
 		AttestationIdealReward decimal.Decimal
-		AttestationsExecuted   uint64
+		AttestationsObserved   uint64
 		AttestationsScheduled  uint64
 		BlocksProposed         uint64
 		BlocksScheduled        uint64
@@ -338,8 +338,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Status.SlashedCount += resultEntry.Status.SlashedCount
 
 		// Attestations
-		resultEntry.Attestations.Success = queryEntry.AttestationsExecuted
-		resultEntry.Attestations.Failed = queryEntry.AttestationsScheduled - queryEntry.AttestationsExecuted
+		resultEntry.Attestations.Success = queryEntry.AttestationsObserved
+		resultEntry.Attestations.Failed = queryEntry.AttestationsScheduled - queryEntry.AttestationsObserved
 
 		// Proposals
 		resultEntry.Proposals.Success = queryEntry.BlocksProposed
@@ -372,7 +372,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		// Add the duties info to the total
 		total.AttestationReward = total.AttestationReward.Add(queryEntry.AttestationReward)
 		total.AttestationIdealReward = total.AttestationIdealReward.Add(queryEntry.AttestationIdealReward)
-		total.AttestationsExecuted += queryEntry.AttestationsExecuted
+		total.AttestationsObserved += queryEntry.AttestationsObserved
 		total.AttestationsScheduled += queryEntry.AttestationsScheduled
 		total.BlocksProposed += queryEntry.BlocksProposed
 		total.BlocksScheduled += queryEntry.BlocksScheduled
@@ -466,8 +466,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		}
 
 		// Attestations
-		totalEntry.Attestations.Success = total.AttestationsExecuted
-		totalEntry.Attestations.Failed = total.AttestationsScheduled - total.AttestationsExecuted
+		totalEntry.Attestations.Success = total.AttestationsObserved
+		totalEntry.Attestations.Failed = total.AttestationsScheduled - total.AttestationsObserved
 
 		// Proposals
 		totalEntry.Proposals.Success = total.BlocksProposed
@@ -581,10 +581,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			goqu.L("attestations_reward"),
 			goqu.L("attestations_ideal_reward"),
 			goqu.L("attestations_scheduled"),
-			goqu.L("attestations_executed"),
-			goqu.L("attestation_head_executed"),
-			goqu.L("attestation_source_executed"),
-			goqu.L("attestation_target_executed"),
+			goqu.L("attestations_observed"),
+			goqu.L("attestations_head_executed"),
+			goqu.L("attestations_source_executed"),
+			goqu.L("attestations_target_executed"),
 			goqu.L("blocks_scheduled"),
 			goqu.L("blocks_proposed"),
 			goqu.L("sync_scheduled"),
@@ -612,11 +612,11 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		AttestationReward      int64  `db:"attestations_reward"`
 		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
 
-		AttestationsScheduled     int64 `db:"attestations_scheduled"`
-		AttestationsExecuted      int64 `db:"attestations_executed"`
-		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
-		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
-		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
+		AttestationsScheduled      int64 `db:"attestations_scheduled"`
+		AttestationsObserved       int64 `db:"attestations_observed"`
+		AttestationsHeadExecuted   int64 `db:"attestations_head_executed"`
+		AttestationsSourceExecuted int64 `db:"attestations_source_executed"`
+		AttestationsTargetExecuted int64 `db:"attestations_target_executed"`
 
 		BlocksScheduled uint32 `db:"blocks_scheduled"`
 		BlocksProposed  uint32 `db:"blocks_proposed"`
@@ -680,14 +680,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalAttestationRewards += row.AttestationReward
 		totalIdealAttestationRewards += row.AttestationIdealReward
 
-		ret.AttestationsHead.Success += uint64(row.AttestationHeadExecuted)
-		ret.AttestationsHead.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
+		ret.AttestationsHead.Success += uint64(row.AttestationsHeadExecuted)
+		ret.AttestationsHead.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsHeadExecuted)
 
-		ret.AttestationsSource.Success += uint64(row.AttestationSourceExecuted)
-		ret.AttestationsSource.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
+		ret.AttestationsSource.Success += uint64(row.AttestationsSourceExecuted)
+		ret.AttestationsSource.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsSourceExecuted)
 
-		ret.AttestationsTarget.Success += uint64(row.AttestationTargetExecuted)
-		ret.AttestationsTarget.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
+		ret.AttestationsTarget.Success += uint64(row.AttestationsTargetExecuted)
+		ret.AttestationsTarget.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsTargetExecuted)
 
 		if row.ValidatorIndex == 0 && row.BlocksProposed > 0 && row.BlocksProposed != row.BlocksScheduled {
 			row.BlocksProposed-- // subtract the genesis block from validator 0 (TODO: remove when fixed in the dashoard data exporter)
@@ -732,7 +732,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalSyncExpected += row.SyncCommitteesExpected
 
 		if row.InclusionDelaySum > 0 {
-			totalInclusionDelayDivisor += row.AttestationsExecuted
+			totalInclusionDelayDivisor += row.AttestationsObserved
 		}
 	}
 
