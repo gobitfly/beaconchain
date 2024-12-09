@@ -58,6 +58,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 
 		groupCount := rand.Intn(groupLimit) + 1
 		validatorIndex := rand.Intn(data.ValidatorsInDB)
+		validatorsInDashboard := 0
 		for j := 0; j < groupCount; j++ {
 			err = CreateValDashboardGroup(int64(j), dashboardID, fmt.Sprintf("Group %v", j))
 			if err != nil {
@@ -77,12 +78,13 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 			}
 
 			validatorCount := rand.Intn(limit) + 1
-			validatorCount = min(validatorCount, data.ValidatorsInDB - 1)
+			validatorCount = min(validatorCount - validatorsInDashboard, (data.ValidatorsInDB - 1) / groupCount)
 
 			err = insertValidators(dashboardID, int64(j), int64(validatorIndex), int64(validatorCount), int64(data.ValidatorsInDB), int64(normalValidatorsInDB))
 			if err != nil {
 				return err
 			}
+			validatorsInDashboard += validatorCount
 			validatorIndex = (validatorIndex + validatorCount) % data.ValidatorsInDB
 
 			addPending := rand.Intn(60) == 0
@@ -101,7 +103,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 		shareAll := rand.Intn(3) == 0
 
 		if share {
-			err = CreateValDashboardSharing(int64(i), "", shareAll)
+			err = CreateValDashboardSharing(dashboardID, "", shareAll)
 			if err != nil {
 				return err
 			}

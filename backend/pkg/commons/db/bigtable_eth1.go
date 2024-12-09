@@ -753,8 +753,10 @@ func (bigtable *Bigtable) IndexEventsWithTransformers(start, end int64, transfor
 						if err != nil {
 							log.Error(err, "error transforming block", 0, map[string]interface{}{"block": block.Number})
 						}
-						bulkMutsData.Keys = append(bulkMutsData.Keys, mutsData.Keys...)
-						bulkMutsData.Muts = append(bulkMutsData.Muts, mutsData.Muts...)
+						if mutsData != nil {
+							bulkMutsData.Keys = append(bulkMutsData.Keys, mutsData.Keys...)
+							bulkMutsData.Muts = append(bulkMutsData.Muts, mutsData.Muts...)
+						}
 
 						if mutsMetadataUpdate != nil {
 							bulkMutsMetadataUpdate.Keys = append(bulkMutsMetadataUpdate.Keys, mutsMetadataUpdate.Keys...)
