@@ -81,10 +81,6 @@ export interface VDBGroupSummaryData {
   missed_rewards: VDBGroupSummaryMissedRewards;
   apr: ClElValue<number /* float64 */>;
   luck: Luck;
-  rocket_pool?: {
-    minipools: number /* uint64 */;
-    collateral: number /* float64 */;
-  };
 }
 export type GetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
 export type GetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
