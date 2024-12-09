@@ -9,6 +9,7 @@ POSTGRES_DB = "db"
 ALLOY_PORT_ID = "alloy"
 ALLOY_DB = "alloy"
 CLICKHOUSE_PORT_ID = "clickhouse"
+CLICKHOUSE_PORT_ID_HTTP = "clickhouse-http"
 CLICKHOUSE_DB = "clickhouse"
 POSTGRES_USER = "postgres"
 POSTGRES_PASSWORD = "pass"
@@ -42,7 +43,7 @@ def run(plan, args):
 				image = "clickhouse/clickhouse-server:24.5",
 				ports = {
 					CLICKHOUSE_PORT_ID: PortSpec(9000, application_protocol = "clickhouse"),
-					"http": PortSpec(8123),
+					CLICKHOUSE_PORT_ID_HTTP: PortSpec(8123),
 				},
 				env_vars = {
 					"CLICKHOUSE_DB": CLICKHOUSE_DB,

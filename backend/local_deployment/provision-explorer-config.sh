@@ -14,6 +14,9 @@ echo "Alloy port is $ALLOY_PORT"
 CLICKHOUSE_PORT=$(kurtosis port print my-testnet clickhouse clickhouse --format number)
 echo "Clickhouse port is $CLICKHOUSE_PORT"
 
+CLICKHOUSE_PORT_HTTP=$(kurtosis port print my-testnet clickhouse clickhouse-http --format number)
+echo "Clickhouse http port is $CLICKHOUSE_PORT_HTTP"
+
 LBT_PORT=$(kurtosis port print my-testnet littlebigtable littlebigtable --format number)
 echo "Little bigtable port is $LBT_PORT"
 
@@ -23,6 +26,7 @@ EL_PORT=$EL_PORT
 REDIS_PORT=$REDIS_PORT
 ALLOY_PORT=$ALLOY_PORT
 CLICKHOUSE_PORT=$CLICKHOUSE_PORT
+CLICKHOUSE_PORT_HTTP=$CLICKHOUSE_PORT_HTTP
 LBT_PORT=$LBT_PORT
 EOF
 
