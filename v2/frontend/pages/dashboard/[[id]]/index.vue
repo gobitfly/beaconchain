@@ -185,12 +185,17 @@ watch(
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
-      <DashboardCreationController class="panel-controller" :display-mode="'panel'" :initially-visible="true" />
+      <DashboardCreationController
+        class="panel-controller"
+        :display-mode="'panel'"
+        :initially-visible="true"
+      />
     </BcPageWrapper>
   </div>
   <div v-else>
     <DashboardCreationController
-      ref="dashboardCreationControllerModal" class="modal-controller"
+      ref="dashboardCreationControllerModal"
+      class="modal-controller"
       :display-mode="'modal'"
     />
     <BcPageWrapper>
@@ -204,7 +209,8 @@ watch(
         <DashboardValidatorSlotViz />
       </div>
       <BcTabList
-        :tabs default-tab="summary"
+        :tabs
+        default-tab="summary"
         :use-route-hash="true"
         class="dashboard-tab-view"
         panels-class="dashboard-tab-panels"
@@ -212,7 +218,10 @@ watch(
         <template #tab-panel-deposits>
           <div class="deposits">
             <DashboardTableElDeposits />
-            <FontAwesomeIcon :icon="faArrowDown" class="down_icon" />
+            <FontAwesomeIcon
+              :icon="faArrowDown"
+              class="down_icon"
+            />
             <DashboardTableClDeposits />
           </div>
         </template>

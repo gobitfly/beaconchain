@@ -51,7 +51,10 @@ const handleDelete = () => {
     v-focustrap
     @keydown.esc.stop="close"
   >
-    <BcText tag="h2" variant="lg">
+    <BcText
+      tag="h2"
+      variant="lg"
+    >
       {{ $t('notifications.dashboards.dialog.delete_all_notifications.heading') }}
     </BcText>
     <p class="notifications-management-modal-dashboards-delete__content">

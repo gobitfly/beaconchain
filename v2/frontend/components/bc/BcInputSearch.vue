@@ -227,7 +227,10 @@ const ariaActivedescendant = computed(() => {
               tabindex="-1"
               @click="handleClick(index)"
             >
-              <slot name="result" :item />
+              <slot
+                name="result"
+                :item
+              />
             </BcInputSearchItem>
           </ul>
         </slot>

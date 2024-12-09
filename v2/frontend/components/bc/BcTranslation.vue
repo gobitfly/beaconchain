@@ -36,7 +36,10 @@ defineProps<{
     :tag="tag || 'span'"
   >
     <template #_bold>
-      <span v-if="boldpath" class="bc-translation-bold">{{ $t(boldpath) }}</span>
+      <span
+        v-if="boldpath"
+        class="bc-translation-bold"
+      >{{ $t(boldpath) }}</span>
     </template>
     <template #_link>
       <slot
@@ -53,9 +56,15 @@ defineProps<{
       </slot>
     </template>
     <template #_list>
-      <slot name="_list" :listpath>
+      <slot
+        name="_list"
+        :listpath
+      >
         <ul v-if="listpath">
-          <li v-for="item in $t(listpath).split('\n')" :key="item">
+          <li
+            v-for="item in $t(listpath).split('\n')"
+            :key="item"
+          >
             {{ item }}
           </li>
         </ul>

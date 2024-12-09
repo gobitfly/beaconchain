@@ -56,5 +56,8 @@ const tabs: HashTabs = [
 </script>
 
 <template>
-  <BcTabList :tabs default-tab="icons" />
+  <BcTabList
+    :tabs
+    default-tab="icons"
+  />
 </template>

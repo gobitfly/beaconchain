@@ -14,7 +14,10 @@ defineProps<{
 </script>
 
 <template>
-  <component :is="tag ?? 'span'" class="bc-screenreader-only">
+  <component
+    :is="tag ?? 'span'"
+    class="bc-screenreader-only"
+  >
     <slot />
   </component>
 </template>

@@ -81,7 +81,10 @@ const formatValueWei = (value: string) => {
         :info-copy="$t('notifications.dashboards.dialog.entity.validator_offline')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faPowerOff" class="notifications-dashboard-dialog-entity__icon__red" />
+          <FontAwesomeIcon
+            :icon="faPowerOff"
+            class="notifications-dashboard-dialog-entity__icon__red"
+          />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.validator_offline') }} ({{ details?.validator_offline?.length ?? 0 }})
@@ -167,7 +170,10 @@ const formatValueWei = (value: string) => {
         :info-copy="$t('notifications.dashboards.dialog.entity.slashed')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faUserSlash" class="notifications-dashboard-dialog-entity__icon__red" />
+          <FontAwesomeIcon
+            :icon="faUserSlash"
+            class="notifications-dashboard-dialog-entity__icon__red"
+          />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.slashed') }} ({{ details?.slashed?.length ?? 0 }})
@@ -187,7 +193,10 @@ const formatValueWei = (value: string) => {
         :info-copy="$t('notifications.dashboards.dialog.entity.sync_committee')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon :icon="faArrowsRotate" class="notifications-dashboard-dialog-entity__icon__green" />
+          <FontAwesomeIcon
+            :icon="faArrowsRotate"
+            class="notifications-dashboard-dialog-entity__icon__green"
+          />
         </template>
         <template #heading>
           {{ $t('notifications.dashboards.dialog.entity.sync_committee') }} ({{ details?.sync?.length ?? 0 }})

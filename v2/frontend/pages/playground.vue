@@ -86,7 +86,10 @@ const tabs: HashTabs = [
 <template>
   <div class="content">
     <h1>Playground for testing UI components</h1>
-    <BcLink to="/" class="row">
+    <BcLink
+      to="/"
+      class="row"
+    >
       <Button class="row">
         <IconBeaconchainLogo alt="Beaconcha.in logo" />
       </Button>
@@ -95,9 +98,16 @@ const tabs: HashTabs = [
       Latest Slot: {{ formatNumber(latestState?.current_slot) }}
     </div>
 
-    <BcTabList :tabs default-tab="components" :use-route-hash="true">
+    <BcTabList
+      :tabs
+      default-tab="components"
+      :use-route-hash="true"
+    >
       <template #tab-panel-slotviz>
-        <SlotVizViewer v-if="slotVizData" :data="slotVizData" />
+        <SlotVizViewer
+          v-if="slotVizData"
+          :data="slotVizData"
+        />
       </template>
     </BcTabList>
     <BcFooterMain />

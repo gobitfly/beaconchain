@@ -349,10 +349,24 @@ const option = computed<ECBasicOption | undefined>(() => {
 <template>
   <div class="rewards-chart-container">
     <ClientOnly>
-      <VChart ref="chart" class="chart" :option autoresize />
+      <VChart
+        ref="chart"
+        class="chart"
+        :option
+        autoresize
+      />
     </ClientOnly>
-    <BcLoadingSpinner v-if="isLoading" class="loading-spinner" :loading="true" alignment="center" />
-    <div v-if="!isLoading && !series?.list?.length" class="no-data" alignment="center">
+    <BcLoadingSpinner
+      v-if="isLoading"
+      class="loading-spinner"
+      :loading="true"
+      alignment="center"
+    />
+    <div
+      v-if="!isLoading && !series?.list?.length"
+      class="no-data"
+      alignment="center"
+    >
       {{ $t("dashboard.validator.summary.chart.no_data") }}
     </div>
   </div>

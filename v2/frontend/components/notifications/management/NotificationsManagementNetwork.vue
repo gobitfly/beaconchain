@@ -54,7 +54,10 @@ watchDebounced([
 
 <template>
   <div>
-    <div v-if="!networks.length" class="error-container">
+    <div
+      v-if="!networks.length"
+      class="error-container"
+    >
       Upps something went wrong. Please try again.
     </div>
     <BcTabPanel v-else>

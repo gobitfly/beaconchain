@@ -66,12 +66,16 @@ const copyText = async () => {
           :key="`${index}-${element}`"
           class="bc-accordion-list__element"
         >
-          <slot name="item" :item="element" />
+          <slot
+            name="item"
+            :item="element"
+          />
         </li>
       </ul>
       <slot
         v-if="item"
-        name="item" :item
+        name="item"
+        :item
       />
       <template #floating-action-button>
         <BcButtonIcon
