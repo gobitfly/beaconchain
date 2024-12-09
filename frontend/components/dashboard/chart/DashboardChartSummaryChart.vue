@@ -1,11 +1,16 @@
 <script lang="ts" setup>
 import {
-  h, render,
+  h,
+  render,
 } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
-import type { ECharts } from 'echarts'
+import type {
+  ECharts,
+  EChartsOption,
+  SeriesOption,
+} from 'echarts'
 import { get } from 'lodash-es'
 import {
   DataZoomComponent,
@@ -84,15 +89,8 @@ const aggregation = ref<AggregationTimeframe>('hourly')
 const isLoading = ref(false)
 let reloadCounter = 0
 
-interface SeriesObject {
-  data: number[],
-  name: string,
-  smooth: boolean,
-  symbol: string,
-  type: string,
-}
 // we don't want the series to be responsive to not trigger an auto update of the option computed
-const series = ref<SeriesObject[]>([])
+const series = ref<SeriesOption[]>([])
 const chartCategories = ref<number[]>([])
 
 const categories = computed<number[]>(() => {
@@ -171,7 +169,7 @@ const loadData = async () => {
     return
   }
   isLoading.value = true
-  const newSeries: SeriesObject[] = []
+  const newSeries: SeriesOption[] = []
   try {
     const res = await fetch<GetValidatorDashboardSummaryChartResponse>(
       'DASHBOARD_SUMMARY_CHART',
@@ -204,7 +202,7 @@ const loadData = async () => {
         else {
           name = getGroupLabel($t, element.id, groups.value, allGroups)
         }
-        const newObj: SeriesObject = {
+        const newObj: SeriesOption = {
           data: element.data,
           name,
           smooth: false,
@@ -285,9 +283,8 @@ const formatTimestamp = (value: string) => {
       return date
   }
 }
-
-// chart options
-const option = computed(() => {
+const toogleTrigger = ref(false)
+const option = computed<EChartsOption>(() => {
   return {
     color: colors.value.groups,
     dataZoom: {
@@ -312,6 +309,9 @@ const option = computed(() => {
     legend: {
       bottom: 40,
       orient: 'horizontal',
+      pageTextStyle: {
+        color: colors.value.label,
+      },
       textStyle: {
         color: colors.value.label,
         fontSize: textSize,
@@ -327,10 +327,14 @@ const option = computed(() => {
       fontWeight: fontWeightLight,
     },
     tooltip: {
+      alwaysShowContent: true,
       borderColor: colors.value.background,
       confine: true,
-      formatter(params: any): HTMLElement {
-        const ts = parseInt(params[0].axisValue)
+      enterable: true,
+      extraCssText: 'z-index: 100;',
+      formatter(params) {
+        if (!Array.isArray(params)) return ''
+        const ts = parseInt(params[0].name)
         let lastDif = 0
         let highlightGroup = ''
         const groupInfos = params.map((param: any) => {
@@ -367,6 +371,7 @@ const option = computed(() => {
       order: 'seriesAsc',
       padding: 0,
       trigger: 'axis',
+      triggerOn: toogleTrigger.value ? 'click' : 'mousemove|click',
     },
     xAxis: [
       {
@@ -402,7 +407,7 @@ const option = computed(() => {
       name: $t(
         `dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`,
       ),
-      nameLocation: 'center',
+      nameLocation: 'middle',
       nameTextStyle: {
         padding: [
           0,
@@ -602,6 +607,10 @@ const onDatazoom = () => {
 const onMouseMove = (e: MouseEvent) => {
   lastMouseYPos = e.offsetY
 }
+const onMouseUp = () => {
+  // using mouseup event here, as `click` or `mousedown` would close `tooltip`
+  toogleTrigger.value = !toogleTrigger.value
+}
 </script>
 
 <template>
@@ -615,6 +624,7 @@ const onMouseMove = (e: MouseEvent) => {
         class="chart"
         :option
         autoresize
+        @zr:mouseup="onMouseUp"
         @datazoom="onDatazoom"
       />
       <BcLoadingSpinner

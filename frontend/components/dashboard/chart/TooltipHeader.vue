@@ -101,7 +101,8 @@ const title = computed(() => {
 
 <template>
   <b>
-    <div>{{ title }} {{ dateText }}</div>
+    <div>{{ title }}</div>
+    <div>{{ dateText }}</div>
     <div>{{ t("common.epoch") }} {{ epochText }}</div>
   </b>
 </template>
