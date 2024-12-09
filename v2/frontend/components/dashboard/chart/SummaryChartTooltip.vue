@@ -59,6 +59,7 @@ defineProps<Props>()
   border: 1px transparent solid;
   line-height: 1.5;
   padding: var(--padding);
+  max-height: 18.75rem;
 
   .line-container {
     display: flex;
