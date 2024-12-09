@@ -190,7 +190,7 @@ const selectedLabel = computed(() => {
     max-width: 200px;
 
     @media (max-width: 1000px) {
-      max-width: 90px;
+      max-width: min-content
     }
   }
   :deep(> .p-dropdown) {
