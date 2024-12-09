@@ -151,9 +151,10 @@ go run ./cmd/misc/main.go -config local_deployment/config.yml -command initBigta
 
 echo "bigtable schema initialization completed"
 
-echo "provisioning postgres db schema"
+echo "provisioning postgres/clickhouse db schema"
 go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database postgres
-echo "postgres db schema initialization completed"
+go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database clickhouse
+echo "postgres/clickhouse db schema initialization completed"
 
 echo "provisioning alloy db schema"
 cd ../perfTesting
