@@ -220,7 +220,6 @@ watchDebounced(() => store.settings.general_settings, async () => {
       </div>
     </div>
     <div
-      v-if="store.settings.general_settings.is_email_notifications_enabled"
       class="row"
       :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
     >
