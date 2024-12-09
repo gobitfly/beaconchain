@@ -638,7 +638,15 @@ func QueueTestPushNotification(ctx context.Context, userId types.UserId, userDbC
 func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
 	var webhooks []types.UserWebhook
 	userIds := slices.Collect(maps.Keys(notificationsByUserID))
-	err := db.FrontendWriterDB.Select(&webhooks, `
+
+	// first get an array of users that have webhooks disabled
+	var disabledUsers []types.UserId
+	err := db.FrontendWriterDB.Select(&disabledUsers, `SELECT user_id FROM users_notification_channels WHERE active = false AND channel = $1 AND user_id = ANY($2)`, types.WebhookNotificationChannel, pq.Array(userIds))
+	if err != nil {
+		return fmt.Errorf("error quering users_notification_channels, err: %w", err)
+	}
+
+	err = db.FrontendWriterDB.Select(&webhooks, `
 	SELECT
 		id,
 		user_id,
@@ -650,8 +658,8 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 	FROM
 		users_webhooks
 	WHERE
-		user_id = ANY($1) AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)
-	`, pq.Array(userIds), types.WebhookNotificationChannel)
+		user_id = ANY($1) AND NOT (user_id = ANY($2));
+	`, pq.Array(userIds), pq.Array(disabledUsers))
 
 	if err != nil {
 		return fmt.Errorf("error quering users_webhooks, err: %w", err)
@@ -676,10 +684,10 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 		webhook_last_sent AS last_sent
 	FROM users_val_dashboards_groups
 	LEFT JOIN users_val_dashboards ON users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
-	WHERE users_val_dashboards.user_id = ANY($1)
+	WHERE users_val_dashboards.user_id = ANY($1) AND NOT (users_val_dashboards.user_id = ANY($2))
 	AND webhook_target IS NOT NULL
 	AND webhook_format IS NOT NULL;
-	`, pq.Array(userIds))
+	`, pq.Array(userIds), pq.Array(disabledUsers))
 	if err != nil {
 		return fmt.Errorf("error quering users_val_dashboards_groups, err: %w", err)
 	}
