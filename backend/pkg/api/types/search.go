@@ -37,3 +37,7 @@ type SearchResult struct {
 type InternalPostSearchResponse struct {
 	Data []SearchResult `json:"data" tstype:"({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrwalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti })[]"`
 }
+
+type VDBBlocksSearch = SearchTableByIndexPubkeyGroup
+type VDBManageValidatorsSearch = SearchTableByIndexPubkeyGroup
+type VDBSummarySearch = SearchTableByIndexPubkeyGroup

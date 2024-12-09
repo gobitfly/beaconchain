@@ -7,7 +7,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 )
 
-func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor t.VDBRocketPoolCursor, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
 	// TODO @DATA-ACCESS
 	return d.dummy.GetValidatorDashboardRocketPool(ctx, dashboardId, cursor, colSort, search, limit)
 }
@@ -17,7 +17,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalRocketPool(ctx context.Con
 	return d.dummy.GetValidatorDashboardTotalRocketPool(ctx, dashboardId, search)
 }
 
-func (d *DataAccessService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor t.VDBRocketPoolMinipoolsCursor, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
 	// TODO @DATA-ACCESS
 	return d.dummy.GetValidatorDashboardRocketPoolMinipools(ctx, dashboardId, node, cursor, colSort, search, limit)
 }
