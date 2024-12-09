@@ -95,6 +95,13 @@ const { error: validatorOverviewError } = await useAsyncData(
   () => refreshOverview(dashboardKey.value),
   { watch: [ dashboardKey ] },
 )
+// when we run into an error loading a dashboard keep it here to prevent an infinity loop
+const errorDashboardKeys: string[] = []
+const setDashboardKeyIfNoError = (key: string) => {
+  if (!errorDashboardKeys.includes(key)) {
+    setDashboardKey(key)
+  }
+}
 watch(
   validatorOverviewError,
   (error) => {
@@ -126,13 +133,6 @@ function showDashboardCreationDialog() {
   dashboardCreationControllerModal.value?.show()
 }
 
-// when we run into an error loading a dashboard keep it here to prevent an infinity loop
-const errorDashboardKeys: string[] = []
-const setDashboardKeyIfNoError = (key: string) => {
-  if (!errorDashboardKeys.includes(key)) {
-    setDashboardKey(key)
-  }
-}
 watch(
   [
     dashboardKey,
