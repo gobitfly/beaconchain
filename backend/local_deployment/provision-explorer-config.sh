@@ -1,8 +1,8 @@
 #! /bin/bash
-CL_PORT=$(kurtosis enclave inspect my-testnet | grep 4000/tcp | tr -s ' ' | cut -d " " -f 6 | sed -e 's/http\:\/\/127.0.0.1\://' | head -n 1)
+CL_PORT=$(kurtosis port print my-testnet cl-1-lighthouse-geth http --format number)
 echo "CL Node port is $CL_PORT"
 
-EL_PORT=$(kurtosis enclave inspect my-testnet | grep 8545/tcp | tr -s ' ' | cut -d " " -f 5 | sed -e 's/http\:\/\/127.0.0.1\://' | head -n 1)
+EL_PORT=$(kurtosis port print my-testnet el-1-geth-lighthouse rpc --format number)
 echo "EL Node port is $EL_PORT"
 
 REDIS_PORT=$(kurtosis port print my-testnet redis redis --format number)
@@ -158,8 +158,9 @@ echo "postgres/clickhouse db schema initialization completed"
 
 echo "provisioning alloy db schema"
 cd ../perfTesting
-go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable --seeder.validators 128
+go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable --seeder.validators 128 --seeder.users 5
 cd ../backend/db_migrations
+echo "migrating dp schemas"
 goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" reset
 goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" up
 echo "alloy db schema initialization completed"
