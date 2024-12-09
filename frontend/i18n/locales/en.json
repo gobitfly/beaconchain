@@ -758,21 +758,9 @@
         "no_storage": "No storage left"
       },
       "footer": {
-        "subscriptions": "Machines (1 Subscription) |Machines ({count} Subscriptions)"
+        "subscriptions": "Machines (1 Subscription) | Machines ({count} Subscriptions)"
       },
       "search_placeholder": "Machine",
-      "settings": {
-        "check_out_knowlege_base": "Check out our Knowledge Base for a step by step tutorial:",
-        "cpu_usage": "CPU usage",
-        "info": "Currently there are no machines configured.",
-        "machine_offline": "Machine offline",
-        "memory_usage": "Memory usage",
-        "mobile_app_node_monitoring": "Mobile App Node Monitoring",
-        "storage_usage": "Storage usage",
-        "subscribe_to_premium_cpu": "Subscribe to premium to set a custom CPU threshold.",
-        "subscribe_to_premium_memory": "Subscribe to premium to set a custom memory threshold.",
-        "subscribe_to_premium_storage": "Subscribe to premium to set a custom storage threshold."
-      },
       "title": "Machines"
     },
     "manage": "Manage Notifications",

@@ -3,7 +3,6 @@ import {
   faBolt,
   faCog,
   faGaugeSimpleMax,
-  faMonitorWaveform,
   faNetworkWired,
 } from '@fortawesome/pro-solid-svg-icons'
 import type { HashTabs } from '~/types/hashTabs'
@@ -22,11 +21,6 @@ const tabs: HashTabs = [
     icon: faGaugeSimpleMax,
     key: 'dashboards',
     title: $t('notifications.tabs.dashboards'),
-  },
-  {
-    icon: faMonitorWaveform,
-    key: 'machines',
-    title: $t('notifications.tabs.machines'),
   },
   {
     icon: faBolt,
@@ -59,9 +53,6 @@ const tabs: HashTabs = [
       </template>
       <template #tab-panel-dashboards>
         <NotificationsManagementDashboards />
-      </template>
-      <template #tab-panel-machines>
-        <NotificationsManagementMachines />
       </template>
       <template #tab-panel-clients>
         <NotificationsManagementClients />
