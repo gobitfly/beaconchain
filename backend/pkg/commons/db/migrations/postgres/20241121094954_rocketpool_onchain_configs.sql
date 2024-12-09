@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS rocketpool_onchain_configs (
     PRIMARY KEY (rocketpool_storage_address)
 );
 
-ALTER TABLE rocketpool_minipools ADD COLUMN validator_index INTEGER;
+ALTER TABLE rocketpool_minipools ADD COLUMN IF NOT EXISTS validator_index INTEGER;
 CREATE INDEX IF NOT EXISTS rocketpool_minipools_validator_index_idx ON rocketpool_minipools (validator_index);
 
 -- +goose StatementEnd
@@ -18,6 +18,6 @@ CREATE INDEX IF NOT EXISTS rocketpool_minipools_validator_index_idx ON rocketpoo
 DROP TABLE IF EXISTS rocketpool_onchain_configs;
 
 DROP INDEX IF EXISTS rocketpool_minipools_validator_index_idx;
-ALTER TABLE rocketpool_minipools DROP COLUMN validator_index;
+ALTER TABLE rocketpool_minipools DROP COLUMN IF EXISTS validator_index;
 
 -- +goose StatementEnd
