@@ -39,8 +39,10 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 	//data.ValidatorsInDB += 20
 
 	for i := 0; i < iterations; i++ {
-		dashboardID := int64(i)
-		err := CreateValDashboard(dashboardID, NetworkMainnet, "")
+		userId := int64(i)
+		// auto-increment primary keys start at 1
+		dashboardID := userId + 1
+		err := CreateValDashboard(userId, NetworkMainnet, "")
 		if err != nil {
 			return err
 		}
@@ -75,6 +77,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 			}
 
 			validatorCount := rand.Intn(limit) + 1
+			validatorCount = min(validatorCount, data.ValidatorsInDB - 1)
 
 			err = insertValidators(dashboardID, int64(j), int64(validatorIndex), int64(validatorCount), int64(data.ValidatorsInDB), int64(normalValidatorsInDB))
 			if err != nil {
@@ -146,7 +149,7 @@ func (data SeederData) FillTable(s *seeding.Seeder) error {
 		shareNotes := rand.Intn(2) == 0
 
 		if share {
-			err = CreateAccDashboardSharing(int64(i), "", shareAll, shareNotes, `{"test": true}`)
+			err = CreateAccDashboardSharing(dashboardID, "", shareAll, shareNotes, `{"test": true}`)
 			if err != nil {
 				return err
 			}
@@ -197,7 +200,7 @@ func insertValidatorsTable(start, count, maxValidatorIndex, pendingAfter int64) 
 		_, ok := multipleMap[index]
 		if !ok {
 			_, err = stmt.Exec(
-				k%maxValidatorIndex,
+				index,
 				randomBytes,
 			)
 			multipleMap[index] = true
