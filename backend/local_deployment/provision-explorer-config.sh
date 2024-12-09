@@ -8,9 +8,6 @@ echo "EL Node port is $EL_PORT"
 REDIS_PORT=$(kurtosis port print my-testnet redis redis --format number)
 echo "Redis port is $REDIS_PORT"
 
-POSTGRES_PORT=$(kurtosis port print my-testnet postgres postgres --format number)
-echo "Postgres port is $POSTGRES_PORT"
-
 ALLOY_PORT=$(kurtosis port print my-testnet alloy alloy --format number)
 echo "Alloy port is $ALLOY_PORT"
 
@@ -24,7 +21,6 @@ cat <<EOF > .env
 CL_PORT=$CL_PORT
 EL_PORT=$EL_PORT
 REDIS_PORT=$REDIS_PORT
-POSTGRES_PORT=$POSTGRES_PORT
 ALLOY_PORT=$ALLOY_PORT
 CLICKHOUSE_PORT=$CLICKHOUSE_PORT
 LBT_PORT=$LBT_PORT
@@ -45,18 +41,6 @@ justV2: false
 chain:
   clConfigPath: 'node'
   elConfigPath: 'local_deployment/elconfig.json'
-readerDatabase:
-  name: db
-  host: 127.0.0.1
-  port: "$POSTGRES_PORT"
-  user: postgres
-  password: "pass"
-writerDatabase:
-  name: db
-  host: 127.0.0.1
-  port: "$POSTGRES_PORT"
-  user: postgres
-  password: "pass"
 alloyReader:
   name: alloy
   host: 127.0.0.1
@@ -157,16 +141,16 @@ go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSc
 echo "postgres/clickhouse db schema initialization completed"
 
 echo "provisioning alloy db schema"
-cd ../perfTesting
-go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable --seeder.validators 128 --seeder.users 5
-cd ../backend/db_migrations
-echo "migrating dp schemas"
+#cd ../perfTesting
+#go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable --seeder.validators 128 --seeder.users 5
+echo "migrating db schemas"
+cd ../backend/pkg/commons/db/migrations/postgres
 goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" reset
 goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" up
 echo "alloy db schema initialization completed"
 
 echo "adding test user"
 HASHED_PW=$(htpasswd -nbBC 10 user password | cut -d ":" -sf 2)
-psql postgres://postgres:pass@localhost:$POSTGRES_PORT/db?sslmode=disable -c "INSERT INTO users(password, email, email_confirmed) \
+psql postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable -c "INSERT INTO users(password, email, email_confirmed) \
 VALUES ('$HASHED_PW', 'test@beaconcha.in', true);"
 echo "created test user with email 'test@beaconcha.in' and password 'password' "
