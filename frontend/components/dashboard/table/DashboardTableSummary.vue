@@ -174,7 +174,7 @@ const searchPlaceholder = computed(() =>
           class="small"
           :placeholder="$t('dashboard.group.selection.placeholder')"
         />
-        <DashboardChartSummaryChartFilter
+        <DashboardChartSummaryFilter
           v-else
           v-model="chartFilter"
         />
@@ -335,7 +335,7 @@ const searchPlaceholder = computed(() =>
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartSummaryChart :filter="chartFilter" />
+          <DashboardChartSummary :filter="chartFilter" />
         </div>
       </template>
     </BcTableControl>
