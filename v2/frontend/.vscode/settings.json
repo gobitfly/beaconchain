@@ -10,6 +10,7 @@
     "BcPremiumModal",
     "BcTablePager",
     "BcToggle",
+    "DashboardChartSummary",
     "DashboardChartSummaryFilter",
     "DashboardGroupManagementModal",
     "DashboardTableSummaryDetails",

@@ -283,7 +283,7 @@ const formatTimestamp = (value: string) => {
       return date
   }
 }
-const toogleTrigger = ref(false)
+const isTriggeringOnMouseMove = ref(true)
 const option = computed<EChartsOption>(() => {
   return {
     color: colors.value.groups,
@@ -371,7 +371,7 @@ const option = computed<EChartsOption>(() => {
       order: 'seriesAsc',
       padding: 0,
       trigger: 'axis',
-      triggerOn: toogleTrigger.value ? 'click' : 'mousemove|click',
+      triggerOn: isTriggeringOnMouseMove.value ? 'mousemove|click' : 'click',
     },
     xAxis: [
       {
@@ -607,9 +607,8 @@ const onDatazoom = () => {
 const onMouseMove = (e: MouseEvent) => {
   lastMouseYPos = e.offsetY
 }
-const onMouseUp = () => {
-  // using mouseup event here, as `click` or `mousedown` would close `tooltip`
-  toogleTrigger.value = !toogleTrigger.value
+const toggleTriggeringOnMouseMove = () => {
+  isTriggeringOnMouseMove.value = !isTriggeringOnMouseMove.value
 }
 </script>
 
@@ -624,7 +623,7 @@ const onMouseUp = () => {
         class="chart"
         :option
         autoresize
-        @zr:mouseup="onMouseUp"
+        @zr:mousedown="toggleTriggeringOnMouseMove"
         @datazoom="onDatazoom"
       />
       <BcLoadingSpinner
