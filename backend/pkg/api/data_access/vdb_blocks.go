@@ -130,7 +130,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	// -------------------------------------
-	// Constuct final query
+	// Construct final query
 	var blocksDs *goqu.SelectDataset
 
 	// 1. Tables
@@ -369,7 +369,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		slots[i] = proposal.Slot
 	}
 
-	// retrieve the cl rewards, source it from clickhouse for mainnet and from postgres for holsky
+	// retrieve the cl rewards, source it from clickhouse for mainnet and from postgres for holesky
 	// TODO: harmonize this @invis
 	clRewardsData := []struct {
 		Slot     uint64              `db:"slot"`

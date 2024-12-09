@@ -229,7 +229,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 						rewardsDs = rewardsDs.Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(uint64(epochSearch)).Unix()))
 						elDs = elDs.Where(goqu.L("b.epoch = ?", epochSearch))
 					} else {
-						// No search for goup or epoch possible, return empty results
+						// No search for group or epoch possible, return empty results
 						return result, &paging, nil
 					}
 				}
@@ -717,11 +717,11 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	queryResult := []struct {
 		ValidatorIndex uint64 `db:"validator_index"`
 
-		AttestationSourceReward      decimal.Decimal `db:"attestations_source_reward"`
-		AttestationTargetReward      decimal.Decimal `db:"attestations_target_reward"`
-		AttestationHeadReward        decimal.Decimal `db:"attestations_head_reward"`
-		AttestationInactivitytReward decimal.Decimal `db:"attestations_inactivity_reward"`
-		AttestationInclusionReward   decimal.Decimal `db:"attestations_inclusion_reward"`
+		AttestationSourceReward     decimal.Decimal `db:"attestations_source_reward"`
+		AttestationTargetReward     decimal.Decimal `db:"attestations_target_reward"`
+		AttestationHeadReward       decimal.Decimal `db:"attestations_head_reward"`
+		AttestationInactivityReward decimal.Decimal `db:"attestations_inactivity_reward"`
+		AttestationInclusionReward  decimal.Decimal `db:"attestations_inclusion_reward"`
 
 		AttestationsScheduled     int64 `db:"attestations_scheduled"`
 		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
@@ -811,8 +811,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		ret.AttestationsTarget.StatusCount.Success += uint64(entry.AttestationTargetExecuted)
 		ret.AttestationsTarget.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationTargetExecuted)
 
-		ret.Inactivity.Income = ret.Inactivity.Income.Add(entry.AttestationInactivitytReward.Mul(gWei).Mul(rpFactor))
-		if entry.AttestationInactivitytReward.LessThan(decimal.Zero) {
+		ret.Inactivity.Income = ret.Inactivity.Income.Add(entry.AttestationInactivityReward.Mul(gWei).Mul(rpFactor))
+		if entry.AttestationInactivityReward.LessThan(decimal.Zero) {
 			ret.Inactivity.StatusCount.Failed++
 		} else {
 			ret.Inactivity.StatusCount.Success++
@@ -1298,27 +1298,16 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 
 	type QueryResult struct {
 		QueryResultBase
-		AttestationsSourceReward    int64 `db:"attestations_source_reward"`
-		AttestationsTargetReward    int64 `db:"attestations_target_reward"`
-		AttestationsHeadReward      int64 `db:"attestations_head_reward"`
-		SyncRewards                 int64 `db:"sync_rewards"`
-		BlocksClSlasherReward       int64 `db:"blocks_cl_slasher_reward"`
-		BlocksClAttestationsReward  int64 `db:"blocks_cl_attestations_reward"`
-		BlocksClSyncAggregateReward int64 `db:"blocks_cl_sync_aggregate_reward"`
+		AttestationsSourceReward    decimal.Decimal `db:"attestations_source_reward"`
+		AttestationsTargetReward    decimal.Decimal `db:"attestations_target_reward"`
+		AttestationsHeadReward      decimal.Decimal `db:"attestations_head_reward"`
+		SyncRewards                 decimal.Decimal `db:"sync_rewards"`
+		BlocksClSlasherReward       decimal.Decimal `db:"blocks_cl_slasher_reward"`
+		BlocksClAttestationsReward  decimal.Decimal `db:"blocks_cl_attestations_reward"`
+		BlocksClSyncAggregateReward decimal.Decimal `db:"blocks_cl_sync_aggregate_reward"`
 	}
 
-	type QueryResultAdjusted struct {
-		QueryResultBase
-		AttestationsSourceReward    decimal.Decimal
-		AttestationsTargetReward    decimal.Decimal
-		AttestationsHeadReward      decimal.Decimal
-		SyncRewards                 decimal.Decimal
-		BlocksClSlasherReward       decimal.Decimal
-		BlocksClAttestationsReward  decimal.Decimal
-		BlocksClSyncAggregateReward decimal.Decimal
-	}
-
-	var queryResultAdjusted []QueryResultAdjusted
+	var queryResultAdjusted []QueryResult
 	wg.Go(func() error {
 		var queryResult []QueryResult
 
@@ -1340,15 +1329,15 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 				}
 			}
 
-			current := QueryResultAdjusted{QueryResultBase: entry.QueryResultBase}
+			current := QueryResult{QueryResultBase: entry.QueryResultBase}
 
-			current.AttestationsSourceReward = utils.GWeiToWei(big.NewInt(entry.AttestationsSourceReward)).Mul(rpFactor)
-			current.AttestationsTargetReward = utils.GWeiToWei(big.NewInt(entry.AttestationsTargetReward)).Mul(rpFactor)
-			current.AttestationsHeadReward = utils.GWeiToWei(big.NewInt(entry.AttestationsHeadReward)).Mul(rpFactor)
-			current.SyncRewards = utils.GWeiToWei(big.NewInt(entry.SyncRewards)).Mul(rpFactor)
-			current.BlocksClSlasherReward = utils.GWeiToWei(big.NewInt(entry.BlocksClSlasherReward)).Mul(rpFactor)
-			current.BlocksClAttestationsReward = utils.GWeiToWei(big.NewInt(entry.BlocksClAttestationsReward)).Mul(rpFactor)
-			current.BlocksClSyncAggregateReward = utils.GWeiToWei(big.NewInt(entry.BlocksClSyncAggregateReward)).Mul(rpFactor)
+			current.AttestationsSourceReward = utils.GWeiToWei(entry.AttestationsSourceReward.BigInt()).Mul(rpFactor)
+			current.AttestationsTargetReward = utils.GWeiToWei(entry.AttestationsTargetReward.BigInt()).Mul(rpFactor)
+			current.AttestationsHeadReward = utils.GWeiToWei(entry.AttestationsHeadReward.BigInt()).Mul(rpFactor)
+			current.SyncRewards = utils.GWeiToWei(entry.SyncRewards.BigInt()).Mul(rpFactor)
+			current.BlocksClSlasherReward = utils.GWeiToWei(entry.BlocksClSlasherReward.BigInt()).Mul(rpFactor)
+			current.BlocksClAttestationsReward = utils.GWeiToWei(entry.BlocksClAttestationsReward.BigInt()).Mul(rpFactor)
+			current.BlocksClSyncAggregateReward = utils.GWeiToWei(entry.BlocksClSyncAggregateReward.BigInt()).Mul(rpFactor)
 
 			queryResultAdjusted = append(queryResultAdjusted, current)
 		}

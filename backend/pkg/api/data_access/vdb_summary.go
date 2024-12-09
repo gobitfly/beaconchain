@@ -119,8 +119,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		Select(
 			goqu.L("r.validator_index"),
 			goqu.L("(r.balance_end + r.withdrawals_amount - r.deposits_amount - r.balance_start) AS cl_rewards"),
-			goqu.L("r.attestations_reward::decimal"),
-			goqu.L("r.attestations_ideal_reward::decimal"),
+			goqu.L("r.attestations_reward"),
+			goqu.L("r.attestations_ideal_reward"),
 			goqu.L("r.attestations_executed"),
 			goqu.L("r.attestations_scheduled"),
 			goqu.L("r.blocks_proposed"),
