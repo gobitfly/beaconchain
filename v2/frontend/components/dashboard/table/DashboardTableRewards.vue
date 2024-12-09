@@ -307,7 +307,7 @@ const findNextEpochDuties = (epoch: number) => {
       </template>
       <template #chart>
         <div class="chart-container">
-          <DashboardChartRewardsChart />
+          <DashboardChartRewards />
         </div>
       </template>
     </BcTableControl>

@@ -19,7 +19,7 @@ import {
   TooltipComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
-import SummaryChartTooltip from './SummaryChartTooltip.vue'
+import SummaryChartTooltip from './DashboardChartSummaryTooltip.vue'
 import {
   getChartTextColor,
   getChartTooltipBackgroundColor,

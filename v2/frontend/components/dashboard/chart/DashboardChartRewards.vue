@@ -29,7 +29,7 @@ import type {
   RewardChartSeries,
 } from '~/types/dashboard/rewards'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { DashboardChartRewardsChartTooltip } from '#components'
+import { DashboardChartRewardsTooltip } from '#components'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 import { useFormat } from '~/composables/useFormat'
 import type { CryptoUnits } from '~/types/currencies'
@@ -293,7 +293,7 @@ const option = computed<ECBasicOption | undefined>(() => {
 
         const d = document.createElement('div')
         render(
-          h(DashboardChartRewardsChartTooltip, {
+          h(DashboardChartRewardsTooltip, {
             dataIndex,
             series: series.value.list,
             startEpoch,
