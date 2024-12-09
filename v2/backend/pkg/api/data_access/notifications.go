@@ -1301,11 +1301,6 @@ func (d *DataAccessService) GetNotificationSettingsDefaultValues(ctx context.Con
 }
 
 func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
-	epoch := utils.TimeToEpoch(time.Now())
-
-	var eventsToInsert []goqu.Record
-	var eventsToDelete []goqu.Expression
-
 	tx, err := d.userWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to update general notification settings: %w", err)
@@ -1341,60 +1336,13 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 		return err
 	}
 
-	// -------------------------------------
-	// Collect the machine and rocketpool events to set and delete
-
-	//Machine events
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineOfflineSubscribed, userId, types.MonitoringMachineOfflineEventName, "", "", epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineStorageUsageSubscribed, userId, types.MonitoringMachineDiskAlmostFullEventName, "", "", epoch, settings.MachineStorageUsageThreshold)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineCpuUsageSubscribed, userId, types.MonitoringMachineCpuLoadEventName, "", "", epoch, settings.MachineCpuUsageThreshold)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineMemoryUsageSubscribed, userId, types.MonitoringMachineMemoryUsageEventName, "", "", epoch, settings.MachineMemoryUsageThreshold)
-
-	// Insert all the events or update the threshold if they already exist
-	if len(eventsToInsert) > 0 {
-		insertDs := goqu.Dialect("postgres").
-			Insert("users_subscriptions").
-			Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
-			Rows(eventsToInsert).
-			OnConflict(goqu.DoUpdate(
-				"user_id, event_name, event_filter",
-				goqu.Record{"event_threshold": goqu.L("EXCLUDED.event_threshold")},
-			))
-
-		query, args, err := insertDs.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		_, err = tx.ExecContext(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Delete all the events
-	if len(eventsToDelete) > 0 {
-		deleteDs := goqu.Dialect("postgres").
-			Delete("users_subscriptions").
-			Where(goqu.Or(eventsToDelete...))
-
-		query, args, err := deleteDs.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		_, err = tx.ExecContext(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-	}
-
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing tx to update general notification settings: %w", err)
 	}
 	return nil
 }
+
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	epoch := utils.TimeToEpoch(time.Now())
 
