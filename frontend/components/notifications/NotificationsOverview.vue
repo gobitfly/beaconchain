@@ -57,7 +57,10 @@ const emit = defineEmits<{
         >
           {{ hasEmail ? $t('common.active') : $t('common.inactive') }}
         </div>
-        <div v-if="hasEmail" class="inline-items">
+        <div
+          v-if="hasEmail"
+          class="inline-items"
+        >
           <span
             class="small_text"
             :class="{ is_limit_reached: last24hEmailsCount >= mailLimit }"
@@ -70,7 +73,10 @@ const emit = defineEmits<{
           </BcTooltip>
           <BcPremiumGem class="gem" />
         </div>
-        <div v-else class="premium-invitation small_text">
+        <div
+          v-else
+          class="premium-invitation small_text"
+        >
           <BcTranslation
             keypath="notifications.overview.notifications_activate_premium.template"
             linkpath="notifications.overview.notifications_activate_premium._link"
@@ -95,7 +101,10 @@ const emit = defineEmits<{
         <div class="big_text">
           {{ hasPushNotifications ? $t('common.active') : $t('common.inactive') }}
         </div>
-        <div v-if="!hasPushNotifications" class="push-invitation small_text">
+        <div
+          v-if="!hasPushNotifications"
+          class="push-invitation small_text"
+        >
           <BcTranslation
             keypath="notifications.overview.notifications_download_app.template"
             linkpath="notifications.overview.notifications_download_app._link"

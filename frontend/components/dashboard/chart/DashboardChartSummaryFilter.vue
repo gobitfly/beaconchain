@@ -139,8 +139,13 @@ const selectedLabel = computed(() => {
 <template>
   <div class="chart-filter-row">
     <BcDropdown
-      v-model="aggregation" :options="aggregationList" option-value="id" option-label="label"
-      :option-disabled="aggregationDisabled" panel-class="summary-chart-aggregation-panel" class="small"
+      v-model="aggregation"
+      :options="aggregationList"
+      option-value="id"
+      option-label="label"
+      :option-disabled="aggregationDisabled"
+      panel-class="summary-chart-aggregation-panel"
+      class="small"
     >
       <template #option="slotProps">
         <span>{{ slotProps.label }}</span>
@@ -151,15 +156,29 @@ const selectedLabel = computed(() => {
         />
       </template>
     </BcDropdown>
-    <BcDropdown v-model="efficiency" :options="efficiencyList" option-value="id" option-label="label" class="small" />
+    <BcDropdown
+      v-model="efficiency"
+      :options="efficiencyList"
+      option-value="id"
+      option-label="label"
+      class="small"
+    />
 
     <BcMultiSelect
-      v-model="selectedGroups" class="small" :options="groups" option-label="name" option-value="id"
+      v-model="selectedGroups"
+      class="small"
+      :options="groups"
+      option-label="name"
+      option-value="id"
       :placeholder="$t('dashboard.group.selection.all')"
     >
       <template #header>
         <div class="special-groups">
-          <Checkbox v-model="total" input-id="total" :binary="true" />
+          <Checkbox
+            v-model="total"
+            input-id="total"
+            :binary="true"
+          />
           <label for="total">{{
             $t("dashboard.validator.summary.chart.total")
           }}</label>
@@ -170,7 +189,10 @@ const selectedLabel = computed(() => {
             $t("dashboard.validator.summary.chart.average")
           }}</label>
         </div> -->
-        <span class="pointer" @click="toggleGroups">
+        <span
+          class="pointer"
+          @click="toggleGroups"
+        >
           {{ $t("dashboard.group.selection.all") }}
         </span>
       </template>

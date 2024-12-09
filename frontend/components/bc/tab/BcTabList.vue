@@ -22,7 +22,12 @@ const {
     class="dashboard-tab-view"
   >
     <TabList>
-      <Tab v-for="tab in tabs" :key="tab.key" :value="tab.key" :disabled="tab.disabled">
+      <Tab
+        v-for="tab in tabs"
+        :key="tab.key"
+        :value="tab.key"
+        :disabled="tab.disabled"
+      >
         <BcTabHeader
           :header="tab.title"
           :icon="tab.icon"
@@ -35,9 +40,16 @@ const {
     </TabList>
 
     <TabPanels :class="panelsClass">
-      <TabPanel v-for="tab in tabs" :key="tab.key" :value="tab.key">
+      <TabPanel
+        v-for="tab in tabs"
+        :key="tab.key"
+        :value="tab.key"
+      >
         <slot :name="`tab-panel-${tab.key}`">
-          <component :is="tab.component" v-if="tab.component" />
+          <component
+            :is="tab.component"
+            v-if="tab.component"
+          />
           <div v-else-if="tab.placeholder">
             {{ tab.placeholder }}
           </div>

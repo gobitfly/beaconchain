@@ -33,7 +33,10 @@ const handleToggleNotifications = ({
   >
     <div class="container">
       <h1>{{ $t("notifications.general.paired_devices.title") }}</h1>
-      <div v-if="notificationsManagementStore.settings.paired_devices.length" class="paired-devices">
+      <div
+        v-if="notificationsManagementStore.settings.paired_devices.length"
+        class="paired-devices"
+      >
         <NotificationsManagementPairedDeviceModalContent
           v-for="device in notificationsManagementStore.settings.paired_devices"
           :key="device.id"
@@ -45,7 +48,8 @@ const handleToggleNotifications = ({
       <BcText
         v-if="!notificationsManagementStore.settings.paired_devices.length"
         class="info-empty"
-        tag="p" variant="lg"
+        tag="p"
+        variant="lg"
       >
         {{ $t('notifications.general.paired_devices.info_empty.template') }}
         <br>

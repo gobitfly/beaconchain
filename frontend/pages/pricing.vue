@@ -58,7 +58,10 @@ const scrollToAddons = () => {
           translation-path="faq.pricing"
         />
       </div>
-      <div v-if="promoCode" class="promo-overlay">
+      <div
+        v-if="promoCode"
+        class="promo-overlay"
+      >
         <I18nT
           keypath="pricing.promo_code"
           scope="global"

@@ -178,7 +178,10 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
             />
           </BcLink>
         </div>
-        <div v-else-if="!isSmallScreen" class="user-menu">
+        <div
+          v-else-if="!isSmallScreen"
+          class="user-menu"
+        >
           <BcDropdown
             :options="userMenu"
             variant="header"
