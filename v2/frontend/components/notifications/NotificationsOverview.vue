@@ -58,7 +58,10 @@ const emit = defineEmits<{
           {{ hasEmail ? $t('common.active') : $t('common.inactive') }}
         </div>
         <div v-if="hasEmail" class="inline-items">
-          <span class="small_text">{{ last24hEmailsCount }}/{{ mailLimit }} {{ $t('common.units.per_day') }}</span>
+          <span
+            class="small_text"
+            :class="{ is_limit_reached: last24hEmailsCount >= mailLimit }"
+          >{{ last24hEmailsCount }}/{{ mailLimit }} {{ $t('common.units.per_day') }}</span>
           <BcTooltip
             tooltip-width="220px"
             :text="tooltipEmail"
@@ -212,6 +215,9 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   gap: .625rem;
+}
+.is_limit_reached {
+  color: var(--negative-color);
 }
 a:hover {
   color: var(--light-blue);
