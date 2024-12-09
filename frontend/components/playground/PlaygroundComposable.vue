@@ -42,7 +42,8 @@ const tabs: HashTabs = [
 
 <template>
   <BcTabList
-    :tabs default-tab="summary"
+    :tabs
+    default-tab="summary"
   >
     <template #tab-panel-bounce>
       <div class="element_container">

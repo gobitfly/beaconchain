@@ -152,7 +152,8 @@ const tabs: HashTabs = [
   </BcDialog>
 
   <BcTabList
-    :tabs default-tab="buttons"
+    :tabs
+    default-tab="buttons"
   >
     <template #tab-panel-buttons>
       <div class="element_container">
