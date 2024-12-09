@@ -973,8 +973,8 @@ func (d *dashboardData) processProposalRewards(data *MultiEpochData, tar *[]type
 				}
 				if len(medianArray) == 0 {
 					// no rewards in buffer
-					// lets just bork ourselves to be safe
-					return fmt.Errorf("no proposal rewards in buffer for slot %d", j)
+					// lets fall back to zero missed rewards. this gets triggered on gnosis during slot 11737794 (and more)
+					medianArray = append(medianArray, 0)
 				}
 				// calculate median
 				slices.Sort(medianArray)

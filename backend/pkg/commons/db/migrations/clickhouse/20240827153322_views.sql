@@ -26,27 +26,27 @@ create or replace view validator_dashboard_data_monthly as
 -- +goose StatementEnd
 -- +goose StatementBegin
 create or replace view validator_dashboard_data_epoch_max_ts as
-    select * 
+    select max(epoch_timestamp) as t
     from _final_validator_dashboard_data_epoch
 -- +goose StatementEnd
 -- +goose StatementBegin
 create or replace view validator_dashboard_data_hourly_max_ts as
-    select * 
+    select max(t) as t
     from _final_validator_dashboard_data_hourly
 -- +goose StatementEnd
 -- +goose StatementBegin
 create or replace view validator_dashboard_data_daily_max_ts as
-    select * 
+    select max(t) as t
     from _final_validator_dashboard_data_daily
 -- +goose StatementEnd
 -- +goose StatementBegin
 create or replace view validator_dashboard_data_weekly_max_ts as
-    select * 
+    select max(t) as t
     from _final_validator_dashboard_data_weekly
 -- +goose StatementEnd
 -- +goose StatementBegin
 create or replace view validator_dashboard_data_monthly_max_ts as
-    select * 
+    select max(t) as t
     from _final_validator_dashboard_data_monthly
 -- +goose StatementEnd
 -- +goose Down

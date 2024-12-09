@@ -896,6 +896,7 @@ func TransferEpochs(epochs []EpochMetadata) error {
 		"insert_deduplication_token":    transferBatchID.String(),
 		"insert_deduplicate":            true,
 		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
 	}))
 	now := time.Now()
 	// sanity check, check that there are more than a thousand entries for each epoch
@@ -906,8 +907,8 @@ func TransferEpochs(epochs []EpochMetadata) error {
 			SELECT count() as count
 			FROM %s
 			FINAL
-			WHERE epoch_timestamp = $1 and toStartOfInterval(epoch_timestamp, Interval 3 Hours) = toStartOfInterval($1, Interval 3 Hours)
-			SETTINGS select_sequential_consistency = 1
+			WHERE epoch_timestamp = $1
+			SETTINGS select_sequential_consistency = 1, use_skip_indexes_if_final = 1
 		`, UnsafeEpochsTableName), utils.EpochToTime(e.Epoch))
 		if err != nil {
 			return fmt.Errorf("error fetching epoch count: %w", err)
@@ -930,9 +931,7 @@ func TransferEpochs(epochs []EpochMetadata) error {
 		from
 			%s FINAL
 		where
-			epoch_timestamp in $1 and
-			toStartOfInterval(epoch_timestamp, Interval 3 Hours) >= toStartOfInterval(arrayMin($1), Interval 3 Hours) and
-			toStartOfInterval(epoch_timestamp, Interval 3 Hours) <= toStartOfInterval(arrayMax($1), Interval 3 Hours)
+			epoch_timestamp in $1
 	`, FinalEpochsTableName, UnsafeEpochsTableName),
 		epoch_timestamp,
 	)
@@ -971,6 +970,21 @@ func GetLatestFinishedEpoch() (int64, error) {
 	`, ExporterMetadataTableName))
 	if err != nil {
 		return 0, fmt.Errorf("error fetching latest finished epoch: %w", err)
+	}
+	return epoch, nil
+}
+
+func GetOldestUnfinishedTransferEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(min(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_transfer IS NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching oldest unfinished transfer epoch: %w", err)
 	}
 	return epoch, nil
 }
@@ -1092,7 +1106,9 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 	abortCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
-		//"select_sequential_consistency": 1,
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+		"max_threads":                   2,
 	}))
 	column := "t"
 	selector := `
@@ -1123,24 +1139,28 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 		sum(attestations_target_executed) AS attestations_target_executed,
 		sum(attestations_source_executed) AS attestations_source_executed,
 		
-		sum(attestations_reward) AS attestations_reward,
-		sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
-		sum(attestations_reward_penalties_only) AS attestations_reward_penalties_only,
+		sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+		sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
 		
-		sum(attestations_head_reward) AS attestations_head_reward,
-		sum(attestations_target_reward) AS attestations_target_reward,
-		sum(attestations_source_reward) AS attestations_source_reward,
-
-		sum(attestations_inclusion_reward) AS attestations_inclusion_reward,
-		sum(attestations_inactivity_reward) AS attestations_inactivity_reward,
-
-		sum(attestations_ideal_reward) AS attestations_ideal_reward,
+		sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+		sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+		
+		sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+		sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+		
+		sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+		sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+		
+		sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+		sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
 		sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
 		sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
 		sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
 
-		sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
 		sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+		sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+
 		sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
 		sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
 		
@@ -1159,7 +1179,6 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 		
 		sum(sync_scheduled) AS sync_scheduled,
 		sum(sync_executed) AS sync_executed,
-		sum(sync_reward) AS sync_reward,
 		sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
 		sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
 		sum(sync_localized_max_reward) AS sync_localized_max_reward,
@@ -1171,7 +1190,7 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 	`
 	if source == RollingSourceEpochly {
 		column = "epoch_timestamp"
-		// this is gonna be uggly. but cant avoid sadly without code generation
+		// this is gonna be ugly. but cant avoid sadly without code generation
 		selector = `
 			validator_index AS validator_index,
 			any(epoch_timestamp) AS t,
@@ -1200,24 +1219,28 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 			sum(attestations_target_executed) AS attestations_target_executed,
 			sum(attestations_source_executed) AS attestations_source_executed,
 
-			sum(attestations_reward) AS attestations_reward,
-			sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
-			sum(attestations_reward_penalties_only) AS attestations_reward_penalties_only,
-
-			sum(attestations_head_reward) AS attestations_head_reward,
-			sum(attestations_target_reward) AS attestations_target_reward,
-			sum(attestations_source_reward) AS attestations_source_reward,
-
-			sum(attestations_inclusion_reward) AS attestations_inclusion_reward,
-			sum(attestations_inactivity_reward) AS attestations_inactivity_reward,
-
-			sum(attestations_ideal_reward) AS attestations_ideal_reward,
+			sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+			sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
+			
+			sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+			sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+			
+			sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+			sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+			
+			sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+			sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+			
+			sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+			sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
 			sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
 			sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
 			sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
 
-			sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
 			sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+			sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+			
 			sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
 			sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
 
@@ -1236,7 +1259,6 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 			sum(blocks_expected) AS blocks_expected,
 			sum(sync_scheduled) AS sync_scheduled,
 			sum(sync_executed) AS sync_executed,
-			sum(sync_reward) AS sync_reward,
 			sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
 			sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
 			sum(sync_localized_max_reward) AS sync_localized_max_reward,
@@ -1269,7 +1291,7 @@ func SwapRollingTables(rolling Rollings) error {
 	// swaps _unsafe_rolling with _final_rolling
 	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
 		EXCHANGE TABLES _unsafe_%[1]s AND _final_%[1]s
-	`, rolling))
+	`, rolling))	
 	if err != nil {
 		return fmt.Errorf("error swapping tables %s: %w", rolling, err)
 	}

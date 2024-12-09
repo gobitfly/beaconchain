@@ -53,6 +53,16 @@ func (d *dashboardData) handleRollings() error {
 }
 
 func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
+	defer func() {
+		// GetOldestUnfinishedTransferEpoch
+		oldestUnfinishedTransferEpoch, err := edb.GetOldestUnfinishedTransferEpoch()
+		if err != nil {
+			d.log.Error(err, "failed to get oldest unfinished transfer epoch", 0)
+			return
+		}
+		metrics.State.WithLabelValues("dashboard_data_exporter_oldest_unfinished_transfer_epoch").Set(float64(oldestUnfinishedTransferEpoch))
+	}()
+
 	start := time.Now()
 	finishedEpoch, err := edb.GetLatestFinishedEpoch()
 	if err != nil {
