@@ -5,7 +5,6 @@ blob_spammer = import_module("github.com/ethpandaops/ethereum-package/src/blob_s
 genesis_constants = import_module("github.com/ethpandaops/ethereum-package/src/prelaunch_data_generator/genesis_constants/genesis_constants.star")
 shared_utils = import_module("github.com/ethpandaops/ethereum-package/src/shared_utils/shared_utils.star")
 
-POSTGRES_PORT_ID = "postgres"
 POSTGRES_DB = "db"
 ALLOY_PORT_ID = "alloy"
 ALLOY_DB = "alloy"
@@ -26,19 +25,7 @@ def run(plan, args):
 
 	db_services = plan.add_services(
 		configs={
-			# Add a Postgres server
-			"postgres": ServiceConfig(
-				image = "postgres:15.2-alpine",
-				ports = {
-					POSTGRES_PORT_ID: PortSpec(5432, application_protocol = "postgresql"),
-				},
-				env_vars = {
-					"POSTGRES_DB": POSTGRES_DB,
-					"POSTGRES_USER": POSTGRES_USER,
-					"POSTGRES_PASSWORD": POSTGRES_PASSWORD,
-				},
-			),
-			# Add second Postgres server to simulate alloy; consider switching to omni (https://cloud.google.com/alloydb/docs/omni)
+			# Add Postgres server to simulate alloy; consider switching to omni (https://cloud.google.com/alloydb/docs/omni)
 			"alloy": ServiceConfig(
 				image = "postgres:15.2-alpine",
 				ports = {
