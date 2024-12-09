@@ -37,6 +37,7 @@
     "color-mode",
     "csrf",
     "customFetch",
+    "dashboard",
     "deps",
     "dialog",
     "eslint",
