@@ -88,11 +88,16 @@ Exiting individual validators can be done using the provided `exit_validator.sh`
 bash exit_validators.sh -i validator_index -m "memonic" -b "http://bn_api_host:bn_api_port"
 ```
 
+# Deposits
+Install _ethereal_:
+```
+go install github.com/wealdtech/ethereal/v2@latest
+```
+
 # Enabling withdrawals
 First, install _JQ_ and _eth2-val-tools_:
 ```
 sudo apt install jq
-go get github.com/protolambda/eth2-val-tools@master
 go install github.com/protolambda/eth2-val-tools@master
 ```
 To enable withdrawals for specific validators in your local network, we provide the script `add_withdrawal_address.sh`. It creates and submits a BLS-to-execution-layer-address-change message.

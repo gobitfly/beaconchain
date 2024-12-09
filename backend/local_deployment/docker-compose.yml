@@ -17,6 +17,7 @@ services:
     command: go run ./cmd exporter -config /app/backend/local_deployment/config.yml
     environment:
       - INDEXER_ENABLED=true
+      - LOG_LEVEL=debug
   eth1indexer:
     <<: *default-service
     command: go run ./cmd eth1indexer -config /app/backend/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
