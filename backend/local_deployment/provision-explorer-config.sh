@@ -14,6 +14,9 @@ echo "Postgres port is $POSTGRES_PORT"
 ALLOY_PORT=$(kurtosis port print my-testnet alloy alloy --format number)
 echo "Alloy port is $ALLOY_PORT"
 
+CLICKHOUSE_PORT=$(kurtosis port print my-testnet clickhouse clickhouse --format number)
+echo "Clickhouse port is $CLICKHOUSE_PORT"
+
 LBT_PORT=$(kurtosis port print my-testnet littlebigtable littlebigtable --format number)
 echo "Little bigtable port is $LBT_PORT"
 
@@ -23,6 +26,7 @@ EL_PORT=$EL_PORT
 REDIS_PORT=$REDIS_PORT
 POSTGRES_PORT=$POSTGRES_PORT
 ALLOY_PORT=$ALLOY_PORT
+CLICKHOUSE_PORT=$CLICKHOUSE_PORT
 LBT_PORT=$LBT_PORT
 EOF
 
@@ -65,6 +69,19 @@ alloyWriter:
   port: "$ALLOY_PORT"
   user: postgres
   password: "pass"
+clickhouse:
+  readerDatabase:
+    name: clickhouse
+    host: 127.0.0.1
+    port: "$CLICKHOUSE_PORT"
+    user: postgres
+    password: "pass"
+  writerDatabase:
+    name: clickhouse
+    host: 127.0.0.1
+    port: "$CLICKHOUSE_PORT"
+    user: postgres
+    password: "pass"
 bigtable:
   project: explorer
   instance: explorer
@@ -135,7 +152,7 @@ go run ./cmd/misc/main.go -config local_deployment/config.yml -command initBigta
 echo "bigtable schema initialization completed"
 
 echo "provisioning postgres db schema"
-go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema
+go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database postgres
 echo "postgres db schema initialization completed"
 
 echo "provisioning alloy db schema"

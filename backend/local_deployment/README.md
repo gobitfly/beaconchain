@@ -60,7 +60,7 @@ make all
 # Start postgres, redis, little_bigtable & the eth test network
 ```
 cd ~/eth2-beaconchain-explorer/backend/local_deployment/
-kurtosis clean -a && kurtosis run --enclave my-testnet . "$(cat network-params.json)"
+kurtosis clean -a && kurtosis run --image-download always --enclave my-testnet . "$(cat network-params.json)"
 ```
 Later in your developer life (after having started Kurtosis and stopped it a few times), if you encounter an error at this step, you might need to clean up bugged cache files from previous runs that Kurtosis or Docker left behind.
 The `./stop` script [in this repository](https://github.com/thib-wien/scripts-localnetworkandexplorer) gathers cleaning commands which worked for their author (it might save you hours of browsing Stack Overflow and GitHub's issues).
@@ -75,7 +75,7 @@ This will generate a _config.yml_ to be used by the explorer and then create the
 # Start the explorer modules
 ```
 cd ~/eth2-beaconchain-explorer/local_deployment/
-docker compose up -d
+docker compose up -d --pull always
 ```
 You can start / stop the exporter submodules using `docker compose`
 
