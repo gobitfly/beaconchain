@@ -41,6 +41,18 @@ justV2: false
 chain:
   clConfigPath: 'node'
   elConfigPath: 'local_deployment/elconfig.json'
+readerDatabase:
+  name: alloy
+  host: 127.0.0.1
+  port: "$ALLOY_PORT"
+  user: postgres
+  password: "pass"
+writerDatabase:
+  name: alloy
+  host: 127.0.0.1
+  port: "$ALLOY_PORT"
+  user: postgres
+  password: "pass"
 alloyReader:
   name: alloy
   host: 127.0.0.1
@@ -85,15 +97,15 @@ frontend:
     host: '0.0.0.0' # Address to listen on
     port: '8080' # Port to listen on
   readerDatabase:
-    name: db
+    name: alloy
     host: 127.0.0.1
-    port: "$POSTGRES_PORT"
+    port: "$ALLOY_PORT"
     user: postgres
     password: "pass"
   writerDatabase:
-    name: db
+    name: alloy
     host: 127.0.0.1
-    port: "$POSTGRES_PORT"
+    port: "$ALLOY_PORT"
     user: postgres
     password: "pass"
   sessionSecret: "11111111111111111111111111111111"
@@ -131,23 +143,15 @@ PROJECT="explorer"
 INSTANCE="explorer"
 HOST="127.0.0.1:$LBT_PORT"
 cd ..
-go run ./cmd/misc/main.go -config local_deployment/config.yml -command initBigtableSchema
+go run ./cmd/main.go misc -config local_deployment/config.yml -command initBigtableSchema
 
 echo "bigtable schema initialization completed"
 
 echo "provisioning postgres/clickhouse db schema"
-go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database postgres
-go run ./cmd/misc/main.go -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database clickhouse
+go run ./cmd/main.go misc -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database postgres
+go run ./cmd/main.go misc -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database clickhouse
+# go run ./cmd/main.go misc -config local_deployment/config.yml -command applyDbSchema -target-version -2 -target-database alloy
 echo "postgres/clickhouse db schema initialization completed"
-
-echo "provisioning alloy db schema"
-#cd ../perfTesting
-#go run main.go -cmd seed -db.dsn postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable --seeder.validators 128 --seeder.users 5
-echo "migrating db schemas"
-cd ../backend/pkg/commons/db/migrations/postgres
-goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" reset
-goose postgres "postgres://postgres:pass@localhost:$ALLOY_PORT/alloy?sslmode=disable" up
-echo "alloy db schema initialization completed"
 
 echo "adding test user"
 HASHED_PW=$(htpasswd -nbBC 10 user password | cut -d ":" -sf 2)
