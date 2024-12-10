@@ -164,7 +164,6 @@ func Run() {
 
 	// check config
 	{
-		log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 		cfg := &types.Config{}
 		err := utils.ReadConfig(cfg, *configPath)
 		if err != nil {
@@ -173,6 +172,7 @@ func Run() {
 			log.Info("reading config completed")
 		}
 		utils.Config = cfg
+		log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 		if len(utils.Config.Eth1ErigonEndpoint) > 0 {
 			eth1RpcEndpoint = utils.Config.Eth1ErigonEndpoint
@@ -276,7 +276,7 @@ func Run() {
 		if chainID != utils.Config.Chain.Id { // if the chain id is removed from the config, just remove this if, there is no point, except checking consistency
 			log.Fatal(err, "node chain different from config chain", 0) // fatal, config doesn't match node
 		}
-		log.Info("...check chain id done.")
+		log.InfoWithFields(log.Fields{"chainId": utils.Config.Chain.Id, "eth1RpcEndpoint": eth1RpcEndpoint, "bt.project": utils.Config.Bigtable.Project, "bt.instance": utils.Config.Bigtable.Instance}, "...check chain id done.")
 	}
 
 	// get latest block (as it's global, so we have a initial value)
@@ -285,6 +285,18 @@ func Run() {
 		log.Fatal(err, "updateBlockNumber", 0)
 	}
 	log.Infof("...get latest block (%s) from node done.", _formatInt64(currentNodeBlockNumber.Load()))
+
+	go func() {
+		for {
+			latestPGBlock, err := psqlGetLatestBlock(false)
+			if err != nil {
+				log.Fatal(err, "error while using psqlGetLatestBlock (start / read)", 0) // fatal, as if there is no initial value, we have nothing to start from
+			}
+
+			sendMessage(fmt.Sprintf("evmindexer for %s, version: %v, lastNodeBlock: %v, lastDbBlock: %v", getChainNamePretty(), version.Version, currentNodeBlockNumber.Load(), latestPGBlock), discordWebhookReportUrl, discordWebhookUser)
+			time.Sleep(time.Hour)
+		}
+	}()
 
 	// //////////////////////////////////////////
 	// Config done, now actually "doing" stuff //
