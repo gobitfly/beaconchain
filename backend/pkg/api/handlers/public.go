@@ -610,12 +610,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	var limit uint64
-	if isUserAdmin(userInfo) {
-		limit = math.MaxUint32 // no limit for admins
-	} else if dashboardLimit >= existingValidatorCount {
-		limit = dashboardLimit - existingValidatorCount
-	}
+	limit := dashboardLimit - existingValidatorCount
 
 	var data []types.VDBPostValidatorsData
 	var dataErr error

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -210,7 +211,36 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 		return nil, err
 	}
 
-	return &userInfo.PremiumPerks, nil
+	limits := &userInfo.PremiumPerks
+	if isUserAdmin(userInfo) {
+		limits = &types.PremiumPerks{
+			AdFree:                      true,
+			ValidatorDashboards:         math.MaxUint32,
+			ValidatorsPerDashboard:      math.MaxUint32,
+			ValidatorGroupsPerDashboard: math.MaxUint32,
+			ShareCustomDashboards:       true,
+			ManageDashboardViaApi:       true,
+			BulkAdding:                  true,
+			ChartHistorySeconds: types.ChartHistorySeconds{
+				Epoch:  math.MaxUint32,
+				Hourly: math.MaxUint32,
+				Daily:  math.MaxUint32,
+				Weekly: math.MaxUint32,
+			},
+			// EmailNotificationsPerDay:                       math.MaxUint32,
+			ConfigureNotificationsViaApi: true,
+			// ValidatorGroupNotifications:                    math.MaxUint32,
+			WebhookEndpoints:                               math.MaxUint32,
+			MobileAppCustomThemes:                          true,
+			MobileAppWidget:                                true,
+			MonitorMachines:                                math.MaxUint32,
+			MachineMonitoringHistorySeconds:                math.MaxUint32,
+			NotificationsMachineCustomThreshold:            true,
+			NotificationsValidatorDashboardGroupEfficiency: true,
+		}
+	}
+
+	return limits, nil
 }
 
 // getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
