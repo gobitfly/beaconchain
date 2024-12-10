@@ -396,12 +396,10 @@ type VDBRocketPoolColumn int
 var _ EnumFactory[VDBRocketPoolColumn] = VDBRocketPoolColumn(0)
 
 const (
-	VDBRocketPoolNode VDBRocketPoolColumn = iota
-	VDBRocketPoolMinipools
+	VDBRocketPoolNode      VDBRocketPoolColumn = iota
+	VDBRocketPoolMinipools                     // might be supported later
 	VDBRocketPoolCollateral
-	VDBRocketPoolRpl
 	VDBRocketPoolEffectiveRpl
-	VDBRocketPoolRplApr
 	VDBRocketPoolSmoothingPool
 )
 
@@ -413,16 +411,12 @@ func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
 	switch s {
 	case "node":
 		return VDBRocketPoolNode
-	case "minipools":
-		return VDBRocketPoolMinipools
 	case "collateral":
 		return VDBRocketPoolCollateral
-	case "rpl":
-		return VDBRocketPoolRpl
+	case "minipools":
+		return VDBRocketPoolMinipools
 	case "effective_rpl":
 		return VDBRocketPoolEffectiveRpl
-	case "rpl_apr":
-		return VDBRocketPoolRplApr
 	case "smoothing_pool":
 		return VDBRocketPoolSmoothingPool
 	default:
@@ -430,21 +424,35 @@ func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
 	}
 }
 
+func (c VDBRocketPoolColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBRocketPoolNode:
+		return goqu.T("n").Col("address")
+	case VDBRocketPoolCollateral:
+		return goqu.C("rpl_stake")
+	case VDBRocketPoolEffectiveRpl:
+		return goqu.C("effective_rpl_stake")
+	case VDBRocketPoolSmoothingPool:
+		return goqu.C("smoothing_pool_opted_in")
+	case VDBRocketPoolMinipools:
+		return goqu.L("COUNT(mp.address)")
+
+	default:
+		return nil
+	}
+}
+
 var VDBRocketPoolColumns = struct {
 	Node          VDBRocketPoolColumn
 	Minipools     VDBRocketPoolColumn
 	Collateral    VDBRocketPoolColumn
-	Rpl           VDBRocketPoolColumn
 	EffectiveRpl  VDBRocketPoolColumn
-	RplApr        VDBRocketPoolColumn
 	SmoothingPool VDBRocketPoolColumn
 }{
 	VDBRocketPoolNode,
 	VDBRocketPoolMinipools,
 	VDBRocketPoolCollateral,
-	VDBRocketPoolRpl,
 	VDBRocketPoolEffectiveRpl,
-	VDBRocketPoolRplApr,
 	VDBRocketPoolSmoothingPool,
 }
 
