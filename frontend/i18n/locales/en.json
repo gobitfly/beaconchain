@@ -283,9 +283,10 @@
         "online_validators": "Online Validators",
         "open_validator_overview_modal": "Open Validator Overview",
         "validators_balance": {
-          "balance_effective": "Effective Balance",
-          "balance_staked": "Staked ETH",
-          "balance_total": "Balance"
+          "balance_effective": "Total amount effectively participating in staking",
+          "balance_staked": "Total amount you deposited",
+          "balance_total": "Balance",
+          "balance_total_tooltip": "Your total share of all validator balances"
         }
       },
       "rewards": {

@@ -48,12 +48,16 @@ const validatorsOnline = computed(() => overview.value?.validators.online ?? 0)
 const validatorsInfos = computed(() =>
   [
     {
-      label: $t('dashboard.validator.overview.validators_balance.balance_staked'),
-      value: formatValueWei(overview.value?.balances.staked_eth ?? 0),
+      label: $t('dashboard.validator.overview.validators_balance.balance_total_tooltip'),
+      value: formatValueWei(overview.value?.balances.total ?? 0),
     },
     {
       label: $t('dashboard.validator.overview.validators_balance.balance_effective'),
       value: formatValueWei(overview.value?.balances.effective ?? 0),
+    },
+    {
+      label: $t('dashboard.validator.overview.validators_balance.balance_staked'),
+      value: formatValueWei(overview.value?.balances.staked_eth ?? 0),
     },
   ],
 )
