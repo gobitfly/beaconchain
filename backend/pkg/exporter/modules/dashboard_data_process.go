@@ -1048,10 +1048,13 @@ func (d *dashboardData) processSyncCommitteeRewards(data *MultiEpochData, tar *[
 					}
 				}
 			}
-			if maxRewards <= 0 {
-				// lets just bork ourselves to be safe
-				return fmt.Errorf("no rewards in epoch %d", epoch)
-			}
+			/*
+				// removed safety check as it was triggered in a real scenario on gnosis
+					if maxRewards <= 0 {
+						// lets just bork ourselves to be safe
+						return fmt.Errorf("no rewards in epoch %d", epoch)
+					}
+			*/
 			for j := startSlot; j < endSlot; j++ {
 				for _, reward := range data.slotBasedData.rewards.syncCommitteeRewards[j].Data {
 					(*tar)[tI].SyncLocalizedMaxReward[tO+reward.ValidatorIndex] += maxRewards
