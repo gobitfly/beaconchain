@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/shopspring/decimal"
@@ -41,6 +42,23 @@ var (
 	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
 	reJsonContentType              = regexp.MustCompile(`^application\/json(;.*)?$`)
 )
+
+var searchEnumsRegexMapping = map[types.SearchType]*regexp.Regexp{
+	types.SearchTypeName:                 reName,
+	types.SearchTypeInteger:              reInteger,
+	types.SearchTypeEthereumAddress:      reEthereumAddress,
+	types.SearchTypeWithdrawalCredential: reWithdrawalCredential,
+	types.SearchTypeEnsName:              reEnsName,
+	types.SearchTypeGraffiti:             reGraffiti,
+	types.SearchTypeEmail:                reEmail,
+	types.SearchTypePassword:             rePassword,
+	types.SearchTypeEmailUserToken:       reEmailUserToken,
+	types.SearchTypeJsonContentType:      reJsonContentType,
+	// Validator Dashboard
+	types.SearchTypeValidatorDashboardPublicId:   reValidatorDashboardPublicId,
+	types.SearchTypeValidatorPublicKeyWithPrefix: reValidatorPublicKeyWithPrefix,
+	types.SearchTypeValidatorPublicKey:           reValidatorPublicKey,
+}
 
 const (
 	maxNameLength                     = 50
@@ -348,15 +366,15 @@ func (v *validationError) checkUintMinMax(param string, min uint64, max uint64, 
 	return checkMinMax(v, v.checkUint(param, paramName), min, max, paramName)
 }
 
-type Paging struct {
-	cursor string
+type Paging[T types.CursorLike] struct {
+	cursor T
 	limit  uint64
 	search string
 }
 
-func (v *validationError) checkPagingParams(q url.Values) Paging {
-	paging := Paging{
-		cursor: q.Get("cursor"),
+func checkPagingParams[T types.CursorLike](v *validationError, q url.Values) Paging[T] {
+	paging := Paging[T]{
+		cursor: *new(T),
 		limit:  defaultReturnLimit,
 		search: q.Get("search"),
 	}
@@ -365,8 +383,12 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 		paging.limit = v.checkUintMinMax(limitStr, 1, maxQueryLimit, "limit")
 	}
 
-	if paging.cursor != "" {
-		paging.cursor = v.checkRegex(reCursor, paging.cursor, "cursor")
+	if q.Get("cursor") != "" {
+		cursor, err := utils.StringToCursor[T](v.checkRegex(reCursor, q.Get("cursor"), "cursor"))
+		if err != nil {
+			v.add("cursor", fmt.Sprintf("give value '%s' is not valid: %v", q.Get("cursor"), err))
+		}
+		paging.cursor = cursor
 	}
 
 	return paging
@@ -415,6 +437,22 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
 	return &types.Sort[T]{Column: sortCol, Desc: desc}
+}
+
+// returns false if the search string doesn't match any search type
+func checkSearch[T types.Searchable](search T, searchString string) (bool, error) {
+	if searchString == "" {
+		return true, nil
+	}
+	search.SetSearchValue(searchString)
+	for _, acceptedSearchType := range search.GetSearches() {
+		if searchEnumsRegexMapping[acceptedSearchType].MatchString(searchString) {
+			if err := search.SetSearchType(acceptedSearchType); err != nil {
+				return false, err
+			}
+		}
+	}
+	return search.HasAnyMatches(), nil
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {

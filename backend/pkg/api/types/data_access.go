@@ -2,9 +2,12 @@ package types
 
 import (
 	"database/sql"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	t "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -113,6 +116,22 @@ type WithdrawalsCursor struct {
 	Index           uint64
 	Recipient       []byte
 	Amount          uint64
+}
+
+type VDBRocketPoolCursor struct {
+	GenericCursor
+
+	// TODO
+}
+
+type VDBRocketPoolMinipoolsCursor struct {
+	GenericCursor
+
+	// TODO
+}
+
+type VDBMobileValidatorsCursor struct {
+	ValidatorsCursor
 }
 
 type NotificationSettingsCursor struct {
@@ -324,3 +343,166 @@ const CtxUserIdKey CtxKey = "user_id"
 const CtxIsMockedKey CtxKey = "is_mocked"
 const CtxMockSeedKey CtxKey = "mock_seed"
 const CtxDashboardIdKey CtxKey = "dashboard_id"
+
+// -------------------------
+// Search structs
+
+// -- General
+type SearchType int
+
+// all possible search types
+const (
+	SearchTypeInteger SearchType = iota
+	SearchTypeName
+	SearchTypeEthereumAddress
+	SearchTypeWithdrawalCredential
+	SearchTypeEnsName
+	SearchTypeGraffiti
+	SearchTypeEmail
+	SearchTypePassword
+	SearchTypeEmailUserToken
+	SearchTypeJsonContentType
+	// Validator Dashboard
+	SearchTypeValidatorDashboardPublicId
+	SearchTypeValidatorPublicKeyWithPrefix
+	SearchTypeValidatorPublicKey
+)
+
+type Searchable interface {
+	GetSearches() []SearchType
+	SetSearchValue(s string)
+	SetSearchType(st SearchType) error
+	HasSearchType(st SearchType) bool
+	IsEnabled() bool
+	HasAnyMatches() bool
+}
+
+// not to be used directly, only for embedding
+// think of this as a base class which provides default implementations that can be overridden / shadowed / masked (see below)
+type basicSearch struct {
+	types map[SearchType]bool
+	value string
+}
+
+func (bs *basicSearch) SetSearchValue(s string) {
+	if bs == nil {
+		log.Warnf("BasicSearch is nil, can't apply search: %s", s)
+		return
+	}
+	bs.value = s
+}
+
+func (bs *basicSearch) SetSearchType(st SearchType) error {
+	if bs.types == nil {
+		bs.types = make(map[SearchType]bool)
+	}
+	bs.types[st] = true
+	return nil
+}
+
+func (bs *basicSearch) HasSearchType(st SearchType) bool {
+	if bs.types == nil {
+		return false
+	}
+	v, ok := bs.types[st]
+	if !ok {
+		return false
+	}
+	return v
+}
+
+func (bs *basicSearch) IsEnabled() bool {
+	return bs != nil && bs.value != ""
+}
+
+func (bs *basicSearch) HasAnyMatches() bool {
+	for _, v := range bs.types {
+		if v {
+			return true
+		}
+	}
+	return false
+}
+
+func (bs *basicSearch) GetSearches() []SearchType {
+	return []SearchType{
+		SearchTypeName,
+		SearchTypeInteger,
+		SearchTypeEthereumAddress,
+		SearchTypeWithdrawalCredential,
+		SearchTypeEnsName,
+		SearchTypeGraffiti,
+		SearchTypeEmail,
+		SearchTypePassword,
+		SearchTypeEmailUserToken,
+		SearchTypeJsonContentType,
+		SearchTypeValidatorDashboardPublicId,
+		SearchTypeValidatorPublicKeyWithPrefix,
+		SearchTypeValidatorPublicKey,
+	}
+}
+
+type baseSearchResult[T comparable] struct {
+	Enabled bool
+	Value   T
+}
+
+type SearchNumber = baseSearchResult[uint64]
+type SearchString = baseSearchResult[string]
+
+func (bsr baseSearchResult[T]) Matches(other T) bool {
+	return !bsr.Filtered(other)
+}
+
+func (bsr baseSearchResult[T]) Filtered(other T) bool {
+	return bsr.Enabled && bsr.Value != other
+}
+
+// -- Commonly used
+type SearchTableByIndexPubkeyGroup struct {
+	basicSearch
+	// conditionals
+	DashboardId VDBId
+	// matched values
+	Index  SearchNumber
+	Pubkey SearchString
+	Group  SearchString
+}
+
+func (s SearchTableByIndexPubkeyGroup) SetSearchType(st SearchType) error {
+	var err error
+	if err = s.basicSearch.SetSearchType(st); err != nil {
+		return err
+	}
+	if _, ok := s.basicSearch.types[SearchTypeInteger]; ok {
+		s.Index.Value, err = strconv.ParseUint(s.value, 10, 64)
+		if err != nil {
+			return err
+		}
+		s.Index.Enabled = true
+	}
+
+	if s.Pubkey.Enabled = s.HasSearchType(SearchTypeValidatorPublicKeyWithPrefix); s.Pubkey.Enabled {
+		s.Pubkey.Value = s.value
+	}
+	if !s.DashboardId.AggregateGroups && s.DashboardId.Validators == nil {
+		if s.Group.Enabled = s.HasSearchType(SearchTypeName); s.Group.Enabled {
+			s.Group.Value = strings.ToLower(s.value)
+		}
+	}
+	return nil
+}
+
+// masked
+func (s SearchTableByIndexPubkeyGroup) GetSearches() []SearchType {
+	return []SearchType{
+		SearchTypeInteger,
+		SearchTypeName,
+		SearchTypeValidatorPublicKeyWithPrefix,
+	}
+}
+
+// custom to filter out certain group searches
+func (s SearchTableByIndexPubkeyGroup) HasAnyMatches() bool {
+	return s.Group.Enabled || s.basicSearch.HasAnyMatches()
+}
