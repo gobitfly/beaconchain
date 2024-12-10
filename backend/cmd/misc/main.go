@@ -19,7 +19,6 @@ import (
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
-	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/coocood/freecache"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
@@ -2236,6 +2235,7 @@ func verifyFCMTokens() error {
 }
 
 func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, client *rpc.ErigonClient) error {
+	timeStart := time.Now()
 	g := new(errgroup.Group)
 	g.SetLimit(int(concurrency))
 
@@ -2255,10 +2255,11 @@ func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, 
 
 	processBatch := func(startBlock, endBlock uint64) error {
 		var blockCount uint64
-		txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch, err := db.PrepareBatchesToSend(transformerList)
-		if err != nil {
-			return fmt.Errorf("error while preparing batches to send to ClickHouse: %w", err)
-		}
+		var erc20Batch []db.ERC20Batch
+		var txBatch []db.TxBatch
+		var itxBatch []db.InternalTxBatch
+		var erc721Batch []db.ERC721Batch
+		var erc1155Batch []db.ERC1155Batch
 
 		for i := startBlock; i <= endBlock; i++ {
 			bc, _, err := client.GetBlock(int64(i), "geth")
@@ -2267,20 +2268,19 @@ func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, 
 				return fmt.Errorf("error getting block %d: %w", i, err)
 			}
 
-			err = db.PrepareTransactionsToClickHouse(bc, transformerList, txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
+			err = db.ParseDataToClickHouse(bc, transformerList, &txBatch, &itxBatch, &erc20Batch, &erc721Batch, &erc1155Batch)
 			if err != nil {
-				log.Error(err, "error preparing transactions to ClickHouse error: %v", 0)
+				log.Error(err, "error parsing transactions for ClickHouse error: %v", 0)
 				return err
 			}
 
 			blockCount++
 
-			if blockCount >= batchSize {
-				batchesToSend := []driver.Batch{txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch}
+			if blockCount >= batchSize || i == endBlock && endBlock-startBlock < batchSize {
 
-				err := db.SendBatchesToClickHouse(batchesToSend)
+				err := db.SendAllBatches(txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
 				if err != nil {
-					log.Error(err, "Error sending transactions to ClickHouse: %v", 0)
+					log.Error(err, "Error sending batches to ClickHouse: %v", 0)
 					if errors.Is(err, context.Canceled) {
 						log.Warn("context was canceled while sending batches to ClickHouse")
 					}
@@ -2312,8 +2312,11 @@ func indexTxsToClickhouse(startBlock uint64, endBlock uint64, batchSize uint64, 
 	}
 
 	if err := g.Wait(); err != nil {
-		log.Error(err, "rrror in processing tx batches: %v", 0)
+		log.Error(err, "error in processing tx batches: %v", 0)
 	}
+
+	timeEnd := time.Since(timeStart)
+	log.Infof("Total time taken to parse %d blocks with txs is: %v", endBlock-startBlock+1, timeEnd)
 
 	return nil
 }
