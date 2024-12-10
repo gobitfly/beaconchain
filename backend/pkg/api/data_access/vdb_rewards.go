@@ -86,7 +86,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("e.epoch"),
-			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_rewards, 0)) AS cl_rewards`),
+			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_reward, 0)) AS cl_rewards`),
 			goqu.L("SUM(COALESCE(e.attestations_scheduled, 0)) AS attestations_scheduled"),
 			goqu.L("SUM(COALESCE(e.attestations_observed, 0)) AS attestations_observed"),
 			goqu.L("SUM(COALESCE(e.blocks_scheduled, 0)) AS blocks_scheduled"),
@@ -547,7 +547,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			goqu.L("COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward"),
 			goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
 			goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
-			goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
+			goqu.L("COALESCE(e.sync_reward, 0) AS sync_reward"),
 			goqu.L("(CASE WHEN e.slashed THEN 1 ELSE 0 END) AS slashed_in_epoch"),
 			goqu.L("COALESCE(e.blocks_slashing_count, 0) AS slashed_amount"),
 			goqu.L("COALESCE(e.blocks_cl_slasher_reward, 0) AS slasher_reward"),
@@ -612,7 +612,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 		SyncScheduled uint32          `db:"sync_scheduled"`
 		SyncExecuted  uint32          `db:"sync_executed"`
-		SyncRewards   decimal.Decimal `db:"sync_rewards"`
+		SyncReward    decimal.Decimal `db:"sync_reward"`
 
 		SlashedInEpoch bool            `db:"slashed_in_epoch"`
 		SlashedAmount  uint32          `db:"slashed_amount"`
@@ -684,7 +684,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		ret.Proposal.StatusCount.Success += uint64(entry.BlocksProposed)
 		ret.Proposal.StatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
 
-		ret.Sync.Income = ret.Sync.Income.Add(entry.SyncRewards.Mul(gWei))
+		ret.Sync.Income = ret.Sync.Income.Add(entry.SyncReward.Mul(gWei))
 		ret.Sync.StatusCount.Success += uint64(entry.SyncExecuted)
 		ret.Sync.StatusCount.Failed += uint64(entry.SyncScheduled) - uint64(entry.SyncExecuted)
 
@@ -725,7 +725,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	rewardsDs := goqu.Dialect("postgres").
 		Select(
 			goqu.L("e.epoch"),
-			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_rewards, 0)) AS cl_rewards`)).
+			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_reward, 0)) AS cl_rewards`)).
 		From(goqu.L("validator_dashboard_data_epoch e")).
 		With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Where(goqu.L("e.epoch_timestamp >= fromUnixTimestamp(?)", utils.EpochToTime(startEpoch).Unix()))
@@ -958,7 +958,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		Select(
 			goqu.L("e.validator_index"),
 			goqu.L("COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled"),
-			goqu.L("COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed"),
+			goqu.L("COALESCE(e.attestations_source_executed, 0) AS attestations_source_executed"),
 			goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
 			goqu.L("COALESCE(e.attestations_target_executed, 0) AS attestations_target_executed"),
 			goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
@@ -966,7 +966,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			goqu.L("COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward"),
 			goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
 			goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
-			goqu.L("COALESCE(e.sync_rewards, 0) AS sync_rewards"),
+			goqu.L("COALESCE(e.sync_reward, 0) AS sync_reward"),
 			goqu.L("e.slashed AS slashed_in_epoch"),
 			goqu.L("COALESCE(e.blocks_slashing_count, 0) AS slashed_amount"),
 			goqu.L("COALESCE(e.blocks_cl_slasher_reward, 0) AS slasher_reward"),
@@ -1052,7 +1052,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		AttestationsHeadReward      int64  `db:"attestations_head_reward"`
 		SyncScheduled               uint64 `db:"sync_scheduled"`
 		SyncExecuted                uint64 `db:"sync_executed"`
-		SyncRewards                 int64  `db:"sync_rewards"`
+		SyncRewards                 int64  `db:"sync_reward"`
 		SlashedInEpoch              bool   `db:"slashed_in_epoch"`
 		SlashedAmount               uint64 `db:"slashed_amount"`
 		SlasherReward               int64  `db:"slasher_reward"`

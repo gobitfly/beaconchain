@@ -135,7 +135,7 @@ func (d *epochWriter) WriteEpochData(epoch uint64, data []*validatorDashboardDat
 			"blocks_cl_reward",
 			"sync_scheduled",
 			"sync_executed",
-			"sync_rewards",
+			"sync_reward",
 			"slashed",
 			"balance_start",
 			"balance_end",
