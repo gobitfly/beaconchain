@@ -18,6 +18,7 @@
     "DashboardTableValidators",
     "DashboardValidatorManagmentModal",
     "DashboardValidatorSubsetList",
+    "DashboardValidatorSubsetListHeader",
     "NotificationMachinesTable",
     "NotificationsClientsTable",
     "NotificationsDashboardDialogEntity",
