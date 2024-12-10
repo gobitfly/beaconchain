@@ -254,7 +254,7 @@ func Run() {
 		Host:         cfg.ClickHouse.WriterDatabase.Host,
 		Port:         cfg.ClickHouse.WriterDatabase.Port,
 		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
-		SSL:          true,
+		SSL:          cfg.ClickHouse.WriterDatabase.SSL,
 		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
 	}, &types.DatabaseConfig{
 		Username:     cfg.ClickHouse.ReaderDatabase.Username,
@@ -263,7 +263,7 @@ func Run() {
 		Host:         cfg.ClickHouse.ReaderDatabase.Host,
 		Port:         cfg.ClickHouse.ReaderDatabase.Port,
 		MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-		SSL:          true,
+		SSL:          cfg.ClickHouse.ReaderDatabase.SSL,
 		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
 	}, "clickhouse", "clickhouse")
 	defer db.ClickHouseReader.Close()
