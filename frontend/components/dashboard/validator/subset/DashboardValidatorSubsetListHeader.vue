@@ -28,6 +28,9 @@ const icon = computed(() => {
   let slotVizCategory: SlotVizCategories | undefined
   switch (props.category) {
     case 'deposited':
+    case 'exited':
+    case 'exited_withdrawing':
+    case 'exited_withdrawn':
       icon = faMoneyBill
       break
     case 'got_slashed':
@@ -56,6 +59,10 @@ const icon = computed(() => {
     case 'proposal_proposed':
       className = 'positive'
       slotVizCategory = 'proposal'
+      break
+    case 'slashed':
+    case 'slashed_withdrawing':
+      slotVizCategory = 'slashing'
       break
     case 'sync_current':
       className = 'positive'
