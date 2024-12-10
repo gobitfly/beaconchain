@@ -1588,16 +1588,16 @@ func (d *dashboardData) process(data *Data, domain []byte) ([]*validatorDashboar
 		validatorsData[validator_index].AttestationIdealReward = utils.NullInt64(int64(idealRewardsOfValidator.Head + idealRewardsOfValidator.Source + idealRewardsOfValidator.Target + idealRewardsOfValidator.Inactivity + idealRewardsOfValidator.InclusionDelay))
 
 		if attestationReward.Head > 0 {
-			validatorsData[validator_index].AttestationHeadExecuted = utils.NullInt16(1)
-			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsHeadExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsObserved = utils.NullInt16(1)
 		}
 		if attestationReward.Source > 0 {
-			validatorsData[validator_index].AttestationSourceExecuted = utils.NullInt16(1)
-			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsSourceExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsObserved = utils.NullInt16(1)
 		}
 		if attestationReward.Target > 0 {
-			validatorsData[validator_index].AttestationTargetExecuted = utils.NullInt16(1)
-			validatorsData[validator_index].AttestationsExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsTargetExecuted = utils.NullInt16(1)
+			validatorsData[validator_index].AttestationsObserved = utils.NullInt16(1)
 		}
 	}
 
@@ -1684,11 +1684,11 @@ type validatorDashboardDataRow struct {
 	AttestationsIdealInclusionsReward  sql.NullInt32 //done
 	AttestationIdealReward             sql.NullInt64 //done
 
-	AttestationsScheduled     sql.NullInt16 //done
-	AttestationsExecuted      sql.NullInt16 //done
-	AttestationHeadExecuted   sql.NullInt16 //done
-	AttestationSourceExecuted sql.NullInt16 //done
-	AttestationTargetExecuted sql.NullInt16 //done
+	AttestationsScheduled      sql.NullInt16 //done
+	AttestationsObserved       sql.NullInt16 //done
+	AttestationsHeadExecuted   sql.NullInt16 //done
+	AttestationsSourceExecuted sql.NullInt16 //done
+	AttestationsTargetExecuted sql.NullInt16 //done
 
 	LastSubmittedDutyEpoch sql.NullInt32 // does not include sync committee duty slots
 
